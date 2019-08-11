@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:fillViewport="true">
+
+    <GridLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:alignmentMode="alignBounds"
+        android:columnCount="3"
+        android:columnOrderPreserved="false"
+        android:useDefaultMargins="true">
+
+        <TextView
+            android:id="@+id/est_tvName"
+            android:layout_columnSpan="3"
+            android:layout_gravity="left"
+            android:text="Name:" />
+
+        <EditText
+            android:id="@+id/est_etName"
+            android:layout_columnSpan="3"
+            android:ems="10"
+            android:text="Name" />
+
+        <TextView
+            android:id="@+id/est_tvBSportType"
+            android:text="Basic Sport Type:" />
+
+        <Spinner
+            android:id="@+id/est_sBSportType"
+            android:layout_columnSpan="2" />
+
+        <TextView android:text="@string/min_avg_speed" />
+
+        <EditText
+            android:id="@+id/est_etMinSpeed"
+            android:ems="5"
+            android:inputType="numberDecimal" />
+
+        <TextView
+            android:id="@+id/est_tvUnitSpeed"
+            android:text="@string/units_speed_metric" />
+
+        <TextView android:text="@string/max_avg_speed" />
+
+        <EditText
+            android:id="@+id/est_etMaxSpeed"
+            android:ems="5"
+            android:inputType="numberDecimal" />
+
+        <TextView
+            android:id="@+id/est_tvUnitSpeed2"
+            android:text="@string/units_speed_metric" />
+
+        <View
+            android:id="@+id/est_seperator1"
+            android:layout_height="2dp"
+            android:layout_columnSpan="3"
+            android:background="@android:color/darker_gray" />
+
+        <TextView
+            android:id="@+id/est_tvOnlineCommunities"
+            android:layout_columnSpan="3"
+            android:layout_gravity="center_horizontal"
+            android:text="@string/OnlineCommunities" />
+
+        <TextView
+            android:id="@+id/est_tvStrava"
+            android:drawableLeft="@drawable/logo_square_strava"
+            android:gravity="center_vertical"
+            android:text="@string/Strava" />
+
+        <Spinner
+            android:id="@+id/est_sStrava"
+            android:layout_columnSpan="2"
+            android:entries="@array/Strava_Sport_Types_UI_Names" />
+
+
+        <TextView
+            android:id="@+id/est_tvRunkeeper"
+            android:drawableLeft="@drawable/logo_square_runkeeper"
+            android:gravity="center_vertical"
+            android:text="@string/Runkeeper" />
+
+        <Spinner
+            android:id="@+id/est_sRunkeeper"
+            android:layout_columnSpan="2"
+            android:entries="@array/Runkeeper_Sport_Types" />
+
+
+        <TextView
+            android:id="@+id/est_tvTrainingPeaks"
+            android:drawableLeft="@drawable/logo_square_training_peaks"
+            android:gravity="center_vertical"
+            android:text="@string/TrainingPeaks" />
+
+        <Spinner
+            android:id="@+id/est_sTrainingPeaks"
+            android:layout_columnSpan="2" />
+
+
+        <View
+            android:id="@+id/est_seperator2"
+            android:layout_height="2dp"
+            android:layout_columnSpan="3"
+            android:background="@android:color/darker_gray" />
+
+        <TextView
+            android:id="@+id/est_tvExportFiles"
+            android:layout_columnSpan="3"
+            android:layout_gravity="center_horizontal"
+            android:text="@string/ExportFiles" />
+
+        <TextView
+            android:id="@+id/est_tvTCX"
+            android:gravity="center_vertical"
+            android:text="@string/TCX" />
+
+        <Spinner
+            android:id="@+id/est_sTCX"
+            android:layout_columnSpan="2" />
+
+        <TextView
+            android:id="@+id/est_tvGC"
+            android:gravity="center_vertical"
+            android:text="@string/GC" />
+
+        <Spinner
+            android:id="@+id/est_sGC"
+            android:layout_columnSpan="2" />
+
+    </GridLayout>
+</ScrollView>

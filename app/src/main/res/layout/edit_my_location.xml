@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/tvName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/editLocationName" />
+
+    <EditText
+        android:id="@+id/etLocationName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal" />
+
+    <TextView
+        android:id="@+id/tvAltitude"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/LocationAltitude" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <EditText
+            android:id="@+id/etLocationAltitude"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:inputType="number|numberDecimal" />
+
+        <TextView
+            android:id="@+id/tvAltitudeUnit"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/units_altitude_metric" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvRadius"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/LocationRadius" />
+
+    <SeekBar
+        android:id="@+id/sbRadius"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:max="500" />
+</LinearLayout>

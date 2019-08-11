@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/jsonWrite"
+        android:title="@string/jsonWrite"></item>
+    <item
+        android:id="@+id/tcxWrite"
+        android:title="@string/tcxWrite"></item>
+    <item
+        android:id="@+id/gpxWrite"
+        android:title="@string/gpxWrite"></item>
+    <item
+        android:id="@+id/csvWrite"
+        android:title="@string/csvWrite"></item>
+    <item
+        android:id="@+id/stravaUpload"
+        android:title="@string/stravaUpload"></item>
+    <item
+        android:id="@+id/runkeeperUpload"
+        android:title="@string/runkeeperUpload"></item>
+    <item
+        android:id="@+id/trainingPeaksUpload"
+        android:title="@string/trainingPeaksUpload"></item>
+    <item
+        android:id="@+id/contextDelete"
+        android:icon="@android:drawable/ic_menu_delete"
+        android:title="@string/delete_workout"></item>
+
+
+</menu>

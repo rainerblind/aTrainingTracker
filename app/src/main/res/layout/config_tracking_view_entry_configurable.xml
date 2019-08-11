@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:layout_weight="3"
+    android:background="@drawable/sensor_field_border"
+    android:orientation="vertical"
+    android:weightSum="4">
+
+    <TextView
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="@string/configSensor"
+        android:textSize="12sp" />
+
+    <Spinner
+        android:id="@+id/spinnerSensor"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:background="@color/my_white" />
+
+
+    <TextView
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="@string/configSource"
+        android:textSize="12sp" />
+
+    <Spinner
+        android:id="@+id/spinnerSource"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:background="@color/my_white"
+        android:text="best" />
+
+    <TextView
+        android:id="@+id/textViewSource"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:background="@color/my_light_blue"
+        android:text="@string/no_sensor_available"
+        android:textSize="18sp" />
+
+
+    <TextView
+        android:id="@+id/tvConfigureFilter"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="@string/configSmoothing"
+        android:textSize="12sp" />
+
+    <Button
+        android:id="@+id/buttonConfigureFilter"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/my_white"
+        android:baselineAligned="false"
+        android:gravity="start"
+        android:text="3 sec Moving Average"
+        android:textAllCaps="false"
+        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+        android:textColor="@color/my_black"
+        android:textSize="18sp" />
+
+    <TextView
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="@string/configSize"
+        android:textSize="12sp" />
+
+    <Spinner
+        android:id="@+id/spinnerTextSize"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:background="@color/my_white" />
+
+
+    <Button
+        android:id="@+id/buttonDelete"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="@string/delete_sensor" />
+
+</LinearLayout>

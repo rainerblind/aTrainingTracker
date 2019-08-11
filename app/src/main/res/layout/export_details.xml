@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TableLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent">
+
+    <TableRow>
+
+        <TextView
+            android:layout_weight="1"
+            android:text="" />
+
+        <TextView
+            android:layout_weight="1"
+            android:text="@string/File" />
+
+        <TextView
+            android:layout_weight="1"
+            android:text="@string/Dropbox" />
+
+        <TextView
+            android:layout_weight="1"
+            android:text="@string/Community" />
+    </TableRow>
+
+    <TableRow>
+
+        <TextView
+            android:layout_weight="1"
+            android:text="@string/CSV" />
+
+        <ImageButton
+            android:id="@+id/ibCSVFile"
+            android:layout_width="10pt"
+            android:layout_height="10pt"
+            android:layout_weight="1"
+            android:src="@drawable/export_success" />
+
+        <ImageButton
+            android:id="@+id/ibCSVDropbox"
+            android:layout_width="10pt"
+            android:layout_height="10pt"
+            android:layout_weight="1"
+            android:src="@drawable/export_success" />
+
+        <ImageButton
+            android:id="@+id/ibCSVCommunity"
+            android:layout_width="10pt"
+            android:layout_height="10pt"
+            android:layout_weight="1"
+            android:src="@drawable/ic_not_interested_black_24dp" />
+    </TableRow>
+
+    <TableRow>
+
+        <TextView
+            android:layout_weight="1"
+            android:text="@string/TCX" />
+
+        <ImageButton
+            android:id="@+id/ibTCXFile"
+            android:layout_width="10pt"
+            android:layout_height="10pt"
+            android:layout_weight="1"
+            android:src="@drawable/export_success" />
+
+        <ImageButton
+            android:id="@+id/ibTCXDropbox"
+            android:layout_width="10pt"
+            android:layout_height="10pt"
+            android:layout_weight="1"
+            android:src="@drawable/export_success" />
+
+        <ImageButton
+            android:id="@+id/ibTCXCommunity"
+            android:layout_width="10pt"
+            android:layout_height="10pt"
+            android:layout_weight="1"
+            android:src="@drawable/ic_not_interested_black_24dp" />
+    </TableRow>
+
+    <TableRow>
+
+        <TextView
+            android:layout_weight="1"
+            android:text="@string/GPX" />
+
+        <ImageButton
+            android:id="@+id/ibGPXFile"
+            android:layout_width="10pt"
+            android:layout_height="10pt"
+            android:layout_weight="1"
+            android:src="@drawable/export_success" />
+
+        <ImageButton
+            android:id="@+id/ibGPXDropbox"
+            android:layout_width="10pt"
+            android:layout_height="10pt"
+            android:layout_weight="1"
+            android:src="@drawable/export_success" />
+
+        <ImageButton
+            android:id="@+id/ibGPXCommunity"
+            android:layout_width="10pt"
+            android:layout_height="10pt"
+            android:layout_weight="1"
+            android:src="@drawable/ic_not_interested_black_24dp" />
+    </TableRow>
+
+    <TableRow>
+
+        <TextView
+            android:layout_weight="1"
+            android:text="@string/GC" />
+
+        <ImageButton
+            android:id="@+id/ibGCFile"
+            android:layout_width="10pt"
+            android:layout_height="10pt"
+            android:layout_weight="1"
+            android:src="@drawable/export_success" />
+
+        <ImageButton
+            android:id="@+id/ibGCDropbox"
+            android:layout_width="10pt"
+            android:layout_height="10pt"
+            android:layout_weight="1"
+            android:src="@drawable/export_success" />
+
+        <ImageButton
+            android:id="@+id/ibGCCommunity"
+            android:layout_width="10pt"
+            android:layout_height="10pt"
+            android:layout_weight="1"
+            android:src="@drawable/ic_not_interested_black_24dp" />
+    </TableRow>
+
+    <TableRow>
+
+        <TextView
+            android:layout_weight="1"
+            android:text="@string/Strava" />
+
+        <ImageButton
+            android:id="@+id/ibStravaFile"
+            android:layout_width="10pt"
+            android:layout_height="10pt"
+            android:layout_weight="1"
+            android:src="@drawable/export_success" />
+
+        <ImageButton
+            android:id="@+id/ibStravaDropbox"
+            android:layout_width="10pt"
+            android:layout_height="10pt"
+            android:layout_weight="1"
+            android:src="@drawable/ic_not_interested_black_24dp" />
+
+        <ImageButton
+            android:id="@+id/ibStravaCommunity"
+            android:layout_width="10pt"
+            android:layout_height="10pt"
+            android:layout_weight="1"
+            android:src="@drawable/export_success" />
+    </TableRow>
+
+    <TableRow>
+
+        <TextView
+            android:layout_weight="1"
+            android:text="@string/Runkeeper" />
+
+        <ImageButton
+            android:id="@+id/ibRunkeeperFile"
+            android:layout_width="10pt"
+            android:layout_height="10pt"
+            android:layout_weight="1"
+            android:src="@drawable/export_success" />
+
+        <ImageButton
+            android:id="@+id/ibRunkeeperDropbox"
+            android:layout_width="10pt"
+            android:layout_height="10pt"
+            android:layout_weight="1"
+            android:src="@drawable/ic_not_interested_black_24dp" />
+
+        <ImageButton
+            android:id="@+id/ibRunkeeperCommunity"
+            android:layout_width="10pt"
+            android:layout_height="10pt"
+            android:layout_weight="1"
+            android:src="@drawable/export_success" />
+    </TableRow>
+
+    <TableRow>
+
+        <TextView
+            android:layout_weight="1"
+            android:text="@string/TrainingPeaks" />
+
+        <ImageButton
+            android:id="@+id/ibTrainingPeaksFile"
+            android:layout_width="10pt"
+            android:layout_height="10pt"
+            android:layout_weight="1"
+            android:src="@drawable/export_success" />
+
+        <ImageButton
+            android:id="@+id/ibTrainingPeaksDropbox"
+            android:layout_width="10pt"
+            android:layout_height="10pt"
+            android:layout_weight="1"
+            android:src="@drawable/ic_not_interested_black_24dp" />
+
+        <ImageButton
+            android:id="@+id/ibTrainingPeaksCommunity"
+            android:layout_width="10pt"
+            android:layout_height="10pt"
+            android:layout_weight="1"
+            android:src="@drawable/export_success" />
+    </TableRow>
+
+</TableLayout>

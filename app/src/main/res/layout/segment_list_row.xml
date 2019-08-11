@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:map="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:id="@+id/llSegmentsHeader"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tvSegmentName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Panzerstraße climb"
+            android:textSize="30sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/tvSegmentDistance"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="3 km"
+                android:textSize="18sp" />
+
+            <TextView
+                android:id="@+id/tvSegmentAverageGrade"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="10%"
+                android:textSize="18sp" />
+
+            <TextView
+                android:id="@+id/tvSegmentClimbCategory"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="cat 3"
+                android:textSize="18sp" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/tvSegmentRank"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="(10/123)"
+                android:textSize="24sp" />
+
+            <TextView
+                android:id="@+id/tvSegmentPRTime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="3:15 min"
+                android:textSize="24sp" />
+
+            <TextView
+                android:id="@+id/tvSegmentPRDate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="21.7.2016"
+                android:textSize="24sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="210dp">
+
+        <com.google.android.gms.maps.MapView
+            android:id="@+id/starred_segments_mapView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            map:liteMode="true"
+            map:mapType="none" />
+
+        <Button
+            android:id="@+id/bUpdate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_alignParentBottom="true"
+            android:text="updated: 20.7.2016" />
+
+    </RelativeLayout>
+
+
+</LinearLayout>

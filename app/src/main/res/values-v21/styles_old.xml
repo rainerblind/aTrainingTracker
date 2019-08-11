@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="AppCompatTheme.NoActionBar" parent="AppBaseCompatTheme.NoActionBar">
+
+        <!-- For the resting Spinner style -->
+        <item name="android:spinnerItemStyle">@style/spinnerItemStyle</item>
+
+        <!-- For each individual Spinner list item once clicked on -->
+        <item name="android:spinnerDropDownItemStyle">@style/spinnerDropDownItemStyle</item>
+
+        <!-- colorPrimary is used for the default action bar background -->
+        <item name="colorPrimary">@color/my_blue</item>
+
+        <!-- colorPrimaryDark is used for the status bar -->
+        <item name="colorPrimaryDark">@color/my_blue</item>
+
+        <item name="android:textColor">@color/my_black</item>
+        <item name="android:textColorPrimary">@color/my_black</item>
+        <item name="android:textColorSecondary">@color/my_black</item>
+
+        <item name="preferenceTheme">@style/PreferenceThemeOverlay</item>
+        <item name="drawerArrowStyle">@style/DrawerArrowStyle</item>
+        <item name="android:buttonStyle">@style/my_ButtonStyle</item>
+        <item name="buttonBarButtonStyle">@style/my_ButtonBarButtonStyle</item>
+        <item name="colorAccent">@color/my_blue</item>
+        <item name="android:textColorPrimaryInverse">@color/my_blue</item>
+        <!-- <item name="alertDialogTheme">@style/AlertDialogCustom</item> -->
+        <item name="android:alertDialogTheme">@style/AlertDialogCustom
+        </item> <!-- full screen dialog but possibly correct colors -->
+    </style>
+
+    <style name="my_ButtonStyle" parent="Widget.AppCompat.Button.Colored">
+        <item name="colorButtonNormal">@color/my_blue</item>
+        <item name="android:textColor">@color/my_white</item>
+    </style>
+
+    <!-- <style name="AlertDialogCustom" parent="@android:style/Widget.Holo.Light"> -->
+    <style name="AlertDialogCustom" parent="AlertDialog.AppCompat.Light">
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowMinWidthMajor">@android:dimen/dialog_min_width_major</item>
+        <item name="android:windowMinWidthMinor">@android:dimen/dialog_min_width_minor</item>
+        <item name="android:windowIsFloating">true</item>
+        <item name="colorPrimary">#00397F</item>
+        <item name="colorAccent">#0AAEEF</item>
+        <item name="android:buttonBarNegativeButtonStyle">@style/NegativeButtonStyle</item>
+        <item name="android:buttonBarPositiveButtonStyle">@style/PositiveButtonStyle</item>
+    </style>
+
+    <style name="NegativeButtonStyle" parent="Widget.AppCompat.Button.ButtonBar.AlertDialog">
+        <item name="android:textColor">@color/my_blue</item>
+    </style>
+
+    <style name="PositiveButtonStyle" parent="Widget.AppCompat.Button.ButtonBar.AlertDialog">
+        <item name="android:textColor">@color/my_blue</item>
+    </style>
+
+
+    <!-- new -->
+    <style name="my_ButtonBarButtonStyle" parent="Widget.AppCompat.Button.Borderless">
+        <!-- this is the button text color!    -->
+        <item name="android:textColor">@color/my_blue</item>
+    </style>
+
+
+    <style name="AppCompatTheme" parent="AppBaseCompatTheme">
+
+        <!-- For the resting Spinner style -->
+        <item name="android:spinnerItemStyle">@style/spinnerItemStyle</item>
+
+        <!-- For each individual Spinner list item once clicked on -->
+        <item name="android:spinnerDropDownItemStyle">@style/spinnerDropDownItemStyle</item>
+
+        <!-- colorPrimary is used for the default action bar background -->
+        <item name="colorPrimary">@color/my_blue</item>
+
+        <!-- colorPrimaryDark is used for the status bar -->
+        <item name="colorPrimaryDark">@color/my_blue</item>
+
+        <item name="android:textColor">@color/my_black</item>
+        <item name="android:textColorPrimary">@color/my_black</item>
+        <item name="android:textColorPrimaryInverse">@color/my_white</item>
+        <item name="android:textColorSecondary">@color/my_black</item>BarStyle
+
+        <item name="colorAccent">@color/my_blue</item>
+
+        <item name="preferenceTheme">@style/PreferenceThemeOverlay</item>
+
+        <!-- for the hamburger menu -->
+        <item name="drawerArrowStyle">@style/DrawerArrowStyle</item>
+
+        <item name="android:buttonStyle">@style/my_ButtonStyle</item>
+
+        <item name="android:actionBarStyle">@style/my_ActionBarStyle</item>
+        <item name="actionBarStyle">@style/my_ActionBarStyle</item>
+        <item name="android:statusBarColor">@color/my_white</item>
+        <!-- <item name="android:alertDialogTheme">@style/AlertDialogCustom</item> -->
+
+    </style>
+</resources>

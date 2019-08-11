@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:layout_weight="3"
+    android:background="@drawable/sensor_field_border"
+    android:orientation="vertical"
+    android:weightSum="4">
+
+    <LinearLayout
+        android:id="@+id/llConfigSummary"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/configSensor"
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/tvSensor"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textAppearance="@android:style/TextAppearance.Large" />
+
+
+        <TextView
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/configSource"
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/tvSource"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="best"
+            android:textAppearance="@android:style/TextAppearance.Large" />
+
+
+        <TextView
+            android:id="@+id/tvConfigureFilterTitle"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/configSmoothing"
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/tvConfigureFilterValue"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="3 sec Moving Average"
+            android:textAppearance="@android:style/TextAppearance.Large" />
+
+
+        <TextView
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/configSize"
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/tvTextSize"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textAppearance="@android:style/TextAppearance.Large" />
+    </LinearLayout>
+
+
+    <Button
+        android:id="@+id/buttonDelete"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="@string/delete_sensor" />
+
+</LinearLayout>

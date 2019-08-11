@@ -1,0 +1,82 @@
+apply plugin: 'com.android.application'
+apply plugin: 'io.fabric'
+
+android {
+    compileSdkVersion 26
+    buildToolsVersion '28.0.3'
+
+    defaultConfig {
+        applicationId "com.atrainingtracker"
+        minSdkVersion 14
+        targetSdkVersion 26
+        multiDexEnabled true
+    }
+
+    signingConfigs {
+        release {
+            storeFile file('/home/rainer/Dropbox/workspace/keystore')
+            keyAlias "aTrainingTrackerReleaseKey"
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
+            signingConfig signingConfigs.release
+            zipAlignEnabled true
+            debuggable false
+        }
+    }
+
+    packagingOptions {
+        pickFirst 'META-INF/NOTICE.txt'
+        pickFirst 'META-INF/NOTICE'
+        pickFirst 'META-INF/DEPENDENCIES'
+        pickFirst 'META-INF/LICENSE.txt'
+        pickFirst 'META-INF/LICENSE'
+    }
+
+    useLibrary 'org.apache.http.legacy'
+
+    dexOptions {
+        javaMaxHeapSize "8g"
+        preDexLibraries = false
+    }
+}
+
+dependencies {
+    implementation files('libs/commons-codec-1.6.jar')
+    implementation files('libs/commons-io-2.4.jar')
+    implementation files('libs/commons-logging-1.1.3.jar')
+    implementation files('libs/fluent-hc-4.3.1.jar')
+    implementation files('libs/httpclient-4.3.1.jar')
+    implementation files('libs/httpclient-cache-4.3.1.jar')
+    implementation files('libs/httpcore-4.3.jar')
+    implementation files('libs/httpmime-4.3.1.jar')
+
+    implementation files('libs/json_simple-1.1.jar')
+    implementation files('libs/pebblekit-3.0.0-eclipse.jar')
+    implementation files('libs/antpluginlib_3-5-0.jar')
+
+    implementation 'com.android.support:support-v4:26.1.0'
+    implementation 'com.android.support:preference-v7:26.1.0'
+    implementation 'com.android.support:appcompat-v7:26.1.0'
+    implementation 'com.android.support:design:26.1.0'
+    implementation 'com.android.support:recyclerview-v7:26.1.0'
+    implementation 'com.google.android.gms:play-services-maps:16.0.0'
+    implementation 'com.google.android.gms:play-services-location:16.0.0'
+    // compile 'com.google.android.gms:play-services-auth:10.0.1'
+
+    // compile('com.crashlytics.sdk.android:crashlytics:2.9.1@aar') {
+    //   transitive = true
+    // }
+    implementation 'com.google.firebase:firebase-core:16.0.6'
+
+    implementation 'com.dropbox.core:dropbox-core-sdk:3.0.2'
+
+    implementation 'com.squareup.okhttp3:okhttp:3.10.0'
+    implementation 'com.squareup.picasso:picasso:2.5.2'
+}
+
+apply plugin: 'com.google.gms.google-services'

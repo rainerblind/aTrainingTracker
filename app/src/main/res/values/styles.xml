@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Widget.aTrainingTracker.Button.Colored" parent="Widget.AppCompat.Button.Colored">
+        <item name="colorButtonNormal">?colorPrimary</item>
+        <item name="android:textColor">?android:textColorPrimaryInverse</item>
+    </style>
+
+    <style name="Widget.aTrainingTracker.Button.Borderless" parent="Widget.AppCompat.Button.Borderless">
+        <item name="android:textColor">?colorPrimary</item>
+    </style>
+
+</resources>
