@@ -1,0 +1,398 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    android:key="root">
+
+    <PreferenceCategory android:title="@string/prefsBasic">
+        <EditTextPreference
+            android:key="athleteName"
+            android:summary="@string/prefsAthleteNameSummary"
+            android:title="@string/prefsAthleteNameTitle" />
+
+        <ListPreference
+            android:defaultValue="METRIC"
+            android:entries="@array/units"
+            android:entryValues="@array/units_values"
+            android:key="listUnits"
+            android:summary="@string/prefsUnitsSummary"
+            android:title="@string/prefsUnitsTitle" />
+
+        <EditTextPreference
+            android:key="samplingTime"
+            android:numeric="integer"
+            android:summary="@string/prefsSamplingTimeSummary"
+            android:title="@string/prefsSamplingTimeTitle" />
+
+        <PreferenceScreen
+            android:key="display"
+            android:title="@string/Display">
+            <CheckBoxPreference
+                android:defaultValue="true"
+                android:key="forcePortrait"
+                android:title="@string/forcePortrait" />
+            <CheckBoxPreference
+                android:defaultValue="true"
+                android:key="keepScreenOn"
+                android:title="@string/prefsKeepScreenOnTitle" />
+            <CheckBoxPreference
+                android:defaultValue="true"
+                android:key="noUnlocking"
+                android:title="@string/prefsNoUnlockingTitle" />
+            <CheckBoxPreference
+                android:defaultValue="true"
+                android:key="zoomDependingOnSpeed"
+                android:title="@string/prefZoomDependingOnSpeedTitle" />
+            <CheckBoxPreference
+                android:defaultValue="true"
+                android:key="showUnits"
+                android:title="@string/prefShowUnitsTitle" />
+        </PreferenceScreen>
+
+        <PreferenceScreen
+            android:icon="@drawable/ic_search_black_48dp"
+            android:key="search_settings"
+            android:title="@string/Search_Settings">
+            <EditTextPreference
+                android:key="numberOfSearchTries"
+                android:numeric="integer"
+                android:summary="3"
+                android:title="@string/prefsNumberOfSearchTriesTitle" />
+            <PreferenceScreen
+                android:key="start_search"
+                android:summary="Start searching when app starts, resume from paused, or you change the sport type"
+                android:title="@string/prefStartSearchTitle">
+                <CheckBoxPreference
+                    android:defaultValue="true"
+                    android:key="startSearchWhenAppStarts"
+                    android:title="@string/prefsStartSearchWhenAppStartsTitle" />
+                <CheckBoxPreference
+                    android:defaultValue="false"
+                    android:key="startSearchWhenTrackingStarts"
+                    android:title="@string/prefsStartSearchWhenTrackingStartsTitle" />
+                <CheckBoxPreference
+                    android:defaultValue="true"
+                    android:key="startSearchWhenResumeFromPaused"
+                    android:title="@string/prefsStartSearchWhenResumeFromPausedTitle" />
+                <CheckBoxPreference
+                    android:defaultValue="false"
+                    android:key="startSearchWhenNewLap"
+                    android:title="@string/prefsStartSearchWhenNewLapTitle" />
+                <CheckBoxPreference
+                    android:defaultValue="true"
+                    android:key="startSearchWhenUserChangesSport"
+                    android:title="@string/prefsStartSearchWhenUserChangesSportTitle" />
+            </PreferenceScreen>
+            <CheckBoxPreference
+                android:defaultValue="true"
+                android:key="searchOnlyForSportSpecificDevices"
+                android:summary="@string/prefsSearchOnlyForSportSpecificDevicesSummary"
+                android:title="@string/prefsSearchOnlyForSportSpecificDevicesTitle" />
+            <CheckBoxPreference
+                android:defaultValue="true"
+                android:key="changeSportWhenDeviceGetsLost"
+                android:summary="@string/prefsChangeSportWhenDeviceGetsLostSummary"
+                android:title="@string/prefsChangeSportWhenDeviceGetsLostTitle" />
+        </PreferenceScreen>
+
+        <PreferenceScreen
+            android:icon="@drawable/ic_save_black_48dp"
+            android:key="fileExport"
+            android:summary="@string/prefsExportSummary"
+            android:title="@string/prefsExportTitle">
+            <CheckBoxPreference
+                android:defaultValue="false"
+                android:key="exportToGarminTCX"
+                android:summary="@string/prefsExportToGarminTCXSummary"
+                android:title="@string/prefsExportToGarminTCXTitle" />
+            <CheckBoxPreference
+                android:defaultValue="false"
+                android:key="exportToGPX"
+                android:summary="@string/prefsExportToGPXSummary"
+                android:title="@string/prefsExportToGPXTitle" />
+            <CheckBoxPreference
+                android:defaultValue="false"
+                android:key="exportToGCJson"
+                android:summary="@string/prefsExportToGCJsonSummary"
+                android:title="@string/prefsExportToGCJsonTitle" />
+            <CheckBoxPreference
+                android:defaultValue="false"
+                android:key="exportToCSV"
+                android:summary="@string/prefsExportToCSVSummary"
+                android:title="@string/prefsExportToCSVTitle" />
+        </PreferenceScreen>
+        <PreferenceScreen
+            android:icon="@drawable/ic_file_upload_black_48dp"
+            android:key="cloudUpload"
+            android:summary="@string/prefsUploadSummary"
+            android:title="@string/prefsUploadTitle">
+            <PreferenceCategory android:title="@string/prefsOnlineStorage">
+                <CheckBoxPreference
+                    android:defaultValue="false"
+                    android:icon="@drawable/dropbox_logo_blue"
+                    android:key="uploadToDropbox"
+                    android:summary="@string/prefsUploadToDropboxSummary"
+                    android:title="@string/prefsUploadToDropboxTitle" />
+                <PreferenceScreen
+                    android:icon="@drawable/ic_mail_outline_black_48dp"
+                    android:key="psSendEmail"
+                    android:summary="send TXC and CSV to first.last@example.com"
+                    android:title="@string/send_email">
+                    <CheckBoxPreference
+                        android:defaultValue="false"
+                        android:key="spSendWorkoutEmail"
+                        android:summary="@string/prefSendWorkoutEmailSummary"
+                        android:title="@string/prefSendWorkoutEmailTitle" />
+                    <EditTextPreference
+                        android:defaultValue="first.last@example.com"
+                        android:dependency="spSendWorkoutEmail"
+                        android:inputType="textEmailAddress"
+                        android:key="spEmailAddress"
+                        android:summary="first.last@example.com"
+                        android:title="@string/prefSendEmailTo" />
+                    <EditTextPreference
+                        android:defaultValue="just finished a workout"
+                        android:dependency="spSendWorkoutEmail"
+                        android:key="spEmailSubject"
+                        android:summary="just finished a workout"
+                        android:title="@string/prefEmailSubject" />
+
+                    <CheckBoxPreference
+                        android:defaultValue="true"
+                        android:dependency="spSendWorkoutEmail"
+                        android:key="spSendTCXEmail"
+                        android:summary="@string/prefSendTCXEmailSummary"
+                        android:title="@string/prefSendTCXEmailTitle" />
+                    <CheckBoxPreference
+                        android:defaultValue="false"
+                        android:dependency="spSendWorkoutEmail"
+                        android:key="spSendGPXEmail"
+                        android:summary="@string/prefSendGPXEmailSummary"
+                        android:title="@string/prefSendGPXEmailTitle" />
+                    <CheckBoxPreference
+                        android:defaultValue="false"
+                        android:dependency="spSendWorkoutEmail"
+                        android:key="spSendCSVEmail"
+                        android:summary="@string/prefSendCSVEmailSummary"
+                        android:title="@string/prefSendCSVEmailTitle" />
+                    <CheckBoxPreference
+                        android:defaultValue="false"
+                        android:dependency="spSendWorkoutEmail"
+                        android:key="spSendGCEmail"
+                        android:summary="@string/prefSendGCEmailSummary"
+                        android:title="@string/prefSendGCEmailTitle" />
+                </PreferenceScreen>
+
+            </PreferenceCategory>
+
+            <PreferenceCategory android:title="@string/prefsOnlineCommunities">
+                <CheckBoxPreference
+                    android:defaultValue="false"
+                    android:key="defaultToPrivate"
+                    android:summary="@string/prefsDefaultToPrivateSummary"
+                    android:title="@string/prefsDefaultToPrivateTitle" />
+
+                <PreferenceScreen
+                    android:icon="@drawable/logo_square_strava"
+                    android:key="psUploadToStrava"
+                    android:summary="@string/prefsUploadToStravaSummary"
+                    android:title="@string/prefsUploadToStravaTitle">
+
+                    <CheckBoxPreference
+                        android:defaultValue="false"
+                        android:icon="@drawable/logo_square_strava"
+                        android:key="uploadToStrava"
+                        android:summary="@string/prefsUploadToStravaSummary"
+                        android:title="@string/prefsUploadToStravaTitle" />
+
+                    <Preference
+                        android:dependency="uploadToStrava"
+                        android:key="updateStravaEquipment"
+                        android:summary="@string/lastUpdateOfEquipmentNever"
+                        android:title="@string/updateStravaEquipment" />
+
+                    <PreferenceCategory android:title="@string/selectiveUpload">
+                        <CheckBoxPreference
+                            android:defaultValue="true"
+                            android:dependency="uploadToStrava"
+                            android:key="uploadStravaGPS"
+                            android:title="@string/uploadGPS" />
+                        <CheckBoxPreference
+                            android:defaultValue="true"
+                            android:dependency="uploadToStrava"
+                            android:key="uploadStravaAltitude"
+                            android:title="@string/uploadAltitude" />
+                        <CheckBoxPreference
+                            android:defaultValue="true"
+                            android:dependency="uploadToStrava"
+                            android:key="uploadStravaHR"
+                            android:title="@string/uploadHR" />
+                        <CheckBoxPreference
+                            android:defaultValue="true"
+                            android:dependency="uploadToStrava"
+                            android:key="uploadStravaPower"
+                            android:title="@string/uploadPower" />
+                        <CheckBoxPreference
+                            android:defaultValue="true"
+                            android:dependency="uploadToStrava"
+                            android:key="uploadStravaCadence"
+                            android:title="@string/uploadCadence" />
+                    </PreferenceCategory>
+                </PreferenceScreen>
+
+
+                <PreferenceScreen
+                    android:icon="@drawable/logo_square_runkeeper"
+                    android:key="psUploadToRunkeeper"
+                    android:summary="@string/prefsUploadToRunkeeperSummary"
+                    android:title="@string/prefsUploadToRunkeeperTitle">
+
+                    <CheckBoxPreference
+                        android:defaultValue="false"
+                        android:icon="@drawable/logo_square_runkeeper"
+                        android:key="uploadToRunkeeper"
+                        android:summary="@string/prefsUploadToRunkeeperSummary"
+                        android:title="@string/prefsUploadToRunkeeperTitle" />
+
+                    <PreferenceCategory android:title="@string/selectiveUpload">
+                        <CheckBoxPreference
+                            android:defaultValue="true"
+                            android:dependency="uploadToRunkeeper"
+                            android:key="uploadRunkeeperGPS"
+                            android:title="@string/uploadGPS" />
+                        <CheckBoxPreference
+                            android:defaultValue="true"
+                            android:dependency="uploadToRunkeeper"
+                            android:key="uploadRunkeeperHR"
+                            android:title="@string/uploadHR" />
+                    </PreferenceCategory>
+                </PreferenceScreen>
+
+                <PreferenceScreen
+                    android:icon="@drawable/logo_square_training_peaks"
+                    android:key="psUploadToTrainingPeaks"
+                    android:summary="@string/prefsUploadToTrainingPeaksSummary"
+                    android:title="@string/prefsUploadToTrainingPeaksTitle">
+
+                    <CheckBoxPreference
+                        android:defaultValue="false"
+                        android:icon="@drawable/logo_square_training_peaks"
+                        android:key="uploadToTrainingPeaks"
+                        android:summary="@string/prefsUploadToTrainingPeaksSummary"
+                        android:title="@string/prefsUploadToTrainingPeaksTitle" />
+
+                    <PreferenceCategory android:title="@string/selectiveUpload">
+                        <CheckBoxPreference
+                            android:defaultValue="true"
+                            android:dependency="uploadToTrainingPeaks"
+                            android:key="uploadTrainingPeaksGPS"
+                            android:title="@string/uploadGPS" />
+                        <CheckBoxPreference
+                            android:defaultValue="true"
+                            android:dependency="uploadToTrainingPeaks"
+                            android:key="uploadTrainingPeaksAltitude"
+                            android:title="@string/uploadAltitude" />
+                        <CheckBoxPreference
+                            android:defaultValue="true"
+                            android:dependency="uploadToTrainingPeaks"
+                            android:key="uploadTrainingPeaksHR"
+                            android:title="@string/uploadHR" />
+                        <CheckBoxPreference
+                            android:defaultValue="true"
+                            android:dependency="uploadToTrainingPeaks"
+                            android:key="uploadTrainingPeaksPower"
+                            android:title="@string/uploadPower" />
+                        <CheckBoxPreference
+                            android:defaultValue="true"
+                            android:dependency="uploadToTrainingPeaks"
+                            android:key="uploadTrainingPeaksCadence"
+                            android:title="@string/uploadCadence" />
+                    </PreferenceCategory>
+                </PreferenceScreen>
+
+            </PreferenceCategory>
+        </PreferenceScreen>
+    </PreferenceCategory>
+    <PreferenceCategory android:title="@string/prefsAdvanced">
+
+
+        <PreferenceScreen
+            android:key="sportTypes"
+            android:summary="@string/configure_sport_types"
+            android:title="@string/sport_types">
+            <Preference>
+                <!-- just a dummy entry -->
+            </Preference>
+        </PreferenceScreen>
+
+        <Preference
+            android:icon="@drawable/icon_configure_views"
+            android:title="@string/prefsConfigureDisplaysTitle">
+            <intent android:action="com.atrainingtracker.trainingtracker.intent.action.ConfigureAllTrackingViews" />
+        </Preference>
+
+        <PreferenceScreen
+            android:icon="@drawable/icon_pebble"
+            android:key="pebbleScreen"
+            android:title="@string/prefsPebbleTitle">
+            <CheckBoxPreference
+                android:defaultValue="false"
+                android:key="PebbleSupport"
+                android:summary="@string/prefsPebbleSupportSummary"
+                android:title="@string/prefsPebbleSupportTitle" />
+
+            <ListPreference
+                android:defaultValue="BUILD_IN"
+                android:dependency="PebbleSupport"
+                android:entries="@array/PebbleWatchapps"
+                android:entryValues="@array/PebbleWatchapps_values"
+                android:key="listPebbleWatchapps"
+                android:summary="@string/prefsPebbleWatchappsSummary"
+                android:title="@string/prefsPebbleWatchappsTitle" />
+
+            <Preference
+                android:key="configurePebbleDisplays"
+                android:title="@string/prefsConfigurePebbleDisplaysTitle">
+                <intent android:action="com.atrainingtracker.trainingtracker.smartwatch.pebble.ConfigPebbleViewsActivity" />
+            </Preference>
+        </PreferenceScreen>
+        <PreferenceScreen
+            android:icon="@drawable/ic_gps_fixed_black_48dp"
+            android:key="prefsLocationSources"
+            android:title="@string/prefsLocationSourceTitle">
+            <PreferenceCategory android:title="@string/prefsLocationSourceTitle">
+                <CheckBoxPreference
+                    android:defaultValue="true"
+                    android:key="locationSourceGPS"
+                    android:summary="@string/prefsLocationSourceGPSSummary"
+                    android:title="@string/prefsLocationSourceGPS" />
+                <CheckBoxPreference
+                    android:defaultValue="false"
+                    android:key="locationSourceGoogleFused"
+                    android:summary="@string/prefsLocationSourceGoogleFusedSummary"
+                    android:title="@string/prefsLocationSourceGoogleFused" />
+                <CheckBoxPreference
+                    android:defaultValue="false"
+                    android:key="locationSourceNetwork"
+                    android:summary="@string/prefsLocationSourceNetworkSummary"
+                    android:title="@string/prefsLocationSourceNetwork" />
+            </PreferenceCategory>
+
+            <PreferenceCategory android:title="@string/prefsAdvanced">
+                <CheckBoxPreference
+                    android:defaultValue="false"
+                    android:key="showAllLocationsSourcesOnMap"
+                    android:summary="@string/prefsShowAllLocationSourcesOnMapSummary"
+                    android:title="@string/prefsShowAllLocationSourcesOnMapTitle" />
+            </PreferenceCategory>
+        </PreferenceScreen>
+
+        <PreferenceScreen
+            android:key="fancyWorkoutNames"
+            android:summary="@string/configureWorkoutNameSchemes"
+            android:title="@string/workout_name_schemes">
+            <Preference>
+                <!-- just a dummy entry -->
+            </Preference>
+        </PreferenceScreen>
+    </PreferenceCategory>
+
+</PreferenceScreen>

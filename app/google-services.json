@@ -1,0 +1,42 @@
+{
+  "project_info": {
+    "project_number": "532416994780",
+    "firebase_url": "https://atrainingtracker-bb57c.firebaseio.com",
+    "project_id": "atrainingtracker-bb57c",
+    "storage_bucket": "atrainingtracker-bb57c.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:532416994780:android:1f07c1209e3ef087",
+        "android_client_info": {
+          "package_name": "com.atrainingtracker"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "532416994780-jcij59gd6m4n1qlptot9dqbuaoie33mt.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBBcvOUAjYMSnTZKWvaEKTr8-eLjQHmrRw"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

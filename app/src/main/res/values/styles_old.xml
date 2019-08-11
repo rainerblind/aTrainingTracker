@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="AppBaseTheme" parent="android:Theme.Holo.Light"></style>
+
+    <style name="AppBaseTheme.NoActionBar" parent="android:Theme.Holo.Light.NoActionBar"></style>
+
+    <style name="AppBaseCompatTheme.NoActionBar" parent="Theme.AppCompat.Light.NoActionBar"></style>
+
+    <style name="AppBaseCompatTheme" parent="Theme.AppCompat.Light"></style>
+
+    <!-- requred Application themes -->
+    <!-- Application theme without action bar. -->
+    <style name="AppCompatTheme.NoActionBar" parent="AppBaseCompatTheme.NoActionBar">
+
+        <!-- colorPrimary is used for the default action bar background -->
+        <item name="colorPrimary">@color/my_blue</item>
+
+        <!-- colorPrimaryDark is used for the status bar -->
+        <item name="colorPrimaryDark">@color/my_blue</item>
+
+        <item name="android:textColor">@color/my_black</item>
+        <item name="android:textColorPrimary">@color/my_black</item>
+        <item name="android:textColorPrimaryInverse">@color/my_white</item>
+        <item name="android:textColorSecondary">@color/my_black</item>
+
+        <item name="colorAccent">@color/my_blue</item>
+
+
+        <!-- For the resting Spinner style -->
+        <item name="android:spinnerItemStyle">@style/spinnerItemStyle</item>
+
+        <!-- For each individual Spinner list item once clicked on -->
+        <item name="android:spinnerDropDownItemStyle">@style/spinnerDropDownItemStyle</item>
+
+
+        <item name="preferenceTheme">@style/PreferenceThemeOverlay</item>
+
+        <!-- for the hamburger menu -->
+        <item name="drawerArrowStyle">@style/DrawerArrowStyle</item>
+
+        <item name="android:buttonStyle">@style/my_ButtonStyle</item>
+        <item name="buttonBarButtonStyle">@style/my_ButtonBarButtonStyle</item>
+    </style>
+
+    <style name="my_ActionBarStyle" parent="@android:style/Widget.Holo.Light.ActionBar">
+        <item name="android:titleTextStyle">@style/my_TitleTextStyle</item>
+        <!-- <item name="titleTextStyle">@style/my_TitleTextStyle</item> -->
+        <!-- <item name="android:background">@color/my_blue</item> -->
+        <item name="background">@color/my_blue</item>
+        <!-- <item name="colorPrimary">@color/my_black</item> -->
+        <!-- <item name="android:textColor">@color/my_white</item> -->
+        <!-- <item name="titleTextColor">@color/my_white</item> -->
+    </style>
+
+    <style name="my_TitleTextStyle" parent="@android:style/TextAppearance.Holo.Widget.ActionBar.Title">
+        <item name="android:textColor">@color/my_white</item>
+    </style>
+
+
+    <style name="my_ButtonStyle" parent="Widget.AppCompat.Button.Colored">
+        <item name="colorButtonNormal">@color/my_blue</item>
+        <item name="android:textColor">@color/my_white</item>
+    </style>
+
+    <!-- new -->
+    <style name="my_ButtonBarButtonStyle" parent="Widget.AppCompat.Button.Borderless">
+        <!-- this is the button text color!    -->
+        <item name="android:textColor">@color/my_blue</item>
+    </style>
+
+    <style name="TitlebarTheme" parent="AppCompatTheme.NoActionBar">
+
+        <item name="android:textColorPrimary">@color/my_white</item>
+        <item name="colorControlNormal">@color/my_white</item>
+        <!-- <item name="android:textColor">@color/my_white</item> -->
+
+    </style>
+
+    <style name="AppTheme" parent="AppBaseTheme">
+
+        <!-- For the resting Spinner style -->
+        <item name="android:spinnerItemStyle">@style/spinnerItemStyle</item>
+
+        <!-- For each individual Spinner list item once clicked on -->
+        <item name="android:spinnerDropDownItemStyle">@style/spinnerDropDownItemStyle</item>
+        <item name="preferenceTheme">@style/PreferenceThemeOverlay</item>
+    </style>
+
+    <style name="AppTheme.NoActionBar" parent="AppBaseTheme.NoActionBar">
+
+        <!-- For the resting Spinner style -->
+        <item name="android:spinnerItemStyle">@style/spinnerItemStyle</item>
+
+        <!-- For each individual Spinner list item once clicked on -->
+        <item name="android:spinnerDropDownItemStyle">@style/spinnerDropDownItemStyle</item>
+        <item name="preferenceTheme">@style/PreferenceThemeOverlay</item>
+    </style>
+
+
+    <style name="spinnerItemStyle">
+        <item name="android:padding">5dp</item>
+        <item name="android:textSize">18sp</item>
+    </style>
+
+    <style name="spinnerDropDownItemStyle">
+        <item name="android:padding">5dp</item>
+        <item name="android:textSize">18sp</item>
+    </style>
+
+    <style name="DrawerArrowStyle" parent="@style/Widget.AppCompat.DrawerArrowToggle">
+        <item name="spinBars">true</item>
+        <item name="color">@color/my_white</item>
+    </style>
+
+
+</resources>

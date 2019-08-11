@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string-array name="units">
+        <item>@string/units_type_metric</item>
+        <item>@string/units_type_imperial</item>
+    </string-array>
+    <string-array name="units_values">
+        <item>@string/METRIC</item>
+        <item>@string/IMPERIAL</item>
+    </string-array>
+
+    <string-array name="PebbleWatchapps">
+        <item>@string/pebble_build_in</item>
+        <item>@string/pebble_a_training_tracker_watchapp</item>
+    </string-array>
+    <string-array name="PebbleWatchapps_values">
+        <item>@string/BUILD_IN</item>
+        <item>@string/TRAINING_TRACKER</item>
+    </string-array>
+
+    <string-array name="Basic_Sport_Types">
+        <item>@string/sport_type_other</item>
+        <item>@string/sport_type_run</item>
+        <item>@string/sport_type_bike</item>
+    </string-array>
+    <string name="Basic_Sport_Types_values" translatable="false">
+        <item>UNKNOWN</item>
+        <item>RUN</item>
+        <item>BIKE</item>
+    </string>
+    <string name="filter_max">max</string>
+
+
+    <string-array name="Strava_Sport_Types_Strava_Names">
+        <item>Workout</item>
+        <item>Ride</item>
+        <item>Run</item>
+        <item>Swim</item>
+        <item>Hike</item>
+        <item>Walk</item>
+        <item>AlpineSki</item>
+        <item>BackcountrySki</item>
+        <item>Canoeing</item>
+        <item>Crossfit</item>
+        <item>EBikeRide</item>
+        <item>Elliptical</item>
+        <item>IceSkate</item>
+        <item>InlineSkate</item>
+        <item>Kayaking</item>
+        <item>Kitesurf</item>
+        <item>NordicSki</item>
+        <item>RockClimbing</item>
+        <item>RollerSki</item>
+        <item>Rowing</item>
+        <item>Snowboard</item>
+        <item>Snowshoe</item>
+        <item>StairStepper</item>
+        <item>StandUpPaddling</item>
+        <item>Surfing</item>
+        <item>VirtualRide</item>
+        <item>WeightTraining</item>
+        <item>Windsurf</item>
+        <item>Yoga</item>
+    </string-array>
+
+    <string-array name="Strava_Sport_Types_UI_Names">
+        <item>Workout (Other)</item>
+        <item>Ride</item>
+        <item>Run</item>
+        <item>Swim</item>
+        <item>Hike</item>
+        <item>Walk</item>
+        <item>Alpine Ski</item>
+        <item>Backcountry Ski</item>
+        <item>Canoeing</item>
+        <item>Crossfit</item>
+        <item>EBike Ride</item>
+        <item>Elliptical</item>
+        <item>Ice Skate</item>
+        <item>Inline Skate</item>
+        <item>Kayaking</item>
+        <item>Kitesurf</item>
+        <item>NordicSki</item>
+        <item>Rock Climbing</item>
+        <item>Roller Ski</item>
+        <item>Rowing</item>
+        <item>Snowboard</item>
+        <item>Snowshoe</item>
+        <item>Stair Stepper</item>
+        <item>Stand Up Paddling</item>
+        <item>Surfing</item>
+        <item>Virtual Ride</item>
+        <item>Weight Training</item>
+        <item>Windsurf</item>
+        <item>Yoga</item>
+    </string-array>
+
+    <string-array name="Runkeeper_Sport_Types">
+        <item>Other</item>
+        <item>Running</item>
+        <item>Cycling</item>
+        <item>Mountain Biking</item>
+        <item>Walking</item>
+        <item>Hiking</item>
+        <item>Downhill Skiing</item>
+        <item>Cross-Country Skiing</item>
+        <item>Snowboarding</item>
+        <item>Skating</item>
+        <item>Swimming</item>
+        <item>Wheelchair</item>
+        <item>Rowing</item>
+        <item>Elliptical</item>
+        <item>Yoga</item>
+        <item>Pilates</item>
+        <item>CrossFit</item>
+        <item>Spinning</item>
+        <item>Zumba</item>
+        <item>Barre</item>
+        <item>Group Workout</item>
+        <item>Dance</item>
+        <item>Bootcamp</item>
+        <item>Boxing / MMA</item>
+        <item>Meditation</item>
+        <item>Strength Training</item>
+        <item>Circuit Training</item>
+        <item>Core Strengthening</item>
+        <item>Arc Trainer</item>
+        <item>Stairmaster / Stepwell</item>
+        <item>Sports</item>
+        <item>Nordic Walking</item>
+    </string-array>
+
+    <string-array name="Training_Peaks_Sport_Types">
+        <item>Other</item>
+        <item>Bike</item>
+        <item>Run</item>
+        <item>Walk</item>
+        <item>Swim</item>
+        <item>X-Train</item>
+        <item>MTB</item>
+        <item>Strength</item>
+        <item>XC-Ski</item>
+        <item>Rowing</item>
+    </string-array>
+
+    <string-array name="TCX_Sport_Types">
+        <item>Other</item>
+        <item>Walking</item>
+        <item>Running</item>
+        <item>Biking</item>
+    </string-array>
+
+    <string-array name="GC_Sport_Types">
+        <item>walk</item>
+        <item>run</item>
+        <item>mtb</item>
+        <item>bike</item>
+    </string-array>
+
+
+    <string-array name="Filter_Types_UI">
+        <item>@string/filter_instantaneous</item>
+        <item>@string/filter_average</item>
+        <item>@string/filter_moving_average</item>
+        <item>@string/filter_exponential_smoothing</item>
+        <item>@string/filter_max</item>
+    </string-array>
+    <string-array name="Time_Units_UI">
+        <item>@string/units_seconds</item>
+        <item>@string/units_minutes</item>
+        <item>@string/units_samples</item>
+    </string-array>
+
+
+</resources>

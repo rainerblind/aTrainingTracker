@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.5"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:text="Filter:"
+                android:textSize="12sp" />
+
+            <Spinner
+                android:id="@+id/spinnerFilter"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:background="@color/my_white"
+                android:text="none" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/llFilterConstant"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:text="Constant:"
+                android:textSize="12sp" />
+
+            <EditText
+                android:id="@+id/editTextFilterConstant"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:text="10" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/llFilterUnit"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:text="Unit:"
+                android:textSize="12sp" />
+
+            <Spinner
+                android:id="@+id/spinnerFilterUnit"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:background="@color/my_white"
+                android:text="sec" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <View
+        android:id="@+id/divider"
+        android:layout_width="match_parent"
+        android:layout_height="2dp"
+        android:background="?android:attr/listDivider" />
+
+    <TextView
+        android:id="@+id/tvFilterDetails"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:text="Some helping and explaining text"
+        android:textSize="18dp" />
+
+
+</LinearLayout>

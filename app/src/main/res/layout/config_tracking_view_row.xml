@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:id="@+id/llRow"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:id="@+id/llFields"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="horizontal"></LinearLayout>
+
+        <Button
+            android:id="@+id/buttonAddSensorToRow"
+            android:layout_width="wrap_content"
+            android:layout_height="fill_parent"
+            android:text="+"
+            android:textSize="24sp" />
+
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/buttonAddNewRow"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:text="+"
+        android:textSize="24sp" />
+
+</LinearLayout>

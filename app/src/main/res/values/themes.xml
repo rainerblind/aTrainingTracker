@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.aTrainingTracker.NoActionBar" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="colorPrimary">@color/my_blue</item>
+        <item name="colorPrimaryDark">@color/midnight_blue</item>
+        <item name="colorAccent">@color/medium_blue</item>
+
+        <!-- Button Styles -->
+        <item name="android:buttonStyle">@style/Widget.aTrainingTracker.Button.Colored</item>
+        <item name="android:buttonBarButtonStyle">@style/Widget.aTrainingTracker.Button.Borderless
+        </item>
+
+        <!-- ??? -->
+        <item name="preferenceTheme">@style/PreferenceThemeOverlay</item>
+    </style>
+
+</resources>

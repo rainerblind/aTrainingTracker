@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/timeLayout"
+    android:layout_width="fill_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:id="@+id/llPluginService"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/tvPluginService"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="ANT+ Plugin Service" />
+
+        <Button
+            android:id="@+id/bPluginService"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/install" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/llRadioService"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/tvRadioService"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="ANT Radio Service" />
+
+        <Button
+            android:id="@+id/bRadioService"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/install" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/llUSBService"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/tvUSBService"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="ANT USB Service" />
+
+        <Button
+            android:id="@+id/bUSBService"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/install" />
+    </LinearLayout>
+
+    <CheckBox
+        android:id="@+id/cbDoNotAskAgain"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/do_not_check_again" />
+
+</LinearLayout>
+
