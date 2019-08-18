@@ -23,7 +23,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
 
-import com.atrainingtracker.trainingtracker.Exporter.ExportWorkoutIntentService;
+import com.atrainingtracker.trainingtracker.exporter.ExportWorkoutIntentService;
 
 
 public class NetworkReceiver extends BroadcastReceiver {

@@ -20,7 +20,7 @@ package com.atrainingtracker.banalservice.filters;
 
 import android.util.Log;
 
-import com.atrainingtracker.banalservice.Sensor.SensorType;
+import com.atrainingtracker.banalservice.sensor.SensorType;
 
 public class MaxValueFilter extends MyFilter<Number> {
     private static final String TAG = MaxValueFilter.class.getCanonicalName();

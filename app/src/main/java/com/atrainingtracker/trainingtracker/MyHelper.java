@@ -24,7 +24,7 @@ import android.net.NetworkInfo;
 import android.util.Log;
 
 import com.atrainingtracker.R;
-import com.atrainingtracker.banalservice.Sensor.SensorType;
+import com.atrainingtracker.banalservice.sensor.SensorType;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -61,10 +61,10 @@ public class MyHelper {
             HttpResponse response = httpClient.execute(httpGet, localContext);
             HttpEntity entity = response.getEntity();
             if (entity != null) {
-                InputStream instream = entity.getContent();
+                InputStream inputStream = entity.getContent();
                 int r = -1;
                 StringBuffer respStr = new StringBuffer();
-                while ((r = instream.read()) != -1)
+                while ((r = inputStream.read()) != -1)
                     respStr.append((char) r);
                 String tagOpen = "<double>";
                 String tagClose = "</double>";
@@ -74,7 +74,7 @@ public class MyHelper {
                     String value = respStr.substring(start, end);
                     result = Double.parseDouble(value);
                 }
-                instream.close();
+                inputStream.close();
             }
         } catch (ClientProtocolException e) {
         } catch (IOException e) {
@@ -97,10 +97,10 @@ public class MyHelper {
             HttpResponse response = httpClient.execute(httpGet, localContext);
             HttpEntity entity = response.getEntity();
             if (entity != null) {
-                InputStream instream = entity.getContent();
+                InputStream inputStream = entity.getContent();
                 int r = -1;
                 StringBuffer respStr = new StringBuffer();
-                while ((r = instream.read()) != -1)
+                while ((r = inputStream.read()) != -1)
                     respStr.append((char) r);
                 String tagOpen = "<elevation>";
                 String tagClose = "</elevation>";
@@ -110,7 +110,7 @@ public class MyHelper {
                     String value = respStr.substring(start, end);
                     result = Double.parseDouble(value);
                 }
-                instream.close();
+                inputStream.close();
             }
         } catch (ClientProtocolException e) {
         } catch (IOException e) {

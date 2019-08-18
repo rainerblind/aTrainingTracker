@@ -31,8 +31,8 @@ import android.util.Log;
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.BANALService.BANALServiceComm;
 import com.atrainingtracker.banalservice.BSportType;
-import com.atrainingtracker.banalservice.Sensor.SensorData;
-import com.atrainingtracker.banalservice.Sensor.SensorType;
+import com.atrainingtracker.banalservice.sensor.SensorData;
+import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.trainingtracker.MyUnits;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.getpebble.android.kit.Constants;
@@ -204,7 +204,7 @@ public class PebbleServiceBuildIn extends Service {
             Log.d(TAG, "stopPebbleWatchApp");
         }
 
-        // here, we want to deconnect, if this fails, we don't care
+        // here, we want to disconnect, if this fails, we don't care
         try {
             PebbleKit.closeAppOnPebble(getApplicationContext(), Constants.SPORTS_UUID);
         } catch (Exception e) {

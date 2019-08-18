@@ -38,5 +38,5 @@ public class FileExportFragment extends android.support.v7.preference.Preference
         setPreferencesFromResource(R.xml.prefs, rootKey);
     }
 
-    // thats all???
+    // that's all???
 }

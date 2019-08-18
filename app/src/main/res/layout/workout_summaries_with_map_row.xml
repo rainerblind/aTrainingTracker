@@ -19,6 +19,7 @@
 
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:map="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/ll_workout_summaries_row"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
@@ -107,7 +108,8 @@
                 android:id="@+id/iv_workout_summaries_export_status_file"
                 android:layout_width="10pt"
                 android:layout_height="fill_parent"
-                android:src="@drawable/export_success" />
+                android:src="@drawable/export_success"
+                tools:ignore="ContentDescription" />
 
             <TextView
                 android:id="@+id/tv_workout_summaries_export_status_file"
@@ -129,7 +131,8 @@
                 android:id="@+id/iv_workout_summaries_export_status_dropbox"
                 android:layout_width="10pt"
                 android:layout_height="fill_parent"
-                android:src="@drawable/export_failed" />
+                android:src="@drawable/export_failed"
+                tools:ignore="ContentDescription" />
 
             <TextView
                 android:id="@+id/tv_workout_summaries_export_status_dropbox"
@@ -151,7 +154,8 @@
                 android:id="@+id/iv_workout_summaries_export_status_communities"
                 android:layout_width="10pt"
                 android:layout_height="fill_parent"
-                android:src="@drawable/export_failed" />
+                android:src="@drawable/export_failed"
+                tools:ignore="ContentDescription" />
 
             <TextView
                 android:id="@+id/tv_workout_summaries_export_status_communities"

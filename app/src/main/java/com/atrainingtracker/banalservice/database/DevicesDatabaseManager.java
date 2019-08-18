@@ -30,12 +30,12 @@ import android.util.Log;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
-import com.atrainingtracker.banalservice.Devices.BikePowerSensorsHelper;
-import com.atrainingtracker.banalservice.Devices.DeviceType;
-import com.atrainingtracker.banalservice.Devices.Manufacturer;
-import com.atrainingtracker.banalservice.Devices.bluetooth_le.BTLEBikePowerDevice;
+import com.atrainingtracker.banalservice.devices.BikePowerSensorsHelper;
+import com.atrainingtracker.banalservice.devices.DeviceType;
+import com.atrainingtracker.banalservice.devices.Manufacturer;
+import com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEBikePowerDevice;
 import com.atrainingtracker.banalservice.Protocol;
-import com.atrainingtracker.banalservice.Sensor.SensorType;
+import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.helpers.BatteryStatusHelper;
 import com.atrainingtracker.banalservice.helpers.HavePressureSensor;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
@@ -342,7 +342,7 @@ public class DevicesDatabaseManager {
     public static long insertNewBluetoothDeviceIntoDB(DeviceType deviceType,
                                                       String bluetoothMACAddress,
                                                       String name,
-                                                      String manufactuer,
+                                                      String manufacturer,
                                                       int batteryPercentage,
                                                       boolean paired) {
         if (DEBUG)
@@ -375,7 +375,7 @@ public class DevicesDatabaseManager {
                 values.put(DevicesDbHelper.DEVICE_TYPE, deviceType.name());
                 values.put(DevicesDbHelper.PAIRED, paired);
                 values.put(DevicesDbHelper.NAME, name);
-                values.put(DevicesDbHelper.MANUFACTURER_NAME, manufactuer);
+                values.put(DevicesDbHelper.MANUFACTURER_NAME, manufacturer);
                 values.put(DevicesDbHelper.CALIBRATION_FACTOR, deviceType.getDefaultCalibrationFactor());
                 values.put(DevicesDbHelper.LAST_ACTIVE, getLastActiveString());
                 if (batteryPercentage >= 0) {
@@ -756,7 +756,7 @@ public class DevicesDatabaseManager {
         private static final String ANT_DEVICE_TYPE_BYTE = "deviceType";          // changed to general device type
         private static final String OWNER = "owner";               // removed
         private static final String MANUFACTURER_ID = "manufacturerID";      // changed to manufacturer string (in version 3, this is the manufacturer id as defined by ANT+)
-        private static final String LAST_BATTERY_STATUS = "lastBatteryStatus";   // changed to battery percentage  (in version 3, this is an integer that reprensts the BatteryStatus as defined by the ANT+ plugin API)
+        private static final String LAST_BATTERY_STATUS = "lastBatteryStatus";   // changed to battery percentage  (in version 3, this is an integer that represents the BatteryStatus as defined by the ANT+ plugin API)
         // old (Version 3)
         private static final String CREATE_DEVICE_DB_3 = "create table " + DEVICES_V3 + " ("
                 //+ C_ID + " int primary key autoincrement, "
@@ -894,7 +894,7 @@ public class DevicesDatabaseManager {
                 while (cursor.moveToNext()) {
                     String btAddress = cursor.getString(cursor.getColumnIndex(BT_ADDRESS));
                     int btFeature = cursor.getInt(cursor.getColumnIndex(BT_FEATURE));
-                    int sensorFlags = BTLEBikePowerDevice.btFeature2BikePowerSensorFlags(btFeature);  // tanslate BT feature to new Bike Power sensors flag
+                    int sensorFlags = BTLEBikePowerDevice.btFeature2BikePowerSensorFlags(btFeature);  // translate BT feature to new Bike Power sensors flag
 
                     if (DEBUG)
                         Log.i(TAG, "migrating btAddress=" + btAddress + ", btFeature=" + btFeature + ", flags=" + sensorFlags);

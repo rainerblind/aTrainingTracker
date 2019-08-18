@@ -18,6 +18,7 @@
   -->
 
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -35,7 +36,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:background="@android:color/transparent"
-            android:src="@drawable/research_icon" />
+            android:src="@drawable/research_icon"
+            tools:ignore="ContentDescription" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -71,7 +73,8 @@
             android:layout_gravity="center_horizontal"
             android:background="@android:color/transparent"
             android:clickable="false"
-            android:src="@drawable/ant_logo" />
+            android:src="@drawable/ant_logo"
+            tools:ignore="ContentDescription" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -99,7 +102,8 @@
             android:layout_gravity="center_horizontal"
             android:background="@android:color/transparent"
             android:clickable="false"
-            android:src="@drawable/logo_protocol_bluetooth" />
+            android:src="@drawable/logo_protocol_bluetooth"
+            tools:ignore="ContentDescription" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -113,6 +117,7 @@
         android:id="@+id/ctl_llCenter"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:orientation="vertical"
         android:layout_centerHorizontal="true"
         android:layout_centerVertical="true" />
 
@@ -145,7 +150,8 @@
             android:layout_gravity="center"
             android:background="@android:color/transparent"
             android:scaleType="fitXY"
-            android:src="@drawable/control_start" />
+            android:src="@drawable/control_start"
+            tools:ignore="ContentDescription" />
 
         <TextView
             android:id="@+id/tvStart"
@@ -174,7 +180,8 @@
             android:layout_gravity="center"
             android:background="@android:color/transparent"
             android:scaleType="fitXY"
-            android:src="@drawable/control_pause" />
+            android:src="@drawable/control_pause"
+            tools:ignore="ContentDescription" />
 
         <TextView
             android:id="@+id/tvPause"
@@ -209,7 +216,8 @@
                 android:layout_gravity="center"
                 android:background="@android:color/transparent"
                 android:scaleType="fitXY"
-                android:src="@drawable/control_start" />
+                android:src="@drawable/control_start"
+                tools:ignore="ContentDescription" />
 
             <TextView
                 android:id="@+id/tvResume"
@@ -234,7 +242,8 @@
                 android:layout_gravity="center"
                 android:background="@android:color/transparent"
                 android:scaleType="fitXY"
-                android:src="@drawable/control_stop" />
+                android:src="@drawable/control_stop"
+                tools:ignore="ContentDescription" />
 
             <TextView
                 android:id="@+id/tvStop"

@@ -49,13 +49,13 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/ExportName"></TextView>
+                        android:text="@string/ExportName" />
 
                     <EditText
                         android:id="@+id/editExportName"
                         android:layout_width="fill_parent"
                         android:layout_height="wrap_content"
-                        android:layout_weight="2"></EditText>
+                        android:layout_weight="2" />
                 </LinearLayout>
 
                 <Button
@@ -83,12 +83,12 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/Sport"></TextView>
+                        android:text="@string/Sport" />
 
                     <Spinner
                         android:id="@+id/spinnerSport"
                         android:layout_width="fill_parent"
-                        android:layout_height="wrap_content"></Spinner>
+                        android:layout_height="wrap_content" />
                 </LinearLayout>
 
                 <!-- equipment -->
@@ -102,12 +102,12 @@
                         android:id="@+id/tvEquipment"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/Equipment"></TextView>
+                        android:text="@string/Equipment" />
 
                     <Spinner
                         android:id="@+id/spinnerEquipment"
                         android:layout_width="fill_parent"
-                        android:layout_height="wrap_content"></Spinner>
+                        android:layout_height="wrap_content" />
                 </LinearLayout>
             </LinearLayout>
 
@@ -159,13 +159,13 @@
                 android:layout_width="wrap_content"
                 android:layout_height="0dp"
                 android:layout_weight="1"
-                android:text="@string/Description"></TextView>
+                android:text="@string/Description" />
 
             <EditText
                 android:id="@+id/editDescription"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/DescriptionHint"></EditText>
+                android:hint="@string/DescriptionHint" />
 
             <!-- less important fields -->
 
@@ -173,25 +173,25 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/Goal"></TextView>
+                android:text="@string/Goal" />
 
             <EditText
                 android:id="@+id/editGoal"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/GoalHint"></EditText>
+                android:hint="@string/GoalHint" />
 
             <!-- method -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/Method"></TextView>
+                android:text="@string/Method" />
 
             <EditText
                 android:id="@+id/editMethod"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/MethodHint"></EditText>
+                android:hint="@string/MethodHint" />
 
             <!-- separator -->
             <View
@@ -762,13 +762,13 @@
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:text="@string/buttonSaveWorkoutText"
-        android:textAppearance="?android:attr/textAppearanceMedium"></Button>
+        android:textAppearance="?android:attr/textAppearanceMedium" />
 
     <Button
         android:id="@+id/buttonDeleteWorkout"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:text="@string/buttonDeleteWorkoutText"
-        android:textAppearance="?android:attr/textAppearanceMedium"></Button>
+        android:textAppearance="?android:attr/textAppearanceMedium" />
 
 </LinearLayout>

@@ -18,6 +18,7 @@
   -->
 
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
     android:orientation="vertical"
@@ -107,7 +108,8 @@
                 android:id="@+id/ivFile"
                 android:layout_width="10pt"
                 android:layout_height="fill_parent"
-                android:src="@drawable/export_success" />
+                android:src="@drawable/export_success"
+                tools:ignore="ContentDescription" />
 
             <TextView
                 android:id="@+id/tvFile"
@@ -129,7 +131,8 @@
                 android:id="@+id/ivDropbox"
                 android:layout_width="10pt"
                 android:layout_height="fill_parent"
-                android:src="@drawable/export_failed" />
+                android:src="@drawable/export_failed"
+                tools:ignore="ContentDescription" />
 
             <TextView
                 android:id="@+id/tvDropbox"
@@ -151,7 +154,8 @@
                 android:id="@+id/ivCommunities"
                 android:layout_width="10pt"
                 android:layout_height="fill_parent"
-                android:src="@drawable/export_failed" />
+                android:src="@drawable/export_failed"
+                tools:ignore="ContentDescription" />
 
             <TextView
                 android:id="@+id/tvCommunities"

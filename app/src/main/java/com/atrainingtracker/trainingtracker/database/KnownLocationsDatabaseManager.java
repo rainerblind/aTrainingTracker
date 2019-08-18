@@ -248,14 +248,14 @@ public class KnownLocationsDatabaseManager {
         return result;
     }
 
-    public static List<NamedLatLng> getLocationsList(ExtremumType extremumType) {
+    public static List<NamedLatLng> getLocationsList(ExtremaType extremaType) {
         List<NamedLatLng> startLocations = new LinkedList<>();
 
         SQLiteDatabase db = getInstance().getOpenDatabase();
         Cursor cursor = db.query(KnownLocationsDbHelper.TABLE,
                 null,
-                KnownLocationsDbHelper.EXTREMUM_TYPE + "=?",
-                new String[]{extremumType.name()},
+                KnownLocationsDbHelper.EXTREMA_TYPE + "=?",
+                new String[]{extremaType.name()},
                 null,
                 null,
                 null,
@@ -330,7 +330,7 @@ public class KnownLocationsDatabaseManager {
         public static final String TABLE = "StartLocation2Altitude";
         public static final String C_ID = BaseColumns._ID;
         public static final String NAME = "name";
-        public static final String EXTREMUM_TYPE = "extremumType";
+        public static final String EXTREMA_TYPE = "extremumType";
         public static final String ALTITUDE = "altitude";
         public static final String LONGITUDE = "longitude";
         public static final String LATITUDE = "latitude";
@@ -355,7 +355,7 @@ public class KnownLocationsDatabaseManager {
         protected static final String CREATE_TABLE_V3 = "create table " + TABLE + " ("
                 + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                 + NAME + " text,"
-                + EXTREMUM_TYPE + " text,"          // new in version 3 but not yet used!
+                + EXTREMA_TYPE + " text,"          // new in version 3 but not yet used!
                 + ALTITUDE + " int,"
                 + LONGITUDE + " real,"
                 + LATITUDE + " real,"
@@ -406,10 +406,10 @@ public class KnownLocationsDatabaseManager {
             }
 
             if (oldVersion < 3) {
-                addColumn(db, EXTREMUM_TYPE, "text");
+                addColumn(db, EXTREMA_TYPE, "text");
 
                 ContentValues contentValues = new ContentValues();
-                contentValues.put(EXTREMUM_TYPE, ExtremumType.START.name());
+                contentValues.put(EXTREMA_TYPE, ExtremaType.START.name());
                 db.update(TABLE, contentValues, null, null);
             }
         }

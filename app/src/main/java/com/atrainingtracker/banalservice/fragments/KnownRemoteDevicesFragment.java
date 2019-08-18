@@ -24,7 +24,7 @@ import android.util.Log;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
-import com.atrainingtracker.banalservice.Devices.DeviceType;
+import com.atrainingtracker.banalservice.devices.DeviceType;
 import com.atrainingtracker.banalservice.Protocol;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager.DevicesDbHelper;
 
@@ -102,7 +102,7 @@ public class KnownRemoteDevicesFragment extends RemoteDevicesFragment {
     // onAttach
     // onCreate
     // onCreateView
-    // onActivityCreatec
+    // onActivityCreated
     // onStart
     // onResume
 

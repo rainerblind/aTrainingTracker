@@ -45,7 +45,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     // The different tables
     public static final String EQUIPMENT = "Equipment";
     public static final String LINKS = "Links";
-    // colums
+    // columns
     public static final String C_ID = BaseColumns._ID;
     public static final String EQUIPMENT_ID = "EquipmentId";
     public static final String NAME = "Name";
@@ -79,7 +79,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     }
 
     public List<String> getLinkedEquipment(int workoutId) {
-        if (DEBUG) Log.d(TAG, "getLinkedEquipment, wokroutId=" + workoutId);
+        if (DEBUG) Log.d(TAG, "getLinkedEquipment, workoutId=" + workoutId);
 
         return getLinkedEquipment(new ActiveDevicesDbHelper(mContext).getDatabaseIdsOfActiveDevices(workoutId));
     }

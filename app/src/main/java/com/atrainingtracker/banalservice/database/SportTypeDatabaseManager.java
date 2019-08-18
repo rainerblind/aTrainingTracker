@@ -281,7 +281,7 @@ public class SportTypeDatabaseManager {
     }
 
     public static String getStravaName(long id) {
-        return getString(id, SportType.STARVA_NAME);
+        return getString(id, SportType.STRAVA_NAME);
     }
 
     // public String toString() { TODO  }
@@ -530,7 +530,7 @@ public class SportTypeDatabaseManager {
         public static final String BASE_SPORT_TYPE = "baseSportType";
         public static final String GOLDEN_CHEETAH_NAME = "gcName";
         public static final String TCX_NAME = "tcxName";
-        public static final String STARVA_NAME = "stravaName";
+        public static final String STRAVA_NAME = "stravaName";
         public static final String RUNKEEPER_NAME = "runkeeperName";
         public static final String TRAINING_PEAKS_NAME = "trainingPeaksName";
         public static final String MIN_AVG_SPEED = "minSpeed";
@@ -539,7 +539,7 @@ public class SportTypeDatabaseManager {
         public static final BSportType DEFAULT_BASE_SPORT_TYPE = BSportType.UNKNOWN;
         public static final String DEFAULT_GOLDEN_CHEETAH_NAME = "";
         public static final String DEFAULT_TCX_NAME = "Other";
-        public static final String DEFAULT_STARVA_NAME = "";
+        public static final String DEFAULT_STRAVA_NAME = "";
         public static final String DEFAULT_RUNKEEPER_NAME = "Other";
         public static final String DEFAULT_TRAINING_PEAKS_NAME = "Other";
         public static final double DEFAULT_MIN_AVG_SPEED = 0.0;
@@ -559,7 +559,7 @@ public class SportTypeDatabaseManager {
                 + SportType.BASE_SPORT_TYPE + " text, "
                 + SportType.GOLDEN_CHEETAH_NAME + " text, "
                 + SportType.TCX_NAME + " text, "
-                + SportType.STARVA_NAME + " text, "
+                + SportType.STRAVA_NAME + " text, "
                 + SportType.RUNKEEPER_NAME + " text, "
                 + SportType.TRAINING_PEAKS_NAME + " text, "
                 + SportType.MIN_AVG_SPEED + " real, "
@@ -598,7 +598,7 @@ public class SportTypeDatabaseManager {
             cv.put(SportType.BASE_SPORT_TYPE, TTSportType.OTHER.getBSportType().name());
             cv.put(SportType.GOLDEN_CHEETAH_NAME, TTSportType.OTHER.getGcName());
             cv.put(SportType.TCX_NAME, TTSportType.OTHER.getTcxName());
-            cv.put(SportType.STARVA_NAME, TTSportType.OTHER.getStravaName());
+            cv.put(SportType.STRAVA_NAME, TTSportType.OTHER.getStravaName());
             cv.put(SportType.RUNKEEPER_NAME, TTSportType.OTHER.getRunkeeperName());
             cv.put(SportType.TRAINING_PEAKS_NAME, TTSportType.OTHER.getTrainingPeaksName());
             cv.put(SportType.MIN_AVG_SPEED, 0.0);
@@ -612,7 +612,7 @@ public class SportTypeDatabaseManager {
             cv.put(SportType.BASE_SPORT_TYPE, TTSportType.RUN.getBSportType().name());
             cv.put(SportType.GOLDEN_CHEETAH_NAME, TTSportType.RUN.getGcName());
             cv.put(SportType.TCX_NAME, TTSportType.RUN.getTcxName());
-            cv.put(SportType.STARVA_NAME, TTSportType.RUN.getStravaName());
+            cv.put(SportType.STRAVA_NAME, TTSportType.RUN.getStravaName());
             cv.put(SportType.RUNKEEPER_NAME, TTSportType.RUN.getRunkeeperName());
             cv.put(SportType.TRAINING_PEAKS_NAME, TTSportType.RUN.getTrainingPeaksName());
             cv.put(SportType.MIN_AVG_SPEED, TrainingApplication.getMaxWalkSpeed_mps());
@@ -626,7 +626,7 @@ public class SportTypeDatabaseManager {
             cv.put(SportType.BASE_SPORT_TYPE, TTSportType.BIKE.getBSportType().name());
             cv.put(SportType.GOLDEN_CHEETAH_NAME, TTSportType.BIKE.getGcName());
             cv.put(SportType.TCX_NAME, TTSportType.BIKE.getTcxName());
-            cv.put(SportType.STARVA_NAME, TTSportType.BIKE.getStravaName());
+            cv.put(SportType.STRAVA_NAME, TTSportType.BIKE.getStravaName());
             cv.put(SportType.RUNKEEPER_NAME, TTSportType.BIKE.getRunkeeperName());
             cv.put(SportType.TRAINING_PEAKS_NAME, TTSportType.BIKE.getTrainingPeaksName());
             cv.put(SportType.MIN_AVG_SPEED, TrainingApplication.getMaxMTBSpeed_mps());
@@ -640,7 +640,7 @@ public class SportTypeDatabaseManager {
             cv.put(SportType.BASE_SPORT_TYPE, TTSportType.WALK.getBSportType().name());
             cv.put(SportType.GOLDEN_CHEETAH_NAME, TTSportType.WALK.getGcName());
             cv.put(SportType.TCX_NAME, TTSportType.WALK.getTcxName());
-            cv.put(SportType.STARVA_NAME, TTSportType.WALK.getStravaName());
+            cv.put(SportType.STRAVA_NAME, TTSportType.WALK.getStravaName());
             cv.put(SportType.RUNKEEPER_NAME, TTSportType.WALK.getRunkeeperName());
             cv.put(SportType.TRAINING_PEAKS_NAME, TTSportType.WALK.getTrainingPeaksName());
             cv.put(SportType.MIN_AVG_SPEED, TrainingApplication.getMinWalkSpeed_mps());
@@ -655,7 +655,7 @@ public class SportTypeDatabaseManager {
             cv.put(SportType.BASE_SPORT_TYPE, TTSportType.MTB.getBSportType().name());
             cv.put(SportType.GOLDEN_CHEETAH_NAME, TTSportType.MTB.getGcName());
             cv.put(SportType.TCX_NAME, TTSportType.MTB.getTcxName());
-            cv.put(SportType.STARVA_NAME, TTSportType.MTB.getStravaName());
+            cv.put(SportType.STRAVA_NAME, TTSportType.MTB.getStravaName());
             cv.put(SportType.RUNKEEPER_NAME, TTSportType.MTB.getRunkeeperName());
             cv.put(SportType.TRAINING_PEAKS_NAME, TTSportType.MTB.getTrainingPeaksName());
             cv.put(SportType.MIN_AVG_SPEED, TrainingApplication.getMaxRunSpeed_mps());

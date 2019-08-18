@@ -39,12 +39,12 @@ import android.widget.TextView;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.ActivityType;
-import com.atrainingtracker.banalservice.Sensor.SensorType;
+import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 import com.atrainingtracker.banalservice.fragments.ConfigureFilterDialogFragment;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
-import com.atrainingtracker.trainingtracker.Views.DeviceIdAndNameArrayAdapter;
-import com.atrainingtracker.trainingtracker.Views.SensorArrayAdapter;
+import com.atrainingtracker.trainingtracker.views.DeviceIdAndNameArrayAdapter;
+import com.atrainingtracker.trainingtracker.views.SensorArrayAdapter;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
 
 import java.util.LinkedList;

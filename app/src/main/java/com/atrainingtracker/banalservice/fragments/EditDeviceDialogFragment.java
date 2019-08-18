@@ -44,14 +44,14 @@ import android.widget.TextView;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
-import com.atrainingtracker.banalservice.Devices.BikePowerSensorsHelper;
-import com.atrainingtracker.banalservice.Devices.DeviceType;
+import com.atrainingtracker.banalservice.devices.BikePowerSensorsHelper;
+import com.atrainingtracker.banalservice.devices.DeviceType;
 import com.atrainingtracker.banalservice.Protocol;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager.DevicesDbHelper;
 import com.atrainingtracker.banalservice.helpers.BatteryStatusHelper;
 import com.atrainingtracker.banalservice.helpers.UIHelper;
-import com.atrainingtracker.trainingtracker.Views.MultiSelectionSpinner;
+import com.atrainingtracker.trainingtracker.views.MultiSelectionSpinner;
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper;
 
 import java.util.List;
@@ -388,7 +388,7 @@ public class EditDeviceDialogFragment
         builder.setPositiveButton(getString(R.string.OK), new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int id) {
-                saveEveryting();
+                saveEverything();
             }
         });
         builder.setNegativeButton(getString(R.string.Cancel), new DialogInterface.OnClickListener() {
@@ -400,7 +400,7 @@ public class EditDeviceDialogFragment
 
     }
 
-    protected void saveEveryting() {
+    protected void saveEverything() {
         if (DEBUG) Log.d(TAG, "saveEverything");
 
 

@@ -32,10 +32,10 @@ import android.widget.TableRow;
 import android.widget.TextView;
 
 import com.atrainingtracker.R;
-import com.atrainingtracker.trainingtracker.Exporter.ExportManager;
-import com.atrainingtracker.trainingtracker.Exporter.ExportStatus;
-import com.atrainingtracker.trainingtracker.Exporter.ExportType;
-import com.atrainingtracker.trainingtracker.Exporter.FileFormat;
+import com.atrainingtracker.trainingtracker.exporter.ExportManager;
+import com.atrainingtracker.trainingtracker.exporter.ExportStatus;
+import com.atrainingtracker.trainingtracker.exporter.ExportType;
+import com.atrainingtracker.trainingtracker.exporter.FileFormat;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;

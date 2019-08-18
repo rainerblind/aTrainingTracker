@@ -21,5 +21,5 @@
     <item
         android:id="@+id/itemDeleteOldWorkouts"
         android:icon="@android:drawable/ic_menu_preferences"
-        android:title="@string/deleteOldWorkouts"></item>
+        android:title="@string/deleteOldWorkouts" />
 </menu>

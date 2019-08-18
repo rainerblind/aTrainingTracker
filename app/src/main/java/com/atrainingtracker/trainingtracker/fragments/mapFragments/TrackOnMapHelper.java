@@ -26,7 +26,7 @@ import android.support.annotation.Nullable;
 import android.util.Log;
 import android.view.View;
 
-import com.atrainingtracker.banalservice.Sensor.SensorType;
+import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
@@ -74,10 +74,10 @@ public class TrackOnMapHelper {
         LatLng latLng;
 
         while (cursor.move(roughness.stepSize)) {
-            if (dataValid(cursor, trackType.getLatitudeName()) && dataValid(cursor, trackType.getLongtudeName())) {
+            if (dataValid(cursor, trackType.getLatitudeName()) && dataValid(cursor, trackType.getLongitudeName())) {
                 // get latitude and longitude from the database and create new LatLng object
                 latLng = new LatLng(cursor.getDouble(cursor.getColumnIndex(trackType.getLatitudeName())),
-                        cursor.getDouble(cursor.getColumnIndex(trackType.getLongtudeName())));
+                        cursor.getDouble(cursor.getColumnIndex(trackType.getLongitudeName())));
                 polylineOptions.add(latLng);
             }
         }
@@ -248,7 +248,7 @@ public class TrackOnMapHelper {
             return latitudeName;
         }
 
-        public String getLongtudeName() {
+        public String getLongitudeName() {
             String longitudeName = SensorType.LONGITUDE.name();
 
             if (source != null) {

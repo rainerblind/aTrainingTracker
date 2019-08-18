@@ -19,6 +19,7 @@
 
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/llSegmentLeaderboardRow"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -28,7 +29,8 @@
         android:id="@+id/ivSegmentAthletePicture"
         android:layout_width="80dp"
         android:layout_height="80dp"
-        app:srcCompat="@drawable/logo_512" />
+        app:srcCompat="@drawable/logo_512"
+        tools:ignore="ContentDescription" />
 
     <LinearLayout
         android:layout_width="match_parent"

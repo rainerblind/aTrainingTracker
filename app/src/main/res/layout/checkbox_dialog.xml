@@ -28,5 +28,5 @@
         android:id="@+id/cbSkip"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/do_not_show_again"></CheckBox>
+        android:text="@string/do_not_show_again" />
 </LinearLayout>

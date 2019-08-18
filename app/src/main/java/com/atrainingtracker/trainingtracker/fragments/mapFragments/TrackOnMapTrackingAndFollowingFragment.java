@@ -65,7 +65,7 @@ public class TrackOnMapTrackingAndFollowingFragment
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
-    // livecycle methods
+    // lifecycle methods
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     @Override
@@ -144,7 +144,7 @@ public class TrackOnMapTrackingAndFollowingFragment
         }
 
         private void getBestAvailableProvider() {
-            /* The preffered way of specifying the location provider (e.g. GPS, NETWORK) to use
+            /* The preferred way of specifying the location provider (e.g. GPS, NETWORK) to use
              * is to ask the Location Manager for the one that best satisfies our criteria.
              * By passing the 'true' boolean we ask for the best available (enabled) provider. */
             bestAvailableProvider = locationManager.getBestProvider(criteria, true);

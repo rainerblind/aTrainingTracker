@@ -34,9 +34,9 @@ import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.ActivityType;
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.BANALService.BANALServiceComm;
-import com.atrainingtracker.banalservice.Sensor.SensorData;
-import com.atrainingtracker.banalservice.Sensor.SensorType;
-import com.atrainingtracker.banalservice.Sensor.formater.DistanceFormater;
+import com.atrainingtracker.banalservice.sensor.SensorData;
+import com.atrainingtracker.banalservice.sensor.SensorType;
+import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter;
 import com.atrainingtracker.trainingtracker.MyHelper;
 import com.atrainingtracker.trainingtracker.MyUnits;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
@@ -171,7 +171,7 @@ public class PebbleService extends Service {
     protected int mRows = 3;
     protected boolean mReceiversRegistered = false;
     protected Number prevLapDistance = 0;
-    protected DistanceFormater distanceFormater = new DistanceFormater();
+    protected DistanceFormatter distanceFormatter = new DistanceFormatter();
     private BANALServiceComm banalService;
     private List<SensorType> mSensorTypeList = new LinkedList<SensorType>();
     private final BroadcastReceiver mConfigurePebbleWatchAppReceiver = new BroadcastReceiver() {
@@ -181,7 +181,7 @@ public class PebbleService extends Service {
             configurePebbleWatchApp();
         }
     };
-    // TODO: use handler, scheduler and runnalbel as in TrackerService instead of this construct???
+    // TODO: use handler, scheduler and runnable as in TrackerService instead of this construct???
     private final BroadcastReceiver mUpdatePebbleReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
             if (DEBUG) Log.d(TAG, "mUpdatePebbleReceiver.onReceive()");
@@ -241,7 +241,7 @@ public class PebbleService extends Service {
                         sendBroadcast(new Intent(TrainingApplication.REQUEST_PAUSE_TRACKING));
                     }
                 } else {
-                    if (DEBUG) Log.d(TAG, "WTF: something unknown happend!");
+                    if (DEBUG) Log.d(TAG, "WTF: something unknown happened!");
                 }
             }
 
@@ -519,7 +519,7 @@ public class PebbleService extends Service {
             Log.d(TAG, "stopPebbleWatchApp");
         }
 
-        // here, we want to deconnect, if this fails, we don't care
+        // here, we want to disconnect, if this fails, we don't care
         try {
             PebbleKit.closeAppOnPebble(this, TRAINING_TRACKER_UUID);
         } catch (Exception e) {

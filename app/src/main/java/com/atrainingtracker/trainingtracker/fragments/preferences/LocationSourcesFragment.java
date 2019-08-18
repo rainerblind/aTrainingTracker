@@ -38,5 +38,5 @@ public class LocationSourcesFragment extends android.support.v7.preference.Prefe
         setPreferencesFromResource(R.xml.prefs, rootKey);
     }
 
-    // thats all???
+    // that's all???
 }

@@ -49,7 +49,7 @@ public class SetCalibrationFactorDialogFragment extends DialogFragment {
     private String mCalibrationFactor = 1.0 + "";
     private double mOldCalibrationFactor = 1;
     private EditText etCalibrationFactor;
-    private EditText etMeassured;
+    private EditText etMeasured;
     private EditText etCorrect;
     private NewCalibrationFactorListener mNewCalibrationFactorListener = null;
     private TextWatcher calibrationDistancesChangedWatcher = new TextWatcher() {
@@ -57,10 +57,10 @@ public class SetCalibrationFactorDialogFragment extends DialogFragment {
         @Override
         public void afterTextChanged(Editable s) {
             if (DEBUG) Log.d(TAG, "afterTextChanged");
-            double meassuredDistance = MyHelper.string2Double(etMeassured.getText().toString());
+            double measuredDistance = MyHelper.string2Double(etMeasured.getText().toString());
             double correctDistance = MyHelper.string2Double(etCorrect.getText().toString());
 
-            etCalibrationFactor.setText(mOldCalibrationFactor / meassuredDistance * correctDistance + "");
+            etCalibrationFactor.setText(mOldCalibrationFactor / measuredDistance * correctDistance + "");
         }
 
         @Override
@@ -115,8 +115,8 @@ public class SetCalibrationFactorDialogFragment extends DialogFragment {
 
         final View mainDialog = inflater.inflate(R.layout.dialog_set_calibration_factor, null);
 
-        etMeassured = mainDialog.findViewById(R.id.etMeassured);
-        etMeassured.addTextChangedListener(calibrationDistancesChangedWatcher);
+        etMeasured = mainDialog.findViewById(R.id.etMeassured);
+        etMeasured.addTextChangedListener(calibrationDistancesChangedWatcher);
 
         etCorrect = mainDialog.findViewById(R.id.etCorrect);
         etCorrect.addTextChangedListener(calibrationDistancesChangedWatcher);

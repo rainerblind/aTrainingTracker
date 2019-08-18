@@ -71,7 +71,7 @@ public class StravaSegmentsHelper {
     }
 
     public void getSegmentLeaderboard(long segmentId) {
-        if (DEBUG) Log.i(TAG, "getSegmentSeaderboard");
+        if (DEBUG) Log.i(TAG, "getSegmentLeaderboard");
 
         if (((TrainingApplication) mContext.getApplicationContext()).isLeaderboardUpdating(segmentId)) {
 

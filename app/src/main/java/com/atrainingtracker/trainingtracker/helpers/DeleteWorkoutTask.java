@@ -27,7 +27,7 @@ import android.os.AsyncTask;
 import android.util.Log;
 
 import com.atrainingtracker.R;
-import com.atrainingtracker.trainingtracker.Exporter.ExportManager;
+import com.atrainingtracker.trainingtracker.exporter.ExportManager;
 import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
@@ -35,7 +35,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseMan
 
 
 public class DeleteWorkoutTask extends AsyncTask<Long, String, Boolean> {
-    public static final String FINISHED_DELETING = "de.rainerblind.trainingtraccker.helpers.DeleteWorkoutTask.FINISHED_DELETING";
+    public static final String FINISHED_DELETING = "de.rainerblind.trainingtracker.helpers.DeleteWorkoutTask.FINISHED_DELETING";
     private static final String TAG = "DeleteWorkoutTask";
     private static final boolean DEBUG = false;
     private ProgressDialog progressDialog;
@@ -105,7 +105,7 @@ public class DeleteWorkoutTask extends AsyncTask<Long, String, Boolean> {
             if (DEBUG) Log.d(TAG, "deleting from WorkoutSummaries");
             dbSummaries.delete(WorkoutSummaries.TABLE, WorkoutSummaries.C_ID + "=?", new String[]{workoutId + ""});
             dbSummaries.delete(WorkoutSummaries.TABLE_ACCUMULATED_SENSORS, WorkoutSummaries.WORKOUT_ID + "=?", new String[]{workoutId + ""});
-            dbSummaries.delete(WorkoutSummaries.TABLE_EXTREMUM_VALUES, WorkoutSummaries.WORKOUT_ID + "=?", new String[]{workoutId + ""});
+            dbSummaries.delete(WorkoutSummaries.TABLE_EXTREMA_VALUES, WorkoutSummaries.WORKOUT_ID + "=?", new String[]{workoutId + ""});
 
             // delete from WorkoutSamples
             if (DEBUG) Log.d(TAG, "deleting from WorkoutSamples");

@@ -61,7 +61,7 @@ public abstract class BaseMapFragment
     protected GoogleMap mMap;
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
-    // livecycle methods
+    // lifecycle methods
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     // onAttach()
@@ -172,11 +172,11 @@ public abstract class BaseMapFragment
         }
 
         Bitmap marker = ((BitmapDrawable) getResources().getDrawable(drawableId)).getBitmap();
-        Bitmap markerscaled = Bitmap.createScaledBitmap(marker, (int) (marker.getWidth() * scale), (int) (marker.getHeight() * scale), false);
+        Bitmap scaledMarker = Bitmap.createScaledBitmap(marker, (int) (marker.getWidth() * scale), (int) (marker.getHeight() * scale), false);
 
         return mMap.addMarker(new MarkerOptions()
                 .position(position)
-                .icon(BitmapDescriptorFactory.fromBitmap(markerscaled)));
+                .icon(BitmapDescriptorFactory.fromBitmap(scaledMarker)));
     }
 
     protected Polyline addPolyline(List<LatLng> latLngs, int color) {

@@ -29,7 +29,7 @@ import android.support.v7.preference.PreferenceManager;
 import android.util.Log;
 
 import com.atrainingtracker.R;
-import com.atrainingtracker.trainingtracker.Exporter.FileFormat;
+import com.atrainingtracker.trainingtracker.exporter.FileFormat;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 
 
@@ -56,7 +56,7 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
 
         mUnitPref = (ListPreference) getPreferenceScreen().findPreference(TrainingApplication.SP_UNITS);
 
-        mAthleteNamePref = (EditTextPreference) getPreferenceScreen().findPreference(TrainingApplication.SP_ATHLETHE_NAME);
+        mAthleteNamePref = (EditTextPreference) getPreferenceScreen().findPreference(TrainingApplication.SP_ATHLETE_NAME);
         mSamplingTimePref = (EditTextPreference) getPreferenceScreen().findPreference(TrainingApplication.SP_SAMPLING_TIME);
         mSearchRoundsPref = (EditTextPreference) getPreferenceScreen().findPreference(TrainingApplication.SP_NUMBER_OF_SEARCH_TRIES);
 
@@ -113,7 +113,7 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
 
     @Override
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
-        if (TrainingApplication.SP_ATHLETHE_NAME.equals(key)) {
+        if (TrainingApplication.SP_ATHLETE_NAME.equals(key)) {
             mAthleteNamePref.setSummary(TrainingApplication.getAthleteName());
         }
 

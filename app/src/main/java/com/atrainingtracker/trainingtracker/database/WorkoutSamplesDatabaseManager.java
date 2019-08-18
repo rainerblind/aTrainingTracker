@@ -26,7 +26,7 @@ import android.location.Location;
 import android.provider.BaseColumns;
 import android.util.Log;
 
-import com.atrainingtracker.banalservice.Sensor.SensorType;
+import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
 import com.google.android.gms.maps.model.LatLng;
@@ -60,14 +60,14 @@ public class WorkoutSamplesDatabaseManager {
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // some high level helper methods
     ////////////////////////////////////////////////////////////////////////////////////////////////
-    public static Double calcExtremumValue(String baseFileName, ExtremumType extremumType, SensorType sensorType) {
+    public static Double calcExtremaValue(String baseFileName, ExtremaType extremaType, SensorType sensorType) {
         if (DEBUG)
-            Log.i(TAG, "calcExtremumValue(" + baseFileName + ", " + extremumType.name() + ", " + sensorType.name() + ")");
+            Log.i(TAG, "calcExtremaValue(" + baseFileName + ", " + extremaType.name() + ", " + sensorType.name() + ")");
 
         // first, a special case: when asked to calc the values for the pace,
-        // we return the inverse of the corresponding extremum value of the speed.
+        // we return the inverse of the corresponding extrema value of the speed.
         if (sensorType == SensorType.PACE_spm) {
-            Double speed = calcExtremumValue(baseFileName, extremumType, SensorType.SPEED_mps);
+            Double speed = calcExtremaValue(baseFileName, extremaType, SensorType.SPEED_mps);
             if (speed != null) {
                 return 1 / speed;
             } else {
@@ -77,7 +77,7 @@ public class WorkoutSamplesDatabaseManager {
 
         // next special case: average speed.
         // here, we simply use the time and distance to calc the average speed
-        if ((extremumType == ExtremumType.AVG) & (sensorType == SensorType.SPEED_mps)) {
+        if ((extremaType == ExtremaType.AVG) & (sensorType == SensorType.SPEED_mps)) {
             if (DEBUG) Log.i(TAG, "calculating average speed based on distance and active time");
 
             Double distance = WorkoutSummariesDatabaseManager.getInstance().getDouble(baseFileName, WorkoutSummaries.DISTANCE_TOTAL_m);
@@ -95,18 +95,18 @@ public class WorkoutSamplesDatabaseManager {
 
 
         // in all other cases, we let sqlite do the job
-        Double extremumValue = null;
+        Double extremaValue = null;
         Cursor cursor = null;
         SQLiteDatabase db = getInstance().getOpenDatabase();
 
         // it might be possible that the corresponding sensor is not a column of the database, so we first check this
         if (existsColumnInTable(db, getTableName(baseFileName), sensorType.name())) {
 
-            switch (extremumType) {
+            switch (extremaType) {
                 case MAX:
                 case AVG:
                 case MIN:
-                    String[] columns = new String[]{extremumType.name() + "(" + sensorType.name() + ")"};
+                    String[] columns = new String[]{extremaType.name() + "(" + sensorType.name() + ")"};
 
                     cursor = db.query(getTableName(baseFileName),
                             columns,  // columns,
@@ -115,7 +115,7 @@ public class WorkoutSamplesDatabaseManager {
                             null, null, null); // groupBy, having, orderBy)
 
                     cursor.moveToFirst();
-                    extremumValue = cursor.getDouble(0);
+                    extremaValue = cursor.getDouble(0);
                     break;
 
                 case START:
@@ -127,10 +127,10 @@ public class WorkoutSamplesDatabaseManager {
                             null,
                             null);  // sorting?
 
-                    while (cursor.moveToNext() && extremumValue == null) {
+                    while (cursor.moveToNext() && extremaValue == null) {
                         if (dataValid(cursor, sensorType.name())) {
                             if (DEBUG) Log.i(TAG, "got start value");
-                            extremumValue = cursor.getDouble(cursor.getColumnIndex(sensorType.name()));
+                            extremaValue = cursor.getDouble(cursor.getColumnIndex(sensorType.name()));
                         }
                     }
                     break;
@@ -145,10 +145,10 @@ public class WorkoutSamplesDatabaseManager {
                             null);  // sorting?
 
                     cursor.moveToLast();
-                    while (cursor.moveToPrevious() && extremumValue == null) {
+                    while (cursor.moveToPrevious() && extremaValue == null) {
                         if (dataValid(cursor, sensorType.name())) {
                             if (DEBUG) Log.i(TAG, "got end location");
-                            extremumValue = cursor.getDouble(cursor.getColumnIndex(sensorType.name()));
+                            extremaValue = cursor.getDouble(cursor.getColumnIndex(sensorType.name()));
                         }
                     }
                     break;
@@ -160,8 +160,8 @@ public class WorkoutSamplesDatabaseManager {
             cursor.close();
         }
 
-        if (DEBUG) Log.i(TAG, "extremumValue: " + extremumValue);
-        return extremumValue;
+        if (DEBUG) Log.i(TAG, "extremaValue: " + extremaValue);
+        return extremaValue;
     }
 
     // since this method goes through all? samples, this might take long.
@@ -283,9 +283,9 @@ public class WorkoutSamplesDatabaseManager {
         return newPoint;
     }
 
-    public static LatLngValue getExtremumPosition(long workoutId, SensorType sensorType, ExtremumType extremumType) {
+    public static LatLngValue getExtremaPosition(long workoutId, SensorType sensorType, ExtremaType extremaType) {
         if (DEBUG)
-            Log.i(TAG, "getExtemumPosition for " + extremumType.name() + " " + sensorType.name());
+            Log.i(TAG, "getExtemaPosition for " + extremaType.name() + " " + sensorType.name());
 
         // TODO: obviously, this does not make sense for AVG
 
@@ -294,19 +294,19 @@ public class WorkoutSamplesDatabaseManager {
         // WorkoutSummariesDbHelper summariesDbHelper = new WorkoutSummariesDbHelper(mContext);
         String baseFileName = WorkoutSummariesDatabaseManager.getBaseFileName(workoutId);
 
-        // first, get the extremum value
-        Double extremumValue = WorkoutSummariesDatabaseManager.getExtremumValue(workoutId, sensorType, extremumType);
-        if (DEBUG) Log.i(TAG, "got " + extremumValue);
+        // first, get the extrema value
+        Double extremaValue = WorkoutSummariesDatabaseManager.getExtremaValue(workoutId, sensorType, extremaType);
+        if (DEBUG) Log.i(TAG, "got " + extremaValue);
 
-        // if there is an extemum value, we look for its location
-        if (extremumValue != null) {
+        // if there is an extrema value, we look for its location
+        if (extremaValue != null) {
 
             WorkoutSamplesDatabaseManager databaseManager = WorkoutSamplesDatabaseManager.getInstance();
             SQLiteDatabase samplesDb = databaseManager.getOpenDatabase();
             Cursor cursor = null;
 
-            // depending on the extremumType, there are two alternative ways to find the corresponding row
-            switch (extremumType) {
+            // depending on the extremaType, there are two alternative ways to find the corresponding row
+            switch (extremaType) {
                 case MIN:
                 case MAX:
                     if (DEBUG)
@@ -314,7 +314,7 @@ public class WorkoutSamplesDatabaseManager {
                     // in previous versions, we used the 'default' code for this but it failed for max of line_distance
                     // probably due to problems with converting and storing doubles?
 
-                    String orderBy = sensorType.name() + " " + ((extremumType == ExtremumType.MAX) ? "DESC" : "ASC");
+                    String orderBy = sensorType.name() + " " + ((extremaType == ExtremaType.MAX) ? "DESC" : "ASC");
                     cursor = samplesDb.query(WorkoutSamplesDatabaseManager.getTableName(baseFileName), // table
                             null, // columns
                             null, // selection
@@ -322,17 +322,17 @@ public class WorkoutSamplesDatabaseManager {
                             null, // groupBy
                             null, // having
                             orderBy, // orderBy
-                            "1"); // limit: we only need the frist one
+                            "1"); // limit: we only need the first one
 
                     break;
                 default:  // neither MIN nor MAX
                     if (DEBUG)
-                        Log.i(TAG, "default case: search for the extremum value which should be already within the summariesDb");
+                        Log.i(TAG, "default case: search for the extrema value which should be already within the summariesDb");
 
                     cursor = samplesDb.query(WorkoutSamplesDatabaseManager.getTableName(baseFileName), // table
                             null, // columns
                             sensorType.name() + "=?", // selection
-                            new String[]{extremumValue.toString()}, // selectionArgs
+                            new String[]{extremaValue.toString()}, // selectionArgs
                             null, // groupBy
                             null, // having
                             null, // orderBy
@@ -343,13 +343,13 @@ public class WorkoutSamplesDatabaseManager {
                     && !cursor.isNull(cursor.getColumnIndex(SensorType.LATITUDE.name()))
                     && !cursor.isNull(cursor.getColumnIndex(SensorType.LONGITUDE.name()))) {
                 if (DEBUG)
-                    Log.i(TAG, "got a valid location for " + extremumType.name() + " of " + sensorType.name());
+                    Log.i(TAG, "got a valid location for " + extremaType.name() + " of " + sensorType.name());
                 result = new LatLngValue(new LatLng(cursor.getDouble(cursor.getColumnIndex(SensorType.LATITUDE.name())),
                         cursor.getDouble(cursor.getColumnIndex(SensorType.LONGITUDE.name()))),
                         cursor.getDouble(cursor.getColumnIndex(sensorType.name())));
             } else {
                 if (DEBUG)
-                    Log.d(TAG, "did not get a valid location for " + extremumType.name() + " of " + sensorType.name());
+                    Log.d(TAG, "did not get a valid location for " + extremaType.name() + " of " + sensorType.name());
             }
 
             // clean up
@@ -358,7 +358,7 @@ public class WorkoutSamplesDatabaseManager {
 
         } else {
             if (DEBUG)
-                Log.i(TAG, "there was no valid extremum value for " + extremumType.name() + " of " + sensorType.name());
+                Log.i(TAG, "there was no valid extrema value for " + extremaType.name() + " of " + sensorType.name());
         }
 
         // finally, return the result

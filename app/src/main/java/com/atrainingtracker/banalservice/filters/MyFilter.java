@@ -18,8 +18,8 @@
 
 package com.atrainingtracker.banalservice.filters;
 
-import com.atrainingtracker.banalservice.Sensor.MySensor;
-import com.atrainingtracker.banalservice.Sensor.SensorType;
+import com.atrainingtracker.banalservice.sensor.MySensor;
+import com.atrainingtracker.banalservice.sensor.SensorType;
 
 public abstract class MyFilter<T>
         implements MySensor.SensorListener<T> {
@@ -42,6 +42,6 @@ public abstract class MyFilter<T>
         // Log.i(TAG, "getFilteredSensorData(): " + getFilterType() + " " + mDeviceName + " " + mSensorType + ": " + getFilteredValue());
 
         T filteredValue = getFilteredValue();
-        return new FilteredSensorData(mSensorType, filteredValue, mSensorType.getMyFormater().format(filteredValue), mDeviceName, getFilterType(), getFilterConstant());
+        return new FilteredSensorData(mSensorType, filteredValue, mSensorType.getMyFormatter().format(filteredValue), mDeviceName, getFilterType(), getFilterConstant());
     }
 }

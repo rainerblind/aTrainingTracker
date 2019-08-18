@@ -55,15 +55,15 @@
     <string name="delete_tracking_view">delete tracking view</string>
     <string name="delete_workout">delete workout</string>
     <string name="deleteOldWorkouts">delete old workouts</string>
-    <string name="deleteWorkoutsThatAreOlderThanDays">delete all workouts that are older than ... days</string>
+    <string name="deleteWorkoutsThatAreOlderThanDays">delete all workouts that are older than … days</string>
     <string name="defaultDaysToKeep">30</string>
     <string name="delete_sensor">delete</string>
     <string name="really_delete_workout">Do you really want to delete this workout?</string>
     <string name="really_delete_location">Do you really want to delete this location?</string>
     <string name="really_delete_pebble_view_format">Do you really want to delete the Pebble view "%1$s"?</string>
     <string name="really_delete_view_format">Do you really want to delete the tracking view "%1$s"?</string>
-    <string name="deleting_please_wait">Deleting workout ...\nplease wait</string>
-    <string name="calculating_extremum_values">Calculating min, mean, and max values...</string>
+    <string name="deleting_please_wait">Deleting workout …\nplease wait</string>
+    <string name="calculating_extremum_values">Calculating min, mean, and max values…</string>
     <string name="calculating_extremum_value_for">calculating %1$s of %2$s</string>
     <string name="calculating_max_away_point">calculating max away point</string>
     <string name="initializing">initializing</string>
@@ -170,7 +170,7 @@
     <string name="units_temperature">°C</string>
     <string name="units_time_basic">s</string>
     <string name="units_torque">Nm</string>
-    <string name="units_none" translatable="false"></string>
+    <string name="units_none" translatable="false" />
     <string name="units_percent">%</string>
     <string name="units_degree">°</string>
 
@@ -179,7 +179,7 @@
     <string name="value_unit_string_string">%1$s %2$s</string>
     <string name="value_unit_int_string">%1$d %2$s</string>
     <string name="distance_distanceUnit_sport_time_format">%1$s %2$s %3$s in %4$s</string>
-    <string name="tracking_details_format">%1$s \n%2$s %3$s in %4$s</string>
+    <string name="tracking_details_format" translatable="false">%1$s \n%2$s %3$s in %4$s</string>
 
     <string name="location_extremum_format">%1$s %2$s: %3$s %4$s</string>
 
@@ -322,7 +322,7 @@
 
     <!-- Bike Power Features -->
     <string name="featuresText">features</string>
-    <string name="instantaneousPower">&#8226; Instantaneous Power</string>
+    <string name="bike_power__instantaneous_power">&#8226; Instantaneous Power</string>
     <string name="bike_power__pedal_power_balance">&#8226; Pedal Power Balance</string>
     <string name="bike_power__accumulated_torque">&#8226; Accumulated Torque</string>
     <string name="bike_power__wheel_revolution_data">&#8226; Speed &amp; Distance</string>
@@ -450,11 +450,11 @@
     <string name="updateStravaEquipment">Update Strava Equipment</string>
     <string name="lastUpdateOfEquipmentNever">not yet updated</string>
 
-    <string name="getting_equipment_from_strava">getting equipment from Strava...\nplease wait</string>
+    <string name="getting_equipment_from_strava">getting equipment from Strava…\nplease wait</string>
     <string name="got_shoe">getting shoes from Strava\ngot shoe: %1$s</string>
     <string name="got_bike">getting bikes from Strava\ngot bike: %1$s</string>
-    <string name="strava_success_but_must_check">uploaded to Strava, checking result ...</string>
-    <string name="strava_success_waiting_for_result">uploaded to Strava, waiting for result ...</string>
+    <string name="strava_success_but_must_check">uploaded to Strava, checking result …</string>
+    <string name="strava_success_waiting_for_result">uploaded to Strava, waiting for result …</string>
     <!-- <string name="checking_bike">getting bikes from Strava\nchecking bike: %1$s</string> -->
 
     <string name="choose_view">choose view</string>
@@ -492,7 +492,7 @@
     <!-- device_list_row -->
     <string name="DeviceListRowDeviceNameText">Unknown</string>
     <string name="DeviceListRowMainValueText">(--)</string>
-    <string name="DeviceListRowEquipmenText" translatable="false"></string>
+    <string name="DeviceListRowEquipmentText" translatable="false" />
 
     <!-- device_list -->
     <string name="myRemoteDevices">My Devices</string>
@@ -620,9 +620,9 @@
     <string name="uploading_to_dropbox_not_wanted">uploading to Dropbox not wanted</string>
     <string name="uploading_to_community_not_wanted">uploading to an online community not wanted</string>
 
-    <string name="exporting_to_file_failed_for_one">exporting to SD-card failed for 1/%1$d file</string>
-    <string name="uploading_to_dropbox_failed_for_one">uploading to Dropbox failed for 1/%1$d file</string>
-    <string name="uploading_to_community_failed_for_one">uploading to 1/%1$d online community failed</string>
+    <string name="exporting_to_file_failed_for_one">exporting to SD-card failed for 1/%1$d files</string>
+    <string name="uploading_to_dropbox_failed_for_one">uploading to Dropbox failed for 1/%1$d files</string>
+    <string name="uploading_to_community_failed_for_one">uploading to 1/%1$d online communities failed</string>
     <!--  which one??? -->
     <string name="exporting_to_file_failed_for_several">exporting to SD-card failed for %1$d/%2$d files</string>
     <string name="uploading_to_dropbox_failed_for_several">uploading to Dropbox failed for %1$d/%2$d files</string>
@@ -639,9 +639,9 @@
     <string name="waiting_to_upload_to_dropbox">waiting to upload %1$d/%2$d files to Dropbox</string>
     <string name="waiting_to_upload_to_community">waiting to upload %1$d/%2$d online communities</string>
 
-    <string name="please_wait">Please wait ...</string>
-    <string name="conntecting_to_string">Connecting to %1$s. \nPlease wait ...</string>
-    <string name="deauthorization">Deauthorization, please wait ...</string>
+    <string name="please_wait">Please wait …</string>
+    <string name="conntecting_to_string">Connecting to %1$s. \nPlease wait …</string>
+    <string name="deauthorization">Deauthorization, please wait …</string>
 
 
     <!-- notification -->
@@ -664,7 +664,7 @@
     <string name="notification_finished_community">successfully %1$s to %2$s\n%3$s</string>
     <!-- successully uploaded to Strava <workoutName> -->
     <string name="notification_exporting_finished">exporting finished</string>
-    <string name="notification_exporting_finished_summary" translatable="false"></string>
+    <string name="notification_exporting_finished_summary" translatable="false" />
     <string name="notification_tracking_a_workout">Tracking a Workout</string>
     <string name="notification_searching_for_ant">searching for ANT+ devices</string>
     <string name="notification_searching_finished">searching finished</string>
@@ -764,7 +764,7 @@
 
     <string name="Search_Settings">Search Settings</string>
     <string name="prefsNumberOfSearchTriesTitle">Number of search rounds</string>
-    <string name="prefStartSearchTitle">Start search when ...</string>
+    <string name="prefStartSearchTitle">Start search when …</string>
     <string name="prefsStartSearchWhenAppStartsTitle">App starts</string>
     <string name="prefsStartSearchWhenTrackingStartsTitle">Tracking starts</string>
     <string name="prefsStartSearchWhenResumeFromPausedTitle">Resume after pause</string>
@@ -814,7 +814,7 @@
     <string name="concatenate_last_format_or">%1$s, or %2$s</string>
     <string name="everything">simply everything</string>
     <string name="battery_level_good">good</string>
-    <string name="battery_level_ok">ok</string>
+    <string name="battery_level_ok">OK</string>
     <string name="battery_level_new">new</string>
     <string name="battery_level_low">low</string>
     <string name="battery_level_critical">critical</string>
@@ -858,7 +858,7 @@
     <string name="units_minutes_long">minutes</string>
     <string name="units_samples">N</string>
     <string name="filter_instantaneous">instantaneous</string>
-    <string name="filter_instantaneous_short"></string>
+    <string name="filter_instantaneous_short" translatable="false" />
     <string name="filter_average">average (entire workout)</string>
     <string name="filter_average_short">Ø</string>
     <string name="filter_exponential_smoothing">exponential smoothing</string>

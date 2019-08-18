@@ -37,7 +37,7 @@ import android.view.ViewGroup;
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.ActivityType;
 import com.atrainingtracker.banalservice.BANALService;
-import com.atrainingtracker.trainingtracker.Tracker.TrackerService;
+import com.atrainingtracker.trainingtracker.tracker.TrackerService;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager.TrackingViewsDbHelper;

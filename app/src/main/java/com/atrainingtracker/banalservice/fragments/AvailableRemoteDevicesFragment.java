@@ -33,7 +33,7 @@ import android.widget.TextView;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
-import com.atrainingtracker.banalservice.Devices.DeviceType;
+import com.atrainingtracker.banalservice.devices.DeviceType;
 import com.atrainingtracker.banalservice.Protocol;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager.DevicesDbHelper;
 import com.atrainingtracker.banalservice.helpers.UIHelper;
@@ -213,7 +213,7 @@ public class AvailableRemoteDevicesFragment extends RemoteDevicesFragment {
 
     // onCreate
     // onCreateView
-    // onActivityCreatec
+    // onActivityCreated
     // onStart
     // onResume
 

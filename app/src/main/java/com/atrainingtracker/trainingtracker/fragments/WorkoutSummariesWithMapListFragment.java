@@ -46,14 +46,14 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 import com.atrainingtracker.R;
-import com.atrainingtracker.banalservice.Sensor.formater.DistanceFormater;
-import com.atrainingtracker.banalservice.Sensor.formater.TimeFormater;
+import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter;
+import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
-import com.atrainingtracker.trainingtracker.Activities.WorkoutDetailsActivity;
-import com.atrainingtracker.trainingtracker.Exporter.ExportManager;
-import com.atrainingtracker.trainingtracker.Exporter.ExportStatus;
-import com.atrainingtracker.trainingtracker.Exporter.ExportType;
-import com.atrainingtracker.trainingtracker.Exporter.FileFormat;
+import com.atrainingtracker.trainingtracker.activities.WorkoutDetailsActivity;
+import com.atrainingtracker.trainingtracker.exporter.ExportManager;
+import com.atrainingtracker.trainingtracker.exporter.ExportStatus;
+import com.atrainingtracker.trainingtracker.exporter.ExportType;
+import com.atrainingtracker.trainingtracker.exporter.FileFormat;
 import com.atrainingtracker.trainingtracker.MyHelper;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
@@ -274,7 +274,7 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
                 mShowWorkoutDetailsListener.exportWorkout(info.id, FileFormat.GPX);
                 return true;
             case R.id.stravaUpload:
-                if (DEBUG) Log.i(TAG, "uplading to Strava selected");
+                if (DEBUG) Log.i(TAG, "uploading to Strava selected");
                 mShowWorkoutDetailsListener.exportWorkout(info.id, FileFormat.STRAVA);
                 return true;
             case R.id.runkeeperUpload:
@@ -449,7 +449,7 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
                     textView = viewHolder.tvDropbox;
                     break;
                 case COMMUNITY:
-                    textView = viewHolder.tvCommumities;
+                    textView = viewHolder.tvCommunities;
                     break;
             }
             textView.setText(text);
@@ -482,7 +482,7 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
 
         public WorkoutSummaryWithMapAdapter(Activity activity, Cursor cursor) {
             super(activity, cursor, 0);
-            if (DEBUG) Log.d(TAG, "WorkoutSummmarywithMapAdapter");
+            if (DEBUG) Log.d(TAG, "WorkoutSummaryWithMapAdapter");
 
             mContext = activity;
 
@@ -518,7 +518,7 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
             viewHolder.ivDropbox = row.findViewById(R.id.iv_workout_summaries_export_status_dropbox);
             viewHolder.tvDropbox = row.findViewById(R.id.tv_workout_summaries_export_status_dropbox);
             viewHolder.ivCommunities = row.findViewById(R.id.iv_workout_summaries_export_status_communities);
-            viewHolder.tvCommumities = row.findViewById(R.id.tv_workout_summaries_export_status_communities);
+            viewHolder.tvCommunities = row.findViewById(R.id.tv_workout_summaries_export_status_communities);
 
             viewHolder.initializeMapView();
 
@@ -538,10 +538,10 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
             String sport = SportTypeDatabaseManager.getUIName(cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPORT_ID)));
             double time_s = cursor.getDouble(cursor.getColumnIndex(WorkoutSummaries.TIME_TOTAL_s));
             String distanceTypeAndDuration = context.getString(R.string.distance_distanceUnit_sport_time_format,
-                    (new DistanceFormater()).format(distance_m),
+                    (new DistanceFormatter()).format(distance_m),
                     context.getString(MyHelper.getDistanceUnitNameId()),
                     sport,
-                    (new TimeFormater()).format(time_s));
+                    (new TimeFormatter()).format(time_s));
 
             ViewHolder viewHolder = (ViewHolder) view.getTag();
             viewHolder.workoutId = workoutId;
@@ -600,7 +600,7 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
         ImageView ivDropbox;
         TextView tvDropbox;
         ImageView ivCommunities;
-        TextView tvCommumities;
+        TextView tvCommunities;
 
         public ViewHolder(GoogleMap map, MapView mapView) {
             super(map, mapView);

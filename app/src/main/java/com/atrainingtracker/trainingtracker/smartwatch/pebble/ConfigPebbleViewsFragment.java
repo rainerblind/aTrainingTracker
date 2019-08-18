@@ -22,7 +22,7 @@ import android.os.Bundle;
 import android.support.v4.app.Fragment;
 
 import com.atrainingtracker.banalservice.ActivityType;
-import com.atrainingtracker.trainingtracker.Activities.ConfigViewsActivity;
+import com.atrainingtracker.trainingtracker.activities.ConfigViewsActivity;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.fragments.ConfigViewsFragment;
 

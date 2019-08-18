@@ -26,7 +26,7 @@ import android.widget.ListView;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
-import com.atrainingtracker.banalservice.Devices.DeviceType;
+import com.atrainingtracker.banalservice.devices.DeviceType;
 import com.atrainingtracker.banalservice.Protocol;
 
 import java.util.ArrayList;

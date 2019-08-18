@@ -34,7 +34,6 @@
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:hint="@string/AltitudeHint"
-        android:inputType="number"
-        android:numeric="integer" />
+        android:inputType="number"/>
 
 </LinearLayout>

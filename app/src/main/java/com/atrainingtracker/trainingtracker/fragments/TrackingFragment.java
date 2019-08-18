@@ -40,13 +40,13 @@ import android.widget.TextView;
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.ActivityType;
 import com.atrainingtracker.banalservice.BANALService;
-import com.atrainingtracker.banalservice.Sensor.SensorType;
+import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 import com.atrainingtracker.banalservice.filters.FilterData;
 import com.atrainingtracker.banalservice.filters.FilterType;
 import com.atrainingtracker.banalservice.filters.FilteredSensorData;
-import com.atrainingtracker.trainingtracker.Activities.ConfigTrackingViewsActivity;
-import com.atrainingtracker.trainingtracker.Activities.ConfigViewsActivity;
+import com.atrainingtracker.trainingtracker.activities.ConfigTrackingViewsActivity;
+import com.atrainingtracker.trainingtracker.activities.ConfigViewsActivity;
 import com.atrainingtracker.trainingtracker.MyHelper;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
@@ -76,7 +76,6 @@ public class TrackingFragment extends Fragment {
     // protected List<TvSensorType> mLTvSensorType;  // contains all the TvSensorTypes
     protected BANALService.GetBanalServiceInterface mGetBanalServiceIf;
     protected HashMap<String, TvSensorType> mHashMapTextViews = new HashMap<>(); // HashMap<String, TvSensorType>   for the TextViews and SensorType
-    // wobei der String von FilterData.getHashKey() kommt
     protected HashMap<String, String> mHashMapValues = new HashMap<>();     // HashMap<String, String>     for the values
     protected LinearLayout mLLSensors;
     protected FrameLayout mMapContainer;

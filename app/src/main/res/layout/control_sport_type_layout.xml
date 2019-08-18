@@ -18,6 +18,7 @@
   -->
 
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:layout_weight="1"
@@ -40,7 +41,8 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
             android:background="@android:color/transparent"
-            android:src="@drawable/bsport_run" />
+            android:src="@drawable/bsport_run"
+            tools:ignore="ContentDescription" />
 
         <TextView
             android:id="@+id/cst_tvRun"
@@ -68,7 +70,8 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
             android:background="@android:color/transparent"
-            android:src="@drawable/bsport_bike" />
+            android:src="@drawable/bsport_bike"
+            tools:ignore="ContentDescription" />
 
         <TextView
             android:id="@+id/cst_tvBike"
@@ -96,7 +99,8 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
             android:background="@android:color/transparent"
-            android:src="@drawable/bsport_other" />
+            android:src="@drawable/bsport_other"
+            tools:ignore="ContentDescription" />
 
         <TextView
             android:id="@+id/cst_tvOther"

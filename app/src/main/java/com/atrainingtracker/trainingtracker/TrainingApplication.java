@@ -38,15 +38,15 @@ import android.widget.Toast;
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.BSportType;
-import com.atrainingtracker.banalservice.Sensor.SensorData;
-import com.atrainingtracker.banalservice.Sensor.formater.DistanceFormater;
-import com.atrainingtracker.banalservice.Sensor.formater.TimeFormater;
+import com.atrainingtracker.banalservice.sensor.SensorData;
+import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter;
+import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
-import com.atrainingtracker.trainingtracker.Activities.MainActivityWithNavigation;
-import com.atrainingtracker.trainingtracker.Activities.WorkoutDetailsActivity;
-import com.atrainingtracker.trainingtracker.Exporter.FileFormat;
-import com.atrainingtracker.trainingtracker.Tracker.TrackerService;
+import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation;
+import com.atrainingtracker.trainingtracker.activities.WorkoutDetailsActivity;
+import com.atrainingtracker.trainingtracker.exporter.FileFormat;
+import com.atrainingtracker.trainingtracker.tracker.TrackerService;
 import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
@@ -96,7 +96,7 @@ public class TrainingApplication extends Application {
     public static final String LOCATION_SOURCES = "prefsLocationSources";
     public static final String SHOW_ALL_LOCATION_SOURCES_ON_MAP = "showAllLocationsSourcesOnMap";
     //    protected static final String SP_DROPBOX_KEY       = "dropboxKey";
-//    protected static final String SP_DROPBOX_SECRET    = "dropboxSekret";
+//    protected static final String SP_DROPBOX_SECRET    = "dropboxSecret";
     public static final String SP_UPLOAD_TO_DROPBOX = "uploadToDropbox";
     public static final String SP_DEFAULT_TO_PRIVATE = "defaultToPrivate";
     public static final String PREFERENCE_SCREEN_EMAIL_UPLOAD = "psSendEmail";
@@ -122,7 +122,7 @@ public class TrainingApplication extends Application {
     public static final String SP_TRAINING_PEAKS_ACCESS_TOKEN = "trainingPeaksAccessToken";
     public static final String SP_TRAINING_PEAKS_REFRESH_TOKEN = "trainingPeaksRefreshToken";
     public static final String SP_SAMPLING_TIME = "samplingTime";
-    public static final String SP_ATHLETHE_NAME = "athleteName";
+    public static final String SP_ATHLETE_NAME = "athleteName";
     // public static final String SP_DISPLAY_UPDATE_TIME     = "displayUpdateTime";
     public static final String SP_LACTATE_THRESHOLD_POWER = "lactateThresholdPower";
     public static final String SP_LOCATION_SOURCE_GPS = "locationSourceGPS";
@@ -221,13 +221,13 @@ public class TrainingApplication extends Application {
     private NotificationCompat.Builder mTrackingAndSearchingNotificationBuilder;
     private PendingIntent mStartMainActivityPendingIntent;
     private String mNotificationSummary = "searching";
-    private DistanceFormater mDistanceFormater = new DistanceFormater();
+    private DistanceFormatter mDistanceFormatter = new DistanceFormatter();
 
     // protected void showNotification()
     // {
     //     mNotificationManager.notify(TRACKING_NOTIFICATION_ID, mTrackingAndSearchingNotificationBuilder.getNotification());
     // }
-    private TimeFormater mTimeFormater = new TimeFormater();
+    private TimeFormatter mTimeFormatter = new TimeFormatter();
     private String mDeviceCurrentlySearchingFor = null;
     /***********************************************************************************************/
 
@@ -296,7 +296,7 @@ public class TrainingApplication extends Application {
         // increase this value by one
         SharedPreferences.Editor editor = cSharedPreferences.edit();
         editor.putInt(SP_PLAY_SERVICE_INSTALLATION_TRIES, tries + 1);
-        editor.commit();
+        editor.apply();
 
         return (tries < MAX_PLAY_SERVICE_INSTALLATION_TRIES);
     }
@@ -376,7 +376,7 @@ public class TrainingApplication extends Application {
     }
 
     public static void setCheckANTInstallation(boolean value) {
-        cSharedPreferences.edit().putBoolean(SP_CHECK_ANT_INSTALLATION, value).commit();
+        cSharedPreferences.edit().putBoolean(SP_CHECK_ANT_INSTALLATION, value).apply();
     }
 
     public static boolean useLocationSourceGPS() {
@@ -416,7 +416,7 @@ public class TrainingApplication extends Application {
     }
 
     public static void setShowPebbleInstallDialog(boolean value) {
-        cSharedPreferences.edit().putBoolean(SP_SHOW_PEBBLE_INSTALL_DIALOG, value).commit();
+        cSharedPreferences.edit().putBoolean(SP_SHOW_PEBBLE_INSTALL_DIALOG, value).apply();
     }
 
     public static boolean forcePortrait() {
@@ -457,7 +457,7 @@ public class TrainingApplication extends Application {
     }
 
     public static String getAthleteName() {
-        return cSharedPreferences.getString(SP_ATHLETHE_NAME, DEFAULT_ATHLETE_NAME);
+        return cSharedPreferences.getString(SP_ATHLETE_NAME, DEFAULT_ATHLETE_NAME);
     }
 
     public static double getMinWalkSpeed_UserUnits() {
@@ -506,7 +506,7 @@ public class TrainingApplication extends Application {
     }
 
     public static void setUploadToDropbox(boolean value) {
-        cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_DROPBOX, value).commit();
+        cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_DROPBOX, value).apply();
     }
 
     public static String getDropboxAppKey() {
@@ -514,7 +514,7 @@ public class TrainingApplication extends Application {
     }
 
     public static void storeDropboxToken(String token) {
-        cSharedPreferences.edit().putString(SP_DROPBOX_TOKEN, token).commit();
+        cSharedPreferences.edit().putString(SP_DROPBOX_TOKEN, token).apply();
     }
 
     public static boolean hasDropboxToken() {
@@ -526,8 +526,8 @@ public class TrainingApplication extends Application {
     }
 
     public static void deleteDropboxToken() {
-        cSharedPreferences.edit().remove(SP_DROPBOX_TOKEN).commit();
-        cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_DROPBOX, false).commit();
+        cSharedPreferences.edit().remove(SP_DROPBOX_TOKEN).apply();
+        cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_DROPBOX, false).apply();
     }
 
     /*
@@ -538,7 +538,7 @@ public class TrainingApplication extends Application {
     }
 
     public static void setUploadToStrava(boolean value) {
-        cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_STRAVA, value).commit();
+        cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_STRAVA, value).apply();
     }
 
     public static String getStravaToken() {
@@ -546,14 +546,14 @@ public class TrainingApplication extends Application {
     }
 
     public static void setStravaToken(String token) {
-        cSharedPreferences.edit().putString(SP_STRAVA_TOKEN, token).commit();
+        cSharedPreferences.edit().putString(SP_STRAVA_TOKEN, token).apply();
     }
 
     public static void deleteStravaToken() {
         if (DEBUG) Log.i(TAG, "deleteStravaToken");
-        cSharedPreferences.edit().remove(TrainingApplication.SP_STRAVA_TOKEN).commit();
-        cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_STRAVA, false).commit();
-        cSharedPreferences.edit().remove(SP_STRAVA_ATHLETE_ID).commit();
+        cSharedPreferences.edit().remove(TrainingApplication.SP_STRAVA_TOKEN).apply();
+        cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_STRAVA, false).apply();
+        cSharedPreferences.edit().remove(SP_STRAVA_ATHLETE_ID).apply();
         if (DEBUG) Log.i(TAG, "end of deleteStravaToken");
     }
 
@@ -562,7 +562,7 @@ public class TrainingApplication extends Application {
     }
 
     public static void setLastUpdateTimeOfStravaEquipment(String updateTime) {
-        cSharedPreferences.edit().putString(SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT, updateTime).commit();
+        cSharedPreferences.edit().putString(SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT, updateTime).apply();
     }
 
     public static int getStravaAthleteId() {
@@ -570,7 +570,7 @@ public class TrainingApplication extends Application {
     }
 
     public static void setStravaAthleteId(int stravaAthleteId) {
-        cSharedPreferences.edit().putInt(SP_STRAVA_ATHLETE_ID, stravaAthleteId).commit();
+        cSharedPreferences.edit().putInt(SP_STRAVA_ATHLETE_ID, stravaAthleteId).apply();
     }
 
     public static boolean uploadStravaGPS() {
@@ -601,7 +601,7 @@ public class TrainingApplication extends Application {
     }
 
     public static void setUploadToRunkeeper(boolean value) {
-        cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_RUNKEEPER, value).commit();
+        cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_RUNKEEPER, value).apply();
     }
 
     public static String getRunkeeperToken() {
@@ -609,12 +609,12 @@ public class TrainingApplication extends Application {
     }
 
     public static void setRunkeeperToken(String token) {
-        cSharedPreferences.edit().putString(SP_RUNKEEPER_TOKEN, token).commit();
+        cSharedPreferences.edit().putString(SP_RUNKEEPER_TOKEN, token).apply();
     }
 
     public static void deleteRunkeeperToken() {
-        cSharedPreferences.edit().remove(SP_RUNKEEPER_TOKEN).commit();
-        cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_RUNKEEPER, false).commit();
+        cSharedPreferences.edit().remove(SP_RUNKEEPER_TOKEN).apply();
+        cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_RUNKEEPER, false).apply();
     }
 
     public static boolean uploadRunkeeperGPS() {
@@ -645,7 +645,7 @@ public class TrainingApplication extends Application {
     }
 
     public static void setUploadToTrainingPeaks(boolean value) {
-        cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_RUNKEEPER, false).commit();
+        cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_RUNKEEPER, false).apply();
     }
 
     public static String getTrainingPeaksAccessToken() {
@@ -653,7 +653,7 @@ public class TrainingApplication extends Application {
     }
 
     public static void setTrainingPeaksAccessToken(String token) {
-        cSharedPreferences.edit().putString(SP_TRAINING_PEAKS_ACCESS_TOKEN, token).commit();
+        cSharedPreferences.edit().putString(SP_TRAINING_PEAKS_ACCESS_TOKEN, token).apply();
     }
 
     public static String getTrainingPeaksRefreshToken() {
@@ -661,13 +661,13 @@ public class TrainingApplication extends Application {
     }
 
     public static void setTrainingPeaksRefreshToken(String token) {
-        cSharedPreferences.edit().putString(SP_TRAINING_PEAKS_REFRESH_TOKEN, token).commit();
+        cSharedPreferences.edit().putString(SP_TRAINING_PEAKS_REFRESH_TOKEN, token).apply();
     }
 
     public static void deleteTrainingPeaksToken() {
-        cSharedPreferences.edit().remove(SP_TRAINING_PEAKS_ACCESS_TOKEN).commit();
-        cSharedPreferences.edit().remove(SP_TRAINING_PEAKS_REFRESH_TOKEN).commit();
-        cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_RUNKEEPER, false).commit();
+        cSharedPreferences.edit().remove(SP_TRAINING_PEAKS_ACCESS_TOKEN).apply();
+        cSharedPreferences.edit().remove(SP_TRAINING_PEAKS_REFRESH_TOKEN).apply();
+        cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_RUNKEEPER, false).apply();
     }
 
     public static boolean uploadTrainingPeaksGPS() {
@@ -711,19 +711,19 @@ public class TrainingApplication extends Application {
     }
 
     public static void setExportToTCX(boolean value) {
-        cSharedPreferences.edit().putBoolean(SP_EXPORT_TO_TCX, value).commit();
+        cSharedPreferences.edit().putBoolean(SP_EXPORT_TO_TCX, value).apply();
     }
 
     public static void setExportToGPX(boolean value) {
-        cSharedPreferences.edit().putBoolean(SP_EXPORT_TO_GPX, value).commit();
+        cSharedPreferences.edit().putBoolean(SP_EXPORT_TO_GPX, value).apply();
     }
 
     public static void setExportToCSV(boolean value) {
-        cSharedPreferences.edit().putBoolean(SP_EXPORT_TO_CSV, value).commit();
+        cSharedPreferences.edit().putBoolean(SP_EXPORT_TO_CSV, value).apply();
     }
 
     public static void setExportToGCJson(boolean value) {
-        cSharedPreferences.edit().putBoolean(SP_EXPORT_TO_GC_JSON, value).commit();
+        cSharedPreferences.edit().putBoolean(SP_EXPORT_TO_GC_JSON, value).apply();
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -915,8 +915,8 @@ public class TrainingApplication extends Application {
     public void updateTimeAndDistanceToNotification(SensorData<Integer> time, SensorData<Number> distance, String sportType) {
         if (DEBUG) Log.i(TAG, "updateTimeAndDistanceToNotification(" + time + ", " + distance);
 
-        String sTime = mTimeFormater.format_with_units(time == null ? null : time.getValue());
-        String sDistance = mDistanceFormater.format_with_units(distance == null ? null : distance.getValue());
+        String sTime = mTimeFormatter.format_with_units(time == null ? null : time.getValue());
+        String sDistance = mDistanceFormatter.format_with_units(distance == null ? null : distance.getValue());
 
         // mTrackingAndSearchingNotificationBuilder.setDefaults(Notification.DEFAULT_ALL) // requires VIBRATE permission
         mTrackingAndSearchingNotificationBuilder.setStyle(new NotificationCompat.BigTextStyle()

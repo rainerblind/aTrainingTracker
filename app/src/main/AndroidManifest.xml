@@ -31,7 +31,7 @@
             android:value="AIzaSyBVPLxC7EDQXCKTS0Mu6Xzdf7LtS9nQGvQ" />
 
         <activity
-            android:name=".trainingtracker.Activities.MainActivityWithNavigation"
+            android:name=".trainingtracker.activities.MainActivityWithNavigation"
             android:label="@string/app_name"
             android:launchMode="singleTask"
             android:theme="@style/Theme.aTrainingTracker.NoActionBar">
@@ -42,21 +42,21 @@
         </activity>
 
         <activity
-            android:name=".trainingtracker.Activities.WorkoutDetailsActivity"
+            android:name=".trainingtracker.activities.WorkoutDetailsActivity"
             android:label="@string/app_name"
             android:theme="@style/Theme.aTrainingTracker.NoActionBar"
-            android:windowSoftInputMode="stateHidden"></activity>
+            android:windowSoftInputMode="stateHidden" />
 
         <activity
-            android:name=".trainingtracker.Activities.SegmentDetailsActivity"
+            android:name=".trainingtracker.activities.SegmentDetailsActivity"
             android:label="@string/app_name"
             android:launchMode="singleTask"
             android:theme="@style/Theme.aTrainingTracker.NoActionBar"
-            android:windowSoftInputMode="stateHidden"></activity>
+            android:windowSoftInputMode="stateHidden" />
 
 
         <activity
-            android:name=".trainingtracker.Activities.ConfigTrackingViewsActivity"
+            android:name=".trainingtracker.activities.ConfigTrackingViewsActivity"
             android:label="@string/TrackingFragmentConfigActivityLabel"
             android:launchMode="singleTask"
             android:theme="@style/Theme.aTrainingTracker.NoActionBar"
@@ -98,29 +98,29 @@
         <activity
             android:name=".trainingtracker.onlinecommunities.runkeeper.RunkeeperGetAccessTokenActivity"
             android:label="@string/RunkeeperGetAccessTokenActivityLabel"
-            android:theme="@style/Theme.aTrainingTracker.NoActionBar"></activity>
+            android:theme="@style/Theme.aTrainingTracker.NoActionBar" />
 
         <activity
             android:name=".trainingtracker.onlinecommunities.strava.StravaGetAccessTokenActivity"
             android:label="@string/StravaGetAccessTokenActivityLabel"
-            android:theme="@style/Theme.aTrainingTracker.NoActionBar"></activity>
+            android:theme="@style/Theme.aTrainingTracker.NoActionBar" />
 
         <activity
             android:name=".trainingtracker.onlinecommunities.trainingpeaks.TrainingpeaksGetAccessTokenActivity"
             android:label="@string/TrainingPeaksGetAccessTokenActivityLabel"
-            android:theme="@style/Theme.aTrainingTracker.NoActionBar"></activity>
+            android:theme="@style/Theme.aTrainingTracker.NoActionBar" />
 
 
         <!-- <uses-library android:name="com.dsi.ant.antradio_library" /> -->
-        <service android:name=".trainingtracker.Tracker.TrackerService" />
+        <service android:name=".trainingtracker.tracker.TrackerService" />
         <service android:name=".trainingtracker.smartwatch.pebble.PebbleService" />
         <service android:name=".trainingtracker.smartwatch.pebble.PebbleServiceBuildIn" />
-        <service android:name=".trainingtracker.Exporter.ExportWorkoutIntentService" />
+        <service android:name=".trainingtracker.exporter.ExportWorkoutIntentService" />
         <service android:name=".banalservice.BANALService" />
         <service android:name=".trainingtracker.onlinecommunities.strava.StravaSegmentsIntentService" />
 
         <provider
-            android:name=".trainingtracker.Exporter.GenericFileProvider"
+            android:name=".trainingtracker.exporter.GenericFileProvider"
             android:authorities="${applicationId}.com.atrainingtracker.file.provider"
             android:exported="false"
             android:grantUriPermissions="true">

@@ -37,7 +37,7 @@ import android.view.ViewGroup;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
-import com.atrainingtracker.banalservice.Devices.DeviceType;
+import com.atrainingtracker.banalservice.devices.DeviceType;
 import com.atrainingtracker.banalservice.Protocol;
 import com.atrainingtracker.banalservice.dialogs.InstallANTShitDialog;
 

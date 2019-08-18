@@ -18,7 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.interfaces;
 
-import com.atrainingtracker.trainingtracker.Exporter.FileFormat;
+import com.atrainingtracker.trainingtracker.exporter.FileFormat;
 
 /**
  * Created by rainer on 19.01.16.
