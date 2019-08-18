@@ -27,7 +27,7 @@ import android.provider.BaseColumns;
 import android.util.Log;
 
 import com.atrainingtracker.R;
-import com.atrainingtracker.banalservice.Sensor.SensorType;
+import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.google.android.gms.maps.model.LatLng;
@@ -275,32 +275,32 @@ public class WorkoutSummariesDatabaseManager {
         return result;
     }
 
-    public static Double getExtremumValue(long workoutId, SensorType sensorType, ExtremumType extremumType) {
-        Double extremumValue = null;
+    public static Double getExtremaValue(long workoutId, SensorType sensorType, ExtremaType extremaType) {
+        Double extremaValue = null;
 
         SQLiteDatabase summariesDb = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
 
-        Cursor cursor = summariesDb.query(WorkoutSummaries.TABLE_EXTREMUM_VALUES,
+        Cursor cursor = summariesDb.query(WorkoutSummaries.TABLE_EXTREMA_VALUES,
                 null,
-                WorkoutSummaries.WORKOUT_ID + "=? AND " + WorkoutSummaries.SENSOR_TYPE + "=? AND " + WorkoutSummaries.EXTREMUM_TYPE + "=?",
-                new String[]{Long.toString(workoutId), sensorType.name(), extremumType.name()},
+                WorkoutSummaries.WORKOUT_ID + "=? AND " + WorkoutSummaries.SENSOR_TYPE + "=? AND " + WorkoutSummaries.EXTREMA_TYPE + "=?",
+                new String[]{Long.toString(workoutId), sensorType.name(), extremaType.name()},
                 null, null, null);
         if (cursor.moveToFirst()) {
-            extremumValue = cursor.getDouble(cursor.getColumnIndex(WorkoutSummaries.VALUE));
+            extremaValue = cursor.getDouble(cursor.getColumnIndex(WorkoutSummaries.VALUE));
             if (DEBUG)
-                Log.i(TAG, "got " + extremumValue + " for " + extremumType.name() + " " + sensorType.name() + " of workout " + workoutId);
+                Log.i(TAG, "got " + extremaValue + " for " + extremaType.name() + " " + sensorType.name() + " of workout " + workoutId);
         } else {
             if (DEBUG)
-                Log.d(TAG, "there seems to be no entry for " + extremumType.name() + " " + sensorType.name() + " in workout " + workoutId);
+                Log.d(TAG, "there seems to be no entry for " + extremaType.name() + " " + sensorType.name() + " in workout " + workoutId);
         }
         cursor.close();
         WorkoutSummariesDatabaseManager.getInstance().closeDatabase(); // summariesDb.close();
 
-        return extremumValue;
+        return extremaValue;
     }
 
     // TODO: make sport specific?
-    public static List<LatLng> getExtremumTypeLocations(ExtremumType extremumType) {
+    public static List<LatLng> getExtremaTypeLocations(ExtremaType extremaType) {
         if (DEBUG) Log.i(TAG, "getAllStartLocations");
 
         List<LatLng> startLocations = new LinkedList<>();
@@ -311,7 +311,7 @@ public class WorkoutSummariesDatabaseManager {
         Cursor lonCursor = null;
         double latitude, longitude;
 
-        Cursor cursor = db.query(WorkoutSummaries.TABLE_EXTREMUM_VALUES,
+        Cursor cursor = db.query(WorkoutSummaries.TABLE_EXTREMA_VALUES,
                 null,
                 null,
                 null,
@@ -324,15 +324,15 @@ public class WorkoutSummariesDatabaseManager {
             long workoutId = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.WORKOUT_ID));
             if (DEBUG) Log.i(TAG, "getAllStartLocations: checking workoutId=" + workoutId);
 
-            latCursor = db.query(WorkoutSummaries.TABLE_EXTREMUM_VALUES,
+            latCursor = db.query(WorkoutSummaries.TABLE_EXTREMA_VALUES,
                     null,
-                    WorkoutSummaries.WORKOUT_ID + "=? AND " + WorkoutSummaries.SENSOR_TYPE + "=? AND " + WorkoutSummaries.EXTREMUM_TYPE + "=?",
-                    new String[]{Long.toString(workoutId), SensorType.LATITUDE.name(), extremumType.name()},
+                    WorkoutSummaries.WORKOUT_ID + "=? AND " + WorkoutSummaries.SENSOR_TYPE + "=? AND " + WorkoutSummaries.EXTREMA_TYPE + "=?",
+                    new String[]{Long.toString(workoutId), SensorType.LATITUDE.name(), extremaType.name()},
                     null, null, null);
-            lonCursor = db.query(WorkoutSummaries.TABLE_EXTREMUM_VALUES,
+            lonCursor = db.query(WorkoutSummaries.TABLE_EXTREMA_VALUES,
                     null,
-                    WorkoutSummaries.WORKOUT_ID + "=? AND " + WorkoutSummaries.SENSOR_TYPE + "=? AND " + WorkoutSummaries.EXTREMUM_TYPE + "=?",
-                    new String[]{Long.toString(workoutId), SensorType.LONGITUDE.name(), extremumType.name()},
+                    WorkoutSummaries.WORKOUT_ID + "=? AND " + WorkoutSummaries.SENSOR_TYPE + "=? AND " + WorkoutSummaries.EXTREMA_TYPE + "=?",
+                    new String[]{Long.toString(workoutId), SensorType.LONGITUDE.name(), extremaType.name()},
                     null, null, null);
 
             if (latCursor.moveToFirst()
@@ -702,7 +702,7 @@ public class WorkoutSummariesDatabaseManager {
 
     public static final class WorkoutSummaries {
         public static final String TABLE = "WorkoutSummaries";
-        public static final String TABLE_EXTREMUM_VALUES = "ExtremumValues";
+        public static final String TABLE_EXTREMA_VALUES = "ExtremumValues";
         public static final String TABLE_ACCUMULATED_SENSORS = "AccumulatedSensors";
         // public static final String TABLE_WORKOUT_NAME_COUNTERS = "TODO:remove!";
         public static final String TABLE_WORKOUT_NAME_PATTERNS = "WorkoutNamePatterns";
@@ -721,11 +721,11 @@ public class WorkoutSummariesDatabaseManager {
         public static final String B_SPORT = "Sport";                 // intentionally the same name.  This avoids creating a new column and leaving the old one unused when upgrading
         public static final String SPORT_ID = "sportId";
         // use WorkoutSummariesDatabaseManager.getStartTime to access this field
-        public static final String TIME_START = "timeStart";            // might be moved to the extremum (START) values?
+        public static final String TIME_START = "timeStart";            // might be moved to the extrema (START) values?
         public static final String TIME_ACTIVE_s = "timeActive_s";
         public static final String TIME_TOTAL_s = "timeTotal_s";
         public static final String DISTANCE_TOTAL_m = "distanceTotal_m";
-        public static final String SPEED_AVERAGE_mps = "speedAverage_mps";     // should be moved to the extremum (MEAN) values
+        public static final String SPEED_AVERAGE_mps = "speedAverage_mps";     // should be moved to the extrema (MEAN) values
         public static final String GC_DATA = "GCData";
         public static final String CALORIES = "calories";
         public static final String LAPS = "laps";
@@ -737,10 +737,10 @@ public class WorkoutSummariesDatabaseManager {
         public static final String ASCENDING = "ascending";
         public static final String DESCENDING = "descending";
         // new entries in version 5 of the DB
-        public static final String EXTREMUM_VALUES_CALCULATED = "extremumValuesCalculated";
+        public static final String EXTREMA_VALUES_CALCULATED = "extremumValuesCalculated";
         // new entries in version 6 of the DB
         public static final String SAMPLES_COLUMN_ID = "samplesColumnId";
-        // columns of the EXTREMUM table
+        // columns of the EXTREMA table
         public static final String WORKOUT_ID = "workoutID";
 
         // public static final String ALTITUDE_MAX         = "altitudeMax";
@@ -755,7 +755,7 @@ public class WorkoutSummariesDatabaseManager {
         // public static final String POWER_MEAN           = "powerMean";
         // public static final String POWER_MAX            = "powerMax";
         // temperature? max, mean, min?
-        public static final String EXTREMUM_TYPE = "extremumType";
+        public static final String EXTREMA_TYPE = "extremumType";
         public static final String SENSOR_TYPE = "sensorType";
         public static final String VALUE = "value";
         // columns of the WorkoutNamePattern table
@@ -815,11 +815,11 @@ public class WorkoutSummariesDatabaseManager {
                 + WorkoutSummaries.TRAINER + " int,"
                 + WorkoutSummaries.ASCENDING + " int,"
                 + WorkoutSummaries.DESCENDING + " int," // end of version 4
-                + WorkoutSummaries.EXTREMUM_VALUES_CALCULATED + " int)";
-        protected static final String CREATE_TABLE_EXTREMUM_VALUES_V6 = "create table " + WorkoutSummaries.TABLE_EXTREMUM_VALUES + " ("
+                + WorkoutSummaries.EXTREMA_VALUES_CALCULATED + " int)";
+        protected static final String CREATE_TABLE_EXTREMA_VALUES_V6 = "create table " + WorkoutSummaries.TABLE_EXTREMA_VALUES + " ("
                 + WorkoutSummaries.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                 + WorkoutSummaries.WORKOUT_ID + " int,"
-                + WorkoutSummaries.EXTREMUM_TYPE + " text,"
+                + WorkoutSummaries.EXTREMA_TYPE + " text,"
                 + WorkoutSummaries.SENSOR_TYPE + " text,"
                 + WorkoutSummaries.VALUE + " real," // end of version 5
                 + WorkoutSummaries.SAMPLES_COLUMN_ID + " int)";
@@ -867,8 +867,8 @@ public class WorkoutSummariesDatabaseManager {
             if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_V11);
 
             // new in version 4:
-            db.execSQL(CREATE_TABLE_EXTREMUM_VALUES_V6);
-            if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_EXTREMUM_VALUES_V6);
+            db.execSQL(CREATE_TABLE_EXTREMA_VALUES_V6);
+            if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_EXTREMA_VALUES_V6);
 
             db.execSQL(CREATE_TABLE_ACCUMULATED_SENSORS_V6);
             if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_ACCUMULATED_SENSORS_V6);
@@ -907,25 +907,25 @@ public class WorkoutSummariesDatabaseManager {
                 addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.ASCENDING, "int");
                 addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.DESCENDING, "int");
 
-                db.execSQL(CREATE_TABLE_EXTREMUM_VALUES_V6);
+                db.execSQL(CREATE_TABLE_EXTREMA_VALUES_V6);
                 db.execSQL(CREATE_TABLE_ACCUMULATED_SENSORS_V6);
             }
 
             if (oldVersion < 5) {  // this version of the database was never released.
                 Log.i(TAG, "upgrading to DB version 5");
 
-                addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.EXTREMUM_VALUES_CALCULATED, "int");
+                addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.EXTREMA_VALUES_CALCULATED, "int");
             }
 
             if (oldVersion < 6) {
                 Log.i(TAG, "upgrading to DB version 6");
 
-                // must not be executed beacause when upgrading from version 4, this column is already present!
-                // addColumn(db, WorkoutSummaries.TABLE_EXTREMUM_VALUES, WorkoutSummaries.SAMPLES_COLUMN_ID, "int");
+                // must not be executed because when upgrading from version 4, this column is already present!
+                // addColumn(db, WorkoutSummaries.TABLE_EXTREMA_VALUES, WorkoutSummaries.SAMPLES_COLUMN_ID, "int");
             }
 
             if (oldVersion < 7) {
-                Log.i(TAG, "udgrading to DB version 7");
+                Log.i(TAG, "upgrading to DB version 7");
 
                 // add MaxLineDistance Stuff but this did not work as expected
             }

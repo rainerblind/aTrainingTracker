@@ -127,7 +127,7 @@ public class FancyWorkoutNameListFragment
         getListView().setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                // Log.i(TAG, "onItemClick: postion=" + position + ", id=" + id);
+                // Log.i(TAG, "onItemClick: position=" + position + ", id=" + id);
                 showEditFancyWorkoutNameDialog(id);
             }
         });

@@ -18,7 +18,7 @@
 
 package com.atrainingtracker.banalservice.filters;
 
-import com.atrainingtracker.banalservice.Sensor.SensorType;
+import com.atrainingtracker.banalservice.sensor.SensorType;
 
 public class AverageFilter extends MyFilter<Number> {
     protected double mAccumulatedValue = 0;

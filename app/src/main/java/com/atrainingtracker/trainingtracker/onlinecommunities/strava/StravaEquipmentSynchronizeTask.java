@@ -202,7 +202,7 @@ public class StravaEquipmentSynchronizeTask extends AsyncTask<String, String, St
             e1.printStackTrace();
         }
 
-        if (DEBUG) Log.d(TAG, "checking stava bikes");
+        if (DEBUG) Log.d(TAG, "checking strava bikes");
         JSONArray bikes;
         try {
             bikes = jsonObject.getJSONArray(BIKES);

@@ -28,10 +28,10 @@ import android.util.Log;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BSportType;
-import com.atrainingtracker.banalservice.Sensor.SensorType;
+import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
-import com.atrainingtracker.trainingtracker.database.ExtremumType;
+import com.atrainingtracker.trainingtracker.database.ExtremaType;
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
@@ -60,7 +60,7 @@ public abstract class TrackOnMapBaseFragment
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
-    // livecycle methods
+    // lifecycle methods
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     // onAttach()
@@ -129,7 +129,7 @@ public abstract class TrackOnMapBaseFragment
     }
 
     protected void addStartMarker(boolean zoomToStart) {
-        LatLng latLngStart = getExtremumPosition(ExtremumType.START, true);
+        LatLng latLngStart = getExtremaPosition(ExtremaType.START, true);
         addMarker(latLngStart, R.drawable.start_logo_map, getString(R.string.Start));
 
         if (zoomToStart && latLngStart != null) {
@@ -138,22 +138,22 @@ public abstract class TrackOnMapBaseFragment
     }
 
     protected void addStopMarker() {
-        LatLng latLngStop = getExtremumPosition(ExtremumType.END, false);
+        LatLng latLngStop = getExtremaPosition(ExtremaType.END, false);
         addMarker(latLngStop, R.drawable.stop_logo_map, getString(R.string.Stop));
     }
 
 
     // helper method to get START and END position
-    LatLng getExtremumPosition(ExtremumType extremumType, boolean calculateWhenNotInDb) {
+    LatLng getExtremaPosition(ExtremaType extremaType, boolean calculateWhenNotInDb) {
         String baseFileName = WorkoutSummariesDatabaseManager.getBaseFileName(mWorkoutID);
 
-        Double lat = WorkoutSummariesDatabaseManager.getExtremumValue(mWorkoutID, SensorType.LATITUDE, extremumType);
+        Double lat = WorkoutSummariesDatabaseManager.getExtremaValue(mWorkoutID, SensorType.LATITUDE, extremaType);
         if (lat == null && calculateWhenNotInDb) {
-            lat = WorkoutSamplesDatabaseManager.calcExtremumValue(baseFileName, extremumType, SensorType.LATITUDE);
+            lat = WorkoutSamplesDatabaseManager.calcExtremaValue(baseFileName, extremaType, SensorType.LATITUDE);
         }
-        Double lon = WorkoutSummariesDatabaseManager.getExtremumValue(mWorkoutID, SensorType.LONGITUDE, extremumType);
+        Double lon = WorkoutSummariesDatabaseManager.getExtremaValue(mWorkoutID, SensorType.LONGITUDE, extremaType);
         if (lon == null && calculateWhenNotInDb) {
-            lon = WorkoutSamplesDatabaseManager.calcExtremumValue(baseFileName, extremumType, SensorType.LONGITUDE);
+            lon = WorkoutSamplesDatabaseManager.calcExtremaValue(baseFileName, extremaType, SensorType.LONGITUDE);
         }
 
         return (lat != null & lon != null) ? new LatLng(lat, lon) : null;

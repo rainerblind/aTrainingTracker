@@ -21,29 +21,29 @@
 
     <item
         android:id="@+id/jsonWrite"
-        android:title="@string/jsonWrite"></item>
+        android:title="@string/jsonWrite" />
     <item
         android:id="@+id/tcxWrite"
-        android:title="@string/tcxWrite"></item>
+        android:title="@string/tcxWrite" />
     <item
         android:id="@+id/gpxWrite"
-        android:title="@string/gpxWrite"></item>
+        android:title="@string/gpxWrite" />
     <item
         android:id="@+id/csvWrite"
-        android:title="@string/csvWrite"></item>
+        android:title="@string/csvWrite" />
     <item
         android:id="@+id/stravaUpload"
-        android:title="@string/stravaUpload"></item>
+        android:title="@string/stravaUpload" />
     <item
         android:id="@+id/runkeeperUpload"
-        android:title="@string/runkeeperUpload"></item>
+        android:title="@string/runkeeperUpload" />
     <item
         android:id="@+id/trainingPeaksUpload"
-        android:title="@string/trainingPeaksUpload"></item>
+        android:title="@string/trainingPeaksUpload" />
     <item
         android:id="@+id/contextDelete"
         android:icon="@android:drawable/ic_menu_delete"
-        android:title="@string/delete_workout"></item>
+        android:title="@string/delete_workout" />
 
 
 </menu>

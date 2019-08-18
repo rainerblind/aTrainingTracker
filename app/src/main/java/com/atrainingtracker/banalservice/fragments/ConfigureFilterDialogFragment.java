@@ -177,13 +177,13 @@ public class ConfigureFilterDialogFragment
         // set the filter constant
         if (mFilterType == FilterType.MOVING_AVERAGE_TIME) {
             if ((mFilterConstant % 60) == 0) {                                                    // use minutes
-                mEditTextFilterConstant.setText((int) mFilterConstant / 60 + "");  // TODO: better formating?
+                mEditTextFilterConstant.setText((int) mFilterConstant / 60 + "");  // TODO: better formatting?
                 selectMinutes = true;
             } else {
-                mEditTextFilterConstant.setText((int) mFilterConstant + "");  // TODO: better formating?
+                mEditTextFilterConstant.setText((int) mFilterConstant + "");  // TODO: better formatting?
             }
         } else {
-            mEditTextFilterConstant.setText(mFilterConstant + "");  // TODO: better formating?
+            mEditTextFilterConstant.setText(mFilterConstant + "");  // TODO: better formatting?
         }
         mEditTextFilterConstant.addTextChangedListener(new TextWatcher() {
             @Override
@@ -349,7 +349,7 @@ public class ConfigureFilterDialogFragment
         try {
             mFilterConstant = Double.parseDouble(filterConstant_String);
         } catch (Exception e) {
-            // TODO: do something usefull here...
+            // TODO: do something useful here...
         }
 
         if (mFilterType == FilterType.MAX_VALUE

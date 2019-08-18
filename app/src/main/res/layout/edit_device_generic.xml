@@ -18,6 +18,7 @@
   -->
 
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true">
@@ -43,14 +44,14 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/lastSeenText"
-                    android:textAppearance="?android:attr/textAppearanceSmall"></TextView>
+                    android:textAppearance="?android:attr/textAppearanceSmall" />
 
                 <TextView
                     android:id="@+id/tvLastSeen"
                     android:layout_width="fill_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/lastSeenDefaultValue"
-                    android:textAppearance="?android:attr/textAppearanceMedium"></TextView>
+                    android:textAppearance="?android:attr/textAppearanceMedium" />
             </LinearLayout>
 
             <ImageView
@@ -58,7 +59,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_vertical"
-                android:src="@drawable/stat_sys_battery_unknown" />
+                android:src="@drawable/stat_sys_battery_unknown"
+                tools:ignore="ContentDescription" />
         </LinearLayout>
 
         <LinearLayout
@@ -72,7 +74,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="@string/manufacturerText"
-                android:textAppearance="?android:attr/textAppearanceSmall"></TextView>
+                android:textAppearance="?android:attr/textAppearanceSmall" />
 
             <TextView
                 android:id="@+id/tvManufacturer"
@@ -80,7 +82,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="@string/manufacturerValue"
-                android:textAppearance="?android:attr/textAppearanceLarge"></TextView>
+                android:textAppearance="?android:attr/textAppearanceLarge" />
         </LinearLayout>
 
         <LinearLayout
@@ -98,14 +100,14 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/deviceNameText"
-                    android:textAppearance="?android:attr/textAppearanceSmall"></TextView>
+                    android:textAppearance="?android:attr/textAppearanceSmall" />
 
                 <EditText
                     android:id="@+id/etDeviceName"
                     android:layout_width="fill_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/editDeviceGenericDeviceNameValue"
-                    android:textAppearance="?android:attr/textAppearanceLarge"></EditText>
+                    android:textAppearance="?android:attr/textAppearanceLarge" />
             </LinearLayout>
 
             <CheckBox

@@ -55,7 +55,7 @@
                 android:layout_height="wrap_content"
                 android:padding="10dp"
                 android:text="@string/Lap"
-                android:textSize="30sp"></Button>
+                android:textSize="30sp" />
         </LinearLayout>
     </LinearLayout>
 

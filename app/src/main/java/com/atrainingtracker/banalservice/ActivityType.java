@@ -21,7 +21,7 @@ package com.atrainingtracker.banalservice;
 import android.content.Context;
 
 import com.atrainingtracker.R;
-import com.atrainingtracker.banalservice.Sensor.SensorType;
+import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 
 import java.util.Arrays;

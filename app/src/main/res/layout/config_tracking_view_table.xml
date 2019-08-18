@@ -32,13 +32,13 @@
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
             android:hint="@string/name"
-            android:textSize="22sp"></EditText>
+            android:textSize="22sp" />
 
         <TableLayout
             android:id="@+id/tableLayoutSensors"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"></TableLayout>
+            android:orientation="vertical" />
 
         <Button
             android:id="@+id/buttonAdd"

@@ -27,13 +27,13 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal">
 
-        <com.atrainingtracker.trainingtracker.Views.MultiSelectionSpinner
+        <com.atrainingtracker.trainingtracker.views.MultiSelectionSpinner
             android:id="@+id/spinnerSport"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_weight="1" />
 
-        <com.atrainingtracker.trainingtracker.Views.MultiSelectionSpinner
+        <com.atrainingtracker.trainingtracker.views.MultiSelectionSpinner
             android:id="@+id/spinnerExtremumType"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

@@ -42,10 +42,10 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.atrainingtracker.R;
-import com.atrainingtracker.banalservice.Sensor.SensorType;
+import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 import com.atrainingtracker.banalservice.fragments.ConfigureFilterDialogFragment;
-import com.atrainingtracker.trainingtracker.Activities.ConfigViewsActivity;
+import com.atrainingtracker.trainingtracker.activities.ConfigViewsActivity;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
 import com.atrainingtracker.trainingtracker.dialogs.EditFieldDialog;

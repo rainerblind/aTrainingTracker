@@ -52,20 +52,20 @@ import android.widget.TextView;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BSportType;
-import com.atrainingtracker.banalservice.Sensor.SensorType;
-import com.atrainingtracker.banalservice.Sensor.formater.DistanceFormater;
-import com.atrainingtracker.banalservice.Sensor.formater.TimeFormater;
+import com.atrainingtracker.banalservice.sensor.SensorType;
+import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter;
+import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
-import com.atrainingtracker.trainingtracker.Exporter.ExportManager;
-import com.atrainingtracker.trainingtracker.Exporter.ExportWorkoutIntentService;
+import com.atrainingtracker.trainingtracker.database.ExtremaType;
+import com.atrainingtracker.trainingtracker.exporter.ExportManager;
+import com.atrainingtracker.trainingtracker.exporter.ExportWorkoutIntentService;
 import com.atrainingtracker.trainingtracker.MyHelper;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper;
-import com.atrainingtracker.trainingtracker.database.ExtremumType;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
 import com.atrainingtracker.trainingtracker.dialogs.EditFancyWorkoutNameDialog;
-import com.atrainingtracker.trainingtracker.helpers.CalcExtremumValuesTask;
+import com.atrainingtracker.trainingtracker.helpers.CalcExtremaValuesTask;
 import com.atrainingtracker.trainingtracker.interfaces.ReallyDeleteDialogInterface;
 
 import java.util.ArrayList;
@@ -133,11 +133,11 @@ public class EditWorkoutFragment extends Fragment {
     private static final String TEMPERATURE_MAX = "TEMPERATURE_MAX";
     private static final String TEMPERATURE_MIN = "TEMPERATURE_MIN";
     private static final String SHOW_DELETE_BUTTON = "SHOW_DELETE_BUTTON";
-    private static final List<Integer> TR_IDS_EXTREMUM_VALUES = Arrays.asList(R.id.trAltitude, R.id.trCadence, R.id.trHR, R.id.trPace, R.id.trPedalPowerBalance,
+    private static final List<Integer> TR_IDS_EXTREMA_VALUES = Arrays.asList(R.id.trAltitude, R.id.trCadence, R.id.trHR, R.id.trPace, R.id.trPedalPowerBalance,
             R.id.trPedalSmoothnessLeft, R.id.trPedalSmoothnessRight, R.id.trPower, R.id.trSpeed, R.id.trTemperature, R.id.trTorque);
-    private final IntentFilter mFinishedCalculatingExtremumValueFilter = new IntentFilter(CalcExtremumValuesTask.FINISHED_CALCULATING_EXTREMUM_VALUE);
-    private final IntentFilter mFinishedGuessingCommuteAndTrainerFilter = new IntentFilter(CalcExtremumValuesTask.FINISHED_GUESSING_COMMUTE_AND_TRAINER);
-    private final IntentFilter mFinishedCalculatingFancyNameFilter = new IntentFilter(CalcExtremumValuesTask.FINISHED_CALCULATING_FANCY_NAME);
+    private final IntentFilter mFinishedCalculatingExtremaValueFilter = new IntentFilter(CalcExtremaValuesTask.FINISHED_CALCULATING_EXTREMA_VALUE);
+    private final IntentFilter mFinishedGuessingCommuteAndTrainerFilter = new IntentFilter(CalcExtremaValuesTask.FINISHED_GUESSING_COMMUTE_AND_TRAINER);
+    private final IntentFilter mFinishedCalculatingFancyNameFilter = new IntentFilter(CalcExtremaValuesTask.FINISHED_CALCULATING_FANCY_NAME);
     protected String mBaseFileName;
     // protected TTSportType mTTSportType;  // we want the sport type easily available since the equipment also depends on the sport type
     protected long mSportTypeId = SportTypeDatabaseManager.getDefaultSportTypeId();
@@ -157,7 +157,7 @@ public class EditWorkoutFragment extends Fragment {
     private final BroadcastReceiver mFinishedCalculatingFancyNameReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            String workoutName = intent.getExtras().getString(CalcExtremumValuesTask.FANCY_NAME);
+            String workoutName = intent.getExtras().getString(CalcExtremaValuesTask.FANCY_NAME);
             editExportName.setText(workoutName);
         }
     };
@@ -186,14 +186,14 @@ public class EditWorkoutFragment extends Fragment {
     boolean radioButtonAlreadyChecked = false;  // necessary to allow deselect of the radio buttons within the group for Commute and Trainer
     private double MAX_WORKOUT_TIME_TO_SHOW_DELETE_BUTTON = 10 * 60;  // 10 min
     private String ALL = "all";
-    private boolean mPaceExtremumValuesAvailable = false;
-    private final BroadcastReceiver mFinishedCalculatingExtremumValueReceiver = new BroadcastReceiver() {
+    private boolean mPaceExtremaValuesAvailable = false;
+    private final BroadcastReceiver mFinishedCalculatingExtremaValueReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
-            SensorType sensorType = SensorType.valueOf(intent.getExtras().getString(CalcExtremumValuesTask.SENSOR_TYPE));
+            SensorType sensorType = SensorType.valueOf(intent.getExtras().getString(CalcExtremaValuesTask.SENSOR_TYPE));
 
             WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance();
             SQLiteDatabase db = databaseManager.getOpenDatabase();
-            fillTrExtremum(db, sensorType);
+            fillTrExtrema(db, sensorType);
             databaseManager.closeDatabase();
         }
     };
@@ -390,8 +390,8 @@ public class EditWorkoutFragment extends Fragment {
 
         // finally, fill the views
         // first, remove all
-        removeExtremumValuesSeparator();
-        removeAllExtremumValuesViews();
+        removeExtremaValuesSeparator();
+        removeAllExtremaValuesViews();
 
         // then fill them
         if (savedInstanceState == null) {
@@ -406,8 +406,8 @@ public class EditWorkoutFragment extends Fragment {
         if (DEBUG) Log.d(TAG, "onResume");
         super.onResume();
 
-        // registerReceiver(mFinishedCalculatingExtremumValuesReceiver, mFinishedCalculatingExtremumValuesFilter);
-        getActivity().registerReceiver(mFinishedCalculatingExtremumValueReceiver, mFinishedCalculatingExtremumValueFilter);
+        // registerReceiver(mFinishedCalculatingExtremaValuesReceiver, mFinishedCalculatingExtremaValuesFilter);
+        getActivity().registerReceiver(mFinishedCalculatingExtremaValueReceiver, mFinishedCalculatingExtremaValueFilter);
         getActivity().registerReceiver(mFinishedGuessingCommuteAndTrainerReceiver, mFinishedGuessingCommuteAndTrainerFilter);
         getActivity().registerReceiver(mFinishedCalculatingFancyNameReceiver, mFinishedCalculatingFancyNameFilter);
     }
@@ -417,9 +417,9 @@ public class EditWorkoutFragment extends Fragment {
         super.onPause();
         if (DEBUG) Log.d(TAG, "onPause");
 
-        // try { unregisterReceiver(mFinishedCalculatingExtremumValuesReceiver); } catch (IllegalArgumentException e) { }
+        // try { unregisterReceiver(mFinishedCalculatingExtremaValuesReceiver); } catch (IllegalArgumentException e) { }
         try {
-            getActivity().unregisterReceiver(mFinishedCalculatingExtremumValueReceiver);
+            getActivity().unregisterReceiver(mFinishedCalculatingExtremaValueReceiver);
         } catch (IllegalArgumentException e) {
         }
         try {
@@ -552,24 +552,24 @@ public class EditWorkoutFragment extends Fragment {
         ((TextView) getActivity().findViewById(R.id.tvStartTime)).setText(WorkoutSummariesDatabaseManager.getStartTime(mWorkoutID, "localtime"));
 
         int totalTime = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_TOTAL_s));
-        ((TextView) getActivity().findViewById(R.id.tvTotalTime)).setText((new TimeFormater()).format(totalTime));
+        ((TextView) getActivity().findViewById(R.id.tvTotalTime)).setText((new TimeFormatter()).format(totalTime));
         // do not show the delete button on "long" workouts or when tracking
         if (totalTime > MAX_WORKOUT_TIME_TO_SHOW_DELETE_BUTTON
                 | TrainingApplication.isTracking()) {
             buttonDeleteWorkout.setVisibility(View.GONE);
         }
         int activeTime = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_ACTIVE_s));
-        ((TextView) getActivity().findViewById(R.id.tvActiveTime)).setText((new TimeFormater()).format(activeTime));
+        ((TextView) getActivity().findViewById(R.id.tvActiveTime)).setText((new TimeFormatter()).format(activeTime));
 
-        ((TextView) getActivity().findViewById(R.id.tvSensorTypes)).setText(cursor.getString(cursor.getColumnIndex(WorkoutSummaries.GC_DATA)));  // argh, confusing wording?
+        ((TextView) getActivity().findViewById(R.id.tvSensorTypes)).setText(cursor.getString(cursor.getColumnIndex(WorkoutSummaries.GC_DATA)));  // wtf, confusing wording?
 
         // distance
-        String distance = (new DistanceFormater()).format(cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.DISTANCE_TOTAL_m)));
+        String distance = (new DistanceFormatter()).format(cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.DISTANCE_TOTAL_m)));
         String unit = getString(MyHelper.getDistanceUnitNameId());
         ((TextView) getActivity().findViewById(R.id.tvDistance)).setText(getString(R.string.value_unit_string_string, distance, unit));
 
         // max line distance
-        fillTvExtremum(db, SensorType.LINE_DISTANCE_m, ExtremumType.MAX, R.id.tvMaxLineDistance);
+        fillTvExtrema(db, SensorType.LINE_DISTANCE_m, ExtremaType.MAX, R.id.tvMaxLineDistance);
         TextView tvMaxLineDistance = getActivity().findViewById(R.id.tvMaxLineDistance);
         CharSequence maxLineDistance = tvMaxLineDistance.getText();
         tvMaxLineDistance.setText(getString(R.string.value_unit_string_string, maxLineDistance, unit));
@@ -585,7 +585,7 @@ public class EditWorkoutFragment extends Fragment {
         }
 
         // mean, max, and min values
-        fillExtremumValuesFromDb(db);
+        fillExtremaValuesFromDb(db);
 
         // finally, the sport type.  This must be done last in order to set the pace field depending on the sport type
         // This also triggers to update the equipment and tvEquipment
@@ -596,134 +596,134 @@ public class EditWorkoutFragment extends Fragment {
         databaseManager.closeDatabase(); // db.close();
     }
 
-    protected void fillExtremumValuesFromDb(SQLiteDatabase db) {
+    protected void fillExtremaValuesFromDb(SQLiteDatabase db) {
         // simply fill with all the values
-        fillTrExtremum(db, SensorType.HR);
-        fillTrExtremum(db, SensorType.SPEED_mps);
-        fillTrExtremum(db, SensorType.PACE_spm);
-        fillTrExtremum(db, SensorType.CADENCE);
-        fillTrExtremum(db, SensorType.POWER);
-        fillTrExtremum(db, SensorType.TORQUE);
-        fillTrExtremum(db, SensorType.PEDAL_POWER_BALANCE);
-        fillTrExtremum(db, SensorType.PEDAL_SMOOTHNESS_L);
-        fillTrExtremum(db, SensorType.PEDAL_SMOOTHNESS);
-        fillTrExtremum(db, SensorType.PEDAL_SMOOTHNESS_R);
-        fillTrExtremum(db, SensorType.ALTITUDE);
-        fillTrExtremum(db, SensorType.TEMPERATURE);
+        fillTrExtrema(db, SensorType.HR);
+        fillTrExtrema(db, SensorType.SPEED_mps);
+        fillTrExtrema(db, SensorType.PACE_spm);
+        fillTrExtrema(db, SensorType.CADENCE);
+        fillTrExtrema(db, SensorType.POWER);
+        fillTrExtrema(db, SensorType.TORQUE);
+        fillTrExtrema(db, SensorType.PEDAL_POWER_BALANCE);
+        fillTrExtrema(db, SensorType.PEDAL_SMOOTHNESS_L);
+        fillTrExtrema(db, SensorType.PEDAL_SMOOTHNESS);
+        fillTrExtrema(db, SensorType.PEDAL_SMOOTHNESS_R);
+        fillTrExtrema(db, SensorType.ALTITUDE);
+        fillTrExtrema(db, SensorType.TEMPERATURE);
 
     }
 
-    protected void removeAllExtremumValuesViews() {
-        for (Integer trId : TR_IDS_EXTREMUM_VALUES) {
+    protected void removeAllExtremaValuesViews() {
+        for (Integer trId : TR_IDS_EXTREMA_VALUES) {
             getActivity().findViewById(trId).setVisibility(View.GONE);
         }
     }
 
-    protected void removeExtremumValuesSeparator() {
+    protected void removeExtremaValuesSeparator() {
         getActivity().findViewById(R.id.separatorViewMeanMaxValues).setVisibility(View.GONE);
         getActivity().findViewById(R.id.tlMeanMaxValues).setVisibility(View.GONE);
     }
 
-    protected void showExtremumValuesSeparator() {
+    protected void showExtremaValuesSeparator() {
         getActivity().findViewById(R.id.separatorViewMeanMaxValues).setVisibility(View.VISIBLE);
         getActivity().findViewById(R.id.tlMeanMaxValues).setVisibility(View.VISIBLE);
     }
 
     protected void showOrHideTrPace() {
         if (SportTypeDatabaseManager.getBSportType(mSportTypeId) == BSportType.RUN
-                && mPaceExtremumValuesAvailable) {
+                && mPaceExtremaValuesAvailable) {
             getActivity().findViewById(R.id.trPace).setVisibility(View.VISIBLE);
         } else {
             getActivity().findViewById(R.id.trPace).setVisibility(View.GONE);
         }
     }
 
-    protected void fillTrExtremum(SQLiteDatabase db, SensorType sensorType) {
+    protected void fillTrExtrema(SQLiteDatabase db, SensorType sensorType) {
         switch (sensorType) {
             case HR:
-                fillTrExtremum(db, SensorType.HR, R.id.trHR, R.id.tvHRMean, R.id.tvHRMax, R.id.tvHRMin);
+                fillTrExtrema(db, SensorType.HR, R.id.trHR, R.id.tvHRMean, R.id.tvHRMax, R.id.tvHRMin);
                 break;
             case SPEED_mps:
-                fillTrExtremum(db, SensorType.SPEED_mps, R.id.trSpeed, R.id.tvSpeedMean, R.id.tvSpeedMax, R.id.tvSpeedMin);
+                fillTrExtrema(db, SensorType.SPEED_mps, R.id.trSpeed, R.id.tvSpeedMean, R.id.tvSpeedMax, R.id.tvSpeedMin);
                 break;
             case PACE_spm:
-                fillTrExtremum(db, SensorType.PACE_spm, R.id.trPace, R.id.tvPaceMean, R.id.tvPaceMax, R.id.tvPaceMin);
+                fillTrExtrema(db, SensorType.PACE_spm, R.id.trPace, R.id.tvPaceMean, R.id.tvPaceMax, R.id.tvPaceMin);
                 showOrHideTrPace();
                 break;
             case CADENCE:
-                fillTrExtremum(db, SensorType.CADENCE, R.id.trCadence, R.id.tvCadenceMean, R.id.tvCadenceMax, R.id.tvCadenceMin);
+                fillTrExtrema(db, SensorType.CADENCE, R.id.trCadence, R.id.tvCadenceMean, R.id.tvCadenceMax, R.id.tvCadenceMin);
                 break;
             case POWER:
-                fillTrExtremum(db, SensorType.POWER, R.id.trPower, R.id.tvPowerMean, R.id.tvPowerMax, R.id.tvPowerMin);
+                fillTrExtrema(db, SensorType.POWER, R.id.trPower, R.id.tvPowerMean, R.id.tvPowerMax, R.id.tvPowerMin);
                 break;
             case TORQUE:
-                fillTrExtremum(db, SensorType.TORQUE, R.id.trTorque, R.id.tvTorqueMean, R.id.tvTorqueMax, R.id.tvTorqueMin);
+                fillTrExtrema(db, SensorType.TORQUE, R.id.trTorque, R.id.tvTorqueMean, R.id.tvTorqueMax, R.id.tvTorqueMin);
                 break;
             case PEDAL_POWER_BALANCE:
-                fillTrExtremum(db, SensorType.PEDAL_POWER_BALANCE, R.id.trPedalPowerBalance, R.id.tvPedalPowerBalanceMean, R.id.tvPedalPowerBalanceMax, R.id.tvPedalPowerBalanceMin);
+                fillTrExtrema(db, SensorType.PEDAL_POWER_BALANCE, R.id.trPedalPowerBalance, R.id.tvPedalPowerBalanceMean, R.id.tvPedalPowerBalanceMax, R.id.tvPedalPowerBalanceMin);
                 break;
             case PEDAL_SMOOTHNESS_L:
-                fillTrExtremum(db, SensorType.PEDAL_SMOOTHNESS_L, R.id.trPedalSmoothnessLeft, R.id.tvPedalSmoothnessLeftMean, R.id.tvPedalSmoothnessLeftMax, R.id.tvPedalSmoothnessLeftMin);
+                fillTrExtrema(db, SensorType.PEDAL_SMOOTHNESS_L, R.id.trPedalSmoothnessLeft, R.id.tvPedalSmoothnessLeftMean, R.id.tvPedalSmoothnessLeftMax, R.id.tvPedalSmoothnessLeftMin);
                 break;
             case PEDAL_SMOOTHNESS:
-                fillTrExtremum(db, SensorType.PEDAL_SMOOTHNESS, R.id.trPedalSmoothness, R.id.tvPedalSmoothnessMean, R.id.tvPedalSmoothnessMax, R.id.tvPedalSmoothnessMin);
+                fillTrExtrema(db, SensorType.PEDAL_SMOOTHNESS, R.id.trPedalSmoothness, R.id.tvPedalSmoothnessMean, R.id.tvPedalSmoothnessMax, R.id.tvPedalSmoothnessMin);
                 break;
             case PEDAL_SMOOTHNESS_R:
-                fillTrExtremum(db, SensorType.PEDAL_SMOOTHNESS_R, R.id.trPedalSmoothnessRight, R.id.tvPedalSmoothnessRightMean, R.id.tvPedalSmoothnessRightMax, R.id.tvPedalSmoothnessRightMin);
+                fillTrExtrema(db, SensorType.PEDAL_SMOOTHNESS_R, R.id.trPedalSmoothnessRight, R.id.tvPedalSmoothnessRightMean, R.id.tvPedalSmoothnessRightMax, R.id.tvPedalSmoothnessRightMin);
                 break;
             case ALTITUDE:
-                fillTrExtremum(db, SensorType.ALTITUDE, R.id.trAltitude, R.id.tvAltitudeMean, R.id.tvAltitudeMax, R.id.tvAltitudeMin);
+                fillTrExtrema(db, SensorType.ALTITUDE, R.id.trAltitude, R.id.tvAltitudeMean, R.id.tvAltitudeMax, R.id.tvAltitudeMin);
                 break;
             case TEMPERATURE:
-                fillTrExtremum(db, SensorType.TEMPERATURE, R.id.trTemperature, R.id.tvTemperatureMean, R.id.tvTemperatureMax, R.id.tvTemperatureMin);
+                fillTrExtrema(db, SensorType.TEMPERATURE, R.id.trTemperature, R.id.tvTemperatureMean, R.id.tvTemperatureMax, R.id.tvTemperatureMin);
                 break;
         }
     }
 
-    protected boolean fillTrExtremum(SQLiteDatabase db, SensorType sensorType, int trId, int tvMeanId, int tvMaxId, int tvMinId) {
-        if (DEBUG) Log.i(TAG, "fillTrExtemum for sensor: " + sensorType.name());
+    protected boolean fillTrExtrema(SQLiteDatabase db, SensorType sensorType, int trId, int tvMeanId, int tvMaxId, int tvMinId) {
+        if (DEBUG) Log.i(TAG, "fillTrExtrema for sensor: " + sensorType.name());
 
-        // if one of the extremum values contains valid data (not 0), we want to show the complete row
-        boolean dataAvailable = fillTvExtremum(db, sensorType, ExtremumType.AVG, tvMeanId)
-                | fillTvExtremum(db, sensorType, ExtremumType.MAX, tvMaxId)
-                | fillTvExtremum(db, sensorType, ExtremumType.MIN, tvMinId);
+        // if one of the extrema values contains valid data (not 0), we want to show the complete row
+        boolean dataAvailable = fillTvExtrema(db, sensorType, ExtremaType.AVG, tvMeanId)
+                | fillTvExtrema(db, sensorType, ExtremaType.MAX, tvMaxId)
+                | fillTvExtrema(db, sensorType, ExtremaType.MIN, tvMinId);
 
         if (dataAvailable) {  // there seems to be valid data, show it
             getActivity().findViewById(trId).setVisibility(View.VISIBLE);
-            showExtremumValuesSeparator();
+            showExtremaValuesSeparator();
         } else {   // no valid data available, remove the complete row
             getActivity().findViewById(trId).setVisibility(View.GONE);
         }
 
         if (sensorType == SensorType.PACE_spm) {
-            mPaceExtremumValuesAvailable = dataAvailable;
+            mPaceExtremaValuesAvailable = dataAvailable;
         }
 
         return dataAvailable;
     }
 
-    protected boolean fillTvExtremum(SQLiteDatabase db, SensorType sensorType, ExtremumType extremumType, int tvId) {
+    protected boolean fillTvExtrema(SQLiteDatabase db, SensorType sensorType, ExtremaType extremaType, int tvId) {
         boolean validData = false;
         ((TextView) getActivity().findViewById(tvId)).setText(R.string.NoData);
 
-        Cursor cursor = db.query(WorkoutSummaries.TABLE_EXTREMUM_VALUES,
+        Cursor cursor = db.query(WorkoutSummaries.TABLE_EXTREMA_VALUES,
                 null,
-                WorkoutSummaries.WORKOUT_ID + "=? AND " + WorkoutSummaries.SENSOR_TYPE + "=? AND " + WorkoutSummaries.EXTREMUM_TYPE + "=?",
-                new String[]{Long.toString(mWorkoutID), sensorType.name(), extremumType.name()},
+                WorkoutSummaries.WORKOUT_ID + "=? AND " + WorkoutSummaries.SENSOR_TYPE + "=? AND " + WorkoutSummaries.EXTREMA_TYPE + "=?",
+                new String[]{Long.toString(mWorkoutID), sensorType.name(), extremaType.name()},
                 null, null, null);
         if (cursor.moveToFirst()) {
             Double value = cursor.getDouble(cursor.getColumnIndex(WorkoutSummaries.VALUE));
             if (DEBUG)
-                Log.i(TAG, "got " + value + " for " + extremumType.name() + " " + sensorType.name() + " of workout " + mWorkoutID);
+                Log.i(TAG, "got " + value + " for " + extremaType.name() + " " + sensorType.name() + " of workout " + mWorkoutID);
             if (value != null) {
-                ((TextView) getActivity().findViewById(tvId)).setText(sensorType.getMyFormater().format(value));
+                ((TextView) getActivity().findViewById(tvId)).setText(sensorType.getMyFormatter().format(value));
                 if (value != 0) {
                     validData = true;
                 }
             }
         } else {
             if (DEBUG)
-                Log.d(TAG, "no value for " + extremumType.name() + " " + sensorType.name() + " of workout " + mWorkoutID);
+                Log.d(TAG, "no value for " + extremaType.name() + " " + sensorType.name() + " of workout " + mWorkoutID);
         }
 
         cursor.close();
@@ -767,7 +767,7 @@ public class EditWorkoutFragment extends Fragment {
         }
 
         if (savedInstanceState.containsKey(HR_MEAN)) {
-            showExtremumValuesSeparator();
+            showExtremaValuesSeparator();
             getActivity().findViewById(R.id.trHR).setVisibility(View.VISIBLE);
             ((TextView) getActivity().findViewById(R.id.tvHRMean)).setText(savedInstanceState.getString(HR_MEAN));
             ((TextView) getActivity().findViewById(R.id.tvHRMax)).setText(savedInstanceState.getString(HR_MAX));
@@ -777,7 +777,7 @@ public class EditWorkoutFragment extends Fragment {
         }
 
         if (savedInstanceState.containsKey(SPEED_MEAN)) {
-            showExtremumValuesSeparator();
+            showExtremaValuesSeparator();
             getActivity().findViewById(R.id.trSpeed).setVisibility(View.VISIBLE);
             ((TextView) getActivity().findViewById(R.id.tvSpeedMean)).setText(savedInstanceState.getString(SPEED_MEAN));
             ((TextView) getActivity().findViewById(R.id.tvSpeedMax)).setText(savedInstanceState.getString(SPEED_MAX));
@@ -787,7 +787,7 @@ public class EditWorkoutFragment extends Fragment {
         }
 
         if (savedInstanceState.containsKey(PACE_MEAN)) {
-            showExtremumValuesSeparator();
+            showExtremaValuesSeparator();
             ((TextView) getActivity().findViewById(R.id.tvPaceMean)).setText(savedInstanceState.getString(PACE_MEAN));
             ((TextView) getActivity().findViewById(R.id.tvPaceMax)).setText(savedInstanceState.getString(PACE_MAX));
             ((TextView) getActivity().findViewById(R.id.tvPaceMin)).setText(savedInstanceState.getString(PACE_MIN));
@@ -797,7 +797,7 @@ public class EditWorkoutFragment extends Fragment {
         }
 
         if (savedInstanceState.containsKey(CADENCE_MEAN)) {
-            showExtremumValuesSeparator();
+            showExtremaValuesSeparator();
             getActivity().findViewById(R.id.trCadence).setVisibility(View.VISIBLE);
             ((TextView) getActivity().findViewById(R.id.tvCadenceMean)).setText(savedInstanceState.getString(CADENCE_MEAN));
             ((TextView) getActivity().findViewById(R.id.tvCadenceMax)).setText(savedInstanceState.getString(CADENCE_MAX));
@@ -807,7 +807,7 @@ public class EditWorkoutFragment extends Fragment {
         }
 
         if (savedInstanceState.containsKey(POWER_MEAN)) {
-            showExtremumValuesSeparator();
+            showExtremaValuesSeparator();
             getActivity().findViewById(R.id.trPower).setVisibility(View.VISIBLE);
             ((TextView) getActivity().findViewById(R.id.tvPowerMean)).setText(savedInstanceState.getString(POWER_MEAN));
             ((TextView) getActivity().findViewById(R.id.tvPowerMax)).setText(savedInstanceState.getString(POWER_MAX));
@@ -817,7 +817,7 @@ public class EditWorkoutFragment extends Fragment {
         }
 
         if (savedInstanceState.containsKey(TORQUE_MEAN)) {
-            showExtremumValuesSeparator();
+            showExtremaValuesSeparator();
             getActivity().findViewById(R.id.trTorque).setVisibility(View.VISIBLE);
             ((TextView) getActivity().findViewById(R.id.tvTorqueMean)).setText(savedInstanceState.getString(TORQUE_MEAN));
             ((TextView) getActivity().findViewById(R.id.tvTorqueMax)).setText(savedInstanceState.getString(TORQUE_MAX));
@@ -827,7 +827,7 @@ public class EditWorkoutFragment extends Fragment {
         }
 
         if (savedInstanceState.containsKey(PEDAL_POWER_BALANCE_MEAN)) {
-            showExtremumValuesSeparator();
+            showExtremaValuesSeparator();
             getActivity().findViewById(R.id.trPedalPowerBalance).setVisibility(View.VISIBLE);
             ((TextView) getActivity().findViewById(R.id.tvPedalPowerBalanceMean)).setText(savedInstanceState.getString(PEDAL_POWER_BALANCE_MEAN));
             ((TextView) getActivity().findViewById(R.id.tvPedalPowerBalanceMax)).setText(savedInstanceState.getString(PEDAL_POWER_BALANCE_MAX));
@@ -837,7 +837,7 @@ public class EditWorkoutFragment extends Fragment {
         }
 
         if (savedInstanceState.containsKey(PEDAL_SMOOTHNESS_LEFT_MEAN)) {
-            showExtremumValuesSeparator();
+            showExtremaValuesSeparator();
             getActivity().findViewById(R.id.trPedalSmoothnessLeft).setVisibility(View.VISIBLE);
             ((TextView) getActivity().findViewById(R.id.tvPedalSmoothnessLeftMean)).setText(savedInstanceState.getString(PEDAL_SMOOTHNESS_LEFT_MEAN));
             ((TextView) getActivity().findViewById(R.id.tvPedalSmoothnessLeftMax)).setText(savedInstanceState.getString(PEDAL_SMOOTHNESS_LEFT_MAX));
@@ -847,7 +847,7 @@ public class EditWorkoutFragment extends Fragment {
         }
 
         if (savedInstanceState.containsKey(PEDAL_SMOOTHNESS_MEAN)) {
-            showExtremumValuesSeparator();
+            showExtremaValuesSeparator();
             getActivity().findViewById(R.id.trPedalSmoothness).setVisibility(View.VISIBLE);
             ((TextView) getActivity().findViewById(R.id.tvPedalSmoothnessMean)).setText(savedInstanceState.getString(PEDAL_SMOOTHNESS_MEAN));
             ((TextView) getActivity().findViewById(R.id.tvPedalSmoothnessMax)).setText(savedInstanceState.getString(PEDAL_SMOOTHNESS_MAX));
@@ -857,7 +857,7 @@ public class EditWorkoutFragment extends Fragment {
         }
 
         if (savedInstanceState.containsKey(PEDAL_SMOOTHNESS_RIGHT_MEAN)) {
-            showExtremumValuesSeparator();
+            showExtremaValuesSeparator();
             getActivity().findViewById(R.id.trPedalSmoothnessRight).setVisibility(View.VISIBLE);
             ((TextView) getActivity().findViewById(R.id.tvPedalSmoothnessRightMean)).setText(savedInstanceState.getString(PEDAL_SMOOTHNESS_RIGHT_MEAN));
             ((TextView) getActivity().findViewById(R.id.tvPedalSmoothnessRightMax)).setText(savedInstanceState.getString(PEDAL_SMOOTHNESS_RIGHT_MAX));
@@ -867,7 +867,7 @@ public class EditWorkoutFragment extends Fragment {
         }
 
         if (savedInstanceState.containsKey(ALTITUDE_MEAN)) {
-            showExtremumValuesSeparator();
+            showExtremaValuesSeparator();
             getActivity().findViewById(R.id.trAltitude).setVisibility(View.VISIBLE);
             ((TextView) getActivity().findViewById(R.id.tvAltitudeMean)).setText(savedInstanceState.getString(ALTITUDE_MEAN));
             ((TextView) getActivity().findViewById(R.id.tvAltitudeMax)).setText(savedInstanceState.getString(ALTITUDE_MAX));
@@ -877,7 +877,7 @@ public class EditWorkoutFragment extends Fragment {
         }
 
         if (savedInstanceState.containsKey(TEMPERATURE_MEAN)) {
-            showExtremumValuesSeparator();
+            showExtremaValuesSeparator();
             getActivity().findViewById(R.id.trTemperature).setVisibility(View.VISIBLE);
             ((TextView) getActivity().findViewById(R.id.tvTemperatureMean)).setText(savedInstanceState.getString(TEMPERATURE_MEAN));
             ((TextView) getActivity().findViewById(R.id.tvTemperatureMax)).setText(savedInstanceState.getString(TEMPERATURE_MAX));

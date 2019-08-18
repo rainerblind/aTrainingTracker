@@ -28,14 +28,14 @@ import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
 
-import com.atrainingtracker.banalservice.Devices.DeviceManager;
-import com.atrainingtracker.banalservice.Devices.DeviceType;
-import com.atrainingtracker.banalservice.Devices.MyRemoteDevice;
-import com.atrainingtracker.banalservice.Sensor.MyAccumulatorSensor;
-import com.atrainingtracker.banalservice.Sensor.MySensor;
-import com.atrainingtracker.banalservice.Sensor.MySensorManager;
-import com.atrainingtracker.banalservice.Sensor.SensorData;
-import com.atrainingtracker.banalservice.Sensor.SensorType;
+import com.atrainingtracker.banalservice.devices.DeviceManager;
+import com.atrainingtracker.banalservice.devices.DeviceType;
+import com.atrainingtracker.banalservice.devices.MyRemoteDevice;
+import com.atrainingtracker.banalservice.sensor.MyAccumulatorSensor;
+import com.atrainingtracker.banalservice.sensor.MySensor;
+import com.atrainingtracker.banalservice.sensor.MySensorManager;
+import com.atrainingtracker.banalservice.sensor.SensorData;
+import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.banalservice.filters.FilterData;
 import com.atrainingtracker.banalservice.filters.FilterManager;
@@ -351,7 +351,7 @@ public class BANALService
         }
 
         double lapSpeed = lapDistance / lapTime_s;
-        String lapSpeedString = SensorType.SPEED_mps.getMyFormater().format(lapSpeed);
+        String lapSpeedString = SensorType.SPEED_mps.getMyFormatter().format(lapSpeed);
 
         cDeviceManager.newLap();
 

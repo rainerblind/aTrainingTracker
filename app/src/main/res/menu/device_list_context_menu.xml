@@ -21,9 +21,9 @@
     <item
         android:id="@+id/editDevice"
         android:icon="@android:drawable/ic_menu_edit"
-        android:title="@string/edit_device"></item>
+        android:title="@string/edit_device" />
     <item
         android:id="@+id/deleteDevice"
         android:icon="@android:drawable/ic_menu_edit"
-        android:title="@string/delete_device"></item>
+        android:title="@string/delete_device" />
 </menu>

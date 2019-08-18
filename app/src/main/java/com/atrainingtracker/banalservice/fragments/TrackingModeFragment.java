@@ -37,7 +37,7 @@ import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.BANALService.BANALServiceComm;
 import com.atrainingtracker.banalservice.BSportType;
-import com.atrainingtracker.banalservice.Devices.MyRemoteDevice;
+import com.atrainingtracker.banalservice.devices.MyRemoteDevice;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.banalservice.helpers.UIHelper;
 import com.atrainingtracker.trainingtracker.TrackingMode;

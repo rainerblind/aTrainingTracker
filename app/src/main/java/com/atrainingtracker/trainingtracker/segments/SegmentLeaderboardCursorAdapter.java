@@ -29,8 +29,8 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.atrainingtracker.R;
-import com.atrainingtracker.banalservice.Sensor.formater.SpeedFormater;
-import com.atrainingtracker.banalservice.Sensor.formater.TimeFormater;
+import com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter;
+import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter;
 import com.atrainingtracker.trainingtracker.MyHelper;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
@@ -51,8 +51,8 @@ public class SegmentLeaderboardCursorAdapter extends CursorAdapter {
     private final String TAG = SegmentLeaderboardCursorAdapter.class.getSimpleName();
     private final boolean DEBUG = TrainingApplication.DEBUG && false;
     protected Context mContext;
-    TimeFormater timeFormater = new TimeFormater();
-    SpeedFormater speedFormater = new SpeedFormater();
+    TimeFormatter timeFormatter = new TimeFormatter();
+    SpeedFormatter speedFormatter = new SpeedFormatter();
 
     private LayoutInflater mInflater;
 
@@ -141,11 +141,11 @@ public class SegmentLeaderboardCursorAdapter extends CursorAdapter {
                 viewHolder.tvAthleteName.setText(rank + ": " + cursor.getString(cursor.getColumnIndex(Segments.ATHLETE_NAME)));
 
                 int time_s = cursor.getInt(cursor.getColumnIndex(Segments.ELAPSED_TIME));
-                viewHolder.tvSegmentTime.setText(timeFormater.format_with_units(time_s));
+                viewHolder.tvSegmentTime.setText(timeFormatter.format_with_units(time_s));
 
                 double distance_m = cursor.getDouble(cursor.getColumnIndex(Segments.DISTANCE));
                 double speed_mps = distance_m / time_s;
-                String speed_string = speedFormater.format_with_units(speed_mps);
+                String speed_string = speedFormatter.format_with_units(speed_mps);
                 viewHolder.tvAverageSpeed.setText(speed_string);
                 break;
         }

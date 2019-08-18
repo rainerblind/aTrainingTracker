@@ -35,10 +35,10 @@ import android.widget.Spinner;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.ActivityType;
-import com.atrainingtracker.banalservice.Sensor.SensorType;
-import com.atrainingtracker.trainingtracker.Activities.ConfigViewsActivity;
+import com.atrainingtracker.banalservice.sensor.SensorType;
+import com.atrainingtracker.trainingtracker.activities.ConfigViewsActivity;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
-import com.atrainingtracker.trainingtracker.Views.SensorArrayAdapter;
+import com.atrainingtracker.trainingtracker.views.SensorArrayAdapter;
 import com.atrainingtracker.trainingtracker.fragments.ConfigViewFragment;
 
 import java.util.LinkedList;

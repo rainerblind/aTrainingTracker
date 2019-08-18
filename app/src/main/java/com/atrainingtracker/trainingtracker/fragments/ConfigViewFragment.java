@@ -23,7 +23,7 @@ import android.support.v4.app.Fragment;
 import android.util.Log;
 
 import com.atrainingtracker.banalservice.ActivityType;
-import com.atrainingtracker.trainingtracker.Activities.ConfigViewsActivity;
+import com.atrainingtracker.trainingtracker.activities.ConfigViewsActivity;
 
 public abstract class ConfigViewFragment extends Fragment {
     private static final String TAG = ConfigViewFragment.class.getName();

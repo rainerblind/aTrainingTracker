@@ -21,7 +21,7 @@ package com.atrainingtracker.banalservice.filters;
 import android.util.Log;
 
 import com.atrainingtracker.banalservice.BANALService;
-import com.atrainingtracker.banalservice.Sensor.SensorType;
+import com.atrainingtracker.banalservice.sensor.SensorType;
 
 import java.util.LinkedList;
 

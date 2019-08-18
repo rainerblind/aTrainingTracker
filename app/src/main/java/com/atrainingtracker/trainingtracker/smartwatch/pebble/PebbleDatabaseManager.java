@@ -28,7 +28,7 @@ import android.util.Log;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.ActivityType;
-import com.atrainingtracker.banalservice.Sensor.SensorType;
+import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 
 import java.util.LinkedList;

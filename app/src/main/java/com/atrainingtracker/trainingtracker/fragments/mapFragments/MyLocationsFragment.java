@@ -43,18 +43,18 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 
 import com.atrainingtracker.R;
-import com.atrainingtracker.banalservice.Sensor.SensorType;
+import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
-import com.atrainingtracker.trainingtracker.Views.MultiSelectionSpinner;
-import com.atrainingtracker.trainingtracker.database.ExtremumType;
+import com.atrainingtracker.trainingtracker.database.ExtremaType;
+import com.atrainingtracker.trainingtracker.views.MultiSelectionSpinner;
 import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager.KnownLocationsDbHelper;
 import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager.MyLocation;
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
-import com.atrainingtracker.trainingtracker.helpers.CalcExtremumValuesTask;
+import com.atrainingtracker.trainingtracker.helpers.CalcExtremaValuesTask;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
@@ -85,9 +85,9 @@ public class MyLocationsFragment
     MapView mMapView;
     GoogleMap mMap;
 
-    MultiSelectionSpinner mSportSpinner, mExtremumTypeSpinner;
+    MultiSelectionSpinner mSportSpinner, mExtremaTypeSpinner;
 
-    HashMap<Long, EnumMap<ExtremumType, List<Marker>>> mMarkerMap = new HashMap<Long, EnumMap<ExtremumType, List<Marker>>>();
+    HashMap<Long, EnumMap<ExtremaType, List<Marker>>> mMarkerMap = new HashMap<Long, EnumMap<ExtremaType, List<Marker>>>();
 
     Map<Marker, Long> mMarker2WorkoutIdMap = new HashMap<>();
     Map<Marker, Long> mMarker2MyLocationsIdMap = new HashMap<>();
@@ -119,7 +119,7 @@ public class MyLocationsFragment
 
         // get the views
         mSportSpinner = v.findViewById(R.id.spinnerSport);
-        mExtremumTypeSpinner = v.findViewById(R.id.spinnerExtremumType);
+        mExtremaTypeSpinner = v.findViewById(R.id.spinnerExtremumType);
         mMapView = v.findViewById(R.id.mapView);
 
         // now, configure the views
@@ -140,19 +140,19 @@ public class MyLocationsFragment
             }
         });
 
-        mExtremumTypeSpinner.setItems(ExtremumType.getLocationNameList());
-        // mExtremumTypeSpinner.setSelection(new int[]{0, 1, 2});
-        mExtremumTypeSpinner.setSelection(new int[]{});
-        mExtremumTypeSpinner.setmMSSOnitemClickedListener(new MultiSelectionSpinner.MSSOnItemClickedListener() {
+        mExtremaTypeSpinner.setItems(ExtremaType.getLocationNameList());
+        // mExtremaTypeSpinner.setSelection(new int[]{0, 1, 2});
+        mExtremaTypeSpinner.setSelection(new int[]{});
+        mExtremaTypeSpinner.setmMSSOnitemClickedListener(new MultiSelectionSpinner.MSSOnItemClickedListener() {
             @Override
             public void onItemClicked(int position, boolean isChecked) {
                 if (DEBUG)
-                    Log.i(TAG, "extremumTypeSpinner: onItemClicked position=" + position + ", isChecked=" + isChecked);
-                ExtremumType selectedExtremumType = ExtremumType.LOCATION_EXTREMUM_TYPES[position];
+                    Log.i(TAG, "extremaTypeSpinner: onItemClicked position=" + position + ", isChecked=" + isChecked);
+                ExtremaType selectedExtremaType = ExtremaType.LOCATION_EXTREMA_TYPES[position];
                 if (isChecked) {
-                    addExtremumTypeLocations(selectedExtremumType);
+                    addExtremaTypeLocations(selectedExtremaType);
                 } else {
-                    removeExtremumTypeLocations(selectedExtremumType);
+                    removeExtremaTypeLocations(selectedExtremaType);
                 }
             }
         });
@@ -271,18 +271,18 @@ public class MyLocationsFragment
     }
 
     protected void addSportTypeLocations(long ttSportTypeId) {
-        for (int selectedExtremumType : mExtremumTypeSpinner.getSelectedIndicies()) {
-            ExtremumType extremumType = ExtremumType.LOCATION_EXTREMUM_TYPES[selectedExtremumType];
+        for (int selectedExtremaType : mExtremaTypeSpinner.getSelectedIndicies()) {
+            ExtremaType extremaType = ExtremaType.LOCATION_EXTREMA_TYPES[selectedExtremaType];
 
-            new ShowExtremumLocations(getContext(), ttSportTypeId, extremumType).execute();
+            new ShowExtremaLocations(getContext(), ttSportTypeId, extremaType).execute();
         }
     }
 
-    protected void addExtremumTypeLocations(ExtremumType extremumType) {
+    protected void addExtremaTypeLocations(ExtremaType extremaType) {
         for (int selectedSportTypeIndex : mSportSpinner.getSelectedIndicies()) {
             long sportTypeId = mSportTypesIdList.get(selectedSportTypeIndex);
 
-            new ShowExtremumLocations(getContext(), sportTypeId, extremumType).execute();
+            new ShowExtremaLocations(getContext(), sportTypeId, extremaType).execute();
         }
     }
 
@@ -290,32 +290,32 @@ public class MyLocationsFragment
         if (DEBUG) Log.i(TAG, "removeSportTypeLocations: sportTypeId=" + sportTypeId);
 
         if (mMarkerMap.containsKey(sportTypeId)) {
-            for (ExtremumType extremumType : mMarkerMap.get(sportTypeId).keySet()) {
-                removeMarkers(sportTypeId, extremumType);
+            for (ExtremaType extremaType : mMarkerMap.get(sportTypeId).keySet()) {
+                removeMarkers(sportTypeId, extremaType);
             }
         }
     }
 
-    protected void removeExtremumTypeLocations(ExtremumType extremumType) {
-        if (DEBUG) Log.i(TAG, "removeExtremumTypeLocations: ExtremumType=" + extremumType);
+    protected void removeExtremaTypeLocations(ExtremaType extremaType) {
+        if (DEBUG) Log.i(TAG, "removeExtremaTypeLocations: ExtremaType=" + extremaType);
 
         for (long sportTypeId : mMarkerMap.keySet()) {
-            if (mMarkerMap.get(sportTypeId).containsKey(extremumType)) {
-                removeMarkers(sportTypeId, extremumType);
+            if (mMarkerMap.get(sportTypeId).containsKey(extremaType)) {
+                removeMarkers(sportTypeId, extremaType);
             }
         }
     }
 
-    protected void removeMarkers(long sportTypeId, ExtremumType extremumType) {
+    protected void removeMarkers(long sportTypeId, ExtremaType extremaType) {
         if (DEBUG)
-            Log.i(TAG, "removeMarkers: sportTypeId=" + sportTypeId + ", ExtremumType=" + extremumType);
+            Log.i(TAG, "removeMarkers: sportTypeId=" + sportTypeId + ", ExtremaType=" + extremaType);
 
-        for (Marker marker : mMarkerMap.get(sportTypeId).get(extremumType)) {
+        for (Marker marker : mMarkerMap.get(sportTypeId).get(extremaType)) {
             mMarker2WorkoutIdMap.remove(marker);
             marker.remove();
         }
 
-        mMarkerMap.get(sportTypeId).remove(extremumType);
+        mMarkerMap.get(sportTypeId).remove(extremaType);
     }
 
     protected void addMyLocationToMap(MyLocation myLocation) {
@@ -449,11 +449,11 @@ public class MyLocationsFragment
         }
 
         Bitmap marker = ((BitmapDrawable) getResources().getDrawable(drawableId)).getBitmap();
-        Bitmap markerscaled = Bitmap.createScaledBitmap(marker, (int) (marker.getWidth() * scale), (int) (marker.getHeight() * scale), false);
+        Bitmap scaledMarker = Bitmap.createScaledBitmap(marker, (int) (marker.getWidth() * scale), (int) (marker.getHeight() * scale), false);
 
         return mMap.addMarker(new MarkerOptions()
                 .position(position)
-                .icon(BitmapDescriptorFactory.fromBitmap(markerscaled)));
+                .icon(BitmapDescriptorFactory.fromBitmap(scaledMarker)));
     }
 
     // again, copied code from BaseMapFragment
@@ -496,22 +496,22 @@ public class MyLocationsFragment
         }
     }
 
-    class ShowExtremumLocations extends AsyncTask<Integer, LatLngId, Float> {
+    class ShowExtremaLocations extends AsyncTask<Integer, LatLngId, Float> {
         private long mSportTypeId;
-        private ExtremumType mExtremumType;
+        private ExtremaType mExtremaType;
 
         private ProgressDialog progressDialog;
         private Context context;
 
         private int mMarkerId = R.drawable.start_logo_map;
 
-        ShowExtremumLocations(Context context, long sportTypeId, ExtremumType extremumType) {
+        ShowExtremaLocations(Context context, long sportTypeId, ExtremaType extremaType) {
             if (DEBUG)
-                Log.i(TAG, "ShowExtremumLocations: sportTypeId=" + sportTypeId + ", extremumType=" + extremumType);
+                Log.i(TAG, "ShowExtremaLocations: sportTypeId=" + sportTypeId + ", extremaType=" + extremaType);
 
             this.context = context;
             mSportTypeId = sportTypeId;
-            mExtremumType = extremumType;
+            mExtremaType = extremaType;
 
             progressDialog = new ProgressDialog(context);
         }
@@ -520,17 +520,17 @@ public class MyLocationsFragment
             // disable clicking
             mSportSpinner.setEnabled(false);
             mSportSpinner.setClickable(false);
-            mExtremumTypeSpinner.setEnabled(false);
-            mExtremumTypeSpinner.setClickable(false);
+            mExtremaTypeSpinner.setEnabled(false);
+            mExtremaTypeSpinner.setClickable(false);
 
             // show a progress dialog
-            progressDialog.setMessage(context.getString(R.string.get_extremumType_of_sportType_format, mExtremumType.toString(), SportTypeDatabaseManager.getUIName(mSportTypeId)));
+            progressDialog.setMessage(context.getString(R.string.get_extremumType_of_sportType_format, mExtremaType.toString(), SportTypeDatabaseManager.getUIName(mSportTypeId)));
             progressDialog.setCancelable(false);
             progressDialog.setCanceledOnTouchOutside(false);
             progressDialog.show();
 
 
-            switch (mExtremumType) {
+            switch (mExtremaType) {
                 case START:
                     mMarkerId = R.drawable.start_logo_map;  // TODO: other color?
                     break;
@@ -544,10 +544,10 @@ public class MyLocationsFragment
 
             // make sure that mMarkerMap it correctly initialized
             if (!mMarkerMap.containsKey(mSportTypeId)) {
-                mMarkerMap.put(mSportTypeId, new EnumMap<ExtremumType, List<Marker>>(ExtremumType.class));
+                mMarkerMap.put(mSportTypeId, new EnumMap<ExtremaType, List<Marker>>(ExtremaType.class));
             }
-            if (!mMarkerMap.get(mSportTypeId).containsKey(mExtremumType)) {
-                mMarkerMap.get(mSportTypeId).put(mExtremumType, new LinkedList<Marker>());
+            if (!mMarkerMap.get(mSportTypeId).containsKey(mExtremaType)) {
+                mMarkerMap.get(mSportTypeId).put(mExtremaType, new LinkedList<Marker>());
             }
 
         }
@@ -577,15 +577,15 @@ public class MyLocationsFragment
                 long workoutId = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.C_ID));
                 if (DEBUG) Log.i(TAG, "checking workoutId=" + workoutId);
 
-                latCursor = db.query(WorkoutSummaries.TABLE_EXTREMUM_VALUES,
+                latCursor = db.query(WorkoutSummaries.TABLE_EXTREMA_VALUES,
                         null,
-                        WorkoutSummaries.WORKOUT_ID + "=? AND " + WorkoutSummaries.SENSOR_TYPE + "=? AND " + WorkoutSummaries.EXTREMUM_TYPE + "=?",
-                        new String[]{Long.toString(workoutId), SensorType.LATITUDE.name(), mExtremumType.name()},
+                        WorkoutSummaries.WORKOUT_ID + "=? AND " + WorkoutSummaries.SENSOR_TYPE + "=? AND " + WorkoutSummaries.EXTREMA_TYPE + "=?",
+                        new String[]{Long.toString(workoutId), SensorType.LATITUDE.name(), mExtremaType.name()},
                         null, null, null);
-                lonCursor = db.query(WorkoutSummaries.TABLE_EXTREMUM_VALUES,
+                lonCursor = db.query(WorkoutSummaries.TABLE_EXTREMA_VALUES,
                         null,
-                        WorkoutSummaries.WORKOUT_ID + "=? AND " + WorkoutSummaries.SENSOR_TYPE + "=? AND " + WorkoutSummaries.EXTREMUM_TYPE + "=?",
-                        new String[]{Long.toString(workoutId), SensorType.LONGITUDE.name(), mExtremumType.name()},
+                        WorkoutSummaries.WORKOUT_ID + "=? AND " + WorkoutSummaries.SENSOR_TYPE + "=? AND " + WorkoutSummaries.EXTREMA_TYPE + "=?",
+                        new String[]{Long.toString(workoutId), SensorType.LONGITUDE.name(), mExtremaType.name()},
                         null, null, null);
 
                 if (latCursor.moveToFirst()
@@ -595,17 +595,17 @@ public class MyLocationsFragment
                     latitude = latCursor.getDouble(latCursor.getColumnIndex(WorkoutSummaries.VALUE));
                     longitude = lonCursor.getDouble(latCursor.getColumnIndex(WorkoutSummaries.VALUE));
                     publishProgress(new LatLngId(latitude, longitude, workoutId));
-                } else if (!calculatedMaxLineDistance && mExtremumType == ExtremumType.MAX_LINE_DISTANCE) {
+                } else if (!calculatedMaxLineDistance && mExtremaType == ExtremaType.MAX_LINE_DISTANCE) {
                     if (DEBUG)
                         Log.i(TAG, "try to calculate the max line distance of workoutId=" + workoutId);
-                    CalcExtremumValuesTask.calcAndSaveMaxLineDistancePosition(workoutId);
+                    CalcExtremaValuesTask.calcAndSaveMaxLineDistancePosition(workoutId);
                     cursor.moveToPrevious();
                     calculatedMaxLineDistance = true;
 
                 }
                 calculatedMaxLineDistance = false;
                 if (DEBUG)
-                    Log.i(TAG, "no valid location for ExtremumType=" + mExtremumType + ", mSportTypeId=" + mSportTypeId);
+                    Log.i(TAG, "no valid location for ExtremaType=" + mExtremaType + ", mSportTypeId=" + mSportTypeId);
 
                 latCursor.close();
                 lonCursor.close();
@@ -620,10 +620,10 @@ public class MyLocationsFragment
         @Override
         protected void onProgressUpdate(LatLngId... values) {
             super.onProgressUpdate(values);
-            if (DEBUG) Log.i(TAG, "add new extremum position.");
+            if (DEBUG) Log.i(TAG, "add new extrema position.");
 
             Marker marker = addScaledMarker(values[0].latLng, mMarkerId, 0.666);
-            mMarkerMap.get(mSportTypeId).get(mExtremumType).add(marker);
+            mMarkerMap.get(mSportTypeId).get(mExtremaType).add(marker);
             mMarker2WorkoutIdMap.put(marker, values[0].id);
         }
 
@@ -646,8 +646,8 @@ public class MyLocationsFragment
 
             mSportSpinner.setEnabled(true);
             mSportSpinner.setClickable(true);
-            mExtremumTypeSpinner.setEnabled(true);
-            mExtremumTypeSpinner.setClickable(true);
+            mExtremaTypeSpinner.setEnabled(true);
+            mExtremaTypeSpinner.setClickable(true);
 
         }
     }
@@ -681,8 +681,8 @@ public class MyLocationsFragment
             SQLiteDatabase db = KnownLocationsDatabaseManager.getInstance().getOpenDatabase();
             Cursor cursor = db.query(KnownLocationsDbHelper.TABLE,
                     null,
-                    null, // KnownLocationsDbHelper.EXTREMUM_TYPE + "=?",
-                    null, // new String[] { extremumType.name() },
+                    null, // KnownLocationsDbHelper.EXTREMA_TYPE + "=?",
+                    null, // new String[] { extremaType.name() },
                     null,
                     null,
                     null,

@@ -28,13 +28,13 @@ import android.os.Bundle;
 import android.util.Log;
 
 import com.atrainingtracker.R;
-import com.atrainingtracker.banalservice.Sensor.SensorType;
+import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.trainingtracker.MyHelper;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
-import com.atrainingtracker.trainingtracker.database.ExtremumType;
+import com.atrainingtracker.trainingtracker.database.ExtremaType;
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
-import com.atrainingtracker.trainingtracker.helpers.CalcExtremumValuesTask;
+import com.atrainingtracker.trainingtracker.helpers.CalcExtremaValuesTask;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.MarkerOptions;
@@ -45,15 +45,15 @@ public class TrackOnMapAftermathFragment
     public static final String TAG = TrackOnMapAftermathFragment.class.getName();
     private static final boolean DEBUG = TrainingApplication.DEBUG & false;
 
-    private final IntentFilter mFinishedCalculatingExtremumValueFilter = new IntentFilter(CalcExtremumValuesTask.FINISHED_CALCULATING_EXTREMUM_VALUE);
+    private final IntentFilter mFinishedCalculatingExtremaValueFilter = new IntentFilter(CalcExtremaValuesTask.FINISHED_CALCULATING_EXTREMA_VALUE);
 
-    // for these SensorTypes we want to add extremum markers
-    protected SensorType[] mExtremumSensorTypes = {SensorType.ALTITUDE, SensorType.CADENCE, SensorType.HR, SensorType.LINE_DISTANCE_m, SensorType.POWER, SensorType.SPEED_mps, SensorType.TEMPERATURE, SensorType.TORQUE};
-    BroadcastReceiver mFinishedCalculatingExtremumValueReceiver = new BroadcastReceiver() {
+    // for these SensorTypes we want to add extrema markers
+    protected SensorType[] mExtremaSensorTypes = {SensorType.ALTITUDE, SensorType.CADENCE, SensorType.HR, SensorType.LINE_DISTANCE_m, SensorType.POWER, SensorType.SPEED_mps, SensorType.TEMPERATURE, SensorType.TORQUE};
+    BroadcastReceiver mFinishedCalculatingExtremaValueReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            SensorType sensorType = SensorType.valueOf(intent.getStringExtra(CalcExtremumValuesTask.SENSOR_TYPE));
-            addExtremumMarker(sensorType);
+            SensorType sensorType = SensorType.valueOf(intent.getStringExtra(CalcExtremaValuesTask.SENSOR_TYPE));
+            addExtremaMarker(sensorType);
         }
     };
 
@@ -68,7 +68,7 @@ public class TrackOnMapAftermathFragment
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
-    // livecycle methods
+    // lifecycle methods
     ////////////////////////////////////////////////////////////////////////////////////////////////
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -82,7 +82,7 @@ public class TrackOnMapAftermathFragment
     public void onResume() {
         super.onResume();
 
-        getActivity().registerReceiver(mFinishedCalculatingExtremumValueReceiver, mFinishedCalculatingExtremumValueFilter);
+        getActivity().registerReceiver(mFinishedCalculatingExtremaValueReceiver, mFinishedCalculatingExtremaValueFilter);
     }
 
 
@@ -95,7 +95,7 @@ public class TrackOnMapAftermathFragment
         super.onPause();
 
         try {
-            getActivity().unregisterReceiver(mFinishedCalculatingExtremumValueReceiver);
+            getActivity().unregisterReceiver(mFinishedCalculatingExtremaValueReceiver);
         } catch (Exception e) {
         }
     }
@@ -114,7 +114,7 @@ public class TrackOnMapAftermathFragment
 
     @Override
     public void showTrackOnMap(boolean zoomToShowMap) {
-        // the super class will be called at the end in the hope that the 'best' location source is at the top (alwasy visible)
+        // the super class will be called at the end in the hope that the 'best' location source is at the top (always visible)
         if (DEBUG) Log.i(TAG, "showMainTrackOnMap: mWorkoutID=" + mWorkoutID);
 
         if (TrainingApplication.showAllLocationSourcesOnMap()) {
@@ -140,48 +140,48 @@ public class TrackOnMapAftermathFragment
         addStartMarker(true);
         addStopMarker();
 
-        for (SensorType sensorType : mExtremumSensorTypes) {
-            addExtremumMarker(sensorType);
+        for (SensorType sensorType : mExtremaSensorTypes) {
+            addExtremaMarker(sensorType);
         }
     }
 
-    protected void addExtremumMarker(SensorType sensorType) {
+    protected void addExtremaMarker(SensorType sensorType) {
         switch (sensorType) {
             case ALTITUDE:
             case TEMPERATURE:
-                addExtremumMarker(sensorType, ExtremumType.MIN, null);
+                addExtremaMarker(sensorType, ExtremaType.MIN, null);
                 // no break because we also add the MAX value
             case CADENCE:
             case HR:
             case POWER:
             case SPEED_mps:
             case TORQUE:
-                addExtremumMarker(sensorType, ExtremumType.MAX, null);
+                addExtremaMarker(sensorType, ExtremaType.MAX, null);
                 break;
 
             case LINE_DISTANCE_m:
-                addExtremumMarker(sensorType, ExtremumType.MAX, R.drawable.max_line_distance_logo_map);
+                addExtremaMarker(sensorType, ExtremaType.MAX, R.drawable.max_line_distance_logo_map);
                 break;
 
         }
     }
 
-    protected void addExtremumMarker(SensorType sensorType, ExtremumType extremumType, Integer drawableId) {
+    protected void addExtremaMarker(SensorType sensorType, ExtremaType extremaType, Integer drawableId) {
         if (DEBUG)
-            Log.i(TAG, "addExtremumMarkerToMap for " + extremumType.name() + " " + sensorType.name());
+            Log.i(TAG, "addExtremaMarkerToMap for " + extremaType.name() + " " + sensorType.name());
         if (mMap == null) {
             Log.i(TAG, "mMap == null => can not add marker to map, thus returning ");
             return;
         }
 
-        WorkoutSamplesDatabaseManager.LatLngValue latLngValue = WorkoutSamplesDatabaseManager.getExtremumPosition(mWorkoutID, sensorType, extremumType);
+        WorkoutSamplesDatabaseManager.LatLngValue latLngValue = WorkoutSamplesDatabaseManager.getExtremaPosition(mWorkoutID, sensorType, extremaType);
 
         if (latLngValue != null) {
             MarkerOptions markerOptions = new MarkerOptions()
                     .position(latLngValue.latLng)
-                    .title(getString(R.string.location_extremum_format, extremumType.name(),
+                    .title(getString(R.string.location_extremum_format, extremaType.name(),
                             getString(sensorType.getFullNameId()),
-                            sensorType.getMyFormater().format(latLngValue.value),
+                            sensorType.getMyFormatter().format(latLngValue.value),
                             getString(MyHelper.getShortUnitsId(sensorType))));
             if (drawableId != null) {
                 Bitmap marker = ((BitmapDrawable) getResources().getDrawable(drawableId)).getBitmap();
@@ -190,7 +190,7 @@ public class TrackOnMapAftermathFragment
             mMap.addMarker(markerOptions);
         } else {
             if (DEBUG)
-                Log.i(TAG, "unfortunately, there seems to be no " + extremumType.name() + " for " + sensorType.name() + " available.");
+                Log.i(TAG, "unfortunately, there seems to be no " + extremaType.name() + " for " + sensorType.name() + " available.");
         }
     }
 

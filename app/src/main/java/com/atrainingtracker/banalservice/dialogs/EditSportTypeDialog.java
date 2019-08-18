@@ -90,7 +90,7 @@ public class EditSportTypeDialog extends DialogFragment {
         String uiName = SportType.getDefaultUiName(getContext());
         String gcName = SportType.DEFAULT_GOLDEN_CHEETAH_NAME;
         String tcxName = SportType.DEFAULT_TCX_NAME;
-        String stravaName = SportType.DEFAULT_STARVA_NAME;
+        String stravaName = SportType.DEFAULT_STRAVA_NAME;
         String runkeeperName = SportType.DEFAULT_RUNKEEPER_NAME;
         String tpName = SportType.DEFAULT_TRAINING_PEAKS_NAME;
         double minAvgSpeed = SportType.DEFAULT_MIN_AVG_SPEED;
@@ -109,7 +109,7 @@ public class EditSportTypeDialog extends DialogFragment {
             uiName = cursor.getString(cursor.getColumnIndex(SportType.UI_NAME));
             gcName = cursor.getString(cursor.getColumnIndex(SportType.GOLDEN_CHEETAH_NAME));
             tcxName = cursor.getString(cursor.getColumnIndex(SportType.TCX_NAME));
-            stravaName = cursor.getString(cursor.getColumnIndex(SportType.STARVA_NAME));
+            stravaName = cursor.getString(cursor.getColumnIndex(SportType.STRAVA_NAME));
             runkeeperName = cursor.getString(cursor.getColumnIndex(SportType.RUNKEEPER_NAME));
             tpName = cursor.getString(cursor.getColumnIndex(SportType.TRAINING_PEAKS_NAME));
             minAvgSpeed = cursor.getDouble(cursor.getColumnIndex(SportType.MIN_AVG_SPEED));
@@ -227,7 +227,7 @@ public class EditSportTypeDialog extends DialogFragment {
             contentValues.put(SportType.GOLDEN_CHEETAH_NAME, (String) mSpGC.getSelectedItem());
             contentValues.put(SportType.TCX_NAME, (String) mSpTCX.getSelectedItem());
             String stravaName = Arrays.asList(getResources().getStringArray(R.array.Strava_Sport_Types_Strava_Names)).get(mSpStrava.getSelectedItemPosition());
-            contentValues.put(SportType.STARVA_NAME, stravaName);
+            contentValues.put(SportType.STRAVA_NAME, stravaName);
             contentValues.put(SportType.RUNKEEPER_NAME, (String) mSpRunkeeper.getSelectedItem());
             contentValues.put(SportType.TRAINING_PEAKS_NAME, (String) mSpTrainingPeaks.getSelectedItem());
         }

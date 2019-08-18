@@ -30,7 +30,7 @@ public class RunkeeperGetAccessTokenActivity
     protected static final String RUNKEEPER_AUTHORITY = "runkeeper.com";
     protected static final String MY_CLIENT_ID = "218435e7bc7f4ca1a43def3ab9589bda";
     protected static final String MY_CLIENT_SECRET = "199c2e26b25e457a97b048977f02a732";
-    private static final String TAG = "RunkeeperGetAcesssTokenActivity";
+    private static final String TAG = "RunkeeperGetAccessTokenActivity";
     private static final boolean DEBUG = false;
 
     @Override

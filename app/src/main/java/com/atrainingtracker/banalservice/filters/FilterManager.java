@@ -25,10 +25,10 @@ import android.content.IntentFilter;
 import android.util.Log;
 
 import com.atrainingtracker.banalservice.BANALService;
-import com.atrainingtracker.banalservice.Devices.DeviceManager;
-import com.atrainingtracker.banalservice.Devices.MyDevice;
-import com.atrainingtracker.banalservice.Sensor.MySensor;
-import com.atrainingtracker.banalservice.Sensor.MySensorManager;
+import com.atrainingtracker.banalservice.devices.DeviceManager;
+import com.atrainingtracker.banalservice.devices.MyDevice;
+import com.atrainingtracker.banalservice.sensor.MySensor;
+import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
 
 import java.util.HashMap;

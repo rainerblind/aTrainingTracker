@@ -55,15 +55,15 @@
     <string name="delete_tracking_view">Ansicht löschen</string>
     <string name="delete_workout">Trainingseinheit löschen</string>
     <string name="deleteOldWorkouts">Alte Einheiten löschen</string>
-    <string name="deleteWorkoutsThatAreOlderThanDays">Lösche alle Einheiten, die älter als ... Tage sind.</string>
+    <string name="deleteWorkoutsThatAreOlderThanDays">Lösche alle Einheiten, die älter als … Tage sind.</string>
     <string name="defaultDaysToKeep">30</string>
     <string name="delete_sensor">löschen</string>
     <string name="really_delete_workout">Willst du diese Trainingseinheit wirklich löchen?</string>
     <string name="really_delete_location">Willst du diesen Ort wirklich löchen?</string>
     <string name="really_delete_pebble_view_format">Willst du die Pebble Ansicht "%1$s" wirklich löschen?</string>
     <string name="really_delete_view_format">Willst du die Ansicht "%1$s" wirklich löschen?</string>
-    <string name="deleting_please_wait">Lösche die Einheit ...\nbitte warten</string>
-    <string name="calculating_extremum_values">Berechne min, mean und max Werte...</string>
+    <string name="deleting_please_wait">Lösche die Einheit …\nbitte warten</string>
+    <string name="calculating_extremum_values">Berechne min, mean und max Werte…</string>
     <string name="calculating_extremum_value_for">berechne %1$s für %2$s</string>
     <string name="calculating_max_away_point">berechne den am weitesten entfernten Punkt</string>
     <string name="initializing">Initialisierung</string>
@@ -416,11 +416,11 @@
     <string name="updateStravaEquipment">Strava Ausrüstung aktualisieren</string>
     <string name="lastUpdateOfEquipmentNever">noch nie aktualisiert</string>
 
-    <string name="getting_equipment_from_strava">Aktualisiere Strava Ausrüstung...\nbitte warten</string>
+    <string name="getting_equipment_from_strava">Aktualisiere Strava Ausrüstung…\nbitte warten</string>
     <string name="got_shoe">Aktualisiere Schuhe\nSchuh: %1$s</string>
     <string name="got_bike">Aktualisiere Fahrräder\nRad: %1$s</string>
-    <string name="strava_success_but_must_check">zu Strava hochgeladen, überprüfe die Rückmeldung ...</string>
-    <string name="strava_success_waiting_for_result">zu Strava hochgeladen, warte auf Rückmeldung ...</string>
+    <string name="strava_success_but_must_check">zu Strava hochgeladen, überprüfe die Rückmeldung …</string>
+    <string name="strava_success_waiting_for_result">zu Strava hochgeladen, warte auf Rückmeldung …</string>
     <!-- <string name="checking_bike">getting bikes from Strava\nchecking bike: %1$s</string> -->
 
     <string name="choose_view">Ansicht wählen</string>
@@ -603,9 +603,9 @@
     <string name="waiting_to_upload_to_dropbox">Warte darauf %1$d/%2$d Dateien zur Dropbox hochzuladen</string>
     <string name="waiting_to_upload_to_community">Warte darauf bei %1$d/%2$d online communities hochzuladen</string>
 
-    <string name="please_wait">Bitte warten ...</string>
-    <string name="conntecting_to_string">Verbinde mit %1$s. \nBitte warten ...</string>
-    <string name="deauthorization">Abmelden, bitte warten ...</string>
+    <string name="please_wait">Bitte warten …</string>
+    <string name="conntecting_to_string">Verbinde mit %1$s. \nBitte warten …</string>
+    <string name="deauthorization">Abmelden, bitte warten …</string>
 
     <!-- notification -->
     <string name="notification_title">%1$s zu %2$s</string> <!-- exporting to file -->
@@ -715,7 +715,7 @@
 
     <string name="Search_Settings">Such Einstellungen</string>
     <string name="prefsNumberOfSearchTriesTitle">Anzahl der Suchrunden</string>
-    <string name="prefStartSearchTitle">Starte Suche wenn ...</string>
+    <string name="prefStartSearchTitle">Starte Suche wenn …</string>
     <string name="prefsStartSearchWhenAppStartsTitle">App startet</string>
     <string name="prefsStartSearchWhenTrackingStartsTitle">Aufzeichnung startet</string>
     <string name="prefsStartSearchWhenResumeFromPausedTitle">Pause beendet wird</string>
@@ -743,7 +743,7 @@
     <string name="select_sport_type_format">Wähle %1$s Sportarten</string>
     <string name="show_all_sport_types">Alle Sportarten</string>
     <string name="powerSmoothingSummary">Faktor 0 &lt; α &#8804; 1 zur Glättung der Leitung. P_anzeige = α P_gemessen + (1-α) P_anzeige_alt. Je kleiner α, desto glatter werden die angezeigten Were.  Z.B. ergibt α=1 den gemessenen Wert, α in Richtung 0 führt zu extrem geklätteten Werten.</string>
-    <string name="powerSmoothingTitle">Faktor zur Glättung der Leistungswerte: α=%1$f</string>
+    <string name="powerSmoothingTitle">Faktor α zur Glättung der Leistungswerte</string>
     <string name="powerSmoothingTitle_format">Glättung der Leistung: α=%1$f</string>
     <string name="concatenate_2_format">%1$s und %2$s</string>
     <string name="concatenate_last_format">%1$s und %2$s</string>
@@ -803,7 +803,7 @@
     <string name="filter_exponential_smoothing">Exponentielle Glättung</string>
     <string name="filter_moving_average">Gleitender Durchschnitt</string>
     <string name="filter_moving_average_short">Ø</string>
-    <string name="filter_exponential_smoothing_format">"Exponentielle Glättung mit "</string>
+    <string name="filter_exponential_smoothing_format">"Exponentielle Glättung mit α=%1$f"</string>
     <string name="filter_exponential_smoothing_short_format">Exp α=%1$f</string>
     <string name="configSensor">Sensor:</string>
     <string name="configSource">Quelle:</string>
@@ -813,7 +813,7 @@
     <string name="filter_details__average">Der Durchschnitt von der gesamten Einheit wird angezeigt.</string>
     <string name="filter_details__max">Der maximale Wert der Einheit wird angezeigt.</string>
     <string name="filter_details__moving_average_time">Der Durchschnitt der letzten %1$d %2$s wird angezeigt.</string>
-    <string name="filter_details__moving_average_number">Der Durchschnitt der letzen %1$d Messungen wird angezeigt.</string>
+    <string name="filter_details__moving_average_number">Der Durchschnitt der letzten %1$d Messungen wird angezeigt.</string>
     <string name="filter_details__exponential_smoothing">Exponentielle Glättung mit 0 &lt; α &#8804; 1.  Wert_angezeigt = α Wert_gemessen + (1-α) Wert_angezeigt_alt.  Je kleiner α, desto glatter werden die angezeigten Werte.  D.h. bei α=1 wird der aktuell gemessene Wert angezeigt, mit α in der Nähe von 0 werden die Werte sehr stark geglättet.</string>
     <string name="units_minutes_long">Minuten</string>
     <string name="filter_max">Max</string>

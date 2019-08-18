@@ -37,7 +37,7 @@ import android.widget.Button;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.ActivityType;
-import com.atrainingtracker.trainingtracker.Activities.ConfigViewsActivity;
+import com.atrainingtracker.trainingtracker.activities.ConfigViewsActivity;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 
 import java.util.HashMap;

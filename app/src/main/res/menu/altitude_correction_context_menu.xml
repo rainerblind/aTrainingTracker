@@ -21,9 +21,9 @@
     <item
         android:id="@+id/editLocation"
         android:icon="@android:drawable/ic_menu_edit"
-        android:title="@string/edit_location"></item>
+        android:title="@string/edit_location" />
     <item
         android:id="@+id/deleteLocation"
         android:icon="@android:drawable/ic_menu_edit"
-        android:title="@string/delete_location"></item>
+        android:title="@string/delete_location" />
 </menu>

@@ -19,7 +19,7 @@
 package com.atrainingtracker.banalservice.helpers;
 
 import com.atrainingtracker.R;
-import com.atrainingtracker.banalservice.Devices.DeviceType;
+import com.atrainingtracker.banalservice.devices.DeviceType;
 import com.atrainingtracker.banalservice.Protocol;
 
 public class UIHelper {
@@ -61,7 +61,7 @@ public class UIHelper {
                 }
         }
         return protocol.getIconId();
-        // return getIconId(protocol);			 // TODO: other (costum?) icon
+        // return getIconId(protocol);			 // TODO: other (custom?) icon
     }
 
 //	public static int getLargeIconId(DeviceType deviceType, Protocol protocol) 
@@ -84,7 +84,7 @@ public class UIHelper {
 //		case ENVIRONMENT:
 //			return R.drawable.temp_large;
 //		default:
-//			return R.drawable.ant_logo_large;	// TODO: other (costum?) icon		
+//			return R.drawable.ant_logo_large;	// TODO: other (custom?) icon
 //		}
 //	}
 

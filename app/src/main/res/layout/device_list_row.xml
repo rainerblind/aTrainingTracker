@@ -83,7 +83,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_vertical|bottom"
             android:layout_weight="1"
-            android:text="@string/DeviceListRowEquipmenText"
+            android:text="@string/DeviceListRowEquipmentText"
             android:textAppearance="?android:attr/textAppearanceMedium" />
 
     </LinearLayout>

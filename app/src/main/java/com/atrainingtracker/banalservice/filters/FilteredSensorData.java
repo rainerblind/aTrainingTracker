@@ -18,8 +18,8 @@
 
 package com.atrainingtracker.banalservice.filters;
 
-import com.atrainingtracker.banalservice.Sensor.SensorData;
-import com.atrainingtracker.banalservice.Sensor.SensorType;
+import com.atrainingtracker.banalservice.sensor.SensorData;
+import com.atrainingtracker.banalservice.sensor.SensorType;
 
 public class FilteredSensorData<T> extends SensorData<T> {
 

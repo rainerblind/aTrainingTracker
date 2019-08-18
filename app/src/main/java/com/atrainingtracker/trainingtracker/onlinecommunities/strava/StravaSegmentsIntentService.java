@@ -75,7 +75,7 @@ public class StravaSegmentsIntentService extends IntentService {
     protected static final String LEADERBOARD = "leaderboard";
     protected static final String PAGE = "page";
     protected static final String PER_PAGE = "per_page";
-    protected static final int PER_PAGE_DEFAULT = 10;  // frist 10
+    protected static final int PER_PAGE_DEFAULT = 10;  // first 10
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     //
@@ -384,7 +384,7 @@ public class StravaSegmentsIntentService extends IntentService {
                         // ignore this segment, when the sportType / activityType is not the requested
                         if (!mStravaSportName.equalsIgnoreCase(segmentJsonObject.getString(ACTIVITY_TYPE))) {
                             if (DEBUG)
-                                Log.i(TAG, "ignore this segment due to the wrong acitvityType");
+                                Log.i(TAG, "ignore this segment due to the wrong activityType");
                             continue;
                         }
 

@@ -28,7 +28,7 @@ import android.os.Bundle;
 import android.util.Log;
 
 import com.atrainingtracker.banalservice.BANALService;
-import com.atrainingtracker.trainingtracker.Tracker.TrackerService;
+import com.atrainingtracker.trainingtracker.tracker.TrackerService;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
 import com.atrainingtracker.trainingtracker.segments.SegmentHelper;
@@ -67,7 +67,7 @@ public class TrackOnMapTrackingFragment
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
-    // livecycle methods
+    // lifecycle methods
     ////////////////////////////////////////////////////////////////////////////////////////////////
     BroadcastReceiver mTrackingStartedReceiver = new BroadcastReceiver() {
         @Override

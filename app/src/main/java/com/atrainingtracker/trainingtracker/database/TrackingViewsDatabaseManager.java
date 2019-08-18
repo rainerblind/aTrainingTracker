@@ -28,7 +28,7 @@ import android.util.Log;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.ActivityType;
-import com.atrainingtracker.banalservice.Sensor.SensorType;
+import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 import com.atrainingtracker.banalservice.filters.FilterData;
 import com.atrainingtracker.banalservice.filters.FilterType;
@@ -479,7 +479,7 @@ public class TrackingViewsDatabaseManager {
         return new ViewInfo(viewId, rowId, rowNr, 1, sensorType, textSize, 0, FilterType.INSTANTANEOUS, 1);
     }
 
-    public static void removeSourceDevice(long sourceDevideId) {
+    public static void removeSourceDevice(long sourceDeviceId) {
         SQLiteDatabase db = getInstance().getOpenDatabase();
 
         ContentValues contentValues = new ContentValues();
@@ -488,7 +488,7 @@ public class TrackingViewsDatabaseManager {
         db.update(TrackingViewsDbHelper.ROWS_TABLE,
                 contentValues,
                 TrackingViewsDbHelper.SOURCE_DEVICE_ID + "=?",
-                new String[]{sourceDevideId + ""});
+                new String[]{sourceDeviceId + ""});
 
         getInstance().closeDatabase();
     }
@@ -571,15 +571,7 @@ public class TrackingViewsDatabaseManager {
 
         // TrackingViewsDbHelper dbHelper = new TrackingViewsDbHelper(context);
         TrackingViewsDbHelper dbHelper = new TrackingViewsDbHelper(context);  // why are the log messages herein not shown???
-        // int bar = 1;
-        // Log.i(TAG, "WTF, kommt das raus? bar=" + bar); // why is this shit not shown
-        // Log.i(TAG, "created dbHelper, bar=" + bar);    // but this????
-        // Log.i(TAG, "Foo");
         newViewId = dbHelper.addDefaultActivity(db, activityType, newLayoutNr);
-        // bar++;
-        // Log.i(TAG, "added default activity, bar=" + bar);
-        // Log.i(TAG, "Bar, bar=" + bar);
-        // Log.i(TAG, "Foobar");
         databaseManager.closeDatabase();
         if (DEBUG) Log.i(TAG, "finished adding new view");
 

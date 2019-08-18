@@ -39,7 +39,7 @@ import android.widget.Toast;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
-import com.atrainingtracker.trainingtracker.Activities.SegmentDetailsActivity;
+import com.atrainingtracker.trainingtracker.activities.SegmentDetailsActivity;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaSegmentsHelper;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaSegmentsIntentService;
@@ -85,7 +85,7 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
             }
         }
     };
-    BroadcastReceiver mUpdateingSegmentsCompleteReceiver = new BroadcastReceiver() {
+    BroadcastReceiver mUpdatingSegmentsCompleteReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             if (DEBUG) Log.i(TAG, "updating segments list completed");
@@ -137,7 +137,7 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
         try {
             startSegmentDetailsActivityInterface = (StartSegmentDetailsActivityInterface) context;
         } catch (ClassCastException e) {
-            throw new ClassCastException(context.toString() + " must implement StartSegmentDetialsActivityInterface");
+            throw new ClassCastException(context.toString() + " must implement StartSegmentDetailsActivityInterface");
         }
     }
 
@@ -213,7 +213,7 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
 
         getContext().registerReceiver(mSegmentUpdateStartedReceiver, mSegmentUpdateStartedFilter);
         getContext().registerReceiver(mUpdateSegmentsListReceiver, mUpdateSegmentsListFilter);
-        getContext().registerReceiver(mUpdateingSegmentsCompleteReceiver, mUpdatingSegmentsCompleteFilter);
+        getContext().registerReceiver(mUpdatingSegmentsCompleteReceiver, mUpdatingSegmentsCompleteFilter);
     }
 
     @Override
@@ -225,7 +225,7 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
 
         getContext().unregisterReceiver(mSegmentUpdateStartedReceiver);
         getContext().unregisterReceiver(mUpdateSegmentsListReceiver);
-        getContext().unregisterReceiver(mUpdateingSegmentsCompleteReceiver);
+        getContext().unregisterReceiver(mUpdatingSegmentsCompleteReceiver);
     }
 
     /**
@@ -246,7 +246,7 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
 
         switch (item.getItemId()) {
             case R.id.itemDeleteAllSegments:
-                Log.i(TAG, "option deleta all segments");
+                Log.i(TAG, "option delete all segments");
                 SegmentsDatabaseManager.deleteAllTables(getContext());
 
                 updateCursor();

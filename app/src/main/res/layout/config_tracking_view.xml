@@ -32,13 +32,13 @@
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
             android:hint="@string/name"
-            android:textSize="22sp"></EditText>
+            android:textSize="22sp" />
 
         <LinearLayout
             android:id="@+id/linearLayoutSensors"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"></LinearLayout>
+            android:orientation="vertical" />
 
         <CheckBox
             android:id="@+id/cbShowMap"
