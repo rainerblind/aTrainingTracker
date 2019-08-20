@@ -179,7 +179,7 @@ public class TrackOnMapAftermathFragment
         if (latLngValue != null) {
             MarkerOptions markerOptions = new MarkerOptions()
                     .position(latLngValue.latLng)
-                    .title(getString(R.string.location_extremum_format, extremaType.name(),
+                    .title(getString(R.string.location_extrema_format, extremaType.name(),
                             getString(sensorType.getFullNameId()),
                             sensorType.getMyFormatter().format(latLngValue.value),
                             getString(MyHelper.getShortUnitsId(sensorType))));

@@ -285,7 +285,7 @@ public class WorkoutSamplesDatabaseManager {
 
     public static LatLngValue getExtremaPosition(long workoutId, SensorType sensorType, ExtremaType extremaType) {
         if (DEBUG)
-            Log.i(TAG, "getExtemaPosition for " + extremaType.name() + " " + sensorType.name());
+            Log.i(TAG, "getExtremaPosition for " + extremaType.name() + " " + sensorType.name());
 
         // TODO: obviously, this does not make sense for AVG
 

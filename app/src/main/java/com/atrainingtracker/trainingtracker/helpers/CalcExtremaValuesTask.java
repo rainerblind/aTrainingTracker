@@ -306,7 +306,7 @@ public class CalcExtremaValuesTask extends AsyncTask<Long, String, Boolean> {
 
         for (SensorType sensorType : sensorTypeList) {
             for (ExtremaType extremaType : extremaTypeList) {
-                publishProgress(mContext.getString(R.string.calculating_extremum_value_for, extremaType.name(), mContext.getString(sensorType.getShortNameId())));
+                publishProgress(mContext.getString(R.string.calculating_extrema_value_for, extremaType.name(), mContext.getString(sensorType.getShortNameId())));
 
                 Double value = WorkoutSamplesDatabaseManager.getInstance().calcExtremaValue(baseFileName, extremaType, sensorType);
                 if (value != null) {

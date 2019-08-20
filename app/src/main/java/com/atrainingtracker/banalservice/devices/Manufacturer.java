@@ -22,6 +22,7 @@ import android.util.Log;
 
 import com.atrainingtracker.banalservice.BANALService;
 
+@SuppressWarnings("SpellCheckingInspection")
 public class Manufacturer {
     /**
      * The lookup table

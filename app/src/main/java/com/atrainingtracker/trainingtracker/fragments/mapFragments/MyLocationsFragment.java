@@ -119,7 +119,7 @@ public class MyLocationsFragment
 
         // get the views
         mSportSpinner = v.findViewById(R.id.spinnerSport);
-        mExtremaTypeSpinner = v.findViewById(R.id.spinnerExtremumType);
+        mExtremaTypeSpinner = v.findViewById(R.id.spinnerExtremaType);
         mMapView = v.findViewById(R.id.mapView);
 
         // now, configure the views
@@ -524,7 +524,7 @@ public class MyLocationsFragment
             mExtremaTypeSpinner.setClickable(false);
 
             // show a progress dialog
-            progressDialog.setMessage(context.getString(R.string.get_extremumType_of_sportType_format, mExtremaType.toString(), SportTypeDatabaseManager.getUIName(mSportTypeId)));
+            progressDialog.setMessage(context.getString(R.string.get_extremaType_of_sportType_format, mExtremaType.toString(), SportTypeDatabaseManager.getUIName(mSportTypeId)));
             progressDialog.setCancelable(false);
             progressDialog.setCanceledOnTouchOutside(false);
             progressDialog.show();
