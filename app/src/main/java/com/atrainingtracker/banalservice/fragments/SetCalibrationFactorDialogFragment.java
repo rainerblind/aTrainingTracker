@@ -115,7 +115,7 @@ public class SetCalibrationFactorDialogFragment extends DialogFragment {
 
         final View mainDialog = inflater.inflate(R.layout.dialog_set_calibration_factor, null);
 
-        etMeasured = mainDialog.findViewById(R.id.etMeassured);
+        etMeasured = mainDialog.findViewById(R.id.etMeasured);
         etMeasured.addTextChangedListener(calibrationDistancesChangedWatcher);
 
         etCorrect = mainDialog.findViewById(R.id.etCorrect);

@@ -178,7 +178,7 @@ public class EditSportTypeDialog extends DialogFragment {
         } else {
             view.findViewById(R.id.est_tvBSportType).setVisibility(View.GONE);
             mSpBSportType.setVisibility(View.GONE);
-            view.findViewById(R.id.est_seperator1).setVisibility(View.GONE);
+            view.findViewById(R.id.est_separator1).setVisibility(View.GONE);
             view.findViewById(R.id.est_tvOnlineCommunities).setVisibility(View.GONE);
             view.findViewById(R.id.est_tvStrava).setVisibility(View.GONE);
             mSpStrava.setVisibility(View.GONE);
@@ -186,7 +186,7 @@ public class EditSportTypeDialog extends DialogFragment {
             mSpRunkeeper.setVisibility(View.GONE);
             view.findViewById(R.id.est_tvTrainingPeaks).setVisibility(View.GONE);
             mSpTrainingPeaks.setVisibility(View.GONE);
-            view.findViewById(R.id.est_seperator2).setVisibility(View.GONE);
+            view.findViewById(R.id.est_separator2).setVisibility(View.GONE);
             view.findViewById(R.id.est_tvExportFiles).setVisibility(View.GONE);
             view.findViewById(R.id.est_tvTCX).setVisibility(View.GONE);
             mSpTCX.setVisibility(View.GONE);

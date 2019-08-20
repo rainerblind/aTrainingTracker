@@ -71,7 +71,7 @@
                     android:layout_height="fill_parent"
                     android:layout_gravity="center_horizontal"
                     android:layout_weight="1"
-                    android:text="@string/calculating_extremum_values" />
+                    android:text="@string/calculating_extrema_values" />
 
                 <TextView
                     android:id="@+id/tvProgressMessage"

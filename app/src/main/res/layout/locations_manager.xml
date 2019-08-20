@@ -34,7 +34,7 @@
             android:layout_weight="1" />
 
         <com.atrainingtracker.trainingtracker.views.MultiSelectionSpinner
-            android:id="@+id/spinnerExtremumType"
+            android:id="@+id/spinnerExtremaType"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_weight="1" />

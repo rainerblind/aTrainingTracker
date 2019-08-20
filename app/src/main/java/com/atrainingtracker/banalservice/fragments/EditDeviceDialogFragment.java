@@ -247,7 +247,7 @@ public class EditDeviceDialogFragment
             if (BikePowerSensorsHelper.isExtremeMagnitudesSupported(mBikePowerSensorFlags)) {
                 TextView tv = new TextView(getContext());
                 tv.setTextColor(getResources().getColor(R.color.bright_grey));
-                tv.setText(R.string.bike_power__extreme_magnitues);
+                tv.setText(R.string.bike_power__extreme_magnitudes);
                 tv.setTextAppearance(getContext(), android.R.style.TextAppearance_Medium);
                 llPowerSensors.addView(tv);
             }

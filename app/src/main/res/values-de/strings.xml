@@ -63,8 +63,8 @@
     <string name="really_delete_pebble_view_format">Willst du die Pebble Ansicht "%1$s" wirklich löschen?</string>
     <string name="really_delete_view_format">Willst du die Ansicht "%1$s" wirklich löschen?</string>
     <string name="deleting_please_wait">Lösche die Einheit …\nbitte warten</string>
-    <string name="calculating_extremum_values">Berechne min, mean und max Werte…</string>
-    <string name="calculating_extremum_value_for">berechne %1$s für %2$s</string>
+    <string name="calculating_extrema_values">Berechne min, mean und max Werte…</string>
+    <string name="calculating_extrema_value_for">berechne %1$s für %2$s</string>
     <string name="calculating_max_away_point">berechne den am weitesten entfernten Punkt</string>
     <string name="initializing">Initialisierung</string>
     <string name="delete_location">lösche Standort</string>
@@ -177,7 +177,7 @@
     <string name="value_unit_int_string">%1$d %2$s</string>
     <string name="distance_distanceUnit_sport_time_format">%1$s %2$s %3$s in %4$s</string>
 
-    <string name="location_extremum_format">%1$s %2$s: %3$s %4$s</string>
+    <string name="location_extrema_format">%1$s %2$s: %3$s %4$s</string>
 
     <string name="configure_pebble_view">Pebble Anzeige anpassen: %1$s</string>
 
@@ -223,8 +223,8 @@
     <string name="device_type_short_environment">Temp.</string>
     <string name="device_type_gps_speed_and_location">GPS</string>
     <string name="device_type_short_gps_speed_and_location">GPS</string>
-    <string name="device_type_altitude_from_preasure">Höhe basierend auf Luftdruck</string>
-    <string name="device_type_short_altitude_from_preasure">Höhe</string>
+    <string name="device_type_altitude_from_pressure">Höhe basierend auf Luftdruck</string>
+    <string name="device_type_short_altitude_from_pressure">Höhe</string>
     <string name="device_type_sensor_manager">Sensor Manager</string>
     <string name="device_type_short_sensor_manager">Sensor Manager</string>
     <string name="device_type_clock">Stoppuhr</string>
@@ -468,7 +468,7 @@
     <string name="searchingForRemoteDevice">suche nach ANT+ Herzfrequenz Sensoren</string>
 
     <!-- dialog_set_calibration_factor -->
-    <string name="meassuredDistanceText">gemessene Distanz:</string>
+    <string name="measuredDistanceText">gemessene Distanz:</string>
     <string name="trueDistanceText">korrekte Distanz:</string>
     <string name="measuredDistanceValue">1.0</string>
     <string name="trueDistanceValue">1.0</string>
@@ -604,7 +604,7 @@
     <string name="waiting_to_upload_to_community">Warte darauf bei %1$d/%2$d online communities hochzuladen</string>
 
     <string name="please_wait">Bitte warten …</string>
-    <string name="conntecting_to_string">Verbinde mit %1$s. \nBitte warten …</string>
+    <string name="connecting_to_string">Verbinde mit %1$s. \nBitte warten …</string>
     <string name="deauthorization">Abmelden, bitte warten …</string>
 
     <!-- notification -->
@@ -666,7 +666,7 @@
     <string name="start">Start</string>
     <string name="average">mittel</string>
     <string name="end">End</string>
-    <string name="get_extremumType_of_sportType_format">Suche nach den %1$s Orten deiner %2$s Einheiten.</string>
+    <string name="get_extremaType_of_sportType_format">Suche nach den %1$s Orten deiner %2$s Einheiten.</string>
     <string name="max_line_distance">maximal entfernten</string>
     <string name="my_locations">Meine Orte</string>
     <string name="settings">Einstellungen</string>

@@ -103,7 +103,7 @@ public abstract class BaseGetAccessTokenActivity
         if (DEBUG) Log.d(TAG, "onCreate");
 
         dialog = new ProgressDialog(this);
-        dialog.setMessage(getString(R.string.conntecting_to_string, getName()));
+        dialog.setMessage(getString(R.string.connecting_to_string, getName()));
         dialog.show();
         dialog.setCancelable(false);
         dialog.setCanceledOnTouchOutside(false);

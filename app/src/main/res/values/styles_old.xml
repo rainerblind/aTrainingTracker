@@ -27,7 +27,7 @@
 
     <style name="AppBaseCompatTheme" parent="Theme.AppCompat.Light" />
 
-    <!-- requred Application themes -->
+    <!-- required Application themes -->
     <!-- Application theme without action bar. -->
     <style name="AppCompatTheme.NoActionBar" parent="AppBaseCompatTheme.NoActionBar">
 
