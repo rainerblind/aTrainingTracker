@@ -68,7 +68,7 @@ public class MySensor<T> {
             for (SensorListener sensorListener : mSensorListeners) {
                 if (DEBUG) Log.i(TAG, "informing sensorListener " + sensorListener);
 
-                sensorListener.newValue(value);
+                sensorListener.newValue(getValue());
             }
         }
     }
