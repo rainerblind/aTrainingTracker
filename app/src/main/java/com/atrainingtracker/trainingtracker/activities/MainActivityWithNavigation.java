@@ -357,9 +357,10 @@ public class MainActivityWithNavigation
     // when we shall upload to a platform there must be a token.
     // TODO: inform user when the settings are not valid?
     protected void checkPreferences() {
-        if (TrainingApplication.uploadToDropbox() && TrainingApplication.getDropboxToken() == null) {
-            TrainingApplication.setUploadToDropbox(false);
-        }
+        // BUT not Dropbox since this case is part of the Auth procedure...
+        // if (TrainingApplication.uploadToDropbox() && TrainingApplication.getDropboxToken() == null) {
+        //     TrainingApplication.setUploadToDropbox(false);
+        // }
 
         if (TrainingApplication.uploadToStrava() && TrainingApplication.getStravaToken() == null) {
             TrainingApplication.setUploadToStrava(false);
