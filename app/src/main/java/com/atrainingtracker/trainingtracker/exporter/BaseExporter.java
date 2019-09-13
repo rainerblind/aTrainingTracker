@@ -20,7 +20,6 @@ package com.atrainingtracker.trainingtracker.exporter;
 
 import android.app.AlertDialog;
 import android.app.Notification;
-import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -30,6 +29,8 @@ import android.database.SQLException;
 import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.os.Environment;
+import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.NotificationManagerCompat;
 import android.util.Log;
 
 import com.atrainingtracker.R;
@@ -49,15 +50,15 @@ public abstract class BaseExporter {
     private static final String TAG = "BaseExporter";
     private static final boolean DEBUG = TrainingApplication.DEBUG && false;
     protected static ExportManager cExportManager;
-    private static Notification.Builder mNotificationBuilder;
-    private static NotificationManager cNotificationManager;
+    private static NotificationCompat.Builder mNotificationBuilder;
+    private static NotificationManagerCompat cNotificationManager;
     protected Context mContext;
 
     public BaseExporter(Context context) {
         mContext = context;
         cExportManager = new ExportManager(context, TAG);
 
-        cNotificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        cNotificationManager = NotificationManagerCompat.from(context);
 
         // configure the intent
         Bundle bundle = new Bundle();
@@ -69,7 +70,7 @@ public abstract class BaseExporter {
         PendingIntent pendingIntent = PendingIntent.getActivity(mContext, 0, newIntent, 0);
 
         // configure the notification
-        mNotificationBuilder = new Notification.Builder(mContext)
+        mNotificationBuilder = new NotificationCompat.Builder(mContext, TrainingApplication.NOTIFICATION_CHANNEL__EXPORT)
                 .setSmallIcon(R.drawable.logo)
                 .setLargeIcon(BitmapFactory.decodeResource(mContext.getResources(), R.drawable.ic_save_black_48dp))
                 .setContentTitle(mContext.getString(R.string.TrainingTracker))
@@ -183,7 +184,7 @@ public abstract class BaseExporter {
         mNotificationBuilder.setProgress(0, 0, false)
                 .setContentText(getExportMessage(exportInfo));
 
-        return mNotificationBuilder.getNotification();
+        return mNotificationBuilder.build();
     }
 
     public void notifyExportFinished(String message) {
@@ -251,7 +252,7 @@ public abstract class BaseExporter {
     protected void notifyProgress(int max, int count) {
         if ((count % (10 * 60)) == 0) {  // TODO take sampling time into account?
             mNotificationBuilder.setProgress(max, count, false);
-            cNotificationManager.notify(TrainingApplication.EXPORT_PROGRESS_NOTIFICATION_ID, mNotificationBuilder.getNotification());
+            cNotificationManager.notify(TrainingApplication.EXPORT_PROGRESS_NOTIFICATION_ID, mNotificationBuilder.build());
         }
     }
 
