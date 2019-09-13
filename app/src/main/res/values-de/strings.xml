@@ -817,6 +817,10 @@
     <string name="filter_details__exponential_smoothing">Exponentielle Glättung mit 0 &lt; α &#8804; 1.  Wert_angezeigt = α Wert_gemessen + (1-α) Wert_angezeigt_alt.  Je kleiner α, desto glatter werden die angezeigten Werte.  D.h. bei α=1 wird der aktuell gemessene Wert angezeigt, mit α in der Nähe von 0 werden die Werte sehr stark geglättet.</string>
     <string name="units_minutes_long">Minuten</string>
     <string name="filter_max">Max</string>
+    <string name="notification_channel_name__tracking">Tracking</string>
+    <string name="notification_channel_description__tracking">Benachrichtigungen während der Aufzeichnugn von Einheiten</string>
+    <string name="notification_channel_name__export">Export</string>
+    <string name="notification_channel_description__export">Benachrichtigungen während dem Export von Einheiten</string>
 
 
 </resources>

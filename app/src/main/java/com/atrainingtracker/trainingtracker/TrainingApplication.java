@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker;
 
 import android.app.Application;
 import android.app.Notification;
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
@@ -28,9 +29,11 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.NotificationManagerCompat;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.widget.Toast;
@@ -140,10 +143,15 @@ public class TrainingApplication extends Application {
     public static final String SPORT = "sport";
     public static final String SENSOR_NAMES = "sensorNames";
     public static final String GC_SENSORS = "GCSensors";
+
+    protected static final String NOTIFICATION_CHANNEL__TRACKING = "NOTIFICATION_CHANNEL__TRACKING";
+    public static final String NOTIFICATION_CHANNEL__EXPORT = "NOTIFICATION_CHANNEL__EXPORT";
     public static final int TRACKING_NOTIFICATION_ID = 1;
+
     public static final int EXPORT_PROGRESS_NOTIFICATION_ID = 2;
     public static final int EXPORT_RESULT_NOTIFICATION_ID = 3;
     public static final int SEND_EMAIL_NOTIFICATION_ID = 4;
+
     public static final int DEFAULT_SAMPLING_TIME = 1;
     public static final float MIN_DISTANCE_BETWEEN_START_AND_STOP = 100;
     public static final double DISTANCE_TO_MAX_THRESHOLD_FOR_TRAINER = 200;
@@ -210,14 +218,13 @@ public class TrainingApplication extends Application {
         }
     };
     private Watchapp startedWatchapp = null;
-    // TODO: use notification channels
-    private NotificationManager mNotificationManager;
     protected BroadcastReceiver mTrackingStoppedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             trackingStopped();
         }
     };
+    private NotificationManagerCompat mNotificationManager;
     private NotificationCompat.Builder mTrackingAndSearchingNotificationBuilder;
     private PendingIntent mStartMainActivityPendingIntent;
     private String mNotificationSummary = "searching";
@@ -839,8 +846,8 @@ public class TrainingApplication extends Application {
         // cSharedPreferences.registerOnSharedPreferenceChangeListener(mSharedPreferencesChangeListener);
         // setPowerSmoothing(0.5);
 
-        // TODO: use notification channel
-        mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        createNotificationChannel();
+        mNotificationManager = NotificationManagerCompat.from(this);
         mTrackingAndSearchingNotificationBuilder = getNewNotificationBuilder();
         addActionsToNotificationBuilder();
 
@@ -877,7 +884,7 @@ public class TrainingApplication extends Application {
         newIntent.setAction("TrackerService");
         mStartMainActivityPendingIntent = PendingIntent.getActivity(this, 0, newIntent, 0);  // TODO: correct???
 
-        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this)
+        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL__TRACKING)
                 .setSmallIcon(R.drawable.logo)
                 .setContentTitle(getString(R.string.TrainingTracker))
                 .setContentText(getString(R.string.notification_tracking))
@@ -923,7 +930,7 @@ public class TrainingApplication extends Application {
                 .bigText(getString(R.string.tracking_details_format, mNotificationSummary, sDistance, sportType, sTime)));
 
         // showNotification();
-        mNotificationManager.notify(TRACKING_NOTIFICATION_ID, mTrackingAndSearchingNotificationBuilder.getNotification());
+        mNotificationManager.notify(TRACKING_NOTIFICATION_ID, mTrackingAndSearchingNotificationBuilder.build());
     }
 
     private void updateNotificationSummary() {
@@ -1138,5 +1145,29 @@ public class TrainingApplication extends Application {
 
         sendBroadcast(new Intent(TRACKING_STATE_CHANGED));
     }
+
+
+    private void createNotificationChannel() {
+        // Create the NotificationChannel, but only on API 26+ because
+        // the NotificationChannel class is new and not in the support library
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationManager notificationManager = getSystemService(NotificationManager.class);
+
+            // Channel for Tracking
+            NotificationChannel channel = new NotificationChannel(NOTIFICATION_CHANNEL__TRACKING,
+                    getString(R.string.notification_channel_name__tracking),
+                    NotificationManager.IMPORTANCE_DEFAULT);
+            channel.setDescription(getString(R.string.notification_channel_description__tracking));
+            notificationManager.createNotificationChannel(channel); // Register the channel with the system;
+
+            channel = new NotificationChannel(NOTIFICATION_CHANNEL__EXPORT,
+                    getString(R.string.notification_channel_name__export),
+                    NotificationManager.IMPORTANCE_DEFAULT);
+            channel.setDescription(getString(R.string.notification_channel_description__export));
+            notificationManager.createNotificationChannel(channel);
+        }
+    }
+
+
 
 }
