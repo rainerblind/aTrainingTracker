@@ -28,6 +28,8 @@ import android.content.Intent;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
+import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.NotificationManagerCompat;
 import android.support.v4.content.FileProvider;
 import android.util.Log;
 
@@ -38,6 +40,8 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 
 import java.io.File;
 import java.util.ArrayList;
+
+import static com.atrainingtracker.trainingtracker.TrainingApplication.NOTIFICATION_CHANNEL__EXPORT;
 
 /**
  *
@@ -163,7 +167,7 @@ public class ExportWorkoutIntentService extends IntentService {
 
         if (exported) {
 
-            NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
             notificationManager.cancelAll();
 
             // show notification with a summary of the result
@@ -175,7 +179,7 @@ public class ExportWorkoutIntentService extends IntentService {
             PendingIntent contentIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
             // PendingIntent contentIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
 
-            Notification.Builder notificationBuilder = new Notification.Builder(this)
+            NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL__EXPORT)
                     .setLargeIcon(BitmapFactory.decodeResource(getResources(), R.drawable.ic_save_black_48dp))
                     .setSmallIcon(R.drawable.logo)
                     .setContentTitle(getString(R.string.TrainingTracker))
@@ -199,7 +203,7 @@ public class ExportWorkoutIntentService extends IntentService {
 
                 PendingIntent pendingShareIntent = PendingIntent.getActivity(this, 0, emailIntent, PendingIntent.FLAG_ONE_SHOT);
 
-                Notification.Builder notificationBuilder2 = new Notification.Builder(this)
+                NotificationCompat.Builder notificationBuilder2 = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL__EXPORT)
                         .setLargeIcon(BitmapFactory.decodeResource(getResources(), R.drawable.ic_mail_outline_black_48dp))
                         .setSmallIcon(R.drawable.logo)
                         .setContentTitle(getString(R.string.TrainingTracker))

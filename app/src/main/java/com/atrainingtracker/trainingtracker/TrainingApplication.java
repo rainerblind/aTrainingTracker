@@ -147,7 +147,6 @@ public class TrainingApplication extends Application {
     protected static final String NOTIFICATION_CHANNEL__TRACKING = "NOTIFICATION_CHANNEL__TRACKING";
     public static final String NOTIFICATION_CHANNEL__EXPORT = "NOTIFICATION_CHANNEL__EXPORT";
     public static final int TRACKING_NOTIFICATION_ID = 1;
-
     public static final int EXPORT_PROGRESS_NOTIFICATION_ID = 2;
     public static final int EXPORT_RESULT_NOTIFICATION_ID = 3;
     public static final int SEND_EMAIL_NOTIFICATION_ID = 4;
