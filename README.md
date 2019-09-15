@@ -1,10 +1,9 @@
 # aTrainingTracker
 An android app for tracking your sports activities (supporting ANT+ and BTLE).
 
+<img src="images/ANT+logo.png" alt="ANT+ logo" width="80" height="80"/> <img src="images/HR.jpeg" alt="ANT+ HR logo" width="40" height="40"/> <img src="images/run_spd.jpeg" alt="ANT+ run speed logo" width="40" height="40" /> <img src="images/bike_spd.jpeg" alt="ANT+ bike speed logo" width="40" height="40"/> <img src="images/bike_cad.jpeg" alt="ANT+ bike cadence logo" width="40" height="40"/> <img src="images/bike_speed_and_cadence.jpeg" alt="ANT+ bike speed & cadence logo" width="40" height="40"/> <img src="images/bike_pwr.jpeg" alt="ANT+ bike power logo" width="40" height="40"/> <img src="images/temp.jpeg" alt="ANT+ temperature logo" width="40" height="40"/>  
 Featuring certified wireless ANT+™ connectivity.  
 Visit www.thisisant.com/directory for compatible products.
-
-<img src="images/ANT+logo.png" alt="ANT+ logo" width="80" height="80"/> <img src="images/HR.jpeg" alt="ANT+ HR logo" width="40" height="40"/> <img src="images/run_spd.jpeg" alt="ANT+ run speed logo" width="40" height="40" /> <img src="images/bike_spd.jpeg" alt="ANT+ bike speed logo" width="40" height="40"/> <img src="images/bike_cad.jpeg" alt="ANT+ bike cadence logo" width="40" height="40"/> <img src="images/bike_speed_and_cadence.jpeg" alt="ANT+ bike speed & cadence logo" width="40" height="40"/> <img src="images/bike_pwr.jpeg" alt="ANT+ bike power logo" width="40" height="40"/> <img src="images/temp.jpeg" alt="ANT+ temperature logo" width="40" height="40"/>
 
 
 ### This Android app is for the really serious athletes.
