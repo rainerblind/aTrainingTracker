@@ -151,7 +151,7 @@ public class StravaSegmentsIntentService extends IntentService {
 
         HttpClient httpClient = new DefaultHttpClient();
         HttpGet httpGet = new HttpGet(leaderboardUrl);
-        httpGet.addHeader(AUTHORIZATION, BEARER + " " + TrainingApplication.getStravaToken());
+        httpGet.addHeader(AUTHORIZATION, BEARER + " " + StravaHelper.getRefreshedAccessToken());
 
         HttpResponse httpResponse;
 
@@ -358,7 +358,7 @@ public class StravaSegmentsIntentService extends IntentService {
 
             HttpClient httpClient = new DefaultHttpClient();
             HttpGet httpGet = new HttpGet(starredSegmentsUrl);
-            httpGet.addHeader(AUTHORIZATION, BEARER + " " + TrainingApplication.getStravaToken());
+            httpGet.addHeader(AUTHORIZATION, BEARER + " " + StravaHelper.getRefreshedAccessToken());
 
             HttpResponse httpResponse;
             try {
@@ -526,7 +526,7 @@ public class StravaSegmentsIntentService extends IntentService {
 
         HttpClient httpClient = new DefaultHttpClient();
         HttpGet httpGet = new HttpGet(leaderboardUrl);
-        httpGet.addHeader(AUTHORIZATION, BEARER + " " + TrainingApplication.getStravaToken());
+        httpGet.addHeader(AUTHORIZATION, BEARER + " " + StravaHelper.getRefreshedAccessToken());
 
         HttpResponse httpResponse;
         try {

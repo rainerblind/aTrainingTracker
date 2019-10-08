@@ -362,7 +362,7 @@ public class MainActivityWithNavigation
         //     TrainingApplication.setUploadToDropbox(false);
         // }
 
-        if (TrainingApplication.uploadToStrava() && TrainingApplication.getStravaToken() == null) {
+        if (TrainingApplication.uploadToStrava() && TrainingApplication.getStravaAccessToken() == null) {
             TrainingApplication.setUploadToStrava(false);
         }
 

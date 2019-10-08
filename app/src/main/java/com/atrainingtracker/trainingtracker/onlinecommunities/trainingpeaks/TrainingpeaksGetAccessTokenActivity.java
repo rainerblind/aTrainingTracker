@@ -144,8 +144,8 @@ public class TrainingpeaksGetAccessTokenActivity
         }
     }
 
-    public String refreshAccessToken() {
-        if (DEBUG) Log.i(TAG, "refreshAccessToken()");
+    public String getRefreshedAccessToken() {
+        if (DEBUG) Log.i(TAG, "getRefreshedAccessToken()");
 
         String refreshUrl = getRefreshUrl();
         if (refreshUrl == null) {

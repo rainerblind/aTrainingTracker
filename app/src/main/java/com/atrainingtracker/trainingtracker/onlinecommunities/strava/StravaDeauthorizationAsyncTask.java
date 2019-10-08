@@ -73,7 +73,7 @@ public class StravaDeauthorizationAsyncTask extends
 
         HttpClient httpClient = new DefaultHttpClient();
         HttpPost httpPost = new HttpPost("https://www.strava.com/oauth/deauthorize");
-        httpPost.addHeader("Authorization", "Bearer " + TrainingApplication.getStravaToken());
+        httpPost.addHeader("Authorization", "Bearer " + StravaHelper.getRefreshedAccessToken());
 
         HttpResponse httpResponse;
         try {
@@ -87,7 +87,7 @@ public class StravaDeauthorizationAsyncTask extends
             if (responseJson.has("access_token")) {
                 // String tokenType   = responseJson.getString(TOKEN_TYPE);
                 String access_token = responseJson.getString("access_token");
-                if (access_token.equals(TrainingApplication.getStravaToken())) {
+                if (access_token.equals(StravaHelper.getRefreshedAccessToken())) {
                     if (DEBUG) Log.d(TAG, "all right!");
                 }
             }

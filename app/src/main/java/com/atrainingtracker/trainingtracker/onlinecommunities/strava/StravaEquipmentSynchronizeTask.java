@@ -119,7 +119,7 @@ public class StravaEquipmentSynchronizeTask extends AsyncTask<String, String, St
         HttpClient httpClient = new DefaultHttpClient();
         HttpGet httpGet = new HttpGet(STRAVA_URL_ATHLETE);
         // httpPost.addHeader(AUTHORIZATION, "Bearer " + TrainingApplication.getRunkeeperToken());
-        httpGet.addHeader(AUTHORIZATION, BEARER + " " + TrainingApplication.getStravaToken());
+        httpGet.addHeader(AUTHORIZATION, BEARER + " " + StravaHelper.getRefreshedAccessToken());
 
         HttpResponse httpResponse;
         try {
@@ -252,7 +252,7 @@ public class StravaEquipmentSynchronizeTask extends AsyncTask<String, String, St
         HttpClient httpClient = new DefaultHttpClient();
         HttpGet httpGet = new HttpGet(STRAVA_URL_GEAR + "/" + bikeId);
         // httpPost.addHeader(AUTHORIZATION, "Bearer " + TrainingApplication.getRunkeeperToken());
-        httpGet.addHeader(AUTHORIZATION, BEARER + " " + TrainingApplication.getStravaToken());
+        httpGet.addHeader(AUTHORIZATION, BEARER + " " + StravaHelper.getRefreshedAccessToken());
 
         try {
             HttpResponse httpResponse = httpClient.execute(httpGet);

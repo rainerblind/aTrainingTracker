@@ -113,6 +113,8 @@ public class TrainingApplication extends Application {
     public static final String PREFERENCE_SCREEN_STRAVA = "psUploadToStrava";
     public static final String SP_UPLOAD_TO_STRAVA = "uploadToStrava";
     public static final String SP_STRAVA_TOKEN = "stravaToken";
+    public static final String SP_STRAVA_REFRESH_TOKEN = "stravaRefreshToken";
+    public static final String SP_STRAVA_TOKEN_EXPIRES_AT = "stravaTokenExpiresAt";
     public static final String UPDATE_STRAVA_EQUIPMENT = "updateStravaEquipment";
     public static final String SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT = "lastUpdateTimeOfStravaEquipment";
     public static final String SP_STRAVA_ATHLETE_ID = "stravaAthleteId";
@@ -547,12 +549,26 @@ public class TrainingApplication extends Application {
         cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_STRAVA, value).apply();
     }
 
-    public static String getStravaToken() {
+    public static String getStravaAccessToken() {
         return cSharedPreferences.getString(SP_STRAVA_TOKEN, null);
     }
 
-    public static void setStravaToken(String token) {
+    public static void setStravaAccessToken(String token) {
         cSharedPreferences.edit().putString(SP_STRAVA_TOKEN, token).apply();
+    }
+
+    public static void setStravaRefreshToken(String refreshToken) {
+        cSharedPreferences.edit().putString(SP_STRAVA_REFRESH_TOKEN, refreshToken).apply();
+    }
+    public static String getStravaRefreshToken() {
+        return cSharedPreferences.getString(SP_STRAVA_REFRESH_TOKEN, null);
+    }
+
+    public static void setStravaTokenExpiresAt(int expiresAt) {
+        cSharedPreferences.edit().putInt(SP_STRAVA_TOKEN_EXPIRES_AT, expiresAt);
+    }
+    public static int getStravaTokenExpiresAt() {
+        return cSharedPreferences.getInt(SP_STRAVA_TOKEN_EXPIRES_AT, 0);
     }
 
     public static void deleteStravaToken() {

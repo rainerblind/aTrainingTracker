@@ -72,7 +72,7 @@ public class TrainingPeaksUploader extends BaseExporter {
         if (DEBUG) Log.d(TAG, "doExport: " + exportInfo.getFileBaseName());
 
         TrainingpeaksGetAccessTokenActivity trainingPeaksGetAccessTokenActivity = new TrainingpeaksGetAccessTokenActivity();
-        String accessToken = trainingPeaksGetAccessTokenActivity.refreshAccessToken();
+        String accessToken = trainingPeaksGetAccessTokenActivity.getRefreshedAccessToken();
         if (DEBUG) Log.i(TAG, "accessToken=" + accessToken);
 
         if (accessToken == null) {
