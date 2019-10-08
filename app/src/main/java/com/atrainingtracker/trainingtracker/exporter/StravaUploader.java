@@ -29,6 +29,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
+import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
@@ -67,7 +68,7 @@ public class StravaUploader extends BaseExporter {
     protected static final long INITIAL_WAITING_TIME = 10 * 1000L;  // 10 seconds
     protected static final long WAITING_TIME_UPDATE = 1 * 1000L;  // 1 second
     private static final String TAG = "StravaUploader";
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = true; //TrainingApplication.DEBUG && false;
 
     //    {
 //    	  "id": 16486788,
@@ -125,7 +126,7 @@ public class StravaUploader extends BaseExporter {
         multipartEntityBuilder.addBinaryBody(FILE, file, ContentType.MULTIPART_FORM_DATA, filename);
 
         HttpPost httpPost = new HttpPost(URL_STRAVA_UPLOAD);
-        httpPost.addHeader("Authorization", "Bearer " + TrainingApplication.getStravaToken());
+        httpPost.addHeader("Authorization", "Bearer " + StravaHelper.getRefreshedAccessToken());
 
         httpPost.setEntity(multipartEntityBuilder.build());
 
@@ -325,8 +326,10 @@ public class StravaUploader extends BaseExporter {
                     e.printStackTrace();
                 }
                 activityJSON = getStravaActivity(activityId);              // ...
-                if (DEBUG)
+                if (DEBUG) {
+                    Log.i(TAG, "json:" + activityJSON);
                     Log.i(TAG, "sport type: " + sportName + "?=" + activityJSON.getString(TYPE));
+                }
             } while ((!sportName.equalsIgnoreCase(activityJSON.getString(TYPE)))       // until type is updated
                     && (counter++ < MAX_REQUESTS));                       // or we give up
         } catch (JSONException e) {
@@ -370,6 +373,7 @@ public class StravaUploader extends BaseExporter {
 
         if (update) {
             activityJSON = updateStravaActivity(activityId, nameValuePairs);
+            if (DEBUG) {Log.i(TAG, "json: " + activityJSON); }
             // check result
             String errors = "errors:";
             boolean correctUpdate = true;
@@ -410,7 +414,7 @@ public class StravaUploader extends BaseExporter {
         try {
             HttpClient httpClient = new DefaultHttpClient();
             HttpPut httpPut = new HttpPut(URL_STRAVA_ACTIVITY + stravaActivityId);
-            httpPut.addHeader("Authorization", "Bearer " + TrainingApplication.getStravaToken());
+            httpPut.addHeader("Authorization", "Bearer " + StravaHelper.getRefreshedAccessToken());
 
             httpPut.setEntity(new UrlEncodedFormEntity(nameValuePairs, "UTF-8"));
 
@@ -444,7 +448,7 @@ public class StravaUploader extends BaseExporter {
 
         HttpClient httpClient = new DefaultHttpClient();
         HttpGet httpGet = new HttpGet(URL_STRAVA_ACTIVITY + stravaActivityId);
-        httpGet.addHeader("Authorization", "Bearer " + TrainingApplication.getStravaToken());
+        httpGet.addHeader("Authorization", "Bearer " + StravaHelper.getRefreshedAccessToken());
 
         HttpResponse httpResponse;
         try {
@@ -476,7 +480,7 @@ public class StravaUploader extends BaseExporter {
 
         HttpClient httpClient = new DefaultHttpClient();
         HttpGet httpGet = new HttpGet(URL_STRAVA_UPLOAD + "/" + stravaUploadId);
-        httpGet.addHeader("Authorization", "Bearer " + TrainingApplication.getStravaToken());
+        httpGet.addHeader("Authorization", "Bearer " + StravaHelper.getRefreshedAccessToken());
 
         HttpResponse httpResponse;
         try {

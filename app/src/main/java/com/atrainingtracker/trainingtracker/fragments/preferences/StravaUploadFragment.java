@@ -119,7 +119,7 @@ public class StravaUploadFragment extends android.support.v7.preference.Preferen
                 if (resultCode == Activity.RESULT_OK) {
                     if (DEBUG) Log.i(TAG, "result_ok");
                     String accessToken = data.getStringExtra(BaseGetAccessTokenActivity.ACCESS_TOKEN);
-                    TrainingApplication.setStravaToken(accessToken);
+                    TrainingApplication.setStravaAccessToken(accessToken);
 
                     // synchronize equipment
                     new StravaEquipmentSynchronizeTask(getActivity()).execute("foo");
