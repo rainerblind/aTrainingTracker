@@ -59,7 +59,7 @@ public class StravaGetAccessTokenActivity
                 .appendQueryParameter(REDIRECT_URI, MY_REDIRECT_URI)
                 .appendQueryParameter(RESPONSE_TYPE, CODE)
                 .appendQueryParameter(APPROVAL_PROMPT, AUTO)
-                .appendQueryParameter(SCOPE, ACTIVITY_WRITE + ',' + READ + ',' + ACTIVITY_READ_ALL);
+                .appendQueryParameter(SCOPE, READ + ',' + ACTIVITY_WRITE + ',' + ACTIVITY_READ_ALL + ',' + PROFILE_READ_ALL);
         return builder.build().toString();
     }
 
