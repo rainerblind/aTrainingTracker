@@ -100,6 +100,7 @@ import com.atrainingtracker.trainingtracker.interfaces.ReallyDeleteDialogInterfa
 import com.atrainingtracker.trainingtracker.interfaces.RemoteDevicesSettingsInterface;
 import com.atrainingtracker.trainingtracker.interfaces.ShowWorkoutDetailsInterface;
 import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface;
+import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaGetAccessTokenActivity;
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager;
 import com.atrainingtracker.trainingtracker.segments.StarredSegmentsListFragment;
 import com.atrainingtracker.trainingtracker.segments.StarredSegmentsTabbedContainer;
@@ -364,6 +365,12 @@ public class MainActivityWithNavigation
 
         if (TrainingApplication.uploadToStrava() && TrainingApplication.getStravaAccessToken() == null) {
             TrainingApplication.setUploadToStrava(false);
+        }
+
+        if (TrainingApplication.uploadToStrava() && TrainingApplication.getStravaTokenExpiresAt() == 0) {
+            Log.i(TAG, "migrating to new Strava OAuth");
+            // TrainingApplication.setStravaTokenExpiresAt(1); // avoid starting the StravaGetAccessToken Activity again and again...
+            startActivityForResult(new Intent(this, StravaGetAccessTokenActivity.class), StravaUploadFragment.GET_STRAVA_ACCESS_TOKEN);
         }
 
         if (TrainingApplication.uploadToRunKeeper() && TrainingApplication.getRunkeeperToken() == null) {

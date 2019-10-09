@@ -75,12 +75,14 @@ public class StravaHelper {
     }
 
     protected static void storeJSONData(JSONObject jsonObject) {
+        if (DEBUG) {Log.i(TAG, "string JSON response: " + jsonObject);}
         try {
             if (jsonObject.has("athlete")) {
                 JSONObject athlete = jsonObject.getJSONObject("athlete");
                 int athleteId = athlete.getInt("id");
                 TrainingApplication.setStravaAthleteId(athleteId);
             }
+            TrainingApplication.setStravaAccessToken(jsonObject.getString(BaseGetAccessTokenActivity.ACCESS_TOKEN));
             TrainingApplication.setStravaRefreshToken(jsonObject.getString(BaseGetAccessTokenActivity.REFRESH_TOKEN));
             TrainingApplication.setStravaTokenExpiresAt(jsonObject.getInt(BaseGetAccessTokenActivity.EXPIRES_AT));
         } catch (JSONException e) {
