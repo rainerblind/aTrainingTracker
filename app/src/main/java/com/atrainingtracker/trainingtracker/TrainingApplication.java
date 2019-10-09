@@ -565,7 +565,7 @@ public class TrainingApplication extends Application {
     }
 
     public static void setStravaTokenExpiresAt(int expiresAt) {
-        cSharedPreferences.edit().putInt(SP_STRAVA_TOKEN_EXPIRES_AT, expiresAt);
+        cSharedPreferences.edit().putInt(SP_STRAVA_TOKEN_EXPIRES_AT, expiresAt).apply();
     }
     public static int getStravaTokenExpiresAt() {
         return cSharedPreferences.getInt(SP_STRAVA_TOKEN_EXPIRES_AT, 0);
