@@ -46,9 +46,9 @@ Over the years, I increased my running volume, added swimming and cycling and be
 
 ## Now, this dream becomes true.
 
-In 2011, I realized that there are smartphones available that support the ANT+ protocol, the de facto standard for transmitting fitness data (heart rate, speed, cadence, power, ...).  Thus, I became excited and bought such a smartphone but non of the available apps were enough powerful and simple to use to satisfy me.  So I started coding ...
+In 2011, I realized that there are smartphones available that support the ANT+ protocol, the de facto standard for transmitting fitness data (heart rate, speed, cadence, power, ...).  Thus, I became excited and bought such a smartphone but non of the available apps were powerful enough and simple to use to satisfy me.  So I started coding ...
 
-Over the years, I invest much more time in developing this app than training.  Now, that my time becomes more and more limited I published the app here on GitHub under an open source licence.
+Over the years, I invested much more time in developing this app than training.  Now, that my time becomes more and more limited I published the app here on GitHub under an open source licence.
 
 
 ## Support
