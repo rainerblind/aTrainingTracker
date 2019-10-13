@@ -705,7 +705,7 @@ public class TrackingViewsDatabaseManager {
         // public static final int DB_VERSION = 3;       // upgraded to version 3 at 2.3.2016
         // public static final int DB_VERSION = 4;       // upgraded to version 4 at 3.1.2017
         // public static final int DB_VERSION = 5;       // upgraded to version 5 at 14.03.2018
-        public static final int DB_VERSION = 6;        // upgraded to version 6 at 17.04.2018
+        public static final int DB_VERSION = 7;        // upgraded to version 6 at 17.04.2018
         public static final String VIEWS_TABLE = "ViewsTable";
         public static final String ROWS_TABLE = "LayoutRowsTable";
         public static final String C_ID = BaseColumns._ID;
