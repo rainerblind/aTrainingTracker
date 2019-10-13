@@ -22,6 +22,7 @@ your computer, waiting to be analyzed with your favorite software like WKO+, or 
 
 ## Main Features:
 
+* Open source.
 * Support of many ANT+ sensors (heart rate, run speed and cadence, bike speed, bike cadence, bike speed and cadence, bike power, temperature/environment).
 * Support of many Bluetooth LE sensors (heart rate, run speed and cadence, cycling speed, cycling cadence, cycling speed and cadence).
 * Pair an unlimited number of remote (ANT+ or Bluetooth) sensors, e.g., a speed or cadence sensor on each of your bikes.
@@ -50,7 +51,9 @@ In 2011, I realized that there are smartphones available that support the ANT+ p
 Over the years, I invest much more time in developing this app than training.  Now, that my time becomes more and more limited I published the app here on GitHub under an open source licence.
 
 
-### Support
+## Support
 
-You can support the development of this app by contributing on GitHub or sending some bitcoins to
-1CwwNwhpqvT77Dqoo9ByMHAMKhyVRvAEq1
+You are more than welcome to support the development of this app by 
+* Adding feature requests or bug reports here on github.  Simply add an issue on https://github.com/rainerblind/aTrainingTracker/issues.
+* If you are one of the blessed persons who learned to code in Java (or Kotlin) you can help to fix the bugs and realize the feature requests by contributing to the code.
+* Translate the app to other languages.  Therefore, you just have to translate the phrases within a file.  No coding required.  This should be a piece of cake for your mother tongue.
