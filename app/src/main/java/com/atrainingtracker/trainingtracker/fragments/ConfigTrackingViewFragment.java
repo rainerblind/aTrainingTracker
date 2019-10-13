@@ -39,6 +39,7 @@ import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.RadioButton;
 import android.widget.TextView;
 
 import com.atrainingtracker.R;
@@ -145,8 +146,42 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
             }
         });
 
+        RadioButton rb = view.findViewById(R.id.rbNightDay_SystemSetting);
+        rb.setChecked(TrackingViewsDatabaseManager.systemSettings(mViewId));
+        rb.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean isChecked) {
+                TrackingViewsDatabaseManager.updateSystemSetting(mViewId, isChecked);
+            }
+        });
 
-        CheckBox checkBox = view.findViewById(R.id.cbShowMap);
+        rb = view.findViewById(R.id.rbNightDay_Day);
+        rb.setChecked(TrackingViewsDatabaseManager.day(mViewId));
+        rb.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean isChecked) {
+                TrackingViewsDatabaseManager.updateDay(mViewId, isChecked);
+            }
+        });
+
+        rb = view.findViewById(R.id.rbNightDay_Night);
+        rb.setChecked(TrackingViewsDatabaseManager.night(mViewId));
+        rb.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean isChecked) {
+                TrackingViewsDatabaseManager.updateNight(mViewId, isChecked);
+            }
+        });
+        CheckBox checkBox = view.findViewById(R.id.cbFullScreen);
+        checkBox.setChecked(TrackingViewsDatabaseManager.fullscreen(mViewId));
+        checkBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean isChecked) {
+                TrackingViewsDatabaseManager.updateFullscreen(mViewId, isChecked);
+            }
+        });
+
+        checkBox = view.findViewById(R.id.cbShowMap);
         checkBox.setChecked(TrackingViewsDatabaseManager.showMap(mViewId));
         checkBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
