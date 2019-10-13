@@ -724,6 +724,13 @@ public class TrackingViewsDatabaseManager {
         protected static final int MEDIUM = 25;
         protected static final int LARGE = 30;
         protected static final int HUGE = 40;
+
+        // new in V8 -> fullscreen and day/night
+        protected static final String FULL_SCREEN = "FullScreen";
+        protected static final String SYSTEM_SETTING = "SystemSetting";
+        protected static final String DAY = "Day";
+        protected static final String NIGHT = "Night";
+
         @Deprecated
         protected static final String CREATE_VIEWS_TABLE_V1 = "create table " + VIEWS_TABLE + " ("
                 + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -750,6 +757,7 @@ public class TrackingViewsDatabaseManager {
                 + NEXT_POSITION + " int, "
                 + SHOW_LAP_BUTTON + " int, "
                 + SHOW_MAP + " int)";
+
         @Deprecated
         protected static final String CREATE_LAYOUTS_TABLE_V3 = "create table " + ROWS_TABLE + " ("
                 + ROW_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -775,6 +783,7 @@ public class TrackingViewsDatabaseManager {
                 + SOURCE_DEVICE_ID + " int)";
         // TODO: same as for PebbleDbHelper: switch to next/previous id structure?
         // NO! when inserting a new view, we just have to add 1 to all following layout_nrs, similar for deleting.
+        @Deprecated
         protected static final String CREATE_LAYOUTS_TABLE_V6 = "create table " + ROWS_TABLE + " ("
                 + ROW_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                 + VIEW_ID + " int, "
@@ -785,6 +794,22 @@ public class TrackingViewsDatabaseManager {
                 + SOURCE_DEVICE_ID + " int, "
                 + FILTER_TYPE + " text, "
                 + FILTER_CONSTANT + " real)";
+
+        protected static final String CREATE_LAYOUTS_TABLE_V7 = "create table " + ROWS_TABLE + " ("
+                + ROW_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + VIEW_ID + " int, "
+                + ROW_NR + " int, "
+                + COL_NR + " int, "
+                + SENSOR_TYPE + " text, "
+                + TEXT_SIZE + " int, "
+                + SOURCE_DEVICE_ID + " int, "
+                + FILTER_TYPE + " text, "
+                + FILTER_CONSTANT + " real, "
+                + FULL_SCREEN + " int, "
+                + SYSTEM_SETTING + " int, "
+                + DAY + " int, "
+                + NIGHT + " int)";
+
         private final String TAG = TrackingViewsDbHelper.class.getName();
         private Context mContext;
         private boolean mHavePressureSensor = false;
@@ -804,10 +829,10 @@ public class TrackingViewsDatabaseManager {
         @Override
         public void onCreate(SQLiteDatabase db) {
             db.execSQL(CREATE_VIEWS_TABLE_V3);
-            db.execSQL(CREATE_LAYOUTS_TABLE_V6);
+            db.execSQL(CREATE_LAYOUTS_TABLE_V7);
 
             if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_VIEWS_TABLE_V3);
-            if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_LAYOUTS_TABLE_V6);
+            if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_LAYOUTS_TABLE_V7);
 
 
             if (DEBUG) Log.d(TAG, "filling db");
@@ -850,6 +875,10 @@ public class TrackingViewsDatabaseManager {
             values.put(NEXT_POSITION, -1);  // insert an invalid value to indicate that this field is invalid
             values.put(SHOW_LAP_BUTTON, 1);
             values.put(SHOW_MAP, 0);
+            values.put(FULL_SCREEN, 1);
+            values.put(SYSTEM_SETTING, 1);  // default will be to follow the systems settings
+            values.put(DAY, 0);
+            values.put(NIGHT, 0);
             newViewId = db.insert(VIEWS_TABLE, null, values);
 
             for (RowData rowData : viewMap.get(activityType)) {
@@ -921,6 +950,20 @@ public class TrackingViewsDatabaseManager {
                 contentValues.put(FILTER_TYPE, FilterType.INSTANTANEOUS.name());
                 contentValues.put(FILTER_CONSTANT, 1);
                 db.update(ROWS_TABLE, contentValues, null, null);
+            }
+
+            if (oldVersion < 7) { // add fullscreen and day/night
+                addColumn(db, VIEWS_TABLE, FULL_SCREEN, "int");
+                addColumn(db, VIEWS_TABLE, SYSTEM_SETTING, "int");
+                addColumn(db, VIEWS_TABLE, DAY, "int");
+                addColumn(db, VIEWS_TABLE, NIGHT, "int");
+
+                ContentValues contentValues = new ContentValues();
+                contentValues.put(FULL_SCREEN, 1);
+                contentValues.put(SYSTEM_SETTING, 1);
+                contentValues.put(DAY, 0);
+                contentValues.put(NIGHT, 0);
+                db.update(VIEWS_TABLE, contentValues, null, null);
             }
         }
 
