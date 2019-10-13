@@ -131,9 +131,9 @@ public class TrackingViewsDatabaseManager {
         databaseManager.closeDatabase();
     }
 
-    public static void updateShowMap(long viewId, boolean showMap) {
+    protected static void updateBoolean(long viewId, String ID, boolean value) {
         ContentValues values = new ContentValues();
-        values.put(TrackingViewsDbHelper.SHOW_MAP, showMap ? 1 : 0);
+        values.put(ID, value ? 1 : 0);
 
         TrackingViewsDatabaseManager databaseManager = TrackingViewsDatabaseManager.getInstance();
         SQLiteDatabase db = databaseManager.getOpenDatabase();
@@ -146,19 +146,28 @@ public class TrackingViewsDatabaseManager {
         databaseManager.closeDatabase();
     }
 
+    public static void updateSystemSetting(long viewId, boolean value) {
+        updateBoolean(viewId, TrackingViewsDbHelper.SYSTEM_SETTING, value);
+    }
+
+    public static void updateDay(long viewId, boolean value) {
+        updateBoolean(viewId, TrackingViewsDbHelper.DAY, value);
+    }
+
+    public static void updateNight(long viewId, boolean value) {
+        updateBoolean(viewId, TrackingViewsDbHelper.NIGHT, value);
+    }
+
+    public static void updateFullscreen(long viewId, boolean fullscreen) {
+        updateBoolean(viewId, TrackingViewsDbHelper.FULL_SCREEN, fullscreen);
+    }
+
+    public static void updateShowMap(long viewId, boolean showMap) {
+        updateBoolean(viewId, TrackingViewsDbHelper.SHOW_MAP, showMap);
+    }
+
     public static void updateShowLapButton(long viewId, boolean showLapButton) {
-        ContentValues values = new ContentValues();
-        values.put(TrackingViewsDbHelper.SHOW_LAP_BUTTON, showLapButton ? 1 : 0);
-
-        TrackingViewsDatabaseManager databaseManager = TrackingViewsDatabaseManager.getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
-
-        db.update(TrackingViewsDbHelper.VIEWS_TABLE,
-                values,
-                TrackingViewsDbHelper.C_ID + "=?",
-                new String[]{viewId + ""});
-
-        databaseManager.closeDatabase();
+        updateBoolean(viewId, TrackingViewsDbHelper.SHOW_LAP_BUTTON, showLapButton);
     }
 
     public static void deleteRow(long rowId) {
@@ -246,7 +255,7 @@ public class TrackingViewsDatabaseManager {
         return layoutNr;
     }
 
-    public static boolean showMap(long viewId) {
+    protected static boolean getBoolean(long viewId, String ID) {
         boolean result = false;
 
         TrackingViewsDatabaseManager databaseManager = getInstance();
@@ -261,7 +270,7 @@ public class TrackingViewsDatabaseManager {
                 null);
 
         if (cursor.moveToFirst()) {
-            result = (cursor.getInt(cursor.getColumnIndex(TrackingViewsDbHelper.SHOW_MAP)) > 0);
+            result = (cursor.getInt(cursor.getColumnIndex(ID)) > 0);
         }
 
         cursor.close();
@@ -270,28 +279,28 @@ public class TrackingViewsDatabaseManager {
         return result;
     }
 
+    public static boolean fullscreen(long viewId) {
+        return getBoolean(viewId, TrackingViewsDbHelper.FULL_SCREEN);
+    }
+
+    public static boolean systemSettings(long viewId) {
+        return getBoolean(viewId, TrackingViewsDbHelper.SYSTEM_SETTING);
+    }
+
+    public static boolean day(long viewId) {
+        return getBoolean(viewId, TrackingViewsDbHelper.DAY);
+    }
+
+    public static boolean night(long viewId) {
+        return getBoolean(viewId, TrackingViewsDbHelper.NIGHT);
+    }
+
+    public static boolean showMap(long viewId) {
+        return getBoolean(viewId, TrackingViewsDbHelper.SHOW_MAP);
+    }
+
     public static boolean showLapButton(long viewId) {
-        boolean result = false;
-
-        TrackingViewsDatabaseManager databaseManager = getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
-
-        Cursor cursor = db.query(TrackingViewsDbHelper.VIEWS_TABLE,
-                null,
-                TrackingViewsDbHelper.C_ID + "=?",
-                new String[]{viewId + ""},
-                null,
-                null,
-                null);
-
-        if (cursor.moveToFirst()) {
-            result = (cursor.getInt(cursor.getColumnIndex(TrackingViewsDbHelper.SHOW_LAP_BUTTON)) > 0);
-        }
-
-        cursor.close();
-        databaseManager.closeDatabase();
-
-        return result;
+        return getBoolean(viewId, TrackingViewsDbHelper.SHOW_LAP_BUTTON);
     }
 
     public static FilterInfo getFilterInfo(long rowId) {
