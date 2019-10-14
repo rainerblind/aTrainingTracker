@@ -24,6 +24,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -231,7 +232,7 @@ public class TrackingFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        if (DEBUG) Log.i(TAG, "onResume");
+        if (DEBUG) Log.i(TAG, "onResume " + mViewId);
 
         if (DEBUG) Log.i(TAG, "mode=" + mMode.name());
 
@@ -252,6 +253,50 @@ public class TrackingFragment extends Fragment {
             getChildFragmentManager().beginTransaction().add(mMapContainer.getId(), mTrackOnMapTrackingFragment).commit();
         }
     }
+
+    @Override
+    public void setUserVisibleHint(boolean isVisibleToUser) {
+        super.setUserVisibleHint(isVisibleToUser);
+        if (isVisibleToUser) {
+            Log.i(TAG, "visible to user: " + mViewId + ", " + isVisibleToUser);
+            // optionally enable fullscreen mode
+            if (TrackingViewsDatabaseManager.fullscreen(mViewId)) {
+                hideSystemUI();
+            }
+            else {
+                showSystemUI();
+            }
+        }
+        else {
+            showSystemUI();
+        }
+    }
+
+    private void hideSystemUI() {
+        // Enables regular immersive mode.
+        // For "lean back" mode, remove SYSTEM_UI_FLAG_IMMERSIVE.
+        // Or for "sticky immersive," replace it with SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+        View decorView = getActivity().getWindow().getDecorView();
+        decorView.setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_IMMERSIVE
+                        | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                        | View.SYSTEM_UI_FLAG_FULLSCREEN);
+
+        // also hide the action bar
+        ((AppCompatActivity) getActivity()).getSupportActionBar().hide();
+    }
+
+    // Shows the system bars by removing all the flags
+    // except for the ones that make the content appear under the system bars.
+    private void showSystemUI() {
+        if (getActivity() == null) { return; }
+
+        View decorView = getActivity().getWindow().getDecorView();
+        decorView.setSystemUiVisibility(0);
+
+        ((AppCompatActivity) getActivity()).getSupportActionBar().show();
+    }
+
 
     @Override
     public void onPause() {
