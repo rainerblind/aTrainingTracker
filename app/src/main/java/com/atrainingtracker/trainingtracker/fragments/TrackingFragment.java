@@ -365,7 +365,7 @@ public class TrackingFragment extends Fragment {
 
             // TextView for the title/description
             TextView tv = new TextView(getContext());
-            tv.setBackgroundColor(getResources().getColor(R.color.my_white));
+            // tv.setBackgroundColor(getResources().getColor(R.color.my_white));
             tv.setTextSize(TEXT_SIZE_TITLE);
             String filterSummary = getShortFilterSummary(getContext(), viewInfo.filterType, viewInfo.filterConstant);
             if (deviceName == null) {
@@ -379,7 +379,7 @@ public class TrackingFragment extends Fragment {
 
             // TextView for the content
             tv = new TextView(getContext());
-            tv.setBackgroundColor(getResources().getColor(R.color.my_white));
+            // tv.setBackgroundColor(getResources().getColor(R.color.my_white));
             tv.setTextSize(viewInfo.textSize);
             // tv.setGravity(Gravity.CENTER_VERTICAL | Gravity.CENTER_HORIZONTAL);
             tv.setGravity(Gravity.CENTER_HORIZONTAL);

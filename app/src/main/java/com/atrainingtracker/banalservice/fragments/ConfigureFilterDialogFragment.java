@@ -125,10 +125,10 @@ public class ConfigureFilterDialogFragment
         TextView title = new TextView(getActivity());
         // You Can Customise your Title here
         title.setText(R.string.configure_filter);
-        title.setBackgroundColor(getResources().getColor(R.color.my_blue));
+//        title.setBackgroundColor(getResources().getColor(R.color.my_blue));
         title.setPadding(10, 10, 10, 10);
         title.setGravity(Gravity.CENTER);
-        title.setTextColor(getResources().getColor(R.color.my_white));
+//        title.setTextColor(getResources().getColor(R.color.my_white));
         title.setTextSize(20);
 
         builder.setCustomTitle(title);

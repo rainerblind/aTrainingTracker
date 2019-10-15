@@ -43,7 +43,6 @@
                 android:id="@+id/spinnerFilter"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
-                android:background="@color/my_white"
                 android:text="none" />
         </LinearLayout>
 
@@ -84,7 +83,6 @@
                 android:id="@+id/spinnerFilterUnit"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
-                android:background="@color/my_white"
                 android:text="sec" />
         </LinearLayout>
     </LinearLayout>
