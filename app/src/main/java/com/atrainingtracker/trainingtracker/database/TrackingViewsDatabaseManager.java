@@ -705,7 +705,8 @@ public class TrackingViewsDatabaseManager {
         // public static final int DB_VERSION = 3;       // upgraded to version 3 at 2.3.2016
         // public static final int DB_VERSION = 4;       // upgraded to version 4 at 3.1.2017
         // public static final int DB_VERSION = 5;       // upgraded to version 5 at 14.03.2018
-        public static final int DB_VERSION = 7;        // upgraded to version 6 at 17.04.2018
+        // public static final int DB_VERSION = 6;       // upgraded to version 6 at 17.04.2018
+        public static final int DB_VERSION = 7;          // upgraded to version 7 at 15.10.2019
         public static final String VIEWS_TABLE = "ViewsTable";
         public static final String ROWS_TABLE = "LayoutRowsTable";
         public static final String C_ID = BaseColumns._ID;
@@ -734,7 +735,7 @@ public class TrackingViewsDatabaseManager {
         protected static final int LARGE = 30;
         protected static final int HUGE = 40;
 
-        // new in V8 -> fullscreen and day/night
+        // new in V7 -> fullscreen and day/night
         protected static final String FULL_SCREEN = "FullScreen";
         protected static final String SYSTEM_SETTING = "SystemSetting";
         protected static final String DAY = "Day";
@@ -757,6 +758,7 @@ public class TrackingViewsDatabaseManager {
                 + LAYOUT_NR + " int, "  // TODO: currently, we have only layout nr 1.
                 + NEXT_POSITION + " int, "
                 + SHOW_LAP_BUTTON + " int)";
+        @Deprecated
         protected static final String CREATE_VIEWS_TABLE_V3 = "create table " + VIEWS_TABLE + " ("
                 + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                 // + VIEW_ID       + " INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -766,6 +768,19 @@ public class TrackingViewsDatabaseManager {
                 + NEXT_POSITION + " int, "
                 + SHOW_LAP_BUTTON + " int, "
                 + SHOW_MAP + " int)";
+        protected static final String CREATE_VIEWS_TABLE_V7 = "create table " + VIEWS_TABLE + " ("
+                + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                // + VIEW_ID       + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + ACTIVITY_TYPE + " text, "
+                + NAME + " text, "
+                + LAYOUT_NR + " int, "
+                + NEXT_POSITION + " int, "
+                + SHOW_LAP_BUTTON + " int, "
+                + SHOW_MAP + " int, "
+                + FULL_SCREEN + " int, "
+                + SYSTEM_SETTING + " int, "
+                + DAY + " int, "
+                + NIGHT + " int)";
 
         @Deprecated
         protected static final String CREATE_LAYOUTS_TABLE_V3 = "create table " + ROWS_TABLE + " ("
@@ -792,7 +807,6 @@ public class TrackingViewsDatabaseManager {
                 + SOURCE_DEVICE_ID + " int)";
         // TODO: same as for PebbleDbHelper: switch to next/previous id structure?
         // NO! when inserting a new view, we just have to add 1 to all following layout_nrs, similar for deleting.
-        @Deprecated
         protected static final String CREATE_LAYOUTS_TABLE_V6 = "create table " + ROWS_TABLE + " ("
                 + ROW_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                 + VIEW_ID + " int, "
@@ -803,21 +817,6 @@ public class TrackingViewsDatabaseManager {
                 + SOURCE_DEVICE_ID + " int, "
                 + FILTER_TYPE + " text, "
                 + FILTER_CONSTANT + " real)";
-
-        protected static final String CREATE_LAYOUTS_TABLE_V7 = "create table " + ROWS_TABLE + " ("
-                + ROW_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
-                + VIEW_ID + " int, "
-                + ROW_NR + " int, "
-                + COL_NR + " int, "
-                + SENSOR_TYPE + " text, "
-                + TEXT_SIZE + " int, "
-                + SOURCE_DEVICE_ID + " int, "
-                + FILTER_TYPE + " text, "
-                + FILTER_CONSTANT + " real, "
-                + FULL_SCREEN + " int, "
-                + SYSTEM_SETTING + " int, "
-                + DAY + " int, "
-                + NIGHT + " int)";
 
         private final String TAG = TrackingViewsDbHelper.class.getName();
         private Context mContext;
@@ -837,11 +836,11 @@ public class TrackingViewsDatabaseManager {
 
         @Override
         public void onCreate(SQLiteDatabase db) {
-            db.execSQL(CREATE_VIEWS_TABLE_V3);
-            db.execSQL(CREATE_LAYOUTS_TABLE_V7);
+            db.execSQL(CREATE_VIEWS_TABLE_V7);
+            db.execSQL(CREATE_LAYOUTS_TABLE_V6);
 
-            if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_VIEWS_TABLE_V3);
-            if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_LAYOUTS_TABLE_V7);
+            if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_VIEWS_TABLE_V7);
+            if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_LAYOUTS_TABLE_V6);
 
 
             if (DEBUG) Log.d(TAG, "filling db");
