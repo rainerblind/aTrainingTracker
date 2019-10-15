@@ -108,9 +108,7 @@
             android:layout_width="30dp"
             android:layout_height="30dp"
             android:layout_gravity="center"
-            android:background="@color/my_blue"
             android:text="-"
-            android:textColor="@color/my_white"
             android:textSize="20sp" />
 
         <EditText
@@ -128,9 +126,7 @@
             android:layout_width="30dp"
             android:layout_height="30dp"
             android:layout_gravity="center"
-            android:background="@color/my_blue"
             android:text="+"
-            android:textColor="@color/my_white"
             android:textSize="20sp" />
     </LinearLayout>
 
