@@ -28,4 +28,9 @@
         <item name="android:textColor">?colorPrimary</item>
     </style>
 
+    <style name="Widget.aTrainingTracker.Toolbar.ToolBarStyle" parent="Widget.AppCompat.Toolbar">
+        <item name="titleTextColor">?android:textColorPrimaryInverse</item>
+        <item name="actionMenuTextColor">?android:textColorPrimaryInverse</item>
+        <item name="colorControlNormal">?android:textColorPrimaryInverse</item>
+    </style>
 </resources>
