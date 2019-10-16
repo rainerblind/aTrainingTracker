@@ -159,7 +159,6 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
 //                // TODO: make the foo here => does not work :-(
 //            }
 //        });
-        mListView.setBackgroundColor(Color.WHITE);
         mListView.setRecyclerListener(mRecycleListener);
 
         registerForContextMenu(mListView);
