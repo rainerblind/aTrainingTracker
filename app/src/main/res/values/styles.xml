@@ -21,11 +21,15 @@
 
     <style name="Widget.aTrainingTracker.Button.Colored" parent="Widget.AppCompat.Button.Colored">
         <item name="colorButtonNormal">?colorPrimary</item>
-        <item name="android:textColor">?android:textColorPrimaryInverse</item>
+        <item name="android:textColor">@color/my_white</item>
     </style>
 
     <style name="Widget.aTrainingTracker.Button.Borderless" parent="Widget.AppCompat.Button.Borderless">
         <item name="android:textColor">?colorPrimary</item>
     </style>
 
+    <style name="Widget.aTrainingTracker.Toolbar.ToolBarStyle" parent="Widget.AppCompat.Toolbar">
+        <item name="titleTextColor">@color/my_white</item>
+        <item name="colorControlNormal">@color/my_white</item>
+    </style>
 </resources>

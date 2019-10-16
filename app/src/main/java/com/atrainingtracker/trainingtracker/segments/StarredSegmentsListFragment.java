@@ -184,7 +184,6 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
         setListAdapter(mStarredSegmentsCursorAdapter);
 
         mListView = getListView();
-        mListView.setBackgroundColor(Color.WHITE);
         mListView.setRecyclerListener(mRecycleListener);
 
         setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
