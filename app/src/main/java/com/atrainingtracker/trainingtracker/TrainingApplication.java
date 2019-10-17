@@ -147,6 +147,7 @@ public class TrainingApplication extends Application {
     public static final String GC_SENSORS = "GCSensors";
 
     protected static final String NOTIFICATION_CHANNEL__TRACKING = "NOTIFICATION_CHANNEL__TRACKING";
+    protected static final String NOTIFICATION_CHANNEL__TRACKING_2 = "NOTIFICATION_CHANNEL__TRACKING_2";
     public static final String NOTIFICATION_CHANNEL__EXPORT = "NOTIFICATION_CHANNEL__EXPORT";
     public static final int TRACKING_NOTIFICATION_ID = 1;
     public static final int EXPORT_PROGRESS_NOTIFICATION_ID = 2;
@@ -1168,10 +1169,12 @@ public class TrainingApplication extends Application {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationManager notificationManager = getSystemService(NotificationManager.class);
 
+            notificationManager.deleteNotificationChannel(NOTIFICATION_CHANNEL__TRACKING);
+
             // Channel for Tracking
-            NotificationChannel channel = new NotificationChannel(NOTIFICATION_CHANNEL__TRACKING,
+            NotificationChannel channel = new NotificationChannel(NOTIFICATION_CHANNEL__TRACKING_2,
                     getString(R.string.notification_channel_name__tracking),
-                    NotificationManager.IMPORTANCE_DEFAULT);
+                    NotificationManager.IMPORTANCE_LOW);
             channel.setDescription(getString(R.string.notification_channel_description__tracking));
             notificationManager.createNotificationChannel(channel); // Register the channel with the system;
 
