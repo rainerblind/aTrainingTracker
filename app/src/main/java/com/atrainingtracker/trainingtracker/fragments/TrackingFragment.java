@@ -22,9 +22,11 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.app.AppCompatDelegate;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -259,6 +261,7 @@ public class TrackingFragment extends Fragment {
         super.setUserVisibleHint(isVisibleToUser);
         if (isVisibleToUser) {
             Log.i(TAG, "visible to user: " + mViewId + ", " + isVisibleToUser);
+
             // optionally enable fullscreen mode
             if (TrackingViewsDatabaseManager.fullscreen(mViewId)) {
                 hideSystemUI();
@@ -266,9 +269,16 @@ public class TrackingFragment extends Fragment {
             else {
                 showSystemUI();
             }
+
+            // optionally force day or night...
+            if (TrackingViewsDatabaseManager.day(mViewId))   { forceDay();   }
+            if (TrackingViewsDatabaseManager.night(mViewId)) { forceNight(); }
+            if (TrackingViewsDatabaseManager.systemSettings(mViewId)) { followSystem(); }
+
         }
         else {
             showSystemUI();
+            followSystem();
         }
     }
 
@@ -295,6 +305,35 @@ public class TrackingFragment extends Fragment {
         decorView.setSystemUiVisibility(0);
 
         ((AppCompatActivity) getActivity()).getSupportActionBar().show();
+    }
+
+    private void forceDay() {
+        if (getActivity() == null) { return; }
+        // AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+        ((AppCompatActivity) getActivity()).getDelegate().setLocalNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+        getActivity().recreate();
+    }
+
+    private void forceNight() {
+        if (getActivity() == null) { return; }
+        // AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+        ((AppCompatActivity) getActivity()).getDelegate().setLocalNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+        getActivity().recreate();
+    }
+
+    private void followSystem() {
+        Log.i(TAG, "followSystem: " + Build.VERSION.SDK_INT);
+
+        if (getActivity() == null) { return; }
+        if (android.os.Build.VERSION.SDK_INT < 29 ) {
+            ((AppCompatActivity) getActivity()).getDelegate().setLocalNightMode(AppCompatDelegate.MODE_NIGHT_AUTO);
+            // AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_AUTO);
+        }
+        else {
+            ((AppCompatActivity) getActivity()).getDelegate().setLocalNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+            // AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+        }
+        getActivity().recreate();
     }
 
 
