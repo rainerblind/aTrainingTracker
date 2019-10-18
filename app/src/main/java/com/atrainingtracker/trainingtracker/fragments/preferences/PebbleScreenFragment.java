@@ -25,9 +25,9 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.v7.preference.ListPreference;
-import android.support.v7.preference.Preference;
-import android.support.v7.preference.PreferenceManager;
+import androidx.preference.ListPreference;
+import androidx.preference.Preference;
+import androidx.preference.PreferenceManager;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -40,7 +40,7 @@ import com.atrainingtracker.trainingtracker.smartwatch.pebble.Watchapp;
 /**
  * Created by rainer on 01.02.16.
  */
-public class PebbleScreenFragment extends android.support.v7.preference.PreferenceFragmentCompat
+public class PebbleScreenFragment extends androidx.preference.PreferenceFragmentCompat
         implements SharedPreferences.OnSharedPreferenceChangeListener {
     private static final boolean DEBUG = TrainingApplication.DEBUG;
     private static final String TAG = PebbleScreenFragment.class.getName();

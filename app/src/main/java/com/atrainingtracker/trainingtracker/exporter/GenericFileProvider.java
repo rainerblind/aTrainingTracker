@@ -18,7 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.exporter;
 
-import android.support.v4.content.FileProvider;
+import androidx.core.content.FileProvider;
 
 /**
  * Created by rainer on 22.02.18.

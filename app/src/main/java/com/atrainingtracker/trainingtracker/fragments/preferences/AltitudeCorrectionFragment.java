@@ -27,7 +27,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 /**
  * Created by rainer on 01.02.16.
  */
-public class AltitudeCorrectionFragment extends android.support.v7.preference.PreferenceFragmentCompat {
+public class AltitudeCorrectionFragment extends androidx.preference.PreferenceFragmentCompat {
     private static final boolean DEBUG = TrainingApplication.DEBUG;
     private static final String TAG = AltitudeCorrectionFragment.class.getName();
 

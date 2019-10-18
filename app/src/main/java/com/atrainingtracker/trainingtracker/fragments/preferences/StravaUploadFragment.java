@@ -22,9 +22,9 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.support.v7.preference.CheckBoxPreference;
-import android.support.v7.preference.Preference;
-import android.support.v7.preference.PreferenceManager;
+import androidx.preference.CheckBoxPreference;
+import androidx.preference.Preference;
+import androidx.preference.PreferenceManager;
 import android.util.Log;
 
 import com.atrainingtracker.R;
@@ -40,7 +40,7 @@ import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaSegme
 /**
  * Created by rainer on 01.02.16.
  */
-public class StravaUploadFragment extends android.support.v7.preference.PreferenceFragmentCompat
+public class StravaUploadFragment extends androidx.preference.PreferenceFragmentCompat
         implements SharedPreferences.OnSharedPreferenceChangeListener {
     public static final int GET_STRAVA_ACCESS_TOKEN = 3;
     private static final boolean DEBUG = TrainingApplication.DEBUG && false;
