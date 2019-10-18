@@ -29,8 +29,8 @@
         <item name="android:buttonBarButtonStyle">@style/Widget.aTrainingTracker.Button.Borderless
         </item>
 
-        <!-- ??? -->
-        <item name="preferenceTheme">@style/PreferenceThemeOverlay</item>
+        <!--
+        <item name="preferenceTheme">@style/PreferenceThemeOverlay</item> -->
     </style>
 
 </resources>

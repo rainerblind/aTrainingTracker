@@ -22,8 +22,8 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.support.v7.preference.CheckBoxPreference;
-import android.support.v7.preference.PreferenceManager;
+import androidx.preference.CheckBoxPreference;
+import androidx.preference.PreferenceManager;
 import android.util.Log;
 
 import com.atrainingtracker.R;
@@ -34,7 +34,7 @@ import com.atrainingtracker.trainingtracker.onlinecommunities.trainingpeaks.Trai
 /**
  * Created by rainer on 01.02.16.
  */
-public class TrainingpeaksUploadFragment extends android.support.v7.preference.PreferenceFragmentCompat
+public class TrainingpeaksUploadFragment extends androidx.preference.PreferenceFragmentCompat
         implements SharedPreferences.OnSharedPreferenceChangeListener {
     public static final int GET_TRAINING_PEAKS_ACCESS_TOKEN = 4;
     private static final boolean DEBUG = TrainingApplication.DEBUG && false;

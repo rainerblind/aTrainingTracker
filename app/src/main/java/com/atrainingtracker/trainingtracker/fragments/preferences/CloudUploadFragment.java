@@ -20,9 +20,9 @@ package com.atrainingtracker.trainingtracker.fragments.preferences;
 
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.support.v7.preference.CheckBoxPreference;
-import android.support.v7.preference.PreferenceManager;
-import android.support.v7.preference.PreferenceScreen;
+import androidx.preference.CheckBoxPreference;
+import androidx.preference.PreferenceManager;
+import androidx.preference.PreferenceScreen;
 import android.util.Log;
 
 import com.atrainingtracker.R;
@@ -36,7 +36,7 @@ import java.util.List;
  * Created by rainer on 01.02.16.
  */
 
-public class CloudUploadFragment extends android.support.v7.preference.PreferenceFragmentCompat
+public class CloudUploadFragment extends androidx.preference.PreferenceFragmentCompat
         implements SharedPreferences.OnSharedPreferenceChangeListener {
     private static final boolean DEBUG = TrainingApplication.DEBUG && false;
     private static final String TAG = CloudUploadFragment.class.getName();

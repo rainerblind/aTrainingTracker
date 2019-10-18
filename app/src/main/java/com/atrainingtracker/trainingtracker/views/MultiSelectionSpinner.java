@@ -22,7 +22,7 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnMultiChoiceClickListener;
-import android.support.v7.widget.AppCompatSpinner;
+import androidx.appcompat.widget.AppCompatSpinner;
 import android.util.AttributeSet;
 import android.widget.ArrayAdapter;
 import android.widget.SpinnerAdapter;
