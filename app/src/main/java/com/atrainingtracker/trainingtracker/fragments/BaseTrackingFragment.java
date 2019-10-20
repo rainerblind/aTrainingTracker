@@ -77,15 +77,21 @@ public abstract class BaseTrackingFragment extends Fragment {
     }
 
     protected void forceDay() {
-        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+        if (getActivity() == null) { return; }
+        ((AppCompatActivity) getActivity()).getDelegate().setLocalNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+        // AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
     }
 
     protected void forceNight() {
-        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+        if (getActivity() == null) { return; }
+        ((AppCompatActivity) getActivity()).getDelegate().setLocalNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+        // AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
     }
 
     protected void followSystem() {
-        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.getDefaultNightMode());
+        if (getActivity() == null) { return; }
+        ((AppCompatActivity) getActivity()).getDelegate().setLocalNightMode(AppCompatDelegate.getDefaultNightMode());
+        // AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.getDefaultNightMode());
     }
 }
 
