@@ -255,32 +255,19 @@ public class TrackingFragment extends Fragment {
             mTrackOnMapTrackingFragment = TrackOnMapTrackingAndFollowingFragment.newInstance();
             getChildFragmentManager().beginTransaction().add(mMapContainer.getId(), mTrackOnMapTrackingFragment).commit();
         }
-    }
 
-    @Override
-    public void setUserVisibleHint(boolean isVisibleToUser) {
-        super.setUserVisibleHint(isVisibleToUser);
-        if (isVisibleToUser) {
-            Log.i(TAG, "visible to user: " + mViewId + ", " + isVisibleToUser);
-
-            // optionally enable fullscreen mode
-            if (TrackingViewsDatabaseManager.fullscreen(mViewId)) {
-                hideSystemUI();
-            }
-            else {
-                showSystemUI();
-            }
-
-            // optionally force day or night...
-            if (TrackingViewsDatabaseManager.day(mViewId))   { forceDay();   }
-            if (TrackingViewsDatabaseManager.night(mViewId)) { forceNight(); }
-            if (TrackingViewsDatabaseManager.systemSettings(mViewId)) { followSystem(); }
-
+        // optionally enable fullscreen mode
+        if (TrackingViewsDatabaseManager.fullscreen(mViewId)) {
+            hideSystemUI();
         }
         else {
             showSystemUI();
-            followSystem();
         }
+
+        // optionally force day or night...
+        if (TrackingViewsDatabaseManager.day(mViewId))   { forceDay();   }
+        if (TrackingViewsDatabaseManager.night(mViewId)) { forceNight(); }
+        if (TrackingViewsDatabaseManager.systemSettings(mViewId)) { followSystem(); }
     }
 
     private void hideSystemUI() {
@@ -299,7 +286,7 @@ public class TrackingFragment extends Fragment {
 
     // Shows the system bars by removing all the flags
     // except for the ones that make the content appear under the system bars.
-    private void showSystemUI() {
+    void showSystemUI() {
         if (getActivity() == null) { return; }
 
         View decorView = getActivity().getWindow().getDecorView();
@@ -312,14 +299,14 @@ public class TrackingFragment extends Fragment {
         if (getActivity() == null) { return; }
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
         // ((AppCompatActivity) getActivity()).getDelegate().setLocalNightMode(AppCompatDelegate.MODE_NIGHT_NO);
-        getActivity().recreate();
+        // getActivity().recreate();
     }
 
     private void forceNight() {
         if (getActivity() == null) { return; }
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
         // ((AppCompatActivity) getActivity()).getDelegate().setLocalNightMode(AppCompatDelegate.MODE_NIGHT_YES);
-        getActivity().recreate();
+        // getActivity().recreate();
     }
 
     private void followSystem() {
@@ -334,7 +321,7 @@ public class TrackingFragment extends Fragment {
             // ((AppCompatActivity) getActivity()).getDelegate().setLocalNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
             AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
         }
-        getActivity().recreate();
+        // getActivity().recreate();
     }
 
 
