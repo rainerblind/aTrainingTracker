@@ -78,31 +78,20 @@ public abstract class BaseTrackingFragment extends Fragment {
 
     protected void forceDay() {
         if (getActivity() == null) { return; }
-        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
-        // ((AppCompatActivity) getActivity()).getDelegate().setLocalNightMode(AppCompatDelegate.MODE_NIGHT_NO);
-        // getActivity().recreate();
+        ((AppCompatActivity) getActivity()).getDelegate().setLocalNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+        // AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
     }
 
     protected void forceNight() {
         if (getActivity() == null) { return; }
-        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
-        // ((AppCompatActivity) getActivity()).getDelegate().setLocalNightMode(AppCompatDelegate.MODE_NIGHT_YES);
-        // getActivity().recreate();
+        ((AppCompatActivity) getActivity()).getDelegate().setLocalNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+        // AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
     }
 
     protected void followSystem() {
-        Log.i(TAG, "followSystem: " + Build.VERSION.SDK_INT);
-
         if (getActivity() == null) { return; }
-        if (android.os.Build.VERSION.SDK_INT < 29 ) {
-            //  ((AppCompatActivity) getActivity()).getDelegate().setLocalNightMode(AppCompatDelegate.MODE_NIGHT_AUTO_BATTERY);
-            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_AUTO_BATTERY);
-        }
-        else {
-            // ((AppCompatActivity) getActivity()).getDelegate().setLocalNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
-            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
-        }
-        // getActivity().recreate();
+        ((AppCompatActivity) getActivity()).getDelegate().setLocalNightMode(AppCompatDelegate.getDefaultNightMode());
+        // AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.getDefaultNightMode());
     }
 }
 
