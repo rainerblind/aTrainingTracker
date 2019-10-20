@@ -51,13 +51,12 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseMan
 import com.atrainingtracker.trainingtracker.interfaces.RemoteDevicesSettingsInterface;
 import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface;
 
-public class ControlTrackingFragment extends Fragment {
+public class ControlTrackingFragment extends BaseTrackingFragment {
     public static final String TAG = ControlTrackingFragment.class.getName();
     private static final boolean DEBUG = TrainingApplication.DEBUG & false;
     private final IntentFilter mStartTrackingFilter = new IntentFilter();
     protected RemoteDevicesSettingsInterface mRemoteDevicesSettingsInterface;
     protected StartOrResumeInterface mStartOrResumeInterface;
-    protected BANALService.GetBanalServiceInterface mGetBanalServiceIf;
     protected BroadcastReceiver mUpdateResearchReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -121,12 +120,6 @@ public class ControlTrackingFragment extends Fragment {
             mStartOrResumeInterface = (StartOrResumeInterface) context;
         } catch (ClassCastException e) {
             throw new ClassCastException(context.toString() + " must implement StartOrResumeInterface");
-        }
-
-        try {
-            mGetBanalServiceIf = (BANALService.GetBanalServiceInterface) context;
-        } catch (ClassCastException e) {
-            throw new ClassCastException(context.toString() + " must implement GetBanalServiceInterface");
         }
 
         mGetBanalServiceIf.registerConnectionStatusListener(new BANALService.GetBanalServiceInterface.ConnectionStatusListener() {
@@ -306,29 +299,6 @@ public class ControlTrackingFragment extends Fragment {
         updateResearchButton();
         updatePairing();
         showTrackingState();
-    }
-
-    void showSystemUI() {
-        if (getActivity() == null) { return; }
-
-        View decorView = getActivity().getWindow().getDecorView();
-        decorView.setSystemUiVisibility(0);
-
-        ((AppCompatActivity) getActivity()).getSupportActionBar().show();
-    }
-
-    private void followSystem() {
-        Log.i(TAG, "followSystem: " + Build.VERSION.SDK_INT);
-
-        if (getActivity() == null) { return; }
-        if (android.os.Build.VERSION.SDK_INT < 29 ) {
-            //  ((AppCompatActivity) getActivity()).getDelegate().setLocalNightMode(AppCompatDelegate.MODE_NIGHT_AUTO_BATTERY);
-            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_AUTO_BATTERY);
-        }
-        else {
-            // ((AppCompatActivity) getActivity()).getDelegate().setLocalNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
-            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
-        }
     }
 
     @Override

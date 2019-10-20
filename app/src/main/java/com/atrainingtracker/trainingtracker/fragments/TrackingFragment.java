@@ -63,7 +63,7 @@ import java.util.TreeMap;
 
 import static com.atrainingtracker.trainingtracker.dialogs.EditFieldDialog.TRACKING_VIEW_CHANGED_INTENT;
 
-public class TrackingFragment extends Fragment {
+public class TrackingFragment extends BaseTrackingFragment {
     public static final String TAG = "TrackingFragment";
     public static final String VIEW_ID = "VIEW_ID";
     private static final boolean DEBUG = TrainingApplication.DEBUG && false;
@@ -78,7 +78,6 @@ public class TrackingFragment extends Fragment {
     // protected EnumMap<SensorType, HashMap<String, String>> mSensorValueMap = new EnumMap<SensorType, HashMap<String, String>>(SensorType.class); // maps (SensorType, DeviceName) -> value
 
     // protected List<TvSensorType> mLTvSensorType;  // contains all the TvSensorTypes
-    protected BANALService.GetBanalServiceInterface mGetBanalServiceIf;
     protected HashMap<String, TvSensorType> mHashMapTextViews = new HashMap<>(); // HashMap<String, TvSensorType>   for the TextViews and SensorType
     protected HashMap<String, String> mHashMapValues = new HashMap<>();     // HashMap<String, String>     for the values
     protected LinearLayout mLLSensors;
@@ -164,18 +163,6 @@ public class TrackingFragment extends Fragment {
                 return "";
         }
 
-    }
-
-    @Override
-    public void onAttach(Context context) {
-        super.onAttach(context);
-        if (DEBUG) Log.d(TAG, "onAttach");
-
-        try {
-            mGetBanalServiceIf = (BANALService.GetBanalServiceInterface) context;
-        } catch (ClassCastException e) {
-            throw new ClassCastException(context.toString() + " must implement GetBanalServiceInterface");
-        }
     }
 
     @Override
@@ -268,60 +255,6 @@ public class TrackingFragment extends Fragment {
         if (TrackingViewsDatabaseManager.day(mViewId))   { forceDay();   }
         if (TrackingViewsDatabaseManager.night(mViewId)) { forceNight(); }
         if (TrackingViewsDatabaseManager.systemSettings(mViewId)) { followSystem(); }
-    }
-
-    private void hideSystemUI() {
-        // Enables regular immersive mode.
-        // For "lean back" mode, remove SYSTEM_UI_FLAG_IMMERSIVE.
-        // Or for "sticky immersive," replace it with SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-        View decorView = getActivity().getWindow().getDecorView();
-        decorView.setSystemUiVisibility(
-                View.SYSTEM_UI_FLAG_IMMERSIVE
-                        | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                        | View.SYSTEM_UI_FLAG_FULLSCREEN);
-
-        // also hide the action bar
-        ((AppCompatActivity) getActivity()).getSupportActionBar().hide();
-    }
-
-    // Shows the system bars by removing all the flags
-    // except for the ones that make the content appear under the system bars.
-    void showSystemUI() {
-        if (getActivity() == null) { return; }
-
-        View decorView = getActivity().getWindow().getDecorView();
-        decorView.setSystemUiVisibility(0);
-
-        ((AppCompatActivity) getActivity()).getSupportActionBar().show();
-    }
-
-    private void forceDay() {
-        if (getActivity() == null) { return; }
-        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
-        // ((AppCompatActivity) getActivity()).getDelegate().setLocalNightMode(AppCompatDelegate.MODE_NIGHT_NO);
-        // getActivity().recreate();
-    }
-
-    private void forceNight() {
-        if (getActivity() == null) { return; }
-        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
-        // ((AppCompatActivity) getActivity()).getDelegate().setLocalNightMode(AppCompatDelegate.MODE_NIGHT_YES);
-        // getActivity().recreate();
-    }
-
-    private void followSystem() {
-        Log.i(TAG, "followSystem: " + Build.VERSION.SDK_INT);
-
-        if (getActivity() == null) { return; }
-        if (android.os.Build.VERSION.SDK_INT < 29 ) {
-            //  ((AppCompatActivity) getActivity()).getDelegate().setLocalNightMode(AppCompatDelegate.MODE_NIGHT_AUTO_BATTERY);
-            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_AUTO_BATTERY);
-        }
-        else {
-            // ((AppCompatActivity) getActivity()).getDelegate().setLocalNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
-            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
-        }
-        // getActivity().recreate();
     }
 
 
