@@ -26,7 +26,11 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.os.Build;
 import android.os.Bundle;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
@@ -296,9 +300,35 @@ public class ControlTrackingFragment extends Fragment {
         getActivity().registerReceiver(mPauseTrackingReceiver, new IntentFilter(TrainingApplication.REQUEST_PAUSE_TRACKING));
         getActivity().registerReceiver(mStopTrackingReceiver, new IntentFilter(TrainingApplication.REQUEST_STOP_TRACKING));
 
+        showSystemUI();
+        followSystem();
+
         updateResearchButton();
         updatePairing();
         showTrackingState();
+    }
+
+    void showSystemUI() {
+        if (getActivity() == null) { return; }
+
+        View decorView = getActivity().getWindow().getDecorView();
+        decorView.setSystemUiVisibility(0);
+
+        ((AppCompatActivity) getActivity()).getSupportActionBar().show();
+    }
+
+    private void followSystem() {
+        Log.i(TAG, "followSystem: " + Build.VERSION.SDK_INT);
+
+        if (getActivity() == null) { return; }
+        if (android.os.Build.VERSION.SDK_INT < 29 ) {
+            //  ((AppCompatActivity) getActivity()).getDelegate().setLocalNightMode(AppCompatDelegate.MODE_NIGHT_AUTO_BATTERY);
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_AUTO_BATTERY);
+        }
+        else {
+            // ((AppCompatActivity) getActivity()).getDelegate().setLocalNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+        }
     }
 
     @Override
