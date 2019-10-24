@@ -58,7 +58,6 @@
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:background="@color/my_light_blue"
         android:text="@string/no_sensor_available"
         android:textSize="18sp" />
 

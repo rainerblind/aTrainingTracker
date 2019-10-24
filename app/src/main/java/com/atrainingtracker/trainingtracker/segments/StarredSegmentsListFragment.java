@@ -27,6 +27,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import androidx.cursoradapter.widget.CursorAdapter;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;

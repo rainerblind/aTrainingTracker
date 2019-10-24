@@ -34,7 +34,7 @@
             android:name=".trainingtracker.activities.MainActivityWithNavigation"
             android:label="@string/app_name"
             android:launchMode="singleTask"
-            android:theme="@style/Theme.aTrainingTracker.NoActionBar">
+            android:theme="@style/Theme.aTrainingTracker">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -44,14 +44,14 @@
         <activity
             android:name=".trainingtracker.activities.WorkoutDetailsActivity"
             android:label="@string/app_name"
-            android:theme="@style/Theme.aTrainingTracker.NoActionBar"
+            android:theme="@style/Theme.aTrainingTracker"
             android:windowSoftInputMode="stateHidden" />
 
         <activity
             android:name=".trainingtracker.activities.SegmentDetailsActivity"
             android:label="@string/app_name"
             android:launchMode="singleTask"
-            android:theme="@style/Theme.aTrainingTracker.NoActionBar"
+            android:theme="@style/Theme.aTrainingTracker"
             android:windowSoftInputMode="stateHidden" />
 
 
@@ -59,7 +59,7 @@
             android:name=".trainingtracker.activities.ConfigTrackingViewsActivity"
             android:label="@string/TrackingFragmentConfigActivityLabel"
             android:launchMode="singleTask"
-            android:theme="@style/Theme.aTrainingTracker.NoActionBar"
+            android:theme="@style/Theme.aTrainingTracker"
             android:windowSoftInputMode="stateHidden">
             <intent-filter>
                 <action android:name="com.atrainingtracker.trainingtracker.intent.action.ConfigureAllTrackingViews" />
@@ -71,7 +71,7 @@
             android:name=".trainingtracker.smartwatch.pebble.ConfigPebbleViewsActivity"
             android:label="@string/PebbleConfigActivityLabel"
             android:launchMode="singleTask"
-            android:theme="@style/Theme.aTrainingTracker.NoActionBar"
+            android:theme="@style/Theme.aTrainingTracker"
             android:windowSoftInputMode="stateHidden">
             <intent-filter>
                 <action android:name="com.atrainingtracker.trainingtracker.smartwatch.pebble.ConfigPebbleViewsActivity" />
@@ -98,17 +98,17 @@
         <activity
             android:name=".trainingtracker.onlinecommunities.runkeeper.RunkeeperGetAccessTokenActivity"
             android:label="@string/RunkeeperGetAccessTokenActivityLabel"
-            android:theme="@style/Theme.aTrainingTracker.NoActionBar" />
+            android:theme="@style/Theme.aTrainingTracker" />
 
         <activity
             android:name=".trainingtracker.onlinecommunities.strava.StravaGetAccessTokenActivity"
             android:label="@string/StravaGetAccessTokenActivityLabel"
-            android:theme="@style/Theme.aTrainingTracker.NoActionBar" />
+            android:theme="@style/Theme.aTrainingTracker" />
 
         <activity
             android:name=".trainingtracker.onlinecommunities.trainingpeaks.TrainingpeaksGetAccessTokenActivity"
             android:label="@string/TrainingPeaksGetAccessTokenActivityLabel"
-            android:theme="@style/Theme.aTrainingTracker.NoActionBar" />
+            android:theme="@style/Theme.aTrainingTracker" />
 
 
         <!-- <uses-library android:name="com.dsi.ant.antradio_library" /> -->
