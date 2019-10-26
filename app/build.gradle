@@ -29,6 +29,18 @@ android {
         }
     }
 
+    lintOptions {
+        //Configure checks with paths
+        //lintConfig file("lint.xml")
+        baseline file("lint-baseline.xml")
+        checkReleaseBuilds true
+
+        showAll true
+        //debug issues in Travis
+        textReport true
+        textOutput 'stdout'
+    }
+
     packagingOptions {
         pickFirst 'META-INF/NOTICE.txt'
         pickFirst 'META-INF/NOTICE'
