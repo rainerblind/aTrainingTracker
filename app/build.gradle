@@ -1,6 +1,15 @@
 apply plugin: 'com.android.application'
 apply plugin: 'io.fabric'
 
+def getGitHash = { ->
+    def stdout = new ByteArrayOutputStream()
+    exec {
+        commandLine 'git', 'rev-parse', '--short', 'HEAD'
+        standardOutput = stdout
+    }
+    return stdout.toString().trim()
+}
+
 android {
     // Travis update separately
     compileSdkVersion 29
@@ -21,7 +30,14 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Separate the debug build
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-${getGitHash()}"
+        }
         release {
+            applicationIdSuffix ""
+
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
             signingConfig signingConfigs.release
