@@ -2,6 +2,7 @@ apply plugin: 'com.android.application'
 apply plugin: 'io.fabric'
 
 android {
+    // Travis update separately
     compileSdkVersion 29
     buildToolsVersion '29.0.2'
 
