@@ -25,9 +25,10 @@ android {
     }
 
     signingConfigs {
+        //noinspection GroovyMissingReturnStatement
         release {
-            storeFile file('/home/rainer/Dropbox/workspace/keystore')
-            keyAlias "aTrainingTrackerReleaseKey"
+            // storeFile file('/home/rainer/Dropbox/workspace/keystore')
+            // keyAlias "aTrainingTrackerReleaseKey"
         }
     }
 
@@ -111,3 +112,16 @@ dependencies {
 }
 
 apply plugin: 'com.google.gms.google-services'
+
+def props = new Properties()
+if (rootProject.file("release.properties").exists()) {
+    props.load(new FileInputStream(rootProject.file("release.properties")))
+
+    android.signingConfigs.release.storeFile rootProject.file(props.keyStore)
+    android.signingConfigs.release.storePassword props.keyStorePassword
+    android.signingConfigs.release.keyAlias props.keyAlias
+    android.signingConfigs.release.keyPassword props.keyAliasPassword
+} else {
+    project.logger.info('INFO: Set the values storeFile, storePassword, keyAlias, and keyPassword in release.properties to sign the release.')
+    android.buildTypes.release.signingConfig = null
+}
