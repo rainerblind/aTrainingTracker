@@ -44,8 +44,7 @@
             android:layout_height="?attr/actionBarSize"
             android:background="?attr/colorPrimary"
             android:theme="@style/Widget.aTrainingTracker.Toolbar.ToolBarStyle"
-            app:layout_scrollFlags="scroll|enterAlways"
-            app:popupTheme="@style/ThemeOverlay.AppCompat.Light" />
+            app:layout_scrollFlags="scroll|enterAlways"/>
 
         <!-- Real content goes here -->
         <FrameLayout
