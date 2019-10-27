@@ -31,7 +31,7 @@
         android:background="?attr/colorPrimary"
         android:minHeight="?attr/actionBarSize"xs
         android:theme="@style/AppTheme.Toolbar.title" /> -->
-xs
+
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/apps_toolbar"
         android:layout_width="match_parent"
