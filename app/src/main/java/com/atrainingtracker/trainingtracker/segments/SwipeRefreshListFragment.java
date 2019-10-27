@@ -23,6 +23,7 @@ import android.os.Bundle;
 import androidx.fragment.app.ListFragment;
 import androidx.core.view.ViewCompat;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
