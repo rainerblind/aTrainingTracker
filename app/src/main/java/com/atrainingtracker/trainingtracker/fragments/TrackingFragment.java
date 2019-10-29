@@ -66,7 +66,7 @@ import static com.atrainingtracker.trainingtracker.dialogs.EditFieldDialog.TRACK
 public class TrackingFragment extends BaseTrackingFragment {
     public static final String TAG = "TrackingFragment";
     public static final String VIEW_ID = "VIEW_ID";
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = true; // TrainingApplication.DEBUG && false;
     private static final String MODE = "MODE";
     private static final String ACTIVITY_TYPE = "ACTIVITY_TYPE";
     private static final int TEXT_SIZE_TITLE = 15;
@@ -185,6 +185,13 @@ public class TrackingFragment extends BaseTrackingFragment {
         super.onCreateView(inflater, container, savedInstanceState);
         if (DEBUG) Log.d(TAG, "onCreateView");
 
+        if (DEBUG) Log.i(TAG, "mode=" + mMode.name());
+        if (mMode == Mode.TRACKING) {
+            setHasOptionsMenu(true);
+        } else if (mMode == Mode.PREVIEW) {
+            setHasOptionsMenu(false);
+        }
+
         mLayoutInflater = inflater;
 
         View view = inflater.inflate(R.layout.tracking_fragment, container, false);
@@ -207,8 +214,14 @@ public class TrackingFragment extends BaseTrackingFragment {
 
         mLLSensors = view.findViewById(R.id.llSensors);
         mLLSensors.removeAllViews();
+        updateSensorFields();  // initialize with the default stuff
 
         mMapContainer = view.findViewById(R.id.map_container);
+        // optionally show a map with the track
+        if (mTrackOnMapTrackingFragment == null && TrackingViewsDatabaseManager.showMap(mViewId)) {
+            mTrackOnMapTrackingFragment = TrackOnMapTrackingAndFollowingFragment.newInstance();
+            getChildFragmentManager().beginTransaction().add(mMapContainer.getId(), mTrackOnMapTrackingFragment).commit();
+        }
 
         return view;
     }
@@ -217,31 +230,15 @@ public class TrackingFragment extends BaseTrackingFragment {
     public void onActivityCreated(Bundle bundle) {
         super.onActivityCreated(bundle);
         if (DEBUG) Log.i(TAG, "onActivityCreated");
+
+        getActivity().registerReceiver(mNewTimeEventReceiver, mNewTimeEventFilter);
+        getActivity().registerReceiver(mTrackingViewChangedReceiver, mTrackingViewChangedFilter);
     }
 
     @Override
     public void onResume() {
         super.onResume();
         if (DEBUG) Log.i(TAG, "onResume " + mViewId);
-
-        if (DEBUG) Log.i(TAG, "mode=" + mMode.name());
-
-        if (mMode == Mode.TRACKING) {
-            setHasOptionsMenu(true);
-        } else if (mMode == Mode.PREVIEW) {
-            setHasOptionsMenu(false);
-        }
-
-        getActivity().registerReceiver(mNewTimeEventReceiver, mNewTimeEventFilter);
-        getActivity().registerReceiver(mTrackingViewChangedReceiver, mTrackingViewChangedFilter);
-
-        updateSensorFields();  // initialize with the default stuff
-
-        // optionally show a map with the track
-        if (mTrackOnMapTrackingFragment == null && TrackingViewsDatabaseManager.showMap(mViewId)) {
-            mTrackOnMapTrackingFragment = TrackOnMapTrackingAndFollowingFragment.newInstance();
-            getChildFragmentManager().beginTransaction().add(mMapContainer.getId(), mTrackOnMapTrackingFragment).commit();
-        }
 
         // optionally enable fullscreen mode
         if (TrackingViewsDatabaseManager.fullscreen(mViewId)) {
@@ -420,8 +417,14 @@ public class TrackingFragment extends BaseTrackingFragment {
                 // check if there was a valid value
                 if (value == null) {
                     // if (DEBUG) Log.d(TAG, "value==null for " + getString(sensorType.getShortNameId()));
-                    value = getString(R.string.NoData);
-                    if (DEBUG) Log.i(TAG, ":-( no valid value for " + hashKey);
+                    if (getActivity() != null) {
+                        value = getString(R.string.NoData);
+                        if (DEBUG) Log.i(TAG, ":-( no valid value for " + hashKey);
+                    }
+                    else {
+                        value = "--";
+                        Log.i(TAG, "WTF: no value for " + hashKey + " but no Activity");
+                    }
                 } else {
                     // remove/delete the current value (necessary when a sensor is removed)
                     mHashMapValues.put(hashKey, null);
@@ -429,7 +432,7 @@ public class TrackingFragment extends BaseTrackingFragment {
                 if (DEBUG) Log.i(TAG, "displayUpdate for " + hashKey + ": " + value);
 
                 // now, display it
-                if (TrainingApplication.showUnits()) {
+                if (TrainingApplication.showUnits() && getActivity() != null) {
                     String units = getString(MyHelper.getUnitsId(tvSensorType.sensorType));
                     tvSensorType.textView.setText(getString(R.string.value_unit_string_string, value, units));
                 } else {
