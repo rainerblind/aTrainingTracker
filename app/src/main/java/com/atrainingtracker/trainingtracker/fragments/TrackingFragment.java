@@ -168,7 +168,7 @@ public class TrackingFragment extends BaseTrackingFragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (DEBUG) Log.i(TAG, "onCreate");
+        if (DEBUG) Log.i(TAG, "onCreate " + getArguments().getLong(VIEW_ID));
 
         mViewId = getArguments().getLong(VIEW_ID);
         mActivityType = ActivityType.valueOf(getArguments().getString(ACTIVITY_TYPE));
@@ -183,7 +183,7 @@ public class TrackingFragment extends BaseTrackingFragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         super.onCreateView(inflater, container, savedInstanceState);
-        if (DEBUG) Log.d(TAG, "onCreateView");
+        if (DEBUG) Log.d(TAG, "onCreateView " + mViewId);
 
         if (DEBUG) Log.i(TAG, "mode=" + mMode.name());
         if (mMode == Mode.TRACKING) {
@@ -229,10 +229,16 @@ public class TrackingFragment extends BaseTrackingFragment {
     @Override
     public void onActivityCreated(Bundle bundle) {
         super.onActivityCreated(bundle);
-        if (DEBUG) Log.i(TAG, "onActivityCreated");
+        if (DEBUG) Log.i(TAG, "onActivityCreated " + mViewId);
 
         getActivity().registerReceiver(mNewTimeEventReceiver, mNewTimeEventFilter);
         getActivity().registerReceiver(mTrackingViewChangedReceiver, mTrackingViewChangedFilter);
+    }
+
+    @Override
+    public void onStart () {
+        super.onStart();
+        if (DEBUG) Log.i(TAG, "onStart " + mViewId);
     }
 
     @Override
@@ -258,16 +264,43 @@ public class TrackingFragment extends BaseTrackingFragment {
     @Override
     public void onPause() {
         super.onPause();
-        if (DEBUG) Log.i(TAG, "onPause");
+        if (DEBUG) Log.i(TAG, "onPause " + mViewId);
 
-        try {
-            getActivity().unregisterReceiver(mNewTimeEventReceiver);
-        } catch (Exception e) {
-        }
-        try {
-            getActivity().unregisterReceiver(mTrackingViewChangedReceiver);
-        } catch (Exception e) {
-        }
+        // try {
+        //     getActivity().unregisterReceiver(mNewTimeEventReceiver);
+        // } catch (Exception e) {
+        // }
+        // try {
+        //     getActivity().unregisterReceiver(mTrackingViewChangedReceiver);
+        // } catch (Exception e) {
+        // }
+    }
+
+    @Override
+    public void onStop () {
+        super.onStop();
+        if (DEBUG) Log.i(TAG, "onStop " + mViewId);
+    }
+
+    @Override
+    public void onDestroyView () {
+        super.onDestroyView();
+        if (DEBUG) Log.i(TAG, "onDestroyView " + mViewId);
+
+        getActivity().unregisterReceiver(mNewTimeEventReceiver);
+        getActivity().unregisterReceiver(mTrackingViewChangedReceiver);
+    }
+
+    @Override
+    public void onDestroy () {
+        super.onDestroy();
+        if (DEBUG) Log.i(TAG, "onDestroy " + mViewId);
+    }
+
+    @Override
+    public void onDetach () {
+        super.onDetach();
+        if (DEBUG) Log.i(TAG, "onDetach " + mViewId);
     }
 
     /**
