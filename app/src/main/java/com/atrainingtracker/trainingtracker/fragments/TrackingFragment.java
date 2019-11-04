@@ -66,7 +66,7 @@ import static com.atrainingtracker.trainingtracker.dialogs.EditFieldDialog.TRACK
 public class TrackingFragment extends BaseTrackingFragment {
     public static final String TAG = "TrackingFragment";
     public static final String VIEW_ID = "VIEW_ID";
-    private static final boolean DEBUG = true; // TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
     private static final String MODE = "MODE";
     private static final String ACTIVITY_TYPE = "ACTIVITY_TYPE";
     private static final int TEXT_SIZE_TITLE = 15;

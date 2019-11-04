@@ -53,7 +53,7 @@ import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface;
 
 public class ControlTrackingFragment extends BaseTrackingFragment {
     public static final String TAG = ControlTrackingFragment.class.getName();
-    private static final boolean DEBUG = true; // TrainingApplication.DEBUG & false;
+    private static final boolean DEBUG = TrainingApplication.DEBUG & false;
     private final IntentFilter mStartTrackingFilter = new IntentFilter();
     protected RemoteDevicesSettingsInterface mRemoteDevicesSettingsInterface;
     protected StartOrResumeInterface mStartOrResumeInterface;
