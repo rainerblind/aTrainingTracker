@@ -19,7 +19,6 @@
 package com.atrainingtracker.trainingtracker.fragments;
 
 import android.content.Context;
-import android.os.Build;
 import android.util.Log;
 import android.view.View;
 
