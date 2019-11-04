@@ -53,7 +53,7 @@ import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface;
 
 public class ControlTrackingFragment extends BaseTrackingFragment {
     public static final String TAG = ControlTrackingFragment.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG & false;
+    private static final boolean DEBUG = true; // TrainingApplication.DEBUG & false;
     private final IntentFilter mStartTrackingFilter = new IntentFilter();
     protected RemoteDevicesSettingsInterface mRemoteDevicesSettingsInterface;
     protected StartOrResumeInterface mStartOrResumeInterface;
@@ -67,6 +67,11 @@ public class ControlTrackingFragment extends BaseTrackingFragment {
     private ImageButton mBluetoothPairingButton;
     private ImageButton mStartButton, mPauseButton, mResumeFromPauseButton, mStopButton, mResearchButton;
     private LinearLayout mStartLayout, mPauseLayout, mResumeAndStopLayout, mResearchLayout;
+
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // BroadcastReceivers
+    ////////////////////////////////////////////////////////////////////////////////////////////////
     protected BroadcastReceiver mStartTrackingReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -105,6 +110,10 @@ public class ControlTrackingFragment extends BaseTrackingFragment {
     };
     private IntentFilter mUpdateResearchFilter = new IntentFilter();  // Intents will be added in onResume
 
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // Lifecycle methods
+    ////////////////////////////////////////////////////////////////////////////////////////////////
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
@@ -133,12 +142,20 @@ public class ControlTrackingFragment extends BaseTrackingFragment {
                 updatePairing();
             }
         });
+
+
+        mUpdateResearchFilter.addAction(BANALService.SEARCHING_STARTED_FOR_ALL_INTENT);
+        mUpdateResearchFilter.addAction(BANALService.SEARCHING_FINISHED_FOR_ALL_INTENT);
+
+        mStartTrackingFilter.addAction(TrainingApplication.REQUEST_START_TRACKING);
+        mStartTrackingFilter.addAction(TrainingApplication.REQUEST_RESUME_FROM_PAUSED);
     }
 
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////
-    // BroadcastReceivers
-    ////////////////////////////////////////////////////////////////////////////////////////////////
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        if (DEBUG) Log.i(TAG, "onCreate");
+    }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -274,27 +291,17 @@ public class ControlTrackingFragment extends BaseTrackingFragment {
         if (!prevTrackingFinishedProperly()) {
             mStartOrResumeInterface.showStartOrResumeDialog();
         }
-    }
 
-    @Override
-    public void onResume() {
-        super.onResume();
-        if (DEBUG) Log.i(TAG, "onResume");
-
-
-        mUpdateResearchFilter.addAction(BANALService.SEARCHING_STARTED_FOR_ALL_INTENT);
-        mUpdateResearchFilter.addAction(BANALService.SEARCHING_FINISHED_FOR_ALL_INTENT);
         getActivity().registerReceiver(mUpdateResearchReceiver, mUpdateResearchFilter);
-
-        mStartTrackingFilter.addAction(TrainingApplication.REQUEST_START_TRACKING);
-        mStartTrackingFilter.addAction(TrainingApplication.REQUEST_RESUME_FROM_PAUSED);
-
         getActivity().registerReceiver(mStartTrackingReceiver, mStartTrackingFilter);
         getActivity().registerReceiver(mPauseTrackingReceiver, new IntentFilter(TrainingApplication.REQUEST_PAUSE_TRACKING));
         getActivity().registerReceiver(mStopTrackingReceiver, new IntentFilter(TrainingApplication.REQUEST_STOP_TRACKING));
+    }
 
-        showSystemUI();
-        followSystem();
+    @Override
+    public void onStart () {
+        super.onStart();
+        if (DEBUG) Log.i(TAG, "onStart");
 
         updateResearchButton();
         updatePairing();
@@ -302,27 +309,50 @@ public class ControlTrackingFragment extends BaseTrackingFragment {
     }
 
     @Override
+    public void onResume() {
+        super.onResume();
+        if (DEBUG) Log.i(TAG, "onResume");
+
+        showSystemUI();
+        followSystem();
+    }
+
+    // Fragment is active
+
+    @Override
     public void onPause() {
         super.onPause();
+        if (DEBUG) Log.i(TAG, "onPause");
 
-        // try { getActivity().unregisterReceiver(mUpdatePairingReceiver);    } catch (Exception e) { }
-        try {
-            getActivity().unregisterReceiver(mStartTrackingReceiver);
-        } catch (Exception e) {
-        }
-        try {
-            getActivity().unregisterReceiver(mPauseTrackingReceiver);
-        } catch (Exception e) {
-        }
-        try {
-            getActivity().unregisterReceiver(mStopTrackingReceiver);
-        } catch (Exception e) {
-        }
-        try {
-            getActivity().unregisterReceiver(mUpdateResearchReceiver);
-        } catch (Exception e) {
-        }
+    }
 
+    @Override
+    public void onStop () {
+        super.onStop();
+        if (DEBUG) Log.i(TAG, "onStop");
+    }
+
+    @Override
+    public void onDestroyView () {
+        super.onDestroyView();
+        if (DEBUG) Log.i(TAG, "onDestroyView");
+
+        getActivity().unregisterReceiver(mStartTrackingReceiver);
+        getActivity().unregisterReceiver(mPauseTrackingReceiver);
+        getActivity().unregisterReceiver(mStopTrackingReceiver);
+        getActivity().unregisterReceiver(mUpdateResearchReceiver);
+    }
+
+    @Override
+    public void onDestroy () {
+        super.onDestroy();
+        if (DEBUG) Log.i(TAG, "onDestroy");
+    }
+
+    @Override
+    public void onDetach () {
+        super.onDetach();
+        if (DEBUG) Log.i(TAG, "onDetach");
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
