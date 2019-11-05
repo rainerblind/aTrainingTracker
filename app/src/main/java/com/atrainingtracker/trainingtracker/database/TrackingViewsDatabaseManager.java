@@ -883,7 +883,7 @@ public class TrackingViewsDatabaseManager {
             values.put(NEXT_POSITION, -1);  // insert an invalid value to indicate that this field is invalid
             values.put(SHOW_LAP_BUTTON, 1);
             values.put(SHOW_MAP, 0);
-            values.put(FULL_SCREEN, 1);
+            values.put(FULL_SCREEN, 0);     // default will be to have no fullscreen mode
             values.put(SYSTEM_SETTING, 1);  // default will be to follow the systems settings
             values.put(DAY, 0);
             values.put(NIGHT, 0);
@@ -967,7 +967,7 @@ public class TrackingViewsDatabaseManager {
                 addColumn(db, VIEWS_TABLE, NIGHT, "int");
 
                 ContentValues contentValues = new ContentValues();
-                contentValues.put(FULL_SCREEN, 1);
+                contentValues.put(FULL_SCREEN, 0);
                 contentValues.put(SYSTEM_SETTING, 1);
                 contentValues.put(DAY, 0);
                 contentValues.put(NIGHT, 0);
