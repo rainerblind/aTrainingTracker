@@ -36,8 +36,8 @@
     <!--selection controls.-->
     <color name="color_primary">#1464F4</color>
     <color name="color_primary_variant">#0000cd</color>
-    <color name="color_secondary">#A1CAF1</color>
-    <color name="color_secondary_variant">#6CA0DC</color>
+    <color name="color_secondary">#0000cd</color>
+    <color name="color_secondary_variant">#000080</color>
 
     <!--colorBackground appears behind scrollable content and is used for the default window-->
     <!--background. colorSurface is mapped to the surface of components such as cards, sheets-->
@@ -52,7 +52,7 @@
     <color name="color_on_primary">#ffffff</color>
     <color name="color_on_secondary">#000000</color>
     <color name="color_on_background">#000000</color>
-    <color name="color_on_surface">#1464f4</color>
+    <color name="color_on_surface">#000080</color>
     <color name="color_on_error">#ffffff</color>
 
     <!-- custom stuff to be replaced ... -->
