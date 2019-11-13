@@ -38,12 +38,20 @@
             android:minHeight="?attr/actionBarSize"
             android:theme="@style/AppTheme.Toolbar.title" /> -->
 
-        <androidx.appcompat.widget.Toolbar
+<!--        <androidx.appcompat.widget.Toolbar
             android:id="@+id/apps_toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             app:layout_scrollFlags="scroll|enterAlways"
-            app:popupTheme="@style/ThemeOverlay.AppCompat.Light" />
+            app:popupTheme="@style/ThemeOverlay.AppCompat.Light" />      -->
+
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/apps_toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="?attr/colorPrimary"
+            android:theme="@style/Widget.aTrainingTracker.Toolbar.ToolBarStyle"
+            app:layout_scrollFlags="scroll|enterAlways"/>
 
         <!-- a view to inform the user about the update progress -->
         <LinearLayout
