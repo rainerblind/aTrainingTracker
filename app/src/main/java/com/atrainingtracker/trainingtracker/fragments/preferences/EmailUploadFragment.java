@@ -20,8 +20,8 @@ package com.atrainingtracker.trainingtracker.fragments.preferences;
 
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.support.v7.preference.EditTextPreference;
-import android.support.v7.preference.PreferenceManager;
+import androidx.preference.EditTextPreference;
+import androidx.preference.PreferenceManager;
 import android.util.Log;
 
 import com.atrainingtracker.R;
@@ -30,7 +30,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 /**
  * Created by rainer on 01.02.16.
  */
-public class EmailUploadFragment extends android.support.v7.preference.PreferenceFragmentCompat
+public class EmailUploadFragment extends androidx.preference.PreferenceFragmentCompat
         implements SharedPreferences.OnSharedPreferenceChangeListener {
     private static final boolean DEBUG = TrainingApplication.DEBUG;
     private static final String TAG = EmailUploadFragment.class.getName();

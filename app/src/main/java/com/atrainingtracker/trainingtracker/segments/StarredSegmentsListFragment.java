@@ -24,10 +24,10 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.graphics.Color;
 import android.os.Bundle;
-import android.support.v4.widget.CursorAdapter;
-import android.support.v4.widget.SwipeRefreshLayout;
+import androidx.cursoradapter.widget.CursorAdapter;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -184,7 +184,6 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
         setListAdapter(mStarredSegmentsCursorAdapter);
 
         mListView = getListView();
-        mListView.setBackgroundColor(Color.WHITE);
         mListView.setRecyclerListener(mRecycleListener);
 
         setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {

@@ -25,10 +25,12 @@ import android.content.IntentFilter;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentManager;
-import android.support.v4.app.FragmentPagerAdapter;
-import android.support.v4.view.ViewPager;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentPagerAdapter;
+import androidx.fragment.app.FragmentStatePagerAdapter;
+import androidx.viewpager.widget.PagerAdapter;
+import androidx.viewpager.widget.ViewPager;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -55,7 +57,7 @@ public class StartAndTrackingFragmentTabbedContainer extends Fragment {
     public static final String ACTIVITY_TYPE = "ACTIVITY_TYPE";
     public static final String SELECTED_ITEM = "SELECTED_ITEM";
     public static final int CONTROL_ITEM = 0;
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = true; // TrainingApplication.DEBUG && false;
     private static final int SHOW_LAP_SUMMARY_TIME = 3000;
     private final IntentFilter mTrackingStartedFilter = new IntentFilter(TrackerService.TRACKING_STARTED_INTENT);
     private final IntentFilter mTrackingFinishedFilter = new IntentFilter(TrackerService.TRACKING_FINISHED_INTENT);
@@ -66,12 +68,12 @@ public class StartAndTrackingFragmentTabbedContainer extends Fragment {
     protected RemoteDevicesSettingsInterface mRemoteDevicesSettingsInterface;
     protected BANALService.GetBanalServiceInterface mGetBanalServiceIf;
     /**
-     * The {@link android.support.v4.view.PagerAdapter} that will provide
+     * The {@link PagerAdapter} that will provide
      * fragments for each of the sections. We use a
-     * {@link android.support.v4.app.FragmentPagerAdapter} derivative, which
+     * {@link FragmentPagerAdapter} derivative, which
      * will keep every loaded fragment in memory. If this becomes too memory
      * intensive, it may be best to switch to a
-     * {@link android.support.v4.app.FragmentStatePagerAdapter}.
+     * {@link FragmentStatePagerAdapter}.
      */
     SectionsPagerAdapter mSectionsPagerAdapter;
     /**
@@ -351,7 +353,7 @@ public class StartAndTrackingFragmentTabbedContainer extends Fragment {
     public class SectionsPagerAdapter extends FragmentPagerAdapter {
 
         public SectionsPagerAdapter(FragmentManager fm) {
-            super(fm);
+            super(fm, BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT);
         }
 
         @Override

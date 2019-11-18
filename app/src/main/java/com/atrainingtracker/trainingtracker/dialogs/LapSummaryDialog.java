@@ -23,7 +23,7 @@ import android.app.Dialog;
 import android.content.DialogInterface;
 import android.os.Bundle;
 import android.os.Handler;
-import android.support.v4.app.DialogFragment;
+import androidx.fragment.app.DialogFragment;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -93,10 +93,10 @@ public class LapSummaryDialog extends DialogFragment {
         TextView title = new TextView(getActivity());
         // You Can Customise your Title here
         title.setText(getString(R.string.Lap_NR, mLapNr));
-        title.setBackgroundColor(getResources().getColor(R.color.my_blue));
+//        title.setBackgroundColor(getResources().getColor(R.color.my_blue));
         title.setPadding(10, 10, 10, 10);
         title.setGravity(Gravity.CENTER);
-        title.setTextColor(getResources().getColor(R.color.my_white));
+//        title.setTextColor(getResources().getColor(R.color.my_white));
         title.setTextSize(20);
 
         builder.setCustomTitle(title);

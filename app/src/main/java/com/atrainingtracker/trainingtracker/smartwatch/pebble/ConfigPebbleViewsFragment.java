@@ -19,7 +19,7 @@
 package com.atrainingtracker.trainingtracker.smartwatch.pebble;
 
 import android.os.Bundle;
-import android.support.v4.app.Fragment;
+import androidx.fragment.app.Fragment;
 
 import com.atrainingtracker.banalservice.ActivityType;
 import com.atrainingtracker.trainingtracker.activities.ConfigViewsActivity;
