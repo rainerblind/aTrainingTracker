@@ -22,8 +22,12 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.os.Build;
 import android.os.Bundle;
-import android.support.v4.app.Fragment;
+
+import androidx.appcompat.app.AppCompatDelegate;
+import androidx.fragment.app.Fragment;
+import androidx.appcompat.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -59,7 +63,7 @@ import java.util.TreeMap;
 
 import static com.atrainingtracker.trainingtracker.dialogs.EditFieldDialog.TRACKING_VIEW_CHANGED_INTENT;
 
-public class TrackingFragment extends Fragment {
+public class TrackingFragment extends BaseTrackingFragment {
     public static final String TAG = "TrackingFragment";
     public static final String VIEW_ID = "VIEW_ID";
     private static final boolean DEBUG = TrainingApplication.DEBUG && false;
@@ -74,7 +78,6 @@ public class TrackingFragment extends Fragment {
     // protected EnumMap<SensorType, HashMap<String, String>> mSensorValueMap = new EnumMap<SensorType, HashMap<String, String>>(SensorType.class); // maps (SensorType, DeviceName) -> value
 
     // protected List<TvSensorType> mLTvSensorType;  // contains all the TvSensorTypes
-    protected BANALService.GetBanalServiceInterface mGetBanalServiceIf;
     protected HashMap<String, TvSensorType> mHashMapTextViews = new HashMap<>(); // HashMap<String, TvSensorType>   for the TextViews and SensorType
     protected HashMap<String, String> mHashMapValues = new HashMap<>();     // HashMap<String, String>     for the values
     protected LinearLayout mLLSensors;
@@ -163,21 +166,9 @@ public class TrackingFragment extends Fragment {
     }
 
     @Override
-    public void onAttach(Context context) {
-        super.onAttach(context);
-        if (DEBUG) Log.d(TAG, "onAttach");
-
-        try {
-            mGetBanalServiceIf = (BANALService.GetBanalServiceInterface) context;
-        } catch (ClassCastException e) {
-            throw new ClassCastException(context.toString() + " must implement GetBanalServiceInterface");
-        }
-    }
-
-    @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (DEBUG) Log.i(TAG, "onCreate");
+        if (DEBUG) Log.i(TAG, "onCreate " + getArguments().getLong(VIEW_ID));
 
         mViewId = getArguments().getLong(VIEW_ID);
         mActivityType = ActivityType.valueOf(getArguments().getString(ACTIVITY_TYPE));
@@ -192,7 +183,14 @@ public class TrackingFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         super.onCreateView(inflater, container, savedInstanceState);
-        if (DEBUG) Log.d(TAG, "onCreateView");
+        if (DEBUG) Log.d(TAG, "onCreateView " + mViewId);
+
+        if (DEBUG) Log.i(TAG, "mode=" + mMode.name());
+        if (mMode == Mode.TRACKING) {
+            setHasOptionsMenu(true);
+        } else if (mMode == Mode.PREVIEW) {
+            setHasOptionsMenu(false);
+        }
 
         mLayoutInflater = inflater;
 
@@ -216,8 +214,14 @@ public class TrackingFragment extends Fragment {
 
         mLLSensors = view.findViewById(R.id.llSensors);
         mLLSensors.removeAllViews();
+        updateSensorFields();  // initialize with the default stuff
 
         mMapContainer = view.findViewById(R.id.map_container);
+        // optionally show a map with the track
+        if (mTrackOnMapTrackingFragment == null && TrackingViewsDatabaseManager.showMap(mViewId)) {
+            mTrackOnMapTrackingFragment = TrackOnMapTrackingAndFollowingFragment.newInstance();
+            getChildFragmentManager().beginTransaction().add(mMapContainer.getId(), mTrackOnMapTrackingFragment).commit();
+        }
 
         return view;
     }
@@ -225,47 +229,78 @@ public class TrackingFragment extends Fragment {
     @Override
     public void onActivityCreated(Bundle bundle) {
         super.onActivityCreated(bundle);
-        if (DEBUG) Log.i(TAG, "onActivityCreated");
+        if (DEBUG) Log.i(TAG, "onActivityCreated " + mViewId);
+
+        getActivity().registerReceiver(mNewTimeEventReceiver, mNewTimeEventFilter);
+        getActivity().registerReceiver(mTrackingViewChangedReceiver, mTrackingViewChangedFilter);
+    }
+
+    @Override
+    public void onStart () {
+        super.onStart();
+        if (DEBUG) Log.i(TAG, "onStart " + mViewId);
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        if (DEBUG) Log.i(TAG, "onResume");
+        if (DEBUG) Log.i(TAG, "onResume " + mViewId);
 
-        if (DEBUG) Log.i(TAG, "mode=" + mMode.name());
-
-        if (mMode == Mode.TRACKING) {
-            setHasOptionsMenu(true);
-        } else if (mMode == Mode.PREVIEW) {
-            setHasOptionsMenu(false);
+        // optionally enable fullscreen mode
+        if (TrackingViewsDatabaseManager.fullscreen(mViewId)) {
+            hideSystemUI();
+        }
+        else {
+            showSystemUI();
         }
 
-        getActivity().registerReceiver(mNewTimeEventReceiver, mNewTimeEventFilter);
-        getActivity().registerReceiver(mTrackingViewChangedReceiver, mTrackingViewChangedFilter);
-
-        updateSensorFields();  // initialize with the default stuff
-
-        // optionally show a map with the track
-        if (mTrackOnMapTrackingFragment == null && TrackingViewsDatabaseManager.showMap(mViewId)) {
-            mTrackOnMapTrackingFragment = TrackOnMapTrackingAndFollowingFragment.newInstance();
-            getChildFragmentManager().beginTransaction().add(mMapContainer.getId(), mTrackOnMapTrackingFragment).commit();
-        }
+        // optionally force day or night...
+        if (TrackingViewsDatabaseManager.day(mViewId))   { forceDay();   }
+        if (TrackingViewsDatabaseManager.night(mViewId)) { forceNight(); }
+        if (TrackingViewsDatabaseManager.systemSettings(mViewId)) { followSystem(); }
     }
+
 
     @Override
     public void onPause() {
         super.onPause();
-        if (DEBUG) Log.i(TAG, "onPause");
+        if (DEBUG) Log.i(TAG, "onPause " + mViewId);
 
-        try {
-            getActivity().unregisterReceiver(mNewTimeEventReceiver);
-        } catch (Exception e) {
-        }
-        try {
-            getActivity().unregisterReceiver(mTrackingViewChangedReceiver);
-        } catch (Exception e) {
-        }
+        // try {
+        //     getActivity().unregisterReceiver(mNewTimeEventReceiver);
+        // } catch (Exception e) {
+        // }
+        // try {
+        //     getActivity().unregisterReceiver(mTrackingViewChangedReceiver);
+        // } catch (Exception e) {
+        // }
+    }
+
+    @Override
+    public void onStop () {
+        super.onStop();
+        if (DEBUG) Log.i(TAG, "onStop " + mViewId);
+    }
+
+    @Override
+    public void onDestroyView () {
+        super.onDestroyView();
+        if (DEBUG) Log.i(TAG, "onDestroyView " + mViewId);
+
+        getActivity().unregisterReceiver(mNewTimeEventReceiver);
+        getActivity().unregisterReceiver(mTrackingViewChangedReceiver);
+    }
+
+    @Override
+    public void onDestroy () {
+        super.onDestroy();
+        if (DEBUG) Log.i(TAG, "onDestroy " + mViewId);
+    }
+
+    @Override
+    public void onDetach () {
+        super.onDetach();
+        if (DEBUG) Log.i(TAG, "onDetach " + mViewId);
     }
 
     /**
@@ -365,7 +400,7 @@ public class TrackingFragment extends Fragment {
 
             // TextView for the title/description
             TextView tv = new TextView(getContext());
-            tv.setBackgroundColor(getResources().getColor(R.color.my_white));
+            // tv.setBackgroundColor(getResources().getColor(R.color.my_white));
             tv.setTextSize(TEXT_SIZE_TITLE);
             String filterSummary = getShortFilterSummary(getContext(), viewInfo.filterType, viewInfo.filterConstant);
             if (deviceName == null) {
@@ -379,7 +414,7 @@ public class TrackingFragment extends Fragment {
 
             // TextView for the content
             tv = new TextView(getContext());
-            tv.setBackgroundColor(getResources().getColor(R.color.my_white));
+            // tv.setBackgroundColor(getResources().getColor(R.color.my_white));
             tv.setTextSize(viewInfo.textSize);
             // tv.setGravity(Gravity.CENTER_VERTICAL | Gravity.CENTER_HORIZONTAL);
             tv.setGravity(Gravity.CENTER_HORIZONTAL);
@@ -415,8 +450,14 @@ public class TrackingFragment extends Fragment {
                 // check if there was a valid value
                 if (value == null) {
                     // if (DEBUG) Log.d(TAG, "value==null for " + getString(sensorType.getShortNameId()));
-                    value = getString(R.string.NoData);
-                    if (DEBUG) Log.i(TAG, ":-( no valid value for " + hashKey);
+                    if (getActivity() != null) {
+                        value = getString(R.string.NoData);
+                        if (DEBUG) Log.i(TAG, ":-( no valid value for " + hashKey);
+                    }
+                    else {
+                        value = "--";
+                        Log.i(TAG, "WTF: no value for " + hashKey + " but no Activity");
+                    }
                 } else {
                     // remove/delete the current value (necessary when a sensor is removed)
                     mHashMapValues.put(hashKey, null);
@@ -424,7 +465,7 @@ public class TrackingFragment extends Fragment {
                 if (DEBUG) Log.i(TAG, "displayUpdate for " + hashKey + ": " + value);
 
                 // now, display it
-                if (TrainingApplication.showUnits()) {
+                if (TrainingApplication.showUnits() && getActivity() != null) {
                     String units = getString(MyHelper.getUnitsId(tvSensorType.sensorType));
                     tvSensorType.textView.setText(getString(R.string.value_unit_string_string, value, units));
                 } else {

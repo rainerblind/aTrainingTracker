@@ -34,11 +34,53 @@
             android:hint="@string/name"
             android:textSize="22sp" />
 
-        <LinearLayout
-            android:id="@+id/linearLayoutSensors"
-            android:layout_width="fill_parent"
+        <TextView
+            android:id="@+id/textView2"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical" />
+            android:text="@string/config_tracking__Display" />
+
+        <CheckBox
+            android:id="@+id/cbFullScreen"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/config_tracking__full_screen" />
+
+        <RadioGroup
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:id="@+id/tvNightDay_Title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/config_tracking__day_or_night" />
+
+            <RadioButton
+                android:id="@+id/rbNightDay_SystemSetting"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/config_tracking_night_day__system_setting" />
+
+            <RadioButton
+                android:id="@+id/rbNightDay_Day"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/config_tracking_night_day__day" />
+
+            <RadioButton
+                android:id="@+id/rbNightDay_Night"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/conffig_tracking_night_day__night" />
+
+        </RadioGroup>
+
+        <TextView
+            android:id="@+id/textView3"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/config_tracking__Map" />
 
         <CheckBox
             android:id="@+id/cbShowMap"
@@ -47,12 +89,32 @@
             android:layout_gravity="right"
             android:text="@string/showMap" />
 
+        <TextView
+            android:id="@+id/textView4"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/config_tracking__Lap" />
+
         <CheckBox
             android:id="@+id/cbShowLapButton"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="right"
             android:text="@string/showLapButton" />
+
+        <View
+            android:id="@+id/divider2"
+            android:layout_width="match_parent"
+            android:layout_height="5dp"
+            android:background="?android:attr/listDivider" />
+
+        <LinearLayout
+            android:id="@+id/linearLayoutSensors"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" >
+
+        </LinearLayout>
 
     </LinearLayout>
 

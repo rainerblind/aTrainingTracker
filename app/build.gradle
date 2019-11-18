@@ -2,13 +2,13 @@ apply plugin: 'com.android.application'
 apply plugin: 'io.fabric'
 
 android {
-    compileSdkVersion 26
-    buildToolsVersion '28.0.3'
+    compileSdkVersion 29
+    buildToolsVersion '29.0.2'
 
     defaultConfig {
         applicationId "com.atrainingtracker"
-        minSdkVersion 14
-        targetSdkVersion 26
+        minSdkVersion 16
+        targetSdkVersion 29
         multiDexEnabled true
     }
 
@@ -59,24 +59,24 @@ dependencies {
     implementation files('libs/pebblekit-3.0.0-eclipse.jar')
     implementation files('libs/antpluginlib_3-5-0.jar')
 
-    implementation 'com.android.support:support-v4:26.1.0'
-    implementation 'com.android.support:preference-v7:26.1.0'
-    implementation 'com.android.support:appcompat-v7:26.1.0'
-    implementation 'com.android.support:design:26.1.0'
-    implementation 'com.android.support:recyclerview-v7:26.1.0'
-    implementation 'com.google.android.gms:play-services-maps:16.0.0'
-    implementation 'com.google.android.gms:play-services-location:16.0.0'
+    implementation 'androidx.preference:preference:1.1.0'
+    implementation 'androidx.appcompat:appcompat:1.1.0'
+    implementation 'androidx.recyclerview:recyclerview:1.0.0'
+    implementation 'com.google.android.material:material:1.1.0-beta01'
+    implementation 'com.google.android.gms:play-services-maps:17.0.0'
+    implementation 'com.google.android.gms:play-services-location:17.0.0'
     // compile 'com.google.android.gms:play-services-auth:10.0.1'
 
     // compile('com.crashlytics.sdk.android:crashlytics:2.9.1@aar') {
     //   transitive = true
     // }
-    implementation 'com.google.firebase:firebase-core:16.0.6'
+    implementation 'com.google.firebase:firebase-core:17.2.0'
 
-    implementation 'com.dropbox.core:dropbox-core-sdk:3.0.2'
+    implementation 'com.dropbox.core:dropbox-core-sdk:3.1.1'
 
     implementation 'com.squareup.okhttp3:okhttp:3.10.0'
     implementation 'com.squareup.picasso:picasso:2.5.2'
+    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.0.0'
 }
 
 apply plugin: 'com.google.gms.google-services'

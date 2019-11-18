@@ -26,7 +26,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
-import android.support.v4.app.DialogFragment;
+import androidx.fragment.app.DialogFragment;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -158,10 +158,10 @@ public class EditFieldDialog extends DialogFragment {
         TextView title = new TextView(getActivity());
         // You Can Customise your Title here
         title.setText(R.string.edit_field);
-        title.setBackgroundColor(getResources().getColor(R.color.my_blue));
+//         title.setBackgroundColor(getResources().getColor(R.color.my_blue));
         title.setPadding(10, 10, 10, 10);
         title.setGravity(Gravity.CENTER);
-        title.setTextColor(getResources().getColor(R.color.my_white));
+//        title.setTextColor(getResources().getColor(R.color.my_white));
         title.setTextSize(20);
 
         builder.setCustomTitle(title);
@@ -173,7 +173,7 @@ public class EditFieldDialog extends DialogFragment {
         // Inflate and set the layout for the dialog
         mMainView = inflater.inflate(R.layout.config_tracking_view_entry_configurable, null);
         builder.setView(mMainView);
-        mMainView.setBackgroundColor(getResources().getColor(R.color.my_white));
+//        mMainView.setBackgroundColor(getResources().getColor(R.color.my_white));
 
 
         final SensorType[] sensorTypes = ActivityType.getSensorTypeArray(mActivityType, getContext());

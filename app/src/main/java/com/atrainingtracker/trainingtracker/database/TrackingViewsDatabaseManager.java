@@ -131,9 +131,9 @@ public class TrackingViewsDatabaseManager {
         databaseManager.closeDatabase();
     }
 
-    public static void updateShowMap(long viewId, boolean showMap) {
+    protected static void updateBoolean(long viewId, String ID, boolean value) {
         ContentValues values = new ContentValues();
-        values.put(TrackingViewsDbHelper.SHOW_MAP, showMap ? 1 : 0);
+        values.put(ID, value ? 1 : 0);
 
         TrackingViewsDatabaseManager databaseManager = TrackingViewsDatabaseManager.getInstance();
         SQLiteDatabase db = databaseManager.getOpenDatabase();
@@ -146,19 +146,28 @@ public class TrackingViewsDatabaseManager {
         databaseManager.closeDatabase();
     }
 
+    public static void updateSystemSetting(long viewId, boolean value) {
+        updateBoolean(viewId, TrackingViewsDbHelper.SYSTEM_SETTING, value);
+    }
+
+    public static void updateDay(long viewId, boolean value) {
+        updateBoolean(viewId, TrackingViewsDbHelper.DAY, value);
+    }
+
+    public static void updateNight(long viewId, boolean value) {
+        updateBoolean(viewId, TrackingViewsDbHelper.NIGHT, value);
+    }
+
+    public static void updateFullscreen(long viewId, boolean fullscreen) {
+        updateBoolean(viewId, TrackingViewsDbHelper.FULL_SCREEN, fullscreen);
+    }
+
+    public static void updateShowMap(long viewId, boolean showMap) {
+        updateBoolean(viewId, TrackingViewsDbHelper.SHOW_MAP, showMap);
+    }
+
     public static void updateShowLapButton(long viewId, boolean showLapButton) {
-        ContentValues values = new ContentValues();
-        values.put(TrackingViewsDbHelper.SHOW_LAP_BUTTON, showLapButton ? 1 : 0);
-
-        TrackingViewsDatabaseManager databaseManager = TrackingViewsDatabaseManager.getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
-
-        db.update(TrackingViewsDbHelper.VIEWS_TABLE,
-                values,
-                TrackingViewsDbHelper.C_ID + "=?",
-                new String[]{viewId + ""});
-
-        databaseManager.closeDatabase();
+        updateBoolean(viewId, TrackingViewsDbHelper.SHOW_LAP_BUTTON, showLapButton);
     }
 
     public static void deleteRow(long rowId) {
@@ -246,7 +255,7 @@ public class TrackingViewsDatabaseManager {
         return layoutNr;
     }
 
-    public static boolean showMap(long viewId) {
+    protected static boolean getBoolean(long viewId, String ID) {
         boolean result = false;
 
         TrackingViewsDatabaseManager databaseManager = getInstance();
@@ -261,7 +270,7 @@ public class TrackingViewsDatabaseManager {
                 null);
 
         if (cursor.moveToFirst()) {
-            result = (cursor.getInt(cursor.getColumnIndex(TrackingViewsDbHelper.SHOW_MAP)) > 0);
+            result = (cursor.getInt(cursor.getColumnIndex(ID)) > 0);
         }
 
         cursor.close();
@@ -270,28 +279,28 @@ public class TrackingViewsDatabaseManager {
         return result;
     }
 
+    public static boolean fullscreen(long viewId) {
+        return getBoolean(viewId, TrackingViewsDbHelper.FULL_SCREEN);
+    }
+
+    public static boolean systemSettings(long viewId) {
+        return getBoolean(viewId, TrackingViewsDbHelper.SYSTEM_SETTING);
+    }
+
+    public static boolean day(long viewId) {
+        return getBoolean(viewId, TrackingViewsDbHelper.DAY);
+    }
+
+    public static boolean night(long viewId) {
+        return getBoolean(viewId, TrackingViewsDbHelper.NIGHT);
+    }
+
+    public static boolean showMap(long viewId) {
+        return getBoolean(viewId, TrackingViewsDbHelper.SHOW_MAP);
+    }
+
     public static boolean showLapButton(long viewId) {
-        boolean result = false;
-
-        TrackingViewsDatabaseManager databaseManager = getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
-
-        Cursor cursor = db.query(TrackingViewsDbHelper.VIEWS_TABLE,
-                null,
-                TrackingViewsDbHelper.C_ID + "=?",
-                new String[]{viewId + ""},
-                null,
-                null,
-                null);
-
-        if (cursor.moveToFirst()) {
-            result = (cursor.getInt(cursor.getColumnIndex(TrackingViewsDbHelper.SHOW_LAP_BUTTON)) > 0);
-        }
-
-        cursor.close();
-        databaseManager.closeDatabase();
-
-        return result;
+        return getBoolean(viewId, TrackingViewsDbHelper.SHOW_LAP_BUTTON);
     }
 
     public static FilterInfo getFilterInfo(long rowId) {
@@ -696,7 +705,8 @@ public class TrackingViewsDatabaseManager {
         // public static final int DB_VERSION = 3;       // upgraded to version 3 at 2.3.2016
         // public static final int DB_VERSION = 4;       // upgraded to version 4 at 3.1.2017
         // public static final int DB_VERSION = 5;       // upgraded to version 5 at 14.03.2018
-        public static final int DB_VERSION = 6;        // upgraded to version 6 at 17.04.2018
+        // public static final int DB_VERSION = 6;       // upgraded to version 6 at 17.04.2018
+        public static final int DB_VERSION = 7;          // upgraded to version 7 at 15.10.2019
         public static final String VIEWS_TABLE = "ViewsTable";
         public static final String ROWS_TABLE = "LayoutRowsTable";
         public static final String C_ID = BaseColumns._ID;
@@ -724,6 +734,13 @@ public class TrackingViewsDatabaseManager {
         protected static final int MEDIUM = 25;
         protected static final int LARGE = 30;
         protected static final int HUGE = 40;
+
+        // new in V7 -> fullscreen and day/night
+        protected static final String FULL_SCREEN = "FullScreen";
+        protected static final String SYSTEM_SETTING = "SystemSetting";
+        protected static final String DAY = "Day";
+        protected static final String NIGHT = "Night";
+
         @Deprecated
         protected static final String CREATE_VIEWS_TABLE_V1 = "create table " + VIEWS_TABLE + " ("
                 + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -741,6 +758,7 @@ public class TrackingViewsDatabaseManager {
                 + LAYOUT_NR + " int, "  // TODO: currently, we have only layout nr 1.
                 + NEXT_POSITION + " int, "
                 + SHOW_LAP_BUTTON + " int)";
+        @Deprecated
         protected static final String CREATE_VIEWS_TABLE_V3 = "create table " + VIEWS_TABLE + " ("
                 + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                 // + VIEW_ID       + " INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -750,6 +768,20 @@ public class TrackingViewsDatabaseManager {
                 + NEXT_POSITION + " int, "
                 + SHOW_LAP_BUTTON + " int, "
                 + SHOW_MAP + " int)";
+        protected static final String CREATE_VIEWS_TABLE_V7 = "create table " + VIEWS_TABLE + " ("
+                + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                // + VIEW_ID       + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + ACTIVITY_TYPE + " text, "
+                + NAME + " text, "
+                + LAYOUT_NR + " int, "
+                + NEXT_POSITION + " int, "
+                + SHOW_LAP_BUTTON + " int, "
+                + SHOW_MAP + " int, "
+                + FULL_SCREEN + " int, "
+                + SYSTEM_SETTING + " int, "
+                + DAY + " int, "
+                + NIGHT + " int)";
+
         @Deprecated
         protected static final String CREATE_LAYOUTS_TABLE_V3 = "create table " + ROWS_TABLE + " ("
                 + ROW_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -785,6 +817,7 @@ public class TrackingViewsDatabaseManager {
                 + SOURCE_DEVICE_ID + " int, "
                 + FILTER_TYPE + " text, "
                 + FILTER_CONSTANT + " real)";
+
         private final String TAG = TrackingViewsDbHelper.class.getName();
         private Context mContext;
         private boolean mHavePressureSensor = false;
@@ -803,10 +836,10 @@ public class TrackingViewsDatabaseManager {
 
         @Override
         public void onCreate(SQLiteDatabase db) {
-            db.execSQL(CREATE_VIEWS_TABLE_V3);
+            db.execSQL(CREATE_VIEWS_TABLE_V7);
             db.execSQL(CREATE_LAYOUTS_TABLE_V6);
 
-            if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_VIEWS_TABLE_V3);
+            if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_VIEWS_TABLE_V7);
             if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_LAYOUTS_TABLE_V6);
 
 
@@ -850,6 +883,10 @@ public class TrackingViewsDatabaseManager {
             values.put(NEXT_POSITION, -1);  // insert an invalid value to indicate that this field is invalid
             values.put(SHOW_LAP_BUTTON, 1);
             values.put(SHOW_MAP, 0);
+            values.put(FULL_SCREEN, 0);     // default will be to have no fullscreen mode
+            values.put(SYSTEM_SETTING, 1);  // default will be to follow the systems settings
+            values.put(DAY, 0);
+            values.put(NIGHT, 0);
             newViewId = db.insert(VIEWS_TABLE, null, values);
 
             for (RowData rowData : viewMap.get(activityType)) {
@@ -921,6 +958,20 @@ public class TrackingViewsDatabaseManager {
                 contentValues.put(FILTER_TYPE, FilterType.INSTANTANEOUS.name());
                 contentValues.put(FILTER_CONSTANT, 1);
                 db.update(ROWS_TABLE, contentValues, null, null);
+            }
+
+            if (oldVersion < 7) { // add fullscreen and day/night
+                addColumn(db, VIEWS_TABLE, FULL_SCREEN, "int");
+                addColumn(db, VIEWS_TABLE, SYSTEM_SETTING, "int");
+                addColumn(db, VIEWS_TABLE, DAY, "int");
+                addColumn(db, VIEWS_TABLE, NIGHT, "int");
+
+                ContentValues contentValues = new ContentValues();
+                contentValues.put(FULL_SCREEN, 0);
+                contentValues.put(SYSTEM_SETTING, 1);
+                contentValues.put(DAY, 0);
+                contentValues.put(NIGHT, 0);
+                db.update(VIEWS_TABLE, contentValues, null, null);
             }
         }
 

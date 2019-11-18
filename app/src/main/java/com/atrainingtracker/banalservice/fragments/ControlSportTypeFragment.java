@@ -23,7 +23,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
-import android.support.v4.app.Fragment;
+
+import androidx.core.content.ContextCompat;
+import androidx.fragment.app.Fragment;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -189,57 +191,57 @@ public class ControlSportTypeFragment extends Fragment {
         if (banalServiceComm != null) {
             switch (banalServiceComm.getBSportType()) {
                 case RUN:
-                    mTvRun.setTextColor(getResources().getColor(R.color.my_black));
-                    mTvBike.setTextColor(getResources().getColor(R.color.bright_grey));
-                    mTvOther.setTextColor(getResources().getColor(R.color.bright_grey));
+                    mTvRun.setTextColor(ContextCompat.getColor(getActivity(), R.color.color_on_background));
+                    mTvBike.setTextColor(ContextCompat.getColor(getActivity(), R.color.bright_grey));
+                    mTvOther.setTextColor(ContextCompat.getColor(getActivity(), R.color.bright_grey));
 
-                    mIbRun.setImageDrawable(getResources().getDrawable(R.drawable.bsport_run));
-                    mIbBike.setImageDrawable(getResources().getDrawable(R.drawable.bsport_bike_gray));
-                    mIbOther.setImageDrawable(getResources().getDrawable(R.drawable.bsport_other_gray));
+                    mIbRun.setImageDrawable(ContextCompat.getDrawable(getActivity(), R.drawable.bsport_run));
+                    mIbBike.setImageDrawable(ContextCompat.getDrawable(getActivity(), R.drawable.bsport_bike_gray));
+                    mIbOther.setImageDrawable(ContextCompat.getDrawable(getActivity(), R.drawable.bsport_other_gray));
 
                     break;
 
                 case BIKE:
-                    mTvRun.setTextColor(getResources().getColor(R.color.bright_grey));
-                    mTvBike.setTextColor(getResources().getColor(R.color.my_black));
-                    mTvOther.setTextColor(getResources().getColor(R.color.bright_grey));
+                    mTvRun.setTextColor(ContextCompat.getColor(getActivity(), R.color.bright_grey));
+                    mTvBike.setTextColor(ContextCompat.getColor(getActivity(), R.color.color_on_background));
+                    mTvOther.setTextColor(ContextCompat.getColor(getActivity(), R.color.bright_grey));
 
-                    mIbRun.setImageDrawable(getResources().getDrawable(R.drawable.bsport_run_gray));
-                    mIbBike.setImageDrawable(getResources().getDrawable(R.drawable.bsport_bike));
-                    mIbOther.setImageDrawable(getResources().getDrawable(R.drawable.bsport_other_gray));
+                    mIbRun.setImageDrawable(ContextCompat.getDrawable(getActivity(), R.drawable.bsport_run_gray));
+                    mIbBike.setImageDrawable(ContextCompat.getDrawable(getActivity(), R.drawable.bsport_bike));
+                    mIbOther.setImageDrawable(ContextCompat.getDrawable(getActivity(), R.drawable.bsport_other_gray));
 
                     break;
 
                 case UNKNOWN:
-                    mTvRun.setTextColor(getResources().getColor(R.color.bright_grey));
-                    mTvBike.setTextColor(getResources().getColor(R.color.bright_grey));
-                    mTvOther.setTextColor(getResources().getColor(R.color.my_black));
+                    mTvRun.setTextColor(ContextCompat.getColor(getActivity(), R.color.bright_grey));
+                    mTvBike.setTextColor(ContextCompat.getColor(getActivity(), R.color.bright_grey));
+                    mTvOther.setTextColor(ContextCompat.getColor(getActivity(), R.color.color_on_background));
 
-                    mIbRun.setImageDrawable(getResources().getDrawable(R.drawable.bsport_run_gray));
-                    mIbBike.setImageDrawable(getResources().getDrawable(R.drawable.bsport_bike_gray));
-                    mIbOther.setImageDrawable(getResources().getDrawable(R.drawable.bsport_other));
+                    mIbRun.setImageDrawable(ContextCompat.getDrawable(getActivity(), R.drawable.bsport_run_gray));
+                    mIbBike.setImageDrawable(ContextCompat.getDrawable(getActivity(), R.drawable.bsport_bike_gray));
+                    mIbOther.setImageDrawable(ContextCompat.getDrawable(getActivity(), R.drawable.bsport_other));
 
                     break;
 
                 default:
-                    mTvRun.setTextColor(getResources().getColor(R.color.bright_grey));
-                    mTvBike.setTextColor(getResources().getColor(R.color.bright_grey));
-                    mTvOther.setTextColor(getResources().getColor(R.color.bright_grey));
+                    mTvRun.setTextColor(ContextCompat.getColor(getActivity(), R.color.bright_grey));
+                    mTvBike.setTextColor(ContextCompat.getColor(getActivity(), R.color.bright_grey));
+                    mTvOther.setTextColor(ContextCompat.getColor(getActivity(), R.color.bright_grey));
 
-                    mIbRun.setImageDrawable(getResources().getDrawable(R.drawable.bsport_run_gray));
-                    mIbBike.setImageDrawable(getResources().getDrawable(R.drawable.bsport_bike_gray));
-                    mIbOther.setImageDrawable(getResources().getDrawable(R.drawable.bsport_other_gray));
+                    mIbRun.setImageDrawable(ContextCompat.getDrawable(getActivity(), R.drawable.bsport_run_gray));
+                    mIbBike.setImageDrawable(ContextCompat.getDrawable(getActivity(), R.drawable.bsport_bike_gray));
+                    mIbOther.setImageDrawable(ContextCompat.getDrawable(getActivity(), R.drawable.bsport_other_gray));
 
                     break;
             }
         } else {
-            mTvRun.setTextColor(getResources().getColor(R.color.bright_grey));
-            mTvBike.setTextColor(getResources().getColor(R.color.bright_grey));
-            mTvOther.setTextColor(getResources().getColor(R.color.bright_grey));
+            mTvRun.setTextColor(ContextCompat.getColor(getActivity(), R.color.bright_grey));
+            mTvBike.setTextColor(ContextCompat.getColor(getActivity(), R.color.bright_grey));
+            mTvOther.setTextColor(ContextCompat.getColor(getActivity(), R.color.bright_grey));
 
-            mIbRun.setImageDrawable(getResources().getDrawable(R.drawable.bsport_run_gray));
-            mIbBike.setImageDrawable(getResources().getDrawable(R.drawable.bsport_bike_gray));
-            mIbOther.setImageDrawable(getResources().getDrawable(R.drawable.bsport_other_gray));
+            mIbRun.setImageDrawable(ContextCompat.getDrawable(getActivity(), R.drawable.bsport_run_gray));
+            mIbBike.setImageDrawable(ContextCompat.getDrawable(getActivity(), R.drawable.bsport_bike_gray));
+            mIbOther.setImageDrawable(ContextCompat.getDrawable(getActivity(), R.drawable.bsport_other_gray));
         }
     }
 

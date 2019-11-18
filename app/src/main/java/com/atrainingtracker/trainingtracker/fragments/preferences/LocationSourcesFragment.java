@@ -27,7 +27,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 /**
  * Created by rainer on 01.02.16.
  */
-public class LocationSourcesFragment extends android.support.v7.preference.PreferenceFragmentCompat {
+public class LocationSourcesFragment extends androidx.preference.PreferenceFragmentCompat {
     private static final boolean DEBUG = TrainingApplication.DEBUG;
     private static final String TAG = LocationSourcesFragment.class.getName();
 

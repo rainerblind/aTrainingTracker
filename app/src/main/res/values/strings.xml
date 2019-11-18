@@ -881,6 +881,14 @@
     <string name="notification_channel_description__tracking">Notifications while tracking a workout</string>
     <string name="notification_channel_name__export">Export</string>
     <string name="notification_channel_description__export">Notifications while exporting a workout</string>
+    <string name="config_tracking__full_screen">Full screen</string>
+    <string name="config_tracking_night_day__system_setting">System setting</string>
+    <string name="config_tracking_night_day__day">Day (bright)</string>
+    <string name="conffig_tracking_night_day__night">Night (dark)</string>
+    <string name="config_tracking__Display">Display</string>
+    <string name="config_tracking__Map">Map</string>
+    <string name="config_tracking__Lap">Lap</string>
+    <string name="config_tracking__day_or_night">Day or night</string>
 
 
 </resources>

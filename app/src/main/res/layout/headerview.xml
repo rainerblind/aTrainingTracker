@@ -19,14 +19,12 @@
 
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    style="@style/AppBaseTheme"
     android:layout_width="fill_parent"
     android:layout_height="150dp"
     android:background="@drawable/menu_header_background"
     android:orientation="vertical">
 
     <LinearLayout
-        style="@style/AppBaseTheme"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_weight="1"
@@ -34,7 +32,6 @@
 
         <ImageView
             android:id="@+id/imageView"
-            style="@style/AppBaseTheme"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_weight="1"
@@ -42,7 +39,6 @@
             tools:ignore="ContentDescription" />
 
         <TextView
-            style="@style/AppBaseTheme"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_weight="1" />
@@ -50,7 +46,6 @@
 
 
     <TextView
-        style="@style/AppBaseTheme"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:paddingBottom="22sp"

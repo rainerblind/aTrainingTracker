@@ -36,8 +36,7 @@
         android:id="@+id/spinnerSensor"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:background="@color/my_white" />
+        android:layout_weight="1"/>
 
 
     <TextView
@@ -52,7 +51,6 @@
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:background="@color/my_white"
         android:text="best" />
 
     <TextView
@@ -60,7 +58,6 @@
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:background="@color/my_light_blue"
         android:text="@string/no_sensor_available"
         android:textSize="18sp" />
 
@@ -77,13 +74,11 @@
         android:id="@+id/buttonConfigureFilter"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:background="@color/my_white"
         android:baselineAligned="false"
         android:gravity="start"
         android:text="3 sec Moving Average"
         android:textAllCaps="false"
         android:textAppearance="@style/TextAppearance.AppCompat.Medium"
-        android:textColor="@color/my_black"
         android:textSize="18sp" />
 
     <TextView
@@ -97,8 +92,7 @@
         android:id="@+id/spinnerTextSize"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:background="@color/my_white" />
+        android:layout_weight="1"/>
 
 
     <Button
