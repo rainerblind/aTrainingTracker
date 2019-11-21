@@ -900,7 +900,7 @@ public class TrainingApplication extends Application {
         newIntent.setAction("TrackerService");
         mStartMainActivityPendingIntent = PendingIntent.getActivity(this, 0, newIntent, 0);  // TODO: correct???
 
-        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL__TRACKING)
+        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL__TRACKING_2)
                 .setSmallIcon(R.drawable.logo)
                 .setContentTitle(getString(R.string.TrainingTracker))
                 .setContentText(getString(R.string.notification_tracking))
@@ -1008,7 +1008,7 @@ public class TrainingApplication extends Application {
     }
 
     public Notification getSearchingAndTrackingNotification() {
-        return mTrackingAndSearchingNotificationBuilder.getNotification();
+        return mTrackingAndSearchingNotificationBuilder.build();
     }
 
     public void startPebbleWatchapp() {

@@ -26,16 +26,9 @@
         <item name="android:windowAnimationStyle">@style/Animation.MyTheme.BottomSheet.Modal</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="bottomSheetStyle">@style/Widget.aTrainingTracker.BottomSheet.Modal</item>
-        <item name="android:navigationBarColor">?colorSurface</item>
-        <item name="android:navigationBarDividerColor" tools:ignore="NewApi">@android:color/transparent</item>
     </style>
     <style name="Widget.aTrainingTracker.BottomSheet.Modal" parent="Widget.MaterialComponents.BottomSheet.Modal">
         <item name="shapeAppearanceOverlay">?shapeAppearanceLargeComponent</item>
-    </style>
-
-    <!--Navigation Drawer-->
-    <style name="Widget.aTrainingTracker.NavigationView" parent="Widget.MaterialComponents.NavigationView">
-        <item name="itemTextAppearance">?textAppearanceBody2</item>
     </style>
 
     <style name="Widget.aTrainingTracker.Toolbar.ToolBarStyle" parent="Widget.AppCompat.Toolbar">

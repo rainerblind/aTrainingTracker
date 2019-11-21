@@ -20,7 +20,6 @@
     <!--Top level DayNight theme to be used in AndroidManifest.xml-->
     <style name="MyTheme.DayNight" parent="Base.aTrainingTracker">
         <item name="android:windowLightStatusBar">false</item>
-        <item name="android:windowLightNavigationBar" tools:ignore="NewApi">false</item>
     </style>
 
 </resources>

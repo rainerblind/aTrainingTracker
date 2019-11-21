@@ -61,7 +61,6 @@
         <!--Component styles-->
         <item name="materialAlertDialogTheme">@style/ThemeOverlay.MaterialComponents.Dialog.Alert</item>
         <item name="bottomSheetDialogTheme">@style/ThemeOverlay.aTrainingTracker.BottomSheetDialog</item>
-        <item name="navigationViewStyle">@style/Widget.aTrainingTracker.NavigationView</item>
         <item name="toolbarStyle">@style/Widget.MaterialComponents.Toolbar.PrimarySurface</item>
     </style>
 
@@ -72,9 +71,6 @@
 
         <item name="android:statusBarColor">?colorPrimaryVariant</item>
         <item name="android:windowLightStatusBar">true</item>
-        <item name="android:navigationBarColor">?android:colorBackground</item>
-        <item name="android:windowLightNavigationBar" tools:ignore="NewApi">true</item>
-        <item name="android:navigationBarDividerColor" tools:ignore="NewApi">?colorControlHighlight</item>
 
         <!--Remap legacy AppCompat attributes to MaterialComponent attributes-->
         <item name="colorPrimaryDark">?colorPrimaryVariant</item>
