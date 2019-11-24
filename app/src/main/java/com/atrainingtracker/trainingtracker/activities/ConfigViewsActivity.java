@@ -18,7 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.activities;
 
-import android.app.AlertDialog;
+import androidx.appcompat.app.AlertDialog;
 import android.content.DialogInterface;
 import android.os.Bundle;
 import androidx.fragment.app.FragmentManager;

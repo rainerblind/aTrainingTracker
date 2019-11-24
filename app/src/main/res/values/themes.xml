@@ -59,8 +59,8 @@
         <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.MyTheme.LargeComponent</item>
 
         <!--Component styles-->
-        <item name="materialAlertDialogTheme">@style/ThemeOverlay.MaterialComponents.Dialog.Alert</item>
-        <item name="bottomSheetDialogTheme">@style/ThemeOverlay.aTrainingTracker.BottomSheetDialog</item>
+        <!-- <item name="materialAlertDialogTheme">@style/ThemeOverlay.MaterialComponents.Dialog.Alert</item> -->
+        <!-- <item name="bottomSheetDialogTheme">@style/ThemeOverlay.aTrainingTracker.BottomSheetDialog</item> -->
         <item name="toolbarStyle">@style/Widget.MaterialComponents.Toolbar.PrimarySurface</item>
     </style>
 

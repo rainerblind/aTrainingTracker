@@ -18,7 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.fragments.preferences;
 
-import android.app.AlertDialog;
+import androidx.appcompat.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.DialogInterface;
 import android.content.Intent;

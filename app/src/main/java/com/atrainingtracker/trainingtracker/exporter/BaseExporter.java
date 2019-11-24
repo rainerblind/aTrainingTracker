@@ -18,7 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.exporter;
 
-import android.app.AlertDialog;
+import androidx.appcompat.app.AlertDialog;
 import android.app.Notification;
 import android.app.PendingIntent;
 import android.content.Context;

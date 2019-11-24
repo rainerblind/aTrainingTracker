@@ -18,7 +18,7 @@
 
 package com.atrainingtracker.banalservice.devices.ant_plus;
 
-import android.app.AlertDialog;
+import androidx.appcompat.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnClickListener;
