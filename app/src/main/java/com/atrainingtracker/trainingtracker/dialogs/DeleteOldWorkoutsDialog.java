@@ -18,10 +18,11 @@
 
 package com.atrainingtracker.trainingtracker.dialogs;
 
-import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.os.Bundle;
+
+import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.DialogFragment;
 import android.text.InputType;
 import android.widget.EditText;
@@ -43,7 +44,7 @@ public class DeleteOldWorkoutsDialog extends DialogFragment {
 
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
-        AlertDialog.Builder alertDialogBuilder = new android.app.AlertDialog.Builder(getContext());
+        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(getContext());
         alertDialogBuilder.setTitle(R.string.deleteOldWorkouts);
         alertDialogBuilder.setMessage(R.string.deleteWorkoutsThatAreOlderThanDays);
         final EditText input = new EditText(getContext());
