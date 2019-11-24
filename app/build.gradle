@@ -54,6 +54,8 @@ android {
         //lintConfig file("lint.xml")
         baseline file("lint-baseline.xml")
         checkReleaseBuilds true
+        // TODO Some dependencies conflicts with Android included
+        disable 'DuplicatePlatformClasses'
 
         showAll true
         //debug issues in Travis
