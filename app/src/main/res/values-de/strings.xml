@@ -40,7 +40,7 @@
     <string name="Tracking">Aufzeichnung</string>
     <string name="StartPositionTitle">Start</string>
     <string name="EndPositionTitle">Ende</string>
-    <string name="Lap">Lap</string>
+    <string name="Lap">Runde</string>
     <string name="Equipment">Ausrüstung</string>
     <string name="edit_device">Sensor bearbeiten</string>
     <string name="edit_location">Standort bearbeiten</string>
@@ -56,7 +56,6 @@
     <string name="delete_workout">Trainingseinheit löschen</string>
     <string name="deleteOldWorkouts">Alte Einheiten löschen</string>
     <string name="deleteWorkoutsThatAreOlderThanDays">Lösche alle Einheiten, die älter als … Tage sind.</string>
-    <string name="defaultDaysToKeep">30</string>
     <string name="delete_sensor">löschen</string>
     <string name="really_delete_workout">Willst du diese Trainingseinheit wirklich löchen?</string>
     <string name="really_delete_location">Willst du diesen Ort wirklich löchen?</string>
@@ -82,14 +81,6 @@
     <string name="SD_card">SD-Karte</string>
     <string name="File">Datei</string>
     <string name="Community">Community</string>
-    <string name="Dropbox">Dropbox</string>
-    <string name="Strava">Strava</string>
-    <string name="Runkeeper">Runkeeper</string>
-    <string name="CSV">CSV</string>
-    <string name="TCX">TCX</string>
-    <string name="GPX">GPX</string>
-    <string name="GC">GC</string>
-    <string name="TrainingPeaks">TrainingPeaks</string>
     <string name="TrainingPeaks_login_title">Bei TrainingPeaks anmelden</string>
     <string name="TrainingPeaks_login_message">Um bei TrainingPeaks hochzuladen, wird dein Benutzername und Passwort benötigt</string>
     <string name="unknown_manufacturer">Unbekannt</string>
@@ -99,16 +90,13 @@
     <string name="prev">zurück</string>
     <string name="name">Name</string>
     <string name="number_of_fields">Anzahl von Feldern:</string>
-    <string name="Lap_NR">Lap %1$d</string>
+    <string name="Lap_NR">Runde %1$d</string>
     <string name="build_in">Standard</string> <!-- TODO? -->
-    <string name="TrainingTracker">a Training Tracker</string>
-    <string name="application_name">a Training Tracker</string>
     <string name="user_name">Benutzername</string>
     <string name="no_user_name">kein Benutzername</string>
     <string name="no_password">kein Passwort</string>
     <string name="add_sensor">Sensor hinzufügen</string>
     <string name="lastSeenText">Zum letzten mal gesehen</string>
-    <string name="lastSeenDefaultValue">2014-10-18 09:10:11</string>
     <string name="now">jetzt</string>
     <string name="privateString">privat</string>
     <string name="commute">Pendeln</string>
@@ -119,8 +107,6 @@
     <string name="guess_commute_and_trainer">Rate pendeln und indoor trainer</string>
 
 
-    <string name="exampleSensorString">TDSPHCNAG--</string>
-
     <string name="install_pebble_watchapp_title">Pebble Watchapp installieren</string>
     <string name="install_pebble_watchapp_text">Um dies zu nutzen, muss die entsprechende Pebble Watchapp installierte sein.</string>
     <string name="install_pebble_watchapp_now">OK, jetzt intallieren</string>
@@ -130,47 +116,14 @@
     <string name="install_ant_plugin_message">Um ANT+ zu nutzen muss der ANT+ Plugin Service installiert sein.</string>
     <string name="install_ant_plugin_ok">OK, jetzt installieren</string>
 
-    <string name="protocol_ant_plus">ANT+</string>
-    <string name="protocol_bluetooth">Bluetooth LE</string>
     <string name="protocol_all">Alle</string>
     <string name="protocol_unknown">Unbekannt</string>
 
     <!--  do not translate these 'constants' -->
-    <string name="METRIC">METRIC</string>
-    <string name="IMPERIAL">IMPERIAL</string>
-    <string name="BUILD_IN">BUILD_IN</string>
-    <string name="TRAINING_TRACKER">TRAINING_TRACKER</string>
 
     <!-- Units -->
     <string name="units_type_metric">Metrisch (m)</string>
     <string name="units_type_imperial">Imperial (mile)</string>
-    <string name="units_speed_basic">m/s</string>
-    <string name="units_speed_metric">km/h</string>
-    <string name="units_speed_imperial">mile/h</string>
-    <string name="units_speed_foobar">foo/bar</string>
-    <string name="units_speed_short_metric">km/h</string>
-    <string name="units_speed_short_imperial">mi/h</string>
-    <string name="units_speed_short_foobar">foo/bar</string>
-    <string name="units_pace_basic">s/m</string>
-    <string name="units_pace_metric">min/km</string>
-    <string name="units_pace_imperial">min/mile</string>
-    <string name="units_pace_foobar">bar/foo</string>
-    <string name="units_pace_short_metric">/km</string>
-    <string name="units_pace_short_imperial">/mi</string>
-    <string name="units_pace_short_foobar">/foo</string>
-    <string name="units_distance_basic">m</string>
-    <string name="units_distance_metric">km</string>
-    <string name="units_distance_imperial">mile</string>
-    <string name="units_distance_foobar">foo</string>
-    <string name="units_cadence">1/min</string>
-    <string name="units_calories">kcal</string>
-    <string name="units_heart_rate">bpm</string>
-    <string name="units_power">W</string>
-    <string name="units_temperature">°C</string>
-    <string name="units_time_basic">s</string>
-    <string name="units_torque">Nm</string>
-    <string name="units_percent">%</string>
-    <string name="units_degree">°</string>
 
     <string name="value_unit_float_string">%1$.2f %2$s</string>
     <string name="value_unit_string_string">%1$s %2$s</string>
@@ -221,8 +174,6 @@
     <string name="device_type_short_run_speed">run spd</string>    <!-- TODO -->
     <string name="device_type_environment">Temperatur</string>
     <string name="device_type_short_environment">Temp.</string>
-    <string name="device_type_gps_speed_and_location">GPS</string>
-    <string name="device_type_short_gps_speed_and_location">GPS</string>
     <string name="device_type_altitude_from_pressure">Höhe basierend auf Luftdruck</string>
     <string name="device_type_short_altitude_from_pressure">Höhe</string>
     <string name="device_type_sensor_manager">Sensor Manager</string>
@@ -317,10 +268,7 @@
     <string name="invertPowerBalanceValues">Invertiere die gemessenen Werte.  D.h., vertausche rechts und links</string>
 
     <!-- Manifest -->
-    <string name="app_name">a Training Tracker</string>
 
-    <string name="RunkeeperGetAccessTokenActivityLabel">Runkeeper</string>
-    <string name="StravaGetAccessTokenActivityLabel">Strava</string>
     <string name="PrefsActivityLabel">Einstellungen</string>
     <string name="UpdateWorkoutActivityLabel">Trainingseinheit hochladen</string>
     <string name="TrackOnMapActivityLabel">Trainingseinheit</string>
@@ -350,12 +298,10 @@
     <string name="prefsMaxMTBSpeedTitle">max Geschwindigkeit MTB</string>
 
     <string name="prefsTrackingTitle">Aufzeichnung</string>
-    <string name="prefsSamplingTimeSummary">1 s</string>
     <string name="prefsSamplingTimeTitle">Aufzeichnungsrate</string>
 
     <string name="prefsLocationSourceTitle">Positionsdatenquellen</string>
     <string name="prefsLocationSourceSummary">Wähle die Positionsdatenquellen (GPS, google fused, Netzwerk)</string>
-    <string name="prefsLocationSourceGPS">GPS</string>
     <string name="prefsLocationSourceGPSSummary">Positionsdaten basierend auf GPS.</string>
     <string name="prefsLocationSourceGoogleFused">google fused</string>
     <string name="prefsLocationSourceGoogleFusedSummary">Positionsdaten durch zusammenführen der GPS und Netzwerkdaten.  Es kann vorkommen, dass zwischen den beiden Quellen gesprungen wird.</string>
@@ -374,7 +320,6 @@
 
     <string name="prefsConfigureDisplaysTitle">Anzeigen konfigurieren</string>
 
-    <string name="prefsPebbleTitle">Pebble</string>
     <string name="prefsDoNotUsePebble">Keine Pebble verwenden</string>
     <string name="prefsPebbleSupportTitle">Pebble Support</string> <!-- TODO -->
     <string name="prefsPebbleSupportSummary">Zeige Werte auf der Pebble an</string>
@@ -386,11 +331,8 @@
     <string name="prefsExportSummary">Dateiformate zu denen die Einheiten exportiert werden</string>
     <string name="prefsExportToGCJsonTitle">Golden Cheetah json</string>
     <string name="prefsExportToGCJsonSummary">Golden Cheetah json exportieren</string>
-    <string name="prefsExportToGarminTCXTitle">TCX</string>
     <string name="prefsExportToGarminTCXSummary">Nach TCX exportieren</string>
-    <string name="prefsExportToGPXTitle">GPX</string>
     <string name="prefsExportToGPXSummary">Nach GPX exportieren</string>
-    <string name="prefsExportToCSVTitle">CSV</string>
     <string name="prefsExportToCSVSummary">Nach CSV exportieren</string>
 
     <string name="prefsUploadTitle">Hochladen</string>
@@ -399,13 +341,9 @@
     <string name="prefsOnlineCommunities">Online Gemeinschaften</string>
     <string name="prefsDefaultToPrivateTitle">Privatsphäre</string>
     <string name="prefsDefaultToPrivateSummary">Standardmäßig sind alle Einheiten privat</string>
-    <string name="prefsUploadToDropboxTitle">Dropbox</string>
     <string name="prefsUploadToDropboxSummary">Exportierte Dateien auch zu Dropbox hochladen</string>
-    <string name="prefsUploadToStravaTitle">Strava</string>
     <string name="prefsUploadToStravaSummary">Trainingseinheiten bei Strava hochladen</string>
-    <string name="prefsUploadToRunkeeperTitle">Runkeeper</string>
     <string name="prefsUploadToRunkeeperSummary">Trainingseinheiten bei Runkeeper hochladen</string>
-    <string name="prefsUploadToTrainingPeaksTitle">TrainingPeaks</string>
     <string name="prefsUploadToTrainingPeaksSummary">Trainingseinheiten bei TrainingPeaks hochladen</string>
 
     <string name="prefsAltitudeCorrectionTitle">Höhenkorrektur</string>
@@ -457,7 +395,6 @@
 
     <!-- device_list_row -->
     <string name="DeviceListRowDeviceNameText">Unbekannt</string>
-    <string name="DeviceListRowMainValueText">(--)</string>
 
     <!-- device_list -->
     <!-- <string name="myANTDevices">Meine ANT+ Sensoren</string> -->
@@ -470,10 +407,7 @@
     <!-- dialog_set_calibration_factor -->
     <string name="measuredDistanceText">gemessene Distanz:</string>
     <string name="trueDistanceText">korrekte Distanz:</string>
-    <string name="measuredDistanceValue">1.0</string>
-    <string name="trueDistanceValue">1.0</string>
     <string name="calibrationFactor_Text">Kalibrierungsfaktor:</string>
-    <string name="calibrationFactor_Value">1.0</string>
 
     <!-- edit_device_* -->
     <string name="deviceNameText">Sensorname</string>
@@ -483,7 +417,6 @@
     <string name="onShoesText">an Schuhen</string>
     <string name="wheelCircumferenceText">Radumfang</string>
     <string name="calibrationFactorText">Kalibrierungsfaktor</string>
-    <string name="manufacturerValue">Garmin</string>
     <!--  somewhere else, todo: make one -->
     <string name="calibration_factor">Kalibrierungsfaktor</string>
     <string name="wheel_circumference">Radumfang</string>
@@ -507,13 +440,11 @@
     <string name="editDeviceBikeDeviceNameValue">Garmin Geschwindigkeit</string>
     <string name="editDeviceBikeDeviceTypeValue">Rad Geschwindigkeit</string>
     <string name="editDeviceBikeEditCalibrationFactorBasedOnDistance">Radumfang berechnen</string>
-    <string name="editDeviceBikeCalibrationFactorValue">2.01</string>
 
     <!-- edit_device_run -->
     <string name="editDeviceRunDeviceNameValue">Garmin Laufsensor</string>
     <string name="editDeviceRunDeviceTypeValue">Laufsensor</string>
     <string name="editDeviceRunEditCalibrationFactorBasedOnDistance">berechnen</string>
-    <string name="editDeviceRunCalibrationFactorValue">1.0</string>
 
     <!-- edit_device_generic -->
     <string name="editDeviceGenericDeviceNameValue">Generischer Sensor</string>
@@ -530,9 +461,7 @@
     <string name="Description">Beschreibung:</string>
     <string name="DescriptionHint">Beschreibung eingeben</string>
     <string name="SamplingTime">Aufzeichnungsrate:</string>
-    <string name="SamplingTimeValue">1</string>
     <string name="StartTime">Startzeit:</string>
-    <string name="NoData">--</string>
     <string name="TotalTime">Gesamtzeit:</string>
     <string name="ActiveTime">Aktive Zeit:</string>
     <string name="Distance">Distanz:</string>
@@ -641,7 +570,6 @@
     <string name="ready_to">Bereit zum</string>
     <string name="paused">Pause vom</string>
     <!-- <string name="stopped">Gestoppt</string> -->
-    <string name="banal_service">BANALService</string>
     <string name="some_remote_device">Externer Sensor</string>
     <string name="ready_run">Laufen</string>
     <string name="ready_bike">Radfahren</string>
@@ -662,7 +590,6 @@
     <string name="bluetooth_disabled_on_device">Im Moment is Bluetooth auf dem Gerät ausgeschaltet.  Um externe Sensoren zu koppeln muss Bluetooth eingeschaltet sein. \nSoll Bluetooth eingeschaltet werden?</string>
     <string name="LocationsActivityLabel">Locations</string>
     <string name="getting_start_locations">Suche nach Start Positionen.</string>
-    <string name="GPS">GPS</string>
     <string name="start">Start</string>
     <string name="average">mittel</string>
     <string name="end">End</string>
@@ -680,8 +607,6 @@
     <string name="edit_counter_format">Bearbeite %1$s Zähler.</string>
     <string name="edit_my_location">Bearbeite Zähler</string>
     <string name="getting_my_locations">Suche nach bekannten Orten.</string>
-    <string name="units_altitude_metric">m</string>
-    <string name="units_radius">m</string>
     <string name="EndLocation">End Ort:</string>
     <string name="NameScheme">Name:</string>
     <string name="StartLocation">Start Ort:</string>
@@ -755,7 +680,6 @@
     <string name="upload_to_training_peaks_format">Lade %1$s bei TrainingPeaks hoch</string>
     <string name="uploadPower">Leistung</string>
     <string name="uploadHR">Herzfrequenz</string>
-    <string name="uploadGPS">GPS</string>
     <string name="uploadCadence">Frequenz</string>
     <string name="uploadAltitude">Höhe</string>
     <string name="OnlineCommunities">Online Gemeinschaften</string>
@@ -785,7 +709,6 @@
     <string name="title_request_dropbox_token">Request Dropbox Access</string>
     <string name="message_request_dropbox_token">Willst du deine Trainingseinheiten bei Dropbox hochladen?\n(Wegen der geänderten Schnittstelle muss erneut gefragt werden.)</string>
 
-    <string name="gps">GPS</string>
     <string name="AltitudeFromPressureDevice_name">Luftdruck</string>
     <string name="smartphone">Smartphone</string>
     <string name="bestSensor">Bester</string>
@@ -793,16 +716,11 @@
     <string name="featuresText">Enthaltene Sensoren</string>
     <string name="selectiveUpload">Geteilte Daten</string>
     <string name="configure_filter">Glättung anpassen</string>
-    <string name="units_seconds">Sec</string>
     <string name="units_seconds_long">Sekunden</string>
-    <string name="units_minutes">Min</string>
-    <string name="units_samples">N</string>
     <string name="filter_instantaneous">keine Glättung</string>
     <string name="filter_average">Durchschnitt (gesamte Einheit)</string>
-    <string name="filter_average_short">Ø</string>
     <string name="filter_exponential_smoothing">Exponentielle Glättung</string>
     <string name="filter_moving_average">Gleitender Durchschnitt</string>
-    <string name="filter_moving_average_short">Ø</string>
     <string name="filter_exponential_smoothing_format">"Exponentielle Glättung mit α=%1$f"</string>
     <string name="filter_exponential_smoothing_short_format">Exp α=%1$f</string>
     <string name="configSensor">Sensor:</string>
