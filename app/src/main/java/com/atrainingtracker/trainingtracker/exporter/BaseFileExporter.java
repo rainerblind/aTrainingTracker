@@ -115,13 +115,13 @@ public abstract class BaseFileExporter extends BaseExporter {
     }
 
     protected BufferedWriter getBufferedWriter(ExportInfo exportInfo) throws IOException {
-        File file = new File(getDir(exportInfo.getFileFormat().getDirName()), exportInfo.getFileBaseName() + exportInfo.getFileFormat().getFileEnding());
+        File file = new File(getDir(mContext, exportInfo.getFileFormat().getDirName()), exportInfo.getFileBaseName() + exportInfo.getFileFormat().getFileEnding());
         file.createNewFile();
         return new BufferedWriter(new FileWriter(file));
     }
 
     protected boolean doesFileAlreadyExist(ExportInfo exportInfo) {
-        return (new File(getDir(exportInfo.getFileFormat().getDirName()), exportInfo.getFileBaseName() + exportInfo.getFileFormat().getFileEnding())).exists();
+        return (new File(getDir(mContext, exportInfo.getFileFormat().getDirName()), exportInfo.getFileBaseName() + exportInfo.getFileFormat().getFileEnding())).exists();
     }
 
     protected String myGet(Cursor cursor, String name, String defaultValue) {

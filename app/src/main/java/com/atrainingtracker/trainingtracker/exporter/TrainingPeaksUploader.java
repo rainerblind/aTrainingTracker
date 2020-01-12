@@ -122,7 +122,7 @@ public class TrainingPeaksUploader extends BaseExporter {
         jsonObject.put(COMMENT, description);
         jsonObject.put(TYPE, sportName);
 
-        File file = new File(getDir(FileFormat.TRAINING_PEAKS.getDirName()), exportInfo.getFileBaseName() + FileFormat.TRAINING_PEAKS.getFileEnding());
+        File file = new File(getDir(mContext, FileFormat.TRAINING_PEAKS.getDirName()), exportInfo.getFileBaseName() + FileFormat.TRAINING_PEAKS.getFileEnding());
         InputStream inputStream = new FileInputStream(file.getAbsolutePath());
         byte[] buffer = new byte[8192];
         int bytesRead;

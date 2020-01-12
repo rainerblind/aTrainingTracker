@@ -52,7 +52,7 @@ public class RunkeeperUploader extends BaseExporter {
             throws IOException, JSONException {
         if (DEBUG) Log.d(TAG, "doExport: " + exportInfo.getFileBaseName());
 
-        File file = new File(getDir(FileFormat.RUNKEEPER.getDirName()), exportInfo.getFileBaseName() + FileFormat.RUNKEEPER.getFileEnding());
+        File file = new File(getDir(mContext, FileFormat.RUNKEEPER.getDirName()), exportInfo.getFileBaseName() + FileFormat.RUNKEEPER.getFileEnding());
 
         HttpClient httpClient = new DefaultHttpClient();
         HttpPost httpPost = new HttpPost(MY_UPLOAD_URL);

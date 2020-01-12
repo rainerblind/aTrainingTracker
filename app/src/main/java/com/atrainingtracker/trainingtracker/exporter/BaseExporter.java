@@ -31,6 +31,8 @@ import android.os.Bundle;
 import android.os.Environment;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
+import androidx.core.content.ContextCompat;
+
 import android.util.Log;
 
 import com.atrainingtracker.R;
@@ -79,38 +81,19 @@ public abstract class BaseExporter {
                 .setOngoing(true);
     }
 
-    protected static File getBaseDir() {
-        File sdCard = Environment.getExternalStorageDirectory();
-        File dir = new File(sdCard.getAbsolutePath() + "/Workouts");
+    protected static File getBaseDir(Context context) {
+        File[] externalStorageVolumes =
+                ContextCompat.getExternalFilesDirs(context, null);
+        return externalStorageVolumes[0];
+
+    }
+
+    public static File getDir(Context context, String type) {
+        File dir = new File(getBaseDir(context).getAbsolutePath() + "/" + type);
         dir.mkdirs();
         return dir;
     }
 
-    public static File getDir(String type) {
-        File sdCard = Environment.getExternalStorageDirectory();
-        File dir = new File(sdCard.getAbsolutePath() + "/Workouts/" + type);
-        dir.mkdirs();
-        return dir;
-    }
-
-    protected static boolean checkForSDStorage(Context context) {
-        if (android.os.Environment.getExternalStorageState().equals(android.os.Environment.MEDIA_MOUNTED)) {
-            return true;
-        } else {
-            AlertDialog.Builder builder = new AlertDialog.Builder(context);
-            builder.setMessage(R.string.SD_card_not_available)
-                    .setCancelable(false)
-                    .setPositiveButton(R.string.OK, new DialogInterface.OnClickListener() {
-                        public void onClick(DialogInterface dialog, int id) {
-                            // do nothing
-                        }
-                    });
-            AlertDialog alert = builder.create();
-            alert.show();
-
-            return false;
-        }
-    }
 
     public void onFinished() {
         cExportManager.onFinished(TAG);
