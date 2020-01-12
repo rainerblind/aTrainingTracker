@@ -113,7 +113,7 @@ public class StravaUploader extends BaseExporter {
         }
 
         String filename = exportInfo.getFileBaseName() + FileFormat.STRAVA.getFileEnding();
-        File file = new File(getDir(FileFormat.STRAVA.getDirName()), filename);
+        File file = new File(getDir(mContext, FileFormat.STRAVA.getDirName()), filename);
 
         MultipartEntityBuilder multipartEntityBuilder = MultipartEntityBuilder.create();
         // multipartEntityBuilder.addTextBody(ACCESS_TOKEN, TrainingApplication.getStravaToken());

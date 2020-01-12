@@ -42,7 +42,7 @@ public class DropboxUploader extends BaseExporter {
     @Override
     protected ExportResult doExport(ExportInfo exportInfo) throws IOException, IllegalArgumentException {
         String filename = exportInfo.getFileFormat().getDirName() + "/" + exportInfo.getFileBaseName() + exportInfo.getFileFormat().getFileEnding();
-        File file = new File(getBaseDir(), filename);
+        File file = new File(getBaseDir(mContext), filename);
 
 
         InputStream inputStream = new FileInputStream(file);

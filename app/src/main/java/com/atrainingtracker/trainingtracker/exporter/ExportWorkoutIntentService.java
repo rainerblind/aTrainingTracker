@@ -87,7 +87,7 @@ public class ExportWorkoutIntentService extends IntentService {
                                 if (TrainingApplication.sendCSVEmail()) {
                                     emailUris.add(FileProvider.getUriForFile(this,
                                             this.getApplicationContext().getPackageName() + ".com.atrainingtracker.file.provider",
-                                            new File(BaseExporter.getDir(FileFormat.CSV.getDirName()), exportInfo.getFileBaseName() + FileFormat.CSV.getFileEnding())));
+                                            new File(BaseExporter.getDir(this, FileFormat.CSV.getDirName()), exportInfo.getFileBaseName() + FileFormat.CSV.getFileEnding())));
                                 }
                                 break;
                             case GC:
@@ -95,7 +95,7 @@ public class ExportWorkoutIntentService extends IntentService {
                                 if (TrainingApplication.sendGCEmail()) {
                                     emailUris.add(FileProvider.getUriForFile(this,
                                             this.getApplicationContext().getPackageName() + ".com.atrainingtracker.file.provider",
-                                            new File(BaseExporter.getDir(FileFormat.GC.getDirName()), exportInfo.getFileBaseName() + FileFormat.GC.getFileEnding())));
+                                            new File(BaseExporter.getDir(this, FileFormat.GC.getDirName()), exportInfo.getFileBaseName() + FileFormat.GC.getFileEnding())));
                                 }
                                 break;
                             case TCX:
@@ -103,7 +103,7 @@ public class ExportWorkoutIntentService extends IntentService {
                                 if (TrainingApplication.sendTCXEmail()) {
                                     emailUris.add(FileProvider.getUriForFile(this,
                                             this.getApplicationContext().getPackageName() + ".com.atrainingtracker.file.provider",
-                                            new File(BaseExporter.getDir(FileFormat.TCX.getDirName()), exportInfo.getFileBaseName() + FileFormat.TCX.getFileEnding())));
+                                            new File(BaseExporter.getDir(this, FileFormat.TCX.getDirName()), exportInfo.getFileBaseName() + FileFormat.TCX.getFileEnding())));
                                 }
                                 break;
                             case GPX:
@@ -111,7 +111,7 @@ public class ExportWorkoutIntentService extends IntentService {
                                 if (TrainingApplication.sendGPXEmail()) {
                                     emailUris.add(FileProvider.getUriForFile(this,
                                             this.getApplicationContext().getPackageName() + ".com.atrainingtracker.file.provider",
-                                            new File(BaseExporter.getDir(FileFormat.GPX.getDirName()), exportInfo.getFileBaseName() + FileFormat.GPX.getFileEnding())));
+                                            new File(BaseExporter.getDir(this, FileFormat.GPX.getDirName()), exportInfo.getFileBaseName() + FileFormat.GPX.getFileEnding())));
                                 }
                                 break;
                             case STRAVA:

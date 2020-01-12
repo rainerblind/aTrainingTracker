@@ -105,7 +105,7 @@ public class CSVFileExporter extends BaseExporter {
 
         // now, we are ready to write to CSV
 
-        File file = new File(getDir(FileFormat.CSV.getDirName()), exportInfo.getFileBaseName() + FileFormat.CSV.getFileEnding());
+        File file = new File(getDir(mContext, FileFormat.CSV.getDirName()), exportInfo.getFileBaseName() + FileFormat.CSV.getFileEnding());
         file.createNewFile();
         CSVWriter csvWrite = new CSVWriter(new FileWriter(file));
 
