@@ -149,11 +149,22 @@ public class EditWorkoutFragment extends Fragment {
     protected boolean mShowAllSportTypes;
     protected BSportType mBSportType;
     protected ReallyDeleteDialogInterface mReallyDeleteDialogInterface;
-    long mWorkoutID;
+    private long mWorkoutID;
+
     // all the interactive views
-    Button buttonSaveWorkout, buttonDeleteWorkout, buttonFancyName;
-    Spinner spinnerSport, spinnerEquipment;
-    EditText editExportName, editGoal, editMethod, editDescription;
+    private Button buttonSaveWorkout, buttonDeleteWorkout, buttonFancyName;
+    private Spinner spinnerSport, spinnerEquipment;
+    private EditText editExportName, editGoal, editMethod, editDescription;
+    private TextView tvEquipment;
+    private RadioGroup rgCommuteTrainer;
+    private RadioButton rbCommute, rbTrainer;
+    private CheckBox cbPrivate;
+    private boolean radioButtonAlreadyChecked = false;  // necessary to allow deselect of the radio buttons within the group for Commute and Trainer
+    private double MAX_WORKOUT_TIME_TO_SHOW_DELETE_BUTTON = 10 * 60;  // 10 min
+    private String ALL = "all";
+    private boolean mPaceExtremaValuesAvailable = false;
+
+    // BroadcastReceivers to update the name, commute, and extrema values
     private final BroadcastReceiver mFinishedCalculatingFancyNameReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -161,9 +172,6 @@ public class EditWorkoutFragment extends Fragment {
             editExportName.setText(workoutName);
         }
     };
-    TextView tvEquipment;
-    RadioGroup rgCommuteTrainer;
-    RadioButton rbCommute, rbTrainer;
     private final BroadcastReceiver mFinishedGuessingCommuteAndTrainerReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
             WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance();
@@ -182,11 +190,6 @@ public class EditWorkoutFragment extends Fragment {
             databaseManager.closeDatabase(); // db.close();
         }
     };
-    CheckBox cbPrivate;
-    boolean radioButtonAlreadyChecked = false;  // necessary to allow deselect of the radio buttons within the group for Commute and Trainer
-    private double MAX_WORKOUT_TIME_TO_SHOW_DELETE_BUTTON = 10 * 60;  // 10 min
-    private String ALL = "all";
-    private boolean mPaceExtremaValuesAvailable = false;
     private final BroadcastReceiver mFinishedCalculatingExtremaValueReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
             SensorType sensorType = SensorType.valueOf(intent.getExtras().getString(CalcExtremaValuesTask.SENSOR_TYPE));
@@ -259,20 +262,13 @@ public class EditWorkoutFragment extends Fragment {
         rbTrainer = view.findViewById(R.id.rbTrainer);
         cbPrivate = view.findViewById(R.id.cbPrivate);
 
-        return view;
-    }
 
-    @Override
-    public void onActivityCreated(Bundle savedInstanceState) {
-        super.onActivityCreated(savedInstanceState);
-        if (DEBUG) Log.d(TAG, "onActivityCreated");
-
+        // configure the views
         ALL = getString(R.string.equipment_all);
 
-        // 'static' initialization of some views
         // first, set the units of speed and pace to the user choice
-        ((TextView) getActivity().findViewById(R.id.tvSpeedUnit)).setText(getString(MyHelper.getSpeedUnitNameId()));
-        ((TextView) getActivity().findViewById(R.id.tvPaceUnit)).setText(getString(MyHelper.getPaceUnitNameId()));
+        ((TextView) view.findViewById(R.id.tvSpeedUnit)).setText(getString(MyHelper.getSpeedUnitNameId()));
+        ((TextView) view.findViewById(R.id.tvPaceUnit)).setText(getString(MyHelper.getPaceUnitNameId()));
 
         spinnerSport.setOnItemSelectedListener(new OnItemSelectedListener() {
             @Override
@@ -388,8 +384,22 @@ public class EditWorkoutFragment extends Fragment {
             }
         });
 
-        // finally, fill the views
-        // first, remove all
+        return view;
+    }
+
+    @Override
+    public void onActivityCreated(Bundle savedInstanceState) {
+        super.onActivityCreated(savedInstanceState);
+        if (DEBUG) Log.d(TAG, "onActivityCreated");
+
+        // register receivers
+        getActivity().registerReceiver(mFinishedCalculatingExtremaValueReceiver, mFinishedCalculatingExtremaValueFilter);
+        getActivity().registerReceiver(mFinishedGuessingCommuteAndTrainerReceiver, mFinishedGuessingCommuteAndTrainerFilter);
+        getActivity().registerReceiver(mFinishedCalculatingFancyNameReceiver, mFinishedCalculatingFancyNameFilter);
+
+
+        // fill the views
+        // first, remove all  TODO: still necessary?
         removeExtremaValuesSeparator();
         removeAllExtremaValuesViews();
 
@@ -403,33 +413,24 @@ public class EditWorkoutFragment extends Fragment {
 
     @Override
     public void onResume() {
-        if (DEBUG) Log.d(TAG, "onResume");
         super.onResume();
-
-        // registerReceiver(mFinishedCalculatingExtremaValuesReceiver, mFinishedCalculatingExtremaValuesFilter);
-        getActivity().registerReceiver(mFinishedCalculatingExtremaValueReceiver, mFinishedCalculatingExtremaValueFilter);
-        getActivity().registerReceiver(mFinishedGuessingCommuteAndTrainerReceiver, mFinishedGuessingCommuteAndTrainerFilter);
-        getActivity().registerReceiver(mFinishedCalculatingFancyNameReceiver, mFinishedCalculatingFancyNameFilter);
+        if (DEBUG) Log.d(TAG, "onResume");
     }
 
     @Override
     public void onPause() {
         super.onPause();
         if (DEBUG) Log.d(TAG, "onPause");
+    }
 
-        // try { unregisterReceiver(mFinishedCalculatingExtremaValuesReceiver); } catch (IllegalArgumentException e) { }
-        try {
-            getActivity().unregisterReceiver(mFinishedCalculatingExtremaValueReceiver);
-        } catch (IllegalArgumentException e) {
-        }
-        try {
-            getActivity().unregisterReceiver(mFinishedGuessingCommuteAndTrainerReceiver);
-        } catch (IllegalArgumentException e) {
-        }
-        try {
-            getActivity().unregisterReceiver(mFinishedCalculatingFancyNameReceiver);
-        } catch (IllegalArgumentException e) {
-        }
+    @Override
+    public void onDestroyView () {
+        super.onDestroyView();
+        if (DEBUG) Log.i(TAG, "onDestroyView");
+
+        getActivity().unregisterReceiver(mFinishedCalculatingExtremaValueReceiver);
+        getActivity().unregisterReceiver(mFinishedGuessingCommuteAndTrainerReceiver);
+        getActivity().unregisterReceiver(mFinishedCalculatingFancyNameReceiver);
     }
 
     @Override
