@@ -45,7 +45,7 @@ import java.util.EnumSet;
 public class ANTBikeSpeedAndCadenceDevice extends MyANTDevice {
     protected static final int SPEED_THRESHOLD = 8;
     protected static final int CADENCE_THRESHOLD = 8;
-    private static final String TAG = "ANTBikeSpeedAndCadenceDevice";
+    private static final String TAG = "ANTBikeSpeedAndCadenceD";
     private static final boolean DEBUG = BANALService.DEBUG & false;
     protected AntPlusBikeSpeedDistancePcc bikeSpeedDistancePcc = null;
     protected AntPlusBikeCadencePcc cadencePcc = null;
