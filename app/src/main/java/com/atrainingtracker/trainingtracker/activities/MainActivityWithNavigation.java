@@ -133,8 +133,8 @@ public class MainActivityWithNavigation
         StartOrResumeInterface {
     public static final String SELECTED_FRAGMENT_ID = "SELECTED_FRAGMENT_ID";
     public static final String SELECTED_FRAGMENT = "SELECTED_FRAGMENT";
-    private static final String TAG = "com.atrainingtracker.trainingtracker.MainActivityWithNavigation";
     private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final String TAG = "MainActivityWithNavigat";
     private static final int DEFAULT_SELECTED_FRAGMENT_ID = R.id.drawer_start_tracking;
     // private static final int REQUEST_ENABLE_BLUETOOTH            = 1;
     private static final int REQUEST_INSTALL_GOOGLE_PLAY_SERVICE = 2;
