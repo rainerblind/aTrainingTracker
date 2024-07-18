@@ -18,6 +18,8 @@
 
 package com.atrainingtracker.banalservice.database;
 
+import static android.provider.MediaStore.Images.Media.getBitmap;
+
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
@@ -28,6 +30,8 @@ import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.provider.BaseColumns;
 import android.util.Log;
+
+import androidx.core.content.res.ResourcesCompat;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
@@ -107,7 +111,7 @@ public class SportTypeDatabaseManager {
 
         int drawableId = getBSportTypeIconId(id);
 
-        Bitmap icon = ((BitmapDrawable) context.getResources().getDrawable(drawableId)).getBitmap();
+        Bitmap icon = ((BitmapDrawable) ResourcesCompat.getDrawable(context.getResources(), drawableId, null)).getBitmap();
         Bitmap iconScaled = Bitmap.createScaledBitmap(icon, (int) (icon.getWidth() * scale), (int) (icon.getHeight() * scale), false);
 
         return new BitmapDrawable(context.getResources(), iconScaled);
