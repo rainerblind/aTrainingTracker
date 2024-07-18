@@ -147,11 +147,12 @@ public abstract class BaseExporter {
      * helper method to check whether there is some data
      */
     protected boolean dataValid(Cursor cursor, String string) {
-        if (cursor.getColumnIndex(string) == -1) {
+        int index = cursor.getColumnIndex(string);
+        if (index < 0) {
             if (DEBUG) Log.d(TAG, "dataValid: no such columnIndex!: " + string);
             return false;
         }
-        if (cursor.isNull(cursor.getColumnIndex(string))) {
+        if (cursor.isNull(index)) {
             if (DEBUG) Log.d(TAG, "dataValid: cursor.isNull = true for " + string);
             return false;
         }
@@ -246,10 +247,15 @@ public abstract class BaseExporter {
     }
 
     protected String myGetStringFromCursor(Cursor cursor, String key) {
-        String result = null;
+        int index = cursor.getColumnIndex(key);
+        if (index <= 0) {
+            if (DEBUG) Log.d(TAG, "myGetStringFromCursor: no such columnIndex!: " + key);
+            return null;
+        }
 
-        if (!cursor.isNull(cursor.getColumnIndex(key))) {
-            result = cursor.getString(cursor.getColumnIndex(key));
+        String result = null;
+        if (!cursor.isNull(index)) {
+            result = cursor.getString(index);
             if ("".equals(result)) {
                 result = null;
             }
@@ -259,9 +265,14 @@ public abstract class BaseExporter {
     }
 
     protected boolean myGetBooleanFromCursor(Cursor cursor, String key) {
+        int index = cursor.getColumnIndex(key);
+        if (index <= 0) {
+            if (DEBUG) Log.d(TAG, "myGetBooleanFromCursor: no such columnIndex!: " + key);
+            return false;
+        }
 
-        if (!cursor.isNull(cursor.getColumnIndex(key))) {
-            return (cursor.getInt(cursor.getColumnIndex(key)) > 0);
+        if (!cursor.isNull(index)) {
+            return (cursor.getInt(index) > 0);
         } else {
             return false;
         }

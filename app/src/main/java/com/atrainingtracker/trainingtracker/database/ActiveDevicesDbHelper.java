@@ -74,11 +74,14 @@ public class ActiveDevicesDbHelper extends SQLiteOpenHelper {
                 null);
 
         if (cursor.moveToFirst()) {
-            do {
-                if (DEBUG)
-                    Log.d(TAG, "adding " + cursor.getInt(cursor.getColumnIndex(ActiveDevices.DEVICE_DB_ID)));
-                result.add(cursor.getInt(cursor.getColumnIndex(ActiveDevices.DEVICE_DB_ID)));
-            } while (cursor.moveToNext());
+            int index = cursor.getColumnIndex(ActiveDevices.DEVICE_DB_ID);
+            if (index >= 0) {
+                do {
+                    if (DEBUG)
+                        Log.d(TAG, "adding " + cursor.getInt(index));
+                    result.add(cursor.getInt(index));
+                } while (cursor.moveToNext());
+            }
         }
 
         cursor.close();
