@@ -28,6 +28,7 @@ import android.os.Bundle;
 import android.util.Log;
 
 import androidx.core.content.ContextCompat;
+import androidx.core.content.res.ResourcesCompat;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.sensor.SensorType;
@@ -186,7 +187,7 @@ public class TrackOnMapAftermathFragment
                             sensorType.getMyFormatter().format(latLngValue.value),
                             getString(MyHelper.getShortUnitsId(sensorType))));
             if (drawableId != null) {
-                Bitmap marker = ((BitmapDrawable) getResources().getDrawable(drawableId)).getBitmap();
+                Bitmap marker = ((BitmapDrawable) ResourcesCompat.getDrawable(getResources(), drawableId, null)).getBitmap();
                 markerOptions.icon(BitmapDescriptorFactory.fromBitmap(marker));
             }
             mMap.addMarker(markerOptions);

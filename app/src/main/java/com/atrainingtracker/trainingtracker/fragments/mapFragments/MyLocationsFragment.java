@@ -31,6 +31,8 @@ import android.location.Location;
 import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
+
+import androidx.core.content.res.ResourcesCompat;
 import androidx.fragment.app.Fragment;
 import android.util.Log;
 import android.view.Gravity;
@@ -448,7 +450,7 @@ public class MyLocationsFragment
             return null;
         }
 
-        Bitmap marker = ((BitmapDrawable) getResources().getDrawable(drawableId)).getBitmap();
+        Bitmap marker = ((BitmapDrawable) ResourcesCompat.getDrawable(getResources(), drawableId, null)).getBitmap();
         Bitmap scaledMarker = Bitmap.createScaledBitmap(marker, (int) (marker.getWidth() * scale), (int) (marker.getHeight() * scale), false);
 
         return mMap.addMarker(new MarkerOptions()

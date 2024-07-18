@@ -26,6 +26,8 @@ import android.location.Location;
 import android.os.Bundle;
 import android.util.Log;
 
+import androidx.core.content.res.ResourcesCompat;
+
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.sensor.SensorType;
@@ -266,7 +268,7 @@ public abstract class TrackOnMapBaseFragment
 
                 float bearing = startLocation.bearingTo(endLocation);
 
-                Bitmap arrowhead = ((BitmapDrawable) getContext().getResources().getDrawable(R.drawable.arrowhead)).getBitmap();
+                Bitmap arrowhead = ((BitmapDrawable) ResourcesCompat.getDrawable(getResources(), R.drawable.arrowhead, null)).getBitmap();
 
                 // mMap.addMarker(new MarkerOptions()
                 //        .position(middle)
