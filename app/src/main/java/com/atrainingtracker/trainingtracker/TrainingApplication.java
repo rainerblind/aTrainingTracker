@@ -897,7 +897,7 @@ public class TrainingApplication extends Application {
         newIntent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
         newIntent.putExtras(bundle);
         newIntent.setAction("TrackerService");
-        mStartMainActivityPendingIntent = PendingIntent.getActivity(this, 0, newIntent, 0);  // TODO: correct???
+        mStartMainActivityPendingIntent = PendingIntent.getActivity(this, 0, newIntent, PendingIntent.FLAG_IMMUTABLE);  // TODO: correct???
 
         NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL__TRACKING_2)
                 .setSmallIcon(R.drawable.logo)
@@ -921,7 +921,7 @@ public class TrainingApplication extends Application {
             mTrackingAndSearchingNotificationBuilder.addAction(
                     (new NotificationCompat.Action.Builder(R.drawable.research_icon, getString(R.string.research),
                         PendingIntent.getBroadcast(this, 0,
-                                new Intent(REQUEST_START_SEARCH_FOR_PAIRED_DEVICES).setPackage(getPackageName()), 0)))
+                                new Intent(REQUEST_START_SEARCH_FOR_PAIRED_DEVICES).setPackage(getPackageName()), PendingIntent.FLAG_IMMUTABLE)))
                     .build());
         }
 
@@ -929,19 +929,19 @@ public class TrainingApplication extends Application {
             mTrackingAndSearchingNotificationBuilder.addAction(
                     (new NotificationCompat.Action.Builder(R.drawable.control_start, getString(R.string.Resume),
                         PendingIntent.getBroadcast(this, 0,
-                                new Intent(REQUEST_RESUME_FROM_PAUSED).setPackage(getPackageName()), 0)))
+                                new Intent(REQUEST_RESUME_FROM_PAUSED).setPackage(getPackageName()), PendingIntent.FLAG_IMMUTABLE)))
                     .build());
 
             mTrackingAndSearchingNotificationBuilder.addAction(
                     (new NotificationCompat.Action.Builder(R.drawable.control_stop, getString(R.string.Stop),
                         PendingIntent.getBroadcast(this, 0,
-                                new Intent(REQUEST_STOP_TRACKING).setPackage(getPackageName()), 0)))
+                                new Intent(REQUEST_STOP_TRACKING).setPackage(getPackageName()), PendingIntent.FLAG_IMMUTABLE)))
                     .build());
         } else {
             mTrackingAndSearchingNotificationBuilder.addAction(
                     (new NotificationCompat.Action.Builder(R.drawable.control_pause, getString(R.string.Pause),
                         PendingIntent.getBroadcast(this, 0,
-                                new Intent(REQUEST_PAUSE_TRACKING).setPackage(getPackageName()), 0)))
+                                new Intent(REQUEST_PAUSE_TRACKING).setPackage(getPackageName()), PendingIntent.FLAG_IMMUTABLE)))
                     .build());
         }
     }

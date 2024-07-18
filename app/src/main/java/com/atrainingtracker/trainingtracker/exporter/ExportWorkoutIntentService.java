@@ -173,7 +173,7 @@ public class ExportWorkoutIntentService extends IntentService {
             Intent notificationIntent = new Intent(this, MainActivityWithNavigation.class);
             notificationIntent.putExtras(bundle);
             // notificationIntent.setAction("barAction");
-            PendingIntent contentIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
+            PendingIntent contentIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
             // PendingIntent contentIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
 
             NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL__EXPORT)
@@ -198,7 +198,7 @@ public class ExportWorkoutIntentService extends IntentService {
 
                 // emailIntent.setAction(Long.toString(System.currentTimeMillis()));
 
-                PendingIntent pendingShareIntent = PendingIntent.getActivity(this, 0, emailIntent, PendingIntent.FLAG_ONE_SHOT);
+                PendingIntent pendingShareIntent = PendingIntent.getActivity(this, 0, emailIntent, PendingIntent.FLAG_ONE_SHOT | PendingIntent.FLAG_IMMUTABLE);
 
                 NotificationCompat.Builder notificationBuilder2 = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL__EXPORT)
                         .setLargeIcon(BitmapFactory.decodeResource(getResources(), R.drawable.ic_mail_outline_black_48dp))
