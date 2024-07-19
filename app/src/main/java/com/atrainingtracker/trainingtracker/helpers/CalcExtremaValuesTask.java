@@ -142,7 +142,8 @@ public class CalcExtremaValuesTask extends AsyncTask<Long, String, Boolean> {
 
         if (DEBUG) Log.d(TAG, "calculating extrema values for workout " + workoutId);
 
-        String baseFileName = WorkoutSummariesDatabaseManager.getInstance().getBaseFileName(workoutId);
+        WorkoutSummariesDatabaseManager.getInstance();
+        String baseFileName = WorkoutSummariesDatabaseManager.getBaseFileName(workoutId);
 
         // find max line distance
         calcAndSaveExtremaValues(workoutId,
@@ -167,7 +168,8 @@ public class CalcExtremaValuesTask extends AsyncTask<Long, String, Boolean> {
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         // first, we need the accumulated sensors of this workout
-        Set<SensorType> accumulatedSensorTypes = WorkoutSummariesDatabaseManager.getInstance().getAccumulatedSensorTypes(workoutId);
+        WorkoutSummariesDatabaseManager.getInstance();
+        Set<SensorType> accumulatedSensorTypes = WorkoutSummariesDatabaseManager.getAccumulatedSensorTypes(workoutId);
 
         // if there are no sensors stored (due to upgrading from DB version 3 to 4, we use all important sensors
         if (accumulatedSensorTypes.isEmpty()) {
@@ -251,9 +253,12 @@ public class CalcExtremaValuesTask extends AsyncTask<Long, String, Boolean> {
 
         // get max away points and guess commute and trainer
         boolean commute = false, trainer = false;
-        Double distance = WorkoutSummariesDatabaseManager.getInstance().getDouble(workoutId, WorkoutSummaries.DISTANCE_TOTAL_m);
-        Double maxLineDistance = WorkoutSummariesDatabaseManager.getInstance().getExtremaValue(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX);
-        Double endLineDistance = WorkoutSummariesDatabaseManager.getInstance().getExtremaValue(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.END);
+        WorkoutSummariesDatabaseManager.getInstance();
+        Double distance = WorkoutSummariesDatabaseManager.getDouble(workoutId, WorkoutSummaries.DISTANCE_TOTAL_m);
+        WorkoutSummariesDatabaseManager.getInstance();
+        Double maxLineDistance = WorkoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX);
+        WorkoutSummariesDatabaseManager.getInstance();
+        Double endLineDistance = WorkoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.END);
         if (DEBUG)
             Log.i(TAG, "distance=" + distance + ", max line distance=" + maxLineDistance + ", end line distance=" + endLineDistance);
 
@@ -312,7 +317,8 @@ public class CalcExtremaValuesTask extends AsyncTask<Long, String, Boolean> {
             for (ExtremaType extremaType : extremaTypeList) {
                 publishProgress(mContext.getString(R.string.calculating_extrema_value_for, extremaType.name(), mContext.getString(sensorType.getShortNameId())));
 
-                Double value = WorkoutSamplesDatabaseManager.getInstance().calcExtremaValue(baseFileName, extremaType, sensorType);
+                WorkoutSamplesDatabaseManager.getInstance();
+                Double value = WorkoutSamplesDatabaseManager.calcExtremaValue(baseFileName, extremaType, sensorType);
                 if (value != null) {
                     if (DEBUG)
                         Log.i(TAG, "saving " + extremaType.name() + " of " + sensorType.name() + ": " + value);
