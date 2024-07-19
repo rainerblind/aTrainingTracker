@@ -59,10 +59,12 @@ public class TrackOnMapTrackingFragment
             if (LocationManager.GPS_PROVIDER.equals(intent.getStringExtra(BANALService.LOCATION_PROVIDER))
                     && intent.hasExtra(BANALService.LATITUDE)
                     && intent.hasExtra(BANALService.LONGITUDE)) {
-                if (getActivity() != null
-                        && ((TrainingApplication) getActivity().getApplication()).isTracking()) {  // only add the received location when we are tracking
-                    addLatLng(intent.getDoubleExtra(BANALService.LATITUDE, 0.0),
-                            intent.getDoubleExtra(BANALService.LONGITUDE, 0.0));
+                if (getActivity() != null) {
+                    getActivity().getApplication();
+                    if (TrainingApplication.isTracking()) {  // only add the received location when we are tracking
+                        addLatLng(intent.getDoubleExtra(BANALService.LATITUDE, 0.0),
+                                intent.getDoubleExtra(BANALService.LONGITUDE, 0.0));
+                    }
                 }
             }
         }

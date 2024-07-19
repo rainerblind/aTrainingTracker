@@ -110,7 +110,8 @@ public class DeleteWorkoutTask extends AsyncTask<Long, String, Boolean> {
 
             // delete from WorkoutSamples
             if (DEBUG) Log.d(TAG, "deleting from WorkoutSamples");
-            WorkoutSamplesDatabaseManager.getInstance().deleteWorkout(baseFileName);
+            WorkoutSamplesDatabaseManager.getInstance();
+            WorkoutSamplesDatabaseManager.deleteWorkout(baseFileName);
 
             // delete from ExportManager
             if (DEBUG) Log.d(TAG, "deleting from ExportManager");

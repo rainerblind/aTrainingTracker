@@ -80,8 +80,10 @@ public class WorkoutSamplesDatabaseManager {
         if ((extremaType == ExtremaType.AVG) & (sensorType == SensorType.SPEED_mps)) {
             if (DEBUG) Log.i(TAG, "calculating average speed based on distance and active time");
 
-            Double distance = WorkoutSummariesDatabaseManager.getInstance().getDouble(baseFileName, WorkoutSummaries.DISTANCE_TOTAL_m);
-            Integer time = WorkoutSummariesDatabaseManager.getInstance().getInt(baseFileName, WorkoutSummaries.TIME_ACTIVE_s);
+            WorkoutSummariesDatabaseManager.getInstance();
+            Double distance = WorkoutSummariesDatabaseManager.getDouble(baseFileName, WorkoutSummaries.DISTANCE_TOTAL_m);
+            WorkoutSummariesDatabaseManager.getInstance();
+            Integer time = WorkoutSummariesDatabaseManager.getInt(baseFileName, WorkoutSummaries.TIME_ACTIVE_s);
 
             if (distance != null & time != null) {
                 if (DEBUG)
