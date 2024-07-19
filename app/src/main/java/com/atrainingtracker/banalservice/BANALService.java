@@ -226,6 +226,7 @@ public class BANALService
         return DeviceManager.isSearchingForARemoteDevice();
     }
 
+    /* unused
     public static DeviceManager getDeviceManager() {
         return cDeviceManager;
     }
@@ -233,6 +234,7 @@ public class BANALService
     public static MySensorManager getSensorManager() {
         return cSensorManager;
     }
+    */
 
     public static List<MySensor> getSensorList(SensorType sensorType) {
         return cDeviceManager.getSensorList(sensorType);

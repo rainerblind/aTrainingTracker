@@ -49,7 +49,7 @@ public class TimeFormatter implements MyFormatter<Number> {
                 long minutes = TimeUnit.SECONDS.toMinutes(seconds) - TimeUnit.HOURS.toMinutes(hours);
                 seconds = seconds - TimeUnit.HOURS.toSeconds(hours) - TimeUnit.MINUTES.toSeconds(minutes);
 
-                return String.format("02d:%02d:%02d h", hours, minutes, seconds);
+                return String.format("%02d:%02d:%02d h", hours, minutes, seconds);
             }
         }
     }
