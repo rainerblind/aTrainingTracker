@@ -31,7 +31,6 @@ import com.atrainingtracker.banalservice.sensor.MySensor;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 
-@TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
 public class BTLEHeartRateDevice extends MyBTLEDevice {
     private static final boolean DEBUG = BANALService.DEBUG & false;
     protected MySensor<Integer> mHeartRateSensor;

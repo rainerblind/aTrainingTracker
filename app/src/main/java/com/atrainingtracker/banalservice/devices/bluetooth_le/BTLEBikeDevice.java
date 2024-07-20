@@ -32,7 +32,6 @@ import com.atrainingtracker.banalservice.sensor.MySensor;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 
-@TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
 abstract public class BTLEBikeDevice extends MyBTLEDevice {
     protected static final int MAX_IDENTICAL = 4;
     private static final boolean DEBUG = BANALService.DEBUG & false;

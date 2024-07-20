@@ -18,7 +18,6 @@
 
 package com.atrainingtracker.banalservice.devices.bluetooth_le;
 
-import android.annotation.TargetApi;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;
@@ -46,7 +45,6 @@ import java.util.Queue;
 
 // TODO: where/when to register and unregister the sensors
 
-@TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
 public abstract class MyBTLEDevice extends MyRemoteDevice {
     private static final boolean DEBUG = BANALService.DEBUG & false;
     private static final int SEARCH_PERIOD = 10 * 1000; // 10 seconds (same as for ANT+)

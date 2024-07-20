@@ -190,8 +190,7 @@ public class BANALService
                 return isANTPluginServiceInstalled(context); // TODO: more precise test possible?
 
             case BLUETOOTH_LE:
-                return (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN_MR2)
-                        && context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE);
+                return context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE);
 
             default:
                 return false;
