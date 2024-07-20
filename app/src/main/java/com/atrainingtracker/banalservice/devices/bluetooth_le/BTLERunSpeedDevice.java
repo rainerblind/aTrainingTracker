@@ -37,7 +37,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-@TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
 public class BTLERunSpeedDevice extends MyBTLEDevice {
     private static final boolean DEBUG = BANALService.DEBUG & false;
     private final ScheduledExecutorService mScheduler = Executors.newScheduledThreadPool(1);

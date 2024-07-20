@@ -19,7 +19,6 @@
 package com.atrainingtracker.banalservice.devices.bluetooth_le.search_new;
 
 import android.annotation.SuppressLint;
-import android.annotation.TargetApi;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
@@ -46,8 +45,6 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.UUID;
 
-
-@TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
 public class BTSearchForNewDevicesEngine
         implements SearchForNewDevicesInterface {
     private static final String TAG = "BTSearchForNewDevicesEngine";

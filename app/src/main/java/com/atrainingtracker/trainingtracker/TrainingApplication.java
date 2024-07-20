@@ -1166,24 +1166,22 @@ public class TrainingApplication extends Application {
     private void createNotificationChannel() {
         // Create the NotificationChannel, but only on API 26+ because
         // the NotificationChannel class is new and not in the support library
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationManager notificationManager = getSystemService(NotificationManager.class);
+        NotificationManager notificationManager = getSystemService(NotificationManager.class);
 
-            notificationManager.deleteNotificationChannel(NOTIFICATION_CHANNEL__TRACKING);
+        notificationManager.deleteNotificationChannel(NOTIFICATION_CHANNEL__TRACKING);
 
-            // Channel for Tracking
-            NotificationChannel channel = new NotificationChannel(NOTIFICATION_CHANNEL__TRACKING_2,
-                    getString(R.string.notification_channel_name__tracking),
-                    NotificationManager.IMPORTANCE_LOW);
-            channel.setDescription(getString(R.string.notification_channel_description__tracking));
-            notificationManager.createNotificationChannel(channel); // Register the channel with the system;
+        // Channel for Tracking
+        NotificationChannel channel = new NotificationChannel(NOTIFICATION_CHANNEL__TRACKING_2,
+                getString(R.string.notification_channel_name__tracking),
+                NotificationManager.IMPORTANCE_LOW);
+        channel.setDescription(getString(R.string.notification_channel_description__tracking));
+        notificationManager.createNotificationChannel(channel); // Register the channel with the system;
 
-            channel = new NotificationChannel(NOTIFICATION_CHANNEL__EXPORT,
-                    getString(R.string.notification_channel_name__export),
-                    NotificationManager.IMPORTANCE_DEFAULT);
-            channel.setDescription(getString(R.string.notification_channel_description__export));
-            notificationManager.createNotificationChannel(channel);
-        }
+        channel = new NotificationChannel(NOTIFICATION_CHANNEL__EXPORT,
+                getString(R.string.notification_channel_name__export),
+                NotificationManager.IMPORTANCE_DEFAULT);
+        channel.setDescription(getString(R.string.notification_channel_description__export));
+        notificationManager.createNotificationChannel(channel);
     }
 
 
