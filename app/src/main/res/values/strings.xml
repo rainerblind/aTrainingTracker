@@ -103,7 +103,6 @@
     <string name="build_in">build in</string>
     <string name="TrainingTracker" translatable="false">a Training Tracker</string>
     <string name="application_name" translatable="false">a Training Tracker</string>
-    <string name="user_name">user name</string>
     <string name="no_user_name">no user name</string>
     <string name="no_password">no password</string>
     <string name="add_sensor">add sensor</string>

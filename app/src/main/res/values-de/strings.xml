@@ -92,7 +92,6 @@
     <string name="number_of_fields">Anzahl von Feldern:</string>
     <string name="Lap_NR">Runde %1$d</string>
     <string name="build_in">Standard</string>
-    <string name="user_name">Benutzername</string>
     <string name="no_user_name">kein Benutzername</string>
     <string name="no_password">kein Passwort</string>
     <string name="add_sensor">Sensor hinzufügen</string>
