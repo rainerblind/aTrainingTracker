@@ -471,9 +471,10 @@ public class StravaSegmentsIntentService extends IntentService {
         if (DEBUG) Log.i(TAG, "notifyNewSegment Strava Name=" + mStravaSportName);
 
         // TODO: do something like 'flush' before we send the broadcast???
-        Intent intent = new Intent(NEW_STARRED_SEGMENT_INTENT);
-        intent.putExtra(SPORT_TYPE_ID, mSportTypeId);
-        intent.putExtra(Segments.SEGMENT_ID, mSegmentId);
+        Intent intent = new Intent(NEW_STARRED_SEGMENT_INTENT)
+                .putExtra(SPORT_TYPE_ID, mSportTypeId)
+                .putExtra(Segments.SEGMENT_ID, mSegmentId)
+                .setPackage(getPackageName());
         sendBroadcast(intent);
     }
 
@@ -482,8 +483,9 @@ public class StravaSegmentsIntentService extends IntentService {
 
         ((TrainingApplication) getApplicationContext()).setIsSegmentListUpdating(mSportTypeId, true);
 
-        Intent intent = new Intent(SEGMENT_UPDATE_STARTED_INTENT);
-        intent.putExtra(SPORT_TYPE_ID, mSportTypeId);
+        Intent intent = new Intent(SEGMENT_UPDATE_STARTED_INTENT)
+                .putExtra(SPORT_TYPE_ID, mSportTypeId)
+                .setPackage(getPackageName());
         sendBroadcast(intent);
     }
 
@@ -492,9 +494,10 @@ public class StravaSegmentsIntentService extends IntentService {
 
         ((TrainingApplication) getApplicationContext()).setIsSegmentListUpdating(mSportTypeId, false);
 
-        Intent intent = new Intent(SEGMENTS_UPDATE_COMPLETE_INTENT);
-        intent.putExtra(SPORT_TYPE_ID, mSportTypeId);
-        intent.putExtra(RESULT_MESSAGE, resultMessage);
+        Intent intent = new Intent(SEGMENTS_UPDATE_COMPLETE_INTENT)
+                .putExtra(SPORT_TYPE_ID, mSportTypeId)
+                .putExtra(RESULT_MESSAGE, resultMessage)
+                .setPackage(getPackageName());
         sendBroadcast(intent);
     }
 
@@ -636,8 +639,9 @@ public class StravaSegmentsIntentService extends IntentService {
     private void notifyNewLeaderboardEntry() {
         if (DEBUG) Log.i(TAG, "notifyNewLeaderboardEntry");
 
-        Intent intent = new Intent(NEW_LEADERBOARD_ENTRY_INTENT);
-        intent.putExtra(Segments.SEGMENT_ID, mSegmentId);
+        Intent intent = new Intent(NEW_LEADERBOARD_ENTRY_INTENT)
+                .putExtra(Segments.SEGMENT_ID, mSegmentId)
+                .setPackage(getPackageName());
         sendBroadcast(intent);
     }
 
@@ -646,9 +650,10 @@ public class StravaSegmentsIntentService extends IntentService {
 
         ((TrainingApplication) getApplicationContext()).setIsLeaderboardUpdating(mSegmentId, false);
 
-        Intent intent = new Intent(LEADERBOARD_UPDATE_COMPLETE_INTENT);
-        intent.putExtra(Segments.SEGMENT_ID, mSegmentId);
-        intent.putExtra(RESULT_MESSAGE, resultMessage);
+        Intent intent = new Intent(LEADERBOARD_UPDATE_COMPLETE_INTENT)
+                .putExtra(Segments.SEGMENT_ID, mSegmentId)
+                .putExtra(RESULT_MESSAGE, resultMessage)
+                .setPackage(getPackageName());
         sendBroadcast(intent);
     }
 

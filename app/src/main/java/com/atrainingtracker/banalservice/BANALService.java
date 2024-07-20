@@ -270,9 +270,11 @@ public class BANALService
     private void setUserSelectedSportTypeId(long sportTypeId) {
         mHaveUserSelectedSportType = true;
         mUserSelectedSportTypeId = sportTypeId;
-        sendBroadcast(new Intent(SPORT_TYPE_CHANGED_BY_USER_INTENT));
+        sendBroadcast(new Intent(SPORT_TYPE_CHANGED_BY_USER_INTENT)
+                .setPackage(this.getPackageName()));
         if (TrainingApplication.startSearchWhenUserChangesSport()) {
-            sendBroadcast(new Intent(TrainingApplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES));
+            sendBroadcast(new Intent(TrainingApplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES)
+                    .setPackage(this.getPackageName()));
         }
     }
 
@@ -324,7 +326,8 @@ public class BANALService
         // if (cPaused == true) { return; }
 
         if (TrainingApplication.startSearchWhenNewLap()) {
-            sendBroadcast(new Intent(TrainingApplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES));
+            sendBroadcast(new Intent(TrainingApplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES)
+                    .setPackage(getPackageName()));
         }
 
         SensorData sensorData;
@@ -357,14 +360,15 @@ public class BANALService
         cDeviceManager.newLap();
 
         // send broadcast with these values
-        Intent intent = new Intent(BANALService.LAP_SUMMARY);
-        intent.putExtra(BANALService.PREV_LAP_NR, prevLapNr);
-        intent.putExtra(PREV_LAP_TIME_S, lapTime_s);
-        intent.putExtra(PREV_LAP_TIME_STRING, lapTime);
-        intent.putExtra(PREV_LAP_DISTANCE_m, lapDistance);
-        intent.putExtra(PREV_LAP_DISTANCE_STRING, lapDistance_String);
-        intent.putExtra(PREV_LAP_SPEED_mps, lapSpeed);
-        intent.putExtra(PREV_LAP_SPEED_STRING, lapSpeedString);
+        Intent intent = new Intent(BANALService.LAP_SUMMARY)
+                .putExtra(BANALService.PREV_LAP_NR, prevLapNr)
+                .putExtra(PREV_LAP_TIME_S, lapTime_s)
+                .putExtra(PREV_LAP_TIME_STRING, lapTime)
+                .putExtra(PREV_LAP_DISTANCE_m, lapDistance)
+                .putExtra(PREV_LAP_DISTANCE_STRING, lapDistance_String)
+                .putExtra(PREV_LAP_SPEED_mps, lapSpeed)
+                .putExtra(PREV_LAP_SPEED_STRING, lapSpeedString)
+                .setPackage(getPackageName());
         sendBroadcast(intent);
     }
 

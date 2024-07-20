@@ -439,7 +439,8 @@ public class ExportManager {
 
     protected void exportStatusChanged() {
         if (DEBUG) Log.d(TAG, "exportStatusChanged");
-        mContext.sendBroadcast(new Intent(EXPORT_STATUS_CHANGED_INTENT));
+        mContext.sendBroadcast(new Intent(EXPORT_STATUS_CHANGED_INTENT)
+                .setPackage(mContext.getPackageName()));
     }
 
     public void deleteWorkout(String baseFileName) {

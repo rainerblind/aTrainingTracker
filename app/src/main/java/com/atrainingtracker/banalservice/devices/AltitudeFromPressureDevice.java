@@ -129,8 +129,9 @@ public class AltitudeFromPressureDevice extends MyDevice
 
         if (mAltitudeCorrection != 0.0) {
             // 	also send broadcast to inform the others (like a tracker) of this change such that they can update all previous samples accordingly!
-            Intent intent = new Intent(ALTITUDE_CORRECTION_INTENT);
-            intent.putExtra(ALTITUDE_CORRECTION_VALUE, mAltitudeCorrection);
+            Intent intent = new Intent(ALTITUDE_CORRECTION_INTENT)
+                    .setPackage(mContext.getPackageName())
+                    .putExtra(ALTITUDE_CORRECTION_VALUE, mAltitudeCorrection);
             mContext.sendBroadcast(intent);
         }
     }

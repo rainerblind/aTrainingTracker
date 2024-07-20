@@ -229,16 +229,20 @@ public class PebbleService extends Service {
                     }
                     configurePebbleWatchApp();
                 } else if (buttonPressed == BUTTON_RESTART_SEARCH) {
-                    sendBroadcast(new Intent(TrainingApplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES));
+                    sendBroadcast(new Intent(TrainingApplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES)
+                            .setPackage(getPackageName()));
                 } else if (buttonPressed == BUTTON_LAP) {
                     if (DEBUG) Log.d(TAG, "got info from pebble: new lap");
-                    sendBroadcast(new Intent(TrainingApplication.REQUEST_NEW_LAP));  // tell the banalservice that there is a new lap,  The banalservice will broadcast an intent with the lap summary
+                    sendBroadcast(new Intent(TrainingApplication.REQUEST_NEW_LAP)
+                            .setPackage(getPackageName()));  // tell the banalservice that there is a new lap,  The banalservice will broadcast an intent with the lap summary
                 } else if (buttonPressed == BUTTON_TOGGLE_PAUSE) {
                     if (DEBUG) Log.d(TAG, "got info from pebble: toggle pause");
                     if (TrainingApplication.isPaused()) {
-                        sendBroadcast(new Intent(TrainingApplication.REQUEST_RESUME_FROM_PAUSED));
+                        sendBroadcast(new Intent(TrainingApplication.REQUEST_RESUME_FROM_PAUSED)
+                                .setPackage(getPackageName()));
                     } else {
-                        sendBroadcast(new Intent(TrainingApplication.REQUEST_PAUSE_TRACKING));
+                        sendBroadcast(new Intent(TrainingApplication.REQUEST_PAUSE_TRACKING)
+                                .setPackage(getPackageName()));
                     }
                 } else {
                     if (DEBUG) Log.d(TAG, "WTF: something unknown happened!");

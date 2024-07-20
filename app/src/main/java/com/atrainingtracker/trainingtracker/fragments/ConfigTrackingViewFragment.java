@@ -343,7 +343,8 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
         super.onPause();
         if (DEBUG) Log.i(TAG, "onPause()");
 
-        getActivity().sendBroadcast(new Intent(TRACKING_VIEW_CHANGED_INTENT));
+        getActivity().sendBroadcast(new Intent(TRACKING_VIEW_CHANGED_INTENT)
+                .setPackage(getActivity().getPackageName()));
 
         getContext().unregisterReceiver(mFilterChangedReceiver);
     }

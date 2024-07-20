@@ -109,7 +109,8 @@ public class StravaEquipmentSynchronizeTask extends AsyncTask<String, String, St
 
         TrainingApplication.setLastUpdateTimeOfStravaEquipment(result);// DateFormat.getDateTimeInstance().format(new Date()));
 
-        mContext.sendBroadcast(new Intent(SYNCHRONIZE_EQUIPMENT_STRAVA_FINISHED));
+        mContext.sendBroadcast(new Intent(SYNCHRONIZE_EQUIPMENT_STRAVA_FINISHED)
+                .setPackage(mContext.getPackageName()));
     }
 
 

@@ -127,7 +127,8 @@ public class CalcExtremaValuesTask extends AsyncTask<Long, String, Boolean> {
     protected void onPostExecute(final Boolean success) {
         if (DEBUG) Log.d(TAG, "onPostExecute");
 
-        mContext.sendBroadcast(new Intent(FINISHED_CALCULATING_EXTREMA_VALUES));
+        mContext.sendBroadcast(new Intent(FINISHED_CALCULATING_EXTREMA_VALUES)
+                .setPackage(mContext.getPackageName()));
     }
 
     @Override
@@ -231,8 +232,9 @@ public class CalcExtremaValuesTask extends AsyncTask<Long, String, Boolean> {
         String fancyName = WorkoutSummariesDatabaseManager.getFancyName(sportTypeId, startLocation, maxLineLocation, endLocation);
 
         if (fancyName != null) {
-            Intent intent = new Intent(FINISHED_CALCULATING_FANCY_NAME);
-            intent.putExtra(FANCY_NAME, fancyName);
+            Intent intent = new Intent(FINISHED_CALCULATING_FANCY_NAME)
+                    .putExtra(FANCY_NAME, fancyName)
+                    .setPackage(mContext.getPackageName());
             mContext.sendBroadcast(intent);
 
             ContentValues contentValues = new ContentValues();
@@ -294,7 +296,8 @@ public class CalcExtremaValuesTask extends AsyncTask<Long, String, Boolean> {
             WorkoutSummariesDatabaseManager.getInstance().closeDatabase(); // db.close();
         }
 
-        mContext.sendBroadcast(new Intent(FINISHED_GUESSING_COMMUTE_AND_TRAINER));
+        mContext.sendBroadcast(new Intent(FINISHED_GUESSING_COMMUTE_AND_TRAINER)
+                .setPackage(mContext.getPackageName()));
     }
 
     protected void calcAndSaveExtremaValues(long workoutId, String baseFileName, Iterable<SensorType> sensorTypeList, Iterable<ExtremaType> extremaTypeList) {
@@ -343,8 +346,9 @@ public class CalcExtremaValuesTask extends AsyncTask<Long, String, Boolean> {
                 }
             }
 
-            Intent intent = new Intent(FINISHED_CALCULATING_EXTREMA_VALUE);
-            intent.putExtra(SENSOR_TYPE, sensorType.name());
+            Intent intent = new Intent(FINISHED_CALCULATING_EXTREMA_VALUE)
+                    .putExtra(SENSOR_TYPE, sensorType.name())
+                    .setPackage(mContext.getPackageName());
             mContext.sendBroadcast(intent);
         }
 

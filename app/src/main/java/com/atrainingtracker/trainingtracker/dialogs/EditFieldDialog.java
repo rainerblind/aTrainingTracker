@@ -229,7 +229,8 @@ public class EditFieldDialog extends DialogFragment {
                 TrackingViewsDatabaseManager.updateTextSizeOfRow(mRowId, mTextSize);
                 TrackingViewsDatabaseManager.updateSensorTypeOfRow(mRowId, mSensorType);
                 TrackingViewsDatabaseManager.updateSourceDeviceIdOfRow(mRowId, mDeviceId);
-                getActivity().sendBroadcast(new Intent(TRACKING_VIEW_CHANGED_INTENT));
+                getActivity().sendBroadcast(new Intent(TRACKING_VIEW_CHANGED_INTENT)
+                        .setPackage(getActivity().getPackageName()));
             }
         });
         builder.setNegativeButton(R.string.Cancel, null);

@@ -225,7 +225,8 @@ public class EditFancyWorkoutNameDialog extends DialogFragment {
                                     WorkoutSummaries.C_ID + "=?", new String[]{Long.toString(mFancyNameId)});
                         }
 
-                        getContext().sendBroadcast(new Intent(FANCY_WORKOUT_NAME_CHANGED_INTENT));
+                        getContext().sendBroadcast(new Intent(FANCY_WORKOUT_NAME_CHANGED_INTENT)
+                                .setPackage(getContext().getPackageName()));
 
                         WorkoutSummariesDatabaseManager.getInstance().closeDatabase();
 
