@@ -180,7 +180,8 @@ public class ClockDevice extends MyDevice {
 
             // send broadcast
             if (DEBUG) Log.d(TAG, "sending new time event broadcast");
-            mContext.sendBroadcast(new Intent(BANALService.NEW_TIME_EVENT_INTENT));
+            mContext.sendBroadcast(new Intent(BANALService.NEW_TIME_EVENT_INTENT)
+                    .setPackage(mContext.getPackageName()));
         }
     }
 
@@ -207,7 +208,7 @@ public class ClockDevice extends MyDevice {
 //            
 //            // send broadcast
 //            if (DEBUG) Log.d(TAG,  "sending new time event broadcast");
-//            mContext.sendBroadcast(new Intent(BANALService.NEW_TIME_EVENT_INTENT));
+//            mContext.sendBroadcast(new Intent(BANALService.NEW_TIME_EVENT_INTENT).setPackage(getPackageName()));
 //        }
 //    };
 

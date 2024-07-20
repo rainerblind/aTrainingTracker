@@ -345,9 +345,10 @@ public abstract class RemoteDevicesFragment extends Fragment {
     private void sendPairingChangedIntent(long deviceId, boolean paired) {
         if (DEBUG) Log.i(TAG, "sendPairingChangedIntent");
 
-        Intent intent = new Intent(BANALService.PAIRING_CHANGED);
-        intent.putExtra(BANALService.PAIRED, paired);
-        intent.putExtra(BANALService.DEVICE_ID, deviceId);
+        Intent intent = new Intent(BANALService.PAIRING_CHANGED)
+                .putExtra(BANALService.PAIRED, paired)
+                .putExtra(BANALService.DEVICE_ID, deviceId)
+                .setPackage(getActivity().getPackageName());
         getActivity().sendBroadcast(intent);
     }
 

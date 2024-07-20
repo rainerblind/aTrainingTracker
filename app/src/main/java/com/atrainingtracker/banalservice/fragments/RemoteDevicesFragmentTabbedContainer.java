@@ -253,9 +253,10 @@ public class RemoteDevicesFragmentTabbedContainer extends Fragment {
         //        getString(UIHelper.getNameId(mProtocol)),
         //        getString(UIHelper.getNameId(mDeviceType))));
 
-        Intent intent = new Intent(BANALService.START_SEARCHING_FOR_NEW_DEVICES_INTENT);
-        intent.putExtra(BANALService.PROTOCOL, mProtocol.name());
-        intent.putExtra(BANALService.DEVICE_TYPE, mDeviceType.name());
+        Intent intent = new Intent(BANALService.START_SEARCHING_FOR_NEW_DEVICES_INTENT)
+                .putExtra(BANALService.PROTOCOL, mProtocol.name())
+                .putExtra(BANALService.DEVICE_TYPE, mDeviceType.name())
+                .setPackage(getActivity().getPackageName());
         getActivity().sendBroadcast(intent);
 
         mSearching = true;
@@ -269,7 +270,8 @@ public class RemoteDevicesFragmentTabbedContainer extends Fragment {
 
         // mtvSearchingForRemoteDevice.setVisibility(View.GONE);
 
-        getActivity().sendBroadcast(new Intent(BANALService.STOP_SEARCHING_FOR_NEW_DEVICES_INTENT));
+        getActivity().sendBroadcast(new Intent(BANALService.STOP_SEARCHING_FOR_NEW_DEVICES_INTENT)
+                .setPackage(getActivity().getPackageName()));
         mSearching = false;
 
         // anything else?

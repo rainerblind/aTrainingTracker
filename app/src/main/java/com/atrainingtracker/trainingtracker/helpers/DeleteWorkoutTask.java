@@ -70,7 +70,8 @@ public class DeleteWorkoutTask extends AsyncTask<Long, String, Boolean> {
         } else {
             if (DEBUG) Log.d(TAG, "dialog no longer showing, so do nothing?");
         }
-        context.sendBroadcast(new Intent(FINISHED_DELETING));
+        context.sendBroadcast(new Intent(FINISHED_DELETING)
+                .setPackage(context.getPackageName()));
     }
 
     @Override

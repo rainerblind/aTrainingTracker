@@ -192,7 +192,8 @@ public class TrackerService extends Service {
                 recreateValuesWhenResuming();
                 mResumeTrackingWhenConnectedToBanalService = false;
                 // mBanalService.resumeTracking();
-                sendBroadcast(new Intent(BANALService.RESET_ACCUMULATORS_INTENT));
+                sendBroadcast(new Intent(BANALService.RESET_ACCUMULATORS_INTENT)
+                        .setPackage(getPackageName()));
             }
         }
 
@@ -276,8 +277,9 @@ public class TrackerService extends Service {
                 TimeUnit.SECONDS);
 
         // notify others
-        Intent trackingStartedIntent = new Intent(TRACKING_STARTED_INTENT);
-        trackingStartedIntent.putExtra(WorkoutSummaries.WORKOUT_ID, mWorkoutID);
+        Intent trackingStartedIntent = new Intent(TRACKING_STARTED_INTENT)
+                .putExtra(WorkoutSummaries.WORKOUT_ID, mWorkoutID)
+                .setPackage(this.getPackageName());
         this.sendBroadcast(trackingStartedIntent);
 
         this.startForeground(TrainingApplication.TRACKING_NOTIFICATION_ID, mTrainingApplication.getSearchingAndTrackingNotification());
@@ -537,7 +539,8 @@ public class TrackerService extends Service {
         exportManager.workoutFinished(mBaseFileName);
         exportManager.onFinished(TAG);
 
-        sendBroadcast(new Intent(TRACKING_FINISHED_INTENT));
+        sendBroadcast(new Intent(TRACKING_FINISHED_INTENT)
+                .setPackage(getPackageName()));
     }
 
     private void sampleAndWriteToDb() {

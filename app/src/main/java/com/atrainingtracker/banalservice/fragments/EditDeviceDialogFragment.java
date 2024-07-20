@@ -327,7 +327,8 @@ public class EditDeviceDialogFragment
 //                // inform everybody that pairing has changed
 //                Intent intent = new Intent(BANALService.PAIRING_CHANGED);
 //                intent.putExtra(BANALService.DEVICE_ID, mDeviceID);
-//                intent.putExtra(BANALService.PAIRED, cbPaired.isChecked());
+//                intent.putExtra(BANALService.PAIRED, cbPaired.isChecked())
+//                intent.setPackage(getActivity().getPackageName())
 //                getActivity().sendBroadcast(intent);
 //            }
 //        });
@@ -447,15 +448,17 @@ public class EditDeviceDialogFragment
 
         // TODO: store original value and do this only when necessary???
         // inform everybody that pairing has changed
-        Intent intent = new Intent(BANALService.PAIRING_CHANGED);
-        intent.putExtra(BANALService.DEVICE_ID, mDeviceID);
-        intent.putExtra(BANALService.PAIRED, cbPaired.isChecked());
+        Intent intent = new Intent(BANALService.PAIRING_CHANGED)
+                .putExtra(BANALService.DEVICE_ID, mDeviceID)
+                .putExtra(BANALService.PAIRED, cbPaired.isChecked())
+                .setPackage(getActivity().getPackageName());
         getActivity().sendBroadcast(intent);
 
         if (mCalibrationFactorChanged) {
-            intent = new Intent(BANALService.CALIBRATION_FACTOR_CHANGED);
-            intent.putExtra(BANALService.DEVICE_ID, mDeviceID);
-            intent.putExtra(BANALService.CALIBRATION_FACTOR, newCalibrationFactor);
+            intent = new Intent(BANALService.CALIBRATION_FACTOR_CHANGED)
+                    .putExtra(BANALService.DEVICE_ID, mDeviceID)
+                    .putExtra(BANALService.CALIBRATION_FACTOR, newCalibrationFactor)
+                    .setPackage(getActivity().getPackageName());
             getActivity().sendBroadcast(intent);
         }
 

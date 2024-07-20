@@ -227,7 +227,8 @@ public class ConfigPebbleViewFragment extends ConfigViewFragment {
         super.onPause();
         if (DEBUG) Log.i(TAG, "onPause()");
 
-        getActivity().sendBroadcast(new Intent(PEBBLE_VIEW_CHANGED_INTENT));
+        getActivity().sendBroadcast(new Intent(PEBBLE_VIEW_CHANGED_INTENT)
+                .setPackage(getActivity().getPackageName()));
     }
 
 }

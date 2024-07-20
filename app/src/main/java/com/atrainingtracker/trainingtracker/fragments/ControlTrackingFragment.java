@@ -188,7 +188,8 @@ public class ControlTrackingFragment extends BaseTrackingFragment {
         mResearchButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                getContext().sendBroadcast(new Intent(TrainingApplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES));
+                getContext().sendBroadcast(new Intent(TrainingApplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES)
+                        .setPackage(getContext().getPackageName()));
             }
         });
 
@@ -197,7 +198,8 @@ public class ControlTrackingFragment extends BaseTrackingFragment {
             public void onClick(View v) {
                 if (DEBUG) Log.i(TAG, "start button clicked");
                 // mControlTrackingListener.startTracking();
-                getContext().sendBroadcast(new Intent(TrainingApplication.REQUEST_START_TRACKING));
+                getContext().sendBroadcast(new Intent(TrainingApplication.REQUEST_START_TRACKING)
+                        .setPackage(getContext().getPackageName()));
             }
         });
 
@@ -206,7 +208,8 @@ public class ControlTrackingFragment extends BaseTrackingFragment {
             public void onClick(View v) {
                 if (DEBUG) Log.i(TAG, "start button clicked");
                 // mControlTrackingListener.pauseTracking();
-                getContext().sendBroadcast(new Intent(TrainingApplication.REQUEST_PAUSE_TRACKING));
+                getContext().sendBroadcast(new Intent(TrainingApplication.REQUEST_PAUSE_TRACKING)
+                        .setPackage(getContext().getPackageName()));
             }
         });
 
@@ -215,7 +218,8 @@ public class ControlTrackingFragment extends BaseTrackingFragment {
             public void onClick(View v) {
                 if (DEBUG) Log.i(TAG, "resume button clicked");
                 // mControlTrackingListener.resumeTracking();
-                getContext().sendBroadcast(new Intent(TrainingApplication.REQUEST_RESUME_FROM_PAUSED));
+                getContext().sendBroadcast(new Intent(TrainingApplication.REQUEST_RESUME_FROM_PAUSED)
+                        .setPackage(getContext().getPackageName()));
             }
         });
 
@@ -225,7 +229,8 @@ public class ControlTrackingFragment extends BaseTrackingFragment {
             public void onClick(View v) {
                 if (DEBUG) Log.i(TAG, "stop button clicked");
                 // mControlTrackingListener.stopTracking();
-                getContext().sendBroadcast(new Intent(TrainingApplication.REQUEST_STOP_TRACKING));
+                getContext().sendBroadcast(new Intent(TrainingApplication.REQUEST_STOP_TRACKING)
+                        .setPackage(getContext().getPackageName()));
 
             }
         });

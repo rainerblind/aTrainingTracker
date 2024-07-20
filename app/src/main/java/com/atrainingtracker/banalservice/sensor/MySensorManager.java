@@ -308,7 +308,7 @@ public class MySensorManager extends MyDevice {
         // Intent intent =  new Intent(BANALService.NEW_SENSOR_INTENT);
         // intent.putExtra(BANALService.SENSOR_TYPE_NAME, mySensor.getSensorType().name());
         // intent.putExtra(BANALService.SENSOR_UNIT, mContext.getString(mySensor.getSensorType().getUnitId()));
-        // mContext.sendBroadcast(intent);
+        // mContext.sendBroadcast(intent.setPackage(getActivity().getPackageName()));
     }
 
 
@@ -322,7 +322,7 @@ public class MySensorManager extends MyDevice {
 
         // Intent intent = new Intent(BANALService.SENSOR_REMOVED_INTENT);
         // intent.putExtra(BANALService.SENSOR_TYPE_NAME, mySensor.getSensorType().name());
-        // mContext.sendBroadcast(intent);
+        // mContext.sendBroadcast(intent.setPackage(getActivity().getPackageName()));
     }
 
     private void updateGCData() {

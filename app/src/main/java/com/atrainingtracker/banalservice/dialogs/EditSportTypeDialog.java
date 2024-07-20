@@ -244,7 +244,8 @@ public class EditSportTypeDialog extends DialogFragment {
 
         SportTypeDatabaseManager.getInstance().closeDatabase();
 
-        getContext().sendBroadcast(new Intent(SPORT_TYPE_CHANGED_INTENT));
+        getContext().sendBroadcast(new Intent(SPORT_TYPE_CHANGED_INTENT)
+                .setPackage(getContext().getPackageName()));
     }
 
 }

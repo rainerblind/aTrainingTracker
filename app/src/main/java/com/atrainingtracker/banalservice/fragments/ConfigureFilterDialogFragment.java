@@ -158,7 +158,8 @@ public class ConfigureFilterDialogFragment
         builder.setPositiveButton(getString(R.string.OK), new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int id) {
-                getActivity().sendBroadcast(new Intent(FILTERS_CHANGED_INTENT));
+                getActivity().sendBroadcast(new Intent(FILTERS_CHANGED_INTENT)
+                        .setPackage(getActivity().getPackageName()));
                 saveEverything();
             }
         });

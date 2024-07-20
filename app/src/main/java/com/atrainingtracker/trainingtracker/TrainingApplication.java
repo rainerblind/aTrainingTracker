@@ -919,19 +919,31 @@ public class TrainingApplication extends Application {
         }
 
         if (!BANALService.isSearching()) {
-            mTrackingAndSearchingNotificationBuilder.addAction((new NotificationCompat.Action.Builder(R.drawable.research_icon, getString(R.string.research),
-                    PendingIntent.getBroadcast(this, 0, new Intent(REQUEST_START_SEARCH_FOR_PAIRED_DEVICES), 0))).build());
+            mTrackingAndSearchingNotificationBuilder.addAction(
+                    (new NotificationCompat.Action.Builder(R.drawable.research_icon, getString(R.string.research),
+                        PendingIntent.getBroadcast(this, 0,
+                                new Intent(REQUEST_START_SEARCH_FOR_PAIRED_DEVICES).setPackage(getPackageName()), 0)))
+                    .build());
         }
 
         if (isPaused()) {
-            mTrackingAndSearchingNotificationBuilder.addAction((new NotificationCompat.Action.Builder(R.drawable.control_start, getString(R.string.Resume),
-                    PendingIntent.getBroadcast(this, 0, new Intent(REQUEST_RESUME_FROM_PAUSED), 0))).build());
+            mTrackingAndSearchingNotificationBuilder.addAction(
+                    (new NotificationCompat.Action.Builder(R.drawable.control_start, getString(R.string.Resume),
+                        PendingIntent.getBroadcast(this, 0,
+                                new Intent(REQUEST_RESUME_FROM_PAUSED).setPackage(getPackageName()), 0)))
+                    .build());
 
-            mTrackingAndSearchingNotificationBuilder.addAction((new NotificationCompat.Action.Builder(R.drawable.control_stop, getString(R.string.Stop),
-                    PendingIntent.getBroadcast(this, 0, new Intent(REQUEST_STOP_TRACKING), 0))).build());
+            mTrackingAndSearchingNotificationBuilder.addAction(
+                    (new NotificationCompat.Action.Builder(R.drawable.control_stop, getString(R.string.Stop),
+                        PendingIntent.getBroadcast(this, 0,
+                                new Intent(REQUEST_STOP_TRACKING).setPackage(getPackageName()), 0)))
+                    .build());
         } else {
-            mTrackingAndSearchingNotificationBuilder.addAction((new NotificationCompat.Action.Builder(R.drawable.control_pause, getString(R.string.Pause),
-                    PendingIntent.getBroadcast(this, 0, new Intent(REQUEST_PAUSE_TRACKING), 0))).build());
+            mTrackingAndSearchingNotificationBuilder.addAction(
+                    (new NotificationCompat.Action.Builder(R.drawable.control_pause, getString(R.string.Pause),
+                        PendingIntent.getBroadcast(this, 0,
+                                new Intent(REQUEST_PAUSE_TRACKING).setPackage(getPackageName()), 0)))
+                    .build());
         }
     }
 
@@ -1096,11 +1108,13 @@ public class TrainingApplication extends Application {
     /*  Broadcast Receivers for handling the tracking state                                        */
     protected void startTracking() {
         if (!cResumeFromCrash) {
-            sendBroadcast(new Intent(BANALService.RESET_ACCUMULATORS_INTENT));
+            sendBroadcast(new Intent(BANALService.RESET_ACCUMULATORS_INTENT)
+                    .setPackage(getPackageName()));
         }
 
         if (startSearchWhenTrackingStarts()) {
-            sendBroadcast(new Intent(REQUEST_START_SEARCH_FOR_PAIRED_DEVICES));
+            sendBroadcast(new Intent(REQUEST_START_SEARCH_FOR_PAIRED_DEVICES)
+                    .setPackage(getPackageName()));
         }
 
         Intent intent = new Intent(this, TrackerService.class);
@@ -1120,7 +1134,8 @@ public class TrainingApplication extends Application {
     protected void pauseTracking() {
         if (DEBUG) Log.d(TAG, "pause tracking");
 
-        sendBroadcast(new Intent(REQUEST_NEW_LAP));
+        sendBroadcast(new Intent(REQUEST_NEW_LAP)
+                .setPackage(getPackageName()));
 
         cTrackingMode = TrackingMode.PAUSED;
         notifyTrackingStateChanged();
@@ -1130,10 +1145,12 @@ public class TrainingApplication extends Application {
         if (DEBUG) Log.d(TAG, "resume tracking");
 
         if (TrainingApplication.startSearchWhenResumeFromPaused()) {
-            sendBroadcast(new Intent(REQUEST_START_SEARCH_FOR_PAIRED_DEVICES));
+            sendBroadcast(new Intent(REQUEST_START_SEARCH_FOR_PAIRED_DEVICES)
+                    .setPackage(getPackageName()));
         }
 
-        sendBroadcast(new Intent(REQUEST_NEW_LAP));
+        sendBroadcast(new Intent(REQUEST_NEW_LAP)
+                .setPackage(getPackageName()));
 
         cTrackingMode = TrackingMode.TRACKING;
         notifyTrackingStateChanged();
@@ -1149,7 +1166,8 @@ public class TrainingApplication extends Application {
     }
 
     protected void trackingStopped() {
-        sendBroadcast(new Intent(BANALService.RESET_ACCUMULATORS_INTENT));
+        sendBroadcast(new Intent(BANALService.RESET_ACCUMULATORS_INTENT)
+                .setPackage(getPackageName()));
         startWorkoutDetailsActivity(mWorkoutID, WorkoutDetailsActivity.SelectedFragment.EDIT_DETAILS);
         mNotificationManager.cancel(TRACKING_NOTIFICATION_ID);
     }
@@ -1159,7 +1177,8 @@ public class TrainingApplication extends Application {
         addActionsToNotificationBuilder();
         updateNotificationSummary();
 
-        sendBroadcast(new Intent(TRACKING_STATE_CHANGED));
+        sendBroadcast(new Intent(TRACKING_STATE_CHANGED)
+                .setPackage(getPackageName()));
     }
 
 

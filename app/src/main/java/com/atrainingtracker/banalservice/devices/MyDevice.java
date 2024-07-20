@@ -104,7 +104,8 @@ public abstract class MyDevice {
     }
 
     protected void notifySensorsChanged() {
-        mContext.sendBroadcast(new Intent(BANALService.SENSORS_CHANGED));
+        mContext.sendBroadcast(new Intent(BANALService.SENSORS_CHANGED)
+                .setPackage(mContext.getPackageName()));
     }
 
     protected void addAndRegisterSensor(MySensor mySensor) {

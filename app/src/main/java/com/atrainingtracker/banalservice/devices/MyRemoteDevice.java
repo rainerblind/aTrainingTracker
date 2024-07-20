@@ -87,14 +87,17 @@ public abstract class MyRemoteDevice extends MyDevice {
     protected void notifyStartSearching() {
         myLog("notifyStartSearching()");
         mSearching = true;
-        mContext.sendBroadcast(addSearchDetails(new Intent(BANALService.SEARCHING_STARTED_FOR_ONE_INTENT)));
+        mContext.sendBroadcast(addSearchDetails(
+                new Intent(BANALService.SEARCHING_STARTED_FOR_ONE_INTENT)
+                .setPackage(mContext.getPackageName())));
     }
 
     protected void notifyStopSearching(boolean success) {
         myLog("notifyStopSearching(" + success + ")");
         mSearching = false;
         mContext.sendBroadcast(addSearchDetails(new Intent(BANALService.SEARCHING_STOPPED_FOR_ONE_INTENT))
-                .putExtra(BANALService.SEARCHING_FINISHED_SUCCESS, success));
+                .putExtra(BANALService.SEARCHING_FINISHED_SUCCESS, success)
+                .setPackage(mContext.getPackageName()));
         // .putExtra(BANALService.DEVICE_ID, getDeviceId()));
     }
 

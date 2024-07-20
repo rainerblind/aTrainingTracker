@@ -199,7 +199,8 @@ public class TrackingFragment extends BaseTrackingFragment {
 
             mButtonLap.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
-                    getActivity().sendBroadcast(new Intent(TrainingApplication.REQUEST_NEW_LAP));
+                    getActivity().sendBroadcast(new Intent(TrainingApplication.REQUEST_NEW_LAP)
+                            .setPackage(getActivity().getPackageName()));
                 }
             });
         } else {
