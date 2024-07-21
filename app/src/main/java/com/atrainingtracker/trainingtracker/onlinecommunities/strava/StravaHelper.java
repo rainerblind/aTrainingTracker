@@ -152,6 +152,9 @@ public class StravaHelper {
     /* returns the athleteId stored in the shared preferences.  If this is not available (== 0), get the id from strava in the background and also get the segments
      * But this method still returns 0. */
     public int getAthleteId(Context context) {
+        // Disable Strava segments
+        return 0;
+        /*
         int athleteId = TrainingApplication.getStravaAthleteId();
 
         if (athleteId == 0) {
@@ -159,6 +162,7 @@ public class StravaHelper {
         }
 
         return athleteId;
+        */
     }
 
     class GetAthleteIdFromStravaAsyncTask extends AsyncTask<Void, Void, Void> {
