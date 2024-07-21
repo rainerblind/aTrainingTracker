@@ -258,6 +258,11 @@ public class MainActivityWithNavigation
             menuItem.setCheckable(false);
         }
 
+        if (BANALService.isANTProperlyInstalled(this)) {
+            MenuItem menuItem = mNavigationView.getMenu().findItem(R.id.drawer_pairing_ant);
+            menuItem.setVisible(false);
+        }
+
         // getPermissions
         if ((!TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)
                 || !TrainingApplication.havePermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION))

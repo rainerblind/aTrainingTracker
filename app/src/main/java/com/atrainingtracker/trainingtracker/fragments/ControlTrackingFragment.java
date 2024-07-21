@@ -235,11 +235,17 @@ public class ControlTrackingFragment extends BaseTrackingFragment {
 
         mANTPairingButton = view.findViewById(R.id.imageButtonANTPairing);
         if (mANTPairingButton != null) {
-            mANTPairingButton.setOnClickListener(new View.OnClickListener() {
-                public void onClick(View v) {
-                    mRemoteDevicesSettingsInterface.startPairing(Protocol.ANT_PLUS);
-                }
-            });
+            if (BANALService.isANTProperlyInstalled(getContext())) {
+                mANTPairingButton.setVisibility(View.GONE);
+                View text = view.findViewById(R.id.textButtonANTPairing);
+                text.setVisibility(View.GONE);
+            } else {
+                mANTPairingButton.setOnClickListener(new View.OnClickListener() {
+                    public void onClick(View v) {
+                        mRemoteDevicesSettingsInterface.startPairing(Protocol.ANT_PLUS);
+                    }
+                });
+            }
         } else {
             if (DEBUG) Log.d(TAG, "WTF, could not find the ANT+ pairing button");
         }
