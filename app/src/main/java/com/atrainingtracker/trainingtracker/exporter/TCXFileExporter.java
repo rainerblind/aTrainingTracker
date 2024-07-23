@@ -191,7 +191,7 @@ public class TCXFileExporter extends BaseFileExporter {
                         cadence + "</Cadence>\n");
             }
 
-            if ((haveSpeed | havePower | haveRunCadence)
+            if ((haveSpeed || havePower || haveRunCadence)
                     && (dataValid(cursor, SensorType.SPEED_mps.name())
                     || dataValid(cursor, SensorType.POWER.name())
                     || dataValid(cursor, SensorType.CADENCE.name()))) {

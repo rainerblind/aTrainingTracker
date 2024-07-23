@@ -229,7 +229,7 @@ public class DevicesDatabaseManager {
                         case DISTANCE_m:
                         case DISTANCE_m_LAP:
                             if (!(BikePowerSensorsHelper.isWheelDistanceDataSupported(sensorFlags)
-                                    | BikePowerSensorsHelper.isWheelRevolutionDataSupported(sensorFlags))) {
+                                    || BikePowerSensorsHelper.isWheelRevolutionDataSupported(sensorFlags))) {
                                 continue;
                             }
                             break;
@@ -237,7 +237,7 @@ public class DevicesDatabaseManager {
                         case PACE_spm:
                         case SPEED_mps:
                             if (!(BikePowerSensorsHelper.isWheelSpeedDataSupported(sensorFlags)
-                                    | BikePowerSensorsHelper.isWheelRevolutionDataSupported(sensorFlags))) {
+                                    || BikePowerSensorsHelper.isWheelRevolutionDataSupported(sensorFlags))) {
                                 continue;
                             }
                             break;

@@ -80,7 +80,7 @@ public class ANTSearchForNewDevicesEngineMultiDeviceSearch
     protected void myOnDeviceFound(MultiDeviceSearchResult deviceFound) {
         if (DEBUG) Log.i(TAG, "onDeviceFound(): " + deviceFound.getDeviceDisplayName());
 
-        boolean pairingRecommendation = deviceFound.isPreferredDevice() | deviceFound.isAlreadyConnected();
+        boolean pairingRecommendation = deviceFound.isPreferredDevice() || deviceFound.isAlreadyConnected();
 
         DeviceType deviceType = DeviceType.getDeviceType(deviceFound.getAntDeviceType());
 

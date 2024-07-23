@@ -473,7 +473,7 @@ public class ControlTrackingFragment extends BaseTrackingFragment {
 
 
     protected void updatePairing() {
-        if (mGetBanalServiceIf == null | mGetBanalServiceIf.getBanalServiceComm() == null) {
+        if (mGetBanalServiceIf == null || mGetBanalServiceIf.getBanalServiceComm() == null) {
             disablePairing();
         } else {
             enablePairing();

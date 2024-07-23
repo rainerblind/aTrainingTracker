@@ -558,7 +558,7 @@ public class EditWorkoutFragment extends Fragment {
         ((TextView) getActivity().findViewById(R.id.tvTotalTime)).setText((new TimeFormatter()).format(totalTime));
         // do not show the delete button on "long" workouts or when tracking
         if (totalTime > MAX_WORKOUT_TIME_TO_SHOW_DELETE_BUTTON
-                | TrainingApplication.isTracking()) {
+                || TrainingApplication.isTracking()) {
             buttonDeleteWorkout.setVisibility(View.GONE);
         }
         int activeTime = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_ACTIVE_s));
@@ -688,8 +688,8 @@ public class EditWorkoutFragment extends Fragment {
 
         // if one of the extrema values contains valid data (not 0), we want to show the complete row
         boolean dataAvailable = fillTvExtrema(db, sensorType, ExtremaType.AVG, tvMeanId)
-                | fillTvExtrema(db, sensorType, ExtremaType.MAX, tvMaxId)
-                | fillTvExtrema(db, sensorType, ExtremaType.MIN, tvMinId);
+                || fillTvExtrema(db, sensorType, ExtremaType.MAX, tvMaxId)
+                || fillTvExtrema(db, sensorType, ExtremaType.MIN, tvMinId);
 
         if (dataAvailable) {  // there seems to be valid data, show it
             getActivity().findViewById(trId).setVisibility(View.VISIBLE);
@@ -952,7 +952,7 @@ public class EditWorkoutFragment extends Fragment {
             mSportTypeUiNameList = SportTypeDatabaseManager.getSportTypesUiNameList(mBSportType, mAverageSpeed);
             mSportTypeIdList = SportTypeDatabaseManager.getSportTypesIdList(mBSportType, mAverageSpeed);
             if (mSportTypeUiNameList.size() <= 1
-                    | !mSportTypeIdList.contains(mSportTypeId)) {
+                    || !mSportTypeIdList.contains(mSportTypeId)) {
                 mShowAllSportTypes = true;
                 setSpinnerSport();
                 return;

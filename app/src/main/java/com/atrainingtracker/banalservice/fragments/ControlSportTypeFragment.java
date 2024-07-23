@@ -183,7 +183,7 @@ public class ControlSportTypeFragment extends Fragment {
     public void updateView() {
         if (DEBUG) Log.d(TAG, "updateView");
 
-        if (!mViewCreated | !isAdded()) {
+        if (!mViewCreated || !isAdded()) {
             return;
         }
 

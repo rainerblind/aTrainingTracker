@@ -137,7 +137,7 @@ public class TrackingModeFragment extends Fragment {
     public void updateView(Context context) {
         if (DEBUG) Log.d(TAG, "updateView");
 
-        if (!mViewCreated | !isAdded()) {
+        if (!mViewCreated || !isAdded()) {
             return;
         }
 

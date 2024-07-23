@@ -87,7 +87,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     protected List<String> getLinkedEquipment(List<Integer> antDeviceIds) {
         if (DEBUG) Log.d(TAG, "getLinkedEquipment with antDeviceList");
 
-        if (antDeviceIds == null | antDeviceIds.size() == 0) {
+        if (antDeviceIds == null || antDeviceIds.size() == 0) {
             return new ArrayList<String>();
         }
 
