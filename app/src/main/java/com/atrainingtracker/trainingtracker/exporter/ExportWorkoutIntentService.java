@@ -71,7 +71,7 @@ public class ExportWorkoutIntentService extends IntentService {
                 if (DEBUG) Log.d(TAG, "ExportType: " + exportInfo.getExportType().toString()
                         + ", FileFormat: " + exportInfo.getFileFormat());
 
-                if ((exportInfo.getExportType() == ExportType.FILE | exportInfo.getExportType() == ExportType.COMMUNITY)
+                if ((exportInfo.getExportType() == ExportType.FILE || exportInfo.getExportType() == ExportType.COMMUNITY)
                         && !TrainingApplication.havePermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
                     continue;
                 }

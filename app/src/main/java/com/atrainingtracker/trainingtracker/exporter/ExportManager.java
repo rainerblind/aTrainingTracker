@@ -412,10 +412,10 @@ public class ExportManager {
 
         // TODO: switch fileFormat?  But this does not allow to do multiple actions, e.g. uploading to Dropbox and Strava!
 
-        if (fileFormat == FileFormat.GC | fileFormat == FileFormat.TCX | fileFormat == FileFormat.GPX | fileFormat == FileFormat.CSV
-            // | fileFormat == FileFormat.STRAVA            // only for debugging
-            // | fileFormat == FileFormat.RUNKEEPER         // only for debugging
-            // | fileFormat == FileFormat.TRAINING_PEAKS    // only for debugging
+        if (fileFormat == FileFormat.GC || fileFormat == FileFormat.TCX || fileFormat == FileFormat.GPX || fileFormat == FileFormat.CSV
+            // || fileFormat == FileFormat.STRAVA            // only for debugging
+            // || fileFormat == FileFormat.RUNKEEPER         // only for debugging
+            // || fileFormat == FileFormat.TRAINING_PEAKS    // only for debugging
         ) {
 
             if (TrainingApplication.uploadToDropbox()) {

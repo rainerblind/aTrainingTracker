@@ -187,8 +187,8 @@ public class BANALService
 
     public static boolean isANTProperlyInstalled(Context context) {
         return (!isANTPluginServiceInstalled(context)
-                | !isANTRadioServiceInstalled()
-                | !hasUsbHostFeature(context) & isANTUSBServiceInstalled());
+                || !isANTRadioServiceInstalled()
+                || !hasUsbHostFeature(context) & isANTUSBServiceInstalled());
     }
 
     public static boolean isProtocolSupported(Context context, Protocol protocol) {

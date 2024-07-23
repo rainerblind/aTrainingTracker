@@ -417,7 +417,7 @@ public class TrackingFragment extends BaseTrackingFragment {
             tv = new TextView(getContext());
             // tv.setBackgroundColor(getResources().getColor(R.color.my_white));
             tv.setTextSize(viewInfo.textSize);
-            // tv.setGravity(Gravity.CENTER_VERTICAL | Gravity.CENTER_HORIZONTAL);
+            // tv.setGravity(Gravity.CENTER_VERTICAL || Gravity.CENTER_HORIZONTAL);
             tv.setGravity(Gravity.CENTER_HORIZONTAL);
             llField.addView(tv);
 
