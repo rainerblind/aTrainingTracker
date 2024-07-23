@@ -133,12 +133,13 @@ public class EditSportTypeDialog extends DialogFragment {
         mEtMinAvgSpeed = view.findViewById(R.id.est_etMinSpeed);
         mEtMaxAvgSpeed = view.findViewById(R.id.est_etMaxSpeed);
         mSpBSportType = view.findViewById(R.id.est_sBSportType);
+        /* Ignore
         mSpStrava = view.findViewById(R.id.est_sStrava);
         mSpRunkeeper = view.findViewById(R.id.est_sRunkeeper);
         mSpTrainingPeaks = view.findViewById(R.id.est_sTrainingPeaks);
         mSpTCX = view.findViewById(R.id.est_sTCX);
         mSpGC = view.findViewById(R.id.est_sGC);
-
+*/
 
         // set the units
         TextView tvSpeedUnit = view.findViewById(R.id.est_tvUnitSpeed);
@@ -182,7 +183,7 @@ public class EditSportTypeDialog extends DialogFragment {
             mSpBSportType.setVisibility(View.GONE);
             view.findViewById(R.id.est_separator1).setVisibility(View.GONE);
             view.findViewById(R.id.est_tvOnlineCommunities).setVisibility(View.GONE);
-            view.findViewById(R.id.est_tvStrava).setVisibility(View.GONE);
+            // view.findViewById(R.id.est_tvStrava).setVisibility(View.GONE);
             mSpStrava.setVisibility(View.GONE);
             view.findViewById(R.id.est_tvRunkeeper).setVisibility(View.GONE);
             mSpRunkeeper.setVisibility(View.GONE);

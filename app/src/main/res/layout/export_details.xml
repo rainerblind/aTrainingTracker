@@ -166,11 +166,11 @@
     </TableRow>
 
     <TableRow>
-
+<!--
         <TextView
             android:layout_weight="1"
             android:text="@string/Strava" />
-
+-->
         <ImageButton
             android:id="@+id/ibStravaFile"
             android:layout_width="10pt"

@@ -765,8 +765,8 @@ public class TrainingApplication extends Application {
                 return exportToTCX();
             case GPX:
                 return exportToGPX();
-            case STRAVA:
-                return uploadToStrava();
+            // ignore Strava case STRAVA:
+            //    return uploadToStrava();
             case RUNKEEPER:
                 return uploadToRunKeeper();
             case TRAINING_PEAKS:
@@ -797,8 +797,8 @@ public class TrainingApplication extends Application {
 
     public static boolean uploadToCommunity(FileFormat fileFormat) {
         switch (fileFormat) {
-            case STRAVA:
-                return uploadToStrava();
+            // ignore Strava case STRAVA:
+            //    return uploadToStrava();
             case RUNKEEPER:
                 return uploadToRunKeeper();
             case TRAINING_PEAKS:

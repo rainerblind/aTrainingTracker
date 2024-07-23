@@ -28,13 +28,13 @@ public enum FileFormat {
     GPX("GPX", ".gpx", R.string.GPX),//                 new GPXFileExporter(),           null),
 
     // not the best solution but should work.
-    STRAVA("Strava", ".tcx", R.string.Strava),//              new TCXFileExporter(),           new StravaUploader()),
+    // ignore Strava STRAVA("Strava", ".tcx", R.string.Strava),//              new TCXFileExporter(),           new StravaUploader()),
     RUNKEEPER("RunKeeper", ".json", R.string.Runkeeper),//           new RunkeeperFileExporter(),     new RunkeeperUploader()),
     TRAINING_PEAKS("TrainingPeaks", ".tcx", R.string.TrainingPeaks);//       new TrainingPeaksFileExporter(), new TrainingPeaksUploader());
     // TRAINING_PEAKS("TrainingPeaks", ".pwx",  "TrainingPeaks");//       new TrainingPeaksFileExporter(), new TrainingPeaksUploader());
 
     public static FileFormat[] STANDARD_FILE_FORMATS = new FileFormat[]{CSV, GC, TCX, GPX};
-    public static FileFormat[] ONLINE_COMMUNITIES = new FileFormat[]{STRAVA, RUNKEEPER, TRAINING_PEAKS};
+    public static FileFormat[] ONLINE_COMMUNITIES = new FileFormat[]{/* ignore STRAVA,*/ RUNKEEPER, TRAINING_PEAKS};
 
     private final String mDirName;
     private final String mFileEnding;

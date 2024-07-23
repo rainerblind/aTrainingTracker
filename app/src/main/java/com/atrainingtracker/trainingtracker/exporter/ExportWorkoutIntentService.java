@@ -114,9 +114,9 @@ public class ExportWorkoutIntentService extends IntentService {
                                             new File(BaseExporter.getDir(this, FileFormat.GPX.getDirName()), exportInfo.getFileBaseName() + FileFormat.GPX.getFileEnding())));
                                 }
                                 break;
-                            case STRAVA:
-                                exporter = new TCXFileExporter(this);
-                                break;
+                            // case STRAVA:
+                            //     exporter = new TCXFileExporter(this);
+                            //     break;
                             case RUNKEEPER:
                                 exporter = new RunkeeperFileExporter(this);
                                 break;
@@ -136,9 +136,9 @@ public class ExportWorkoutIntentService extends IntentService {
                     case COMMUNITY:
                         if (MyHelper.isOnline()) {
                             switch (exportInfo.getFileFormat()) {
-                                case STRAVA:
-                                    exporter = new StravaUploader(this);
-                                    break;
+                                // case STRAVA:
+                                //     exporter = new StravaUploader(this);
+                                //     break;
                                 case RUNKEEPER:
                                     exporter = new RunkeeperUploader(this);
                                     break;
