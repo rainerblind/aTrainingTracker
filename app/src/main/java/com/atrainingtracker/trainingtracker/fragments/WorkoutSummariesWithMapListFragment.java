@@ -350,25 +350,26 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
                         text = context.getString(R.string.uploading_to_community_not_wanted);
                         break;
                 }
-            } else if (exportStatusCounter.get(ExportStatus.FINISHED_FAILED) == 1) {
 
-                ivStatus.setImageResource(R.drawable.export_failed);
-
-                switch (exportType) {
-                    case FILE:
-                        text = context.getString(R.string.exporting_to_file_failed_for_one, wanted);
-                        break;
-                    case DROPBOX:
-                        text = context.getString(R.string.uploading_to_dropbox_failed_for_one, wanted);
-                        break;
-                    case COMMUNITY:
-                        text = context.getString(R.string.uploading_to_community_failed_for_one, wanted);
-                        break; // TODO: which one???
-                }
-            } else if (exportStatusCounter.get(ExportStatus.FINISHED_FAILED) > 1) {
+            } else if (exportStatusCounter.get(ExportStatus.FINISHED_FAILED) > 0) {
 
                 ivStatus.setImageResource(R.drawable.export_failed);
                 int failed = exportStatusCounter.get(ExportStatus.FINISHED_FAILED);
+                switch (exportType) {
+                    case FILE:
+                        text = context.getString(R.string.exporting_to_file_failed_for_several, failed, wanted);
+                        break;
+                    case DROPBOX:
+                        text = context.getString(R.string.uploading_to_dropbox_failed_for_several, failed, wanted);
+                        break;
+                    case COMMUNITY:
+                        text = context.getString(R.string.uploading_to_community_failed_for_several, failed, wanted);
+                        break;
+
+            } else if (exportStatusCounter.get(ExportStatus.FINISHED_RETRY) > 0) {
+
+                ivStatus.setImageResource(R.drawable.export_error);
+                int failed = exportStatusCounter.get(ExportStatus.FINISHED_RETRY);
                 switch (exportType) {
                     case FILE:
                         text = context.getString(R.string.exporting_to_file_failed_for_several, failed, wanted);
