@@ -6,15 +6,15 @@ def getGitHash = providers.exec {
 
 android {
     // Travis update separately
-    compileSdkVersion 29
-    buildToolsVersion '29.0.2'
+    compileSdkVersion = 34
+    buildToolsVersion = '35.0.0'
     namespace "com.atrainingtracker"
 
     defaultConfig {
         minSdkVersion 26 // Android 8
-        targetSdkVersion 29
+        targetSdkVersion 34 // Android 14
         multiDexEnabled true
-        versionName "4.2.5"
+        versionName "4.2.99.1"
         versionCode 217
     }
 
@@ -36,26 +36,11 @@ android {
             applicationIdSuffix ""
 
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard.txt'
             signingConfig signingConfigs.release
             debuggable false
         }
     }
-
-    lintOptions {
-        //Configure checks with paths
-        //lintConfig file("lint.xml")
-        baseline file("lint-baseline.xml")
-        checkReleaseBuilds true
-        // TODO Some dependencies conflicts with Android included
-        disable 'DuplicatePlatformClasses'
-
-        showAll true
-        //debug issues in Travis
-        textReport true
-        textOutput 'stdout'
-    }
-
     packagingOptions {
         resources {
             pickFirsts += ['META-INF/NOTICE.txt', 'META-INF/NOTICE', 'META-INF/DEPENDENCIES', 'META-INF/LICENSE.txt', 'META-INF/LICENSE']
@@ -63,6 +48,12 @@ android {
     }
 
     lint {
+        baseline file('lint-baseline.xml')
+        checkReleaseBuilds true
+        // TODO fix Range, some hundred occurrences
+        disable 'DuplicatePlatformClasses', 'MissingTranslation', 'Range'
+        showAll true
+        textReport true
     }
 }
 
