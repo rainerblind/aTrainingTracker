@@ -66,6 +66,7 @@ import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleServiceBuild
 import com.atrainingtracker.trainingtracker.smartwatch.pebble.Watchapp;
 
 import java.util.HashMap;
+import java.util.Locale;
 
 public class TrainingApplication extends Application {
     public static final boolean DEBUG = false;
@@ -469,19 +470,19 @@ public class TrainingApplication extends Application {
     }
 
     public static double getMinWalkSpeed_UserUnits() {
-        return MyHelper.string2Double(cSharedPreferences.getString(MIN_WALK_SPEED, String.format("%f", MyHelper.mps2userUnit(DEFAULT_MIN_WALK_SPEED_mps))));
+        return MyHelper.string2Double(cSharedPreferences.getString(MIN_WALK_SPEED, String.format(Locale.getDefault(), "%f", MyHelper.mps2userUnit(DEFAULT_MIN_WALK_SPEED_mps))));
     }
 
     public static double getMaxWalkSpeed_UserUnits() {
-        return MyHelper.string2Double(cSharedPreferences.getString(MAX_WALK_SPEED, String.format("%f", MyHelper.mps2userUnit(DEFAULT_MAX_WALK_SPEED_mps))));
+        return MyHelper.string2Double(cSharedPreferences.getString(MAX_WALK_SPEED, String.format(Locale.getDefault(), "%f", MyHelper.mps2userUnit(DEFAULT_MAX_WALK_SPEED_mps))));
     }
 
     public static double getMaxRunSpeed_UserUnits() {
-        return MyHelper.string2Double(cSharedPreferences.getString(MAX_RUN_SPEED, String.format("%f", MyHelper.mps2userUnit(DEFAULT_MAX_RUN_SPEED_mps))));
+        return MyHelper.string2Double(cSharedPreferences.getString(MAX_RUN_SPEED, String.format(Locale.getDefault(), "%f", MyHelper.mps2userUnit(DEFAULT_MAX_RUN_SPEED_mps))));
     }
 
     public static double getMaxMTBSpeed_UserUnits() {
-        return MyHelper.string2Double(cSharedPreferences.getString(MAX_MTB_SPEED, String.format("%f", MyHelper.mps2userUnit(DEFAULT_MAX_MTB_SPEED_mps))));
+        return MyHelper.string2Double(cSharedPreferences.getString(MAX_MTB_SPEED, String.format(Locale.getDefault(), "%f", MyHelper.mps2userUnit(DEFAULT_MAX_MTB_SPEED_mps))));
     }
 
     public static double getMinWalkSpeed_mps() {

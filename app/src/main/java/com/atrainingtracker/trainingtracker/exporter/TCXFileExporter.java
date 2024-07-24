@@ -36,6 +36,7 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Locale;
 
 
 public class TCXFileExporter extends BaseFileExporter {
@@ -43,8 +44,8 @@ public class TCXFileExporter extends BaseFileExporter {
     private static final String TAG = "TCXFileExporter";
     private static final boolean DEBUG = false;
     // DateFormats to convert from Db style dates to XML style dates
-    protected static SimpleDateFormat msdfFromDb = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-    protected static SimpleDateFormat msdfToXML = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+    protected static SimpleDateFormat msdfFromDb = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
+    protected static SimpleDateFormat msdfToXML = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US);
 
     public TCXFileExporter(Context context) {
         super(context);

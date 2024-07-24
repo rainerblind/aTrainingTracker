@@ -22,6 +22,8 @@ package com.atrainingtracker.banalservice.sensor.formater;
 
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 
+import java.util.Locale;
+
 public class SpeedFormatter implements MyFormatter<Number> {
     @Override
     public String format(Number speed_mps) {
@@ -39,7 +41,7 @@ public class SpeedFormatter implements MyFormatter<Number> {
                 foo = speed_mps.doubleValue() * 2.23693629;
                 break;
         }
-        return String.format("%.1f", foo);
+        return String.format(Locale.getDefault(), "%.1f", foo);
         // return NumberFormat.getInstance().format(foo);
     }
 

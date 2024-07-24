@@ -45,6 +45,7 @@ import com.atrainingtracker.trainingtracker.MyHelper;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Created by rainer on 05.01.17.
@@ -147,8 +148,8 @@ public class EditSportTypeDialog extends DialogFragment {
 
         // configure the main view
         mEtName.setText(uiName);
-        mEtMinAvgSpeed.setText(String.format("%.1f", MyHelper.mps2userUnit(minAvgSpeed)));
-        mEtMaxAvgSpeed.setText(String.format("%.1f", MyHelper.mps2userUnit(maxAvgSpeed)));
+        mEtMinAvgSpeed.setText(String.format(Locale.getDefault(), "%.1f", MyHelper.mps2userUnit(minAvgSpeed)));
+        mEtMaxAvgSpeed.setText(String.format(Locale.getDefault(), "%.1f", MyHelper.mps2userUnit(maxAvgSpeed)));
 
         if (SportTypeDatabaseManager.canDelete(mSportTypeId)) {
 
