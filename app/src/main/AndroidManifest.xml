@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="com.atrainingtracker">
 
     <uses-permission android:name="android.permission.INTERNET" />
@@ -33,7 +34,7 @@
 
         <activity
             android:name=".trainingtracker.activities.MainActivityWithNavigation"
-            android:label="@string/app_name"
+            android:exported="true"
             android:launchMode="singleTask"
             android:theme="@style/Theme.aTrainingTracker">
             <intent-filter>
@@ -44,13 +45,11 @@
 
         <activity
             android:name=".trainingtracker.activities.WorkoutDetailsActivity"
-            android:label="@string/app_name"
             android:theme="@style/Theme.aTrainingTracker"
             android:windowSoftInputMode="stateHidden" />
 
         <activity
             android:name=".trainingtracker.activities.SegmentDetailsActivity"
-            android:label="@string/app_name"
             android:launchMode="singleTask"
             android:theme="@style/Theme.aTrainingTracker"
             android:windowSoftInputMode="stateHidden" />
@@ -58,6 +57,7 @@
 
         <activity
             android:name=".trainingtracker.activities.ConfigTrackingViewsActivity"
+            android:exported="true"
             android:label="@string/TrackingFragmentConfigActivityLabel"
             android:launchMode="singleTask"
             android:theme="@style/Theme.aTrainingTracker"
@@ -70,6 +70,7 @@
 
         <activity
             android:name=".trainingtracker.smartwatch.pebble.ConfigPebbleViewsActivity"
+            android:exported="true"
             android:label="@string/PebbleConfigActivityLabel"
             android:launchMode="singleTask"
             android:theme="@style/Theme.aTrainingTracker"
@@ -82,6 +83,7 @@
 
         <activity
             android:name="com.dropbox.core.android.AuthActivity"
+            android:exported="true"
             android:configChanges="orientation|keyboard"
             android:launchMode="singleTask">
             <intent-filter>
@@ -112,7 +114,8 @@
             android:theme="@style/Theme.aTrainingTracker" />
 
         <!-- <uses-library android:name="com.dsi.ant.antradio_library" /> -->
-        <service android:name=".trainingtracker.tracker.TrackerService" />
+        <service android:name=".trainingtracker.tracker.TrackerService"
+            android:foregroundServiceType="location" />
         <service android:name=".trainingtracker.smartwatch.pebble.PebbleService" />
         <service android:name=".trainingtracker.smartwatch.pebble.PebbleServiceBuildIn" />
         <service android:name=".banalservice.BANALService" />
