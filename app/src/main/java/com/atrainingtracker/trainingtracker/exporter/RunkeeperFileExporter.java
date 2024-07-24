@@ -43,7 +43,7 @@ public class RunkeeperFileExporter extends BaseFileExporter {
     private static final String TAG = "RunkeeperFileExporter";
     private static final boolean DEBUG = true;
     // DateFormats to convert from Db style dates to XML style dates
-    protected static SimpleDateFormat msdfFromDb = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    protected static SimpleDateFormat msdfFromDb = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
     protected static SimpleDateFormat msdfToRK = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss", Locale.US);
     // Sat, 1 Jan 2011 00:00:00
 

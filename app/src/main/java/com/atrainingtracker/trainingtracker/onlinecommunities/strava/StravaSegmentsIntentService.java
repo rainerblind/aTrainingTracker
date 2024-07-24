@@ -47,6 +47,7 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Set;
 
 /**
@@ -610,7 +611,7 @@ public class StravaSegmentsIntentService extends IntentService {
 
             // finally, store the date of this update
             contentValues.clear();
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
             contentValues.put(Segments.LAST_UPDATED, sdf.format(new Date()));
             db.update(Segments.TABLE_STARRED_SEGMENTS, contentValues, Segments.SEGMENT_ID + "=?", new String[]{mSegmentId + ""});
 

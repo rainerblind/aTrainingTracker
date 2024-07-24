@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.exporter;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -35,14 +36,15 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Locale;
 
 public class GCFileExporter extends BaseFileExporter {
     protected static final boolean WRITE_ONLY_ON_NEW_GEO_DATA = true;
     private static final String TAG = "GCFileExporter";
     private static final boolean DEBUG = false;
     // DateFormats to convert from Db style dates to Strava style dates
-    protected static SimpleDateFormat msdfFromDb = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-    protected static SimpleDateFormat msdfToGC = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+    protected static SimpleDateFormat msdfFromDb = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
+    protected static SimpleDateFormat msdfToGC = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss", Locale.US);
 
     public GCFileExporter(Context context) {
         super(context);
@@ -136,31 +138,32 @@ public class GCFileExporter extends BaseFileExporter {
                 sample.put(SECS, cursor.getInt(cursor.getColumnIndexOrThrow(SensorType.TIME_TOTAL.name())));
 
                 // TODO: loop over ???
+                // TODO Locale should be US if , is used as separator
                 if (haveDistance && dataValid(cursor, SensorType.DISTANCE_m.name())) {
-                    sample.put(KM, String.format("%.3f", cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.DISTANCE_m.name())) / 1000));
+                    sample.put(KM, String.format(Locale.getDefault(), "%.3f", cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.DISTANCE_m.name())) / 1000));
                 }
 
                 if (haveSpeed && dataValid(cursor, SensorType.SPEED_mps.name())) {
-                    sample.put(KPH, String.format("%.3f", cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.SPEED_mps.name())) * 3.6));
+                    sample.put(KPH, String.format(Locale.getDefault(), "%.3f", cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.SPEED_mps.name())) * 3.6));
                 }
 
                 if (havePower && dataValid(cursor, SensorType.POWER.name())) {
-                    sample.put(WATTS, String.format("%.3f", cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.POWER.name()))));
+                    sample.put(WATTS, String.format(Locale.getDefault(), "%.3f", cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.POWER.name()))));
                 }
                 if (havePower && dataValid(cursor, SensorType.PEDAL_POWER_BALANCE.name())) {
-                    sample.put(LRBALANCE, String.format("%.3f", cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.PEDAL_POWER_BALANCE.name()))));
+                    sample.put(LRBALANCE, String.format(Locale.getDefault(), "%.3f", cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.PEDAL_POWER_BALANCE.name()))));
                 }
                 if (havePower && dataValid(cursor, SensorType.TORQUE_EFFECTIVENESS_L.name())) {
-                    sample.put(LTE, String.format("%.3f", cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.TORQUE_EFFECTIVENESS_L.name()))));
+                    sample.put(LTE, String.format(Locale.getDefault(), "%.3f", cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.TORQUE_EFFECTIVENESS_L.name()))));
                 }
                 if (havePower && dataValid(cursor, SensorType.TORQUE_EFFECTIVENESS_R.name())) {
-                    sample.put(RTE, String.format("%.3f", cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.TORQUE_EFFECTIVENESS_R.name()))));
+                    sample.put(RTE, String.format(Locale.getDefault(), "%.3f", cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.TORQUE_EFFECTIVENESS_R.name()))));
                 }
                 if (havePower && dataValid(cursor, SensorType.PEDAL_SMOOTHNESS_L.name())) {
-                    sample.put(LPS, String.format("%.3f", cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.PEDAL_SMOOTHNESS_L.name()))));
+                    sample.put(LPS, String.format(Locale.getDefault(), "%.3f", cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.PEDAL_SMOOTHNESS_L.name()))));
                 }
                 if (havePower && dataValid(cursor, SensorType.PEDAL_SMOOTHNESS_R.name())) {
-                    sample.put(RPS, String.format("%.3f", cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.PEDAL_SMOOTHNESS_R.name()))));
+                    sample.put(RPS, String.format(Locale.getDefault(), "%.3f", cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.PEDAL_SMOOTHNESS_R.name()))));
                 }
 
                 if (haveHR && dataValid(cursor, SensorType.HR.name())) {
@@ -168,15 +171,15 @@ public class GCFileExporter extends BaseFileExporter {
                 }
 
                 if (haveCadence && dataValid(cursor, SensorType.CADENCE.name())) {
-                    sample.put(CAD, String.format("%.3f", cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.CADENCE.name()))));
+                    sample.put(CAD, String.format(Locale.getDefault(), "%.3f", cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.CADENCE.name()))));
                 }
 
                 if (haveTorque & dataValid(cursor, SensorType.TORQUE.name())) {
-                    sample.put(NM, String.format("%.3f", cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.TORQUE.name()))));
+                    sample.put(NM, String.format(Locale.getDefault(), "%.3f", cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.TORQUE.name()))));
                 }
 
                 if (haveAltitude && dataValid(cursor, SensorType.ALTITUDE.name())) {
-                    sample.put(ALT, String.format("%.3f", cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.ALTITUDE.name()))));
+                    sample.put(ALT, String.format(Locale.getDefault(), "%.3f", cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.ALTITUDE.name()))));
                 }
 
                 // we do not write location data when it was an (indoor) trainer session
