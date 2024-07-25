@@ -48,8 +48,8 @@ import com.atrainingtracker.trainingtracker.dialogs.ReallyDeleteWorkoutDialog;
 import com.atrainingtracker.trainingtracker.fragments.EditWorkoutFragment;
 import com.atrainingtracker.trainingtracker.fragments.ExportStatusDialogFragment;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapAftermathFragment;
-import com.atrainingtracker.trainingtracker.helpers.CalcExtremaValuesTask;
-import com.atrainingtracker.trainingtracker.helpers.DeleteWorkoutTask;
+import com.atrainingtracker.trainingtracker.helpers.CalcExtremaValuesThread;
+import com.atrainingtracker.trainingtracker.helpers.DeleteWorkoutThread;
 import com.atrainingtracker.trainingtracker.interfaces.ReallyDeleteDialogInterface;
 
 
@@ -62,7 +62,7 @@ public class WorkoutDetailsActivity extends AppCompatActivity
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private static final int DEFAULT_SELECTED_FRAGMENT_ID = R.id.drawer_map;
     private static final String CALCULATING_EXTREMA_VALUES = "CALCULATING_EXTREMA_VALUES";
-    private final IntentFilter mFinishedCalculatingExtremaValuesFilter = new IntentFilter(CalcExtremaValuesTask.FINISHED_CALCULATING_EXTREMA_VALUES);
+    private final IntentFilter mFinishedCalculatingExtremaValuesFilter = new IntentFilter(CalcExtremaValuesThread.FINISHED_CALCULATING_EXTREMA_VALUES);
     // remember which fragment should be shown
     protected int mSelectedFragmentId = DEFAULT_SELECTED_FRAGMENT_ID;
     // the views
@@ -138,7 +138,7 @@ public class WorkoutDetailsActivity extends AppCompatActivity
             findViewById(R.id.llProgress).setVisibility(View.VISIBLE);
 
             // now, calc the extrema values in the background
-            (new CalcExtremaValuesTask(this, findViewById(R.id.tvProgressMessage))).execute(mWorkoutID);
+            (new CalcExtremaValuesThread(this, findViewById(R.id.tvProgressMessage), mWorkoutID)).start();
         }
     }
 
@@ -269,7 +269,7 @@ public class WorkoutDetailsActivity extends AppCompatActivity
 
     @Override
     public void reallyDeleteWorkout(long workoutId) {
-        (new DeleteWorkoutTask(this)).execute(workoutId);
+        (new DeleteWorkoutThread(this, new Long[]{workoutId})).start();
 
         finish();
     }

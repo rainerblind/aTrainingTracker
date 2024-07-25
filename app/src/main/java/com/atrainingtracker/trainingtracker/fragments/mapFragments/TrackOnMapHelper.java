@@ -21,8 +21,10 @@ package com.atrainingtracker.trainingtracker.fragments.mapFragments;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Color;
-import android.os.AsyncTask;
 import androidx.annotation.Nullable;
+
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.View;
 
@@ -136,7 +138,7 @@ public class TrackOnMapHelper {
         }
 
         if (calcTrackData) {
-            new FooAsyncTask().execute(new InputArguments(myMapViewHolder, workoutId, roughness, trackType, zoomToMap, animateZoom));
+            new TrackOnMapThread(myMapViewHolder, workoutId, roughness, trackType, zoomToMap, animateZoom).start();
         }
     }
 
@@ -181,7 +183,6 @@ public class TrackOnMapHelper {
         }
 
         myMapViewHolder.map.setMapType(GoogleMap.MAP_TYPE_TERRAIN);
-
     }
 
     @Nullable
@@ -268,8 +269,7 @@ public class TrackOnMapHelper {
             this.latLngBounds = latLngBounds;
         }
     }
-
-    private class InputArguments {
+    private class TrackOnMapThread extends Thread {
         MyMapViewHolder myMapViewHolder;
         long workoutId;
         Roughness roughness;
@@ -277,7 +277,7 @@ public class TrackOnMapHelper {
         boolean zoomToMap;
         boolean animateZoom;
 
-        public InputArguments(MyMapViewHolder myMapViewHolder, long workoutId, Roughness roughness, TrackType trackType, boolean zoomToMap, boolean animateZoom) {
+        public TrackOnMapThread(MyMapViewHolder myMapViewHolder, long workoutId, Roughness roughness, TrackType trackType, boolean zoomToMap, boolean animateZoom) {
             this.myMapViewHolder = myMapViewHolder;
             this.workoutId = workoutId;
             this.roughness = roughness;
@@ -285,32 +285,19 @@ public class TrackOnMapHelper {
             this.zoomToMap = zoomToMap;
             this.animateZoom = animateZoom;
         }
-    }
-
-    private class FooAsyncTask extends AsyncTask<InputArguments, Void, Void> {
-
-        long workoutId;
-        InputArguments inputArguments;
 
         @Override
-        protected Void doInBackground(InputArguments... params) {
-            inputArguments = params[0];
-            workoutId = inputArguments.workoutId;
-            if (DEBUG) Log.i(TAG, "doInBackground for workoutId=" + workoutId);
+        public void run()
+        {
+            if (DEBUG)
+                Log.i(TAG, "doInBackground for workoutId=" + workoutId);
 
-            calcTrackData(workoutId, inputArguments.roughness, inputArguments.trackType);
-
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(Void foo) {
-            if (DEBUG) Log.i(TAG, "onPostExecute workoutId=" + workoutId);
-
-            if (inputArguments.workoutId == workoutId) {  // is the workoutId still valid?
-                plotTrackOnMap(inputArguments.myMapViewHolder, inputArguments.workoutId, inputArguments.roughness, inputArguments.trackType, inputArguments.zoomToMap, inputArguments.animateZoom);
-            }
+            calcTrackData(workoutId, roughness, trackType);
+            new Handler(Looper.getMainLooper()).post(() -> {
+                if (DEBUG)
+                    Log.i(TAG, "onPostExecute workoutId=" + workoutId);
+                plotTrackOnMap(myMapViewHolder, workoutId, roughness, trackType, zoomToMap, animateZoom);
+            });
         }
     }
-
 }

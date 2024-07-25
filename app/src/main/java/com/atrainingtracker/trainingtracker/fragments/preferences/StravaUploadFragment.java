@@ -32,8 +32,8 @@ import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.onlinecommunities.BaseGetAccessTokenActivity;
-import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaDeauthorizationAsyncTask;
-import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSynchronizeTask;
+import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaDeauthorizationThread;
+import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSynchronizeThread;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaGetAccessTokenActivity;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaSegmentsHelper;
 
@@ -70,7 +70,7 @@ public class StravaUploadFragment extends androidx.preference.PreferenceFragment
             @Override
             public boolean onPreferenceClick(Preference preference) {
                 if (DEBUG) Log.d(TAG, "updateStravaEquipment has been clicked");
-                new StravaEquipmentSynchronizeTask(getActivity()).execute("foo");
+                new StravaEquipmentSynchronizeThread(getActivity()).start();
                 return false;
             }
         });
@@ -101,7 +101,7 @@ public class StravaUploadFragment extends androidx.preference.PreferenceFragment
             if (!TrainingApplication.uploadToStrava()) {
                 if (DEBUG) Log.d(TAG, "deleting Strava token");
                 TrainingApplication.deleteStravaToken();
-                new StravaDeauthorizationAsyncTask(getActivity()).execute();
+                new StravaDeauthorizationThread(getActivity()).start();
             } else {
                 startActivityForResult(new Intent(getActivity(), StravaGetAccessTokenActivity.class), GET_STRAVA_ACCESS_TOKEN);
             }
@@ -122,7 +122,7 @@ public class StravaUploadFragment extends androidx.preference.PreferenceFragment
                     TrainingApplication.setStravaAccessToken(accessToken);
 
                     // synchronize equipment
-                    new StravaEquipmentSynchronizeTask(getActivity()).execute("foo");
+                    new StravaEquipmentSynchronizeThread(getActivity()).start();
 
                     // update Segments
                     StravaSegmentsHelper stravaSegmentsHelper = new StravaSegmentsHelper(getContext());

@@ -23,7 +23,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.os.AsyncTask;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.widget.TextView;
 
@@ -45,11 +46,11 @@ import java.util.List;
 import java.util.Set;
 
 
-public class CalcExtremaValuesTask extends AsyncTask<Long, String, Boolean> {
-    public static final String FINISHED_CALCULATING_EXTREMA_VALUES = "com.atrainingtracker.helpers.CalcExtremaValuesTask.FINISHED_CALCULATING_EXTREMA_VALUES";
-    public static final String FINISHED_CALCULATING_EXTREMA_VALUE = "com.atrainingtracker.helpers.CalcExtremaValuesTask.FINISHED_CALCULATING_EXTREMA_VALUE";
-    public static final String FINISHED_GUESSING_COMMUTE_AND_TRAINER = "com.atrainingtracker.helpers.CalcExtremaValuesTask.FINISHED_GUESSING_COMMUTE_AND_TRAINER";
-    public static final String FINISHED_CALCULATING_FANCY_NAME = "com.atrainingtracker.helpers.CalcExtremaValuesTask.FINISHED_CALCULATING_FANCY_NAME";
+public class CalcExtremaValuesThread extends Thread {
+    public static final String FINISHED_CALCULATING_EXTREMA_VALUES = "com.atrainingtracker.helpers.CalcExtremaValuesThread.FINISHED_CALCULATING_EXTREMA_VALUES";
+    public static final String FINISHED_CALCULATING_EXTREMA_VALUE = "com.atrainingtracker.helpers.CalcExtremaValuesThread.FINISHED_CALCULATING_EXTREMA_VALUE";
+    public static final String FINISHED_GUESSING_COMMUTE_AND_TRAINER = "com.atrainingtracker.helpers.CalcExtremaValuesThread.FINISHED_GUESSING_COMMUTE_AND_TRAINER";
+    public static final String FINISHED_CALCULATING_FANCY_NAME = "com.atrainingtracker.helpers.CalcExtremaValuesThread.FINISHED_CALCULATING_FANCY_NAME";
     public static final String SENSOR_TYPE = "SENSOR_TYPE";
     public static final String FANCY_NAME = "FANCY_NAME";
     private static final String TAG = "CalcExtremaValuesTask";
@@ -58,15 +59,17 @@ public class CalcExtremaValuesTask extends AsyncTask<Long, String, Boolean> {
 
     private final Context mContext;
     private final TextView mMessageTextView;
+    final long workoutId;
 
-    public CalcExtremaValuesTask(Context context, TextView messageTextView) {
+    public CalcExtremaValuesThread(Context context, TextView messageTextView, long workoutId) {
         mContext = context;
         mMessageTextView = messageTextView;
+        this.workoutId = workoutId;
 
         if (DEBUG) Log.i(TAG, "CalcExtremaValuesTask()");
     }
 
-    public static void calcAndSaveMaxLineDistancePosition(long workoutId) {
+    public static void calcAndSaveMaxLineDistancePosition(final long workoutId) {
         if (DEBUG) Log.i(TAG, "calcAndSaveMaxLineDistancePosition: workoutId=" + workoutId);
 
         WorkoutSamplesDatabaseManager.LatLngValue latLngValue = WorkoutSamplesDatabaseManager.getExtremaPosition(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX);
@@ -119,26 +122,11 @@ public class CalcExtremaValuesTask extends AsyncTask<Long, String, Boolean> {
         }
     }
 
-    protected void onPreExecute() {
-        mMessageTextView.setText(R.string.initializing);
-    }
-
     @Override
-    protected void onPostExecute(final Boolean success) {
-        if (DEBUG) Log.d(TAG, "onPostExecute");
-
-        mContext.sendBroadcast(new Intent(FINISHED_CALCULATING_EXTREMA_VALUES)
-                .setPackage(mContext.getPackageName()));
-    }
-
-    @Override
-    public void onProgressUpdate(String... args) {
-        mMessageTextView.setText(args[0]);
-    }
-
-    @Override
-    protected Boolean doInBackground(Long... args) {
-        long workoutId = args[0];
+    public void run() {
+        new Handler(Looper.getMainLooper()).post(() -> {
+            mMessageTextView.setText(R.string.initializing);
+        });
 
         if (DEBUG) Log.d(TAG, "calculating extrema values for workout " + workoutId);
 
@@ -198,13 +186,21 @@ public class CalcExtremaValuesTask extends AsyncTask<Long, String, Boolean> {
                 new String[]{Long.toString(workoutId)});
         WorkoutSummariesDatabaseManager.getInstance().closeDatabase(); // db.close();
 
-        return true;
+        new Handler(Looper.getMainLooper()).post(() -> {
+            if (DEBUG) Log.d(TAG, "onPostExecute");
+
+            mContext.sendBroadcast(new Intent(FINISHED_CALCULATING_EXTREMA_VALUES)
+                    .setPackage(mContext.getPackageName()));
+        });
+    }
+
+    public void publishProgress(String text) {
+        new Handler(Looper.getMainLooper()).post(() -> mMessageTextView.setText(text));
     }
 
     protected void calcFancyName(long workoutId) {
         if (DEBUG) Log.i(TAG, "calcFancyName");
         publishProgress(mContext.getString(R.string.calc_workout_name));
-
 
         MyLocation startLocation = null;
         Double startLat = WorkoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.LATITUDE, ExtremaType.START);

@@ -71,7 +71,7 @@ import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
 import com.atrainingtracker.trainingtracker.dialogs.EditFancyWorkoutNameDialog;
-import com.atrainingtracker.trainingtracker.helpers.CalcExtremaValuesTask;
+import com.atrainingtracker.trainingtracker.helpers.CalcExtremaValuesThread;
 import com.atrainingtracker.trainingtracker.interfaces.ReallyDeleteDialogInterface;
 
 import java.util.ArrayList;
@@ -141,9 +141,9 @@ public class EditWorkoutFragment extends Fragment {
     private static final String SHOW_DELETE_BUTTON = "SHOW_DELETE_BUTTON";
     private static final List<Integer> TR_IDS_EXTREMA_VALUES = Arrays.asList(R.id.trAltitude, R.id.trCadence, R.id.trHR, R.id.trPace, R.id.trPedalPowerBalance,
             R.id.trPedalSmoothnessLeft, R.id.trPedalSmoothnessRight, R.id.trPower, R.id.trSpeed, R.id.trTemperature, R.id.trTorque);
-    private final IntentFilter mFinishedCalculatingExtremaValueFilter = new IntentFilter(CalcExtremaValuesTask.FINISHED_CALCULATING_EXTREMA_VALUE);
-    private final IntentFilter mFinishedGuessingCommuteAndTrainerFilter = new IntentFilter(CalcExtremaValuesTask.FINISHED_GUESSING_COMMUTE_AND_TRAINER);
-    private final IntentFilter mFinishedCalculatingFancyNameFilter = new IntentFilter(CalcExtremaValuesTask.FINISHED_CALCULATING_FANCY_NAME);
+    private final IntentFilter mFinishedCalculatingExtremaValueFilter = new IntentFilter(CalcExtremaValuesThread.FINISHED_CALCULATING_EXTREMA_VALUE);
+    private final IntentFilter mFinishedGuessingCommuteAndTrainerFilter = new IntentFilter(CalcExtremaValuesThread.FINISHED_GUESSING_COMMUTE_AND_TRAINER);
+    private final IntentFilter mFinishedCalculatingFancyNameFilter = new IntentFilter(CalcExtremaValuesThread.FINISHED_CALCULATING_FANCY_NAME);
     protected String mBaseFileName;
     // protected TTSportType mTTSportType;  // we want the sport type easily available since the equipment also depends on the sport type
     protected long mSportTypeId = SportTypeDatabaseManager.getDefaultSportTypeId();
@@ -174,7 +174,7 @@ public class EditWorkoutFragment extends Fragment {
     private final BroadcastReceiver mFinishedCalculatingFancyNameReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            String workoutName = intent.getExtras().getString(CalcExtremaValuesTask.FANCY_NAME);
+            String workoutName = intent.getExtras().getString(CalcExtremaValuesThread.FANCY_NAME);
             editExportName.setText(workoutName);
         }
     };
@@ -198,7 +198,7 @@ public class EditWorkoutFragment extends Fragment {
     };
     private final BroadcastReceiver mFinishedCalculatingExtremaValueReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
-            SensorType sensorType = SensorType.valueOf(intent.getExtras().getString(CalcExtremaValuesTask.SENSOR_TYPE));
+            SensorType sensorType = SensorType.valueOf(intent.getExtras().getString(CalcExtremaValuesThread.SENSOR_TYPE));
 
             WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance();
             SQLiteDatabase db = databaseManager.getOpenDatabase();
