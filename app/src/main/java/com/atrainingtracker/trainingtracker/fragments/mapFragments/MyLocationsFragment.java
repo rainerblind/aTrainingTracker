@@ -29,11 +29,13 @@ import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.location.Location;
 import android.location.LocationManager;
-import android.os.AsyncTask;
 import android.os.Bundle;
 
 import androidx.core.content.res.ResourcesCompat;
 import androidx.fragment.app.Fragment;
+
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -49,6 +51,7 @@ import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.ExtremaType;
+import com.atrainingtracker.trainingtracker.helpers.CalcExtremaValuesThread;
 import com.atrainingtracker.trainingtracker.views.MultiSelectionSpinner;
 import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager.KnownLocationsDbHelper;
@@ -56,7 +59,6 @@ import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManag
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
-import com.atrainingtracker.trainingtracker.helpers.CalcExtremaValuesTask;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
@@ -223,7 +225,7 @@ public class MyLocationsFragment
                     @Override
                     public void onMapLongClick(LatLng latLng) {
                         // create new MyLocation
-                        new CreateNewMyLocation(getContext()).execute(latLng);
+                        new CreateNewMyLocation(getContext(), latLng).start();
                     }
                 });
 
@@ -269,14 +271,14 @@ public class MyLocationsFragment
     }
 
     protected void addMyLocationMarkers() {
-        new AddMyLocationMarkers(getContext()).execute();
+        new AddMyLocationMarkers(getContext()).start();
     }
 
     protected void addSportTypeLocations(long ttSportTypeId) {
         for (int selectedExtremaType : mExtremaTypeSpinner.getSelectedIndicies()) {
             ExtremaType extremaType = ExtremaType.LOCATION_EXTREMA_TYPES[selectedExtremaType];
 
-            new ShowExtremaLocations(getContext(), ttSportTypeId, extremaType).execute();
+            new ShowExtremaLocations(getContext(), ttSportTypeId, extremaType).start();
         }
     }
 
@@ -284,7 +286,7 @@ public class MyLocationsFragment
         for (int selectedSportTypeIndex : mSportSpinner.getSelectedIndicies()) {
             long sportTypeId = mSportTypesIdList.get(selectedSportTypeIndex);
 
-            new ShowExtremaLocations(getContext(), sportTypeId, extremaType).execute();
+            new ShowExtremaLocations(getContext(), sportTypeId, extremaType).start();
         }
     }
 
@@ -488,17 +490,7 @@ public class MyLocationsFragment
         }
     }
 
-    private class LatLngId {
-        LatLng latLng;
-        long id;
-
-        LatLngId(double lat, double lng, long id) {
-            latLng = new LatLng(lat, lng);
-            this.id = id;
-        }
-    }
-
-    class ShowExtremaLocations extends AsyncTask<Integer, LatLngId, Float> {
+    class ShowExtremaLocations extends Thread {
         private final long mSportTypeId;
         private final ExtremaType mExtremaType;
 
@@ -518,52 +510,49 @@ public class MyLocationsFragment
             progressDialog = new ProgressDialog(context);
         }
 
-        protected void onPreExecute() {
-            // disable clicking
-            mSportSpinner.setEnabled(false);
-            mSportSpinner.setClickable(false);
-            mExtremaTypeSpinner.setEnabled(false);
-            mExtremaTypeSpinner.setClickable(false);
-
-            // show a progress dialog
-            progressDialog.setMessage(context.getString(R.string.get_extremaType_of_sportType_format, mExtremaType.toString(), SportTypeDatabaseManager.getUIName(mSportTypeId)));
-            progressDialog.setCancelable(false);
-            progressDialog.setCanceledOnTouchOutside(false);
-            progressDialog.show();
-
-
-            switch (mExtremaType) {
-                case START:
-                    mMarkerId = R.drawable.start_logo_map;  // TODO: other color?
-                    break;
-                case END:
-                    mMarkerId = R.drawable.stop_logo_map;   // TODO: other color?
-                    break;
-                case MAX_LINE_DISTANCE:
-                    mMarkerId = R.drawable.max_line_distance_logo_map;  // TODO: other color?
-                    break;
-            }
-
-            // make sure that mMarkerMap it correctly initialized
-            if (!mMarkerMap.containsKey(mSportTypeId)) {
-                mMarkerMap.put(mSportTypeId, new EnumMap<ExtremaType, List<Marker>>(ExtremaType.class));
-            }
-            if (!mMarkerMap.get(mSportTypeId).containsKey(mExtremaType)) {
-                mMarkerMap.get(mSportTypeId).put(mExtremaType, new LinkedList<Marker>());
-            }
-
-        }
-
-
         @Override
-        protected Float doInBackground(Integer... params) {
+        public void run() {
+            new Handler(Looper.getMainLooper()).post(() -> {
+                // disable clicking
+                mSportSpinner.setEnabled(false);
+                mSportSpinner.setClickable(false);
+                mExtremaTypeSpinner.setEnabled(false);
+                mExtremaTypeSpinner.setClickable(false);
+
+                // show a progress dialog
+                progressDialog.setMessage(context.getString(R.string.get_extremaType_of_sportType_format, mExtremaType.toString(), SportTypeDatabaseManager.getUIName(mSportTypeId)));
+                progressDialog.setCancelable(false);
+                progressDialog.setCanceledOnTouchOutside(false);
+                progressDialog.show();
+
+
+                switch (mExtremaType) {
+                    case START:
+                        mMarkerId = R.drawable.start_logo_map;  // TODO: other color?
+                        break;
+                    case END:
+                        mMarkerId = R.drawable.stop_logo_map;   // TODO: other color?
+                        break;
+                    case MAX_LINE_DISTANCE:
+                        mMarkerId = R.drawable.max_line_distance_logo_map;  // TODO: other color?
+                        break;
+                }
+
+                // make sure that mMarkerMap it correctly initialized
+                if (!mMarkerMap.containsKey(mSportTypeId)) {
+                    mMarkerMap.put(mSportTypeId, new EnumMap<ExtremaType, List<Marker>>(ExtremaType.class));
+                }
+                if (!mMarkerMap.get(mSportTypeId).containsKey(mExtremaType)) {
+                    mMarkerMap.get(mSportTypeId).put(mExtremaType, new LinkedList<Marker>());
+                }
+
+            });
 
             // TODO: copied code from WorkoutSummariesDatabaseManager
             SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
 
             Cursor latCursor = null;
             Cursor lonCursor = null;
-            double latitude, longitude;
 
             Cursor cursor = db.query(WorkoutSummaries.TABLE,
                     null,
@@ -594,13 +583,18 @@ public class MyLocationsFragment
                         && lonCursor.moveToFirst()
                         && dataValid(latCursor, WorkoutSummaries.VALUE)
                         && dataValid(lonCursor, WorkoutSummaries.VALUE)) {
-                    latitude = latCursor.getDouble(latCursor.getColumnIndex(WorkoutSummaries.VALUE));
-                    longitude = lonCursor.getDouble(latCursor.getColumnIndex(WorkoutSummaries.VALUE));
-                    publishProgress(new LatLngId(latitude, longitude, workoutId));
+                    final LatLng latLng = new LatLng(latCursor.getDouble(latCursor.getColumnIndex(WorkoutSummaries.VALUE)),
+                            lonCursor.getDouble(latCursor.getColumnIndex(WorkoutSummaries.VALUE)));
+                    new Handler(Looper.getMainLooper()).post(() -> {
+                        if (DEBUG) Log.i(TAG, "add new extrema position.");
+                        Marker marker = addScaledMarker(latLng, mMarkerId, 0.666);
+                        mMarkerMap.get(mSportTypeId).get(mExtremaType).add(marker);
+                        mMarker2WorkoutIdMap.put(marker, workoutId);
+                    });
                 } else if (!calculatedMaxLineDistance && mExtremaType == ExtremaType.MAX_LINE_DISTANCE) {
                     if (DEBUG)
                         Log.i(TAG, "try to calculate the max line distance of workoutId=" + workoutId);
-                    CalcExtremaValuesTask.calcAndSaveMaxLineDistancePosition(workoutId);
+                    CalcExtremaValuesThread.calcAndSaveMaxLineDistancePosition(workoutId);
                     cursor.moveToPrevious();
                     calculatedMaxLineDistance = true;
 
@@ -616,21 +610,7 @@ public class MyLocationsFragment
             cursor.close();
             WorkoutSummariesDatabaseManager.getInstance().closeDatabase();
 
-            return null;
-        }
-
-        @Override
-        protected void onProgressUpdate(LatLngId... values) {
-            super.onProgressUpdate(values);
-            if (DEBUG) Log.i(TAG, "add new extrema position.");
-
-            Marker marker = addScaledMarker(values[0].latLng, mMarkerId, 0.666);
-            mMarkerMap.get(mSportTypeId).get(mExtremaType).add(marker);
-            mMarker2WorkoutIdMap.put(marker, values[0].id);
-        }
-
-        @Override
-        protected void onPostExecute(Float param) {
+         new Handler(Looper.getMainLooper()).post(() -> {
             // hide progressView
             if (progressDialog.isShowing()) {
                 try {
@@ -651,14 +631,15 @@ public class MyLocationsFragment
             mExtremaTypeSpinner.setEnabled(true);
             mExtremaTypeSpinner.setClickable(true);
 
-        }
+        });
     }
+}
 
     /**
      * helper method to check whether there is some data
      */
 
-    class AddMyLocationMarkers extends AsyncTask<Integer, MyLocation, Float> {
+    class AddMyLocationMarkers extends Thread {
         private final ProgressDialog progressDialog;
         private final Context context;
 
@@ -668,121 +649,109 @@ public class MyLocationsFragment
             progressDialog = new ProgressDialog(context);
         }
 
-        protected void onPreExecute() {
-            // show a progress dialog
-            progressDialog.setMessage(context.getString(R.string.getting_my_locations));
-            progressDialog.setCancelable(false);
-            progressDialog.setCanceledOnTouchOutside(false);
-            progressDialog.show();
-        }
-
-
         @Override
-        protected Float doInBackground(Integer... params) {
+        public void run() {
+            new Handler(Looper.getMainLooper()).post(() -> {
+                // show a progress dialog
+                progressDialog.setMessage(context.getString(R.string.getting_my_locations));
+                progressDialog.setCancelable(false);
+                progressDialog.setCanceledOnTouchOutside(false);
+                progressDialog.show();
+            });
 
-            SQLiteDatabase db = KnownLocationsDatabaseManager.getInstance().getOpenDatabase();
-            Cursor cursor = db.query(KnownLocationsDbHelper.TABLE,
-                    null,
-                    null, // KnownLocationsDbHelper.EXTREMA_TYPE + "=?",
-                    null, // new String[] { extremaType.name() },
-                    null,
-                    null,
-                    null,
-                    null);  // sorting
+                SQLiteDatabase db = KnownLocationsDatabaseManager.getInstance().getOpenDatabase();
+                Cursor cursor = db.query(KnownLocationsDbHelper.TABLE,
+                        null,
+                        null, // KnownLocationsDbHelper.EXTREMA_TYPE + "=?",
+                        null, // new String[] { extremaType.name() },
+                        null,
+                        null,
+                        null,
+                        null);  // sorting
 
-            while (cursor.moveToNext()) {
-                long id = cursor.getLong(cursor.getColumnIndex(KnownLocationsDbHelper.C_ID));
-                double latitude = cursor.getDouble(cursor.getColumnIndex(KnownLocationsDbHelper.LATITUDE));
-                double longitude = cursor.getDouble(cursor.getColumnIndex(KnownLocationsDbHelper.LONGITUDE));
-                String name = cursor.getString(cursor.getColumnIndex(KnownLocationsDbHelper.NAME));
-                int altitude = cursor.getInt(cursor.getColumnIndex(KnownLocationsDbHelper.ALTITUDE));
-                int radius = cursor.getInt(cursor.getColumnIndex(KnownLocationsDbHelper.RADIUS));
+                while (cursor.moveToNext()) {
+                    long id = cursor.getLong(cursor.getColumnIndex(KnownLocationsDbHelper.C_ID));
+                    double latitude = cursor.getDouble(cursor.getColumnIndex(KnownLocationsDbHelper.LATITUDE));
+                    double longitude = cursor.getDouble(cursor.getColumnIndex(KnownLocationsDbHelper.LONGITUDE));
+                    String name = cursor.getString(cursor.getColumnIndex(KnownLocationsDbHelper.NAME));
+                    int altitude = cursor.getInt(cursor.getColumnIndex(KnownLocationsDbHelper.ALTITUDE));
+                    int radius = cursor.getInt(cursor.getColumnIndex(KnownLocationsDbHelper.RADIUS));
 
-                publishProgress(new MyLocation(id, latitude, longitude, name, altitude, radius));
-            }
+                    final MyLocation myLocation = new MyLocation(id, latitude, longitude, name, altitude, radius);
+                    new Handler(Looper.getMainLooper()).post(() -> {
+                        if (DEBUG) Log.i(TAG, "add new myLocation.");
 
-            cursor.close();
-            KnownLocationsDatabaseManager.getInstance().closeDatabase();
-
-            return null;
-        }
-
-        @Override
-        protected void onProgressUpdate(MyLocation... values) {
-            super.onProgressUpdate(values);
-            if (DEBUG) Log.i(TAG, "add new myLocation.");
-
-            addMyLocationToMap(values[0]);
-        }
-
-        @Override
-        protected void onPostExecute(Float param) {
-            // hide progressView
-            if (progressDialog.isShowing()) {
-                try {
-                    progressDialog.dismiss();
-                    // sometimes this gives the following exception:
-                    // java.lang.IllegalArgumentException: View not attached to window manager
-                    // so we catch this exception
-                } catch (IllegalArgumentException e) {
-                    // and nothing
-                    // http://stackoverflow.com/questions/2745061/java-lang-illegalargumentexception-view-not-attached-to-window-manager
+                        addMyLocationToMap(myLocation);
+                    });
                 }
-            } else {
-                if (DEBUG) Log.d(TAG, "dialog no longer showing, so do nothing?");
-            }
 
+                cursor.close();
+                KnownLocationsDatabaseManager.getInstance().closeDatabase();
+
+            new Handler(Looper.getMainLooper()).post(() -> {
+                if (progressDialog.isShowing()) {
+                    try {
+                        progressDialog.dismiss();
+                        // sometimes this gives the following exception:
+                        // java.lang.IllegalArgumentException: View not attached to window manager
+                        // so we catch this exception
+                    } catch (IllegalArgumentException e) {
+                        // and nothing
+                        // http://stackoverflow.com/questions/2745061/java-lang-illegalargumentexception-view-not-attached-to-window-manager
+                    }
+                } else {
+                    if (DEBUG) Log.d(TAG, "dialog no longer showing, so do nothing?");
+                }
+
+            });
         }
     }
 
-    class CreateNewMyLocation extends AsyncTask<LatLng, Void, MyLocation> {
+    class CreateNewMyLocation extends Thread {
         private final ProgressDialog progressDialog;
         private final Context context;
+        private final LatLng latLng;
 
-        CreateNewMyLocation(Context context) {
+        CreateNewMyLocation(Context context, LatLng latLng) {
             this.context = context;
+            this.latLng = latLng;
 
             progressDialog = new ProgressDialog(context);
         }
 
-        protected void onPreExecute() {
-            // show a progress dialog
-            progressDialog.setMessage(context.getString(R.string.create_new_my_location));
-            progressDialog.setCancelable(false);
-            progressDialog.setCanceledOnTouchOutside(false);
-            progressDialog.show();
-        }
-
-
         @Override
-        protected MyLocation doInBackground(LatLng... params) {
-            Double altitude = WorkoutSamplesDatabaseManager.calcAverageAroundLocation(params[0], 100, SensorType.ALTITUDE);
+        public void run() {
+            new Handler(Looper.getMainLooper()).post(() -> {
+                // show a progress dialog
+                progressDialog.setMessage(context.getString(R.string.create_new_my_location));
+                progressDialog.setCancelable(false);
+                progressDialog.setCanceledOnTouchOutside(false);
+                progressDialog.show();
+            });
 
-            return KnownLocationsDatabaseManager.addNewLocation("", altitude.intValue(), KnownLocationsDatabaseManager.DEFAULT_RADIUS, params[0].latitude, params[0].longitude);
+                Double altitude = WorkoutSamplesDatabaseManager.calcAverageAroundLocation(latLng, 100, SensorType.ALTITUDE);
 
-        }
+                final KnownLocationsDatabaseManager.MyLocation location = KnownLocationsDatabaseManager.addNewLocation("", altitude.intValue(), KnownLocationsDatabaseManager.DEFAULT_RADIUS, latLng.latitude, latLng.longitude);
 
-        @Override
-        protected void onPostExecute(MyLocation param) {
-            addMyLocationToMap(param);
-            showEditMyLocationsDialog(param.id);
+            new Handler(Looper.getMainLooper()).post(() -> {
+                addMyLocationToMap(location);
+                showEditMyLocationsDialog(location.id);
 
-            // hide progressView
-            if (progressDialog.isShowing()) {
-                try {
-                    progressDialog.dismiss();
-                    // sometimes this gives the following exception:
-                    // java.lang.IllegalArgumentException: View not attached to window manager
-                    // so we catch this exception
-                } catch (IllegalArgumentException e) {
-                    // and nothing
-                    // http://stackoverflow.com/questions/2745061/java-lang-illegalargumentexception-view-not-attached-to-window-manager
+                // hide progressView
+                if (progressDialog.isShowing()) {
+                    try {
+                        progressDialog.dismiss();
+                        // sometimes this gives the following exception:
+                        // java.lang.IllegalArgumentException: View not attached to window manager
+                        // so we catch this exception
+                    } catch (IllegalArgumentException e) {
+                        // and nothing
+                        // http://stackoverflow.com/questions/2745061/java-lang-illegalargumentexception-view-not-attached-to-window-manager
+                    }
+                } else {
+                    if (DEBUG) Log.d(TAG, "dialog no longer showing, so do nothing?");
                 }
-            } else {
-                if (DEBUG) Log.d(TAG, "dialog no longer showing, so do nothing?");
-            }
-
+            });
         }
     }
-
 }

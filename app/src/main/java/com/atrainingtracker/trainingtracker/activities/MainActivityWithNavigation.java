@@ -102,7 +102,7 @@ import com.atrainingtracker.trainingtracker.fragments.preferences.SearchFragment
 import com.atrainingtracker.trainingtracker.fragments.preferences.StartSearchFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.StravaUploadFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.TrainingpeaksUploadFragment;
-import com.atrainingtracker.trainingtracker.helpers.DeleteWorkoutTask;
+import com.atrainingtracker.trainingtracker.helpers.DeleteWorkoutThread;
 import com.atrainingtracker.trainingtracker.interfaces.ReallyDeleteDialogInterface;
 import com.atrainingtracker.trainingtracker.interfaces.RemoteDevicesSettingsInterface;
 import com.atrainingtracker.trainingtracker.interfaces.ShowWorkoutDetailsInterface;
@@ -780,7 +780,7 @@ public class MainActivityWithNavigation
 
     @Override
     public void reallyDeleteWorkout(long workoutId) {
-        (new DeleteWorkoutTask(this)).execute(workoutId);
+        (new DeleteWorkoutThread(this, new Long[]{workoutId})).start();
     }
 
     public void deleteOldWorkouts() {

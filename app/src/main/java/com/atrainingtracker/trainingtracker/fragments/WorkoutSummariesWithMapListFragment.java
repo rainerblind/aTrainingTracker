@@ -62,7 +62,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseMan
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.MyMapViewHolder;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.Roughness;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapHelper;
-import com.atrainingtracker.trainingtracker.helpers.DeleteWorkoutTask;
+import com.atrainingtracker.trainingtracker.helpers.DeleteWorkoutThread;
 import com.atrainingtracker.trainingtracker.interfaces.ReallyDeleteDialogInterface;
 import com.atrainingtracker.trainingtracker.interfaces.ShowWorkoutDetailsInterface;
 import com.google.android.gms.common.ConnectionResult;
@@ -81,7 +81,7 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
     public static final String TAG = WorkoutSummariesWithMapListFragment.class.getSimpleName();
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private final IntentFilter mExportStatusChangedFilter = new IntentFilter(ExportManager.EXPORT_STATUS_CHANGED_INTENT);
-    private final IntentFilter mFinishedDeletingFilter = new IntentFilter(DeleteWorkoutTask.FINISHED_DELETING);
+    private final IntentFilter mFinishedDeletingFilter = new IntentFilter(DeleteWorkoutThread.FINISHED_DELETING);
     protected SQLiteDatabase mDb;
     protected ExportManager mExportManager;
     protected Cursor mCursor;
