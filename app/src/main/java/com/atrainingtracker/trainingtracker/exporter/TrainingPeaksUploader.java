@@ -116,13 +116,13 @@ public class TrainingPeaksUploader extends BaseExporter {
         JSONObject jsonObject = new JSONObject();
         jsonObject.put(UPLOAD_CLIENT, TrainingApplication.getAppName());
         // jsonObject.put(UPLOAD_CLIENT, TrainingpeaksGetAccessTokenActivity.MY_CLIENT_ID);
-        jsonObject.put(FILENAME, exportInfo.getFileBaseName() + FileFormat.TRAINING_PEAKS.getFileEnding());
+        jsonObject.put(FILENAME, exportInfo.getFileName());
         jsonObject.put(SET_WORKOUT_PUBLIC, !isPrivate);
         jsonObject.put(TITLE, name);
         jsonObject.put(COMMENT, description);
         jsonObject.put(TYPE, sportName);
 
-        File file = new File(getDir(mContext, FileFormat.TRAINING_PEAKS.getDirName()), exportInfo.getFileBaseName() + FileFormat.TRAINING_PEAKS.getFileEnding());
+        File file = new File(getBaseDirFile(mContext), exportInfo.getShortPath());
         InputStream inputStream = new FileInputStream(file.getAbsolutePath());
         byte[] buffer = new byte[8192];
         int bytesRead;

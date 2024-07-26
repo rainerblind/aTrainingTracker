@@ -21,17 +21,22 @@ package com.atrainingtracker.trainingtracker.exporter;
 
 import android.app.Notification;
 import android.app.PendingIntent;
+import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.database.SQLException;
 import android.graphics.BitmapFactory;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
-import androidx.core.content.ContextCompat;
 
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.util.Log;
 
 import com.atrainingtracker.R;
@@ -41,8 +46,15 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 
 import org.json.JSONException;
 
+import java.io.BufferedOutputStream;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 
 public abstract class BaseExporter {
@@ -79,19 +91,61 @@ public abstract class BaseExporter {
                 .setOngoing(true);
     }
 
-    protected static File getBaseDir(Context context) {
-        File[] externalStorageVolumes =
-                ContextCompat.getExternalFilesDirs(context, null);
-        return externalStorageVolumes[0];
-
+    /**
+     * Get the absolute path for the base directory where exported files are stored
+     * @param context
+     * @return the path
+     */
+    public static File getBaseDirFile(Context context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            // relative path
+            return Environment.getExternalStoragePublicDirectory(getRelativePath()).getAbsoluteFile();
+        } else {
+            return context.getExternalFilesDir(null).getAbsoluteFile();
+         }
     }
 
-    public static File getDir(Context context, String type) {
-        File dir = new File(getBaseDir(context).getAbsolutePath() + "/" + type);
-        dir.mkdirs();
-        return dir;
+    /**
+     * Get the relative "base path" to identify the file for >=Q
+     * @return the path
+     */
+    private static String getRelativePath() {
+        return Environment.DIRECTORY_DOCUMENTS + File.separator + "aTrainingTracker";
     }
 
+    private static OutputStream getOutputStream(Context context, String shortPath, String mimeType) throws IOException {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            File shortFile = new File(shortPath);
+            final String relativeLocation = getRelativePath() + File.separator + shortFile.getParent();
+
+            final ContentValues contentValues = new ContentValues();
+            contentValues.put(MediaStore.Files.FileColumns.DISPLAY_NAME, shortFile.getName());
+            contentValues.put(MediaStore.Files.FileColumns.RELATIVE_PATH, relativeLocation);
+            // TODO int mediaType = Build.VERSION.SDK_INT == Build.VERSION_CODES.Q ? 0 : MediaStore.Files.FileColumns.MEDIA_TYPE_DOCUMENT;
+            contentValues.put(MediaStore.Files.FileColumns.MEDIA_TYPE, 0);
+            contentValues.put(MediaStore.Files.FileColumns.MIME_TYPE, mimeType);
+
+            final ContentResolver resolver = context.getApplicationContext().getContentResolver();
+
+            final Uri contentUri = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
+            Uri uri = resolver.insert(contentUri, contentValues);
+            if (uri == null) {
+                Log.w(TAG, "No uri: " + contentUri + " " + shortPath);
+                return null;
+            }
+            return resolver.openOutputStream(uri);
+        } else {
+            String path = context.getExternalFilesDir(null).getAbsolutePath() + File.separator + shortPath;
+            File file = new File(path);
+            return new BufferedOutputStream(new FileOutputStream(file));
+        }
+    }
+
+    public static BufferedWriter getWriter(Context context, String shortPath, String mimeType) throws IOException {
+        OutputStream outputStream = getOutputStream(context, shortPath, mimeType);
+        OutputStreamWriter outputStreamWriter = new OutputStreamWriter(outputStream, StandardCharsets.UTF_8);
+        return new BufferedWriter(outputStreamWriter);
+    }
 
     public void onFinished() {
         cExportManager.onFinished(TAG);
@@ -117,6 +171,9 @@ public abstract class BaseExporter {
                 cExportManager.exportingFinished(exportInfo, result.success(), result.answer());
             }
 
+        } catch (FileNotFoundException e) {
+            Log.e(TAG, "FileNotFoundException: " + e.getMessage(), e);
+            cExportManager.exportingFinished(exportInfo, false, "InterruptedException: " + e.getMessage());
         } catch (SQLException e) {
             Log.e(TAG, e.getMessage(), e);
             cExportManager.exportingFinished(exportInfo, false, "SQLException: " + e.getMessage());

@@ -28,8 +28,6 @@ import com.atrainingtracker.banalservice.sensor.SensorValueType;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager;
 
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
@@ -105,9 +103,7 @@ public class CSVFileExporter extends BaseExporter {
 
         // now, we are ready to write to CSV
 
-        File file = new File(getDir(mContext, FileFormat.CSV.getDirName()), exportInfo.getFileBaseName() + FileFormat.CSV.getFileEnding());
-        file.createNewFile();
-        CSVWriter csvWrite = new CSVWriter(new FileWriter(file));
+        CSVWriter csvWrite = new CSVWriter(getWriter(mContext, exportInfo.getShortPath(), "application/gpx+xml"));
 
         // first of all: header with column names
         csvWrite.writeNext(sortedNames.toArray(new String[sortedNames.size()]));

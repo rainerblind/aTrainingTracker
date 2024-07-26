@@ -19,7 +19,6 @@
 package com.atrainingtracker.trainingtracker.fragments;
 
 import android.app.Activity;
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import android.app.Dialog;
 import android.content.BroadcastReceiver;
@@ -746,7 +745,7 @@ public class EditWorkoutFragment extends Fragment {
         if (DEBUG) Log.i(TAG, "fillViewsFromSavedInstanceState");
 
         // first, the member variables
-        mWorkoutID = savedInstanceState.getInt(WorkoutSummaries.WORKOUT_ID);
+        mWorkoutID = savedInstanceState.getLong(WorkoutSummaries.WORKOUT_ID);
         mBaseFileName = savedInstanceState.getString(BASE_FILE_NAME);
         mEquipmentName = savedInstanceState.getString(EQUIPMENT);
         mSportTypeId = savedInstanceState.getLong(SPORT_ID);

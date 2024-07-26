@@ -367,6 +367,7 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
                     case COMMUNITY:
                         text = context.getString(R.string.uploading_to_community_failed_for_several, failed, wanted);
                         break;
+                }
 
             } else if (exportStatusCounter.get(ExportStatus.FINISHED_RETRY) > 0) {
 

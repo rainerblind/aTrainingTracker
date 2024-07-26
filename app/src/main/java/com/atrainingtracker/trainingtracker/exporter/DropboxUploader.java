@@ -41,9 +41,11 @@ public class DropboxUploader extends BaseExporter {
 
     @Override
     protected ExportResult doExport(ExportInfo exportInfo) throws IOException, IllegalArgumentException {
-        String filename = exportInfo.getFileFormat().getDirName() + "/" + exportInfo.getFileBaseName() + exportInfo.getFileFormat().getFileEnding();
-        File file = new File(getBaseDir(mContext), filename);
-
+        String filename = exportInfo.getShortPath();
+        File file = new File(getBaseDirFile(mContext), filename);
+        if (!file.exists()) {
+            return new ExportResult(false, "Dropbox file does not exist: " + file);
+        }
 
         InputStream inputStream = new FileInputStream(file);
         try {

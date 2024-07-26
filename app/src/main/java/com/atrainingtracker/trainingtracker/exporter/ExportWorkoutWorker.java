@@ -18,7 +18,6 @@
 
 package com.atrainingtracker.trainingtracker.exporter;
 
-import android.Manifest;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
@@ -78,47 +77,39 @@ public class ExportWorkoutWorker extends Worker {
                 if (DEBUG) Log.d(TAG, "ExportType: " + exportInfo.getExportType().toString()
                         + ", FileFormat: " + exportInfo.getFileFormat());
 
-                if ((exportInfo.getExportType() == ExportType.FILE || exportInfo.getExportType() == ExportType.COMMUNITY)
-                        && !TrainingApplication.havePermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-                    continue;
-                }
-
                 BaseExporter exporter = null;
                 switch (exportInfo.getExportType()) {
                     case FILE:
                         tryExporting = true;
+                        File emailFile = new File(BaseExporter.getBaseDirFile(mContext), exportInfo.getShortPath());
                         switch (exportInfo.getFileFormat()) {
                             // TODO: change Uri.fromFile to the stuff explained at https://stackoverflow.com/questions/38200282/android-os-fileuriexposedexception-file-storage-emulated-0-test-txt-exposed
                             case CSV:
                                 exporter = new CSVFileExporter(mContext);
                                 if (TrainingApplication.sendCSVEmail()) {
                                     emailUris.add(FileProvider.getUriForFile(mContext,
-                                            mContext.getApplicationContext().getPackageName() + ".com.atrainingtracker.file.provider",
-                                            new File(BaseExporter.getDir(mContext, FileFormat.CSV.getDirName()), exportInfo.getFileBaseName() + FileFormat.CSV.getFileEnding())));
+                                            mContext.getApplicationContext().getPackageName() + ".com.atrainingtracker.file.provider", emailFile));
                                 }
                                 break;
                             case GC:
                                 exporter = new GCFileExporter(mContext);
                                 if (TrainingApplication.sendGCEmail()) {
                                     emailUris.add(FileProvider.getUriForFile(mContext,
-                                            mContext.getApplicationContext().getPackageName() + ".com.atrainingtracker.file.provider",
-                                            new File(BaseExporter.getDir(mContext, FileFormat.GC.getDirName()), exportInfo.getFileBaseName() + FileFormat.GC.getFileEnding())));
+                                            mContext.getApplicationContext().getPackageName() + ".com.atrainingtracker.file.provider", emailFile));
                                 }
                                 break;
                             case TCX:
                                 exporter = new TCXFileExporter(mContext);
                                 if (TrainingApplication.sendTCXEmail()) {
                                     emailUris.add(FileProvider.getUriForFile(mContext,
-                                            mContext.getApplicationContext().getPackageName() + ".com.atrainingtracker.file.provider",
-                                            new File(BaseExporter.getDir(mContext, FileFormat.TCX.getDirName()), exportInfo.getFileBaseName() + FileFormat.TCX.getFileEnding())));
+                                            mContext.getApplicationContext().getPackageName() + ".com.atrainingtracker.file.provider", emailFile));
                                 }
                                 break;
                             case GPX:
                                 exporter = new GPXFileExporter(mContext);
                                 if (TrainingApplication.sendGPXEmail()) {
                                     emailUris.add(FileProvider.getUriForFile(mContext,
-                                            mContext.getApplicationContext().getPackageName() + ".com.atrainingtracker.file.provider",
-                                            new File(BaseExporter.getDir(mContext, FileFormat.GPX.getDirName()), exportInfo.getFileBaseName() + FileFormat.GPX.getFileEnding())));
+                                            mContext.getApplicationContext().getPackageName() + ".com.atrainingtracker.file.provider", emailFile));
                                 }
                                 break;
                             // case STRAVA:
