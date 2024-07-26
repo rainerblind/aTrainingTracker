@@ -18,10 +18,14 @@
 
 package com.atrainingtracker.banalservice.devices;
 
+import android.Manifest;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
 import android.util.Log;
+
+import androidx.core.app.ActivityCompat;
 
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
@@ -45,6 +49,7 @@ public class SpeedAndLocationDevice_GoogleFused extends SpeedAndLocationDevice
 
     public SpeedAndLocationDevice_GoogleFused(Context context, MySensorManager mySensorManager) {
         super(context, mySensorManager, DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED);
+        mContext = context;
         if (DEBUG) {
             Log.d(TAG, "constructor");
         }
@@ -73,6 +78,9 @@ public class SpeedAndLocationDevice_GoogleFused extends SpeedAndLocationDevice
     public void onConnected(Bundle dataBundle) {
         if (DEBUG) Log.d(TAG, "onConnected()");
 
+        if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
         LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
     }
 

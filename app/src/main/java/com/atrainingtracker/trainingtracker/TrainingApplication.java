@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker;
 
+import android.annotation.SuppressLint;
 import android.app.Application;
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -29,9 +30,10 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+
+import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
@@ -283,7 +285,7 @@ public class TrainingApplication extends Application {
     };
 
     public static boolean havePermission(String permission) {
-        return ContextCompat.checkSelfPermission(cAppContext, permission) == PackageManager.PERMISSION_GRANTED;
+        return ActivityCompat.checkSelfPermission(cAppContext, permission) == PackageManager.PERMISSION_GRANTED;
     }
 
     public static boolean isAppInstalled(String uri) {
@@ -913,6 +915,7 @@ public class TrainingApplication extends Application {
         return notificationBuilder;
     }
 
+    @SuppressLint("RestrictedApi")
     protected void addActionsToNotificationBuilder() {
         if (DEBUG) Log.i(TAG, "addActionsToNotificationBuilder");
 
@@ -954,15 +957,17 @@ public class TrainingApplication extends Application {
     public void updateTimeAndDistanceToNotification(SensorData<Integer> time, SensorData<Number> distance, String sportType) {
         if (DEBUG) Log.i(TAG, "updateTimeAndDistanceToNotification(" + time + ", " + distance);
 
-        String sTime = mTimeFormatter.format_with_units(time == null ? null : time.getValue());
-        String sDistance = mDistanceFormatter.format_with_units(distance == null ? null : distance.getValue());
+        if (mNotificationManager.areNotificationsEnabled()) {
+            String sTime = mTimeFormatter.format_with_units(time == null ? null : time.getValue());
+            String sDistance = mDistanceFormatter.format_with_units(distance == null ? null : distance.getValue());
 
-        // mTrackingAndSearchingNotificationBuilder.setDefaults(Notification.DEFAULT_ALL) // requires VIBRATE permission
-        mTrackingAndSearchingNotificationBuilder.setStyle(new NotificationCompat.BigTextStyle()
-                .bigText(getString(R.string.tracking_details_format, mNotificationSummary, sDistance, sportType, sTime)));
+            // mTrackingAndSearchingNotificationBuilder.setDefaults(Notification.DEFAULT_ALL) // requires VIBRATE permission
+            mTrackingAndSearchingNotificationBuilder.setStyle(new NotificationCompat.BigTextStyle()
+                    .bigText(getString(R.string.tracking_details_format, mNotificationSummary, sDistance, sportType, sTime)));
 
-        // showNotification();
-        mNotificationManager.notify(TRACKING_NOTIFICATION_ID, mTrackingAndSearchingNotificationBuilder.build());
+            // showNotification();
+            mNotificationManager.notify(TRACKING_NOTIFICATION_ID, mTrackingAndSearchingNotificationBuilder.build());
+        }
     }
 
     private void updateNotificationSummary() {

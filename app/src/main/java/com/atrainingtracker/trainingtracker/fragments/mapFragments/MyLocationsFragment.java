@@ -19,9 +19,12 @@
 package com.atrainingtracker.trainingtracker.fragments.mapFragments;
 
 import androidx.appcompat.app.AlertDialog;
+
+import android.Manifest;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
@@ -31,6 +34,7 @@ import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
 
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.res.ResourcesCompat;
 import androidx.fragment.app.Fragment;
 
@@ -464,6 +468,9 @@ public class MyLocationsFragment
     protected void centerMapOnMyLocation(int zoomLevel) {
         // seems to work now properly
 
+        if (ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
         long gpsTime = 1;
         long networkTime = 0;
 

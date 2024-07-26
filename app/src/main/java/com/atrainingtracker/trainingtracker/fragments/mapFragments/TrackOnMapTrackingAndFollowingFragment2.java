@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.fragments.mapFragments;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.location.Location;
 import android.os.Bundle;
@@ -160,6 +161,7 @@ public class TrackOnMapTrackingAndFollowingFragment2
             mLocationRequest.setInterval(500); // Update location every half second
         }
 
+        @SuppressLint("MissingPermission")
         @Override
         public void onConnected(Bundle bundle) {
 
@@ -186,6 +188,7 @@ public class TrackOnMapTrackingAndFollowingFragment2
         /* Activates this provider. This provider will notify the supplied listener
          * periodically, until you call deactivate().
          * This method is automatically invoked by enabling my-location layer. */
+        @SuppressLint("MissingPermission")
         @Override
         public void activate(OnLocationChangedListener listener) {
             // We need to keep a reference to my-location layer's listener so we can push forward
@@ -199,6 +202,7 @@ public class TrackOnMapTrackingAndFollowingFragment2
 
         /* Deactivates this provider.
          * This method is automatically invoked by disabling my-location layer. */
+        @SuppressLint("MissingPermission")
         @Override
         public void deactivate() {
             // Remove location updates from Location Manager
@@ -207,6 +211,7 @@ public class TrackOnMapTrackingAndFollowingFragment2
             mListener = null;
         }
 
+        @SuppressLint("MissingPermission")
         @Override
         public void onLocationChanged(Location location) {
             /* Push location updates to the registered listener..

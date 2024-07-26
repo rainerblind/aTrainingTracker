@@ -889,5 +889,9 @@
     <string name="config_tracking__Lap">Lap</string>
     <string name="config_tracking__day_or_night">Day or night</string>
 
-
+    <string name="GPS_permission_required">Background location permission</string>
+    <string name="GPS_permission_text_pre_Android10">Location permission required in system settings</string>
+    <string name="GPS_permission_text">This app collects location data to enable activity tracking even when the app is closed or not in use (the app is in the background).\nThis is required to record activities when the screen is off or another app is in the foreground.\n\nYou need to explicitly set \"Allow all the time\" in system settings.</string>
+    <string name="GPS_permission_text_Android12">This app collects location data to enable activity tracking even when the app is closed or not in use (the app is in the background).\nThis is required to record activities when the screen is off or another app is in the foreground.\n\nYou need to explicitly set \"Allow all the time\" in system settings.\nBlueTooth requires \" Nearby devices\".</string>
+    <string name="Request_permission_text">Allow permission by clicking \"OK\".</string>
 </resources>

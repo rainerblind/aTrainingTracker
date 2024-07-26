@@ -18,7 +18,11 @@
 
 package com.atrainingtracker.trainingtracker.fragments;
 
+import android.Manifest;
+import android.content.pm.PackageManager;
 import android.util.Log;
+
+import androidx.core.app.ActivityCompat;
 
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.BaseMapFragment;
@@ -37,6 +41,9 @@ public class SimpleMapFragment
         if (DEBUG) Log.i(TAG, "onMapReady");
         super.onMapReady(map);
 
+        if (ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
         mMap.setMyLocationEnabled(true);
         centerMapOnMyLocation(14, 0);
     }

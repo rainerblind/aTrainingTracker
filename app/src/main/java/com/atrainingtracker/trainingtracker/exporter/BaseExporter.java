@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.exporter;
 
+
 import android.app.Notification;
 import android.app.PendingIntent;
 import android.content.Context;
@@ -231,7 +232,8 @@ public abstract class BaseExporter {
     protected abstract Action getAction();
 
     protected void notifyProgress(int max, int count) {
-        if ((count % (10 * 60)) == 0) {  // TODO take sampling time into account?
+        if ((count % (10 * 60)) == 0  // TODO take sampling time into account?
+                && cNotificationManager.areNotificationsEnabled()) {
             mNotificationBuilder.setProgress(max, count, false);
             cNotificationManager.notify(TrainingApplication.EXPORT_PROGRESS_NOTIFICATION_ID, mNotificationBuilder.build());
         }

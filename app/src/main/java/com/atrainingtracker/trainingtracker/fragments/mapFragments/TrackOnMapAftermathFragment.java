@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.fragments.mapFragments;
 
+import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -103,6 +104,7 @@ public class TrackOnMapAftermathFragment
         }
     }
 
+    @SuppressLint("MissingPermission")
     @Override
     public void onMapReady(final GoogleMap map) {
         if (DEBUG) Log.i(TAG, "onMapReady");

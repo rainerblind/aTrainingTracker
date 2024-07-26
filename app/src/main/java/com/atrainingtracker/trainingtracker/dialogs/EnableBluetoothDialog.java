@@ -18,13 +18,16 @@
 
 package com.atrainingtracker.trainingtracker.dialogs;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.Dialog;
 import android.bluetooth.BluetoothAdapter;
 import android.content.DialogInterface;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.DialogFragment;
 
 import com.atrainingtracker.R;
@@ -64,6 +67,9 @@ public class EnableBluetoothDialog extends DialogFragment {
                 .setPositiveButton(R.string.enable_bluetooth, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
                         BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+                        if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                            return;
+                        }
                         bluetoothAdapter.enable();
                         mRemoteDevicesSettingsInterface.startPairing(Protocol.BLUETOOTH_LE);
                     }
