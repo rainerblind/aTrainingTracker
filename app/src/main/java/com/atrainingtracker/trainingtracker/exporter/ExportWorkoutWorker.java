@@ -183,27 +183,28 @@ public class ExportWorkoutWorker extends Worker {
             PendingIntent contentIntent = PendingIntent.getActivity(mContext, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
             // PendingIntent contentIntent = PendingIntent.getActivity(mContext, 0, notificationIntent, 0);
 
-            NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(mContext, NOTIFICATION_CHANNEL__EXPORT)
-                    .setLargeIcon(BitmapFactory.decodeResource(mContext.getResources(), R.drawable.ic_save_black_48dp))
-                    .setSmallIcon(R.drawable.logo)
-                    .setContentTitle(mContext.getString(R.string.TrainingTracker))
-                    .setContentText(mContext.getString(R.string.notification_exporting_finished))
-                    .setContentIntent(contentIntent)
-                    .setAutoCancel(true);
+            if (notificationManager.areNotificationsEnabled()) {
 
-            notificationManager.notify(TrainingApplication.EXPORT_RESULT_NOTIFICATION_ID, notificationBuilder.build());
+                NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(mContext, NOTIFICATION_CHANNEL__EXPORT)
+                        .setLargeIcon(BitmapFactory.decodeResource(mContext.getResources(), R.drawable.ic_save_black_48dp))
+                        .setSmallIcon(R.drawable.logo)
+                        .setContentTitle(mContext.getString(R.string.TrainingTracker))
+                        .setContentText(mContext.getString(R.string.notification_exporting_finished))
+                        .setContentIntent(contentIntent)
+                        .setAutoCancel(true);
 
+                notificationManager.notify(TrainingApplication.EXPORT_RESULT_NOTIFICATION_ID, notificationBuilder.build());
 
-            // send email stuff
-            if (TrainingApplication.sendEmail()) {
-                Intent emailIntent = new Intent(Intent.ACTION_SEND_MULTIPLE);
-                emailIntent.setType("text/plain");
-                emailIntent.putExtra(Intent.EXTRA_EMAIL, new String[]{TrainingApplication.getSpEmailAddress()});
-                emailIntent.putExtra(Intent.EXTRA_SUBJECT, TrainingApplication.getSpEmailSubject());
-                emailIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, emailUris);
-                emailIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                // send email stuff
+                if (TrainingApplication.sendEmail()) {
+                    Intent emailIntent = new Intent(Intent.ACTION_SEND_MULTIPLE);
+                    emailIntent.setType("text/plain");
+                    emailIntent.putExtra(Intent.EXTRA_EMAIL, new String[]{TrainingApplication.getSpEmailAddress()});
+                    emailIntent.putExtra(Intent.EXTRA_SUBJECT, TrainingApplication.getSpEmailSubject());
+                    emailIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, emailUris);
+                    emailIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
 
-                // emailIntent.setAction(Long.toString(System.currentTimeMillis()));
+                    // emailIntent.setAction(Long.toString(System.currentTimeMillis()));
 
                     PendingIntent pendingShareIntent = PendingIntent.getActivity(mContext, 0, emailIntent, PendingIntent.FLAG_ONE_SHOT | PendingIntent.FLAG_IMMUTABLE);
 
@@ -215,7 +216,8 @@ public class ExportWorkoutWorker extends Worker {
                             .setContentIntent(pendingShareIntent)
                             .setAutoCancel(true);
 
-                notificationManager.notify(TrainingApplication.SEND_EMAIL_NOTIFICATION_ID, notificationBuilder2.build());
+                    notificationManager.notify(TrainingApplication.SEND_EMAIL_NOTIFICATION_ID, notificationBuilder2.build());
+                }
             }
         }
         return Result.success();

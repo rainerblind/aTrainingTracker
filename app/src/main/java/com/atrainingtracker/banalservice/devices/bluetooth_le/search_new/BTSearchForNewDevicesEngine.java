@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.banalservice.devices.bluetooth_le.search_new;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -28,9 +29,12 @@ import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
 import android.content.Context;
-import android.os.Build;
+import android.content.pm.PackageManager;
 import android.os.Handler;
 import android.util.Log;
+
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.devices.DeviceType;
@@ -42,6 +46,7 @@ import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.UUID;
 
@@ -76,6 +81,9 @@ public class BTSearchForNewDevicesEngine
                 mHandler.post(new Runnable() {
                     @Override
                     public void run() {
+                        if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                            return;
+                        }
                         mNameMap.put(gatt.getDevice().getAddress(), gatt.getDevice().getName());
                         gatt.discoverServices();
                     }
@@ -201,10 +209,14 @@ public class BTSearchForNewDevicesEngine
             // should never ever be called here
         }
     };
+
     // Device scan callback.
     private final BluetoothAdapter.LeScanCallback mLeScanCallback = new BluetoothAdapter.LeScanCallback() {
         @Override
         public void onLeScan(final BluetoothDevice device, int rssi, byte[] scanRecord) {
+            if (ContextCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                return;
+            }
             if (DEBUG)
                 Log.i(TAG, "wow, we found a device: address=" + device.getAddress() + ", name=" + device.getName());
 
@@ -213,6 +225,9 @@ public class BTSearchForNewDevicesEngine
                     @Override
                     public void run() {
                         if (DEBUG) Log.i(TAG, "trying to connect to Gatt");
+                        if (ContextCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                            return;
+                        }
                         mBTGatts.put(device.getAddress(), device.connectGatt(mContext, false, mGattCallback));
                     }
                 });
@@ -243,6 +258,9 @@ public class BTSearchForNewDevicesEngine
 
         if (!scanning) {
             if (DEBUG) Log.i(TAG, "starting to search for " + getDeviceType().name() + " devices");
+            if (ContextCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                return;
+            }
             scanning = true;
             mBluetoothAdapter.startLeScan(new UUID[]{BluetoothConstants.getServiceUUID(getDeviceType())}, mLeScanCallback);
         } else if (DEBUG) {
@@ -253,6 +271,9 @@ public class BTSearchForNewDevicesEngine
     @Override
     public void stopAsyncSearch() {
         if (DEBUG) Log.i(TAG, "stopAsyncSearch()");
+        if (ContextCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
 
         if (scanning) {
             scanning = false;
@@ -264,6 +285,9 @@ public class BTSearchForNewDevicesEngine
                 mHandler.post(new Runnable() {
                     @Override
                     public void run() {
+                        if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                            return;
+                        }
                         btGatt.disconnect();
                         btGatt.close();
                     }
@@ -293,12 +317,15 @@ public class BTSearchForNewDevicesEngine
 
         if (!mReadCharacteristicQueue.get(address).isEmpty()) {
             if (DEBUG) Log.i(TAG, "queue is not empty, so we read the next characteristic");
-            final BluetoothGattCharacteristic characteristic = mReadCharacteristicQueue.get(address).poll();
+            final BluetoothGattCharacteristic characteristic = Objects.requireNonNull(mReadCharacteristicQueue.get(address)).poll();
             if (characteristic != null) {
                 if (DEBUG) Log.i(TAG, "UUID of characteristic: " + characteristic.getUuid());
                 mHandler.post(new Runnable() {
                     @Override
                     public void run() {
+                        if (ContextCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                            return;
+                        }
                         gatt.readCharacteristic(characteristic); // the result is reported via the onCharacteristicRead method
                     }
                 });

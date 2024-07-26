@@ -221,19 +221,17 @@ public class WorkoutSummariesDatabaseManager {
 
         SQLiteDatabase summariesDb = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
 
-        Cursor cursor = summariesDb.query(WorkoutSummaries.TABLE,
+        try (Cursor cursor = summariesDb.query(WorkoutSummaries.TABLE,
                 null,
                 WorkoutSummaries.FILE_BASE_NAME + "=?",
                 new String[]{baseFileName},
-                null, null, null);
-        if (cursor.moveToFirst()) {
-            try {
+                null, null, null)) {
+            if (cursor.moveToFirst()) {
                 value = cursor.getInt(cursor.getColumnIndexOrThrow(key));
-            } catch (Exception e) {
-                Log.d(TAG, "in getInt(): probably undefined key is used: " + key);
             }
+        } catch (Exception e) {
+            Log.d(TAG, "in getInt(): probably undefined key is used: " + key);
         }
-        cursor.close();
         WorkoutSummariesDatabaseManager.getInstance().closeDatabase(); // summariesDb.close();
 
         return value;

@@ -23,10 +23,12 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.util.Log;
 
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.atrainingtracker.banalservice.BANALService;
@@ -146,8 +148,8 @@ public class TrackOnMapTrackingFragment
 
         showStarredSegmentsOnMap(SegmentHelper.SegmentType.ALL);
 
-        if (TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)
-                || TrainingApplication.havePermission(Manifest.permission.ACCESS_COARSE_LOCATION)) {
+        if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            || ContextCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             mMap.setMyLocationEnabled(true);
         }
         centerMapOnMyLocation(15, 0);

@@ -18,8 +18,12 @@
 
 package com.atrainingtracker.trainingtracker.segments;
 
+import android.Manifest;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
+
+import androidx.core.app.ActivityCompat;
 
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapBaseFragment;
@@ -83,6 +87,9 @@ public class SimpleSegmentOnMapFragment
         if (DEBUG) Log.i(TAG, "onMapReady");
         super.onMapReady(map);
 
+        if (ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
         mMap.setMyLocationEnabled(false);
         if (mSegmentID > 0) {
             showSegmentOnMap(mSegmentID, true);

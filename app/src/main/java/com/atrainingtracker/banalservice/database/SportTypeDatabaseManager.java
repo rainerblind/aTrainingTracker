@@ -18,8 +18,6 @@
 
 package com.atrainingtracker.banalservice.database;
 
-import static android.provider.MediaStore.Images.Media.getBitmap;
-
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;

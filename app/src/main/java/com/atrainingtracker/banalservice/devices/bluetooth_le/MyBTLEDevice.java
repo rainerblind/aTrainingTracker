@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.banalservice.devices.bluetooth_le;
 
+import android.Manifest;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;
@@ -27,9 +28,11 @@ import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
 import android.content.Context;
-import android.os.Build;
+import android.content.pm.PackageManager;
 import android.os.Handler;
 import android.util.Log;
+
+import androidx.core.app.ActivityCompat;
 
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.devices.DeviceType;
@@ -69,6 +72,9 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
                 mHandler.post(new Runnable() {
                     @Override
                     public void run() {
+                        if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                            return;
+                        }
                         mBluetoothGatt.discoverServices();
                         notifyStopSearching(true);  // we found the device
                     }
@@ -172,6 +178,9 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
             @Override
             public void run() {
                 if (DEBUG) Log.i(TAG, "trying to connect gatt");
+                if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                    return;
+                }
                 mBluetoothGatt = device.connectGatt(mContext, false, mGattCallback);
             }
         });
@@ -184,6 +193,9 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
             mHandler.post(new Runnable() {
                 @Override
                 public void run() {
+                    if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                        return;
+                    }
                     mBluetoothGatt.disconnect();
                     mBluetoothGatt.close();
                 }
@@ -252,6 +264,9 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
             mHandler.post(new Runnable() {
                 @Override
                 public void run() {
+                    if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                        return;
+                    }
                     mBluetoothGatt.readCharacteristic(gattChar);
                 }
             });
@@ -267,6 +282,9 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
                         BluetoothGattService btGattService = mBluetoothGatt.getService(BluetoothConstants.getServiceUUID(getDeviceType()));
                         if (btGattService == null) {
                             Log.d(TAG, "WTF, we expected a service here!");
+                            return;
+                        }
+                        if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
                             return;
                         }
                         BluetoothGattCharacteristic btGattChar = btGattService.getCharacteristic(BluetoothConstants.getCharacteristicUUID(getDeviceType()));
