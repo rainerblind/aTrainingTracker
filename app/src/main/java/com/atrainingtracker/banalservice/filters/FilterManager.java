@@ -37,6 +37,8 @@ import java.util.List;
 
 import static com.atrainingtracker.trainingtracker.dialogs.EditFieldDialog.TRACKING_VIEW_CHANGED_INTENT;
 
+import androidx.core.content.ContextCompat;
+
 public class FilterManager {
     private static final String TAG = FilterType.class.getSimpleName();
     private static final boolean DEBUG = BANALService.DEBUG & false;
@@ -78,8 +80,8 @@ public class FilterManager {
         mMySensorManager = mySensorManager;
         mContext = context;
 
-        mContext.registerReceiver(mSensorsChangedReceiver, mSensorsChangedFilter);
-        mContext.registerReceiver(mFiltersChangedReceiver, mFiltersChangedFilter);
+        ContextCompat.registerReceiver(mContext, mSensorsChangedReceiver, mSensorsChangedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(mContext, mFiltersChangedReceiver, mFiltersChangedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     public void createFilter(FilterData filterData) {

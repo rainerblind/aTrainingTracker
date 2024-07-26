@@ -25,6 +25,8 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.util.Log;
 
+import androidx.core.content.ContextCompat;
+
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.Protocol;
 import com.atrainingtracker.banalservice.sensor.MySensor;
@@ -60,7 +62,7 @@ public abstract class MyRemoteDevice extends MyDevice {
         mDeviceId = deviceId;
 
         mCalibrationFactor = DevicesDatabaseManager.getCalibrationFactor(deviceId);
-        context.registerReceiver(mCalibrationFactorChangedReceiver, mCalibrationFactorChangedFilter);
+        ContextCompat.registerReceiver(context, mCalibrationFactorChangedReceiver, mCalibrationFactorChangedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     @Override

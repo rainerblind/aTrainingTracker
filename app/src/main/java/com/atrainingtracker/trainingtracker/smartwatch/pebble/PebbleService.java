@@ -30,6 +30,8 @@ import android.database.sqlite.SQLiteDatabase;
 import android.os.IBinder;
 import android.util.Log;
 
+import androidx.core.content.ContextCompat;
+
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.ActivityType;
 import com.atrainingtracker.banalservice.BANALService;
@@ -340,15 +342,15 @@ public class PebbleService extends Service {
         mConfigurePebbleWatchAppFilter.addAction(BANALService.SEARCHING_FINISHED_FOR_ALL_INTENT);
         mConfigurePebbleWatchAppFilter.addAction(ConfigPebbleViewFragment.PEBBLE_VIEW_CHANGED_INTENT);
 
-        //registerReceiver(mSearchingFinishedReceiver, mSearchingFinishedFilter);
-        registerReceiver(mConfigurePebbleWatchAppReceiver, mConfigurePebbleWatchAppFilter);
-        registerReceiver(mUpdatePebbleReceiver, mUpdatePebbleFilter);
-        registerReceiver(mPebbleConnectedReceiver, mPebbleConnectedFilter);
-        registerReceiver(mPauseReceiver, mPauseFilter);
-        registerReceiver(mResumeReceiver, mResumeFilter);
-        registerReceiver(mLapSummaryReceiver, mLapSummaryFilter);
-        registerReceiver(mStartSearchingReceiver, mStartSearchingFilter);
-        registerReceiver(mEndSearchingReceiver, mEndSearchingFilter);
+        // ContextCompat.registerReceiver(this, mSearchingFinishedReceiver, mSearchingFinishedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mConfigurePebbleWatchAppReceiver, mConfigurePebbleWatchAppFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mUpdatePebbleReceiver, mUpdatePebbleFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mPebbleConnectedReceiver, mPebbleConnectedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mPauseReceiver, mPauseFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mResumeReceiver, mResumeFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mLapSummaryReceiver, mLapSummaryFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mStartSearchingReceiver, mStartSearchingFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mEndSearchingReceiver, mEndSearchingFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     @Override

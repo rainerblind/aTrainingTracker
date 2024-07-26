@@ -28,6 +28,8 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.ListFragment;
 import androidx.cursoradapter.widget.SimpleCursorAdapter;
 import android.util.Log;
@@ -138,7 +140,7 @@ public class FancyWorkoutNameListFragment
     @Override
     public void onResume() {
         super.onResume();
-        getContext().registerReceiver(mFancyWorkoutNamesChangedReceiver, mFancyWorkoutNamesChangedFilter);
+        ContextCompat.registerReceiver(getContext(), mFancyWorkoutNamesChangedReceiver, mFancyWorkoutNamesChangedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     @Override

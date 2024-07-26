@@ -28,6 +28,8 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.util.Log;
 
+import androidx.core.content.ContextCompat;
+
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.sensor.MySensor;
@@ -68,7 +70,7 @@ public class AltitudeFromPressureDevice extends MyDevice
             sensorManager.registerListener(this, mPressureSensor, SensorManager.SENSOR_DELAY_NORMAL);
         }
 
-        context.registerReceiver(mGPSProviderEnabledReceiver, mGPSProviderEnabledFilter);
+        ContextCompat.registerReceiver(context, mGPSProviderEnabledReceiver, mGPSProviderEnabledFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     @Override
@@ -88,6 +90,7 @@ public class AltitudeFromPressureDevice extends MyDevice
         super.shutDown();
         ((SensorManager) mContext.getSystemService(Context.SENSOR_SERVICE)).unregisterListener(this);
 
+        ContextCompat.registerReceiver(mContext, mGPSProviderEnabledReceiver, mGPSProviderEnabledFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
         mContext.unregisterReceiver(mGPSProviderEnabledReceiver);
     }
 

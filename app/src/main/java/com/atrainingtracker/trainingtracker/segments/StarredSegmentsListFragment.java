@@ -25,6 +25,8 @@ import android.content.IntentFilter;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
+
+import androidx.core.content.ContextCompat;
 import androidx.cursoradapter.widget.CursorAdapter;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
@@ -210,9 +212,9 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
         mDb = SegmentsDatabaseManager.getInstance().getOpenDatabase();
         updateCursor();
 
-        getContext().registerReceiver(mSegmentUpdateStartedReceiver, mSegmentUpdateStartedFilter);
-        getContext().registerReceiver(mUpdateSegmentsListReceiver, mUpdateSegmentsListFilter);
-        getContext().registerReceiver(mUpdatingSegmentsCompleteReceiver, mUpdatingSegmentsCompleteFilter);
+        ContextCompat.registerReceiver(getContext(), mSegmentUpdateStartedReceiver, mSegmentUpdateStartedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(getContext(), mUpdateSegmentsListReceiver, mUpdateSegmentsListFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(getContext(), mUpdatingSegmentsCompleteReceiver, mUpdatingSegmentsCompleteFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     @Override

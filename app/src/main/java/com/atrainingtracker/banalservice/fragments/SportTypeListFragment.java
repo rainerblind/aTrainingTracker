@@ -29,6 +29,8 @@ import android.database.sqlite.SQLiteDatabase;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.ListFragment;
 import androidx.cursoradapter.widget.SimpleCursorAdapter;
 import android.util.Log;
@@ -173,7 +175,7 @@ public class SportTypeListFragment
     public void onResume() {
         super.onResume();
 
-        getContext().registerReceiver(mSportTypeChangedReceiver, mSportTypeChangedFilter);
+        ContextCompat.registerReceiver(getContext(), mSportTypeChangedReceiver, mSportTypeChangedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     @Override

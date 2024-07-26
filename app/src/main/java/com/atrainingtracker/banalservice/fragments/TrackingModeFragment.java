@@ -23,6 +23,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
+
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -121,7 +123,7 @@ public class TrackingModeFragment extends Fragment {
         mUpdateViewFilter.addAction(BANALService.SEARCHING_STARTED_FOR_ONE_INTENT);
         mUpdateViewFilter.addAction(BANALService.SPORT_TYPE_CHANGED_BY_USER_INTENT);
         mUpdateViewFilter.addAction(TrainingApplication.TRACKING_STATE_CHANGED);
-        getActivity().registerReceiver(mUpdateViewReceiver, mUpdateViewFilter);
+        ContextCompat.registerReceiver(getActivity(), mUpdateViewReceiver, mUpdateViewFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     @Override

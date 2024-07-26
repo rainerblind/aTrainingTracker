@@ -25,6 +25,8 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
+
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentPagerAdapter;
@@ -224,7 +226,7 @@ public abstract class ConfigViewsFragment extends Fragment {
 
         // create list of views
         createViewIdList();
-        getActivity().registerReceiver(mNameChangedReceiver, mNameChangedFilter);
+        ContextCompat.registerReceiver(getActivity(), mNameChangedReceiver, mNameChangedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
 
         if (mCurrentItem >= 0) {
             if (DEBUG) Log.i(TAG, "setCurrentItem based on mCurrentItem=" + mCurrentItem);

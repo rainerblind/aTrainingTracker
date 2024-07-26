@@ -27,6 +27,8 @@ import android.location.LocationManager;
 import android.os.Bundle;
 import android.util.Log;
 
+import androidx.core.content.ContextCompat;
+
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.trainingtracker.tracker.TrackerService;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
@@ -104,8 +106,8 @@ public class TrackOnMapTrackingFragment
 
         mWorkoutID = ((TrainingApplication) getActivity().getApplication()).getWorkoutID();
 
-        getActivity().registerReceiver(mNewLocationReceiver, mNewLocationFilter);
-        getActivity().registerReceiver(mTrackingStartedReceiver, mTrackingStartedFilter);
+        ContextCompat.registerReceiver(getActivity(), mNewLocationReceiver, mNewLocationFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(getActivity(), mTrackingStartedReceiver, mTrackingStartedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
 
         if (mMap != null && mWorkoutID > 0) {
             showTrackOnMap();

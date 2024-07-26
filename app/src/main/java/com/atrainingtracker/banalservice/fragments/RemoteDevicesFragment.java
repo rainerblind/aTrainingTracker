@@ -27,6 +27,8 @@ import android.content.IntentFilter;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
+
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import android.util.Log;
 import android.view.ContextMenu;
@@ -193,7 +195,7 @@ public abstract class RemoteDevicesFragment extends Fragment {
         mRemoteDevicesAdapter.changeCursor(mRemoteDevicesCursor);
         mRemoteDevicesAdapter.notifyDataSetChanged();
 
-        getActivity().registerReceiver(mPairingChangedReceiver, mPairingChangedFilter);
+        ContextCompat.registerReceiver(getActivity(), mPairingChangedReceiver, mPairingChangedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
 
         startTimer();
     }

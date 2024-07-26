@@ -75,6 +75,8 @@ import java.util.Set;
 
 import static com.atrainingtracker.banalservice.BSportType.UNKNOWN;
 
+import androidx.core.content.ContextCompat;
+
 
 public class DeviceManager
         implements OnSharedPreferenceChangeListener {
@@ -290,10 +292,10 @@ public class DeviceManager
             startSearchForPairedDevices();
         }
 
-        mContext.registerReceiver(mPairingChangedReceiver, mPairingChangedFilter);
-        mContext.registerReceiver(mSearchingStoppedForOneReceiver, mSearchingStoppedForOneFilter);
-        mContext.registerReceiver(mStartSearchingForNewDevicesReceiver, mStartSearchingForNewDevicesFilter);
-        mContext.registerReceiver(mStopSearchingForNewDevicesReceiver, mStopSearchingForNewDevicesFilter);
+        ContextCompat.registerReceiver(mContext, mPairingChangedReceiver, mPairingChangedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(mContext, mSearchingStoppedForOneReceiver, mSearchingStoppedForOneFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(mContext, mStartSearchingForNewDevicesReceiver, mStartSearchingForNewDevicesFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(mContext, mStopSearchingForNewDevicesReceiver, mStopSearchingForNewDevicesFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     public static boolean isSearchingForARemoteDevice() {

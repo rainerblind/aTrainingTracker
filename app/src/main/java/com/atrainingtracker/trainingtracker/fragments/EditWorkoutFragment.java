@@ -30,6 +30,8 @@ import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
+
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -393,9 +395,9 @@ public class EditWorkoutFragment extends Fragment {
         if (DEBUG) Log.d(TAG, "onActivityCreated");
 
         // register receivers
-        getActivity().registerReceiver(mFinishedCalculatingExtremaValueReceiver, mFinishedCalculatingExtremaValueFilter);
-        getActivity().registerReceiver(mFinishedGuessingCommuteAndTrainerReceiver, mFinishedGuessingCommuteAndTrainerFilter);
-        getActivity().registerReceiver(mFinishedCalculatingFancyNameReceiver, mFinishedCalculatingFancyNameFilter);
+        ContextCompat.registerReceiver(getActivity(), mFinishedCalculatingExtremaValueReceiver, mFinishedCalculatingExtremaValueFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(getActivity(), mFinishedGuessingCommuteAndTrainerReceiver, mFinishedGuessingCommuteAndTrainerFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(getActivity(), mFinishedCalculatingFancyNameReceiver, mFinishedCalculatingFancyNameFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
 
 
         // fill the views
