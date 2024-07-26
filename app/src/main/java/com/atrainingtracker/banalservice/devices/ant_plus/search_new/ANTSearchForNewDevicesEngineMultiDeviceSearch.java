@@ -37,7 +37,7 @@ import java.util.List;
 public class ANTSearchForNewDevicesEngineMultiDeviceSearch
         implements SearchForNewDevicesInterface {
     private static final String TAG = "ANTSearchForNewDevicesEngineMultiDeviceSearch";
-    private static final boolean DEBUG = BANALService.DEBUG & true;
+    private static final boolean DEBUG = BANALService.getDebug(true);
 
     protected Context mContext;
     protected DeviceType mDeviceType;

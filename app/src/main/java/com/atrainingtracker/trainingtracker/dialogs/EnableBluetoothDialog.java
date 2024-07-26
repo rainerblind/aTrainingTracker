@@ -38,7 +38,7 @@ import com.atrainingtracker.trainingtracker.interfaces.RemoteDevicesSettingsInte
 
 public class EnableBluetoothDialog extends DialogFragment {
     public static final String TAG = EnableBluetoothDialog.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
     RemoteDevicesSettingsInterface mRemoteDevicesSettingsInterface = null;
 

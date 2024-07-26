@@ -32,7 +32,7 @@ import com.atrainingtracker.banalservice.sensor.MySensorManager;
 public class SpeedAndLocationDevice_GPS extends SpeedAndLocationDevice
         implements LocationListener {
     private static final String TAG = "SpeedAndLocationDev_GPS";
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
 
 
     LocationManager mLocationManager;

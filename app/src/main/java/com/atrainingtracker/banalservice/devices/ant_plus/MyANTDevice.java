@@ -56,7 +56,7 @@ import java.util.EnumSet;
 // TODO: where/when to register and unregister the sensors
 
 public abstract class MyANTDevice extends MyRemoteDevice {
-    private static final boolean DEBUG = BANALService.DEBUG & true;
+    private static final boolean DEBUG = BANALService.getDebug(true);
     protected int mAntDeviceNumber;
     /**
      * The state of the device/channel

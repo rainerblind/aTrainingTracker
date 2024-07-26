@@ -54,7 +54,7 @@ import java.util.Locale;
 public class EditSportTypeDialog extends DialogFragment {
     public static final String TAG = EditSportTypeDialog.class.getName();
     public static final String SPORT_TYPE_CHANGED_INTENT = "SPORT_TYPE_CHANGED_INTENT";
-    private static final boolean DEBUG = BANALService.DEBUG && false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     private static final String SPORT_TYPE_ID = "SPORT_TYPE_ID";
     protected EditText mEtName, mEtMinAvgSpeed, mEtMaxAvgSpeed;
     protected Spinner mSpBSportType, mSpStrava, mSpRunkeeper, mSpTrainingPeaks, mSpTCX, mSpGC;

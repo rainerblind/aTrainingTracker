@@ -38,7 +38,7 @@ import java.util.List;
 
 
 public abstract class MyDevice {
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     private final IntentFilter resetAccumulatorsFilter = new IntentFilter(BANALService.RESET_ACCUMULATORS_INTENT);
     protected Context mContext;
     protected DeviceType mDeviceType;

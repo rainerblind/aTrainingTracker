@@ -30,7 +30,7 @@ public class ConfigTrackingViewsActivity
         implements BANALService.GetBanalServiceInterface {
 
     private static final String TAG = ConfigTrackingViewsActivity.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG & true;
+    private static final boolean DEBUG = TrainingApplication.getDebug(true);
 
 
     @Override

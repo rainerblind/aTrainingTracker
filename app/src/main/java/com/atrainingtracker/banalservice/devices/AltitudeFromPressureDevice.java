@@ -45,7 +45,7 @@ public class AltitudeFromPressureDevice extends MyDevice
     public static final String ALTITUDE_CORRECTION_VALUE = "com.atrainingtracker.banalservice.Devices.AltitudeFromPressureDevice.ALTITUDE_CORRECTION_VALUE";
     public static final String ALTITUDE_CORRECTION_INTENT = "com.atrainingtracker.banalservice.Devices.AltitudeFromPressureDevice.ALTITUDE_CORRECTION_INTENT";
     protected static final double MY_PRESSURE_STANDARD_ATMOSPHERE = 1013.25;
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     protected final IntentFilter mGPSProviderEnabledFilter = new IntentFilter(BANALService.LOCATION_AVAILABLE_INTENT);
     protected MySensor<Number> mAltitudeSensor;
 

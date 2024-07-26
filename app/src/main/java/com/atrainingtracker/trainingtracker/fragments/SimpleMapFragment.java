@@ -30,7 +30,7 @@ import com.google.android.gms.maps.GoogleMap;
 public class SimpleMapFragment
         extends BaseMapFragment {
     public static final String TAG = SimpleMapFragment.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG & true;
+    private static final boolean DEBUG = TrainingApplication.getDebug(true);
 
     @Override
     public void onMapReady(final GoogleMap map) {

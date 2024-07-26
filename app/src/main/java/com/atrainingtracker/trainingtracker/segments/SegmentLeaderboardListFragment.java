@@ -43,7 +43,7 @@ import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager.Seg
 public class SegmentLeaderboardListFragment extends SwipeRefreshListFragment {
 
     public static final String TAG = SegmentLeaderboardListFragment.class.getSimpleName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
     private static final String SEGMENT_ID = "SEGMENT_ID";
 

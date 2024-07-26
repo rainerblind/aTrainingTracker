@@ -71,7 +71,7 @@ public class MySensorManager extends MyDevice {
     private static final String TAG = "MySensorManager";
     // String        mGCData            = EMPTY_GC_DATA;
     // protected int mAccumulatedSensors = 0; 
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     protected Map<SensorType, Object> mInitialValues = new HashMap<SensorType, Object>();
     protected StringBuilder mAccumulatedGCData = new StringBuilder(EMPTY_GC_DATA);
     protected Set<SensorType> mAccumulatedSensorTypeSet = new HashSet<SensorType>();

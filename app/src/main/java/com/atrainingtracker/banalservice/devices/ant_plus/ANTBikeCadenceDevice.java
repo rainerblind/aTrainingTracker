@@ -41,7 +41,7 @@ import java.util.EnumSet;
 public class ANTBikeCadenceDevice extends MyANTDevice {
     protected static final int CADENCE_THRESHOLD = 8;
     private static final String TAG = "ANTBikeCadenceDevice";
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
 
     // everything is stored as int, so we do not have to take care about all the castings
     protected AntPlusBikeCadencePcc cadencePcc = null;

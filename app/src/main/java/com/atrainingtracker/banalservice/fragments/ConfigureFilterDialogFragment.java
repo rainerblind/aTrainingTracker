@@ -52,7 +52,7 @@ public class ConfigureFilterDialogFragment
         extends DialogFragment {
     public static final String TAG = ConfigureFilterDialogFragment.class.getName();
     public static final String FILTERS_CHANGED_INTENT = "FILTERS_CHANGED_INTENT";
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     long mRowId;
     FilterType mFilterType;
     double mFilterConstant;

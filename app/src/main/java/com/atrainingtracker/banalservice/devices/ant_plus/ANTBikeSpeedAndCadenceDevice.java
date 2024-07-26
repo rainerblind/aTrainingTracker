@@ -46,7 +46,7 @@ public class ANTBikeSpeedAndCadenceDevice extends MyANTDevice {
     protected static final int SPEED_THRESHOLD = 8;
     protected static final int CADENCE_THRESHOLD = 8;
     private static final String TAG = "ANTBikeSpeedAndCadenceD";
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     protected AntPlusBikeSpeedDistancePcc bikeSpeedDistancePcc = null;
     protected AntPlusBikeCadencePcc cadencePcc = null;
     protected PccReleaseHandle pccReleaseHandle2 = null;

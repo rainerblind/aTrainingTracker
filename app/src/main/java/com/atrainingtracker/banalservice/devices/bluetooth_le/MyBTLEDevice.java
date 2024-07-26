@@ -46,7 +46,7 @@ import java.util.Queue;
 // TODO: where/when to register and unregister the sensors
 
 public abstract class MyBTLEDevice extends MyRemoteDevice {
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     private static final int SEARCH_PERIOD = 10 * 1000; // 10 seconds (same as for ANT+)
     private static final int READ_BATTERY_PERCENTAGE_PERIOD = 5 * 60 * 1000; // 5 minutes
     protected String mAddress; // the MAC Address

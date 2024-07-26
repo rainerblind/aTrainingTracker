@@ -50,7 +50,7 @@ import java.util.EnumSet;
 // TODO: where/when to register and unregister the sensors
 
 public abstract class MyANTAsyncSearchDevice {
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     /**
      * The state of the device/channel
      **/

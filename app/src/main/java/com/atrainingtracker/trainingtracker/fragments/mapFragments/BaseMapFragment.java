@@ -57,7 +57,7 @@ public abstract class BaseMapFragment
         extends SupportMapFragment
         implements OnMapReadyCallback {
     public static final String TAG = BaseMapFragment.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
     // map related stuff
     protected GoogleMap mMap;

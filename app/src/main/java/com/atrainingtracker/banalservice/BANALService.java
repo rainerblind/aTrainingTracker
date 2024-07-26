@@ -57,7 +57,7 @@ import androidx.core.content.ContextCompat;
 
 public class BANALService
         extends Service {
-    public static final boolean DEBUG = false;
+    private static final boolean DEBUG = false;
 
     /**
      * the Log TAG
@@ -141,7 +141,12 @@ public class BANALService
     private static MySensorManager cSensorManager;
     private static FilterManager cFilterManager;
     protected ActivityType mActivityTypeMax = ActivityType.GENERIC;
+
     /***********************************************************************************************/
+
+    public static boolean getDebug(boolean defaultVal) {
+        return DEBUG && defaultVal;
+    }
 
     protected BroadcastReceiver mStartSearchForPairedDevices = new BroadcastReceiver() {
         @Override

@@ -49,7 +49,7 @@ public class SegmentLeaderboardCursorAdapter extends CursorAdapter {
     private static final int OTHER_ATHLETE = 2;
     private static final int VIEW_TYPE_COUNT = 3;
     private final String TAG = SegmentLeaderboardCursorAdapter.class.getSimpleName();
-    private final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private final boolean DEBUG = TrainingApplication.getDebug(false);
     protected Context mContext;
     TimeFormatter timeFormatter = new TimeFormatter();
     SpeedFormatter speedFormatter = new SpeedFormatter();

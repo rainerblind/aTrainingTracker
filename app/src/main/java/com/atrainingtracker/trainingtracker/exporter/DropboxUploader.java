@@ -33,7 +33,7 @@ import java.io.InputStream;
 
 public class DropboxUploader extends BaseExporter {
     private static final String TAG = "DropboxUploader";
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
     public DropboxUploader(Context context) {
         super(context);

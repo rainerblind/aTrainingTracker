@@ -92,7 +92,7 @@ public class StravaSegmentsIntentService extends IntentService {
     protected static final String ENTRY_COUNT = "entry_count";
     protected static final String ENTRIES = "entries";
     private static final String TAG = StravaSegmentsIntentService.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private static final String ID = "id";
     private static final String RESOURCE_STATE = "resource_state";
     private static final String NAME = "name";

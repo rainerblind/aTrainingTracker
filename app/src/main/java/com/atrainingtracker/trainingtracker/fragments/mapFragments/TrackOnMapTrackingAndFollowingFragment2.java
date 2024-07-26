@@ -39,7 +39,7 @@ import com.google.android.gms.maps.model.LatLng;
 public class TrackOnMapTrackingAndFollowingFragment2
         extends TrackOnMapTrackingFragment {
     public static final String TAG = TrackOnMapTrackingAndFollowingFragment2.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
     private static final float ZOOM_SUPER_CLOSE_THRESHOLD = 10f / 3.6f;
     private static final float ZOOM_CLOSE_THRESHOLD = 20f / 3.6f;

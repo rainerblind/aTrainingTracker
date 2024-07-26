@@ -37,7 +37,7 @@ import com.atrainingtracker.trainingtracker.onlinecommunities.runkeeper.Runkeepe
 public class RunkeeperUploadFragment extends androidx.preference.PreferenceFragmentCompat
         implements SharedPreferences.OnSharedPreferenceChangeListener {
     public static final int GET_RUNKEEPER_ACCESS_TOKEN = 4;
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private static final String TAG = RunkeeperUploadFragment.class.getName();
     private CheckBoxPreference mRunkeeperUpload;
 

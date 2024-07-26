@@ -35,7 +35,7 @@ import java.util.LinkedList;
 public class ConfigPebbleViewsFragment extends ConfigViewsFragment {
 
     public static final String TAG = ConfigPebbleViewsFragment.class.getSimpleName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && true;
+    private static final boolean DEBUG = TrainingApplication.getDebug(true);
 
     public static ConfigPebbleViewsFragment newInstance(ActivityType activityType, long viewId) {
 

@@ -60,7 +60,7 @@ public class SportTypeListFragment
     protected static final String[] FROM = {SportType.UI_NAME, SportType.MIN_AVG_SPEED, SportType.MAX_AVG_SPEED};
     protected static final String[] FROM_WITH_C_ID = {SportType.C_ID, SportType.MIN_AVG_SPEED, SportType.MAX_AVG_SPEED, SportType.UI_NAME};
     protected static final int[] TO = {R.id.st_tvName, R.id.st_tvSpeed, R.id.st_tvSpeed};
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     protected Cursor mCursor;
     protected SimpleCursorAdapter mAdapter;
     protected String mSpeedUnit;

@@ -30,7 +30,7 @@ import com.google.android.gms.maps.model.Polyline;
 public class SimpleSegmentOnMapFragment
         extends TrackOnMapBaseFragment {
     public static final String TAG = SimpleSegmentOnMapFragment.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
     protected Polyline mPolyline;
 

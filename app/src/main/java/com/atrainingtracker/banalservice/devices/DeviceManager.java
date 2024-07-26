@@ -81,7 +81,7 @@ import androidx.core.content.ContextCompat;
 public class DeviceManager
         implements OnSharedPreferenceChangeListener {
     private static final String TAG = "DeviceManager";
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     protected static MyRemoteDevice cMyRemoteDeviceCurrentlySearchingFor = null;
     protected Context mContext;
     protected ClockDevice mClockDevice;

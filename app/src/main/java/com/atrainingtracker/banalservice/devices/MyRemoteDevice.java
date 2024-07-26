@@ -38,7 +38,7 @@ import com.atrainingtracker.banalservice.helpers.UIHelper;
  * base class for remote devices that connect via ANT+ or Bluetooth
  */
 public abstract class MyRemoteDevice extends MyDevice {
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     protected final IntentFilter mCalibrationFactorChangedFilter = new IntentFilter(BANALService.CALIBRATION_FACTOR_CHANGED);
     protected double mCalibrationFactor = 1;
     long mDeviceId = -1;  // the id of the device within the database

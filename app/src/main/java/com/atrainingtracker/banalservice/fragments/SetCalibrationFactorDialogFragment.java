@@ -40,7 +40,7 @@ import com.atrainingtracker.trainingtracker.MyHelper;
  */
 public class SetCalibrationFactorDialogFragment extends DialogFragment {
     public static final String TAG = "SetCalibrationFactorDialogFragment";
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     private static final String CALIBRATION_FACTOR = "CALIBRATION_FACTOR";
     private static final String TITLE_NAME = "TITLE_NAME";
     private static final String FIELD_NAME = "FIELD_NAME";

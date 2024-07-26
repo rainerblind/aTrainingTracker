@@ -46,7 +46,7 @@ import java.util.List;
 public class TrackOnMapTrackingFragment
         extends TrackOnMapBaseFragment {
     public static final String TAG = TrackOnMapTrackingFragment.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
     private final IntentFilter mNewLocationFilter = new IntentFilter(BANALService.NEW_LOCATION_INTENT);
     private final IntentFilter mTrackingStartedFilter = new IntentFilter(TrackerService.TRACKING_STARTED_INTENT);

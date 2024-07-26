@@ -35,7 +35,7 @@ import java.util.LinkedList;
 public class ConfigTrackingViewsFragment extends ConfigViewsFragment {
 
     public static final String TAG = ConfigTrackingViewsFragment.class.getSimpleName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && true;
+    private static final boolean DEBUG = TrainingApplication.getDebug(true);
 
     public static ConfigTrackingViewsFragment newInstance(ActivityType activityType, long viewId) {
 

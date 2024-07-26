@@ -47,7 +47,7 @@ import java.util.List;
 public class ConfigPebbleViewFragment extends ConfigViewFragment {
     public static final String PEBBLE_VIEW_CHANGED_INTENT = "PEBBLE_VIEW_CHANGED_INTENT";
     private static final String TAG = ConfigPebbleViewFragment.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && true;
+    private static final boolean DEBUG = TrainingApplication.getDebug(true);
     protected static ArrayAdapter<Integer> NUMBER_OF_FIELDS_ARRAY_ADAPTER;
     protected static SensorArrayAdapter SENSOR_ARRAY_ADAPTER;
 

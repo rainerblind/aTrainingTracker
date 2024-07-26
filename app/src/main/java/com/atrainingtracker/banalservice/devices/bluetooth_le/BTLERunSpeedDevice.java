@@ -38,7 +38,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 public class BTLERunSpeedDevice extends MyBTLEDevice {
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     private final ScheduledExecutorService mScheduler = Executors.newScheduledThreadPool(1);
     protected MySensor<Integer> mCadenceSensor;
     protected MySensor<Double> mSpeedSensor;

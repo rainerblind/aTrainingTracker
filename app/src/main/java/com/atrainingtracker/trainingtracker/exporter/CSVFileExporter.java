@@ -43,7 +43,7 @@ import au.com.bytecode.opencsv.CSVWriter;
 
 public class CSVFileExporter extends BaseExporter {
     private static final String TAG = "CSVFileExporter";
-    private static final boolean DEBUG = TrainingApplication.DEBUG & false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
     public CSVFileExporter(Context context) {
         super(context);

@@ -25,7 +25,7 @@ import com.atrainingtracker.banalservice.sensor.SensorType;
 // simple filter for y[k+1] = \alpha m[k] + (1-\alpha) y[k]
 public class ExponentialSmoothingFilter
         extends MyFilter<Number> {
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     private static final String TAG = ExponentialSmoothingFilter.class.getName();
 
     protected double mFilteredValue;

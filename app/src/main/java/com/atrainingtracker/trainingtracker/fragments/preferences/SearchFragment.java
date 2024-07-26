@@ -37,7 +37,7 @@ import java.util.List;
  */
 public class SearchFragment extends PreferenceFragmentCompat
         implements SharedPreferences.OnSharedPreferenceChangeListener {
-    private static final boolean DEBUG = TrainingApplication.DEBUG;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private static final String TAG = SearchFragment.class.getName();
 
     private SharedPreferences mSharedPreferences;

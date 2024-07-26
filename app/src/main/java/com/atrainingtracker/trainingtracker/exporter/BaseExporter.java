@@ -48,7 +48,7 @@ public abstract class BaseExporter {
     protected static final String PREFIX_NOT_FIRST = ",\n    ";
     protected static final String PREFIX_FIRST = "\n    ";
     private static final String TAG = "BaseExporter";
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     protected static ExportManager cExportManager;
     private static NotificationCompat.Builder mNotificationBuilder;
     private static NotificationManagerCompat cNotificationManager;
