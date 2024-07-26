@@ -19,7 +19,6 @@
 package com.atrainingtracker.trainingtracker.activities;
 
 import android.Manifest;
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 
 import android.annotation.SuppressLint;
@@ -150,9 +149,6 @@ public class MainActivityWithNavigation
     // private static final int REQUEST_ENABLE_BLUETOOTH            = 1;
     private static final int REQUEST_INSTALL_GOOGLE_PLAY_SERVICE = 2;
     private static final int MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1;
-    private static final int MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE = 2;
-    // private static final int MY_PERMISSIONS_REQUEST_READ_PHONE_STATE       = 3;
-    private static final int MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION_AND_WRITE_EXTERNAL_STORAGE = 4;
     // todo new perms
     private static final long WAITING_TIME_BEFORE_DISCONNECTING = 5 * 60 * 1000; // 5 min
     private static final int CRITICAL_BATTERY_LEVEL = 30;
@@ -276,14 +272,7 @@ public class MainActivityWithNavigation
         }
 
         // getPermissions
-        // TODO WRITE_EXTERNAL_STORAGE
         checkPermissions(true);
-        if (!TrainingApplication.havePermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE);
-        }
-        // if (!TrainingApplication.havePermission(Manifest.permission.READ_PHONE_STATE)) {
-        //     ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_PHONE_STATE}, MY_PERMISSIONS_REQUEST_READ_PHONE_STATE);
-        // }
 
         // check ANT+ installation
         if (TrainingApplication.checkANTInstallation() && BANALService.isANTProperlyInstalled(this)) {
