@@ -247,7 +247,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     }
 
     private int getEquipmentId(SQLiteDatabase db, String equipmentName) {
-        equipmentName.equals("foo");  // throw an exception when equipmentName is null
+        equipmentName.equals("");  // throw an exception when equipmentName is null
 
         int equipmentId = -1;
 

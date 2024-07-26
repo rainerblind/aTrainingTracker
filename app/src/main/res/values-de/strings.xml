@@ -443,7 +443,7 @@
     <string name="wheel_circumference">Radumfang</string>
     <string name="Calibration_Factor">Kalibrierungsfaktor</string>
     <string name="Wheel_Circumference">Radumfang</string>
-    <string name="Set_foo">%1$s berechnen</string>
+    <string name="Set_calibration">%1$s berechnen</string>
 
     <!--     <string name="textDeviceNumber">device Number</string> -->
     <!--     <string name="textPaired">paired</string> -->

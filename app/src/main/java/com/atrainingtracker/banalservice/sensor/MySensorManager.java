@@ -230,7 +230,7 @@ public class MySensorManager extends MyDevice {
             MySensor newBestSensor = getBestSensor(sensorType);
             if (newBestSensor == null) {
                 if (DEBUG) Log.d(TAG, "newBestSensor == null => removeSensor");
-                removeSensor(sensorType); // foo
+                removeSensor(sensorType);
                 sensorRemoved = true;
             }
 

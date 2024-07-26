@@ -158,10 +158,10 @@ public class EditSportTypeDialog extends DialogFragment {
             mSpBSportType.setAdapter(adapter);
             mSpBSportType.setSelection(bSportType.ordinal());
 
-            List<String> foo = Arrays.asList(getResources().getStringArray(R.array.Strava_Sport_Types_Strava_Names));
+            List<String> stravaNames = Arrays.asList(getResources().getStringArray(R.array.Strava_Sport_Types_Strava_Names));
             ArrayAdapter<CharSequence> stravaAdapter = ArrayAdapter.createFromResource(getContext(), R.array.Strava_Sport_Types_UI_Names, android.R.layout.simple_list_item_1);
             mSpStrava.setAdapter(stravaAdapter);
-            mSpStrava.setSelection(foo.indexOf(stravaName));
+            mSpStrava.setSelection(stravaNames.indexOf(stravaName));
 
             ArrayAdapter<CharSequence> runkeeperAdapter = ArrayAdapter.createFromResource(getContext(), R.array.Runkeeper_Sport_Types, android.R.layout.simple_list_item_1);
             mSpRunkeeper.setAdapter(runkeeperAdapter);

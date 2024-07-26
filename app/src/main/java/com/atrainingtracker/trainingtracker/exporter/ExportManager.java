@@ -334,7 +334,7 @@ public class ExportManager {
 
         for (ExportType exportType : ExportType.values()) {
 
-            EnumMap<FileFormat, ExportStatus> foo = new EnumMap<FileFormat, ExportStatus>(FileFormat.class);
+            EnumMap<FileFormat, ExportStatus> enumMap = new EnumMap<FileFormat, ExportStatus>(FileFormat.class);
             for (FileFormat fileFormat : FileFormat.values()) {
                 cursor = cExportStatusDb.query(ExportStatusDbHelper.TABLE,
                         new String[]{ExportStatusDbHelper.EXPORT_STATUS},
@@ -345,11 +345,11 @@ public class ExportManager {
                         null);
                 if (cursor.getCount() > 0) {
                     cursor.moveToFirst();
-                    foo.put(fileFormat, ExportStatus.valueOf(cursor.getString(cursor.getColumnIndex(ExportStatusDbHelper.EXPORT_STATUS))));
+                    enumMap.put(fileFormat, ExportStatus.valueOf(cursor.getString(cursor.getColumnIndex(ExportStatusDbHelper.EXPORT_STATUS))));
                 }
                 cursor.close();
             }
-            result.put(exportType, foo);
+            result.put(exportType, enumMap);
         }
 
         if (DEBUG) Log.d(TAG, "getExportStatus finished");

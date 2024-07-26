@@ -182,33 +182,33 @@ public class MyHelper {
     public static int getSpeedUnitNameId() {
         switch (TrainingApplication.getUnit()) {
             case METRIC:
-                return R.string.units_speed_metric;   // "km/h";
+                return R.string.units_speed_metric;
             case IMPERIAL:
-                return R.string.units_speed_imperial; // "mile/h";
+                return R.string.units_speed_imperial;
             default:
-                return R.string.units_speed_foobar;   // "foo/bar";
+                return R.string.units_speed_unknown;
         }
     }
 
     public static int getShortSpeedUnitNameId() {
         switch (TrainingApplication.getUnit()) {
             case METRIC:
-                return R.string.units_speed_short_metric;   // "km/h";
+                return R.string.units_speed_short_metric;
             case IMPERIAL:
-                return R.string.units_speed_short_imperial; // "mi/h";
+                return R.string.units_speed_short_imperial;
             default:
-                return R.string.units_speed_short_foobar;   // "foo/bar";
+                return R.string.units_speed_short_unknown;
         }
     }
 
     public static int getPaceUnitNameId() {
         switch (TrainingApplication.getUnit()) {
             case METRIC:
-                return R.string.units_pace_metric;    // "min/km"
+                return R.string.units_pace_metric;
             case IMPERIAL:
-                return R.string.units_pace_imperial;  // "min/mile"
+                return R.string.units_pace_imperial;
             default:
-                return R.string.units_pace_foobar;    //  min/foo
+                return R.string.units_pace_unknown;
 
         }
     }
@@ -216,11 +216,11 @@ public class MyHelper {
     public static int getShortPaceUnitNameId() {
         switch (TrainingApplication.getUnit()) {
             case METRIC:
-                return R.string.units_pace_short_metric; // "/km"
+                return R.string.units_pace_short_metric;
             case IMPERIAL:
-                return R.string.units_pace_short_imperial; // "/mile"
+                return R.string.units_pace_short_imperial;
             default:
-                return R.string.units_pace_short_foobar;       // "/foo"
+                return R.string.units_pace_short_unknown;
 
         }
     }
@@ -228,11 +228,11 @@ public class MyHelper {
     public static int getDistanceUnitNameId() {
         switch (TrainingApplication.getUnit()) {
             case METRIC:
-                return R.string.units_distance_metric;  // "km"
+                return R.string.units_distance_metric;
             case IMPERIAL:
-                return R.string.units_distance_imperial; // "mile"
+                return R.string.units_distance_imperial;
             default:
-                return R.string.units_distance_foobar;  // "foo"
+                return R.string.units_distance_unknown;
         }
     }
 

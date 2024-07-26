@@ -66,7 +66,6 @@ public abstract class BaseExporter {
         Intent newIntent = new Intent(mContext, MainActivityWithNavigation.class);
         newIntent.putExtras(bundle);
         newIntent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-        // newIntent.setAction("fooAction");
         PendingIntent pendingIntent = PendingIntent.getActivity(mContext, 0, newIntent, PendingIntent.FLAG_IMMUTABLE);
 
         // configure the notification

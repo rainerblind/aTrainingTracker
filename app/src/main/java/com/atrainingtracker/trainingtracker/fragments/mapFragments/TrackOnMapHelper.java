@@ -48,8 +48,6 @@ import java.util.HashMap;
 public class TrackOnMapHelper {
     private static final String TAG = TrackOnMapHelper.class.getName();
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
-    private EnumMap<Roughness, Integer> foo;
-    //                                                    workoutId
     private final EnumMap<Roughness, EnumMap<TrackType, HashMap<Long, TrackData>>> mTrackCache = new EnumMap<Roughness, EnumMap<TrackType, HashMap<Long, TrackData>>>(Roughness.class);
     private final EnumMap<TrackType, HashMap<GoogleMap, Polyline>> mPolylines = new EnumMap<TrackType, HashMap<GoogleMap, Polyline>>(TrackType.class);
 
