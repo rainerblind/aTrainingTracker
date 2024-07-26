@@ -47,7 +47,7 @@ public class SegmentDetailsActivity extends AppCompatActivity
     public static final String SELECTED_FRAGMENT = "SELECTED_FRAGMENT";
     public static final String SELECTED_FRAGMENT_ID = "SELECTED_FRAGMENT_ID";
     private static final String TAG = SegmentDetailsActivity.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private static final int DEFAULT_SELECTED_FRAGMENT_ID = R.id.drawer_map;
     // remember which fragment should be shown
     protected int mSelectedFragmentId = DEFAULT_SELECTED_FRAGMENT_ID;

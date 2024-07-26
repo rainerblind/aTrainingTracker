@@ -54,7 +54,7 @@ import java.util.LinkedList;
 public abstract class ConfigViewsFragment extends Fragment {
 
     public static final String TAG = ConfigViewsFragment.class.getSimpleName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && true;
+    private static final boolean DEBUG = TrainingApplication.getDebug(true);
     private static final String CURRENT_ITEM = "CURRENT_ITEM";
     private final IntentFilter mNameChangedFilter = new IntentFilter(ConfigViewsActivity.NAME_CHANGED_INTENT);
     protected ActivityType mActivityType = ActivityType.getDefaultActivityType();

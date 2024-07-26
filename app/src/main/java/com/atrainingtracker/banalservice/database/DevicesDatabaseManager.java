@@ -49,7 +49,7 @@ import java.util.Set;
 
 public class DevicesDatabaseManager {
     private static final String TAG = DevicesDatabaseManager.class.getName();
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     private static DevicesDatabaseManager cInstance;
     private static DevicesDbHelper cDevicesDbHelper;
     private int mOpenCounter;
@@ -726,7 +726,7 @@ public class DevicesDatabaseManager {
         // static final int DB_VERSION = 6;    // upgraded at 30.01.2018 to replace storing of BT features (for Bike Power) to all Bike Power Devices
         static final int DB_VERSION = 7;    // upgraded at 20.03.2018: added the location devices to this database
         private static final String TAG = "DeviceDbHelper";
-        private static final boolean DEBUG = BANALService.DEBUG & false;
+        private static final boolean DEBUG = BANALService.getDebug(false);
         private static final String DEVICES_V3 = "Devices";               // in version 3, the table was simply called Devices
         @Deprecated
         private static final String TABLE_BT_SPECIFIC = "BTSpecific";

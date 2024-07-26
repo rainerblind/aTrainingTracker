@@ -48,7 +48,7 @@ import java.util.UUID;
 public class BTSearchForNewDevicesEngine
         implements SearchForNewDevicesInterface {
     private static final String TAG = "BTSearchForNewDevicesE";
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
 
     protected Context mContext;
     protected Handler mHandler;

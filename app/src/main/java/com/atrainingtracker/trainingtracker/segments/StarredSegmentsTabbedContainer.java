@@ -42,7 +42,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 public class StarredSegmentsTabbedContainer extends Fragment {
 
     public static final String TAG = StarredSegmentsTabbedContainer.class.getSimpleName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
     private static final String SELECTED_ITEM = "SELECTED_ITEM";
     /**

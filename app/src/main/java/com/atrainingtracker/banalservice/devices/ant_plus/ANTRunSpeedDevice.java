@@ -44,7 +44,7 @@ import java.math.BigDecimal;
  */
 public class ANTRunSpeedDevice extends MyANTDevice {
     private static final String TAG = "ANTRunSpeedDevice";
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     protected MySensor<BigDecimal> mCadenceSensor;
     protected MySensor<Double> mSpeedSensor;
     protected MySensor<Double> mPaceSensor;

@@ -36,7 +36,7 @@ import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 
 public class BTLEBikePowerDevice extends MyBTLEDevice {
     protected static final int MAX_IDENTICAL = 4;
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
 
     private static final int PEDAL_POWER_BALANCE_SUPPORTED_MASK = 1;
     private static final int ACCUMULATED_TORQUE_SUPPORTED_MASK = 1 << 1;

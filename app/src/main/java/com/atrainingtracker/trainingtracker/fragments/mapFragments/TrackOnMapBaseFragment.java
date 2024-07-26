@@ -54,7 +54,7 @@ public abstract class TrackOnMapBaseFragment
     public static final String TAG = TrackOnMapBaseFragment.class.getName();
     protected static final String START_AND_FINISH_LINE_POINTS = 5 + "";
     protected static final double START_LINE_LENGTH = 15;                 // essentially only halve the length ;-)
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     protected long mWorkoutID = -1;
 
     private boolean mTrackOnMapLoaded = false;

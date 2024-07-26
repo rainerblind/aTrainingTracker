@@ -69,7 +69,7 @@ import java.util.HashMap;
 import java.util.Locale;
 
 public class TrainingApplication extends Application {
-    public static final boolean DEBUG = false;
+    private static final boolean DEBUG = false;
     // some Strings to handle tracking globally
     public static final String REQUEST_START_TRACKING = "com.atrainingtracker.trainingapplication.REQUEST_START_TRACKING";
     public static final String REQUEST_PAUSE_TRACKING = "com.atrainingtracker.trainingapplication.REQUEST_PAUSE_TRACKING";
@@ -240,6 +240,10 @@ public class TrainingApplication extends Application {
     private final TimeFormatter mTimeFormatter = new TimeFormatter();
     private String mDeviceCurrentlySearchingFor = null;
     /***********************************************************************************************/
+
+    public static boolean getDebug(boolean defaultVal) {
+        return DEBUG && defaultVal;
+    }
 
     protected BroadcastReceiver mStartTrackingReceiver = new BroadcastReceiver() {
         @Override

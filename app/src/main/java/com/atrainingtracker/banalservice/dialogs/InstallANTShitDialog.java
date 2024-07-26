@@ -44,7 +44,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 
 public class InstallANTShitDialog extends DialogFragment {
     public static final String TAG = InstallANTShitDialog.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
     private static final String ANT_PLUGIN_PACKAGE_NAME = "com.dsi.ant.plugins.antplus";
 

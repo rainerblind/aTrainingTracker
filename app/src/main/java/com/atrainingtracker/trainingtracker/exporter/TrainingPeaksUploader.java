@@ -60,7 +60,7 @@ public class TrainingPeaksUploader extends BaseExporter {
     protected static final String COMMENT = "Comment";
     protected static final String TYPE = "Type";
     private static final String TAG = TrainingPeaksUploader.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
     public TrainingPeaksUploader(Context context) {
         super(context);

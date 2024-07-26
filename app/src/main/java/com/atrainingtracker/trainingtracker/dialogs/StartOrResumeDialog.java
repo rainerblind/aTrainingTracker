@@ -36,7 +36,7 @@ import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface;
 
 public class StartOrResumeDialog extends DialogFragment {
     public static final String TAG = StartOrResumeDialog.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
     private StartOrResumeInterface mStartOrResumeInterface;
 

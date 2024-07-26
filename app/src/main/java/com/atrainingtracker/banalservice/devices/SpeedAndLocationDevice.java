@@ -35,7 +35,7 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
     protected static final int SAMPLING_TIME = 1000;
     protected static final int MIN_DISTANCE = 0;
     private static final String TAG = "GPSSpeedAndLocationDevice";
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     protected boolean LocationAvailable = false;
     protected MySensor<Double> mLongitudeSensor;
     protected MySensor<Double> mLatitudeSensor;

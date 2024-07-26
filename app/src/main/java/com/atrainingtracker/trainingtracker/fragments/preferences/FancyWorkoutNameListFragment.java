@@ -55,7 +55,7 @@ public class FancyWorkoutNameListFragment
     public static final String TAG = FancyWorkoutNameListFragment.class.getName();
     protected static final String[] FROM = {WorkoutSummaries.FANCY_NAME, WorkoutSummaries.COUNTER};
     protected static final int[] TO = {R.id.tvWorkoutNameHashKey, R.id.tvCounter};
-    private static final boolean DEBUG = TrainingApplication.DEBUG & false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     protected Cursor mCursor;
     protected SimpleCursorAdapter mAdapter;
     protected IntentFilter mFancyWorkoutNamesChangedFilter = new IntentFilter(EditFancyWorkoutNameDialog.FANCY_WORKOUT_NAME_CHANGED_INTENT);

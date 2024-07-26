@@ -61,7 +61,7 @@ public class EditFieldDialog extends DialogFragment {
     public static final String TAG = EditFieldDialog.class.getName();
     public static final String TRACKING_VIEW_CHANGED_INTENT = "TRACKING_VIEW_CHANGED_INTENT";
     protected static final Integer[] TEXT_SIZES = {20, 25, 30, 35, 40, 45, 50, 60, 70, 80};
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private static final String ACTIVITY_TYPE = "ACTIVITY_TYPE";
     private static final String ROW_ID = "ROW_ID";
     private static final String SENSOR_TYPE = "SENSOR_TYPE";

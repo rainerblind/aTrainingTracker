@@ -34,7 +34,7 @@ import com.atrainingtracker.banalservice.sensor.SensorType;
 
 abstract public class BTLEBikeDevice extends MyBTLEDevice {
     protected static final int MAX_IDENTICAL = 4;
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
 
     // some variables to calc the speed, distance, and cadence
     protected boolean mLastWheelRevolutionsValid = false;

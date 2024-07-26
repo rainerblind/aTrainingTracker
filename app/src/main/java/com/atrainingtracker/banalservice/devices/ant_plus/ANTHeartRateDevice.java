@@ -34,7 +34,7 @@ import com.dsi.ant.plugins.antplus.pccbase.AntPluginPcc;
 import com.dsi.ant.plugins.antplus.pccbase.PccReleaseHandle;
 
 public class ANTHeartRateDevice extends MyANTDevice {
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     protected AntPlusHeartRatePcc hrPcc = null;
 
     protected MySensor<Number> mHeartRateSensor;

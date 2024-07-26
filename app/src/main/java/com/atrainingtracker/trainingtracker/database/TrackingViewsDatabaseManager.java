@@ -43,7 +43,7 @@ import java.util.TreeMap;
 
 public class TrackingViewsDatabaseManager {
     private static final String TAG = TrackingViewsDatabaseManager.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private static TrackingViewsDatabaseManager cInstance;
     private static TrackingViewsDbHelper cTrackingViewsDbHelper;
     private int mOpenCounter;

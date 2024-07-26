@@ -59,7 +59,7 @@ public class WorkoutDetailsActivity extends AppCompatActivity
     public static final String SELECTED_FRAGMENT = "SELECTED_FRAGMENT";
     public static final String SELECTED_FRAGMENT_ID = "SELECTED_FRAGMENT_ID";
     private static final String TAG = "WorkoutDetailsActivity";
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private static final int DEFAULT_SELECTED_FRAGMENT_ID = R.id.drawer_map;
     private static final String CALCULATING_EXTREMA_VALUES = "CALCULATING_EXTREMA_VALUES";
     private final IntentFilter mFinishedCalculatingExtremaValuesFilter = new IntentFilter(CalcExtremaValuesTask.FINISHED_CALCULATING_EXTREMA_VALUES);

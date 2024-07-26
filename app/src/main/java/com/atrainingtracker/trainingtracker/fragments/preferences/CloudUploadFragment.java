@@ -38,7 +38,7 @@ import java.util.List;
 
 public class CloudUploadFragment extends androidx.preference.PreferenceFragmentCompat
         implements SharedPreferences.OnSharedPreferenceChangeListener {
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private static final String TAG = CloudUploadFragment.class.getName();
 
     private CheckBoxPreference mDropboxUpload;

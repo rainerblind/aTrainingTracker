@@ -47,7 +47,7 @@ import java.util.List;
  */
 public class AvailableRemoteDevicesFragment extends RemoteDevicesFragment {
     public static final String TAG = "AvailableRemoteDevicesF";
-    private static final boolean DEBUG = BANALService.DEBUG && false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     protected LinearLayout mllSearchLayout;
     // protected ProgressBar mpbSearching;
     protected TextView mtvSearchingForRemoteDevice;

@@ -45,7 +45,7 @@ import static com.atrainingtracker.trainingtracker.TrainingApplication.NOTIFICAT
  */
 public class ExportWorkoutIntentService extends IntentService {
     private static final String TAG = "ExportWorkoutIntentService";
-    private static final boolean DEBUG = TrainingApplication.DEBUG & true;
+    private static final boolean DEBUG = TrainingApplication.getDebug(true);
 
 
     boolean exported = false;

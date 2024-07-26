@@ -54,7 +54,7 @@ import java.util.Arrays;
 public class RemoteDevicesFragmentTabbedContainer extends Fragment {
 
     public static final String TAG = RemoteDevicesFragmentTabbedContainer.class.getSimpleName();
-    private static final boolean DEBUG = BANALService.DEBUG && false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     /**
      * The {@link ViewPager} that will host the section contents.
      */

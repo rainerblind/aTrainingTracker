@@ -53,7 +53,7 @@ public class CalcExtremaValuesTask extends AsyncTask<Long, String, Boolean> {
     public static final String SENSOR_TYPE = "SENSOR_TYPE";
     public static final String FANCY_NAME = "FANCY_NAME";
     private static final String TAG = "CalcExtremaValuesTask";
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private static final List<SensorType> IMPORTANT_SENSOR_TYPES = Arrays.asList(SensorType.ALTITUDE, SensorType.CADENCE, SensorType.HR, SensorType.PACE_spm, SensorType.PEDAL_POWER_BALANCE, SensorType.PEDAL_SMOOTHNESS_L, SensorType.PEDAL_SMOOTHNESS_R, SensorType.POWER, SensorType.SPEED_mps, SensorType.TEMPERATURE, SensorType.TORQUE, SensorType.TORQUE_EFFECTIVENESS_L, SensorType.TORQUE_EFFECTIVENESS_R);
 
     private final Context mContext;

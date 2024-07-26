@@ -59,7 +59,7 @@ import java.util.List;
 public class EditDeviceDialogFragment
         extends DialogFragment {
     public static final String TAG = "EditDeviceDialogFragment";
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
 
     // public interface OnEditDeviceFinishedListener
     // {

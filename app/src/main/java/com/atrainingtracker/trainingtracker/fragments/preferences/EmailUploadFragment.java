@@ -32,7 +32,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
  */
 public class EmailUploadFragment extends androidx.preference.PreferenceFragmentCompat
         implements SharedPreferences.OnSharedPreferenceChangeListener {
-    private static final boolean DEBUG = TrainingApplication.DEBUG;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private static final String TAG = EmailUploadFragment.class.getName();
 
     EditTextPreference etpAddress, etpSubject;

@@ -27,7 +27,7 @@ import com.atrainingtracker.trainingtracker.fragments.ConfigViewsFragment;
 public class ConfigPebbleViewsActivity extends ConfigViewsActivity {
 
     private static final String TAG = ConfigPebbleViewsActivity.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG & true;
+    private static final boolean DEBUG = TrainingApplication.getDebug(true);
 
 
     @Override

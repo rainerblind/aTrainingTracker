@@ -41,7 +41,7 @@ import com.atrainingtracker.banalservice.dialogs.SelectSportTypeDialog;
 
 public class ControlSportTypeFragment extends Fragment {
     private static final String TAG = ControlSportTypeFragment.class.getName();
-    private static final boolean DEBUG = BANALService.DEBUG && false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
 
     private ImageButton mIbRun, mIbBike, mIbOther;
     private TextView mTvRun, mTvBike, mTvOther;

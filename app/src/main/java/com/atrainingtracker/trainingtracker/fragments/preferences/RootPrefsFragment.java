@@ -36,7 +36,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 public class RootPrefsFragment extends PreferenceFragmentCompat
         implements OnSharedPreferenceChangeListener {
     public static final String TAG = RootPrefsFragment.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
 
     private EditTextPreference mAthleteNamePref, mSamplingTimePref, mSearchRoundsPref;

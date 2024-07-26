@@ -70,7 +70,7 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
     // public static final String VIEW_ID = "VIEW_ID";
     // public static final String NAME    = "NAME";
     private static final String TAG = ConfigTrackingViewFragment.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     // protected ActivityType mActivityType;
     // protected long mViewId;
     protected LinearLayout mLLSensors;

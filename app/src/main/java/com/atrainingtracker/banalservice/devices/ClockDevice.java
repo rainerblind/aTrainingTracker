@@ -40,7 +40,7 @@ import java.util.TimerTask;
 
 public class ClockDevice extends MyDevice {
     private static final String TAG = "ClockDevice";
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
 
     // protected final IntentFilter mStartTimerFilter = new IntentFilter(BANALService.START_TIMER_INTENT);
     // protected final IntentFilter mStopTimerFilter  = new IntentFilter(BANALService.STOP_TIMER_INTENT);

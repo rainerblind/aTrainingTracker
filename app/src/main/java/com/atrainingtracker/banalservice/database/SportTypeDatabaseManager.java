@@ -44,7 +44,7 @@ import java.util.List;
 public class SportTypeDatabaseManager {
 
     private static final String TAG = SportTypeDatabaseManager.class.getName();
-    private static final boolean DEBUG = BANALService.DEBUG && false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     private static SportTypeDatabaseManager cInstance;
     private static SportTypeDbHelper cSportTypeDbHelper;
     private int mOpenCounter;

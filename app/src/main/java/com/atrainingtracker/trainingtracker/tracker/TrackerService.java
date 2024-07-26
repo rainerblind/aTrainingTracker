@@ -73,7 +73,7 @@ public class TrackerService extends Service {
     // public static final String WORKOUT_ID               = "de.rainerblind.trainingtracker.TrackerService.WORKOUT_ID";
     public static final String START_TYPE = "START_TYPE";
     private static final String TAG = "TrackerService";
-    private static final boolean DEBUG = TrainingApplication.DEBUG & false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     protected final IntentFilter mAltitudeCorrectionFilter = new IntentFilter(AltitudeFromPressureDevice.ALTITUDE_CORRECTION_INTENT);
     protected final IntentFilter mSearchingFinishedFilter = new IntentFilter(BANALService.SEARCHING_FINISHED_FOR_ALL_INTENT);
     // BANALConnection banalConnection;

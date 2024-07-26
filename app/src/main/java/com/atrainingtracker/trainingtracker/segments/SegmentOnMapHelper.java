@@ -45,7 +45,7 @@ import java.util.HashMap;
  */
 public class SegmentOnMapHelper {
     private static final String TAG = SegmentOnMapHelper.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     //                                 segmentId
     private final EnumMap<Roughness, HashMap<Long, SegmentData>> mSegmentCache = new EnumMap<Roughness, HashMap<Long, SegmentData>>(Roughness.class);
 

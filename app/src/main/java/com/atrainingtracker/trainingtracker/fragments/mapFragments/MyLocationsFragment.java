@@ -81,7 +81,7 @@ import java.util.Map;
 public class MyLocationsFragment
         extends Fragment {
     public static final String TAG = MyLocationsFragment.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG & false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
 
     MapView mMapView;

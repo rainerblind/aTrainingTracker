@@ -76,7 +76,7 @@ import java.util.List;
 
 public class EditWorkoutFragment extends Fragment {
     public static final String TAG = "EditWorkoutFragment";
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
     // public static final String WORKOUT_ID = "de.rainerblind.trainingtracker.Activities.UpdateWorkoutActivity.WORKOUT_ID";
     // some definitions to store the values of the views

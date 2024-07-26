@@ -46,7 +46,7 @@ import com.google.android.gms.maps.model.MarkerOptions;
 public class TrackOnMapAftermathFragment
         extends TrackOnMapBaseFragment {
     public static final String TAG = TrackOnMapAftermathFragment.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG & false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
     private final IntentFilter mFinishedCalculatingExtremaValueFilter = new IntentFilter(CalcExtremaValuesTask.FINISHED_CALCULATING_EXTREMA_VALUE);
 

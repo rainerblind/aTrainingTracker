@@ -43,7 +43,7 @@ import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaSegme
 public class StravaUploadFragment extends androidx.preference.PreferenceFragmentCompat
         implements SharedPreferences.OnSharedPreferenceChangeListener {
     public static final int GET_STRAVA_ACCESS_TOKEN = 3;
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private static final String TAG = StravaUploadFragment.class.getName();
     private CheckBoxPreference mStravaUpload;
     private Preference mUpdateStravaEquipment;

@@ -23,7 +23,7 @@ import com.atrainingtracker.banalservice.BANALService;
 // public class SensorData implements Parcelable
 public class SensorData<T> {
     private static final String TAG = "SensorData";
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     public String mDeviceName;
     private final SensorType mSensorType;
     private final T mValue;

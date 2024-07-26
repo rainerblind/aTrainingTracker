@@ -59,7 +59,7 @@ import java.util.TimerTask;
 
 public abstract class RemoteDevicesFragment extends Fragment {
     private static final String TAG = "RemoteDevicesFragment";
-    private static final boolean DEBUG = BANALService.DEBUG && false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     protected DeviceType mDeviceType;
     protected Protocol mProtocol;
     protected ListView lvDevices;

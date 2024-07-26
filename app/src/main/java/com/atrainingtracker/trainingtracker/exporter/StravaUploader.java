@@ -67,7 +67,7 @@ public class StravaUploader extends BaseExporter {
     protected static final long INITIAL_WAITING_TIME = 10 * 1000L;  // 10 seconds
     protected static final long WAITING_TIME_UPDATE = 1000L;  // 1 second
     private static final String TAG = "StravaUploader";
-    private static final boolean DEBUG = true; //TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = true; //TrainingApplication.getDebug(false);
 
     //    {
 //    	  "id": 16486788,

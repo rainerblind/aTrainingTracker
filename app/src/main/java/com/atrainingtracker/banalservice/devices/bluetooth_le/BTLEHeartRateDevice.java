@@ -32,7 +32,7 @@ import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 
 public class BTLEHeartRateDevice extends MyBTLEDevice {
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     protected MySensor<Integer> mHeartRateSensor;
     private final String TAG = "ANTHeartRateDevice";
 

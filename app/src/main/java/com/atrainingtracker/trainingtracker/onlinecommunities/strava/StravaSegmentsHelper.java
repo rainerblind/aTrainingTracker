@@ -37,7 +37,7 @@ import static com.atrainingtracker.trainingtracker.onlinecommunities.strava.Stra
 
 public class StravaSegmentsHelper {
     private static final String TAG = StravaSegmentsHelper.class.getSimpleName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
     private final Context mContext;
 

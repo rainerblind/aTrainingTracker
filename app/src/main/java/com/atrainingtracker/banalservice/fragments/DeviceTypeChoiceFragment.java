@@ -35,7 +35,7 @@ import java.util.List;
 
 public class DeviceTypeChoiceFragment extends ListFragment {
     public static final String TAG = "DeviceTypeChoiceFragment";
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
 
     OnDeviceTypeSelectedListener mCallback;
     Protocol mProtocol;

@@ -85,7 +85,7 @@ public abstract class BaseGetAccessTokenActivity
     protected static final String APPS = "apps";
     protected static final String MY_REDIRECT_URI = "https://rainer-blind.de";  // must not be changed because strava checks this uri
     private static final String TAG = "BaseGetAccessTokenActivity";
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private ProgressDialog dialog;
     private boolean showDialog = true;  // TODO: bad name!
 

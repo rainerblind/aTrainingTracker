@@ -41,7 +41,7 @@ import androidx.core.content.ContextCompat;
 
 public class FilterManager {
     private static final String TAG = FilterType.class.getSimpleName();
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
 
     protected HashMap<String, FilterData> mRequiredButNotAvailableFilters = new HashMap<>();
 

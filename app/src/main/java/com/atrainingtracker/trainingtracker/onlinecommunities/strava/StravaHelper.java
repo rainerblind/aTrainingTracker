@@ -50,7 +50,7 @@ public class StravaHelper {
     public static final String BEARER = "Bearer";
     protected static final String ID = "id";
     private static final String TAG = StravaHelper.class.getSimpleName();
-    private static final boolean DEBUG = true; // TrainingApplication.DEBUG & true;
+    private static final boolean DEBUG = true; // TrainingApplication.getDebug(true);
 
     public static String translateClimbCategory(int climbCategory) {
         switch (climbCategory) {

@@ -52,7 +52,7 @@ import com.google.android.gms.maps.GoogleMap;
 public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
 
     private static final String TAG = StarredSegmentsListFragment.class.getSimpleName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
     private static final String SPORT_TYPE_ID = "SPORT_TYPE_ID";
 

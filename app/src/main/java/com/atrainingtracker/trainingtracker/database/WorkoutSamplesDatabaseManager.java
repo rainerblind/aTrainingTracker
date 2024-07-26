@@ -35,7 +35,7 @@ import java.util.List;
 
 public class WorkoutSamplesDatabaseManager {
     private static final String TAG = WorkoutSamplesDatabaseManager.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private static WorkoutSamplesDatabaseManager cInstance;
     private static WorkoutSamplesDbHelper cWorkoutSamplesDbHelper;
     private int mOpenCounter;
@@ -494,7 +494,7 @@ public class WorkoutSamplesDatabaseManager {
         protected static final String BASE_COLUMNS = C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                 + TIME + " DATETIME DEFAULT CURRENT_TIMESTAMP";
         static final String TAG = "WorkoutSamplesDbHelper";
-        static final boolean DEBUG = TrainingApplication.DEBUG & true;
+        static final boolean DEBUG = TrainingApplication.getDebug(true);
         protected Context mContext;
 
         // Constructor

@@ -39,7 +39,7 @@ import java.util.Set;
 
 public class WorkoutSummariesDatabaseManager {
     private static final String TAG = WorkoutSummariesDatabaseManager.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private static WorkoutSummariesDatabaseManager cInstance;
     private static WorkoutSummariesDbHelper cWorkoutSummariesDbHelper;
     private int mOpenCounter;
@@ -848,7 +848,7 @@ public class WorkoutSummariesDatabaseManager {
                 + WorkoutSummaries.COUNTER + " int, "
                 + WorkoutSummaries.ADD_VIA + " int)";
         private static final String TAG = "WorkoutSummariesDbHelper";
-        private static final boolean DEBUG = TrainingApplication.DEBUG & true;
+        private static final boolean DEBUG = TrainingApplication.getDebug(true);
         private final Context mContext;
 
         // Constructor

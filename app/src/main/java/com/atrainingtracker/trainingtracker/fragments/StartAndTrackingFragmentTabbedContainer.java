@@ -59,7 +59,7 @@ public class StartAndTrackingFragmentTabbedContainer extends Fragment {
     public static final String ACTIVITY_TYPE = "ACTIVITY_TYPE";
     public static final String SELECTED_ITEM = "SELECTED_ITEM";
     public static final int CONTROL_ITEM = 0;
-    private static final boolean DEBUG = true; // TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = true; // TrainingApplication.getDebug(false);
     private static final int SHOW_LAP_SUMMARY_TIME = 3000;
     private final IntentFilter mTrackingStartedFilter = new IntentFilter(TrackerService.TRACKING_STARTED_INTENT);
     private final IntentFilter mTrackingFinishedFilter = new IntentFilter(TrackerService.TRACKING_FINISHED_INTENT);
