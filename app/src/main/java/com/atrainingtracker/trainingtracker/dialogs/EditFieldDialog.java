@@ -262,7 +262,7 @@ public class EditFieldDialog extends DialogFragment {
             LinkedList<Long> deviceIds = deviceIdAndNameLists.deviceIds;
             LinkedList<String> names = deviceIdAndNameLists.names;
 
-            deviceIds.addFirst(new Long(0));
+            deviceIds.addFirst(Long.valueOf(0));
             names.addFirst(getContext().getString(R.string.bestSensor));
 
             if (mDeviceId < 0) {

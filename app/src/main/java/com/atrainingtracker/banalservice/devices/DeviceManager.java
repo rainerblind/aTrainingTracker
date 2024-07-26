@@ -244,7 +244,7 @@ public class DeviceManager
             startSearchForNewRemoteDevices(protocol, deviceType);
         }
     };
-    private SharedPreferences mSharedPreferences;
+    private final SharedPreferences mSharedPreferences;
 
     /**
      * Constructor

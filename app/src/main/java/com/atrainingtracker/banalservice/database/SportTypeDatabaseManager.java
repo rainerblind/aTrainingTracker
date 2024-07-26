@@ -545,7 +545,7 @@ public class SportTypeDatabaseManager {
         public static final double DEFAULT_MIN_AVG_SPEED = 0.0;
         public static final double DEFAULT_MAX_AVG_SPEED = 0.5;
 
-        public static final String getDefaultUiName(Context context) {
+        public static String getDefaultUiName(Context context) {
             return context.getString(R.string.sport_type_other);
         }
     }

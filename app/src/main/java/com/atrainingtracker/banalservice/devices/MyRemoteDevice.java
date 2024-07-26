@@ -40,7 +40,7 @@ public abstract class MyRemoteDevice extends MyDevice {
     protected final IntentFilter mCalibrationFactorChangedFilter = new IntentFilter(BANALService.CALIBRATION_FACTOR_CHANGED);
     protected double mCalibrationFactor = 1;
     long mDeviceId = -1;  // the id of the device within the database
-    private String TAG = "MyRemoteDevice";
+    private final String TAG = "MyRemoteDevice";
     private final BroadcastReceiver mCalibrationFactorChangedReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
             long deviceId = intent.getLongExtra(BANALService.DEVICE_ID, -1);

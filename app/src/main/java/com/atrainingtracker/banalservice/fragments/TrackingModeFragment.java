@@ -62,7 +62,7 @@ public class TrackingModeFragment extends Fragment {
             updateView(context);
         }
     };
-    private IntentFilter mUpdateViewFilter = new IntentFilter();  // Intents will be added in onResume
+    private final IntentFilter mUpdateViewFilter = new IntentFilter();  // Intents will be added in onResume
 
     // onCreate()
 
@@ -85,7 +85,7 @@ public class TrackingModeFragment extends Fragment {
                 }
             });
         } catch (ClassCastException e) {
-            throw new ClassCastException(context.toString() + " must implement GetBanalServiceInterface");
+            throw new ClassCastException(context + " must implement GetBanalServiceInterface");
         }
 
     }

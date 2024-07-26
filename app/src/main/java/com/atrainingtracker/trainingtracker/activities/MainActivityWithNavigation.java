@@ -186,7 +186,7 @@ public class MainActivityWithNavigation
     private IntentFilter mStartTrackingFilter;
     private boolean mAlreadyTriedToRequestDropboxToken = false;
     // class BANALConnection implements ServiceConnection
-    private ServiceConnection mBanalConnection = new ServiceConnection() {
+    private final ServiceConnection mBanalConnection = new ServiceConnection() {
         public void onServiceConnected(ComponentName name, IBinder service) {
             if (DEBUG) Log.i(TAG, "onServiceConnected");
 
@@ -587,16 +587,14 @@ public class MainActivityWithNavigation
                 tag = RootPrefsFragment.TAG;
                 break;
 
-
             case R.id.drawer_privacy_policy:
                 Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://www.atrainingtracker.com/privacy.html"));
                 startActivity(browserIntent);
                 return true;
 
-
             default:
                 Log.d(TAG, "setting a new content fragment not yet implemented");
-                Toast.makeText(this, "setting a new content fragment not yet implemented", Toast.LENGTH_SHORT);
+                Toast.makeText(this, "setting a new content fragment not yet implemented", Toast.LENGTH_SHORT).show();
         }
 
         if (mFragment != null) {

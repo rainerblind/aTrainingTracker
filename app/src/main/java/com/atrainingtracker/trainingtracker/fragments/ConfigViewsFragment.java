@@ -136,7 +136,7 @@ public abstract class ConfigViewsFragment extends Fragment {
         try {
             mViewSetChangedListener = (ViewSetChangedListener) context;
         } catch (ClassCastException e) {
-            throw new ClassCastException(context.toString() + " must implement ViewSetChangedListener");
+            throw new ClassCastException(context + " must implement ViewSetChangedListener");
         }
     }
 

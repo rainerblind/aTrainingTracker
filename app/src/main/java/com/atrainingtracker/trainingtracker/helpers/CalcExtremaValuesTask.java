@@ -40,6 +40,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseMan
 import com.google.android.gms.maps.model.LatLng;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -55,8 +56,8 @@ public class CalcExtremaValuesTask extends AsyncTask<Long, String, Boolean> {
     private static final boolean DEBUG = TrainingApplication.DEBUG && false;
     private static final List<SensorType> IMPORTANT_SENSOR_TYPES = Arrays.asList(SensorType.ALTITUDE, SensorType.CADENCE, SensorType.HR, SensorType.PACE_spm, SensorType.PEDAL_POWER_BALANCE, SensorType.PEDAL_SMOOTHNESS_L, SensorType.PEDAL_SMOOTHNESS_R, SensorType.POWER, SensorType.SPEED_mps, SensorType.TEMPERATURE, SensorType.TORQUE, SensorType.TORQUE_EFFECTIVENESS_L, SensorType.TORQUE_EFFECTIVENESS_R);
 
-    private Context mContext;
-    private TextView mMessageTextView;
+    private final Context mContext;
+    private final TextView mMessageTextView;
 
     public CalcExtremaValuesTask(Context context, TextView messageTextView) {
         mContext = context;
@@ -145,7 +146,7 @@ public class CalcExtremaValuesTask extends AsyncTask<Long, String, Boolean> {
         // find max line distance
         calcAndSaveExtremaValues(workoutId,
                 baseFileName,
-                Arrays.asList(SensorType.LINE_DISTANCE_m),
+                Collections.singletonList(SensorType.LINE_DISTANCE_m),
                 Arrays.asList(ExtremaType.MAX, ExtremaType.END));
 
         // start and end location

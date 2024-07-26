@@ -44,8 +44,8 @@ public class StravaDeauthorizationAsyncTask extends
     private static final String TAG = "StravaDeauthorizationAsyncTask";
     private static final boolean DEBUG = false;
 
-    private ProgressDialog progressDialog;
-    private Context mContext;
+    private final ProgressDialog progressDialog;
+    private final Context mContext;
 
     public StravaDeauthorizationAsyncTask(Context context) {
         progressDialog = new ProgressDialog(context);

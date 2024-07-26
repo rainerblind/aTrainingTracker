@@ -41,9 +41,9 @@ public class ExportManager {
     private static final boolean DEBUG = false;
     protected static SQLiteDatabase cExportStatusDb;
     protected static int cInstances = 0;
-    private static int DEFAULT_RETRIES_FILE = 1;
-    private static int DEFAULT_RETRIES_DROPBOX = 10;
-    private static int DEFAULT_RETRIES_COMMUNITY = 1;
+    private static final int DEFAULT_RETRIES_FILE = 1;
+    private static final int DEFAULT_RETRIES_DROPBOX = 10;
+    private static final int DEFAULT_RETRIES_COMMUNITY = 1;
     protected Context mContext;
     // protected static HashMap<String, EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>>> cCash = new HashMap<String, EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>>>();
 
@@ -89,7 +89,7 @@ public class ExportManager {
                 try {
                     cExportStatusDb.insert(ExportStatusDbHelper.TABLE, null, exportProgressValues);
                 } catch (SQLException e) {
-                    Log.e(TAG, "Error while writing" + e.toString() + "to ExportStatusDbHelper.TABLE");
+                    Log.e(TAG, "Error while writing" + e + "to ExportStatusDbHelper.TABLE");
                 }
             }
         }

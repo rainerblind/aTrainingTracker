@@ -198,7 +198,7 @@ public enum DeviceType {
         return deviceTypes;
     }
 
-    protected static List<DeviceType> getEnabledLocationDevices() {
+    private static List<DeviceType> getEnabledLocationDevices() {
         LinkedList<DeviceType> enabledLocationDevices = new LinkedList<>();
         if (TrainingApplication.useLocationSourceGPS()) {
             enabledLocationDevices.add(DeviceType.SPEED_AND_LOCATION_GPS);

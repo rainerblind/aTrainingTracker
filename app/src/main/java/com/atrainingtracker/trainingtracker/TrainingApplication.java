@@ -211,8 +211,8 @@ public class TrainingApplication extends Application {
     private final IntentFilter mSearchingStartedFilter = new IntentFilter(BANALService.SEARCHING_STARTED_FOR_ONE_INTENT);
     public TrackOnMapHelper trackOnMapHelper;
     public SegmentOnMapHelper segmentOnMapHelper;
-    private HashMap<Long, Boolean> mSegmentListUpdating = new HashMap();
-    private HashMap<Long, Boolean> mLeaderboardUpdating = new HashMap();
+    private final HashMap<Long, Boolean> mSegmentListUpdating = new HashMap();
+    private final HashMap<Long, Boolean> mLeaderboardUpdating = new HashMap();
     private long mWorkoutID = -1;
     protected BroadcastReceiver mTrackingStartedReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
@@ -230,13 +230,13 @@ public class TrainingApplication extends Application {
     private NotificationCompat.Builder mTrackingAndSearchingNotificationBuilder;
     private PendingIntent mStartMainActivityPendingIntent;
     private String mNotificationSummary = "searching";
-    private DistanceFormatter mDistanceFormatter = new DistanceFormatter();
+    private final DistanceFormatter mDistanceFormatter = new DistanceFormatter();
 
     // protected void showNotification()
     // {
     //     mNotificationManager.notify(TRACKING_NOTIFICATION_ID, mTrackingAndSearchingNotificationBuilder.getNotification());
     // }
-    private TimeFormatter mTimeFormatter = new TimeFormatter();
+    private final TimeFormatter mTimeFormatter = new TimeFormatter();
     private String mDeviceCurrentlySearchingFor = null;
     /***********************************************************************************************/
 
@@ -264,13 +264,13 @@ public class TrainingApplication extends Application {
             resumeFromPaused();
         }
     };
-    private BroadcastReceiver mSearchingFinishedReceiver = new BroadcastReceiver() {
+    private final BroadcastReceiver mSearchingFinishedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             notifySearchingFinished();
         }
     };
-    private BroadcastReceiver mSearchingStartedReceiver = new BroadcastReceiver() {
+    private final BroadcastReceiver mSearchingStartedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             notifySearchingStartedFor(intent.getStringExtra(BANALService.DEVICE_NAME));

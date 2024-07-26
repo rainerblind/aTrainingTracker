@@ -395,7 +395,7 @@ public class ConfigureFilterDialogFragment
                     null);
         } catch (SQLException e) {
             // TODO: use Toast?
-            Log.e(TAG, "Error while writing" + e.toString());
+            Log.e(TAG, "Error while writing" + e);
         }
         databaseManager.closeDatabase(); // db.close();
 

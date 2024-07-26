@@ -62,7 +62,7 @@ public abstract class MyANTDevice extends MyRemoteDevice {
      * The state of the device/channel
      **/
     protected DeviceState mDeviceState = null;  // TODO: rename to mANTDeviceState
-    private String TAG = "MyANTDevice";
+    private final String TAG = "MyANTDevice";
     private AntPlusLegacyCommonPcc mLegacyCommonPcc = null;
     private AntPlusCommonPcc mCommonPcc = null;
     private PccReleaseHandle pccReleaseHandle = null;
@@ -133,10 +133,7 @@ public abstract class MyANTDevice extends MyRemoteDevice {
 
         if (isSearching() && newDeviceState != DeviceState.SEARCHING) {
             if (DEBUG) Log.i(TAG, "stopped searching");
-            boolean success = false;
-            if (newDeviceState == DeviceState.TRACKING) {
-                success = true;
-            }
+            boolean success = newDeviceState == DeviceState.TRACKING;
             notifyStopSearching(success);  // WTF might be called several times?
         } else if (!isSearching() && newDeviceState == DeviceState.SEARCHING) {
             notifyStartSearching();

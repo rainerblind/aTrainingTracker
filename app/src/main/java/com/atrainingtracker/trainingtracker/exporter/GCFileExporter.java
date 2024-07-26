@@ -103,8 +103,7 @@ public class GCFileExporter extends BaseFileExporter {
                 .put(ATHLETE, athleteName)
                 .put(DATA, data)
                 .put(SPORT, SportTypeDatabaseManager.getGcName(sportTypeId))
-                .put(WORKOUT_CODE, goal + " " + method)
-                .toString()));
+                .put(WORKOUT_CODE, goal + " " + method)));
 
         bufferedWriter.write("        \"SAMPLES\":[\n");
 
@@ -194,7 +193,7 @@ public class GCFileExporter extends BaseFileExporter {
                     }
                 }
 
-                bufferedWriter.write(getSamplePrefix(isFirst) + sample.toString());
+                bufferedWriter.write(getSamplePrefix(isFirst) + sample);
                 isFirst = false;
             }
 

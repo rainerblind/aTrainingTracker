@@ -52,7 +52,7 @@ public class SetCalibrationFactorDialogFragment extends DialogFragment {
     private EditText etMeasured;
     private EditText etCorrect;
     private NewCalibrationFactorListener mNewCalibrationFactorListener = null;
-    private TextWatcher calibrationDistancesChangedWatcher = new TextWatcher() {
+    private final TextWatcher calibrationDistancesChangedWatcher = new TextWatcher() {
 
         @Override
         public void afterTextChanged(Editable s) {

@@ -56,7 +56,7 @@ public abstract class TrackOnMapBaseFragment
     protected long mWorkoutID = -1;
 
     private boolean mTrackOnMapLoaded = false;
-    private HashMap<Long, Boolean> mSegmentLoaded = new HashMap<>();
+    private final HashMap<Long, Boolean> mSegmentLoaded = new HashMap<>();
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////

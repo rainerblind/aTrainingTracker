@@ -819,7 +819,7 @@ public class TrackingViewsDatabaseManager {
                 + FILTER_CONSTANT + " real)";
 
         private final String TAG = TrackingViewsDbHelper.class.getName();
-        private Context mContext;
+        private final Context mContext;
         private boolean mHavePressureSensor = false;
 
         // Constructor

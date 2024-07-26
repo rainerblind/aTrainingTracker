@@ -130,7 +130,7 @@ public class RunkeeperFileExporter extends BaseFileExporter {
                     sample = new JSONObject();
                     sample.put(TIMESTAMP, cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.TIME_TOTAL.name())));
                     sample.put(HEART_RATE, Math.round(cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.HR.name()))));
-                    bufferedWriter.write(getSamplePrefix(isFirst) + sample.toString());
+                    bufferedWriter.write(getSamplePrefix(isFirst) + sample);
 
                     isFirst = false;
                 }
@@ -186,7 +186,7 @@ public class RunkeeperFileExporter extends BaseFileExporter {
                         }
                         sample.put(TYPE, type);
 
-                        bufferedWriter.write(getSamplePrefix(isFirst) + sample.toString());
+                        bufferedWriter.write(getSamplePrefix(isFirst) + sample);
                         isFirst = false;
                     }
                 }

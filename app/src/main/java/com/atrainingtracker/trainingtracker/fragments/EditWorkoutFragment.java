@@ -160,7 +160,7 @@ public class EditWorkoutFragment extends Fragment {
     private RadioButton rbCommute, rbTrainer;
     private CheckBox cbPrivate;
     private boolean radioButtonAlreadyChecked = false;  // necessary to allow deselect of the radio buttons within the group for Commute and Trainer
-    private double MAX_WORKOUT_TIME_TO_SHOW_DELETE_BUTTON = 10 * 60;  // 10 min
+    private final double MAX_WORKOUT_TIME_TO_SHOW_DELETE_BUTTON = 10 * 60;  // 10 min
     private String ALL = "all";
     private boolean mPaceExtremaValuesAvailable = false;
 
@@ -219,7 +219,7 @@ public class EditWorkoutFragment extends Fragment {
         try {
             mReallyDeleteDialogInterface = (ReallyDeleteDialogInterface) context;
         } catch (ClassCastException e) {
-            throw new ClassCastException(context.toString() + " must implement ReallyDeleteDialogInterface");
+            throw new ClassCastException(context + " must implement ReallyDeleteDialogInterface");
         }
     }
 
@@ -274,7 +274,7 @@ public class EditWorkoutFragment extends Fragment {
             @Override
             public void onItemSelected(AdapterView<?> arg0, View arg1, int position, long id) {
                 if (DEBUG) Log.i(TAG, "spinnerSport.onItemSelected");
-                if (mShowAllSportTypes == false
+                if (!mShowAllSportTypes
                         && spinnerSport.getSelectedItemPosition() == mSportTypeIdList.size()) {
                     if (DEBUG) Log.i(TAG, "all sport types selected");
                     mShowAllSportTypes = true;
@@ -1049,7 +1049,7 @@ public class EditWorkoutFragment extends Fragment {
                     null);
         } catch (SQLException e) {
             // TODO: use Toast?
-            Log.e(TAG, "Error while writing" + e.toString());
+            Log.e(TAG, "Error while writing" + e);
         }
         databaseManager.closeDatabase(); // db.close();
 

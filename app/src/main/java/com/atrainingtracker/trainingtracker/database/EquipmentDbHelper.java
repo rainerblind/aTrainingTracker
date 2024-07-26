@@ -69,7 +69,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
             // + C_ID          + " INTEGER PRIMARY KEY AUTOINCREMENT, "
             + EQUIPMENT_ID + " int,"
             + ANT_DEVICE_ID + " int)";
-    private Context mContext;
+    private final Context mContext;
 
     // Constructor
     public EquipmentDbHelper(Context context) {

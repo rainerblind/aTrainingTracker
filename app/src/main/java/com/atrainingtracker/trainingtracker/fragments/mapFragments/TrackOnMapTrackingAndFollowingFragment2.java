@@ -147,10 +147,10 @@ public class TrackOnMapTrackingAndFollowingFragment2
             LocationListener {
 
         private OnLocationChangedListener mListener;
-        private LocationRequest mLocationRequest;
+        private final LocationRequest mLocationRequest;
         private double mLatitudeFiltered, mLongitudeFiltered;
         private float mBearingFiltered, mSpeedFiltered;
-        private CameraPosition.Builder mCameraPositionBuilder = new CameraPosition.Builder();
+        private final CameraPosition.Builder mCameraPositionBuilder = new CameraPosition.Builder();
 
 
         private FollowMeLocationSource() {

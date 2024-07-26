@@ -38,7 +38,7 @@ public class ANTHeartRateDevice extends MyANTDevice {
     protected AntPlusHeartRatePcc hrPcc = null;
 
     protected MySensor<Number> mHeartRateSensor;
-    private String TAG = "ANTHeartRateDevice";
+    private final String TAG = "ANTHeartRateDevice";
 
 
     /**

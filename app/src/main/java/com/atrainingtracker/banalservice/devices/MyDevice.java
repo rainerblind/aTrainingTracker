@@ -42,9 +42,9 @@ public abstract class MyDevice {
     protected DeviceType mDeviceType;
     protected EnumMap<SensorType, MySensor> mSensorMap = new EnumMap<SensorType, MySensor>(SensorType.class);
     protected MySensorManager mMySensorManager;
-    private String TAG = "MyDevice";
+    private final String TAG = "MyDevice";
     private boolean mSensorsRegistered = false;
-    private BroadcastReceiver resetAccumulatorsReceiver = new BroadcastReceiver() {
+    private final BroadcastReceiver resetAccumulatorsReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context arg0, Intent arg1) {
             if (DEBUG) Log.d(TAG, "resetAccumulatorsReceiver.onReceive()");

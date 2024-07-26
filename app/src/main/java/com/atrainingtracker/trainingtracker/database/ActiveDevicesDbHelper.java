@@ -95,7 +95,7 @@ public class ActiveDevicesDbHelper extends SQLiteOpenHelper {
         public static final String WORKOUT_ID = "workoutID";
         public static final String DEVICE_DB_ID = "deviceDbId";
 
-        protected static final String CREATE_TABLE = "create table " + TABLE + " ("
+        private static final String CREATE_TABLE = "create table " + TABLE + " ("
                 + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                 + WORKOUT_ID + " int,"
                 + DEVICE_DB_ID + " int)";

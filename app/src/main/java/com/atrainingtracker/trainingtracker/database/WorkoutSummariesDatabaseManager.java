@@ -849,7 +849,7 @@ public class WorkoutSummariesDatabaseManager {
                 + WorkoutSummaries.ADD_VIA + " int)";
         private static final String TAG = "WorkoutSummariesDbHelper";
         private static final boolean DEBUG = TrainingApplication.DEBUG & true;
-        private Context mContext;
+        private final Context mContext;
 
         // Constructor
         public WorkoutSummariesDbHelper(Context context) {

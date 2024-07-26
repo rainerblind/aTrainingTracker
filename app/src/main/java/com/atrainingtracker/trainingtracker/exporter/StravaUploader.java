@@ -25,7 +25,6 @@ import android.util.Log;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
-import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
@@ -66,7 +65,7 @@ public class StravaUploader extends BaseExporter {
     protected static final String TCX = "tcx";
     protected static final String FILE = "file";
     protected static final long INITIAL_WAITING_TIME = 10 * 1000L;  // 10 seconds
-    protected static final long WAITING_TIME_UPDATE = 1 * 1000L;  // 1 second
+    protected static final long WAITING_TIME_UPDATE = 1000L;  // 1 second
     private static final String TAG = "StravaUploader";
     private static final boolean DEBUG = true; //TrainingApplication.DEBUG && false;
 

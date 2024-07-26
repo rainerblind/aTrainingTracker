@@ -28,7 +28,6 @@ import android.text.InputType;
 import android.widget.EditText;
 
 import com.atrainingtracker.R;
-import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.helpers.DeleteWorkoutTask;
 
@@ -40,7 +39,6 @@ import java.util.List;
 
 public class DeleteOldWorkoutsDialog extends DialogFragment {
     public static final String TAG = DeleteOldWorkoutsDialog.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
 
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {

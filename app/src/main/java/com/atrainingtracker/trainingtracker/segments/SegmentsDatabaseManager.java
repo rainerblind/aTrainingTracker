@@ -236,7 +236,7 @@ public class SegmentsDatabaseManager {
                 + Segments.WATTS + " real)";
         private static final String TAG = SegmentsDbHelper.class.getName();
         private static final boolean DEBUG = TrainingApplication.DEBUG & true;
-        private Context mContext;
+        private final Context mContext;
 
 
         // Constructor

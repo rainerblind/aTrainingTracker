@@ -143,7 +143,7 @@ public class TrainingPeaksUploader extends BaseExporter {
         // TODO: do this in background!
         if (DEBUG) Log.d(TAG, "starting to upload to TrainingPeaks");
         if (DEBUG) Log.i(TAG, "URI=" + httpPost.getURI());
-        if (DEBUG) Log.i(TAG, "content:" + jsonObject.toString());
+        if (DEBUG) Log.i(TAG, "content:" + jsonObject);
         HttpResponse httpResponse = httpClient.execute(httpPost);
         String response = EntityUtils.toString(httpResponse.getEntity());
         if (DEBUG) Log.d(TAG, "status: " + httpResponse.getStatusLine());

@@ -38,8 +38,8 @@ public class DeleteWorkoutTask extends AsyncTask<Long, String, Boolean> {
     public static final String FINISHED_DELETING = "de.rainerblind.trainingtracker.helpers.DeleteWorkoutTask.FINISHED_DELETING";
     private static final String TAG = "DeleteWorkoutTask";
     private static final boolean DEBUG = false;
-    private ProgressDialog progressDialog;
-    private Context context;
+    private final ProgressDialog progressDialog;
+    private final Context context;
 
     public DeleteWorkoutTask(Context context) {
         this.context = context;

@@ -101,14 +101,14 @@ public abstract class RemoteDevicesFragment extends Fragment {
         try {
             mOnRemoteDeviceSelectedListener = (OnRemoteDeviceSelectedListener) context;
         } catch (ClassCastException e) {
-            throw new ClassCastException(context.toString()
+            throw new ClassCastException(context
                     + " must implement OnRemoteDeviceSelectedListener");
         }
 
         try {
             mGetBanalServiceInterface = (BANALService.GetBanalServiceInterface) context;
         } catch (ClassCastException e) {
-            throw new ClassCastException(context.toString() + " must implement GetBanalServiceInterface");
+            throw new ClassCastException(context + " must implement GetBanalServiceInterface");
         }
 
 

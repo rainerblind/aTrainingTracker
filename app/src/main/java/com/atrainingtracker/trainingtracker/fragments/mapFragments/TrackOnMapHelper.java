@@ -48,8 +48,8 @@ public class TrackOnMapHelper {
     private static final boolean DEBUG = TrainingApplication.DEBUG && false;
     private EnumMap<Roughness, Integer> foo;
     //                                                    workoutId
-    private EnumMap<Roughness, EnumMap<TrackType, HashMap<Long, TrackData>>> mTrackCache = new EnumMap<Roughness, EnumMap<TrackType, HashMap<Long, TrackData>>>(Roughness.class);
-    private EnumMap<TrackType, HashMap<GoogleMap, Polyline>> mPolylines = new EnumMap<TrackType, HashMap<GoogleMap, Polyline>>(TrackType.class);
+    private final EnumMap<Roughness, EnumMap<TrackType, HashMap<Long, TrackData>>> mTrackCache = new EnumMap<Roughness, EnumMap<TrackType, HashMap<Long, TrackData>>>(Roughness.class);
+    private final EnumMap<TrackType, HashMap<GoogleMap, Polyline>> mPolylines = new EnumMap<TrackType, HashMap<GoogleMap, Polyline>>(TrackType.class);
 
     public static PolylineOptions getPolylineOptions(long workoutId, Roughness roughness, TrackType trackType) {
         String baseFileName = WorkoutSummariesDatabaseManager.getBaseFileName(workoutId);
@@ -182,7 +182,6 @@ public class TrackOnMapHelper {
 
         myMapViewHolder.map.setMapType(GoogleMap.MAP_TYPE_TERRAIN);
 
-        return;
     }
 
     @Nullable

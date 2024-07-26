@@ -47,14 +47,14 @@ public class SegmentLeaderboardCursorAdapter extends CursorAdapter {
     private static final int SEPARATOR = 0;
     private static final int THIS_ATHLETE = 1;
     private static final int OTHER_ATHLETE = 2;
-    private static int VIEW_TYPE_COUNT = 3;
+    private static final int VIEW_TYPE_COUNT = 3;
     private final String TAG = SegmentLeaderboardCursorAdapter.class.getSimpleName();
     private final boolean DEBUG = TrainingApplication.DEBUG && false;
     protected Context mContext;
     TimeFormatter timeFormatter = new TimeFormatter();
     SpeedFormatter speedFormatter = new SpeedFormatter();
 
-    private LayoutInflater mInflater;
+    private final LayoutInflater mInflater;
 
 
     public SegmentLeaderboardCursorAdapter(Context context, Cursor cursor) {

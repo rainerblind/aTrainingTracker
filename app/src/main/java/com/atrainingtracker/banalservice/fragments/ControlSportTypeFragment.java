@@ -55,7 +55,7 @@ public class ControlSportTypeFragment extends Fragment {
             updateView();
         }
     };
-    private IntentFilter mUpdateViewFilter = new IntentFilter(BANALService.NEW_DEVICE_FOUND_INTENT);
+    private final IntentFilter mUpdateViewFilter = new IntentFilter(BANALService.NEW_DEVICE_FOUND_INTENT);
 
     // onCreate()
 
@@ -78,7 +78,7 @@ public class ControlSportTypeFragment extends Fragment {
                 }
             });
         } catch (ClassCastException e) {
-            throw new ClassCastException(context.toString() + " must implement GetBanalServiceInterface");
+            throw new ClassCastException(context + " must implement GetBanalServiceInterface");
         }
 
     }

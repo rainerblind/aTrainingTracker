@@ -61,7 +61,7 @@ public class DeviceTypeChoiceFragment extends ListFragment {
         try {
             mCallback = (OnDeviceTypeSelectedListener) context;
         } catch (ClassCastException e) {
-            throw new ClassCastException(context.toString() + " must implement OnDeviceTypeSelectedListener");
+            throw new ClassCastException(context + " must implement OnDeviceTypeSelectedListener");
         }
     }
 

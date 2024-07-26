@@ -145,6 +145,4 @@ public class LapSummaryDialog extends DialogFragment {
 
         return alert;
     }
-
-
 }

@@ -26,8 +26,8 @@ public enum ExportType {
     DROPBOX(R.string.Dropbox, new FileFormat[]{FileFormat.CSV, FileFormat.GC, FileFormat.GPX, FileFormat.TCX}),
     COMMUNITY(R.string.Community, new FileFormat[]{FileFormat.RUNKEEPER, FileFormat.STRAVA, FileFormat.TRAINING_PEAKS});
 
-    private int uiId;
-    private FileFormat[] exportToFileFormats;
+    private final int uiId;
+    private final FileFormat[] exportToFileFormats;
 
     ExportType(int uiId, FileFormat[] exportToFileFormats) {
         this.uiId = uiId;

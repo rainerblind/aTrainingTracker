@@ -52,7 +52,7 @@ abstract public class BTLEBikeDevice extends MyBTLEDevice {
     protected MySensor<Double> mPaceSensor;
     protected MyDoubleAccumulatorSensor mDistanceSensor;
     protected MyDoubleAccumulatorSensor mLapDistanceSensor;
-    private String TAG = "BTLEBikeDevice";
+    private final String TAG = "BTLEBikeDevice";
 
 
     /**

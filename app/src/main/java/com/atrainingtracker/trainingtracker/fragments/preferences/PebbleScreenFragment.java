@@ -56,7 +56,7 @@ public class PebbleScreenFragment extends androidx.preference.PreferenceFragment
 
         setPreferencesFromResource(R.xml.prefs, rootKey);
 
-        mPebbleWatchappPref = (ListPreference) getPreferenceScreen().findPreference(TrainingApplication.SP_PEBBLE_WATCHAPP);
+        mPebbleWatchappPref = getPreferenceScreen().findPreference(TrainingApplication.SP_PEBBLE_WATCHAPP);
         mConfigurePebbleDisplays = getPreferenceScreen().findPreference(TrainingApplication.SP_CONFIGURE_PEBBLE_DISPLAY);
 
     }
@@ -85,11 +85,7 @@ public class PebbleScreenFragment extends androidx.preference.PreferenceFragment
             }
         });
 
-        if (TrainingApplication.pebbleSupport() && TrainingApplication.getPebbleWatchapp() == Watchapp.TRAINING_TRACKER) {
-            mConfigurePebbleDisplays.setEnabled(true);
-        } else {
-            mConfigurePebbleDisplays.setEnabled(false);
-        }
+        mConfigurePebbleDisplays.setEnabled(TrainingApplication.pebbleSupport() && TrainingApplication.getPebbleWatchapp() == Watchapp.TRAINING_TRACKER);
 
         mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(getActivity());
         mSharedPreferences.registerOnSharedPreferenceChangeListener(this);
@@ -107,19 +103,11 @@ public class PebbleScreenFragment extends androidx.preference.PreferenceFragment
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
         if (TrainingApplication.SP_PEBBLE_WATCHAPP.equals(key)) {
             mPebbleWatchappPref.setSummary(TrainingApplication.getPebbleWatchapp().getUiId());
-            if (TrainingApplication.getPebbleWatchapp() == Watchapp.TRAINING_TRACKER) {
-                mConfigurePebbleDisplays.setEnabled(true);
-            } else {
-                mConfigurePebbleDisplays.setEnabled(false);
-            }
+            mConfigurePebbleDisplays.setEnabled(TrainingApplication.getPebbleWatchapp() == Watchapp.TRAINING_TRACKER);
         }
 
         if (TrainingApplication.SP_PEBBLE_SUPPORT.equals(key)) {
-            if (TrainingApplication.pebbleSupport() && TrainingApplication.getPebbleWatchapp() == Watchapp.TRAINING_TRACKER) {
-                mConfigurePebbleDisplays.setEnabled(true);
-            } else {
-                mConfigurePebbleDisplays.setEnabled(false);
-            }
+            mConfigurePebbleDisplays.setEnabled(TrainingApplication.pebbleSupport() && TrainingApplication.getPebbleWatchapp() == Watchapp.TRAINING_TRACKER);
         }
     }
 
@@ -146,7 +134,6 @@ public class PebbleScreenFragment extends androidx.preference.PreferenceFragment
                     startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://apps.getpebble.com/applications/537516d64385b82a3b00009b")));
                 }
 
-                return;
             }
         });
 
@@ -154,7 +141,6 @@ public class PebbleScreenFragment extends androidx.preference.PreferenceFragment
             public void onClick(DialogInterface dialog, int which) {
                 TrainingApplication.setShowPebbleInstallDialog(!doNotShowAgain.isChecked());
 
-                return;
             }
         });
 

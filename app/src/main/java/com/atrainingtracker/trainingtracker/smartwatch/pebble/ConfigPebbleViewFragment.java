@@ -166,11 +166,11 @@ public class ConfigPebbleViewFragment extends ConfigViewFragment {
 
         // sensor fields
         mSensorTypeSpinners.clear();
-        mSensorTypeSpinners.add((Spinner) view.findViewById(R.id.spinnerField1));
-        mSensorTypeSpinners.add((Spinner) view.findViewById(R.id.spinnerField2));
-        mSensorTypeSpinners.add((Spinner) view.findViewById(R.id.spinnerField3));
-        mSensorTypeSpinners.add((Spinner) view.findViewById(R.id.spinnerField4));
-        mSensorTypeSpinners.add((Spinner) view.findViewById(R.id.spinnerField5));
+        mSensorTypeSpinners.add(view.findViewById(R.id.spinnerField1));
+        mSensorTypeSpinners.add(view.findViewById(R.id.spinnerField2));
+        mSensorTypeSpinners.add(view.findViewById(R.id.spinnerField3));
+        mSensorTypeSpinners.add(view.findViewById(R.id.spinnerField4));
+        mSensorTypeSpinners.add(view.findViewById(R.id.spinnerField5));
 
         int counter = 0;
         for (SensorType sensorType : sensorTypeList) {

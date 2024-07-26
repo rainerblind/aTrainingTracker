@@ -405,7 +405,7 @@ public class PebbleDatabaseManager {
                 + LAYOUT_NR + " int)";  // since layouts might be deleted, this makes no longer sense?
         private static final String TAG = PebbleDbHelper.class.getName();
         private static final boolean DEBUG = TrainingApplication.DEBUG & true;
-        private Context mContext;
+        private final Context mContext;
 
 
         // Constructor

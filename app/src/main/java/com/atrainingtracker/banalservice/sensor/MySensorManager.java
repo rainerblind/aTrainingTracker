@@ -334,7 +334,7 @@ public class MySensorManager extends MyDevice {
             addGCSensor(mySensor.getSensorType(), GCdata);
         }
         mSensorsSensor.newValue(GCdata.toString());
-        if (DEBUG) Log.d(TAG, "updatedGCData: " + GCdata.toString());
+        if (DEBUG) Log.d(TAG, "updatedGCData: " + GCdata);
     }
 
     private void addGCSensor(SensorType sensorType, StringBuilder gcDataString) {

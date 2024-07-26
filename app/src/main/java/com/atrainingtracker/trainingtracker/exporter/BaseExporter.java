@@ -18,17 +18,15 @@
 
 package com.atrainingtracker.trainingtracker.exporter;
 
-import androidx.appcompat.app.AlertDialog;
 import android.app.Notification;
 import android.app.PendingIntent;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.database.Cursor;
 import android.database.SQLException;
 import android.graphics.BitmapFactory;
 import android.os.Bundle;
-import android.os.Environment;
+
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
@@ -273,8 +271,8 @@ public abstract class BaseExporter {
         UPLOAD(R.string.uploading, R.string.uploaded),
         EXPORT(R.string.exporting, R.string.exported);
 
-        private int mIngId;
-        private int mPastId;
+        private final int mIngId;
+        private final int mPastId;
 
         Action(int ingId, int pastId) {
             mIngId = ingId;
@@ -291,8 +289,8 @@ public abstract class BaseExporter {
     }
 
     protected class ExportResult {
-        private boolean mSuccess;
-        private String mAnswer;
+        private final boolean mSuccess;
+        private final String mAnswer;
 
         public ExportResult(boolean success, String answer) {
             mSuccess = success;
