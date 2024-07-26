@@ -19,15 +19,20 @@
 package com.atrainingtracker.trainingtracker.exporter;
 
 import android.Manifest;
-import android.app.IntentService;
 import android.app.PendingIntent;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
+
+import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.FileProvider;
+import androidx.work.Worker;
+import androidx.work.WorkerParameters;
+
 import android.util.Log;
 
 import com.atrainingtracker.R;
@@ -43,27 +48,29 @@ import static com.atrainingtracker.trainingtracker.TrainingApplication.NOTIFICAT
 /**
  *
  */
-public class ExportWorkoutIntentService extends IntentService {
-    private static final String TAG = "ExportWorkoutIntentService";
+public class ExportWorkoutWorker extends Worker {
+    private static final String TAG = "ExportWorkoutWorker";
     private static final boolean DEBUG = TrainingApplication.getDebug(true);
-
+ private final Context mContext;
 
     boolean exported = false;
 
-    public ExportWorkoutIntentService() {
-        super(TAG);
+    public ExportWorkoutWorker(@NonNull Context context, @NonNull WorkerParameters workerParams) {
+        super(context, workerParams);
+        mContext = context;
     }
 
 
+    @NonNull
     @Override
-    protected void onHandleIntent(Intent intent) {
+    public Result doWork() {
         if (DEBUG) Log.d(TAG, "onHandleIntent");
 
-        ExportManager exportManager = new ExportManager(this, TAG);
+        ExportManager exportManager = new ExportManager(mContext, TAG);
 
         ArrayList<Uri> emailUris = new ArrayList<>();
 
-        boolean tryExporting = true;  // TODO: what are we exactly doing with this variable?? 
+        boolean tryExporting = true;  // TODO: what are we exactly doing with mContext variable?? 
         while (tryExporting) {
             tryExporting = false;
             for (ExportInfo exportInfo : exportManager.getExportQueue()) {
@@ -83,67 +90,67 @@ public class ExportWorkoutIntentService extends IntentService {
                         switch (exportInfo.getFileFormat()) {
                             // TODO: change Uri.fromFile to the stuff explained at https://stackoverflow.com/questions/38200282/android-os-fileuriexposedexception-file-storage-emulated-0-test-txt-exposed
                             case CSV:
-                                exporter = new CSVFileExporter(this);
+                                exporter = new CSVFileExporter(mContext);
                                 if (TrainingApplication.sendCSVEmail()) {
-                                    emailUris.add(FileProvider.getUriForFile(this,
-                                            this.getApplicationContext().getPackageName() + ".com.atrainingtracker.file.provider",
-                                            new File(BaseExporter.getDir(this, FileFormat.CSV.getDirName()), exportInfo.getFileBaseName() + FileFormat.CSV.getFileEnding())));
+                                    emailUris.add(FileProvider.getUriForFile(mContext,
+                                            mContext.getApplicationContext().getPackageName() + ".com.atrainingtracker.file.provider",
+                                            new File(BaseExporter.getDir(mContext, FileFormat.CSV.getDirName()), exportInfo.getFileBaseName() + FileFormat.CSV.getFileEnding())));
                                 }
                                 break;
                             case GC:
-                                exporter = new GCFileExporter(this);
+                                exporter = new GCFileExporter(mContext);
                                 if (TrainingApplication.sendGCEmail()) {
-                                    emailUris.add(FileProvider.getUriForFile(this,
-                                            this.getApplicationContext().getPackageName() + ".com.atrainingtracker.file.provider",
-                                            new File(BaseExporter.getDir(this, FileFormat.GC.getDirName()), exportInfo.getFileBaseName() + FileFormat.GC.getFileEnding())));
+                                    emailUris.add(FileProvider.getUriForFile(mContext,
+                                            mContext.getApplicationContext().getPackageName() + ".com.atrainingtracker.file.provider",
+                                            new File(BaseExporter.getDir(mContext, FileFormat.GC.getDirName()), exportInfo.getFileBaseName() + FileFormat.GC.getFileEnding())));
                                 }
                                 break;
                             case TCX:
-                                exporter = new TCXFileExporter(this);
+                                exporter = new TCXFileExporter(mContext);
                                 if (TrainingApplication.sendTCXEmail()) {
-                                    emailUris.add(FileProvider.getUriForFile(this,
-                                            this.getApplicationContext().getPackageName() + ".com.atrainingtracker.file.provider",
-                                            new File(BaseExporter.getDir(this, FileFormat.TCX.getDirName()), exportInfo.getFileBaseName() + FileFormat.TCX.getFileEnding())));
+                                    emailUris.add(FileProvider.getUriForFile(mContext,
+                                            mContext.getApplicationContext().getPackageName() + ".com.atrainingtracker.file.provider",
+                                            new File(BaseExporter.getDir(mContext, FileFormat.TCX.getDirName()), exportInfo.getFileBaseName() + FileFormat.TCX.getFileEnding())));
                                 }
                                 break;
                             case GPX:
-                                exporter = new GPXFileExporter(this);
+                                exporter = new GPXFileExporter(mContext);
                                 if (TrainingApplication.sendGPXEmail()) {
-                                    emailUris.add(FileProvider.getUriForFile(this,
-                                            this.getApplicationContext().getPackageName() + ".com.atrainingtracker.file.provider",
-                                            new File(BaseExporter.getDir(this, FileFormat.GPX.getDirName()), exportInfo.getFileBaseName() + FileFormat.GPX.getFileEnding())));
+                                    emailUris.add(FileProvider.getUriForFile(mContext,
+                                            mContext.getApplicationContext().getPackageName() + ".com.atrainingtracker.file.provider",
+                                            new File(BaseExporter.getDir(mContext, FileFormat.GPX.getDirName()), exportInfo.getFileBaseName() + FileFormat.GPX.getFileEnding())));
                                 }
                                 break;
                             // case STRAVA:
-                            //     exporter = new TCXFileExporter(this);
-                            //     break;
+                            //    exporter = new TCXFileExporter(mContext);
+                            //    break;
                             case RUNKEEPER:
-                                exporter = new RunkeeperFileExporter(this);
+                                exporter = new RunkeeperFileExporter(mContext);
                                 break;
                             case TRAINING_PEAKS:
-                                exporter = new TCXFileExporter(this);
-                                // exporter = new TrainingPeaksFileExporter(this);
+                                exporter = new TCXFileExporter(mContext);
+                                // exporter = new TrainingPeaksFileExporter(mContext);
                                 break;
                         }
                         break;
 
                     case DROPBOX:
                         if (MyHelper.isOnline()) {
-                            exporter = new DropboxUploader(this);
+                            exporter = new DropboxUploader(mContext);
                         }
                         break;
 
                     case COMMUNITY:
                         if (MyHelper.isOnline()) {
                             switch (exportInfo.getFileFormat()) {
-                                // case STRAVA:
-                                //     exporter = new StravaUploader(this);
-                                //     break;
+                                //case STRAVA:
+                                //    exporter = new StravaUploader(mContext);
+                                //    break;
                                 case RUNKEEPER:
-                                    exporter = new RunkeeperUploader(this);
+                                    exporter = new RunkeeperUploader(mContext);
                                     break;
                                 case TRAINING_PEAKS:
-                                    exporter = new TrainingPeaksUploader(this);
+                                    exporter = new TrainingPeaksUploader(mContext);
                                     break;
                                 default:
                                     // exporter remains null
@@ -154,7 +161,7 @@ public class ExportWorkoutIntentService extends IntentService {
                 }
                 if (exporter != null) {
                     exported = true;
-                    this.startForeground(TrainingApplication.EXPORT_PROGRESS_NOTIFICATION_ID, exporter.getExportProgressNotification(exportInfo));
+                    exporter.getExportProgressNotification(exportInfo);
                     exporter.export(exportInfo);
                     exporter.onFinished();
                 }
@@ -164,23 +171,23 @@ public class ExportWorkoutIntentService extends IntentService {
 
         if (exported) {
 
-            NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
+            NotificationManagerCompat notificationManager = NotificationManagerCompat.from(mContext);
             notificationManager.cancelAll();
 
             // show notification with a summary of the result
             Bundle bundle = new Bundle();
             bundle.putString(MainActivityWithNavigation.SELECTED_FRAGMENT, MainActivityWithNavigation.SelectedFragment.WORKOUT_LIST.name());
-            Intent notificationIntent = new Intent(this, MainActivityWithNavigation.class);
+            Intent notificationIntent = new Intent(mContext, MainActivityWithNavigation.class);
             notificationIntent.putExtras(bundle);
             // notificationIntent.setAction("barAction");
-            PendingIntent contentIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
-            // PendingIntent contentIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
+            PendingIntent contentIntent = PendingIntent.getActivity(mContext, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
+            // PendingIntent contentIntent = PendingIntent.getActivity(mContext, 0, notificationIntent, 0);
 
-            NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL__EXPORT)
-                    .setLargeIcon(BitmapFactory.decodeResource(getResources(), R.drawable.ic_save_black_48dp))
+            NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(mContext, NOTIFICATION_CHANNEL__EXPORT)
+                    .setLargeIcon(BitmapFactory.decodeResource(mContext.getResources(), R.drawable.ic_save_black_48dp))
                     .setSmallIcon(R.drawable.logo)
-                    .setContentTitle(getString(R.string.TrainingTracker))
-                    .setContentText(getString(R.string.notification_exporting_finished))
+                    .setContentTitle(mContext.getString(R.string.TrainingTracker))
+                    .setContentText(mContext.getString(R.string.notification_exporting_finished))
                     .setContentIntent(contentIntent)
                     .setAutoCancel(true);
 
@@ -198,18 +205,19 @@ public class ExportWorkoutIntentService extends IntentService {
 
                 // emailIntent.setAction(Long.toString(System.currentTimeMillis()));
 
-                PendingIntent pendingShareIntent = PendingIntent.getActivity(this, 0, emailIntent, PendingIntent.FLAG_ONE_SHOT | PendingIntent.FLAG_IMMUTABLE);
+                    PendingIntent pendingShareIntent = PendingIntent.getActivity(mContext, 0, emailIntent, PendingIntent.FLAG_ONE_SHOT | PendingIntent.FLAG_IMMUTABLE);
 
-                NotificationCompat.Builder notificationBuilder2 = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL__EXPORT)
-                        .setLargeIcon(BitmapFactory.decodeResource(getResources(), R.drawable.ic_mail_outline_black_48dp))
-                        .setSmallIcon(R.drawable.logo)
-                        .setContentTitle(getString(R.string.TrainingTracker))
-                        .setContentText(getString(R.string.ready_to_send_email))
-                        .setContentIntent(pendingShareIntent)
-                        .setAutoCancel(true);
+                    NotificationCompat.Builder notificationBuilder2 = new NotificationCompat.Builder(mContext, NOTIFICATION_CHANNEL__EXPORT)
+                            .setLargeIcon(BitmapFactory.decodeResource(mContext.getResources(), R.drawable.ic_mail_outline_black_48dp))
+                            .setSmallIcon(R.drawable.logo)
+                            .setContentTitle(mContext.getString(R.string.TrainingTracker))
+                            .setContentText(mContext.getString(R.string.ready_to_send_email))
+                            .setContentIntent(pendingShareIntent)
+                            .setAutoCancel(true);
 
                 notificationManager.notify(TrainingApplication.SEND_EMAIL_NOTIFICATION_ID, notificationBuilder2.build());
             }
         }
+        return Result.success();
     }
 }

@@ -115,7 +115,6 @@
         <service android:name=".trainingtracker.tracker.TrackerService" />
         <service android:name=".trainingtracker.smartwatch.pebble.PebbleService" />
         <service android:name=".trainingtracker.smartwatch.pebble.PebbleServiceBuildIn" />
-        <service android:name=".trainingtracker.exporter.ExportWorkoutIntentService" />
         <service android:name=".banalservice.BANALService" />
         <service android:name=".trainingtracker.onlinecommunities.strava.StravaSegmentsIntentService" />
 
