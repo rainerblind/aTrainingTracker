@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.fragments;
 
 import android.app.Activity;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import android.app.Dialog;
 import android.content.BroadcastReceiver;
@@ -33,6 +34,9 @@ import android.os.Bundle;
 
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkManager;
+
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -60,7 +64,7 @@ import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.ExtremaType;
 import com.atrainingtracker.trainingtracker.exporter.ExportManager;
-import com.atrainingtracker.trainingtracker.exporter.ExportWorkoutIntentService;
+import com.atrainingtracker.trainingtracker.exporter.ExportWorkoutWorker;
 import com.atrainingtracker.trainingtracker.MyHelper;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper;
@@ -360,7 +364,10 @@ public class EditWorkoutFragment extends Fragment {
                     exportManager.exportWorkout(mBaseFileName);
                     exportManager.onFinished(TAG);
 
-                    getActivity().startService(new Intent(context, ExportWorkoutIntentService.class));
+                    OneTimeWorkRequest workRequest = new OneTimeWorkRequest.Builder(ExportWorkoutWorker.class)
+                            .build();
+                    assert context != null;
+                    WorkManager.getInstance(context).enqueue(workRequest);
 
                     getActivity().setResult(Activity.RESULT_OK, resultIntent);
                 } else {

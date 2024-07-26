@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.activities;
 
 import android.Manifest;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import android.app.Dialog;
 import android.content.BroadcastReceiver;
@@ -34,6 +35,8 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+
+import com.atrainingtracker.trainingtracker.exporter.ExportWorkoutWorker;
 import com.google.android.material.navigation.NavigationView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -47,6 +50,10 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceScreen;
 import androidx.appcompat.widget.Toolbar;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkManager;
+
+import android.provider.Settings;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.WindowManager;
@@ -68,7 +75,6 @@ import com.atrainingtracker.banalservice.fragments.RemoteDevicesFragmentTabbedCo
 import com.atrainingtracker.banalservice.fragments.SportTypeListFragment;
 import com.atrainingtracker.banalservice.helpers.BatteryStatusHelper;
 import com.atrainingtracker.trainingtracker.exporter.ExportManager;
-import com.atrainingtracker.trainingtracker.exporter.ExportWorkoutIntentService;
 import com.atrainingtracker.trainingtracker.exporter.FileFormat;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
@@ -104,7 +110,6 @@ import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaGetAccessTokenActivity;
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager;
 import com.atrainingtracker.trainingtracker.segments.StarredSegmentsListFragment;
-import com.atrainingtracker.trainingtracker.segments.StarredSegmentsTabbedContainer;
 import com.dropbox.core.android.Auth;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
@@ -754,7 +759,9 @@ public class MainActivityWithNavigation
         exportManager.exportWorkoutTo(id, fileFormat);
         exportManager.onFinished(TAG);
 
-        startService(new Intent(this, ExportWorkoutIntentService.class));
+        OneTimeWorkRequest workRequest = new OneTimeWorkRequest.Builder(ExportWorkoutWorker.class)
+                .build();
+        WorkManager.getInstance(this).enqueue(workRequest);
     }
 
     @Override
