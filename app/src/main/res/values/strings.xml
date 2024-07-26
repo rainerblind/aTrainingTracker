@@ -147,21 +147,21 @@
     <string name="units_speed_basic" translatable="false">m/s</string>
     <string name="units_speed_metric" translatable="false">km/h</string>
     <string name="units_speed_imperial" translatable="false">mile/h</string>
-    <string name="units_speed_foobar" translatable="false">foo/bar</string>
+    <string name="units_speed_unknown" translatable="false">n/a</string>
     <string name="units_speed_short_metric" translatable="false">km/h</string>
     <string name="units_speed_short_imperial" translatable="false">mi/h</string>
-    <string name="units_speed_short_foobar" translatable="false">foo/bar</string>
+    <string name="units_speed_short_unknown" translatable="false">n/a</string>
     <string name="units_pace_basic" translatable="false">s/m</string>
     <string name="units_pace_metric" translatable="false">min/km</string>
     <string name="units_pace_imperial" translatable="false">min/mile</string>
-    <string name="units_pace_foobar" translatable="false">bar/foo</string>
+    <string name="units_pace_unknown" translatable="false">n/a</string>
     <string name="units_pace_short_metric" translatable="false">/km</string>
     <string name="units_pace_short_imperial" translatable="false">/mi</string>
-    <string name="units_pace_short_foobar" translatable="false">/foo</string>
+    <string name="units_pace_short_unknown" translatable="false">/na</string>
     <string name="units_distance_basic" translatable="false">m</string>
     <string name="units_distance_metric" translatable="false">km</string>
     <string name="units_distance_imperial" translatable="false">mile</string>
-    <string name="units_distance_foobar" translatable="false">foo</string>
+    <string name="units_distance_unknown" translatable="false">na</string>
     <string name="units_cadence" translatable="false">1/min</string>
     <string name="units_calories" translatable="false">kcal</string>
     <string name="units_heart_rate" translatable="false">bpm</string>
@@ -522,7 +522,7 @@
     <string name="wheel_circumference">wheel circumference</string>
     <string name="Calibration_Factor">Calibration Factor</string>
     <string name="Wheel_Circumference">Wheel Circumference</string>
-    <string name="Set_foo">Set %1$s</string>
+    <string name="Set_calibration">Set %1$s</string>
 
     <!--     <string name="textDeviceNumber">device Number</string> -->
     <!--     <string name="textPaired">paired</string> -->

@@ -293,8 +293,8 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
     private void setStatusInfo(ViewHolder viewHolder, final Context context, final String fileBaseName) {
         if (DEBUG) Log.d(TAG, "setStatusInfo: " + fileBaseName);
 
-        EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>> foo = mExportManager.getExportStatus(fileBaseName);
-        if (DEBUG && foo == null) Log.d(TAG, "WTF: foo == null");
+        EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>> exportStatuses = mExportManager.getExportStatus(fileBaseName);
+        if (DEBUG && exportStatuses == null) Log.d(TAG, "WTF: exportStatuses == null");
 
         for (ExportType exportType : ExportType.values()) {
             if (DEBUG) Log.d(TAG, "looking for " + exportType);
@@ -321,7 +321,7 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
                 exportStatusCounter.put(exportStatus, 0);
             }
 
-            EnumMap<FileFormat, ExportStatus> bar = foo.get(exportType);
+            EnumMap<FileFormat, ExportStatus> bar = exportStatuses.get(exportType);
             for (FileFormat fileFormat : FileFormat.values()) {
                 ExportStatus exportStatus = bar.get(fileFormat);
                 // avoid a NullPointer Exception when there is a workout in the summaries DB but not in the exportStatus DB

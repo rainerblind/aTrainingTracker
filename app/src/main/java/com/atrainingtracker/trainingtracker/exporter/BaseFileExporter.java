@@ -125,15 +125,15 @@ public abstract class BaseFileExporter extends BaseExporter {
     }
 
     protected String myGet(Cursor cursor, String name, String defaultValue) {
-        String foo = defaultValue;
+        String defVal = defaultValue;
         try {
-            foo = cursor.getString(cursor.getColumnIndexOrThrow(name));
+            defVal = cursor.getString(cursor.getColumnIndexOrThrow(name));
         } catch (CursorIndexOutOfBoundsException e) {
             Log.e(TAG, e.toString());
         }
-        if (foo == null || foo.equals("")) {
-            foo = defaultValue;
+        if (defVal == null || defVal.isEmpty()) {
+            defVal = defaultValue;
         }
-        return foo;
+        return defVal;
     }
 }

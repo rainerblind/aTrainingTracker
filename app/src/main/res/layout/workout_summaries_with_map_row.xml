@@ -115,7 +115,7 @@
                 android:id="@+id/tv_workout_summaries_export_status_file"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="successfully exported 3 files (foo)"
+                android:text="@string/successfully_exported_to_file"
                 android:textSize="15sp">
 
             </TextView>
@@ -138,7 +138,7 @@
                 android:id="@+id/tv_workout_summaries_export_status_dropbox"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="successfully uploaded to Dropbox (foo)"
+                android:text="@string/successfully_uploaded_to_dropbox"
                 android:textSize="15sp">
 
             </TextView>
@@ -161,7 +161,7 @@
                 android:id="@+id/tv_workout_summaries_export_status_communities"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="successfully uploaded to 3 communities (foo)"
+                android:text="@string/successfully_uploaded_to_community"
                 android:textSize="15sp">
 
             </TextView>
