@@ -189,7 +189,7 @@ public class PebbleService extends Service {
         }
     };
     // class BANALConnection implements ServiceConnection
-    private ServiceConnection mBanalConnection = new ServiceConnection() {
+    private final ServiceConnection mBanalConnection = new ServiceConnection() {
         public void onServiceConnected(ComponentName name, IBinder service) {
             banalService = (BANALServiceComm) service;
             if (DEBUG) Log.i(TAG, "connected to BANAL Service");
@@ -205,7 +205,7 @@ public class PebbleService extends Service {
         }
     };
     // Pebble stuff
-    private PebbleKit.PebbleDataReceiver mPebbleDataReceiver = new PebbleKit.PebbleDataReceiver(TRAINING_TRACKER_UUID) {
+    private final PebbleKit.PebbleDataReceiver mPebbleDataReceiver = new PebbleKit.PebbleDataReceiver(TRAINING_TRACKER_UUID) {
         @Override
         public void receiveData(final Context context, final int transactionId, final PebbleDictionary data) {
             // first, we have to send immediately an ack to the pebble
@@ -249,13 +249,13 @@ public class PebbleService extends Service {
             // updatePebbleWatch();
         }
     };
-    private PebbleAckReceiver pebbleAckReceiver = new PebbleAckReceiver(TRAINING_TRACKER_UUID) {
+    private final PebbleAckReceiver pebbleAckReceiver = new PebbleAckReceiver(TRAINING_TRACKER_UUID) {
         @Override
         public void receiveAck(Context context, int transactionId) {
             if (DEBUG) Log.d(TAG, "Pebble ACKed id:" + transactionId);
         }
     };
-    private PebbleNackReceiver pebbleNackReceiver = new PebbleNackReceiver(TRAINING_TRACKER_UUID) {
+    private final PebbleNackReceiver pebbleNackReceiver = new PebbleNackReceiver(TRAINING_TRACKER_UUID) {
         @Override
         public void receiveNack(Context context, int transactionId) {
             if (DEBUG) Log.d(TAG, "Pebble NACKed id:" + transactionId);

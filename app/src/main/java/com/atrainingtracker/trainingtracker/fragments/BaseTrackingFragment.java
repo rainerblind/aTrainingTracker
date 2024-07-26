@@ -46,7 +46,7 @@ public abstract class BaseTrackingFragment extends Fragment {
         try {
             mGetBanalServiceIf = (BANALService.GetBanalServiceInterface) context;
         } catch (ClassCastException e) {
-            throw new ClassCastException(context.toString() + " must implement GetBanalServiceInterface");
+            throw new ClassCastException(context + " must implement GetBanalServiceInterface");
         }
     }
 

@@ -64,7 +64,7 @@ public class BTSearchForNewDevicesEngine
     protected Map<String, Queue<BluetoothGattCharacteristic>> mReadCharacteristicQueue = new HashMap<String, Queue<BluetoothGattCharacteristic>>();
     BluetoothAdapter mBluetoothAdapter;
     boolean scanning = false;
-    private IBTSearchForNewDevicesEngineInterface mCallbackInterface;
+    private final IBTSearchForNewDevicesEngineInterface mCallbackInterface;
     // callback to get the manufacturer and battery percentage
     // also check whether this is a bike speed, bike cadence, or combined speed and cadence device
     private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
@@ -205,7 +205,7 @@ public class BTSearchForNewDevicesEngine
         }
     };
     // Device scan callback.
-    private BluetoothAdapter.LeScanCallback mLeScanCallback = new BluetoothAdapter.LeScanCallback() {
+    private final BluetoothAdapter.LeScanCallback mLeScanCallback = new BluetoothAdapter.LeScanCallback() {
         @Override
         public void onLeScan(final BluetoothDevice device, int rssi, byte[] scanRecord) {
             if (DEBUG)

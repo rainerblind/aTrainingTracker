@@ -328,7 +328,7 @@ public class DevicesDatabaseManager {
 
                 result = db.insert(DevicesDbHelper.DEVICES, null, values);
             } catch (SQLException e) {
-                Log.e(TAG, "Error while writing" + e.toString());
+                Log.e(TAG, "Error while writing" + e);
                 result = -2;
             }
         }
@@ -384,7 +384,7 @@ public class DevicesDatabaseManager {
 
                 result = db.insert(DevicesDbHelper.DEVICES, null, values);
             } catch (SQLException e) {
-                Log.e(TAG, "Error while writing" + e.toString());
+                Log.e(TAG, "Error while writing" + e);
                 result = -2;
             }
         }
@@ -770,7 +770,7 @@ public class DevicesDatabaseManager {
                 + CALIBRATION_FACTOR + " real,"
                 + LAST_ACTIVE + " text,"
                 + LAST_BATTERY_STATUS + " int)";       // currently ANT+ specific, change to battery percentage as in bluetooth
-        private Context mContext;
+        private final Context mContext;
 
         // Constructor
         public DevicesDbHelper(Context context) {

@@ -101,7 +101,7 @@ public class BTLEBikePowerDevice extends MyBTLEDevice {
     protected boolean mIsCrankRevolutionDataSupported = false;
     protected boolean mDoublePowerBalanceValues = false;
     protected boolean mInvertPowerBalanceValues = false;
-    private String TAG = BTLEBikePowerDevice.class.getName();
+    private final String TAG = BTLEBikePowerDevice.class.getName();
 
 
     /**

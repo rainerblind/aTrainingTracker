@@ -162,13 +162,13 @@ public class StartAndTrackingFragmentTabbedContainer extends Fragment {
         try {
             mUpdateActivityInterface = (UpdateActivityTypeInterface) context;
         } catch (ClassCastException e) {
-            throw new ClassCastException(context.toString() + " must implement UpdateActivityTypeInterface");
+            throw new ClassCastException(context + " must implement UpdateActivityTypeInterface");
         }
 
         try {
             mRemoteDevicesSettingsInterface = (RemoteDevicesSettingsInterface) context;
         } catch (ClassCastException e) {
-            throw new ClassCastException(context.toString() + "must implement RemoteDevicesSettingsInterface");
+            throw new ClassCastException(context + "must implement RemoteDevicesSettingsInterface");
         }
 
         try {
@@ -186,7 +186,7 @@ public class StartAndTrackingFragmentTabbedContainer extends Fragment {
                 }
             });
         } catch (ClassCastException e) {
-            throw new ClassCastException(context.toString() + " must implement GetBanalServiceInterface");
+            throw new ClassCastException(context + " must implement GetBanalServiceInterface");
         }
     }
 

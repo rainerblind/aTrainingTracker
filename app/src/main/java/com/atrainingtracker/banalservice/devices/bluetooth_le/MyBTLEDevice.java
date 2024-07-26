@@ -57,7 +57,7 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
     protected Queue<BluetoothGattCharacteristic> mReadCharacteristicQueue = new LinkedList<BluetoothGattCharacteristic>();
     protected State mState = State.DISCONNECTED;
     Handler mHandler;
-    private String TAG = "MyBTLEDevice";
+    private final String TAG = "MyBTLEDevice";
     private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {

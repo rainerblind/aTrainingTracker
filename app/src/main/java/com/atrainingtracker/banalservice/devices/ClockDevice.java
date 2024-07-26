@@ -57,7 +57,7 @@ public class ClockDevice extends MyDevice {
 
     private Timer timer;
     private boolean timerRunning = false;
-    private DateFormat df = SimpleDateFormat.getTimeInstance();
+    private final DateFormat df = SimpleDateFormat.getTimeInstance();
 
     public ClockDevice(Context context, MySensorManager mySensorManager) {
         super(context, mySensorManager, DeviceType.CLOCK);

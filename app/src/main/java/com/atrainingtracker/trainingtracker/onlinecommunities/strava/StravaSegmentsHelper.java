@@ -39,7 +39,7 @@ public class StravaSegmentsHelper {
     private static final String TAG = StravaSegmentsHelper.class.getSimpleName();
     private static final boolean DEBUG = TrainingApplication.DEBUG && false;
 
-    private Context mContext;
+    private final Context mContext;
 
     public StravaSegmentsHelper(Context context) {
         mContext = context;

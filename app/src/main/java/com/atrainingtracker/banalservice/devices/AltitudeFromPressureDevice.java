@@ -49,7 +49,7 @@ public class AltitudeFromPressureDevice extends MyDevice
 
     protected Sensor mPressureSensor;
     protected boolean mPressureSensorRegistered = false;
-    private String TAG = "AltitudeFromPressureDevice";
+    private final String TAG = "AltitudeFromPressureDevice";
     private double mAltitudeCorrection = 0;
     private boolean mPressureSensorInitialized = false;
     private final BroadcastReceiver mGPSProviderEnabledReceiver = new BroadcastReceiver() {

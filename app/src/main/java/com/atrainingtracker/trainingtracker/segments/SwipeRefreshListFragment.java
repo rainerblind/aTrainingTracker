@@ -121,8 +121,6 @@ public class SwipeRefreshListFragment extends ListFragment {
 
     /**
      * Set the color scheme for the {@link SwipeRefreshLayout}.
-     *
-     * @see SwipeRefreshLayout#setColorScheme(int, int, int, int)
      */
     public void setColorScheme(int colorRes1, int colorRes2, int colorRes3, int colorRes4) {
         mSwipeRefreshLayout.setColorScheme(colorRes1, colorRes2, colorRes3, colorRes4);

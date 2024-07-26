@@ -26,12 +26,8 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.os.Build;
 import android.os.Bundle;
 
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.app.AppCompatDelegate;
-import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 import android.util.Log;
@@ -108,7 +104,7 @@ public class ControlTrackingFragment extends BaseTrackingFragment {
             disableResumeAndStopLayout();
         }
     };
-    private IntentFilter mUpdateResearchFilter = new IntentFilter();  // Intents will be added in onResume
+    private final IntentFilter mUpdateResearchFilter = new IntentFilter();  // Intents will be added in onResume
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -122,13 +118,13 @@ public class ControlTrackingFragment extends BaseTrackingFragment {
         try {
             mRemoteDevicesSettingsInterface = (RemoteDevicesSettingsInterface) context;
         } catch (ClassCastException e) {
-            throw new ClassCastException(context.toString() + " must implement StartPairingListener");
+            throw new ClassCastException(context + " must implement StartPairingListener");
         }
 
         try {
             mStartOrResumeInterface = (StartOrResumeInterface) context;
         } catch (ClassCastException e) {
-            throw new ClassCastException(context.toString() + " must implement StartOrResumeInterface");
+            throw new ClassCastException(context + " must implement StartOrResumeInterface");
         }
 
         mGetBanalServiceIf.registerConnectionStatusListener(new BANALService.GetBanalServiceInterface.ConnectionStatusListener() {

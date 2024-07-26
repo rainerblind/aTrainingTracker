@@ -103,7 +103,7 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
             }
         }
     };
-    private AbsListView.RecyclerListener mRecycleListener = new AbsListView.RecyclerListener() {
+    private final AbsListView.RecyclerListener mRecycleListener = new AbsListView.RecyclerListener() {
 
         @Override
         public void onMovedToScrapHeap(View view) {
@@ -137,7 +137,7 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
         try {
             startSegmentDetailsActivityInterface = (StartSegmentDetailsActivityInterface) context;
         } catch (ClassCastException e) {
-            throw new ClassCastException(context.toString() + " must implement StartSegmentDetailsActivityInterface");
+            throw new ClassCastException(context + " must implement StartSegmentDetailsActivityInterface");
         }
     }
 

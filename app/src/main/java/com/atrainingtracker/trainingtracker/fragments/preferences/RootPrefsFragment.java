@@ -54,11 +54,11 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
         setPreferencesFromResource(R.xml.prefs, rootKey);
         if (DEBUG) Log.i(TAG, "inflated xml resource file");
 
-        mUnitPref = (ListPreference) getPreferenceScreen().findPreference(TrainingApplication.SP_UNITS);
+        mUnitPref = getPreferenceScreen().findPreference(TrainingApplication.SP_UNITS);
 
-        mAthleteNamePref = (EditTextPreference) getPreferenceScreen().findPreference(TrainingApplication.SP_ATHLETE_NAME);
-        mSamplingTimePref = (EditTextPreference) getPreferenceScreen().findPreference(TrainingApplication.SP_SAMPLING_TIME);
-        mSearchRoundsPref = (EditTextPreference) getPreferenceScreen().findPreference(TrainingApplication.SP_NUMBER_OF_SEARCH_TRIES);
+        mAthleteNamePref = getPreferenceScreen().findPreference(TrainingApplication.SP_ATHLETE_NAME);
+        mSamplingTimePref = getPreferenceScreen().findPreference(TrainingApplication.SP_SAMPLING_TIME);
+        mSearchRoundsPref = getPreferenceScreen().findPreference(TrainingApplication.SP_NUMBER_OF_SEARCH_TRIES);
 
         mExport = this.getPreferenceScreen().findPreference(TrainingApplication.FILE_EXPORT);
         mCloudUpload = this.getPreferenceScreen().findPreference(TrainingApplication.CLOUD_UPLOAD);

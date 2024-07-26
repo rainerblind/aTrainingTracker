@@ -100,7 +100,7 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
     private ShowWorkoutDetailsInterface mShowWorkoutDetailsListener;
     private ReallyDeleteDialogInterface mReallyDeleteDialogInterface;
     private boolean isPlayServiceAvailable = true;
-    private AbsListView.RecyclerListener mRecycleListener = new AbsListView.RecyclerListener() {
+    private final AbsListView.RecyclerListener mRecycleListener = new AbsListView.RecyclerListener() {
 
         @Override
         public void onMovedToScrapHeap(View view) {
@@ -130,13 +130,13 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
         try {
             mShowWorkoutDetailsListener = (ShowWorkoutDetailsInterface) context;
         } catch (ClassCastException e) {
-            throw new ClassCastException(context.toString() + " must implement UpdateWorkoutInterface");
+            throw new ClassCastException(context + " must implement UpdateWorkoutInterface");
         }
 
         try {
             mReallyDeleteDialogInterface = (ReallyDeleteDialogInterface) context;
         } catch (ClassCastException e) {
-            throw new ClassCastException(context.toString() + " must implement ReallyDeleteWorkoutDialogInterface");
+            throw new ClassCastException(context + " must implement ReallyDeleteWorkoutDialogInterface");
         }
     }
 
@@ -488,7 +488,7 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
             try {
                 mUpdateWorkoutListener = (ShowWorkoutDetailsInterface) activity;
             } catch (ClassCastException e) {
-                throw new ClassCastException(activity.toString() + " must implement ShowWorkoutDetailsInterface");
+                throw new ClassCastException(activity + " must implement ShowWorkoutDetailsInterface");
             }
         }
 

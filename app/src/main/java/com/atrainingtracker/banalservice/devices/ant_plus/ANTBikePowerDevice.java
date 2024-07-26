@@ -73,7 +73,7 @@ public class ANTBikePowerDevice extends MyANTDevice {
     protected MySensor<Integer> mTorqueEffectivenessLeftSensor;
     protected boolean mInvertPowerBalanceValues;
     AntPlusBikePowerPcc bikePowerPcc = null;
-    private String TAG = "ANTBikePowerDevice";
+    private final String TAG = "ANTBikePowerDevice";
 
     /**
      * constructor

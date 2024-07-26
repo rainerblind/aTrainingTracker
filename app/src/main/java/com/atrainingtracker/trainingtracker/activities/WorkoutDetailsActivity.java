@@ -37,7 +37,6 @@ import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.TextView;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
@@ -137,7 +136,7 @@ public class WorkoutDetailsActivity extends AppCompatActivity
             findViewById(R.id.llProgress).setVisibility(View.VISIBLE);
 
             // now, calc the extrema values in the background
-            (new CalcExtremaValuesTask(this, (TextView) findViewById(R.id.tvProgressMessage))).execute(mWorkoutID);
+            (new CalcExtremaValuesTask(this, findViewById(R.id.tvProgressMessage))).execute(mWorkoutID);
         }
     }
 

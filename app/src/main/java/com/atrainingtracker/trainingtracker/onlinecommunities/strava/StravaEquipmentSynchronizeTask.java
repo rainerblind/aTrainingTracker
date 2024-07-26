@@ -64,7 +64,7 @@ public class StravaEquipmentSynchronizeTask extends AsyncTask<String, String, St
     private static final String TAG = "StravaEquipmentHelperTask";
     private static final boolean DEBUG = false;
     protected Context mContext;
-    private ProgressDialog mProgressDialog;
+    private final ProgressDialog mProgressDialog;
 
     public StravaEquipmentSynchronizeTask(Context context) {
         mContext = context;

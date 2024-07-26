@@ -57,15 +57,15 @@ public abstract class MyANTAsyncSearchDevice {
     protected DeviceState mDeviceState = null;  // TODO: rename to mANTDeviceState
     protected Context mContext;
     protected MultiDeviceSearchResult mDeviceFound;
-    private String TAG = "MyANTAsyncSearchDevice";
+    private final String TAG = "MyANTAsyncSearchDevice";
     private AntPlusLegacyCommonPcc mLegacyCommonPcc = null;
     private AntPlusCommonPcc mCommonPcc = null;
     private PccReleaseHandle pccReleaseHandle = null;
-    private IANTAsyncSearchEngineInterface mCallback;
-    private DeviceType mDeviceType;
+    private final IANTAsyncSearchEngineInterface mCallback;
+    private final DeviceType mDeviceType;
     private int mBatteryPercentage = -1;
     private String mManufacturer = null;
-    private boolean mPairingRecommendation;
+    private final boolean mPairingRecommendation;
 
 
     /**

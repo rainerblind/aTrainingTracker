@@ -77,7 +77,7 @@ public class KnownLocationsDatabaseManager {
         try {
             db.insert(KnownLocationsDbHelper.TABLE, null, values);
         } catch (SQLException e) {
-            Log.e(TAG, "Error while writing" + e.toString());
+            Log.e(TAG, "Error while writing" + e);
         }
         getInstance().closeDatabase();
     }
@@ -101,7 +101,7 @@ public class KnownLocationsDatabaseManager {
             long id = db.insert(KnownLocationsDbHelper.TABLE, null, values);
             myLocation = new MyLocation(id, latitude, longitude, name, altitude, radius);
         } catch (SQLException e) {
-            Log.e(TAG, "Error while writing" + e.toString());
+            Log.e(TAG, "Error while writing" + e);
         }
         getInstance().closeDatabase();
 

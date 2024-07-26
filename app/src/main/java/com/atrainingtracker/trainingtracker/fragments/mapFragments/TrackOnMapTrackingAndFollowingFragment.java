@@ -124,11 +124,11 @@ public class TrackOnMapTrackingAndFollowingFragment
         private final int minTime = 500;     // minimum time interval between location updates, in milliseconds
         private final int minDistance = 1;    // minimum distance between location updates, in meters
         private OnLocationChangedListener mListener;
-        private LocationManager locationManager;
+        private final LocationManager locationManager;
         private String bestAvailableProvider;
         // private double mLatitudeFiltered, mLongitudeFiltered;
         // private float mBearingFiltered, mSpeedFiltered;
-        private CameraPosition.Builder mCameraPositionBuilder = new CameraPosition.Builder();
+        private final CameraPosition.Builder mCameraPositionBuilder = new CameraPosition.Builder();
 
         private FollowMeLocationSource() {
             // Get reference to Location Manager

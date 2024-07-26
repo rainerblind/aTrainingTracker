@@ -497,11 +497,11 @@ public class MyLocationsFragment
     }
 
     class ShowExtremaLocations extends AsyncTask<Integer, LatLngId, Float> {
-        private long mSportTypeId;
-        private ExtremaType mExtremaType;
+        private final long mSportTypeId;
+        private final ExtremaType mExtremaType;
 
-        private ProgressDialog progressDialog;
-        private Context context;
+        private final ProgressDialog progressDialog;
+        private final Context context;
 
         private int mMarkerId = R.drawable.start_logo_map;
 
@@ -657,8 +657,8 @@ public class MyLocationsFragment
      */
 
     class AddMyLocationMarkers extends AsyncTask<Integer, MyLocation, Float> {
-        private ProgressDialog progressDialog;
-        private Context context;
+        private final ProgressDialog progressDialog;
+        private final Context context;
 
         AddMyLocationMarkers(Context context) {
             this.context = context;
@@ -734,8 +734,8 @@ public class MyLocationsFragment
     }
 
     class CreateNewMyLocation extends AsyncTask<LatLng, Void, MyLocation> {
-        private ProgressDialog progressDialog;
-        private Context context;
+        private final ProgressDialog progressDialog;
+        private final Context context;
 
         CreateNewMyLocation(Context context) {
             this.context = context;

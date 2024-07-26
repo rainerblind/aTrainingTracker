@@ -46,7 +46,7 @@ public class BTLERunSpeedDevice extends MyBTLEDevice {
     protected MySensor<Double> mPaceSensor;
     protected MyDoubleAccumulatorSensor mDistanceSensor;    // WTF: a distance sensor is not always present in bluetooth devices!
     protected MyDoubleAccumulatorSensor mLapDistanceSensor;
-    private String TAG = "BTLERunSpeedDevice";
+    private final String TAG = "BTLERunSpeedDevice";
     private boolean mDistancePresent;
     private double mDistance = 0;
     private double mSpeed;
@@ -63,7 +63,7 @@ public class BTLERunSpeedDevice extends MyBTLEDevice {
         }
     };
     //TODO: there might be a stride length sensor
-    private ScheduledFuture mDistanceCalculatorHandle;
+    private final ScheduledFuture mDistanceCalculatorHandle;
 
     /**
      * constructor

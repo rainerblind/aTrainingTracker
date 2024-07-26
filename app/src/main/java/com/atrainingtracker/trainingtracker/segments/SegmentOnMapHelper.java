@@ -47,7 +47,7 @@ public class SegmentOnMapHelper {
     private static final String TAG = SegmentOnMapHelper.class.getName();
     private static final boolean DEBUG = TrainingApplication.DEBUG && false;
     //                                 segmentId
-    private EnumMap<Roughness, HashMap<Long, SegmentData>> mSegmentCache = new EnumMap<Roughness, HashMap<Long, SegmentData>>(Roughness.class);
+    private final EnumMap<Roughness, HashMap<Long, SegmentData>> mSegmentCache = new EnumMap<Roughness, HashMap<Long, SegmentData>>(Roughness.class);
 
     public void showSegmentOnMap(Context context, MyMapViewHolder myMapViewHolder, long segmentId, Roughness roughness, boolean zoomToMap, boolean animateZoom) {
         if (DEBUG)

@@ -50,7 +50,7 @@ public class RunkeeperUploadFragment extends androidx.preference.PreferenceFragm
 
         setPreferencesFromResource(R.xml.prefs, rootKey);
 
-        mRunkeeperUpload = (CheckBoxPreference) this.getPreferenceScreen().findPreference(TrainingApplication.SP_UPLOAD_TO_RUNKEEPER);
+        mRunkeeperUpload = this.getPreferenceScreen().findPreference(TrainingApplication.SP_UPLOAD_TO_RUNKEEPER);
     }
 
     @Override

@@ -45,8 +45,8 @@ public class EmailUploadFragment extends androidx.preference.PreferenceFragmentC
 
         setPreferencesFromResource(R.xml.prefs, rootKey);
 
-        etpAddress = (EditTextPreference) this.getPreferenceScreen().findPreference(TrainingApplication.SP_EMAIL_ADDRESS);
-        etpSubject = (EditTextPreference) this.getPreferenceScreen().findPreference(TrainingApplication.SP_EMAIL_SUBJECT);
+        etpAddress = this.getPreferenceScreen().findPreference(TrainingApplication.SP_EMAIL_ADDRESS);
+        etpSubject = this.getPreferenceScreen().findPreference(TrainingApplication.SP_EMAIL_SUBJECT);
     }
 
     @Override

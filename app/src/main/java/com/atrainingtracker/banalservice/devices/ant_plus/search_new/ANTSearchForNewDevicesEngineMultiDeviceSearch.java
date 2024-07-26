@@ -44,7 +44,7 @@ public class ANTSearchForNewDevicesEngineMultiDeviceSearch
     protected MultiDeviceSearch mMultiDeviceSearch;
 
     protected List<MyANTAsyncSearchDevice> mFoundDevices = new LinkedList<MyANTAsyncSearchDevice>();
-    private IANTAsyncSearchEngineInterface mCallbackInterface;
+    private final IANTAsyncSearchEngineInterface mCallbackInterface;
 
     public ANTSearchForNewDevicesEngineMultiDeviceSearch(Context context, DeviceType deviceType, IANTAsyncSearchEngineInterface callbackInterface) {
         mContext = context;
