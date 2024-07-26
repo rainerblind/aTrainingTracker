@@ -26,6 +26,8 @@ import android.content.IntentFilter;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
+
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.ListFragment;
 import androidx.cursoradapter.widget.CursorAdapter;
 import android.util.Log;
@@ -178,9 +180,8 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
         mExportManager = new ExportManager(getActivity(), TAG);
         updateCursor();
 
-        getActivity().registerReceiver(mExportStatusChangedReceiver, mExportStatusChangedFilter);
-        getActivity().registerReceiver(mFinishedDeletingReceiver, mFinishedDeletingFilter);
-
+        ContextCompat.registerReceiver(getActivity(), mExportStatusChangedReceiver, mExportStatusChangedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(getActivity(), mFinishedDeletingReceiver, mFinishedDeletingFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     @Override

@@ -22,6 +22,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
 
+import androidx.core.content.ContextCompat;
+
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.sensor.MyIntegerAccumulatorSensor;
 import com.atrainingtracker.banalservice.sensor.MySensor;
@@ -63,8 +65,8 @@ public class ClockDevice extends MyDevice {
         super(context, mySensorManager, DeviceType.CLOCK);
         if (DEBUG) Log.i(TAG, "begin of constructor: mLaps=" + mLaps);
 
-        // context.registerReceiver(mStartTimerReceiver, mStartTimerFilter);
-        // context.registerReceiver(mStopTimerReceiver,  mStopTimerFilter);
+        // ContextCompat.registerReceiver(context, mStartTimerReceiver, mStartTimerFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        // ContextCompat.registerReceiver(context, mStopTimerReceiver, mStopTimerFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
 
         // final SimpleDateFormat seconds2StringFormat = new SimpleDateFormat("HH:mm:ss");
         // seconds2StringFormat.getTimeZone().setRawOffset(0);

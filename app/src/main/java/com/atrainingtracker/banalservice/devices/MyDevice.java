@@ -24,6 +24,8 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.util.Log;
 
+import androidx.core.content.ContextCompat;
+
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.sensor.MyAccumulatorSensor;
 import com.atrainingtracker.banalservice.sensor.MySensor;
@@ -62,7 +64,7 @@ public abstract class MyDevice {
         mMySensorManager = mySensorManager;
         mDeviceType = deviceType;
 
-        mContext.registerReceiver(resetAccumulatorsReceiver, resetAccumulatorsFilter);
+        ContextCompat.registerReceiver(mContext, resetAccumulatorsReceiver, resetAccumulatorsFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
 
         addSensors();
     }

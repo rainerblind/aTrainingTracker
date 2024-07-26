@@ -281,7 +281,6 @@ public class TrainingApplication extends Application {
         return ContextCompat.checkSelfPermission(cAppContext, permission) == PackageManager.PERMISSION_GRANTED;
     }
 
-
     public static boolean isAppInstalled(String uri) {
         PackageManager pm = cAppContext.getPackageManager();
         try {
@@ -867,15 +866,15 @@ public class TrainingApplication extends Application {
         mTrackingAndSearchingNotificationBuilder = getNewNotificationBuilder();
         addActionsToNotificationBuilder();
 
-        registerReceiver(mSearchingFinishedReceiver, mSearchingFinishedFilter);
-        registerReceiver(mSearchingStartedReceiver, mSearchingStartedFilter);
+        ContextCompat.registerReceiver(this, mSearchingFinishedReceiver, mSearchingFinishedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mSearchingStartedReceiver, mSearchingStartedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
 
-        registerReceiver(mStartTrackingReceiver, new IntentFilter(REQUEST_START_TRACKING));
-        registerReceiver(mTrackingStartedReceiver, new IntentFilter(TrackerService.TRACKING_STARTED_INTENT));
-        registerReceiver(mStopTrackingReceiver, new IntentFilter(REQUEST_STOP_TRACKING));
-        registerReceiver(mTrackingStoppedReceiver, new IntentFilter(TrackerService.TRACKING_FINISHED_INTENT));
-        registerReceiver(mPauseTrackingReceiver, new IntentFilter(REQUEST_PAUSE_TRACKING));
-        registerReceiver(mResumeFromPaused, new IntentFilter(REQUEST_RESUME_FROM_PAUSED));
+        ContextCompat.registerReceiver(this, mStartTrackingReceiver, new IntentFilter(REQUEST_START_TRACKING), ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mTrackingStartedReceiver, new IntentFilter(TrackerService.TRACKING_STARTED_INTENT), ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mStopTrackingReceiver, new IntentFilter(REQUEST_STOP_TRACKING), ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mTrackingStoppedReceiver, new IntentFilter(TrackerService.TRACKING_FINISHED_INTENT), ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mPauseTrackingReceiver, new IntentFilter(REQUEST_PAUSE_TRACKING), ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mResumeFromPaused, new IntentFilter(REQUEST_RESUME_FROM_PAUSED), ContextCompat.RECEIVER_NOT_EXPORTED);
 
         // eventually get the starred segments
         // TODO: do this in the main activity???

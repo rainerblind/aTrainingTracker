@@ -25,6 +25,8 @@ import android.content.IntentFilter;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
+
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentPagerAdapter;
@@ -223,18 +225,18 @@ public class StartAndTrackingFragmentTabbedContainer extends Fragment {
         super.onResume();
         if (DEBUG) Log.i(TAG, "onResume()");
 
-        getActivity().registerReceiver(mTrackingStartedReceiver, mTrackingStartedFilter);
-        getActivity().registerReceiver(mTrackingFinishedReceiver, mTrackingFinishedFilter);
-        getActivity().registerReceiver(mLapSummaryReceiver, mLapSummaryFilter);
+        ContextCompat.registerReceiver(getActivity(), mTrackingStartedReceiver, mTrackingStartedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(getActivity(), mTrackingFinishedReceiver, mTrackingFinishedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(getActivity(), mLapSummaryReceiver, mLapSummaryFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
 
         mPauseChangedFilter.addAction(TrainingApplication.REQUEST_START_TRACKING);
         mPauseChangedFilter.addAction(TrainingApplication.REQUEST_PAUSE_TRACKING);
         mPauseChangedFilter.addAction(TrainingApplication.REQUEST_RESUME_FROM_PAUSED);
-        getActivity().registerReceiver(mPauseChangedReceiver, mPauseChangedFilter);
+        ContextCompat.registerReceiver(getActivity(), mPauseChangedReceiver, mPauseChangedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
 
         mUpdateActivityTypeFilter.addAction(BANALService.SENSORS_CHANGED);
         mUpdateActivityTypeFilter.addAction(BANALService.SPORT_TYPE_CHANGED_BY_USER_INTENT);
-        getActivity().registerReceiver(mUpdateActivityTypeReceiver, mUpdateActivityTypeFilter);
+        ContextCompat.registerReceiver(getActivity(), mUpdateActivityTypeReceiver, mUpdateActivityTypeFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
 
         createViewIdList();
 

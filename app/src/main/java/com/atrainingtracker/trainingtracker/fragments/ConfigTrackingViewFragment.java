@@ -23,6 +23,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
+
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 import android.text.Editable;
@@ -217,7 +219,7 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
 
         mViewChangedFilter.addAction(FILTERS_CHANGED_INTENT);
         mViewChangedFilter.addAction(TRACKING_VIEW_CHANGED_INTENT);
-        getContext().registerReceiver(mFilterChangedReceiver, mViewChangedFilter);
+        ContextCompat.registerReceiver(getContext(), mFilterChangedReceiver, mViewChangedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     protected void getViewInfoMapAndAddSensorFields() {

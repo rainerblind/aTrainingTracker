@@ -163,7 +163,7 @@ public class ControlSportTypeFragment extends Fragment {
 
         updateView();
 
-        getActivity().registerReceiver(mUpdateViewReceiver, mUpdateViewFilter);
+        ContextCompat.registerReceiver(getActivity(), mUpdateViewReceiver, mUpdateViewFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     @Override

@@ -27,6 +27,8 @@ import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 import android.util.Log;
 
+import androidx.core.content.ContextCompat;
+
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.trainingtracker.MyHelper;
@@ -82,7 +84,7 @@ public class TrackOnMapAftermathFragment
     public void onResume() {
         super.onResume();
 
-        getActivity().registerReceiver(mFinishedCalculatingExtremaValueReceiver, mFinishedCalculatingExtremaValueFilter);
+        ContextCompat.registerReceiver(getActivity(), mFinishedCalculatingExtremaValueReceiver, mFinishedCalculatingExtremaValueFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
 

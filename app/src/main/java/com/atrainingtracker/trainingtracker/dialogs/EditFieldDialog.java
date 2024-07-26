@@ -27,6 +27,7 @@ import android.content.IntentFilter;
 import android.os.Bundle;
 
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.DialogFragment;
 import android.util.Log;
 import android.view.Gravity;
@@ -141,7 +142,7 @@ public class EditFieldDialog extends DialogFragment {
     @Override
     public void onResume() {
         super.onResume();
-        getContext().registerReceiver(mFilterChangedReceiver, mFilterChangedFilter);
+        ContextCompat.registerReceiver(getContext(), mFilterChangedReceiver, mFilterChangedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     public void onPause() {

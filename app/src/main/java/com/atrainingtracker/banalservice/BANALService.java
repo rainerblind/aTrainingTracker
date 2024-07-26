@@ -53,6 +53,8 @@ import java.util.Set;
 import static com.atrainingtracker.trainingtracker.TrainingApplication.REQUEST_NEW_LAP;
 import static com.atrainingtracker.trainingtracker.TrainingApplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES;
 
+import androidx.core.content.ContextCompat;
+
 public class BANALService
         extends Service {
     public static final boolean DEBUG = false;
@@ -481,8 +483,8 @@ public class BANALService
         cDeviceManager = new DeviceManager(this, cSensorManager);
         cFilterManager = new FilterManager(this, cDeviceManager, cSensorManager);
 
-        registerReceiver(mStartSearchForPairedDevices, new IntentFilter(REQUEST_START_SEARCH_FOR_PAIRED_DEVICES));
-        registerReceiver(mNewLapReceiver, new IntentFilter(REQUEST_NEW_LAP));
+        ContextCompat.registerReceiver(this, mStartSearchForPairedDevices, new IntentFilter(REQUEST_START_SEARCH_FOR_PAIRED_DEVICES), ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mNewLapReceiver, new IntentFilter(REQUEST_NEW_LAP), ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     @Override
