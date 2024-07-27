@@ -19,6 +19,8 @@
 package com.atrainingtracker.trainingtracker.activities;
 
 import android.Manifest;
+
+import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AlertDialog;
 
 import android.annotation.SuppressLint;
@@ -319,6 +321,23 @@ public class MainActivityWithNavigation
                 dialog.show();
             }
         }
+
+        getOnBackPressedDispatcher().addCallback(this,
+                new OnBackPressedCallback(true) {
+                    @Override
+                    public void handleOnBackPressed() {
+                        // TODO: optimize: when showing "deeper fragments", we only want to go back one step and not completely to the start_tracking fragment
+                        if (mDrawerLayout.isDrawerOpen(GravityCompat.START)) {
+                            mDrawerLayout.closeDrawer(GravityCompat.START);
+                        } else if (getSupportFragmentManager().getBackStackEntryCount() == 0
+                                && mSelectedFragmentId != R.id.drawer_start_tracking) {
+                            onNavigationItemSelected(mNavigationView.getMenu().findItem(R.id.drawer_start_tracking));
+                        } else {
+                            finish();
+                        }
+                    }
+                }
+        );
     }
 
     private List<String> getPermissions() {
@@ -696,19 +715,6 @@ public class MainActivityWithNavigation
         setTitle(titleId);
 
         return true;
-    }
-
-    @Override
-    public void onBackPressed() {
-        // TODO: optimize: when showing "deeper fragments", we only want to go back one step and not completely to the start_tracking fragment
-        if (mDrawerLayout.isDrawerOpen(GravityCompat.START)) {
-            mDrawerLayout.closeDrawer(GravityCompat.START);
-        } else if (getSupportFragmentManager().getBackStackEntryCount() == 0
-                && mSelectedFragmentId != R.id.drawer_start_tracking) {
-            onNavigationItemSelected(mNavigationView.getMenu().findItem(R.id.drawer_start_tracking));
-        } else {
-            super.onBackPressed();
-        }
     }
 
     /* Called when an options item is clicked */

@@ -26,6 +26,7 @@ import android.content.IntentFilter;
 import android.os.Bundle;
 import com.google.android.material.navigation.NavigationView;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
@@ -140,6 +141,24 @@ public class WorkoutDetailsActivity extends AppCompatActivity
             // now, calc the extrema values in the background
             (new CalcExtremaValuesThread(this, findViewById(R.id.tvProgressMessage), mWorkoutID)).start();
         }
+
+        getOnBackPressedDispatcher().addCallback(this,
+                new OnBackPressedCallback(true) {
+                    @Override
+                    public void handleOnBackPressed() {
+                        if (mDrawerLayout.isDrawerOpen(GravityCompat.START)) {
+                            mDrawerLayout.closeDrawer(GravityCompat.START);
+                        }
+                        // else if (getSupportFragmentManager().getBackStackEntryCount() == 0
+                        //        && mSelectedFragmentId != R.id.drawer_map) {
+                        //     onNavigationItemSelected(mNavigationView.getMenu().findItem(R.id.drawer_map));
+                        // }
+                        else {
+                            finish();
+                        }
+                    }
+                }
+        );
     }
 
     @Override
@@ -177,22 +196,6 @@ public class WorkoutDetailsActivity extends AppCompatActivity
         } catch (IllegalArgumentException e) {
         }
     }
-
-    @Override
-    public void onBackPressed() {
-
-        if (mDrawerLayout.isDrawerOpen(GravityCompat.START)) {
-            mDrawerLayout.closeDrawer(GravityCompat.START);
-        }
-        // else if (getSupportFragmentManager().getBackStackEntryCount() == 0
-        //        && mSelectedFragmentId != R.id.drawer_map) {
-        //     onNavigationItemSelected(mNavigationView.getMenu().findItem(R.id.drawer_map));
-        // }
-        else {
-            super.onBackPressed();
-        }
-    }
-
 
     /* Called when an options item is clicked */
     @Override
