@@ -31,6 +31,8 @@ import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import androidx.core.content.ContextCompat;
+
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.devices.DeviceType;
@@ -44,8 +46,8 @@ import java.util.List;
  * Created by rainer on 30.01.16.
  */
 public class AvailableRemoteDevicesFragment extends RemoteDevicesFragment {
-    public static final String TAG = "AvailableRemoteDevicesFragment";
-    private static final boolean DEBUG = BANALService.DEBUG && false;
+    public static final String TAG = "AvailableRemoteDevicesF";
+    private static final boolean DEBUG = BANALService.getDebug(false);
     protected LinearLayout mllSearchLayout;
     // protected ProgressBar mpbSearching;
     protected TextView mtvSearchingForRemoteDevice;
@@ -121,7 +123,7 @@ public class AvailableRemoteDevicesFragment extends RemoteDevicesFragment {
         super.onResume();
         if (DEBUG) Log.i(TAG, "onResume()");
 
-        getActivity().registerReceiver(mNewDeviceFoundReceiver, mNewDeviceFoundFilter);
+        ContextCompat.registerReceiver(getActivity(), mNewDeviceFoundReceiver, mNewDeviceFoundFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
 
         if (mDeviceType == DeviceType.ALL) {
             mllSearchLayout.setVisibility(View.GONE);

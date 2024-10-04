@@ -25,7 +25,6 @@ import android.util.Log;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
-import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
@@ -66,9 +65,9 @@ public class StravaUploader extends BaseExporter {
     protected static final String TCX = "tcx";
     protected static final String FILE = "file";
     protected static final long INITIAL_WAITING_TIME = 10 * 1000L;  // 10 seconds
-    protected static final long WAITING_TIME_UPDATE = 1 * 1000L;  // 1 second
+    protected static final long WAITING_TIME_UPDATE = 1000L;  // 1 second
     private static final String TAG = "StravaUploader";
-    private static final boolean DEBUG = true; //TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = true; //TrainingApplication.getDebug(false);
 
     //    {
 //    	  "id": 16486788,
@@ -104,8 +103,10 @@ public class StravaUploader extends BaseExporter {
     @Override
     protected ExportResult doExport(ExportInfo exportInfo)
             throws IOException, JSONException, InterruptedException {
-        if (DEBUG) Log.d(TAG, "doExport: " + exportInfo.getFileBaseName());
+        if (DEBUG) Log.d(TAG, "doExport: " + exportInfo.getFileBaseName() + " ignoring as success, upload is broken.");
+        return new ExportResult(true, "ignoring Strava uploade");
 
+        /*
         if (ExportStatus.FINISHED_SUCCESS == cExportManager.getExportStatus(exportInfo)) {
             if (DEBUG) Log.d(TAG, "workout already successfully uploaded");
             return doUpdate(exportInfo);
@@ -246,11 +247,11 @@ public class StravaUploader extends BaseExporter {
             if (DEBUG) Log.d(TAG, "strange error: neither ID, nor ERROR!");
             return new ExportResult(false, "Something strange went wrong");
         }
-
+*/
     }
 
-
     protected ExportResult doUpdate(ExportInfo exportInfo) {
+        Log.e(TAG, "doUpdate: " + exportInfo.getFileBaseName());
         if (DEBUG) Log.d(TAG, "doUpdate");
         // Strava fields:
         //
@@ -408,6 +409,7 @@ public class StravaUploader extends BaseExporter {
 
     protected JSONObject updateStravaActivity(String stravaActivityId, List<NameValuePair> nameValuePairs) {
         if (DEBUG) Log.i(TAG, "updateStravaActivity(...)");
+        Log.e(TAG, "updateStravaActivity: " + stravaActivityId);
 
         JSONObject responseJson = null;
 
@@ -445,6 +447,7 @@ public class StravaUploader extends BaseExporter {
 
     protected JSONObject getStravaActivity(String stravaActivityId) {
         JSONObject responseJson = null;
+        Log.e(TAG, "getStravaUploadStatus: " + stravaActivityId);
 
         HttpClient httpClient = new DefaultHttpClient();
         HttpGet httpGet = new HttpGet(URL_STRAVA_ACTIVITY + stravaActivityId);
@@ -477,6 +480,7 @@ public class StravaUploader extends BaseExporter {
 
     protected JSONObject getStravaUploadStatus(String stravaUploadId) {
         JSONObject responseJson = null;
+        Log.e(TAG, "getStravaUploadStatus: " + stravaUploadId);
 
         HttpClient httpClient = new DefaultHttpClient();
         HttpGet httpGet = new HttpGet(URL_STRAVA_UPLOAD + "/" + stravaUploadId);

@@ -24,6 +24,8 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.util.Log;
 
+import androidx.core.content.ContextCompat;
+
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.sensor.MyAccumulatorSensor;
 import com.atrainingtracker.banalservice.sensor.MySensor;
@@ -36,15 +38,15 @@ import java.util.List;
 
 
 public abstract class MyDevice {
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     private final IntentFilter resetAccumulatorsFilter = new IntentFilter(BANALService.RESET_ACCUMULATORS_INTENT);
     protected Context mContext;
     protected DeviceType mDeviceType;
     protected EnumMap<SensorType, MySensor> mSensorMap = new EnumMap<SensorType, MySensor>(SensorType.class);
     protected MySensorManager mMySensorManager;
-    private String TAG = "MyDevice";
+    private final String TAG = "MyDevice";
     private boolean mSensorsRegistered = false;
-    private BroadcastReceiver resetAccumulatorsReceiver = new BroadcastReceiver() {
+    private final BroadcastReceiver resetAccumulatorsReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context arg0, Intent arg1) {
             if (DEBUG) Log.d(TAG, "resetAccumulatorsReceiver.onReceive()");
@@ -62,7 +64,7 @@ public abstract class MyDevice {
         mMySensorManager = mySensorManager;
         mDeviceType = deviceType;
 
-        mContext.registerReceiver(resetAccumulatorsReceiver, resetAccumulatorsFilter);
+        ContextCompat.registerReceiver(mContext, resetAccumulatorsReceiver, resetAccumulatorsFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
 
         addSensors();
     }
@@ -104,7 +106,8 @@ public abstract class MyDevice {
     }
 
     protected void notifySensorsChanged() {
-        mContext.sendBroadcast(new Intent(BANALService.SENSORS_CHANGED));
+        mContext.sendBroadcast(new Intent(BANALService.SENSORS_CHANGED)
+                .setPackage(mContext.getPackageName()));
     }
 
     protected void addAndRegisterSensor(MySensor mySensor) {

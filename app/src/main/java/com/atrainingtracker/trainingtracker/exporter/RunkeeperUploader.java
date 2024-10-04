@@ -35,7 +35,7 @@ import java.io.File;
 import java.io.IOException;
 
 public class RunkeeperUploader extends BaseExporter {
-    protected static final String MY_UPLOAD_URL = "http://api.runkeeper.com/fitnessActivities";
+    protected static final String MY_UPLOAD_URL = "https://api.runkeeper.com/fitnessActivities";
     protected static final String MY_CONTENT_TYPE = "application/vnd.com.runkeeper.NewFitnessActivity+json";
     protected static final String CONTENT_TYPE = "Content-Type";
     protected static final String AUTHORIZATION = "Authorization";
@@ -52,7 +52,10 @@ public class RunkeeperUploader extends BaseExporter {
             throws IOException, JSONException {
         if (DEBUG) Log.d(TAG, "doExport: " + exportInfo.getFileBaseName());
 
-        File file = new File(getDir(mContext, FileFormat.RUNKEEPER.getDirName()), exportInfo.getFileBaseName() + FileFormat.RUNKEEPER.getFileEnding());
+        File file = new File(getBaseDirFile(mContext), exportInfo.getShortPath());
+        if (!file.exists()) {
+            return new ExportResult(false, "Runkeeper file does not exist: " + file);
+        }
 
         HttpClient httpClient = new DefaultHttpClient();
         HttpPost httpPost = new HttpPost(MY_UPLOAD_URL);

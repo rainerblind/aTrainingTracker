@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.banalservice.fragments;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -29,7 +30,6 @@ import androidx.fragment.app.FragmentStatePagerAdapter;
 import androidx.viewpager.widget.PagerAdapter;
 import androidx.viewpager.widget.ViewPager;
 import android.util.Log;
-import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -54,7 +54,7 @@ import java.util.Arrays;
 public class RemoteDevicesFragmentTabbedContainer extends Fragment {
 
     public static final String TAG = RemoteDevicesFragmentTabbedContainer.class.getSimpleName();
-    private static final boolean DEBUG = BANALService.DEBUG && false;
+    private static final boolean DEBUG = true;// BANALService.getDebug(false);
     /**
      * The {@link ViewPager} that will host the section contents.
      */
@@ -100,7 +100,7 @@ public class RemoteDevicesFragmentTabbedContainer extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (DEBUG) Log.i(TAG, "onCreate()");
+        if (DEBUG) Log.w(TAG, "onCreate()");
 
         mProtocol = Protocol.valueOf(getArguments().getString(BANALService.PROTOCOL));
         if (getArguments().getString(BANALService.DEVICE_TYPE) != null) {
@@ -109,7 +109,7 @@ public class RemoteDevicesFragmentTabbedContainer extends Fragment {
             mDeviceType = DeviceType.valueOf(savedInstanceState.getString(BANALService.DEVICE_TYPE));
         }
 
-        if (DEBUG) Log.i(TAG, "protocol=" + mProtocol.name() + ", DeviceType=" + mDeviceType);
+        if (DEBUG) Log.w(TAG, "protocol=" + mProtocol.name() + ", DeviceType=" + mDeviceType);
     }
 
     // onAttach???
@@ -117,7 +117,7 @@ public class RemoteDevicesFragmentTabbedContainer extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         super.onCreateView(inflater, container, savedInstanceState);
-        if (DEBUG) Log.i(TAG, "onCreateView()");
+        if (DEBUG) Log.w(TAG, "onCreateView()");
 
         View view = inflater.inflate(R.layout.tabbed_remote_devices_container_fragment, container, false);
 
@@ -137,20 +137,20 @@ public class RemoteDevicesFragmentTabbedContainer extends Fragment {
             setSectionsPagerAdapter();
         } else if (!mShowingDialog) { // show dialog when mDeviceType is not yet known
             mShowingDialog = true;
-
             AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(getContext());
             dialogBuilder.setIcon(mProtocol.getIconId());
-            dialogBuilder.setOnKeyListener(new DialogInterface.OnKeyListener() {
-                @Override
-                public boolean onKey(DialogInterface dialog, int keyCode, KeyEvent event) {
-                    Log.i(TAG, "key pressed: keyCode=" + keyCode + ", keyEvent=" + event);
-                    if (keyCode == KeyEvent.KEYCODE_BACK) {
-                        cancelDialog(dialog);
-                        return true;
+            requireActivity().getOnBackPressedDispatcher().addCallback(this,
+                    new OnBackPressedCallback(true) {
+                        @Override
+                        public void handleOnBackPressed() {
+                            if (mShowingDialog && isEnabled()) {
+                                cancelDialog(dialogBuilder.create());
+                                requireActivity().finish();
+                            }
+                        }
                     }
-                    return false;
-                }
-            });
+            );
+
             dialogBuilder.setCancelable(false);
             dialogBuilder.setTitle(R.string.select_device_type);
 
@@ -182,14 +182,14 @@ public class RemoteDevicesFragmentTabbedContainer extends Fragment {
     @Override
     public void onPause() {
         super.onPause();
-        if (DEBUG) Log.i(TAG, "onPause");
+        if (DEBUG) Log.w(TAG, "onPause");
 
         stopSearching();
     }
 
     @Override
     public void onSaveInstanceState(Bundle outState) {
-        if (DEBUG) Log.i(TAG, "onSaveInstanceState");
+        if (DEBUG) Log.w(TAG, "onSaveInstanceState");
 
         if (mProtocol != null) {
             outState.putString(BANALService.PROTOCOL, mProtocol.name());
@@ -215,7 +215,7 @@ public class RemoteDevicesFragmentTabbedContainer extends Fragment {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        if (DEBUG) Log.i(TAG, "onOptionsItemSelected");
+        if (DEBUG) Log.w(TAG, "onOptionsItemSelected");
 
         switch (item.getItemId()) {
             case R.id.itemCheckANTInstallation:
@@ -238,7 +238,7 @@ public class RemoteDevicesFragmentTabbedContainer extends Fragment {
     }
 
     protected void setSectionsPagerAdapter() {
-        if (DEBUG) Log.i(TAG, "setSectionsPagerAdapter");
+        if (DEBUG) Log.w(TAG, "setSectionsPagerAdapter");
 
         mSectionsPagerAdapter = new SectionsPagerAdapter(getChildFragmentManager());
         mViewPager.setAdapter(mSectionsPagerAdapter);
@@ -246,16 +246,17 @@ public class RemoteDevicesFragmentTabbedContainer extends Fragment {
 
 
     protected void startSearching() {
-        if (DEBUG) Log.i(TAG, "startSearching");
+        if (DEBUG) Log.w(TAG, "startSearching");
 
         // mllSearchLayout.setVisibility(View.VISIBLE);  // really necessary???
         // mtvSearchingForRemoteDevice.setText(getString(R.string.searchingForDevice,
         //        getString(UIHelper.getNameId(mProtocol)),
         //        getString(UIHelper.getNameId(mDeviceType))));
 
-        Intent intent = new Intent(BANALService.START_SEARCHING_FOR_NEW_DEVICES_INTENT);
-        intent.putExtra(BANALService.PROTOCOL, mProtocol.name());
-        intent.putExtra(BANALService.DEVICE_TYPE, mDeviceType.name());
+        Intent intent = new Intent(BANALService.START_SEARCHING_FOR_NEW_DEVICES_INTENT)
+                .putExtra(BANALService.PROTOCOL, mProtocol.name())
+                .putExtra(BANALService.DEVICE_TYPE, mDeviceType.name())
+                .setPackage(getActivity().getPackageName());
         getActivity().sendBroadcast(intent);
 
         mSearching = true;
@@ -265,11 +266,12 @@ public class RemoteDevicesFragmentTabbedContainer extends Fragment {
     }
 
     protected void stopSearching() {
-        if (DEBUG) Log.i(TAG, "stopSearching");
+        if (DEBUG) Log.w(TAG, "stopSearching");
 
         // mtvSearchingForRemoteDevice.setVisibility(View.GONE);
 
-        getActivity().sendBroadcast(new Intent(BANALService.STOP_SEARCHING_FOR_NEW_DEVICES_INTENT));
+        getActivity().sendBroadcast(new Intent(BANALService.STOP_SEARCHING_FOR_NEW_DEVICES_INTENT)
+                .setPackage(getActivity().getPackageName()));
         mSearching = false;
 
         // anything else?
@@ -289,7 +291,7 @@ public class RemoteDevicesFragmentTabbedContainer extends Fragment {
         @Override
         public Fragment getItem(int position) {
             // getItem is called to instantiate the fragment for the given page.
-            if (DEBUG) Log.i(TAG, "SectionsPagerAdapter.getItem(" + position + ")");
+            if (DEBUG) Log.w(TAG, "SectionsPagerAdapter.getItem(" + position + ")");
 
             switch (position) {
                 case 0:

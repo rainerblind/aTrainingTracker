@@ -37,14 +37,14 @@ import java.util.List;
 public class ANTSearchForNewDevicesEngineMultiDeviceSearch
         implements SearchForNewDevicesInterface {
     private static final String TAG = "ANTSearchForNewDevicesEngineMultiDeviceSearch";
-    private static final boolean DEBUG = BANALService.DEBUG & true;
+    private static final boolean DEBUG = BANALService.getDebug(true);
 
     protected Context mContext;
     protected DeviceType mDeviceType;
     protected MultiDeviceSearch mMultiDeviceSearch;
 
     protected List<MyANTAsyncSearchDevice> mFoundDevices = new LinkedList<MyANTAsyncSearchDevice>();
-    private IANTAsyncSearchEngineInterface mCallbackInterface;
+    private final IANTAsyncSearchEngineInterface mCallbackInterface;
 
     public ANTSearchForNewDevicesEngineMultiDeviceSearch(Context context, DeviceType deviceType, IANTAsyncSearchEngineInterface callbackInterface) {
         mContext = context;
@@ -80,7 +80,7 @@ public class ANTSearchForNewDevicesEngineMultiDeviceSearch
     protected void myOnDeviceFound(MultiDeviceSearchResult deviceFound) {
         if (DEBUG) Log.i(TAG, "onDeviceFound(): " + deviceFound.getDeviceDisplayName());
 
-        boolean pairingRecommendation = deviceFound.isPreferredDevice() | deviceFound.isAlreadyConnected();
+        boolean pairingRecommendation = deviceFound.isPreferredDevice() || deviceFound.isAlreadyConnected();
 
         DeviceType deviceType = DeviceType.getDeviceType(deviceFound.getAntDeviceType());
 

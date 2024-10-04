@@ -27,6 +27,8 @@ import android.content.IntentFilter;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
+
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import android.util.Log;
 import android.view.ContextMenu;
@@ -57,7 +59,7 @@ import java.util.TimerTask;
 
 public abstract class RemoteDevicesFragment extends Fragment {
     private static final String TAG = "RemoteDevicesFragment";
-    private static final boolean DEBUG = BANALService.DEBUG && false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     protected DeviceType mDeviceType;
     protected Protocol mProtocol;
     protected ListView lvDevices;
@@ -101,14 +103,14 @@ public abstract class RemoteDevicesFragment extends Fragment {
         try {
             mOnRemoteDeviceSelectedListener = (OnRemoteDeviceSelectedListener) context;
         } catch (ClassCastException e) {
-            throw new ClassCastException(context.toString()
+            throw new ClassCastException(context
                     + " must implement OnRemoteDeviceSelectedListener");
         }
 
         try {
             mGetBanalServiceInterface = (BANALService.GetBanalServiceInterface) context;
         } catch (ClassCastException e) {
-            throw new ClassCastException(context.toString() + " must implement GetBanalServiceInterface");
+            throw new ClassCastException(context + " must implement GetBanalServiceInterface");
         }
 
 
@@ -193,7 +195,7 @@ public abstract class RemoteDevicesFragment extends Fragment {
         mRemoteDevicesAdapter.changeCursor(mRemoteDevicesCursor);
         mRemoteDevicesAdapter.notifyDataSetChanged();
 
-        getActivity().registerReceiver(mPairingChangedReceiver, mPairingChangedFilter);
+        ContextCompat.registerReceiver(getActivity(), mPairingChangedReceiver, mPairingChangedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
 
         startTimer();
     }
@@ -345,9 +347,10 @@ public abstract class RemoteDevicesFragment extends Fragment {
     private void sendPairingChangedIntent(long deviceId, boolean paired) {
         if (DEBUG) Log.i(TAG, "sendPairingChangedIntent");
 
-        Intent intent = new Intent(BANALService.PAIRING_CHANGED);
-        intent.putExtra(BANALService.PAIRED, paired);
-        intent.putExtra(BANALService.DEVICE_ID, deviceId);
+        Intent intent = new Intent(BANALService.PAIRING_CHANGED)
+                .putExtra(BANALService.PAIRED, paired)
+                .putExtra(BANALService.DEVICE_ID, deviceId)
+                .setPackage(getActivity().getPackageName());
         getActivity().sendBroadcast(intent);
     }
 

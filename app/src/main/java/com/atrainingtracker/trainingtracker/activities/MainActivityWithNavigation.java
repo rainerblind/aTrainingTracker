@@ -19,7 +19,11 @@
 package com.atrainingtracker.trainingtracker.activities;
 
 import android.Manifest;
+
+import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AlertDialog;
+
+import android.annotation.SuppressLint;
 import android.app.Dialog;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -29,13 +33,18 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.ActivityInfo;
+import android.content.pm.PackageManager;
 import android.location.LocationManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+
+import com.atrainingtracker.trainingtracker.exporter.ExportWorkoutWorker;
 import com.google.android.material.navigation.NavigationView;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
 import androidx.core.view.GravityCompat;
@@ -46,6 +55,10 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceScreen;
 import androidx.appcompat.widget.Toolbar;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkManager;
+
+import android.provider.Settings;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.WindowManager;
@@ -67,7 +80,6 @@ import com.atrainingtracker.banalservice.fragments.RemoteDevicesFragmentTabbedCo
 import com.atrainingtracker.banalservice.fragments.SportTypeListFragment;
 import com.atrainingtracker.banalservice.helpers.BatteryStatusHelper;
 import com.atrainingtracker.trainingtracker.exporter.ExportManager;
-import com.atrainingtracker.trainingtracker.exporter.ExportWorkoutIntentService;
 import com.atrainingtracker.trainingtracker.exporter.FileFormat;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
@@ -95,7 +107,7 @@ import com.atrainingtracker.trainingtracker.fragments.preferences.SearchFragment
 import com.atrainingtracker.trainingtracker.fragments.preferences.StartSearchFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.StravaUploadFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.TrainingpeaksUploadFragment;
-import com.atrainingtracker.trainingtracker.helpers.DeleteWorkoutTask;
+import com.atrainingtracker.trainingtracker.helpers.DeleteWorkoutThread;
 import com.atrainingtracker.trainingtracker.interfaces.ReallyDeleteDialogInterface;
 import com.atrainingtracker.trainingtracker.interfaces.RemoteDevicesSettingsInterface;
 import com.atrainingtracker.trainingtracker.interfaces.ShowWorkoutDetailsInterface;
@@ -103,11 +115,11 @@ import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaGetAccessTokenActivity;
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager;
 import com.atrainingtracker.trainingtracker.segments.StarredSegmentsListFragment;
-import com.atrainingtracker.trainingtracker.segments.StarredSegmentsTabbedContainer;
 import com.dropbox.core.android.Auth;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -133,15 +145,13 @@ public class MainActivityWithNavigation
         StartOrResumeInterface {
     public static final String SELECTED_FRAGMENT_ID = "SELECTED_FRAGMENT_ID";
     public static final String SELECTED_FRAGMENT = "SELECTED_FRAGMENT";
-    private static final String TAG = "com.atrainingtracker.trainingtracker.MainActivityWithNavigation";
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
+    private static final String TAG = "MainActivityWithNavigat";
     private static final int DEFAULT_SELECTED_FRAGMENT_ID = R.id.drawer_start_tracking;
     // private static final int REQUEST_ENABLE_BLUETOOTH            = 1;
     private static final int REQUEST_INSTALL_GOOGLE_PLAY_SERVICE = 2;
     private static final int MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1;
-    private static final int MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE = 2;
-    // private static final int MY_PERMISSIONS_REQUEST_READ_PHONE_STATE       = 3;
-    private static final int MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION_AND_WRITE_EXTERNAL_STORAGE = 4;
+    // todo new perms
     private static final long WAITING_TIME_BEFORE_DISCONNECTING = 5 * 60 * 1000; // 5 min
     private static final int CRITICAL_BATTERY_LEVEL = 30;
     protected TrainingApplication mTrainingApplication;
@@ -186,7 +196,7 @@ public class MainActivityWithNavigation
     private IntentFilter mStartTrackingFilter;
     private boolean mAlreadyTriedToRequestDropboxToken = false;
     // class BANALConnection implements ServiceConnection
-    private ServiceConnection mBanalConnection = new ServiceConnection() {
+    private final ServiceConnection mBanalConnection = new ServiceConnection() {
         public void onServiceConnected(ComponentName name, IBinder service) {
             if (DEBUG) Log.i(TAG, "onServiceConnected");
 
@@ -258,29 +268,18 @@ public class MainActivityWithNavigation
             menuItem.setCheckable(false);
         }
 
+        if (BANALService.isANTProperlyInstalled(this)) {
+            MenuItem menuItem = mNavigationView.getMenu().findItem(R.id.drawer_pairing_ant);
+            menuItem.setVisible(false);
+        }
+
         // getPermissions
-        if ((!TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)
-                || !TrainingApplication.havePermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION))
-                && !TrainingApplication.havePermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_BACKGROUND_LOCATION, Manifest.permission.WRITE_EXTERNAL_STORAGE},
-                    MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION_AND_WRITE_EXTERNAL_STORAGE);
-        }
-        if (!TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)
-                || !TrainingApplication.havePermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION)) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_BACKGROUND_LOCATION}, MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
-        }
-        if (!TrainingApplication.havePermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE);
-        }
-        // if (!TrainingApplication.havePermission(Manifest.permission.READ_PHONE_STATE)) {
-        //     ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_PHONE_STATE}, MY_PERMISSIONS_REQUEST_READ_PHONE_STATE);
-        // }
+        checkPermissions(true);
 
         // check ANT+ installation
         if (TrainingApplication.checkANTInstallation() && BANALService.isANTProperlyInstalled(this)) {
             showInstallANTShitDialog();
         }
-
 
         if (savedInstanceState != null) {
             mSelectedFragmentId = savedInstanceState.getInt(SELECTED_FRAGMENT_ID, DEFAULT_SELECTED_FRAGMENT_ID);
@@ -322,8 +321,116 @@ public class MainActivityWithNavigation
                 dialog.show();
             }
         }
+
+        getOnBackPressedDispatcher().addCallback(this,
+                new OnBackPressedCallback(true) {
+                    @Override
+                    public void handleOnBackPressed() {
+                        // TODO: optimize: when showing "deeper fragments", we only want to go back one step and not completely to the start_tracking fragment
+                        if (mDrawerLayout.isDrawerOpen(GravityCompat.START)) {
+                            mDrawerLayout.closeDrawer(GravityCompat.START);
+                        } else if (getSupportFragmentManager().getBackStackEntryCount() == 0
+                                && mSelectedFragmentId != R.id.drawer_start_tracking) {
+                            onNavigationItemSelected(mNavigationView.getMenu().findItem(R.id.drawer_start_tracking));
+                        } else {
+                            finish();
+                        }
+                    }
+                }
+        );
     }
 
+    private List<String> getPermissions() {
+        List<String> requiredPerms = new ArrayList<>();
+        requiredPerms.add(Manifest.permission.ACCESS_FINE_LOCATION);
+        requiredPerms.add(Manifest.permission.ACCESS_COARSE_LOCATION);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            requiredPerms.add(Manifest.permission.ACCESS_BACKGROUND_LOCATION);
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S /* Android12, sdk31*/
+                && (getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)
+                || getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH))) {
+            requiredPerms.add(Manifest.permission.BLUETOOTH_CONNECT);
+            requiredPerms.add(Manifest.permission.BLUETOOTH_SCAN);
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requiredPerms.add(Manifest.permission.POST_NOTIFICATIONS);
+        }
+
+        return requiredPerms;
+    }
+
+    /**
+     * Check that required permissions are allowed
+     * Snippet borrowed from RunnerUp
+     * @param popup
+     * @return if permissions are required
+     */
+    private boolean checkPermissions(boolean popup) {
+        boolean missingEssentialPermission = false;
+        boolean missingAnyPermission = false;
+        List<String> requiredPerms = getPermissions();
+        List<String> requestPerms = new ArrayList<>();
+
+        for (final String perm : requiredPerms) {
+            if (ContextCompat.checkSelfPermission(this, perm) != PackageManager.PERMISSION_GRANTED) {
+                missingAnyPermission = true;
+                // Filter non essential permissions for result
+                boolean nonEssential = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                        && perm.equals(Manifest.permission.POST_NOTIFICATIONS));
+                missingEssentialPermission = missingEssentialPermission || !nonEssential;
+                if (ActivityCompat.shouldShowRequestPermissionRationale(this, perm)) {
+                    // A denied permission, show motivation in a popup
+                    String s = "Permission " + perm + " is explicitly denied";
+                    Log.i(getClass().getName(), s);
+                } else {
+                    requestPerms.add(perm);
+                }
+            }
+        }
+
+        if (missingAnyPermission) {
+            final String[] permissions = new String[requestPerms.size()];
+            requestPerms.toArray(permissions);
+
+            if (popup && missingEssentialPermission || !requestPerms.isEmpty()) {
+                // Essential or requestable permissions missing
+                String baseMessage = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                        ? getString(R.string.GPS_permission_text_Android12)
+                        : Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+                        ? getString(R.string.GPS_permission_text)
+                        : getString(R.string.GPS_permission_text_pre_Android10);
+
+                AlertDialog.Builder builder = new AlertDialog.Builder(this)
+                        .setTitle(R.string.GPS_permission_required)
+                        .setNegativeButton(R.string.Cancel, (dialog, which) -> dialog.dismiss());
+                if (!requestPerms.isEmpty()) {
+                    // Let Android request the permissions
+                    builder.setPositiveButton(R.string.OK,
+                                    (dialog, id) -> ActivityCompat.requestPermissions(this, permissions, MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION))
+                            .setMessage(baseMessage + "\n" + getString(R.string.Request_permission_text));
+                }
+                else {
+                    // Open settings for the app (no direct shortcut to permissions)
+                    Intent intent = new Intent()
+                            .setAction(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                            .setData(Uri.fromParts("package", getPackageName(), null));
+                    builder.setPositiveButton(R.string.OK, (dialog, id) -> startActivity(intent))
+                            .setMessage(baseMessage + "\n\n" + getString(R.string.Request_permission_text));
+                }
+                builder.show();
+            }
+        }
+
+        // No check for battery optimizations
+
+        return missingEssentialPermission;
+    }
+
+    @SuppressLint("SourceLockedOrientationActivity")
     @Override
     protected void onResume() {
         super.onResume();
@@ -349,9 +456,9 @@ public class MainActivityWithNavigation
 
 
         // register the receivers
-        registerReceiver(mStartTrackingReceiver, mStartTrackingFilter);
-        registerReceiver(mPauseTrackingReceiver, new IntentFilter(TrainingApplication.REQUEST_PAUSE_TRACKING));
-        registerReceiver(mStopTrackingReceiver, new IntentFilter(TrainingApplication.REQUEST_STOP_TRACKING));
+        ContextCompat.registerReceiver(this, mStartTrackingReceiver, mStartTrackingFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mPauseTrackingReceiver, new IntentFilter(TrainingApplication.REQUEST_PAUSE_TRACKING), ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mStopTrackingReceiver, new IntentFilter(TrainingApplication.REQUEST_STOP_TRACKING), ContextCompat.RECEIVER_NOT_EXPORTED);
 
         upgradeDropboxV2();
     }
@@ -535,11 +642,13 @@ public class MainActivityWithNavigation
                 tag = TrackOnMapTrackingFragment.TAG;
                 break;
 
+                /* Segments no longer supported for 3rd parties
             case R.id.drawer_segments:
                 titleId = R.string.segments;
                 mFragment = new StarredSegmentsTabbedContainer();
                 tag = StarredSegmentsTabbedContainer.TAG;
                 break;
+                */
 
             case R.id.drawer_workouts:
                 titleId = R.string.tab_workouts;
@@ -587,16 +696,14 @@ public class MainActivityWithNavigation
                 tag = RootPrefsFragment.TAG;
                 break;
 
-
             case R.id.drawer_privacy_policy:
                 Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://www.atrainingtracker.com/privacy.html"));
                 startActivity(browserIntent);
                 return true;
 
-
             default:
                 Log.d(TAG, "setting a new content fragment not yet implemented");
-                Toast.makeText(this, "setting a new content fragment not yet implemented", Toast.LENGTH_SHORT);
+                Toast.makeText(this, "setting a new content fragment not yet implemented", Toast.LENGTH_SHORT).show();
         }
 
         if (mFragment != null) {
@@ -608,19 +715,6 @@ public class MainActivityWithNavigation
         setTitle(titleId);
 
         return true;
-    }
-
-    @Override
-    public void onBackPressed() {
-        // TODO: optimize: when showing "deeper fragments", we only want to go back one step and not completely to the start_tracking fragment
-        if (mDrawerLayout.isDrawerOpen(GravityCompat.START)) {
-            mDrawerLayout.closeDrawer(GravityCompat.START);
-        } else if (getSupportFragmentManager().getBackStackEntryCount() == 0
-                && mSelectedFragmentId != R.id.drawer_start_tracking) {
-            onNavigationItemSelected(mNavigationView.getMenu().findItem(R.id.drawer_start_tracking));
-        } else {
-            super.onBackPressed();
-        }
     }
 
     /* Called when an options item is clicked */
@@ -748,7 +842,9 @@ public class MainActivityWithNavigation
         exportManager.exportWorkoutTo(id, fileFormat);
         exportManager.onFinished(TAG);
 
-        startService(new Intent(this, ExportWorkoutIntentService.class));
+        OneTimeWorkRequest workRequest = new OneTimeWorkRequest.Builder(ExportWorkoutWorker.class)
+                .build();
+        WorkManager.getInstance(this).enqueue(workRequest);
     }
 
     @Override
@@ -767,7 +863,7 @@ public class MainActivityWithNavigation
 
     @Override
     public void reallyDeleteWorkout(long workoutId) {
-        (new DeleteWorkoutTask(this)).execute(workoutId);
+        (new DeleteWorkoutThread(this, new Long[]{workoutId})).start();
     }
 
     public void deleteOldWorkouts() {

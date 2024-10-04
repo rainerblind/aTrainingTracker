@@ -22,12 +22,10 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.os.Build;
 import android.os.Bundle;
 
-import androidx.appcompat.app.AppCompatDelegate;
-import androidx.fragment.app.Fragment;
-import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
+
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -66,7 +64,7 @@ import static com.atrainingtracker.trainingtracker.dialogs.EditFieldDialog.TRACK
 public class TrackingFragment extends BaseTrackingFragment {
     public static final String TAG = "TrackingFragment";
     public static final String VIEW_ID = "VIEW_ID";
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private static final String MODE = "MODE";
     private static final String ACTIVITY_TYPE = "ACTIVITY_TYPE";
     private static final int TEXT_SIZE_TITLE = 15;
@@ -203,7 +201,8 @@ public class TrackingFragment extends BaseTrackingFragment {
 
             mButtonLap.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
-                    getActivity().sendBroadcast(new Intent(TrainingApplication.REQUEST_NEW_LAP));
+                    getActivity().sendBroadcast(new Intent(TrainingApplication.REQUEST_NEW_LAP)
+                            .setPackage(getActivity().getPackageName()));
                 }
             });
         } else {
@@ -231,8 +230,8 @@ public class TrackingFragment extends BaseTrackingFragment {
         super.onActivityCreated(bundle);
         if (DEBUG) Log.i(TAG, "onActivityCreated " + mViewId);
 
-        getActivity().registerReceiver(mNewTimeEventReceiver, mNewTimeEventFilter);
-        getActivity().registerReceiver(mTrackingViewChangedReceiver, mTrackingViewChangedFilter);
+        ContextCompat.registerReceiver(getActivity(), mNewTimeEventReceiver, mNewTimeEventFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(getActivity(), mTrackingViewChangedReceiver, mTrackingViewChangedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     @Override
@@ -416,7 +415,7 @@ public class TrackingFragment extends BaseTrackingFragment {
             tv = new TextView(getContext());
             // tv.setBackgroundColor(getResources().getColor(R.color.my_white));
             tv.setTextSize(viewInfo.textSize);
-            // tv.setGravity(Gravity.CENTER_VERTICAL | Gravity.CENTER_HORIZONTAL);
+            // tv.setGravity(Gravity.CENTER_VERTICAL || Gravity.CENTER_HORIZONTAL);
             tv.setGravity(Gravity.CENTER_HORIZONTAL);
             llField.addView(tv);
 

@@ -37,7 +37,7 @@ import com.google.android.gms.maps.model.LatLng;
 public class TrackOnMapTrackingAndFollowingFragment
         extends TrackOnMapTrackingFragment {
     public static final String TAG = TrackOnMapTrackingAndFollowingFragment.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
     private static final float ZOOM_SUPER_CLOSE_THRESHOLD = 10f / 3.6f;
     private static final float ZOOM_CLOSE_THRESHOLD = 20f / 3.6f;
@@ -124,11 +124,11 @@ public class TrackOnMapTrackingAndFollowingFragment
         private final int minTime = 500;     // minimum time interval between location updates, in milliseconds
         private final int minDistance = 1;    // minimum distance between location updates, in meters
         private OnLocationChangedListener mListener;
-        private LocationManager locationManager;
+        private final LocationManager locationManager;
         private String bestAvailableProvider;
         // private double mLatitudeFiltered, mLongitudeFiltered;
         // private float mBearingFiltered, mSpeedFiltered;
-        private CameraPosition.Builder mCameraPositionBuilder = new CameraPosition.Builder();
+        private final CameraPosition.Builder mCameraPositionBuilder = new CameraPosition.Builder();
 
         private FollowMeLocationSource() {
             // Get reference to Location Manager

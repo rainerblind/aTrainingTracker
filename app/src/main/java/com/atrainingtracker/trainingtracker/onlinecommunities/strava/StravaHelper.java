@@ -20,7 +20,6 @@ package com.atrainingtracker.trainingtracker.onlinecommunities.strava;
 
 import android.content.Context;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.util.Log;
 
 import com.atrainingtracker.banalservice.BSportType;
@@ -50,7 +49,7 @@ public class StravaHelper {
     public static final String BEARER = "Bearer";
     protected static final String ID = "id";
     private static final String TAG = StravaHelper.class.getSimpleName();
-    private static final boolean DEBUG = true; // TrainingApplication.DEBUG & true;
+    private static final boolean DEBUG = true; // TrainingApplication.getDebug(true);
 
     public static String translateClimbCategory(int climbCategory) {
         switch (climbCategory) {
@@ -75,7 +74,9 @@ public class StravaHelper {
     }
 
     protected static void storeJSONData(JSONObject jsonObject) {
-        if (DEBUG) {Log.i(TAG, "string JSON response: " + jsonObject);}
+        if (DEBUG) {
+            Log.i(TAG, "string JSON response: " + jsonObject);
+        }
         try {
             if (jsonObject.has("athlete")) {
                 JSONObject athlete = jsonObject.getJSONObject("athlete");
@@ -106,7 +107,7 @@ public class StravaHelper {
     public static String getRefreshedAccessToken() {
         if (DEBUG) Log.i(TAG, "getRefreshedAccessToken()");
         // first, check if we really need a new access token
-        if (System.currentTimeMillis()/1000 < TrainingApplication.getStravaTokenExpiresAt()) {
+        if (System.currentTimeMillis() / 1000 < TrainingApplication.getStravaTokenExpiresAt()) {
             return TrainingApplication.getStravaAccessToken();
         }
 
@@ -152,23 +153,28 @@ public class StravaHelper {
     /* returns the athleteId stored in the shared preferences.  If this is not available (== 0), get the id from strava in the background and also get the segments
      * But this method still returns 0. */
     public int getAthleteId(Context context) {
+        // Disable Strava segments
+        return 0;
+        /*
         int athleteId = TrainingApplication.getStravaAthleteId();
 
         if (athleteId == 0) {
-            new GetAthleteIdFromStravaAsyncTask(context).execute();
+            new GetAthleteIdFromStravaThread(context).start();
         }
 
         return athleteId;
+        */
     }
 
-    class GetAthleteIdFromStravaAsyncTask extends AsyncTask<Void, Void, Void> {
+    class GetAthleteIdFromStravaThread extends Thread {
         Context mContext;
 
-        GetAthleteIdFromStravaAsyncTask(Context context) {
+        GetAthleteIdFromStravaThread(Context context) {
             mContext = context;
         }
 
-        protected Void doInBackground(Void... foo) {
+        @Override
+        public void run() {
             HttpClient httpClient = new DefaultHttpClient();
             HttpGet httpGet = new HttpGet("https://www.strava.com/api/v3/athlete");
             httpGet.addHeader(AUTHORIZATION, BEARER + " " + getRefreshedAccessToken());
@@ -201,9 +207,6 @@ public class StravaHelper {
             } catch (Exception e) {
                 e.printStackTrace();
             }
-
-            return null;
         }
     }
-
 }

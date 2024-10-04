@@ -26,6 +26,8 @@ import android.location.Location;
 import android.os.Bundle;
 import android.util.Log;
 
+import androidx.core.content.res.ResourcesCompat;
+
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.sensor.SensorType;
@@ -52,11 +54,11 @@ public abstract class TrackOnMapBaseFragment
     public static final String TAG = TrackOnMapBaseFragment.class.getName();
     protected static final String START_AND_FINISH_LINE_POINTS = 5 + "";
     protected static final double START_LINE_LENGTH = 15;                 // essentially only halve the length ;-)
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     protected long mWorkoutID = -1;
 
     private boolean mTrackOnMapLoaded = false;
-    private HashMap<Long, Boolean> mSegmentLoaded = new HashMap<>();
+    private final HashMap<Long, Boolean> mSegmentLoaded = new HashMap<>();
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -266,7 +268,7 @@ public abstract class TrackOnMapBaseFragment
 
                 float bearing = startLocation.bearingTo(endLocation);
 
-                Bitmap arrowhead = ((BitmapDrawable) getContext().getResources().getDrawable(R.drawable.arrowhead)).getBitmap();
+                Bitmap arrowhead = ((BitmapDrawable) ResourcesCompat.getDrawable(getResources(), R.drawable.arrowhead, null)).getBitmap();
 
                 // mMap.addMarker(new MarkerOptions()
                 //        .position(middle)

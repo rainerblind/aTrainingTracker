@@ -28,7 +28,7 @@ import java.util.LinkedList;
 
 public class MySensor<T> {
     private static final String TAG = "MySensor";
-    private static final boolean DEBUG = BANALService.DEBUG && false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     protected MyDevice mDevice;
     protected SensorType mSensorType;
     protected T mValue = null;

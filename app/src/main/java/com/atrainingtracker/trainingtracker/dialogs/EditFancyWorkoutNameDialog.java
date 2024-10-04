@@ -54,7 +54,7 @@ import java.util.List;
 public class EditFancyWorkoutNameDialog extends DialogFragment {
     public static final String TAG = EditFancyWorkoutNameDialog.class.getName();
     public static final String FANCY_WORKOUT_NAME_CHANGED_INTENT = "FANCY_WORKOUT_NAME_CHANGED_INTENT";
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private static final String FANCY_NAME_ID = "FANCY_NAME_ID";
 
     private long mFancyNameId = -1;
@@ -225,7 +225,8 @@ public class EditFancyWorkoutNameDialog extends DialogFragment {
                                     WorkoutSummaries.C_ID + "=?", new String[]{Long.toString(mFancyNameId)});
                         }
 
-                        getContext().sendBroadcast(new Intent(FANCY_WORKOUT_NAME_CHANGED_INTENT));
+                        getContext().sendBroadcast(new Intent(FANCY_WORKOUT_NAME_CHANGED_INTENT)
+                                .setPackage(getContext().getPackageName()));
 
                         WorkoutSummariesDatabaseManager.getInstance().closeDatabase();
 

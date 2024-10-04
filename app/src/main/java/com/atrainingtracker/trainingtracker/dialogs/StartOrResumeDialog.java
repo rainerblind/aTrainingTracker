@@ -36,7 +36,7 @@ import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface;
 
 public class StartOrResumeDialog extends DialogFragment {
     public static final String TAG = StartOrResumeDialog.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
     private StartOrResumeInterface mStartOrResumeInterface;
 
@@ -49,7 +49,7 @@ public class StartOrResumeDialog extends DialogFragment {
             mStartOrResumeInterface = (StartOrResumeInterface) activity;
         } catch (ClassCastException e) {
             // The activity doesn't implement the interface, throw exception
-            throw new ClassCastException(activity.toString() + " must implement ChooseStartOrResumeInterface");
+            throw new ClassCastException(activity + " must implement ChooseStartOrResumeInterface");
         }
     }
 

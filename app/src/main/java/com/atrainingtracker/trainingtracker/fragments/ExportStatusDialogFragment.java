@@ -45,7 +45,7 @@ import java.util.EnumMap;
 // public class ExportStatusDialogFragment extends AppCompatDialogFragment
 public class ExportStatusDialogFragment extends DialogFragment {
     public static final String TAG = ExportStatusDialogFragment.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
     private static final int PADDING = 2;
 

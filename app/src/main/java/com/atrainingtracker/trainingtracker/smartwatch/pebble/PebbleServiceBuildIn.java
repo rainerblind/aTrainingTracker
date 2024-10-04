@@ -28,6 +28,8 @@ import android.content.ServiceConnection;
 import android.os.IBinder;
 import android.util.Log;
 
+import androidx.core.content.ContextCompat;
+
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.BANALService.BANALServiceComm;
 import com.atrainingtracker.banalservice.BSportType;
@@ -78,7 +80,7 @@ public class PebbleServiceBuildIn extends Service {
         }
     };
     // class BANALConnection implements ServiceConnection
-    private ServiceConnection mBanalConnection = new ServiceConnection() {
+    private final ServiceConnection mBanalConnection = new ServiceConnection() {
         public void onServiceConnected(ComponentName name, IBinder service) {
             banalService = (BANALServiceComm) service;
             if (DEBUG) Log.i(TAG, "connected to BANAL Service");
@@ -107,9 +109,9 @@ public class PebbleServiceBuildIn extends Service {
         // request bind to the BANAL Service
         bindService(new Intent(this, BANALService.class), mBanalConnection, Context.BIND_AUTO_CREATE);
 
-        registerReceiver(mUpdatePebbleReceiver, mUpdatePebbleFilter);
-        registerReceiver(mPebbleConnectedReceiver, mPebbleConnectedFilter);
-        registerReceiver(mSearchingFinishedReceiver, mSearchingFinishedFilter);
+        ContextCompat.registerReceiver(this, mUpdatePebbleReceiver, mUpdatePebbleFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mPebbleConnectedReceiver, mPebbleConnectedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mSearchingFinishedReceiver, mSearchingFinishedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     @Override

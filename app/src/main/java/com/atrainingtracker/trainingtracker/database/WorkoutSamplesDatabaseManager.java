@@ -35,7 +35,7 @@ import java.util.List;
 
 public class WorkoutSamplesDatabaseManager {
     private static final String TAG = WorkoutSamplesDatabaseManager.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private static WorkoutSamplesDatabaseManager cInstance;
     private static WorkoutSamplesDbHelper cWorkoutSamplesDbHelper;
     private int mOpenCounter;
@@ -80,8 +80,10 @@ public class WorkoutSamplesDatabaseManager {
         if ((extremaType == ExtremaType.AVG) & (sensorType == SensorType.SPEED_mps)) {
             if (DEBUG) Log.i(TAG, "calculating average speed based on distance and active time");
 
-            Double distance = WorkoutSummariesDatabaseManager.getInstance().getDouble(baseFileName, WorkoutSummaries.DISTANCE_TOTAL_m);
-            Integer time = WorkoutSummariesDatabaseManager.getInstance().getInt(baseFileName, WorkoutSummaries.TIME_ACTIVE_s);
+            WorkoutSummariesDatabaseManager.getInstance();
+            Double distance = WorkoutSummariesDatabaseManager.getDouble(baseFileName, WorkoutSummaries.DISTANCE_TOTAL_m);
+            WorkoutSummariesDatabaseManager.getInstance();
+            Integer time = WorkoutSummariesDatabaseManager.getInt(baseFileName, WorkoutSummaries.TIME_ACTIVE_s);
 
             if (distance != null & time != null) {
                 if (DEBUG)
@@ -494,7 +496,7 @@ public class WorkoutSamplesDatabaseManager {
         protected static final String BASE_COLUMNS = C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                 + TIME + " DATETIME DEFAULT CURRENT_TIMESTAMP";
         static final String TAG = "WorkoutSamplesDbHelper";
-        static final boolean DEBUG = TrainingApplication.DEBUG & true;
+        static final boolean DEBUG = TrainingApplication.getDebug(true);
         protected Context mContext;
 
         // Constructor

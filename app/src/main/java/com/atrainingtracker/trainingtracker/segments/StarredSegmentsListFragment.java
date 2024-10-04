@@ -25,6 +25,8 @@ import android.content.IntentFilter;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
+
+import androidx.core.content.ContextCompat;
 import androidx.cursoradapter.widget.CursorAdapter;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
@@ -50,7 +52,7 @@ import com.google.android.gms.maps.GoogleMap;
 public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
 
     private static final String TAG = StarredSegmentsListFragment.class.getSimpleName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
     private static final String SPORT_TYPE_ID = "SPORT_TYPE_ID";
 
@@ -103,7 +105,7 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
             }
         }
     };
-    private AbsListView.RecyclerListener mRecycleListener = new AbsListView.RecyclerListener() {
+    private final AbsListView.RecyclerListener mRecycleListener = new AbsListView.RecyclerListener() {
 
         @Override
         public void onMovedToScrapHeap(View view) {
@@ -137,7 +139,7 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
         try {
             startSegmentDetailsActivityInterface = (StartSegmentDetailsActivityInterface) context;
         } catch (ClassCastException e) {
-            throw new ClassCastException(context.toString() + " must implement StartSegmentDetailsActivityInterface");
+            throw new ClassCastException(context + " must implement StartSegmentDetailsActivityInterface");
         }
     }
 
@@ -210,9 +212,9 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
         mDb = SegmentsDatabaseManager.getInstance().getOpenDatabase();
         updateCursor();
 
-        getContext().registerReceiver(mSegmentUpdateStartedReceiver, mSegmentUpdateStartedFilter);
-        getContext().registerReceiver(mUpdateSegmentsListReceiver, mUpdateSegmentsListFilter);
-        getContext().registerReceiver(mUpdatingSegmentsCompleteReceiver, mUpdatingSegmentsCompleteFilter);
+        ContextCompat.registerReceiver(getContext(), mSegmentUpdateStartedReceiver, mSegmentUpdateStartedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(getContext(), mUpdateSegmentsListReceiver, mUpdateSegmentsListFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(getContext(), mUpdatingSegmentsCompleteReceiver, mUpdatingSegmentsCompleteFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     @Override

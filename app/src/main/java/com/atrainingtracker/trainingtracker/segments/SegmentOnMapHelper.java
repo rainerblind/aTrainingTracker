@@ -21,8 +21,10 @@ package com.atrainingtracker.trainingtracker.segments;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.os.AsyncTask;
 import androidx.annotation.Nullable;
+
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.View;
 
@@ -45,9 +47,9 @@ import java.util.HashMap;
  */
 public class SegmentOnMapHelper {
     private static final String TAG = SegmentOnMapHelper.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     //                                 segmentId
-    private EnumMap<Roughness, HashMap<Long, SegmentData>> mSegmentCache = new EnumMap<Roughness, HashMap<Long, SegmentData>>(Roughness.class);
+    private final EnumMap<Roughness, HashMap<Long, SegmentData>> mSegmentCache = new EnumMap<Roughness, HashMap<Long, SegmentData>>(Roughness.class);
 
     public void showSegmentOnMap(Context context, MyMapViewHolder myMapViewHolder, long segmentId, Roughness roughness, boolean zoomToMap, boolean animateZoom) {
         if (DEBUG)
@@ -70,7 +72,7 @@ public class SegmentOnMapHelper {
         }
 
         if (calcSegmentData) {
-            new FooAsyncTask(context).execute(new InputArguments(myMapViewHolder, segmentId, roughness, zoomToMap, animateZoom));
+            new SegmentDataThread(context, myMapViewHolder, segmentId, roughness, zoomToMap, animateZoom).start();
         }
     }
 
@@ -191,53 +193,38 @@ public class SegmentOnMapHelper {
         }
     }
 
-    private class InputArguments {
+    private class SegmentDataThread extends Thread {
+        Context context;
         MyMapViewHolder myMapViewHolder;
         long segmentId;
         Roughness roughness;
         boolean zoomToMap;
         boolean animateZoom;
 
-        public InputArguments(MyMapViewHolder myMapViewHolder, long segmentId, Roughness roughness, boolean zoomToMap, boolean animateZoom) {
+        SegmentDataThread(Context context, MyMapViewHolder myMapViewHolder, long segmentId, Roughness roughness, boolean zoomToMap, boolean animateZoom) {
+            this.context = context;
             this.myMapViewHolder = myMapViewHolder;
             this.segmentId = segmentId;
             this.roughness = roughness;
             this.zoomToMap = zoomToMap;
             this.animateZoom = animateZoom;
         }
-    }
-
-    private class FooAsyncTask extends AsyncTask<InputArguments, Void, Void> {
-
-        long segmentId;
-        InputArguments inputArguments;
-        Context context;
-
-        FooAsyncTask(Context context) {
-            this.context = context;
-        }
 
         @Override
-        protected Void doInBackground(InputArguments... params) {
-            inputArguments = params[0];
-            segmentId = inputArguments.segmentId;
+        public void run() {
             if (DEBUG) Log.i(TAG, "doInBackground for segmentId=" + segmentId);
 
-            calcSegmentData(context, segmentId, inputArguments.roughness);
+            calcSegmentData(context, segmentId, roughness);
 
-            return null;
-        }
+            new Handler(Looper.getMainLooper()).post(() -> {
+                if (DEBUG) Log.i(TAG, "onPostExecute segmentId=" + segmentId);
 
-        @Override
-        protected void onPostExecute(Void foo) {
-            if (DEBUG) Log.i(TAG, "onPostExecute segmentId=" + segmentId);
-
-            if (inputArguments.segmentId == segmentId) {  // is the workoutId still valid?
-                plotSegmentOnMap(inputArguments.myMapViewHolder, segmentId, inputArguments.roughness, inputArguments.zoomToMap, inputArguments.animateZoom);
-            } else {
-                Log.i(TAG, "do not plot the segment because the segmentId has changed!");
-            }
+                if (segmentId == segmentId) {  // is the workoutId still valid?
+                    plotSegmentOnMap(myMapViewHolder, segmentId, roughness, zoomToMap, animateZoom);
+                } else {
+                    Log.i(TAG, "do not plot the segment because the segmentId has changed!");
+                }
+            });
         }
     }
-
 }

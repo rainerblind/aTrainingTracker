@@ -41,7 +41,7 @@ import java.util.List;
 
 public class SelectSportTypeDialog extends DialogFragment {
     public static final String TAG = SelectSportTypeDialog.class.getName();
-    private static final boolean DEBUG = BANALService.DEBUG && false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
 
 
     private static final String B_SPORT_TYPE = "B_SPORT_TYPE";
@@ -69,7 +69,7 @@ public class SelectSportTypeDialog extends DialogFragment {
         try {
             mGetBanalServiceInterface = (BANALService.GetBanalServiceInterface) context;
         } catch (ClassCastException e) {
-            throw new ClassCastException(context.toString() + " must implement GetBanalServiceInterface");
+            throw new ClassCastException(context + " must implement GetBanalServiceInterface");
         }
 
     }

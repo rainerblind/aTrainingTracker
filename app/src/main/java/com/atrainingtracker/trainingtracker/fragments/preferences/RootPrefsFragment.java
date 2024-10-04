@@ -36,7 +36,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 public class RootPrefsFragment extends PreferenceFragmentCompat
         implements OnSharedPreferenceChangeListener {
     public static final String TAG = RootPrefsFragment.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
 
     private EditTextPreference mAthleteNamePref, mSamplingTimePref, mSearchRoundsPref;
@@ -54,11 +54,11 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
         setPreferencesFromResource(R.xml.prefs, rootKey);
         if (DEBUG) Log.i(TAG, "inflated xml resource file");
 
-        mUnitPref = (ListPreference) getPreferenceScreen().findPreference(TrainingApplication.SP_UNITS);
+        mUnitPref = getPreferenceScreen().findPreference(TrainingApplication.SP_UNITS);
 
-        mAthleteNamePref = (EditTextPreference) getPreferenceScreen().findPreference(TrainingApplication.SP_ATHLETE_NAME);
-        mSamplingTimePref = (EditTextPreference) getPreferenceScreen().findPreference(TrainingApplication.SP_SAMPLING_TIME);
-        mSearchRoundsPref = (EditTextPreference) getPreferenceScreen().findPreference(TrainingApplication.SP_NUMBER_OF_SEARCH_TRIES);
+        mAthleteNamePref = getPreferenceScreen().findPreference(TrainingApplication.SP_ATHLETE_NAME);
+        mSamplingTimePref = getPreferenceScreen().findPreference(TrainingApplication.SP_SAMPLING_TIME);
+        mSearchRoundsPref = getPreferenceScreen().findPreference(TrainingApplication.SP_NUMBER_OF_SEARCH_TRIES);
 
         mExport = this.getPreferenceScreen().findPreference(TrainingApplication.FILE_EXPORT);
         mCloudUpload = this.getPreferenceScreen().findPreference(TrainingApplication.CLOUD_UPLOAD);
@@ -133,9 +133,9 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
 
 
         if (TrainingApplication.SP_EXPORT_TO_CSV.equals(key)
-                | TrainingApplication.SP_EXPORT_TO_TCX.equals(key)
-                | TrainingApplication.SP_EXPORT_TO_GPX.equals(key)
-                | TrainingApplication.SP_EXPORT_TO_GC_JSON.equals(key)) {
+                || TrainingApplication.SP_EXPORT_TO_TCX.equals(key)
+                || TrainingApplication.SP_EXPORT_TO_GPX.equals(key)
+                || TrainingApplication.SP_EXPORT_TO_GC_JSON.equals(key)) {
             String exportSummary = exportSummary();
             Log.i(TAG, "updating exportSummary to " + exportSummary);
             mExport.setSummary(exportSummary);
@@ -143,9 +143,9 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
         }
 
         if (TrainingApplication.SP_UPLOAD_TO_DROPBOX.equals(key)
-                | TrainingApplication.SP_UPLOAD_TO_STRAVA.equals(key)
-                | TrainingApplication.SP_UPLOAD_TO_RUNKEEPER.equals(key)
-                | TrainingApplication.SP_UPLOAD_TO_TRAINING_PEAKS.equals(key)) {
+                || TrainingApplication.SP_UPLOAD_TO_STRAVA.equals(key)
+                || TrainingApplication.SP_UPLOAD_TO_RUNKEEPER.equals(key)
+                || TrainingApplication.SP_UPLOAD_TO_TRAINING_PEAKS.equals(key)) {
             String cloudUploadSummary = cloudUploadSummary();
             Log.i(TAG, "updating cloudUploadSummary to " + cloudUploadSummary);
             mCloudUpload.setSummary(cloudUploadSummary);
@@ -162,8 +162,8 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
 
 
         if (TrainingApplication.SP_LOCATION_SOURCE_GPS.equals(key)
-                | TrainingApplication.SP_LOCATION_SOURCE_GOOGLE_FUSED.equals(key)
-                | TrainingApplication.SP_LOCATION_SOURCE_NETWORK.equals(key)) {
+                || TrainingApplication.SP_LOCATION_SOURCE_GOOGLE_FUSED.equals(key)
+                || TrainingApplication.SP_LOCATION_SOURCE_NETWORK.equals(key)) {
             mLocationSources.setSummary(locationSourcesSummary());
             getActivity().onContentChanged();
         }

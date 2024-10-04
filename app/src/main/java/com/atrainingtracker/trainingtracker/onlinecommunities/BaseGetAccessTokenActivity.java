@@ -22,8 +22,9 @@ import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Intent;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.webkit.WebChromeClient;
 import android.webkit.WebView;
@@ -85,7 +86,7 @@ public abstract class BaseGetAccessTokenActivity
     protected static final String APPS = "apps";
     protected static final String MY_REDIRECT_URI = "https://rainer-blind.de";  // must not be changed because strava checks this uri
     private static final String TAG = "BaseGetAccessTokenActivity";
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private ProgressDialog dialog;
     private boolean showDialog = true;  // TODO: bad name!
 
@@ -133,7 +134,7 @@ public abstract class BaseGetAccessTokenActivity
                     String code = uri.getQueryParameter(CODE);
                     if (DEBUG) Log.d(TAG, "we got the code: " + code);
 
-                    new GetAccessTokenTask().execute(code);
+                    new GetAccessTokenThread(code).start();
                     return true;
                 } else {
                     return false;
@@ -175,47 +176,24 @@ public abstract class BaseGetAccessTokenActivity
     protected void onJsonResponse(JSONObject jsonObject) {
     }
 
-    class GetAccessTokenTask extends AsyncTask<String, String, String> {
-
-//    	@Override
-//    	protected void onPreExecute() {
-//    	    super.onPreExecute();
-//    	    dialog.setMessage("Pre Execute");
-//    	    if (! dialog.isShowing()) {	dialog.show(); }
-//    	}
-
-        @Override
-        protected void onPostExecute(String accessToken) {
-            super.onPostExecute(accessToken);
-
-            Intent resultIntent = new Intent();
-            if (accessToken == null) { // something went wrong
-                setResult(Activity.RESULT_CANCELED, resultIntent);
-            } else {
-                resultIntent.putExtra(ACCESS_TOKEN, accessToken);
-                setResult(Activity.RESULT_OK, resultIntent);
-            }
-
-            if (dialog.isShowing()) {
-                dialog.dismiss();
-            }
-
-            finish();
+    class GetAccessTokenThread extends Thread {
+        final String code;
+        public GetAccessTokenThread(String code) {
+            this.code = code;
         }
 
         @Override
-        protected String doInBackground(String... params) {
-
-            HttpPost httpPost = new HttpPost(getAccessUrl(params[0]));
+        public void run() {
+            HttpPost httpPost = new HttpPost(getAccessUrl(code));
 
             httpPost.setHeader(HTTP.CONTENT_TYPE, "application/x-www-form-urlencoded");
 
-            UrlEncodedFormEntity urlEncodedFormEntity = getAccessUrlEncodedFormEntity(params[0]);
+            UrlEncodedFormEntity urlEncodedFormEntity = getAccessUrlEncodedFormEntity(code);
             if (urlEncodedFormEntity != null) {
                 httpPost.setEntity(urlEncodedFormEntity);
             }
 
-
+            String result = null;
             HttpClient httpClient = new DefaultHttpClient();
             try {
                 HttpResponse httpResponse = httpClient.execute(httpPost);
@@ -229,7 +207,7 @@ public abstract class BaseGetAccessTokenActivity
 
                 if (responseJson.has(ACCESS_TOKEN)) {
                     // String tokenType   = responseJson.getString(TOKEN_TYPE);
-                    return responseJson.getString(ACCESS_TOKEN);
+                    result = responseJson.getString(ACCESS_TOKEN);
                 }
             } catch (ClientProtocolException e) {
                 // TODO Auto-generated catch block
@@ -245,9 +223,22 @@ public abstract class BaseGetAccessTokenActivity
                 e.printStackTrace();
             }
 
-            return null;
+            final String accessToken = result;
+            new Handler(Looper.getMainLooper()).post(() -> {
+                Intent resultIntent = new Intent();
+                if (accessToken == null) { // something went wrong
+                    setResult(Activity.RESULT_CANCELED, resultIntent);
+                } else {
+                    resultIntent.putExtra(ACCESS_TOKEN, accessToken);
+                    setResult(Activity.RESULT_OK, resultIntent);
+                }
+
+                if (dialog.isShowing()) {
+                    dialog.dismiss();
+                }
+
+                finish();
+            });
         }
     }
-
-
 }

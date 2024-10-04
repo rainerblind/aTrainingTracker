@@ -18,6 +18,8 @@
 
 package com.atrainingtracker.trainingtracker.exporter;
 
+import java.io.File;
+
 public class ExportInfo {
     protected String mFileBaseName;
     protected FileFormat mFileFormat;
@@ -31,6 +33,14 @@ public class ExportInfo {
 
     public String getFileBaseName() {
         return mFileBaseName;
+    }
+
+    public String getShortPath() {
+        return mFileFormat.getDirName() + File.separator + getFileName();
+    }
+
+    public String getFileName() {
+        return mFileBaseName + mFileFormat.getFileEnding();
     }
 
     public FileFormat getFileFormat() {

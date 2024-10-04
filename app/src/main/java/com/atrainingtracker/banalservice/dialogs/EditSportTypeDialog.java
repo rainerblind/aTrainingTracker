@@ -45,6 +45,7 @@ import com.atrainingtracker.trainingtracker.MyHelper;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Created by rainer on 05.01.17.
@@ -53,7 +54,7 @@ import java.util.List;
 public class EditSportTypeDialog extends DialogFragment {
     public static final String TAG = EditSportTypeDialog.class.getName();
     public static final String SPORT_TYPE_CHANGED_INTENT = "SPORT_TYPE_CHANGED_INTENT";
-    private static final boolean DEBUG = BANALService.DEBUG && false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     private static final String SPORT_TYPE_ID = "SPORT_TYPE_ID";
     protected EditText mEtName, mEtMinAvgSpeed, mEtMaxAvgSpeed;
     protected Spinner mSpBSportType, mSpStrava, mSpRunkeeper, mSpTrainingPeaks, mSpTCX, mSpGC;
@@ -132,12 +133,13 @@ public class EditSportTypeDialog extends DialogFragment {
         mEtMinAvgSpeed = view.findViewById(R.id.est_etMinSpeed);
         mEtMaxAvgSpeed = view.findViewById(R.id.est_etMaxSpeed);
         mSpBSportType = view.findViewById(R.id.est_sBSportType);
+        /* Ignore
         mSpStrava = view.findViewById(R.id.est_sStrava);
         mSpRunkeeper = view.findViewById(R.id.est_sRunkeeper);
         mSpTrainingPeaks = view.findViewById(R.id.est_sTrainingPeaks);
         mSpTCX = view.findViewById(R.id.est_sTCX);
         mSpGC = view.findViewById(R.id.est_sGC);
-
+*/
 
         // set the units
         TextView tvSpeedUnit = view.findViewById(R.id.est_tvUnitSpeed);
@@ -147,8 +149,8 @@ public class EditSportTypeDialog extends DialogFragment {
 
         // configure the main view
         mEtName.setText(uiName);
-        mEtMinAvgSpeed.setText(String.format("%.1f", MyHelper.mps2userUnit(minAvgSpeed)));
-        mEtMaxAvgSpeed.setText(String.format("%.1f", MyHelper.mps2userUnit(maxAvgSpeed)));
+        mEtMinAvgSpeed.setText(String.format(Locale.getDefault(), "%.1f", MyHelper.mps2userUnit(minAvgSpeed)));
+        mEtMaxAvgSpeed.setText(String.format(Locale.getDefault(), "%.1f", MyHelper.mps2userUnit(maxAvgSpeed)));
 
         if (SportTypeDatabaseManager.canDelete(mSportTypeId)) {
 
@@ -156,10 +158,10 @@ public class EditSportTypeDialog extends DialogFragment {
             mSpBSportType.setAdapter(adapter);
             mSpBSportType.setSelection(bSportType.ordinal());
 
-            List<String> foo = Arrays.asList(getResources().getStringArray(R.array.Strava_Sport_Types_Strava_Names));
+            List<String> stravaNames = Arrays.asList(getResources().getStringArray(R.array.Strava_Sport_Types_Strava_Names));
             ArrayAdapter<CharSequence> stravaAdapter = ArrayAdapter.createFromResource(getContext(), R.array.Strava_Sport_Types_UI_Names, android.R.layout.simple_list_item_1);
             mSpStrava.setAdapter(stravaAdapter);
-            mSpStrava.setSelection(foo.indexOf(stravaName));
+            mSpStrava.setSelection(stravaNames.indexOf(stravaName));
 
             ArrayAdapter<CharSequence> runkeeperAdapter = ArrayAdapter.createFromResource(getContext(), R.array.Runkeeper_Sport_Types, android.R.layout.simple_list_item_1);
             mSpRunkeeper.setAdapter(runkeeperAdapter);
@@ -181,7 +183,7 @@ public class EditSportTypeDialog extends DialogFragment {
             mSpBSportType.setVisibility(View.GONE);
             view.findViewById(R.id.est_separator1).setVisibility(View.GONE);
             view.findViewById(R.id.est_tvOnlineCommunities).setVisibility(View.GONE);
-            view.findViewById(R.id.est_tvStrava).setVisibility(View.GONE);
+            // view.findViewById(R.id.est_tvStrava).setVisibility(View.GONE);
             mSpStrava.setVisibility(View.GONE);
             view.findViewById(R.id.est_tvRunkeeper).setVisibility(View.GONE);
             mSpRunkeeper.setVisibility(View.GONE);
@@ -244,7 +246,8 @@ public class EditSportTypeDialog extends DialogFragment {
 
         SportTypeDatabaseManager.getInstance().closeDatabase();
 
-        getContext().sendBroadcast(new Intent(SPORT_TYPE_CHANGED_INTENT));
+        getContext().sendBroadcast(new Intent(SPORT_TYPE_CHANGED_INTENT)
+                .setPackage(getContext().getPackageName()));
     }
 
 }

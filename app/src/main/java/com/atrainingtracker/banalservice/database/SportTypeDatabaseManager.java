@@ -29,6 +29,8 @@ import android.graphics.drawable.Drawable;
 import android.provider.BaseColumns;
 import android.util.Log;
 
+import androidx.core.content.res.ResourcesCompat;
+
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.BSportType;
@@ -40,7 +42,7 @@ import java.util.List;
 public class SportTypeDatabaseManager {
 
     private static final String TAG = SportTypeDatabaseManager.class.getName();
-    private static final boolean DEBUG = BANALService.DEBUG && false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     private static SportTypeDatabaseManager cInstance;
     private static SportTypeDbHelper cSportTypeDbHelper;
     private int mOpenCounter;
@@ -107,7 +109,7 @@ public class SportTypeDatabaseManager {
 
         int drawableId = getBSportTypeIconId(id);
 
-        Bitmap icon = ((BitmapDrawable) context.getResources().getDrawable(drawableId)).getBitmap();
+        Bitmap icon = ((BitmapDrawable) ResourcesCompat.getDrawable(context.getResources(), drawableId, null)).getBitmap();
         Bitmap iconScaled = Bitmap.createScaledBitmap(icon, (int) (icon.getWidth() * scale), (int) (icon.getHeight() * scale), false);
 
         return new BitmapDrawable(context.getResources(), iconScaled);
@@ -545,7 +547,7 @@ public class SportTypeDatabaseManager {
         public static final double DEFAULT_MIN_AVG_SPEED = 0.0;
         public static final double DEFAULT_MAX_AVG_SPEED = 0.5;
 
-        public static final String getDefaultUiName(Context context) {
+        public static String getDefaultUiName(Context context) {
             return context.getString(R.string.sport_type_other);
         }
     }

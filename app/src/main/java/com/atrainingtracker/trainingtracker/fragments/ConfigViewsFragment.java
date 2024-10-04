@@ -25,6 +25,8 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
+
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentPagerAdapter;
@@ -52,7 +54,7 @@ import java.util.LinkedList;
 public abstract class ConfigViewsFragment extends Fragment {
 
     public static final String TAG = ConfigViewsFragment.class.getSimpleName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && true;
+    private static final boolean DEBUG = TrainingApplication.getDebug(true);
     private static final String CURRENT_ITEM = "CURRENT_ITEM";
     private final IntentFilter mNameChangedFilter = new IntentFilter(ConfigViewsActivity.NAME_CHANGED_INTENT);
     protected ActivityType mActivityType = ActivityType.getDefaultActivityType();
@@ -136,7 +138,7 @@ public abstract class ConfigViewsFragment extends Fragment {
         try {
             mViewSetChangedListener = (ViewSetChangedListener) context;
         } catch (ClassCastException e) {
-            throw new ClassCastException(context.toString() + " must implement ViewSetChangedListener");
+            throw new ClassCastException(context + " must implement ViewSetChangedListener");
         }
     }
 
@@ -224,7 +226,7 @@ public abstract class ConfigViewsFragment extends Fragment {
 
         // create list of views
         createViewIdList();
-        getActivity().registerReceiver(mNameChangedReceiver, mNameChangedFilter);
+        ContextCompat.registerReceiver(getActivity(), mNameChangedReceiver, mNameChangedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
 
         if (mCurrentItem >= 0) {
             if (DEBUG) Log.i(TAG, "setCurrentItem based on mCurrentItem=" + mCurrentItem);

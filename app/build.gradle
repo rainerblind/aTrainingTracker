@@ -1,27 +1,20 @@
 apply plugin: 'com.android.application'
-apply plugin: 'io.fabric'
-apply plugin: 'com.google.gms.google-services'
 
-def getGitHash = { ->
-    def stdout = new ByteArrayOutputStream()
-    exec {
-        commandLine 'git', 'rev-parse', '--short', 'HEAD'
-        standardOutput = stdout
-    }
-    return stdout.toString().trim()
-}
+def getGitHash = providers.exec {
+    commandLine('git', 'rev-parse', '--short', 'HEAD')
+}.standardOutput.asText.get().strip()
 
 android {
     // Travis update separately
-    compileSdkVersion 29
-    buildToolsVersion '29.0.2'
+    compileSdkVersion = 34
+    buildToolsVersion = '35.0.0'
+    namespace "com.atrainingtracker"
 
     defaultConfig {
-        applicationId "com.atrainingtracker"
-        minSdkVersion 16
-        targetSdkVersion 29
+        minSdkVersion 26 // Android 8
+        targetSdkVersion 34 // Android 14
         multiDexEnabled true
-        versionName "4.2.5"
+        versionName "4.2.99.1"
         versionCode 217
     }
 
@@ -37,46 +30,30 @@ android {
         debug {
             // Separate the debug build
             applicationIdSuffix ".debug"
-            versionNameSuffix "-${getGitHash()}"
+            versionNameSuffix "-${getGitHash}"
         }
         release {
             applicationIdSuffix ""
 
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard.txt'
             signingConfig signingConfigs.release
-            zipAlignEnabled true
             debuggable false
         }
     }
-
-    lintOptions {
-        //Configure checks with paths
-        //lintConfig file("lint.xml")
-        baseline file("lint-baseline.xml")
-        checkReleaseBuilds true
-        // TODO Some dependencies conflicts with Android included
-        disable 'DuplicatePlatformClasses'
-
-        showAll true
-        //debug issues in Travis
-        textReport true
-        textOutput 'stdout'
-    }
-
     packagingOptions {
-        pickFirst 'META-INF/NOTICE.txt'
-        pickFirst 'META-INF/NOTICE'
-        pickFirst 'META-INF/DEPENDENCIES'
-        pickFirst 'META-INF/LICENSE.txt'
-        pickFirst 'META-INF/LICENSE'
+        resources {
+            pickFirsts += ['META-INF/NOTICE.txt', 'META-INF/NOTICE', 'META-INF/DEPENDENCIES', 'META-INF/LICENSE.txt', 'META-INF/LICENSE']
+        }
     }
 
-    useLibrary 'org.apache.http.legacy'
-
-    dexOptions {
-        javaMaxHeapSize "8g"
-        preDexLibraries = false
+    lint {
+        baseline file('lint-baseline.xml')
+        checkReleaseBuilds true
+        // TODO fix Range, some hundred occurrences
+        disable 'DuplicatePlatformClasses', 'MissingTranslation', 'Range'
+        showAll true
+        textReport true
     }
 }
 
@@ -85,44 +62,32 @@ configurations {
 }
 
 dependencies {
-    implementation group: 'commons-codec', name: 'commons-codec', version: '20041127.091804'
-    implementation group: 'commons-io', name: 'commons-io', version: '20030203.000550'
-    implementation group: 'commons-logging', name: 'commons-logging', version: '1.2'
+    implementation 'org.apache.httpcomponents:fluent-hc:4.5.13'
+    implementation 'org.apache.httpcomponents:httpclient:4.5.14'
+    implementation 'org.apache.httpcomponents:httpclient-cache:4.5.13'
+    implementation 'org.apache.httpcomponents:httpcore:4.4.16'
+    implementation 'org.apache.httpcomponents:httpmime:4.5.13'
 
-    implementation group: 'org.apache.httpcomponents', name: 'fluent-hc', version: '4.5.11'
-    implementation group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.5.11'
-    implementation group: 'org.apache.httpcomponents', name: 'httpclient-cache', version: '4.5.11'
-    implementation group: 'org.apache.httpcomponents', name: 'httpcore', version: '4.4.13'
-    implementation group: 'org.apache.httpcomponents', name: 'httpmime', version: '4.5.11'
-
-    implementation group: 'com.googlecode.json-simple', name: 'json-simple', version: '1.1.1'
     implementation 'com.getpebble:pebblekit:4.0.1'
-    implementation files('../ANT-Android-SDKs/ANT+_Android_SDK/API/antpluginlib_3-8-0.aar')
+    implementation files('../ANT-Android-SDKs/ANT+_Android_SDK/API/antpluginlib_3-9-0.aar')
 
-    implementation 'androidx.preference:preference:1.1.0'
-    implementation 'androidx.appcompat:appcompat:1.1.0'
-    implementation 'androidx.recyclerview:recyclerview:1.1.0'
-    implementation 'com.google.android.material:material:1.2.0-alpha05'
-    implementation 'com.google.android.gms:play-services-maps:17.0.0'
-    implementation 'com.google.android.gms:play-services-location:17.0.0'
-    // compile 'com.google.android.gms:play-services-auth:10.0.1'
+    implementation 'androidx.preference:preference:1.2.1'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.work:work-runtime:2.9.0'
+    implementation 'androidx.activity:activity:1.9.1'
 
-    // compile('com.crashlytics.sdk.android:crashlytics:2.9.1@aar') {
-    //   transitive = true
-    // }
-    implementation 'com.google.firebase:firebase-core:17.2.3'
+    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'com.google.android.gms:play-services-maps:19.0.0'
+    implementation 'com.google.android.gms:play-services-location:21.3.0'
 
-    // Add the Firebase SDK for Google Analytics
-    implementation 'com.google.firebase:firebase-analytics:17.2.3'
+    implementation platform('com.google.firebase:firebase-bom:33.1.2')
+    implementation 'com.google.firebase:firebase-analytics' // No version needed with BOM
 
-    implementation 'com.dropbox.core:dropbox-core-sdk:3.1.3'
-
-    implementation 'com.squareup.okhttp3:okhttp:3.10.0'
-    implementation 'com.squareup.picasso:picasso:2.5.2'
-    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.0.0'
+    implementation 'com.dropbox.core:dropbox-core-sdk:7.0.0'
+    implementation 'com.dropbox.core:dropbox-android-sdk:7.0.0'
+    implementation 'com.squareup.picasso:picasso:2.5.2' // Consider using Glide or Coil
+    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
 }
-
-apply plugin: 'com.google.gms.google-services'
 
 def props = new Properties()
 if (rootProject.file("release.properties").exists()) {
@@ -136,3 +101,6 @@ if (rootProject.file("release.properties").exists()) {
     project.logger.info('INFO: Set the values storeFile, storePassword, keyAlias, and keyPassword in release.properties to sign the release.')
     android.buildTypes.release.signingConfig = null
 }
+
+apply plugin: 'com.google.firebase.crashlytics'
+apply plugin: 'com.google.gms.google-services'

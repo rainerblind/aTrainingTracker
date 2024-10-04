@@ -30,6 +30,8 @@ import android.database.sqlite.SQLiteDatabase;
 import android.os.IBinder;
 import android.util.Log;
 
+import androidx.core.content.ContextCompat;
+
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.ActivityType;
 import com.atrainingtracker.banalservice.BANALService;
@@ -189,7 +191,7 @@ public class PebbleService extends Service {
         }
     };
     // class BANALConnection implements ServiceConnection
-    private ServiceConnection mBanalConnection = new ServiceConnection() {
+    private final ServiceConnection mBanalConnection = new ServiceConnection() {
         public void onServiceConnected(ComponentName name, IBinder service) {
             banalService = (BANALServiceComm) service;
             if (DEBUG) Log.i(TAG, "connected to BANAL Service");
@@ -205,7 +207,7 @@ public class PebbleService extends Service {
         }
     };
     // Pebble stuff
-    private PebbleKit.PebbleDataReceiver mPebbleDataReceiver = new PebbleKit.PebbleDataReceiver(TRAINING_TRACKER_UUID) {
+    private final PebbleKit.PebbleDataReceiver mPebbleDataReceiver = new PebbleKit.PebbleDataReceiver(TRAINING_TRACKER_UUID) {
         @Override
         public void receiveData(final Context context, final int transactionId, final PebbleDictionary data) {
             // first, we have to send immediately an ack to the pebble
@@ -229,16 +231,20 @@ public class PebbleService extends Service {
                     }
                     configurePebbleWatchApp();
                 } else if (buttonPressed == BUTTON_RESTART_SEARCH) {
-                    sendBroadcast(new Intent(TrainingApplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES));
+                    sendBroadcast(new Intent(TrainingApplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES)
+                            .setPackage(getPackageName()));
                 } else if (buttonPressed == BUTTON_LAP) {
                     if (DEBUG) Log.d(TAG, "got info from pebble: new lap");
-                    sendBroadcast(new Intent(TrainingApplication.REQUEST_NEW_LAP));  // tell the banalservice that there is a new lap,  The banalservice will broadcast an intent with the lap summary
+                    sendBroadcast(new Intent(TrainingApplication.REQUEST_NEW_LAP)
+                            .setPackage(getPackageName()));  // tell the banalservice that there is a new lap,  The banalservice will broadcast an intent with the lap summary
                 } else if (buttonPressed == BUTTON_TOGGLE_PAUSE) {
                     if (DEBUG) Log.d(TAG, "got info from pebble: toggle pause");
                     if (TrainingApplication.isPaused()) {
-                        sendBroadcast(new Intent(TrainingApplication.REQUEST_RESUME_FROM_PAUSED));
+                        sendBroadcast(new Intent(TrainingApplication.REQUEST_RESUME_FROM_PAUSED)
+                                .setPackage(getPackageName()));
                     } else {
-                        sendBroadcast(new Intent(TrainingApplication.REQUEST_PAUSE_TRACKING));
+                        sendBroadcast(new Intent(TrainingApplication.REQUEST_PAUSE_TRACKING)
+                                .setPackage(getPackageName()));
                     }
                 } else {
                     if (DEBUG) Log.d(TAG, "WTF: something unknown happened!");
@@ -249,13 +255,13 @@ public class PebbleService extends Service {
             // updatePebbleWatch();
         }
     };
-    private PebbleAckReceiver pebbleAckReceiver = new PebbleAckReceiver(TRAINING_TRACKER_UUID) {
+    private final PebbleAckReceiver pebbleAckReceiver = new PebbleAckReceiver(TRAINING_TRACKER_UUID) {
         @Override
         public void receiveAck(Context context, int transactionId) {
             if (DEBUG) Log.d(TAG, "Pebble ACKed id:" + transactionId);
         }
     };
-    private PebbleNackReceiver pebbleNackReceiver = new PebbleNackReceiver(TRAINING_TRACKER_UUID) {
+    private final PebbleNackReceiver pebbleNackReceiver = new PebbleNackReceiver(TRAINING_TRACKER_UUID) {
         @Override
         public void receiveNack(Context context, int transactionId) {
             if (DEBUG) Log.d(TAG, "Pebble NACKed id:" + transactionId);
@@ -336,15 +342,15 @@ public class PebbleService extends Service {
         mConfigurePebbleWatchAppFilter.addAction(BANALService.SEARCHING_FINISHED_FOR_ALL_INTENT);
         mConfigurePebbleWatchAppFilter.addAction(ConfigPebbleViewFragment.PEBBLE_VIEW_CHANGED_INTENT);
 
-        //registerReceiver(mSearchingFinishedReceiver, mSearchingFinishedFilter);
-        registerReceiver(mConfigurePebbleWatchAppReceiver, mConfigurePebbleWatchAppFilter);
-        registerReceiver(mUpdatePebbleReceiver, mUpdatePebbleFilter);
-        registerReceiver(mPebbleConnectedReceiver, mPebbleConnectedFilter);
-        registerReceiver(mPauseReceiver, mPauseFilter);
-        registerReceiver(mResumeReceiver, mResumeFilter);
-        registerReceiver(mLapSummaryReceiver, mLapSummaryFilter);
-        registerReceiver(mStartSearchingReceiver, mStartSearchingFilter);
-        registerReceiver(mEndSearchingReceiver, mEndSearchingFilter);
+        // ContextCompat.registerReceiver(this, mSearchingFinishedReceiver, mSearchingFinishedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mConfigurePebbleWatchAppReceiver, mConfigurePebbleWatchAppFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mUpdatePebbleReceiver, mUpdatePebbleFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mPebbleConnectedReceiver, mPebbleConnectedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mPauseReceiver, mPauseFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mResumeReceiver, mResumeFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mLapSummaryReceiver, mLapSummaryFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mStartSearchingReceiver, mStartSearchingFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mEndSearchingReceiver, mEndSearchingFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     @Override
