@@ -18,11 +18,9 @@
 
 package com.atrainingtracker.banalservice.devices.bluetooth_le;
 
-import android.annotation.TargetApi;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.content.Context;
-import android.os.Build;
 import android.util.Log;
 
 import com.atrainingtracker.banalservice.BANALService;
@@ -34,10 +32,9 @@ import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 
-@TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
 public class BTLEBikePowerDevice extends MyBTLEDevice {
     protected static final int MAX_IDENTICAL = 4;
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
 
     private static final int PEDAL_POWER_BALANCE_SUPPORTED_MASK = 1;
     private static final int ACCUMULATED_TORQUE_SUPPORTED_MASK = 1 << 1;
@@ -101,7 +98,7 @@ public class BTLEBikePowerDevice extends MyBTLEDevice {
     protected boolean mIsCrankRevolutionDataSupported = false;
     protected boolean mDoublePowerBalanceValues = false;
     protected boolean mInvertPowerBalanceValues = false;
-    private String TAG = BTLEBikePowerDevice.class.getName();
+    private final String TAG = BTLEBikePowerDevice.class.getName();
 
 
     /**

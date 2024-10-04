@@ -25,6 +25,8 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.util.Log;
 
+import androidx.core.content.ContextCompat;
+
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.Protocol;
 import com.atrainingtracker.banalservice.sensor.MySensor;
@@ -36,11 +38,11 @@ import com.atrainingtracker.banalservice.helpers.UIHelper;
  * base class for remote devices that connect via ANT+ or Bluetooth
  */
 public abstract class MyRemoteDevice extends MyDevice {
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     protected final IntentFilter mCalibrationFactorChangedFilter = new IntentFilter(BANALService.CALIBRATION_FACTOR_CHANGED);
     protected double mCalibrationFactor = 1;
     long mDeviceId = -1;  // the id of the device within the database
-    private String TAG = "MyRemoteDevice";
+    private final String TAG = "MyRemoteDevice";
     private final BroadcastReceiver mCalibrationFactorChangedReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
             long deviceId = intent.getLongExtra(BANALService.DEVICE_ID, -1);
@@ -60,7 +62,7 @@ public abstract class MyRemoteDevice extends MyDevice {
         mDeviceId = deviceId;
 
         mCalibrationFactor = DevicesDatabaseManager.getCalibrationFactor(deviceId);
-        context.registerReceiver(mCalibrationFactorChangedReceiver, mCalibrationFactorChangedFilter);
+        ContextCompat.registerReceiver(context, mCalibrationFactorChangedReceiver, mCalibrationFactorChangedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     @Override
@@ -87,14 +89,17 @@ public abstract class MyRemoteDevice extends MyDevice {
     protected void notifyStartSearching() {
         myLog("notifyStartSearching()");
         mSearching = true;
-        mContext.sendBroadcast(addSearchDetails(new Intent(BANALService.SEARCHING_STARTED_FOR_ONE_INTENT)));
+        mContext.sendBroadcast(addSearchDetails(
+                new Intent(BANALService.SEARCHING_STARTED_FOR_ONE_INTENT)
+                .setPackage(mContext.getPackageName())));
     }
 
     protected void notifyStopSearching(boolean success) {
         myLog("notifyStopSearching(" + success + ")");
         mSearching = false;
         mContext.sendBroadcast(addSearchDetails(new Intent(BANALService.SEARCHING_STOPPED_FOR_ONE_INTENT))
-                .putExtra(BANALService.SEARCHING_FINISHED_SUCCESS, success));
+                .putExtra(BANALService.SEARCHING_FINISHED_SUCCESS, success)
+                .setPackage(mContext.getPackageName()));
         // .putExtra(BANALService.DEVICE_ID, getDeviceId()));
     }
 

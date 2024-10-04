@@ -49,8 +49,8 @@ public class BluetoothConstants {
     public static final UUID UUID_CHARACTERISTIC_CYCLING_SPEED_AND_CADENCE_FEATURE = UUID.fromString(CHARACTERISTIC_CYCLING_SPEED_AND_CADENCE_FEATURE);
     private static final String CHARACTERISTIC_CYCLING_POWER_FEATURE = "00002a65-0000-1000-8000-00805f9b34fb";
     public static final UUID UUID_CHARACTERISTIC_CYCLING_POWER_FEATURE = UUID.fromString(CHARACTERISTIC_CYCLING_POWER_FEATURE);
-    private static HashMap<DeviceType, UUID> SERVICE_UUIDS = new HashMap<DeviceType, UUID>();
-    private static HashMap<DeviceType, UUID> CHARACTERISTIC_MEASUREMENT_UUIDS = new HashMap<DeviceType, UUID>();
+    private static final HashMap<DeviceType, UUID> SERVICE_UUIDS = new HashMap<DeviceType, UUID>();
+    private static final HashMap<DeviceType, UUID> CHARACTERISTIC_MEASUREMENT_UUIDS = new HashMap<DeviceType, UUID>();
 
     static {
         SERVICE_UUIDS.put(DeviceType.HRM, UUID.fromString(SERVICE_HEART_RATE));

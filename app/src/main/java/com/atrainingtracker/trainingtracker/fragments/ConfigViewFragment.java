@@ -40,9 +40,10 @@ public abstract class ConfigViewFragment extends Fragment {
 
         updateNameOfView(name);
 
-        Intent intent = new Intent(ConfigViewsActivity.NAME_CHANGED_INTENT);
-        intent.putExtra(ConfigViewsActivity.VIEW_ID, mViewId);
-        intent.putExtra(ConfigViewsActivity.NAME, name);
+        Intent intent = new Intent(ConfigViewsActivity.NAME_CHANGED_INTENT)
+                .putExtra(ConfigViewsActivity.VIEW_ID, mViewId)
+                .putExtra(ConfigViewsActivity.NAME, name)
+                .setPackage(getActivity().getPackageName());
         getActivity().sendBroadcast(intent);
     }
 

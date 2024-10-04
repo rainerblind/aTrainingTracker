@@ -29,6 +29,8 @@ import android.database.sqlite.SQLiteDatabase;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.ListFragment;
 import androidx.cursoradapter.widget.SimpleCursorAdapter;
 import android.util.Log;
@@ -58,7 +60,7 @@ public class SportTypeListFragment
     protected static final String[] FROM = {SportType.UI_NAME, SportType.MIN_AVG_SPEED, SportType.MAX_AVG_SPEED};
     protected static final String[] FROM_WITH_C_ID = {SportType.C_ID, SportType.MIN_AVG_SPEED, SportType.MAX_AVG_SPEED, SportType.UI_NAME};
     protected static final int[] TO = {R.id.st_tvName, R.id.st_tvSpeed, R.id.st_tvSpeed};
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     protected Cursor mCursor;
     protected SimpleCursorAdapter mAdapter;
     protected String mSpeedUnit;
@@ -173,7 +175,7 @@ public class SportTypeListFragment
     public void onResume() {
         super.onResume();
 
-        getContext().registerReceiver(mSportTypeChangedReceiver, mSportTypeChangedFilter);
+        ContextCompat.registerReceiver(getContext(), mSportTypeChangedReceiver, mSportTypeChangedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     @Override

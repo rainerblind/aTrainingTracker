@@ -18,11 +18,9 @@
 
 package com.atrainingtracker.banalservice.devices.bluetooth_le;
 
-import android.annotation.TargetApi;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.content.Context;
-import android.os.Build;
 import android.util.Log;
 
 import com.atrainingtracker.banalservice.BANALService;
@@ -37,16 +35,15 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-@TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
 public class BTLERunSpeedDevice extends MyBTLEDevice {
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     private final ScheduledExecutorService mScheduler = Executors.newScheduledThreadPool(1);
     protected MySensor<Integer> mCadenceSensor;
     protected MySensor<Double> mSpeedSensor;
     protected MySensor<Double> mPaceSensor;
     protected MyDoubleAccumulatorSensor mDistanceSensor;    // WTF: a distance sensor is not always present in bluetooth devices!
     protected MyDoubleAccumulatorSensor mLapDistanceSensor;
-    private String TAG = "BTLERunSpeedDevice";
+    private final String TAG = "BTLERunSpeedDevice";
     private boolean mDistancePresent;
     private double mDistance = 0;
     private double mSpeed;
@@ -63,7 +60,7 @@ public class BTLERunSpeedDevice extends MyBTLEDevice {
         }
     };
     //TODO: there might be a stride length sensor
-    private ScheduledFuture mDistanceCalculatorHandle;
+    private final ScheduledFuture mDistanceCalculatorHandle;
 
     /**
      * constructor

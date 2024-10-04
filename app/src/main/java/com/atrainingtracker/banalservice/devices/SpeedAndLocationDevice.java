@@ -35,7 +35,7 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
     protected static final int SAMPLING_TIME = 1000;
     protected static final int MIN_DISTANCE = 0;
     private static final String TAG = "GPSSpeedAndLocationDevice";
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     protected boolean LocationAvailable = false;
     protected MySensor<Double> mLongitudeSensor;
     protected MySensor<Double> mLatitudeSensor;
@@ -64,7 +64,8 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
         if (!LocationAvailable) {
             LocationAvailable = true;
             registerSensors();
-            mContext.sendBroadcast(new Intent(BANALService.LOCATION_AVAILABLE_INTENT));
+            mContext.sendBroadcast(new Intent(BANALService.LOCATION_AVAILABLE_INTENT)
+                    .setPackage(mContext.getPackageName()));
         }
     }
 
@@ -74,7 +75,8 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
         if (LocationAvailable) {
             LocationAvailable = false;
             unregisterSensors();
-            mContext.sendBroadcast(new Intent(BANALService.LOCATION_UNAVAILABLE_INTENT));
+            mContext.sendBroadcast(new Intent(BANALService.LOCATION_UNAVAILABLE_INTENT)
+                    .setPackage(mContext.getPackageName()));
         }
     }
 
@@ -150,12 +152,12 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
                 mPrevLocation = location;
 
                 // also broadcast that we have a new location
-                Intent intent = new Intent(BANALService.NEW_LOCATION_INTENT);
-                intent.putExtra(BANALService.LATITUDE, location.getLatitude());
-                intent.putExtra(BANALService.LONGITUDE, location.getLongitude());
-                intent.putExtra(BANALService.LOCATION_PROVIDER, location.getProvider());
+                Intent intent = new Intent(BANALService.NEW_LOCATION_INTENT)
+                        .putExtra(BANALService.LATITUDE, location.getLatitude())
+                        .putExtra(BANALService.LONGITUDE, location.getLongitude())
+                        .putExtra(BANALService.LOCATION_PROVIDER, location.getProvider())
+                        .setPackage(mContext.getPackageName());
                 mContext.sendBroadcast(intent);
-
             }
         }
     }

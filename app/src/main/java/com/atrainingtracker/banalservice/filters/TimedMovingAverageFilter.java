@@ -27,7 +27,7 @@ import java.util.LinkedList;
 
 public class TimedMovingAverageFilter
         extends MovingAverageFilter {
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     private static final String TAG = TimedMovingAverageFilter.class.getName();
     protected long mSeconds;
     protected LinkedList<TimestampedValue> mTimestampedValues = new LinkedList<>();

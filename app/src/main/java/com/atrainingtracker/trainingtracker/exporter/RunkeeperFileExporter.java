@@ -43,7 +43,7 @@ public class RunkeeperFileExporter extends BaseFileExporter {
     private static final String TAG = "RunkeeperFileExporter";
     private static final boolean DEBUG = true;
     // DateFormats to convert from Db style dates to XML style dates
-    protected static SimpleDateFormat msdfFromDb = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    protected static SimpleDateFormat msdfFromDb = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
     protected static SimpleDateFormat msdfToRK = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss", Locale.US);
     // Sat, 1 Jan 2011 00:00:00
 
@@ -130,7 +130,7 @@ public class RunkeeperFileExporter extends BaseFileExporter {
                     sample = new JSONObject();
                     sample.put(TIMESTAMP, cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.TIME_TOTAL.name())));
                     sample.put(HEART_RATE, Math.round(cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.HR.name()))));
-                    bufferedWriter.write(getSamplePrefix(isFirst) + sample.toString());
+                    bufferedWriter.write(getSamplePrefix(isFirst) + sample);
 
                     isFirst = false;
                 }
@@ -186,7 +186,7 @@ public class RunkeeperFileExporter extends BaseFileExporter {
                         }
                         sample.put(TYPE, type);
 
-                        bufferedWriter.write(getSamplePrefix(isFirst) + sample.toString());
+                        bufferedWriter.write(getSamplePrefix(isFirst) + sample);
                         isFirst = false;
                     }
                 }

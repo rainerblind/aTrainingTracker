@@ -23,6 +23,8 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import com.google.android.material.navigation.NavigationView;
+
+import androidx.activity.OnBackPressedCallback;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
 import androidx.core.view.GravityCompat;
@@ -47,7 +49,7 @@ public class SegmentDetailsActivity extends AppCompatActivity
     public static final String SELECTED_FRAGMENT = "SELECTED_FRAGMENT";
     public static final String SELECTED_FRAGMENT_ID = "SELECTED_FRAGMENT_ID";
     private static final String TAG = SegmentDetailsActivity.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private static final int DEFAULT_SELECTED_FRAGMENT_ID = R.id.drawer_map;
     // remember which fragment should be shown
     protected int mSelectedFragmentId = DEFAULT_SELECTED_FRAGMENT_ID;
@@ -118,6 +120,24 @@ public class SegmentDetailsActivity extends AppCompatActivity
         if (DEBUG) Log.i(TAG, "now, we select the main fragment");
         // now, create and show the main fragment
         onNavigationItemSelected(mNavigationView.getMenu().findItem(mSelectedFragmentId));
+
+        getOnBackPressedDispatcher().addCallback(this,
+                new OnBackPressedCallback(true) {
+                    @Override
+                    public void handleOnBackPressed() {
+                        if (mDrawerLayout.isDrawerOpen(GravityCompat.START)) {
+                            mDrawerLayout.closeDrawer(GravityCompat.START);
+                        }
+                        // else if (getSupportFragmentManager().getBackStackEntryCount() == 0
+                        //        && mSelectedFragmentId != R.id.drawer_map) {
+                        //     onNavigationItemSelected(mNavigationView.getMenu().findItem(R.id.drawer_map));
+                        // }
+                        else {
+                            finish();
+                        }
+                    }
+                }
+        );
     }
 
     @Override
@@ -136,21 +156,6 @@ public class SegmentDetailsActivity extends AppCompatActivity
         savedInstanceState.putInt(SELECTED_FRAGMENT_ID, mSelectedFragmentId);
 
         super.onSaveInstanceState(savedInstanceState);
-    }
-
-    @Override
-    public void onBackPressed() {
-
-        if (mDrawerLayout.isDrawerOpen(GravityCompat.START)) {
-            mDrawerLayout.closeDrawer(GravityCompat.START);
-        }
-        // else if (getSupportFragmentManager().getBackStackEntryCount() == 0
-        //        && mSelectedFragmentId != R.id.drawer_map) {
-        //     onNavigationItemSelected(mNavigationView.getMenu().findItem(R.id.drawer_map));
-        // }
-        else {
-            super.onBackPressed();
-        }
     }
 
     /* Called when an options item is clicked */

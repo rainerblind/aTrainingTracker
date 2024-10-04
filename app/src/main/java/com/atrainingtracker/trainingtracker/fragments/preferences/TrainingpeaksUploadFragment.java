@@ -37,7 +37,7 @@ import com.atrainingtracker.trainingtracker.onlinecommunities.trainingpeaks.Trai
 public class TrainingpeaksUploadFragment extends androidx.preference.PreferenceFragmentCompat
         implements SharedPreferences.OnSharedPreferenceChangeListener {
     public static final int GET_TRAINING_PEAKS_ACCESS_TOKEN = 4;
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private static final String TAG = TrainingpeaksUploadFragment.class.getName();
     private CheckBoxPreference mTrainingPeaksUpload;
 
@@ -50,7 +50,7 @@ public class TrainingpeaksUploadFragment extends androidx.preference.PreferenceF
 
         setPreferencesFromResource(R.xml.prefs, rootKey);
 
-        mTrainingPeaksUpload = (CheckBoxPreference) this.getPreferenceScreen().findPreference(TrainingApplication.SP_UPLOAD_TO_TRAINING_PEAKS);
+        mTrainingPeaksUpload = this.getPreferenceScreen().findPreference(TrainingApplication.SP_UPLOAD_TO_TRAINING_PEAKS);
     }
 
     @Override

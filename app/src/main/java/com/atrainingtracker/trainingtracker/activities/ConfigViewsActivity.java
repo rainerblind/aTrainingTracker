@@ -44,7 +44,7 @@ public abstract class ConfigViewsActivity
     public static final String NAME = "NAME";
     public static final String NAME_CHANGED_INTENT = "NAME_CHANGED_INTENT";
     private static final String TAG = ConfigViewsActivity.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG & true;
+    private static final boolean DEBUG = TrainingApplication.getDebug(true);
     // public static final String VIEW_CHANGED_INTENT = "VIEW_CHANGED_INTENT";
     long mViewId = -1;
     ActivityType mActivityType = null;

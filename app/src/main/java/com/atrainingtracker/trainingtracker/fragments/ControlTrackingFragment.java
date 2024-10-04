@@ -26,12 +26,9 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.os.Build;
 import android.os.Bundle;
 
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.app.AppCompatDelegate;
-import androidx.fragment.app.Fragment;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 import android.util.Log;
@@ -53,7 +50,7 @@ import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface;
 
 public class ControlTrackingFragment extends BaseTrackingFragment {
     public static final String TAG = ControlTrackingFragment.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG & false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private final IntentFilter mStartTrackingFilter = new IntentFilter();
     protected RemoteDevicesSettingsInterface mRemoteDevicesSettingsInterface;
     protected StartOrResumeInterface mStartOrResumeInterface;
@@ -108,7 +105,7 @@ public class ControlTrackingFragment extends BaseTrackingFragment {
             disableResumeAndStopLayout();
         }
     };
-    private IntentFilter mUpdateResearchFilter = new IntentFilter();  // Intents will be added in onResume
+    private final IntentFilter mUpdateResearchFilter = new IntentFilter();  // Intents will be added in onResume
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -122,13 +119,13 @@ public class ControlTrackingFragment extends BaseTrackingFragment {
         try {
             mRemoteDevicesSettingsInterface = (RemoteDevicesSettingsInterface) context;
         } catch (ClassCastException e) {
-            throw new ClassCastException(context.toString() + " must implement StartPairingListener");
+            throw new ClassCastException(context + " must implement StartPairingListener");
         }
 
         try {
             mStartOrResumeInterface = (StartOrResumeInterface) context;
         } catch (ClassCastException e) {
-            throw new ClassCastException(context.toString() + " must implement StartOrResumeInterface");
+            throw new ClassCastException(context + " must implement StartOrResumeInterface");
         }
 
         mGetBanalServiceIf.registerConnectionStatusListener(new BANALService.GetBanalServiceInterface.ConnectionStatusListener() {
@@ -192,7 +189,8 @@ public class ControlTrackingFragment extends BaseTrackingFragment {
         mResearchButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                getContext().sendBroadcast(new Intent(TrainingApplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES));
+                getContext().sendBroadcast(new Intent(TrainingApplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES)
+                        .setPackage(getContext().getPackageName()));
             }
         });
 
@@ -201,7 +199,8 @@ public class ControlTrackingFragment extends BaseTrackingFragment {
             public void onClick(View v) {
                 if (DEBUG) Log.i(TAG, "start button clicked");
                 // mControlTrackingListener.startTracking();
-                getContext().sendBroadcast(new Intent(TrainingApplication.REQUEST_START_TRACKING));
+                getContext().sendBroadcast(new Intent(TrainingApplication.REQUEST_START_TRACKING)
+                        .setPackage(getContext().getPackageName()));
             }
         });
 
@@ -210,7 +209,8 @@ public class ControlTrackingFragment extends BaseTrackingFragment {
             public void onClick(View v) {
                 if (DEBUG) Log.i(TAG, "start button clicked");
                 // mControlTrackingListener.pauseTracking();
-                getContext().sendBroadcast(new Intent(TrainingApplication.REQUEST_PAUSE_TRACKING));
+                getContext().sendBroadcast(new Intent(TrainingApplication.REQUEST_PAUSE_TRACKING)
+                        .setPackage(getContext().getPackageName()));
             }
         });
 
@@ -219,7 +219,8 @@ public class ControlTrackingFragment extends BaseTrackingFragment {
             public void onClick(View v) {
                 if (DEBUG) Log.i(TAG, "resume button clicked");
                 // mControlTrackingListener.resumeTracking();
-                getContext().sendBroadcast(new Intent(TrainingApplication.REQUEST_RESUME_FROM_PAUSED));
+                getContext().sendBroadcast(new Intent(TrainingApplication.REQUEST_RESUME_FROM_PAUSED)
+                        .setPackage(getContext().getPackageName()));
             }
         });
 
@@ -229,7 +230,8 @@ public class ControlTrackingFragment extends BaseTrackingFragment {
             public void onClick(View v) {
                 if (DEBUG) Log.i(TAG, "stop button clicked");
                 // mControlTrackingListener.stopTracking();
-                getContext().sendBroadcast(new Intent(TrainingApplication.REQUEST_STOP_TRACKING));
+                getContext().sendBroadcast(new Intent(TrainingApplication.REQUEST_STOP_TRACKING)
+                        .setPackage(getContext().getPackageName()));
 
             }
         });
@@ -239,11 +241,17 @@ public class ControlTrackingFragment extends BaseTrackingFragment {
 
         mANTPairingButton = view.findViewById(R.id.imageButtonANTPairing);
         if (mANTPairingButton != null) {
-            mANTPairingButton.setOnClickListener(new View.OnClickListener() {
-                public void onClick(View v) {
-                    mRemoteDevicesSettingsInterface.startPairing(Protocol.ANT_PLUS);
-                }
-            });
+            if (BANALService.isANTProperlyInstalled(getContext())) {
+                mANTPairingButton.setVisibility(View.GONE);
+                View text = view.findViewById(R.id.textButtonANTPairing);
+                text.setVisibility(View.GONE);
+            } else {
+                mANTPairingButton.setOnClickListener(new View.OnClickListener() {
+                    public void onClick(View v) {
+                        mRemoteDevicesSettingsInterface.startPairing(Protocol.ANT_PLUS);
+                    }
+                });
+            }
         } else {
             if (DEBUG) Log.d(TAG, "WTF, could not find the ANT+ pairing button");
         }
@@ -292,10 +300,10 @@ public class ControlTrackingFragment extends BaseTrackingFragment {
             mStartOrResumeInterface.showStartOrResumeDialog();
         }
 
-        getActivity().registerReceiver(mUpdateResearchReceiver, mUpdateResearchFilter);
-        getActivity().registerReceiver(mStartTrackingReceiver, mStartTrackingFilter);
-        getActivity().registerReceiver(mPauseTrackingReceiver, new IntentFilter(TrainingApplication.REQUEST_PAUSE_TRACKING));
-        getActivity().registerReceiver(mStopTrackingReceiver, new IntentFilter(TrainingApplication.REQUEST_STOP_TRACKING));
+        ContextCompat.registerReceiver(getActivity(), mUpdateResearchReceiver, mUpdateResearchFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(getActivity(), mStartTrackingReceiver, mStartTrackingFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(getActivity(), mPauseTrackingReceiver, new IntentFilter(TrainingApplication.REQUEST_PAUSE_TRACKING), ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(getActivity(), mStopTrackingReceiver, new IntentFilter(TrainingApplication.REQUEST_STOP_TRACKING), ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     @Override
@@ -462,7 +470,7 @@ public class ControlTrackingFragment extends BaseTrackingFragment {
 
 
     protected void updatePairing() {
-        if (mGetBanalServiceIf == null | mGetBanalServiceIf.getBanalServiceComm() == null) {
+        if (mGetBanalServiceIf == null || mGetBanalServiceIf.getBanalServiceComm() == null) {
             disablePairing();
         } else {
             enablePairing();

@@ -24,7 +24,7 @@ import com.atrainingtracker.banalservice.devices.MyDevice;
 public class ThresholdSensor<T> extends MySensor<T> {
     private static final String TAG = "ThresholdSensor";
 
-    private int mThreshold;
+    private final int mThreshold;
     private int mNrZeros;
 
     public ThresholdSensor(MyDevice myDevice, SensorType sensorType, int threshold) {

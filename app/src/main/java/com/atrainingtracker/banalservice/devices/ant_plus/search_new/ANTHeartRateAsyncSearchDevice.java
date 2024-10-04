@@ -32,7 +32,7 @@ import com.dsi.ant.plugins.antplus.pccbase.PccReleaseHandle;
 public class ANTHeartRateAsyncSearchDevice extends MyANTAsyncSearchDevice {
 
     private static final String TAG = "ANTHeartRateAsyncSearchDevice";
-    private static final boolean DEBUG = BANALService.DEBUG & true;
+    private static final boolean DEBUG = BANALService.getDebug(true);
 
     public ANTHeartRateAsyncSearchDevice(Context context, IANTAsyncSearchEngineInterface callback, MultiDeviceSearchResult deviceFound, boolean pairingRecommendation) {
         super(context, callback, DeviceType.HRM, deviceFound, pairingRecommendation);

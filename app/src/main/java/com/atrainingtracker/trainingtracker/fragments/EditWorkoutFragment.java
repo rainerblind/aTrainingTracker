@@ -30,7 +30,12 @@ import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
+
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkManager;
+
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -58,14 +63,14 @@ import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.ExtremaType;
 import com.atrainingtracker.trainingtracker.exporter.ExportManager;
-import com.atrainingtracker.trainingtracker.exporter.ExportWorkoutIntentService;
+import com.atrainingtracker.trainingtracker.exporter.ExportWorkoutWorker;
 import com.atrainingtracker.trainingtracker.MyHelper;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
 import com.atrainingtracker.trainingtracker.dialogs.EditFancyWorkoutNameDialog;
-import com.atrainingtracker.trainingtracker.helpers.CalcExtremaValuesTask;
+import com.atrainingtracker.trainingtracker.helpers.CalcExtremaValuesThread;
 import com.atrainingtracker.trainingtracker.interfaces.ReallyDeleteDialogInterface;
 
 import java.util.ArrayList;
@@ -74,7 +79,7 @@ import java.util.List;
 
 public class EditWorkoutFragment extends Fragment {
     public static final String TAG = "EditWorkoutFragment";
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
     // public static final String WORKOUT_ID = "de.rainerblind.trainingtracker.Activities.UpdateWorkoutActivity.WORKOUT_ID";
     // some definitions to store the values of the views
@@ -135,9 +140,9 @@ public class EditWorkoutFragment extends Fragment {
     private static final String SHOW_DELETE_BUTTON = "SHOW_DELETE_BUTTON";
     private static final List<Integer> TR_IDS_EXTREMA_VALUES = Arrays.asList(R.id.trAltitude, R.id.trCadence, R.id.trHR, R.id.trPace, R.id.trPedalPowerBalance,
             R.id.trPedalSmoothnessLeft, R.id.trPedalSmoothnessRight, R.id.trPower, R.id.trSpeed, R.id.trTemperature, R.id.trTorque);
-    private final IntentFilter mFinishedCalculatingExtremaValueFilter = new IntentFilter(CalcExtremaValuesTask.FINISHED_CALCULATING_EXTREMA_VALUE);
-    private final IntentFilter mFinishedGuessingCommuteAndTrainerFilter = new IntentFilter(CalcExtremaValuesTask.FINISHED_GUESSING_COMMUTE_AND_TRAINER);
-    private final IntentFilter mFinishedCalculatingFancyNameFilter = new IntentFilter(CalcExtremaValuesTask.FINISHED_CALCULATING_FANCY_NAME);
+    private final IntentFilter mFinishedCalculatingExtremaValueFilter = new IntentFilter(CalcExtremaValuesThread.FINISHED_CALCULATING_EXTREMA_VALUE);
+    private final IntentFilter mFinishedGuessingCommuteAndTrainerFilter = new IntentFilter(CalcExtremaValuesThread.FINISHED_GUESSING_COMMUTE_AND_TRAINER);
+    private final IntentFilter mFinishedCalculatingFancyNameFilter = new IntentFilter(CalcExtremaValuesThread.FINISHED_CALCULATING_FANCY_NAME);
     protected String mBaseFileName;
     // protected TTSportType mTTSportType;  // we want the sport type easily available since the equipment also depends on the sport type
     protected long mSportTypeId = SportTypeDatabaseManager.getDefaultSportTypeId();
@@ -160,7 +165,7 @@ public class EditWorkoutFragment extends Fragment {
     private RadioButton rbCommute, rbTrainer;
     private CheckBox cbPrivate;
     private boolean radioButtonAlreadyChecked = false;  // necessary to allow deselect of the radio buttons within the group for Commute and Trainer
-    private double MAX_WORKOUT_TIME_TO_SHOW_DELETE_BUTTON = 10 * 60;  // 10 min
+    private final double MAX_WORKOUT_TIME_TO_SHOW_DELETE_BUTTON = 10 * 60;  // 10 min
     private String ALL = "all";
     private boolean mPaceExtremaValuesAvailable = false;
 
@@ -168,7 +173,7 @@ public class EditWorkoutFragment extends Fragment {
     private final BroadcastReceiver mFinishedCalculatingFancyNameReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            String workoutName = intent.getExtras().getString(CalcExtremaValuesTask.FANCY_NAME);
+            String workoutName = intent.getExtras().getString(CalcExtremaValuesThread.FANCY_NAME);
             editExportName.setText(workoutName);
         }
     };
@@ -192,7 +197,7 @@ public class EditWorkoutFragment extends Fragment {
     };
     private final BroadcastReceiver mFinishedCalculatingExtremaValueReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
-            SensorType sensorType = SensorType.valueOf(intent.getExtras().getString(CalcExtremaValuesTask.SENSOR_TYPE));
+            SensorType sensorType = SensorType.valueOf(intent.getExtras().getString(CalcExtremaValuesThread.SENSOR_TYPE));
 
             WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance();
             SQLiteDatabase db = databaseManager.getOpenDatabase();
@@ -219,7 +224,7 @@ public class EditWorkoutFragment extends Fragment {
         try {
             mReallyDeleteDialogInterface = (ReallyDeleteDialogInterface) context;
         } catch (ClassCastException e) {
-            throw new ClassCastException(context.toString() + " must implement ReallyDeleteDialogInterface");
+            throw new ClassCastException(context + " must implement ReallyDeleteDialogInterface");
         }
     }
 
@@ -274,7 +279,7 @@ public class EditWorkoutFragment extends Fragment {
             @Override
             public void onItemSelected(AdapterView<?> arg0, View arg1, int position, long id) {
                 if (DEBUG) Log.i(TAG, "spinnerSport.onItemSelected");
-                if (mShowAllSportTypes == false
+                if (!mShowAllSportTypes
                         && spinnerSport.getSelectedItemPosition() == mSportTypeIdList.size()) {
                     if (DEBUG) Log.i(TAG, "all sport types selected");
                     mShowAllSportTypes = true;
@@ -358,7 +363,10 @@ public class EditWorkoutFragment extends Fragment {
                     exportManager.exportWorkout(mBaseFileName);
                     exportManager.onFinished(TAG);
 
-                    getActivity().startService(new Intent(context, ExportWorkoutIntentService.class));
+                    OneTimeWorkRequest workRequest = new OneTimeWorkRequest.Builder(ExportWorkoutWorker.class)
+                            .build();
+                    assert context != null;
+                    WorkManager.getInstance(context).enqueue(workRequest);
 
                     getActivity().setResult(Activity.RESULT_OK, resultIntent);
                 } else {
@@ -393,9 +401,9 @@ public class EditWorkoutFragment extends Fragment {
         if (DEBUG) Log.d(TAG, "onActivityCreated");
 
         // register receivers
-        getActivity().registerReceiver(mFinishedCalculatingExtremaValueReceiver, mFinishedCalculatingExtremaValueFilter);
-        getActivity().registerReceiver(mFinishedGuessingCommuteAndTrainerReceiver, mFinishedGuessingCommuteAndTrainerFilter);
-        getActivity().registerReceiver(mFinishedCalculatingFancyNameReceiver, mFinishedCalculatingFancyNameFilter);
+        ContextCompat.registerReceiver(getActivity(), mFinishedCalculatingExtremaValueReceiver, mFinishedCalculatingExtremaValueFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(getActivity(), mFinishedGuessingCommuteAndTrainerReceiver, mFinishedGuessingCommuteAndTrainerFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(getActivity(), mFinishedCalculatingFancyNameReceiver, mFinishedCalculatingFancyNameFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
 
 
         // fill the views
@@ -556,7 +564,7 @@ public class EditWorkoutFragment extends Fragment {
         ((TextView) getActivity().findViewById(R.id.tvTotalTime)).setText((new TimeFormatter()).format(totalTime));
         // do not show the delete button on "long" workouts or when tracking
         if (totalTime > MAX_WORKOUT_TIME_TO_SHOW_DELETE_BUTTON
-                | TrainingApplication.isTracking()) {
+                || TrainingApplication.isTracking()) {
             buttonDeleteWorkout.setVisibility(View.GONE);
         }
         int activeTime = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_ACTIVE_s));
@@ -686,8 +694,8 @@ public class EditWorkoutFragment extends Fragment {
 
         // if one of the extrema values contains valid data (not 0), we want to show the complete row
         boolean dataAvailable = fillTvExtrema(db, sensorType, ExtremaType.AVG, tvMeanId)
-                | fillTvExtrema(db, sensorType, ExtremaType.MAX, tvMaxId)
-                | fillTvExtrema(db, sensorType, ExtremaType.MIN, tvMinId);
+                || fillTvExtrema(db, sensorType, ExtremaType.MAX, tvMaxId)
+                || fillTvExtrema(db, sensorType, ExtremaType.MIN, tvMinId);
 
         if (dataAvailable) {  // there seems to be valid data, show it
             getActivity().findViewById(trId).setVisibility(View.VISIBLE);
@@ -737,7 +745,7 @@ public class EditWorkoutFragment extends Fragment {
         if (DEBUG) Log.i(TAG, "fillViewsFromSavedInstanceState");
 
         // first, the member variables
-        mWorkoutID = savedInstanceState.getInt(WorkoutSummaries.WORKOUT_ID);
+        mWorkoutID = savedInstanceState.getLong(WorkoutSummaries.WORKOUT_ID);
         mBaseFileName = savedInstanceState.getString(BASE_FILE_NAME);
         mEquipmentName = savedInstanceState.getString(EQUIPMENT);
         mSportTypeId = savedInstanceState.getLong(SPORT_ID);
@@ -950,7 +958,7 @@ public class EditWorkoutFragment extends Fragment {
             mSportTypeUiNameList = SportTypeDatabaseManager.getSportTypesUiNameList(mBSportType, mAverageSpeed);
             mSportTypeIdList = SportTypeDatabaseManager.getSportTypesIdList(mBSportType, mAverageSpeed);
             if (mSportTypeUiNameList.size() <= 1
-                    | !mSportTypeIdList.contains(mSportTypeId)) {
+                    || !mSportTypeIdList.contains(mSportTypeId)) {
                 mShowAllSportTypes = true;
                 setSpinnerSport();
                 return;
@@ -1049,7 +1057,7 @@ public class EditWorkoutFragment extends Fragment {
                     null);
         } catch (SQLException e) {
             // TODO: use Toast?
-            Log.e(TAG, "Error while writing" + e.toString());
+            Log.e(TAG, "Error while writing" + e);
         }
         databaseManager.closeDatabase(); // db.close();
 

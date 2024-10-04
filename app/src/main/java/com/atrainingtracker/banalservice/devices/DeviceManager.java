@@ -75,11 +75,13 @@ import java.util.Set;
 
 import static com.atrainingtracker.banalservice.BSportType.UNKNOWN;
 
+import androidx.core.content.ContextCompat;
+
 
 public class DeviceManager
         implements OnSharedPreferenceChangeListener {
     private static final String TAG = "DeviceManager";
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     protected static MyRemoteDevice cMyRemoteDeviceCurrentlySearchingFor = null;
     protected Context mContext;
     protected ClockDevice mClockDevice;
@@ -244,7 +246,7 @@ public class DeviceManager
             startSearchForNewRemoteDevices(protocol, deviceType);
         }
     };
-    private SharedPreferences mSharedPreferences;
+    private final SharedPreferences mSharedPreferences;
 
     /**
      * Constructor
@@ -290,10 +292,10 @@ public class DeviceManager
             startSearchForPairedDevices();
         }
 
-        mContext.registerReceiver(mPairingChangedReceiver, mPairingChangedFilter);
-        mContext.registerReceiver(mSearchingStoppedForOneReceiver, mSearchingStoppedForOneFilter);
-        mContext.registerReceiver(mStartSearchingForNewDevicesReceiver, mStartSearchingForNewDevicesFilter);
-        mContext.registerReceiver(mStopSearchingForNewDevicesReceiver, mStopSearchingForNewDevicesFilter);
+        ContextCompat.registerReceiver(mContext, mPairingChangedReceiver, mPairingChangedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(mContext, mSearchingStoppedForOneReceiver, mSearchingStoppedForOneFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(mContext, mStartSearchingForNewDevicesReceiver, mStartSearchingForNewDevicesFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(mContext, mStopSearchingForNewDevicesReceiver, mStopSearchingForNewDevicesFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     public static boolean isSearchingForARemoteDevice() {
@@ -393,7 +395,8 @@ public class DeviceManager
             if (DEBUG) Log.d(TAG, "empty search queue");
             cMyRemoteDeviceCurrentlySearchingFor = null;
             // finished searching, broadcast this
-            mContext.sendBroadcast(new Intent(BANALService.SEARCHING_FINISHED_FOR_ALL_INTENT));
+            mContext.sendBroadcast(new Intent(BANALService.SEARCHING_FINISHED_FOR_ALL_INTENT)
+                    .setPackage(mContext.getPackageName()));
         } else {
             cMyRemoteDeviceCurrentlySearchingFor = mSearchQueue.pollFirst();
             if (cMyRemoteDeviceCurrentlySearchingFor.isSearching()) {
@@ -463,7 +466,8 @@ public class DeviceManager
         }
 
         // now, start searching
-        mContext.sendBroadcast(new Intent(BANALService.SEARCHING_STARTED_FOR_ALL_INTENT));
+        mContext.sendBroadcast(new Intent(BANALService.SEARCHING_STARTED_FOR_ALL_INTENT)
+                .setPackage(mContext.getPackageName()));
         searchForNextRemoteDevice();
     }
 
@@ -864,8 +868,9 @@ public class DeviceManager
     protected void sendNewDeviceFoundBroadcast(long deviceId) {
         if (DEBUG) Log.i(TAG, "sendNewDeviceFountBroadcast");
 
-        Intent intent = new Intent(BANALService.NEW_DEVICE_FOUND_INTENT);
-        intent.putExtra(BANALService.DEVICE_ID, deviceId);
+        Intent intent = new Intent(BANALService.NEW_DEVICE_FOUND_INTENT)
+                .putExtra(BANALService.DEVICE_ID, deviceId)
+                .setPackage(mContext.getPackageName());
         mContext.sendBroadcast(intent);
     }
 

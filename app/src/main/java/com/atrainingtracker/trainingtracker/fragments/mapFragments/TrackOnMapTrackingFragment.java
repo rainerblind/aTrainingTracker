@@ -23,9 +23,13 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.util.Log;
+
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.trainingtracker.tracker.TrackerService;
@@ -44,7 +48,7 @@ import java.util.List;
 public class TrackOnMapTrackingFragment
         extends TrackOnMapBaseFragment {
     public static final String TAG = TrackOnMapTrackingFragment.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
     private final IntentFilter mNewLocationFilter = new IntentFilter(BANALService.NEW_LOCATION_INTENT);
     private final IntentFilter mTrackingStartedFilter = new IntentFilter(TrackerService.TRACKING_STARTED_INTENT);
@@ -57,10 +61,12 @@ public class TrackOnMapTrackingFragment
             if (LocationManager.GPS_PROVIDER.equals(intent.getStringExtra(BANALService.LOCATION_PROVIDER))
                     && intent.hasExtra(BANALService.LATITUDE)
                     && intent.hasExtra(BANALService.LONGITUDE)) {
-                if (getActivity() != null
-                        && ((TrainingApplication) getActivity().getApplication()).isTracking()) {  // only add the received location when we are tracking
-                    addLatLng(intent.getDoubleExtra(BANALService.LATITUDE, 0.0),
-                            intent.getDoubleExtra(BANALService.LONGITUDE, 0.0));
+                if (getActivity() != null) {
+                    getActivity().getApplication();
+                    if (TrainingApplication.isTracking()) {  // only add the received location when we are tracking
+                        addLatLng(intent.getDoubleExtra(BANALService.LATITUDE, 0.0),
+                                intent.getDoubleExtra(BANALService.LONGITUDE, 0.0));
+                    }
                 }
             }
         }
@@ -104,8 +110,8 @@ public class TrackOnMapTrackingFragment
 
         mWorkoutID = ((TrainingApplication) getActivity().getApplication()).getWorkoutID();
 
-        getActivity().registerReceiver(mNewLocationReceiver, mNewLocationFilter);
-        getActivity().registerReceiver(mTrackingStartedReceiver, mTrackingStartedFilter);
+        ContextCompat.registerReceiver(getActivity(), mNewLocationReceiver, mNewLocationFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(getActivity(), mTrackingStartedReceiver, mTrackingStartedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
 
         if (mMap != null && mWorkoutID > 0) {
             showTrackOnMap();
@@ -142,8 +148,8 @@ public class TrackOnMapTrackingFragment
 
         showStarredSegmentsOnMap(SegmentHelper.SegmentType.ALL);
 
-        if (TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)
-                || TrainingApplication.havePermission(Manifest.permission.ACCESS_COARSE_LOCATION)) {
+        if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            || ContextCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             mMap.setMyLocationEnabled(true);
         }
         centerMapOnMyLocation(15, 0);

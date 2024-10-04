@@ -38,7 +38,7 @@ import java.util.TimerTask;
 
 public class ClockDevice extends MyDevice {
     private static final String TAG = "ClockDevice";
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
 
     // protected final IntentFilter mStartTimerFilter = new IntentFilter(BANALService.START_TIMER_INTENT);
     // protected final IntentFilter mStopTimerFilter  = new IntentFilter(BANALService.STOP_TIMER_INTENT);
@@ -57,14 +57,14 @@ public class ClockDevice extends MyDevice {
 
     private Timer timer;
     private boolean timerRunning = false;
-    private DateFormat df = SimpleDateFormat.getTimeInstance();
+    private final DateFormat df = SimpleDateFormat.getTimeInstance();
 
     public ClockDevice(Context context, MySensorManager mySensorManager) {
         super(context, mySensorManager, DeviceType.CLOCK);
         if (DEBUG) Log.i(TAG, "begin of constructor: mLaps=" + mLaps);
 
-        // context.registerReceiver(mStartTimerReceiver, mStartTimerFilter);
-        // context.registerReceiver(mStopTimerReceiver,  mStopTimerFilter);
+        // ContextCompat.registerReceiver(context, mStartTimerReceiver, mStartTimerFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        // ContextCompat.registerReceiver(context, mStopTimerReceiver, mStopTimerFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
 
         // final SimpleDateFormat seconds2StringFormat = new SimpleDateFormat("HH:mm:ss");
         // seconds2StringFormat.getTimeZone().setRawOffset(0);
@@ -180,7 +180,8 @@ public class ClockDevice extends MyDevice {
 
             // send broadcast
             if (DEBUG) Log.d(TAG, "sending new time event broadcast");
-            mContext.sendBroadcast(new Intent(BANALService.NEW_TIME_EVENT_INTENT));
+            mContext.sendBroadcast(new Intent(BANALService.NEW_TIME_EVENT_INTENT)
+                    .setPackage(mContext.getPackageName()));
         }
     }
 
@@ -207,7 +208,7 @@ public class ClockDevice extends MyDevice {
 //            
 //            // send broadcast
 //            if (DEBUG) Log.d(TAG,  "sending new time event broadcast");
-//            mContext.sendBroadcast(new Intent(BANALService.NEW_TIME_EVENT_INTENT));
+//            mContext.sendBroadcast(new Intent(BANALService.NEW_TIME_EVENT_INTENT).setPackage(getPackageName()));
 //        }
 //    };
 

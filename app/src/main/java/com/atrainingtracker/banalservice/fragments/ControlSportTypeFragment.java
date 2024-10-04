@@ -41,7 +41,7 @@ import com.atrainingtracker.banalservice.dialogs.SelectSportTypeDialog;
 
 public class ControlSportTypeFragment extends Fragment {
     private static final String TAG = ControlSportTypeFragment.class.getName();
-    private static final boolean DEBUG = BANALService.DEBUG && false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
 
     private ImageButton mIbRun, mIbBike, mIbOther;
     private TextView mTvRun, mTvBike, mTvOther;
@@ -55,7 +55,7 @@ public class ControlSportTypeFragment extends Fragment {
             updateView();
         }
     };
-    private IntentFilter mUpdateViewFilter = new IntentFilter(BANALService.NEW_DEVICE_FOUND_INTENT);
+    private final IntentFilter mUpdateViewFilter = new IntentFilter(BANALService.NEW_DEVICE_FOUND_INTENT);
 
     // onCreate()
 
@@ -78,7 +78,7 @@ public class ControlSportTypeFragment extends Fragment {
                 }
             });
         } catch (ClassCastException e) {
-            throw new ClassCastException(context.toString() + " must implement GetBanalServiceInterface");
+            throw new ClassCastException(context + " must implement GetBanalServiceInterface");
         }
 
     }
@@ -163,7 +163,7 @@ public class ControlSportTypeFragment extends Fragment {
 
         updateView();
 
-        getActivity().registerReceiver(mUpdateViewReceiver, mUpdateViewFilter);
+        ContextCompat.registerReceiver(getActivity(), mUpdateViewReceiver, mUpdateViewFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     @Override
@@ -183,7 +183,7 @@ public class ControlSportTypeFragment extends Fragment {
     public void updateView() {
         if (DEBUG) Log.d(TAG, "updateView");
 
-        if (!mViewCreated | !isAdded()) {
+        if (!mViewCreated || !isAdded()) {
             return;
         }
 

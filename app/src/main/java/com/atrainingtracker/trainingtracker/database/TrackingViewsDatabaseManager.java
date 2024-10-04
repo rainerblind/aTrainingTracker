@@ -43,7 +43,7 @@ import java.util.TreeMap;
 
 public class TrackingViewsDatabaseManager {
     private static final String TAG = TrackingViewsDatabaseManager.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private static TrackingViewsDatabaseManager cInstance;
     private static TrackingViewsDbHelper cTrackingViewsDbHelper;
     private int mOpenCounter;
@@ -819,7 +819,7 @@ public class TrackingViewsDatabaseManager {
                 + FILTER_CONSTANT + " real)";
 
         private final String TAG = TrackingViewsDbHelper.class.getName();
-        private Context mContext;
+        private final Context mContext;
         private boolean mHavePressureSensor = false;
 
         // Constructor

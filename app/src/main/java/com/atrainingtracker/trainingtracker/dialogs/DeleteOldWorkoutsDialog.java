@@ -28,9 +28,8 @@ import android.text.InputType;
 import android.widget.EditText;
 
 import com.atrainingtracker.R;
-import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
-import com.atrainingtracker.trainingtracker.helpers.DeleteWorkoutTask;
+import com.atrainingtracker.trainingtracker.helpers.DeleteWorkoutThread;
 
 import java.util.List;
 
@@ -40,7 +39,6 @@ import java.util.List;
 
 public class DeleteOldWorkoutsDialog extends DialogFragment {
     public static final String TAG = DeleteOldWorkoutsDialog.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
 
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
@@ -57,10 +55,8 @@ public class DeleteOldWorkoutsDialog extends DialogFragment {
                 try {
                     int daysToKeep = Integer.parseInt(input.getText().toString());
                     List<Long> oldWorkoutIds = WorkoutSummariesDatabaseManager.getOldWorkouts(daysToKeep);
-
-                    (new DeleteWorkoutTask(getContext())).execute(oldWorkoutIds.toArray(new Long[oldWorkoutIds.size()]));
+                    new DeleteWorkoutThread(getContext(), oldWorkoutIds.toArray(new Long[oldWorkoutIds.size()])).start();
                 } catch (Exception e) {
-
                 }
             }
         });

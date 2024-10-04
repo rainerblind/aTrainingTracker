@@ -40,7 +40,7 @@ import com.atrainingtracker.trainingtracker.MyHelper;
  */
 public class SetCalibrationFactorDialogFragment extends DialogFragment {
     public static final String TAG = "SetCalibrationFactorDialogFragment";
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     private static final String CALIBRATION_FACTOR = "CALIBRATION_FACTOR";
     private static final String TITLE_NAME = "TITLE_NAME";
     private static final String FIELD_NAME = "FIELD_NAME";
@@ -52,7 +52,7 @@ public class SetCalibrationFactorDialogFragment extends DialogFragment {
     private EditText etMeasured;
     private EditText etCorrect;
     private NewCalibrationFactorListener mNewCalibrationFactorListener = null;
-    private TextWatcher calibrationDistancesChangedWatcher = new TextWatcher() {
+    private final TextWatcher calibrationDistancesChangedWatcher = new TextWatcher() {
 
         @Override
         public void afterTextChanged(Editable s) {
@@ -105,7 +105,7 @@ public class SetCalibrationFactorDialogFragment extends DialogFragment {
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
 
-        builder.setTitle(getString(R.string.Set_foo, mTitleName));
+        builder.setTitle(getString(R.string.Set_calibration, mTitleName));
 
         // Get the layout inflater
         LayoutInflater inflater = getActivity().getLayoutInflater();

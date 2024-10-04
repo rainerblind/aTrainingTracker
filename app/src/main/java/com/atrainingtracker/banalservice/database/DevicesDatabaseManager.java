@@ -49,7 +49,7 @@ import java.util.Set;
 
 public class DevicesDatabaseManager {
     private static final String TAG = DevicesDatabaseManager.class.getName();
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     private static DevicesDatabaseManager cInstance;
     private static DevicesDbHelper cDevicesDbHelper;
     private int mOpenCounter;
@@ -229,7 +229,7 @@ public class DevicesDatabaseManager {
                         case DISTANCE_m:
                         case DISTANCE_m_LAP:
                             if (!(BikePowerSensorsHelper.isWheelDistanceDataSupported(sensorFlags)
-                                    | BikePowerSensorsHelper.isWheelRevolutionDataSupported(sensorFlags))) {
+                                    || BikePowerSensorsHelper.isWheelRevolutionDataSupported(sensorFlags))) {
                                 continue;
                             }
                             break;
@@ -237,7 +237,7 @@ public class DevicesDatabaseManager {
                         case PACE_spm:
                         case SPEED_mps:
                             if (!(BikePowerSensorsHelper.isWheelSpeedDataSupported(sensorFlags)
-                                    | BikePowerSensorsHelper.isWheelRevolutionDataSupported(sensorFlags))) {
+                                    || BikePowerSensorsHelper.isWheelRevolutionDataSupported(sensorFlags))) {
                                 continue;
                             }
                             break;
@@ -328,7 +328,7 @@ public class DevicesDatabaseManager {
 
                 result = db.insert(DevicesDbHelper.DEVICES, null, values);
             } catch (SQLException e) {
-                Log.e(TAG, "Error while writing" + e.toString());
+                Log.e(TAG, "Error while writing" + e);
                 result = -2;
             }
         }
@@ -384,7 +384,7 @@ public class DevicesDatabaseManager {
 
                 result = db.insert(DevicesDbHelper.DEVICES, null, values);
             } catch (SQLException e) {
-                Log.e(TAG, "Error while writing" + e.toString());
+                Log.e(TAG, "Error while writing" + e);
                 result = -2;
             }
         }
@@ -726,7 +726,7 @@ public class DevicesDatabaseManager {
         // static final int DB_VERSION = 6;    // upgraded at 30.01.2018 to replace storing of BT features (for Bike Power) to all Bike Power Devices
         static final int DB_VERSION = 7;    // upgraded at 20.03.2018: added the location devices to this database
         private static final String TAG = "DeviceDbHelper";
-        private static final boolean DEBUG = BANALService.DEBUG & false;
+        private static final boolean DEBUG = BANALService.getDebug(false);
         private static final String DEVICES_V3 = "Devices";               // in version 3, the table was simply called Devices
         @Deprecated
         private static final String TABLE_BT_SPECIFIC = "BTSpecific";
@@ -770,7 +770,7 @@ public class DevicesDatabaseManager {
                 + CALIBRATION_FACTOR + " real,"
                 + LAST_ACTIVE + " text,"
                 + LAST_BATTERY_STATUS + " int)";       // currently ANT+ specific, change to battery percentage as in bluetooth
-        private Context mContext;
+        private final Context mContext;
 
         // Constructor
         public DevicesDbHelper(Context context) {

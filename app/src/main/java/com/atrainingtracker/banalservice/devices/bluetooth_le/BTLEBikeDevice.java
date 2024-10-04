@@ -18,11 +18,9 @@
 
 package com.atrainingtracker.banalservice.devices.bluetooth_le;
 
-import android.annotation.TargetApi;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.content.Context;
-import android.os.Build;
 import android.util.Log;
 
 import com.atrainingtracker.banalservice.BANALService;
@@ -32,10 +30,9 @@ import com.atrainingtracker.banalservice.sensor.MySensor;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 
-@TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
 abstract public class BTLEBikeDevice extends MyBTLEDevice {
     protected static final int MAX_IDENTICAL = 4;
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
 
     // some variables to calc the speed, distance, and cadence
     protected boolean mLastWheelRevolutionsValid = false;
@@ -52,7 +49,7 @@ abstract public class BTLEBikeDevice extends MyBTLEDevice {
     protected MySensor<Double> mPaceSensor;
     protected MyDoubleAccumulatorSensor mDistanceSensor;
     protected MyDoubleAccumulatorSensor mLapDistanceSensor;
-    private String TAG = "BTLEBikeDevice";
+    private final String TAG = "BTLEBikeDevice";
 
 
     /**

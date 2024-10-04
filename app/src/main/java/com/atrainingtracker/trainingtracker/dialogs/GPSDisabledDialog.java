@@ -35,7 +35,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 
 public class GPSDisabledDialog extends DialogFragment {
     public static final String TAG = GPSDisabledDialog.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {

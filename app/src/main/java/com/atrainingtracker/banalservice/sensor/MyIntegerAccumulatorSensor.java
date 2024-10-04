@@ -25,7 +25,7 @@ import com.atrainingtracker.banalservice.devices.MyDevice;
 
 public class MyIntegerAccumulatorSensor extends MyAccumulatorSensor<Integer> {
     private static final String TAG = "MyLongAccumulatorSensor";
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
 
     private Integer mZeroValue = 0;
 

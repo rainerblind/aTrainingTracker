@@ -69,7 +69,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
             // + C_ID          + " INTEGER PRIMARY KEY AUTOINCREMENT, "
             + EQUIPMENT_ID + " int,"
             + ANT_DEVICE_ID + " int)";
-    private Context mContext;
+    private final Context mContext;
 
     // Constructor
     public EquipmentDbHelper(Context context) {
@@ -87,7 +87,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     protected List<String> getLinkedEquipment(List<Integer> antDeviceIds) {
         if (DEBUG) Log.d(TAG, "getLinkedEquipment with antDeviceList");
 
-        if (antDeviceIds == null | antDeviceIds.size() == 0) {
+        if (antDeviceIds == null || antDeviceIds.size() == 0) {
             return new ArrayList<String>();
         }
 
@@ -247,7 +247,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     }
 
     private int getEquipmentId(SQLiteDatabase db, String equipmentName) {
-        equipmentName.equals("foo");  // throw an exception when equipmentName is null
+        equipmentName.equals("");  // throw an exception when equipmentName is null
 
         int equipmentId = -1;
 
