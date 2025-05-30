@@ -25,6 +25,11 @@ import android.os.Bundle;
 import com.google.android.material.navigation.NavigationView;
 
 import androidx.activity.OnBackPressedCallback;
+import androidx.annotation.NonNull;
+import androidx.core.graphics.Insets;
+import androidx.core.view.OnApplyWindowInsetsListener;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
 import androidx.core.view.GravityCompat;
@@ -35,6 +40,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import android.util.Log;
 import android.view.MenuItem;
+import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 
 import com.atrainingtracker.R;
@@ -120,6 +127,21 @@ public class SegmentDetailsActivity extends AppCompatActivity
         if (DEBUG) Log.i(TAG, "now, we select the main fragment");
         // now, create and show the main fragment
         onNavigationItemSelected(mNavigationView.getMenu().findItem(mSelectedFragmentId));
+
+        ViewCompat.setOnApplyWindowInsetsListener(
+                mDrawerLayout,
+                new OnApplyWindowInsetsListener() {
+                    @NonNull
+                    @Override
+                    public WindowInsetsCompat onApplyWindowInsets(
+                            @NonNull View v, @NonNull WindowInsetsCompat windowInsets) {
+                        Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+                        v.setPadding(insets.left, 0, insets.right, insets.bottom);
+                        ViewGroup.MarginLayoutParams mlp = (ViewGroup.MarginLayoutParams) v.getLayoutParams();
+                        mlp.topMargin = insets.top;
+                        return WindowInsetsCompat.CONSUMED;
+                    }
+                });
 
         getOnBackPressedDispatcher().addCallback(this,
                 new OnBackPressedCallback(true) {

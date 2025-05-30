@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.activities;
 import android.Manifest;
 
 import androidx.activity.OnBackPressedCallback;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 
 import android.annotation.SuppressLint;
@@ -45,6 +46,10 @@ import com.atrainingtracker.trainingtracker.exporter.ExportWorkoutWorker;
 import com.google.android.material.navigation.NavigationView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.Insets;
+import androidx.core.view.OnApplyWindowInsetsListener;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
 import androidx.core.view.GravityCompat;
@@ -61,6 +66,8 @@ import androidx.work.WorkManager;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.MenuItem;
+import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -321,6 +328,20 @@ public class MainActivityWithNavigation
                 dialog.show();
             }
         }
+        ViewCompat.setOnApplyWindowInsetsListener(
+                mDrawerLayout,
+                new OnApplyWindowInsetsListener() {
+                    @NonNull
+                    @Override
+                    public WindowInsetsCompat onApplyWindowInsets(
+                            @NonNull View v, @NonNull WindowInsetsCompat windowInsets) {
+                        Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+                        v.setPadding(insets.left, 0, insets.right, insets.bottom);
+                        ViewGroup.MarginLayoutParams mlp = (ViewGroup.MarginLayoutParams) v.getLayoutParams();
+                        mlp.topMargin = insets.top;
+                        return WindowInsetsCompat.CONSUMED;
+                    }
+                });
 
         getOnBackPressedDispatcher().addCallback(this,
                 new OnBackPressedCallback(true) {
