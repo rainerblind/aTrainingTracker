@@ -139,26 +139,11 @@ public class RemoteDevicesFragmentTabbedContainer extends Fragment {
             mShowingDialog = true;
             AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(getContext());
             dialogBuilder.setIcon(mProtocol.getIconId());
-            requireActivity().getOnBackPressedDispatcher().addCallback(this,
-                    new OnBackPressedCallback(true) {
-                        @Override
-                        public void handleOnBackPressed() {
-                            if (mShowingDialog && isEnabled()) {
-                                cancelDialog(dialogBuilder.create());
-                                requireActivity().finish();
-                            }
-                        }
-                    }
-            );
-
-            dialogBuilder.setCancelable(false);
             dialogBuilder.setTitle(R.string.select_device_type);
 
-            dialogBuilder.setNegativeButton(R.string.Cancel, new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    cancelDialog(dialog);
-                }
+            dialogBuilder.setNegativeButton(R.string.Cancel, (dialog, which) -> {
+                dialog.dismiss();
+                mShowingDialog = false;
             });
 
             final ArrayList<DeviceType> deviceTypeList = new ArrayList<>(Arrays.asList(DeviceType.getRemoteDeviceTypes(mProtocol)));
@@ -226,15 +211,6 @@ public class RemoteDevicesFragmentTabbedContainer extends Fragment {
         }
 
         return false;
-    }
-
-
-    private void cancelDialog(DialogInterface dialog) {
-        dialog.dismiss();
-        if (getActivity() != null) {
-            getActivity().onBackPressed();
-        }
-        mShowingDialog = false;
     }
 
     protected void setSectionsPagerAdapter() {

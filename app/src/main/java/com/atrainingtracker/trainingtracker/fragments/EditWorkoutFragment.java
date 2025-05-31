@@ -381,7 +381,7 @@ public class EditWorkoutFragment extends Fragment {
                     getActivity().setResult(Activity.RESULT_CANCELED, resultIntent);
                 }
 
-                getActivity().onBackPressed();
+                getActivity().getOnBackPressedDispatcher().onBackPressed();
             }
         });
 
