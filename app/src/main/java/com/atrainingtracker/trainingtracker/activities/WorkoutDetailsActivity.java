@@ -27,7 +27,12 @@ import android.os.Bundle;
 import com.google.android.material.navigation.NavigationView;
 
 import androidx.activity.OnBackPressedCallback;
+import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.Insets;
+import androidx.core.view.OnApplyWindowInsetsListener;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
 import androidx.core.view.GravityCompat;
@@ -39,6 +44,7 @@ import androidx.appcompat.widget.Toolbar;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 
 import com.atrainingtracker.R;
@@ -141,6 +147,22 @@ public class WorkoutDetailsActivity extends AppCompatActivity
             // now, calc the extrema values in the background
             (new CalcExtremaValuesThread(this, findViewById(R.id.tvProgressMessage), mWorkoutID)).start();
         }
+        // knappar beskärda
+
+        ViewCompat.setOnApplyWindowInsetsListener(
+                mDrawerLayout,
+                new OnApplyWindowInsetsListener() {
+                    @NonNull
+                    @Override
+                    public WindowInsetsCompat onApplyWindowInsets(
+                            @NonNull View v, @NonNull WindowInsetsCompat windowInsets) {
+                        Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+                        v.setPadding(insets.left, 0, insets.right, insets.bottom);
+                        ViewGroup.MarginLayoutParams mlp = (ViewGroup.MarginLayoutParams) v.getLayoutParams();
+                        mlp.topMargin = insets.top;
+                        return windowInsets;
+                    }
+                });
 
         getOnBackPressedDispatcher().addCallback(this,
                 new OnBackPressedCallback(true) {

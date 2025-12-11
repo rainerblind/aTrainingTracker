@@ -133,6 +133,7 @@ public class LapSummaryDialog extends DialogFragment {
             }
         };
 
+        // todo ondismiss()
         alert.setOnDismissListener(new DialogInterface.OnDismissListener() {
             @Override
             public void onDismiss(DialogInterface dialog) {

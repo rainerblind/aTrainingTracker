@@ -19,6 +19,9 @@
 package com.atrainingtracker.trainingtracker.fragments;
 
 import android.app.Activity;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import android.app.Dialog;
 import android.content.BroadcastReceiver;
@@ -32,6 +35,10 @@ import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.Insets;
+import androidx.core.view.OnApplyWindowInsetsListener;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 import androidx.work.OneTimeWorkRequest;
 import androidx.work.WorkManager;
@@ -374,7 +381,7 @@ public class EditWorkoutFragment extends Fragment {
                     getActivity().setResult(Activity.RESULT_CANCELED, resultIntent);
                 }
 
-                getActivity().onBackPressed();
+                getActivity().getOnBackPressedDispatcher().onBackPressed();
             }
         });
 
@@ -396,15 +403,42 @@ public class EditWorkoutFragment extends Fragment {
     }
 
     @Override
-    public void onActivityCreated(Bundle savedInstanceState) {
-        super.onActivityCreated(savedInstanceState);
-        if (DEBUG) Log.d(TAG, "onActivityCreated");
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        if (DEBUG) Log.d(TAG, "onViewCreated");
 
         // register receivers
         ContextCompat.registerReceiver(getActivity(), mFinishedCalculatingExtremaValueReceiver, mFinishedCalculatingExtremaValueFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(getActivity(), mFinishedGuessingCommuteAndTrainerReceiver, mFinishedGuessingCommuteAndTrainerFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(getActivity(), mFinishedCalculatingFancyNameReceiver, mFinishedCalculatingFancyNameFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ViewCompat.setOnApplyWindowInsetsListener(view, new OnApplyWindowInsetsListener() {
+            @NonNull
+            @Override
+            public WindowInsetsCompat onApplyWindowInsets(@NonNull View v, @NonNull WindowInsetsCompat windowInsets) {
+                Insets navBarInsets = windowInsets.getInsets(WindowInsetsCompat.Type.navigationBars());
+                Insets imeInsets = windowInsets.getInsets(WindowInsetsCompat.Type.ime());
+                int bottomPadding = navBarInsets.bottom + imeInsets.bottom;
+                v.setPadding(
+                        v.getPaddingLeft(),
+                        v.getPaddingTop(),
+                        v.getPaddingRight(),
+                        bottomPadding
+                );
+                Insets systemGestureInsets = windowInsets.getInsets(WindowInsetsCompat.Type.systemGestures());
+                return WindowInsetsCompat.CONSUMED;
+            }
+        });
 
+        // Request initial insets apply in case the listener was set up after the first dispatch
+        // (though with setOnApplyWindowInsetsListener, it usually gets called immediately if insets are available)
+        ViewCompat.requestApplyInsets(view);
+
+        // register receivers (moved from onActivityCreated for modern Fragment lifecycle)
+        if (getActivity() != null) {
+            ContextCompat.registerReceiver(getActivity(), mFinishedCalculatingExtremaValueReceiver, mFinishedCalculatingExtremaValueFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+            ContextCompat.registerReceiver(getActivity(), mFinishedGuessingCommuteAndTrainerReceiver, mFinishedGuessingCommuteAndTrainerFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+            ContextCompat.registerReceiver(getActivity(), mFinishedCalculatingFancyNameReceiver, mFinishedCalculatingFancyNameFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        }
 
         // fill the views
         // first, remove all  TODO: still necessary?
