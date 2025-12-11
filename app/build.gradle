@@ -6,13 +6,18 @@ def getGitHash = providers.exec {
 
 android {
     // Travis update separately
-    compileSdkVersion = 34
-    buildToolsVersion = '35.0.0'
+    compileSdkVersion = 35
+    buildToolsVersion = '36.0.0'
     namespace "com.atrainingtracker"
+
+    compileOptions {
+        sourceCompatibility JavaVersion.toVersion("17")
+        targetCompatibility JavaVersion.toVersion("17")
+    }
 
     defaultConfig {
         minSdkVersion 26 // Android 8
-        targetSdkVersion 34 // Android 14
+        targetSdkVersion 35 // Android 15
         multiDexEnabled true
         versionName "4.2.99.1"
         versionCode 217
@@ -73,14 +78,14 @@ dependencies {
 
     implementation 'androidx.preference:preference:1.2.1'
     implementation 'androidx.appcompat:appcompat:1.7.0'
-    implementation 'androidx.work:work-runtime:2.9.0'
-    implementation 'androidx.activity:activity:1.9.1'
+    implementation 'androidx.work:work-runtime:2.10.1'
+    implementation 'androidx.activity:activity:1.10.1'
 
     implementation 'com.google.android.material:material:1.12.0'
-    implementation 'com.google.android.gms:play-services-maps:19.0.0'
+    implementation 'com.google.android.gms:play-services-maps:19.2.0'
     implementation 'com.google.android.gms:play-services-location:21.3.0'
 
-    implementation platform('com.google.firebase:firebase-bom:33.1.2')
+    implementation platform('com.google.firebase:firebase-bom:33.14.0')
     implementation 'com.google.firebase:firebase-analytics' // No version needed with BOM
 
     implementation 'com.dropbox.core:dropbox-core-sdk:7.0.0'
