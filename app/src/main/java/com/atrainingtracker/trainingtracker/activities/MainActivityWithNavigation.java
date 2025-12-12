@@ -708,7 +708,7 @@ public class MainActivityWithNavigation
                 break;
 
             case R.id.drawer_privacy_policy:
-                Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://www.atrainingtracker.com/privacy.html"));
+                Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.url_privacy)));
                 startActivity(browserIntent);
                 return true;
 

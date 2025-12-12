@@ -894,4 +894,6 @@
     <string name="location_permission_text_pre_Android10">Location permission required in system settings</string>
     <string name="location_permission_text_Android12">The main purpose of this app is to track your training sessions, even when the app is not directly visible.  Please give the app the permission to get your location (precise).\n\nFurthermore, in oder to use Bluetooth LE devices, the permission \" Nearby devices\" is required.</string>
     <string name="Request_permission_text">Allow permission by clicking \"OK\".</string>
+
+    <string name="url_privacy">https://github.com/rainerblind/aTrainingTracker/blob/develop/privacy.md</string> <!-- TODO: replace develop with master -->
 </resources>
