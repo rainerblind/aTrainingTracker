@@ -272,11 +272,10 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
             case R.id.gpxWrite:
                 mShowWorkoutDetailsListener.exportWorkout(info.id, FileFormat.GPX);
                 return true;
-            //case R.id.stravaUpload:
-            //    if (DEBUG) Log.i(TAG, "ignoring strava upload");
-            //    // if (DEBUG) Log.i(TAG, "uploading to Strava selected");
-            //    // mShowWorkoutDetailsListener.exportWorkout(info.id, FileFormat.STRAVA);
-            //    return true;
+            case R.id.stravaUpload:
+                if (DEBUG) Log.i(TAG, "uploading to Strava selected");
+                mShowWorkoutDetailsListener.exportWorkout(info.id, FileFormat.STRAVA);
+                return true;
             case R.id.runkeeperUpload:
                 if (DEBUG) Log.i(TAG, "uploading to RunKeeper selected");
                 mShowWorkoutDetailsListener.exportWorkout(info.id, FileFormat.RUNKEEPER);
