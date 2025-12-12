@@ -702,7 +702,7 @@
     <string name="paired_devices">paired devices</string>
     <string name="known_devices">known devices</string>
     <string name="enable_bluetooth">Enable</string>
-    <string name="bluetooth_disabled_on_device">Bluetooth is currently enabled on this device.  In order to pair a Bluetooth device, you have to enable Bluetooth.  \nDo you want to enable Bluetooth?</string>
+    <string name="bluetooth_disabled_on_device">Bluetooth is currently disabled on this device.  In order to pair a Bluetooth device, you have to enable Bluetooth.  \nDo you want to enable Bluetooth?</string>
     <string name="LocationsActivityLabel">Locations</string>
     <string name="getting_start_locations">Looking for start locations.</string>
     <string name="GPS" translatable="false">GPS</string>
