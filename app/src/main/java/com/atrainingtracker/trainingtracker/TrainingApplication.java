@@ -799,6 +799,7 @@ public class TrainingApplication extends Application {
 
     public static boolean uploadToCommunity(FileFormat fileFormat) {
         switch (fileFormat) {
+            case STRAVA:
                 return uploadToStrava();
             case RUNKEEPER:
                 return uploadToRunKeeper();
