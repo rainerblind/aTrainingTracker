@@ -31,11 +31,9 @@
     <item
         android:id="@+id/csvWrite"
         android:title="@string/csvWrite" />
-    <!--
     <item
         android:id="@+id/stravaUpload"
         android:title="@string/stravaUpload" />
-        -->
     <item
         android:id="@+id/runkeeperUpload"
         android:title="@string/runkeeperUpload" />

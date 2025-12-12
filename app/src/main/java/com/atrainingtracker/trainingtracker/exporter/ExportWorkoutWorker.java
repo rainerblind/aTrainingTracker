@@ -112,9 +112,9 @@ public class ExportWorkoutWorker extends Worker {
                                             mContext.getApplicationContext().getPackageName() + ".com.atrainingtracker.file.provider", emailFile));
                                 }
                                 break;
-                            // case STRAVA:
-                            //    exporter = new TCXFileExporter(mContext);
-                            //    break;
+                            case STRAVA:
+                                exporter = new TCXFileExporter(mContext);
+                                break;
                             case RUNKEEPER:
                                 exporter = new RunkeeperFileExporter(mContext);
                                 break;
@@ -134,9 +134,9 @@ public class ExportWorkoutWorker extends Worker {
                     case COMMUNITY:
                         if (MyHelper.isOnline()) {
                             switch (exportInfo.getFileFormat()) {
-                                //case STRAVA:
-                                //    exporter = new StravaUploader(mContext);
-                                //    break;
+                                case STRAVA:
+                                    exporter = new StravaUploader(mContext);
+                                    break;
                                 case RUNKEEPER:
                                     exporter = new RunkeeperUploader(mContext);
                                     break;
