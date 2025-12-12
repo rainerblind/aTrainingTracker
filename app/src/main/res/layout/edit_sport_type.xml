@@ -84,7 +84,7 @@
             android:layout_columnSpan="3"
             android:layout_gravity="center_horizontal"
             android:text="@string/OnlineCommunities" />
-<!--
+
         <TextView
             android:id="@+id/est_tvStrava"
             app:drawableLeftCompat="@drawable/logo_square_strava"
@@ -95,7 +95,6 @@
             android:id="@+id/est_sStrava"
             android:layout_columnSpan="2"
             android:entries="@array/Strava_Sport_Types_UI_Names" />
--->
 
         <TextView
             android:id="@+id/est_tvRunkeeper"
