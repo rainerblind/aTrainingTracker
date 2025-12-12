@@ -135,7 +135,7 @@ public class SegmentLeaderboardCursorAdapter extends CursorAdapter {
 
             case THIS_ATHLETE:
             case OTHER_ATHLETE:
-                Picasso.with(context).load(cursor.getString(cursor.getColumnIndex(Segments.ATHLETE_PROFILE_URL))).into(viewHolder.ivAthleteProfile);
+                // Picasso.with(context).load(cursor.getString(cursor.getColumnIndex(Segments.ATHLETE_PROFILE_URL))).into(viewHolder.ivAthleteProfile);
 
                 String rank = MyHelper.formatRank(cursor.getInt(cursor.getColumnIndex(Segments.RANK)));
                 viewHolder.tvAthleteName.setText(rank + ": " + cursor.getString(cursor.getColumnIndex(Segments.ATHLETE_NAME)));
