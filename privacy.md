@@ -21,7 +21,7 @@ The app does use third party services that may collect information used to ident
 Link to privacy policy of third party service providers used by the app
 
 * [Google Play Services](https://policies.google.com/privacy)
-* [Firebase Analytics](https://firebase.google.com/policies/analytics/)
+* [Google Analytics](https://www.google.com/analytics/terms//)
 * [Strava](https://www.strava.com/legal/privacy)
 * [Runkeeper](https://runkeeper.com/privacypolicy)
 * [TrainingPeaks](https://www.trainingpeaks.com/privacy/)
