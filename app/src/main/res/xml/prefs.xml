@@ -207,7 +207,7 @@
                     android:key="defaultToPrivate"
                     android:summary="@string/prefsDefaultToPrivateSummary"
                     android:title="@string/prefsDefaultToPrivateTitle" />
-<!--
+
                 <PreferenceScreen
                     android:icon="@drawable/logo_square_strava"
                     android:key="psUploadToStrava"
@@ -255,7 +255,6 @@
                             android:title="@string/uploadCadence" />
                     </PreferenceCategory>
                 </PreferenceScreen>
--->
 
                 <PreferenceScreen
                     android:icon="@drawable/logo_square_runkeeper"

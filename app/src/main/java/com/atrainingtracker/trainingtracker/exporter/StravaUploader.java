@@ -104,17 +104,14 @@ public class StravaUploader extends BaseExporter {
     protected ExportResult doExport(ExportInfo exportInfo)
             throws IOException, JSONException, InterruptedException {
         if (DEBUG) Log.d(TAG, "doExport: " + exportInfo.getFileBaseName() + " ignoring as success, upload is broken.");
-        return new ExportResult(true, "ignoring Strava uploade");
 
-        /*
         if (ExportStatus.FINISHED_SUCCESS == cExportManager.getExportStatus(exportInfo)) {
             if (DEBUG) Log.d(TAG, "workout already successfully uploaded");
             return doUpdate(exportInfo);
             // return new ExportResult(false, "workout already successfully uploaded");  // TODO here, we should not change the answer?
         }
 
-        String filename = exportInfo.getFileBaseName() + FileFormat.STRAVA.getFileEnding();
-        File file = new File(getDir(mContext, FileFormat.STRAVA.getDirName()), filename);
+        File file = new File(getBaseDirFile(mContext), exportInfo.getShortPath());
 
         MultipartEntityBuilder multipartEntityBuilder = MultipartEntityBuilder.create();
         // multipartEntityBuilder.addTextBody(ACCESS_TOKEN, TrainingApplication.getStravaToken());
@@ -124,7 +121,7 @@ public class StravaUploader extends BaseExporter {
         // Maybe, this should be check again.
 
         // multipartEntityBuilder.addBinaryBody("file", file);
-        multipartEntityBuilder.addBinaryBody(FILE, file, ContentType.MULTIPART_FORM_DATA, filename);
+        multipartEntityBuilder.addBinaryBody(FILE, file, ContentType.MULTIPART_FORM_DATA, file.getName());
 
         HttpPost httpPost = new HttpPost(URL_STRAVA_UPLOAD);
         httpPost.addHeader("Authorization", "Bearer " + StravaHelper.getRefreshedAccessToken());
@@ -247,7 +244,6 @@ public class StravaUploader extends BaseExporter {
             if (DEBUG) Log.d(TAG, "strange error: neither ID, nor ERROR!");
             return new ExportResult(false, "Something strange went wrong");
         }
-*/
     }
 
     protected ExportResult doUpdate(ExportInfo exportInfo) {

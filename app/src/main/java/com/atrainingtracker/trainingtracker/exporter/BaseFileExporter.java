@@ -87,14 +87,14 @@ public abstract class BaseFileExporter extends BaseExporter {
 
         // selective upload
         if (exportInfo.getExportType() == ExportType.FILE) {
-            /* if (exportInfo.getFileFormat() == FileFormat.STRAVA) {
+            if (exportInfo.getFileFormat() == FileFormat.STRAVA) {
                 // Log.i(TAG, "selective Strava settings");
                 haveGeo = haveGeo & TrainingApplication.uploadStravaGPS();
                 haveAltitude = haveAltitude & TrainingApplication.uploadStravaAltitude();
                 haveHR = haveHR & TrainingApplication.uploadStravaHR();
                 havePower = havePower & TrainingApplication.uploadStravaPower();
                 haveCadence = haveCadence & TrainingApplication.uploadStravaCadence();
-            } else */ if (exportInfo.getFileFormat() == FileFormat.RUNKEEPER) {
+            } else if (exportInfo.getFileFormat() == FileFormat.RUNKEEPER) {
                 haveGeo = haveGeo & TrainingApplication.uploadRunkeeperGPS();
                 haveHR = haveHR & TrainingApplication.uploadRunkeeperHR();
             } else if (exportInfo.getFileFormat() == FileFormat.TRAINING_PEAKS) {
