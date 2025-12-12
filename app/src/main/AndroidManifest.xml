@@ -7,18 +7,17 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="com.dsi.ant.permission.ANT" />
     <uses-permission android:name="com.dsi.ant.permission.ANT_ADMIN" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" android:minSdkVersion="33"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30"/>
     <!-- uses-permission android:name="android.permission.BLUETOOTH_ADMIN" /-->
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
-        android:usesPermissionFlags="neverForLocation" android:minSdkVersion="31" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" android:minSdkVersion="28"/>
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" android:minSdkVersion="34"/>
-    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" android:minSdkVersion="29"/>
-    <!-- <uses-permission android:name="android.permission.VIBRATE" /> -->
+        android:usesPermissionFlags="neverForLocation"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>
+    <!-- <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" android:minSdkVersion="29"/> Not necessary since we track within a background service, which is visible by a notification-->
     <uses-feature android:name="android.hardware.location.gps"
         android:required="true" />
 

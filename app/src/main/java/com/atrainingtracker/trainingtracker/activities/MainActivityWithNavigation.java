@@ -281,7 +281,7 @@ public class MainActivityWithNavigation
         }
 
         // getPermissions
-        checkPermissions(true);
+        getPermissions(true);
 
         // check ANT+ installation
         if (TrainingApplication.checkANTInstallation() && BANALService.isANTProperlyInstalled(this)) {
@@ -366,9 +366,9 @@ public class MainActivityWithNavigation
         requiredPerms.add(Manifest.permission.ACCESS_FINE_LOCATION);
         requiredPerms.add(Manifest.permission.ACCESS_COARSE_LOCATION);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            requiredPerms.add(Manifest.permission.ACCESS_BACKGROUND_LOCATION);
-        }
+        // if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        //    requiredPerms.add(Manifest.permission.ACCESS_BACKGROUND_LOCATION);
+        //}
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S /* Android12, sdk31*/
                 && (getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)
@@ -388,10 +388,8 @@ public class MainActivityWithNavigation
      * Check that required permissions are allowed
      * Snippet borrowed from RunnerUp
      * @param popup
-     * @return if permissions are required
      */
-    private boolean checkPermissions(boolean popup) {
-        boolean missingEssentialPermission = false;
+    private void getPermissions(boolean popup) {
         boolean missingAnyPermission = false;
         List<String> requiredPerms = getPermissions();
         List<String> requestPerms = new ArrayList<>();
@@ -399,10 +397,6 @@ public class MainActivityWithNavigation
         for (final String perm : requiredPerms) {
             if (ContextCompat.checkSelfPermission(this, perm) != PackageManager.PERMISSION_GRANTED) {
                 missingAnyPermission = true;
-                // Filter non essential permissions for result
-                boolean nonEssential = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
-                        && perm.equals(Manifest.permission.POST_NOTIFICATIONS));
-                missingEssentialPermission = missingEssentialPermission || !nonEssential;
                 if (ActivityCompat.shouldShowRequestPermissionRationale(this, perm)) {
                     // A denied permission, show motivation in a popup
                     String s = "Permission " + perm + " is explicitly denied";
@@ -417,16 +411,16 @@ public class MainActivityWithNavigation
             final String[] permissions = new String[requestPerms.size()];
             requestPerms.toArray(permissions);
 
-            if (popup && missingEssentialPermission || !requestPerms.isEmpty()) {
+            if (popup || !requestPerms.isEmpty()) {
                 // Essential or requestable permissions missing
                 String baseMessage = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-                        ? getString(R.string.GPS_permission_text_Android12)
+                        ? getString(R.string.location_permission_text_Android12)
                         : Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
-                        ? getString(R.string.GPS_permission_text)
-                        : getString(R.string.GPS_permission_text_pre_Android10);
+                        ? getString(R.string.location_permission_text)
+                        : getString(R.string.location_permission_text_pre_Android10);
 
                 AlertDialog.Builder builder = new AlertDialog.Builder(this)
-                        .setTitle(R.string.GPS_permission_required)
+                        .setTitle(R.string.location_permission_required)
                         .setNegativeButton(R.string.Cancel, (dialog, which) -> dialog.dismiss());
                 if (!requestPerms.isEmpty()) {
                     // Let Android request the permissions
@@ -445,10 +439,6 @@ public class MainActivityWithNavigation
                 builder.show();
             }
         }
-
-        // No check for battery optimizations
-
-        return missingEssentialPermission;
     }
 
     @SuppressLint("SourceLockedOrientationActivity")
