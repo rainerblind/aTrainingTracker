@@ -40,6 +40,7 @@ import androidx.core.content.ContextCompat;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.atrainingtracker.BuildConfig;
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.BSportType;
@@ -161,8 +162,8 @@ public class TrainingApplication extends Application {
     public static final float MIN_DISTANCE_BETWEEN_START_AND_STOP = 100;
     public static final double DISTANCE_TO_MAX_THRESHOLD_FOR_TRAINER = 200;
     public static final double DISTANCE_TO_MAX_RATIO_FOR_COMMUTE = Math.PI / 2; // probably the best value ;-)
-    protected final static String DROPBOX_APP_KEY = "iknmdmr31sf64r0";
-    protected final static String DROPBOX_APP_SECRET = "w7jkk5ri8sl7sd7";
+    protected final static String DROPBOX_APP_KEY = BuildConfig.DROPBOX_APP_KEY;
+    protected final static String DROPBOX_APP_SECRET = BuildConfig.DROPBOX_APP_SECRET;
     protected static final String SP_DROPBOX_TOKEN = "dropboxToken";
     private static final String TAG = "TrainingApplication";
     private static final String SP_PLAY_SERVICE_INSTALLATION_TRIES = "playServiceInstallationTries";
