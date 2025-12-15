@@ -1,4 +1,9 @@
-apply plugin: 'com.android.application'
+plugins {
+    id 'com.android.application'
+    id 'com.google.gms.google-services'
+    id 'com.google.firebase.crashlytics'
+    id 'com.google.android.libraries.mapsplatform.secrets-gradle-plugin'
+}
 
 def getGitHash = providers.exec {
     commandLine('git', 'rev-parse', '--short', 'HEAD')
@@ -8,19 +13,19 @@ android {
     // Travis update separately
     compileSdkVersion = 36
     buildToolsVersion = '36.0.0'
-    namespace "com.atrainingtracker"
+    namespace = "com.atrainingtracker"
 
     compileOptions {
-        sourceCompatibility JavaVersion.toVersion("17")
-        targetCompatibility JavaVersion.toVersion("17")
+        sourceCompatibility = JavaVersion.toVersion("17")
+        targetCompatibility = JavaVersion.toVersion("17")
     }
 
     defaultConfig {
         minSdkVersion 26 // Android 8
         targetSdkVersion 35 // Android 15
-        multiDexEnabled true
-        versionName "4.2.99.1"
-        versionCode 217
+        multiDexEnabled = true
+        versionName = "4.2.99.1"
+        versionCode = 217
     }
 
     signingConfigs {
@@ -31,19 +36,24 @@ android {
         }
     }
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     buildTypes {
         debug {
             // Separate the debug build
-            applicationIdSuffix ".debug"
-            versionNameSuffix "-${getGitHash}"
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-${getGitHash}"
+            debuggable = true
         }
         release {
             applicationIdSuffix ""
 
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard.txt'
-            signingConfig signingConfigs.release
-            debuggable false
+            minifyEnabled = false
+            proguardFiles = [getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard.txt']
+            signingConfig = signingConfigs.release
+            debuggable = false
         }
     }
     packagingOptions {
@@ -53,12 +63,12 @@ android {
     }
 
     lint {
-        baseline file('lint-baseline.xml')
-        checkReleaseBuilds true
+        baseline = file('lint-baseline.xml')
+        checkReleaseBuilds = true
         // TODO fix Range, some hundred occurrences
-        disable 'DuplicatePlatformClasses', 'MissingTranslation', 'Range'
-        showAll true
-        textReport true
+        disable = ['DuplicatePlatformClasses', 'MissingTranslation', 'Range']
+        showAll = true
+        textReport = true
     }
 }
 
@@ -85,13 +95,17 @@ dependencies {
     implementation 'com.google.android.gms:play-services-maps:19.2.0'
     implementation 'com.google.android.gms:play-services-location:21.3.0'
 
-    implementation platform('com.google.firebase:firebase-bom:34.6.0')
+    implementation platform('com.google.firebase:firebase-bom:34.7.0')
     implementation 'com.google.firebase:firebase-analytics' // No version needed with BOM
 
     implementation 'com.dropbox.core:dropbox-core-sdk:7.0.0'
     implementation 'com.dropbox.core:dropbox-android-sdk:7.0.0'
     implementation 'com.squareup.picasso:picasso:2.71828' // Consider using Glide or Coil
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.2.0'
+}
+
+secrets {
+    propertiesFileName = "secrets.properties"
 }
 
 def props = new Properties()
@@ -106,6 +120,3 @@ if (rootProject.file("release.properties").exists()) {
     project.logger.info('INFO: Set the values storeFile, storePassword, keyAlias, and keyPassword in release.properties to sign the release.')
     android.buildTypes.release.signingConfig = null
 }
-
-apply plugin: 'com.google.firebase.crashlytics'
-apply plugin: 'com.google.gms.google-services'
