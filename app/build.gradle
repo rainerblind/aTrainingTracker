@@ -1,4 +1,9 @@
-apply plugin: 'com.android.application'
+plugins {
+    id 'com.android.application'
+    id 'com.google.gms.google-services'
+    id 'com.google.firebase.crashlytics'
+    id 'com.google.android.libraries.mapsplatform.secrets-gradle-plugin'
+}
 
 def getGitHash = providers.exec {
     commandLine('git', 'rev-parse', '--short', 'HEAD')
@@ -29,6 +34,10 @@ android {
             // storeFile file('/home/rainer/Dropbox/workspace/keystore')
             // keyAlias "aTrainingTrackerReleaseKey"
         }
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     buildTypes {
@@ -95,6 +104,10 @@ dependencies {
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.2.0'
 }
 
+secrets {
+    propertiesFileName = "secrets.properties"
+}
+
 def props = new Properties()
 if (rootProject.file("release.properties").exists()) {
     props.load(new FileInputStream(rootProject.file("release.properties")))
@@ -107,6 +120,3 @@ if (rootProject.file("release.properties").exists()) {
     project.logger.info('INFO: Set the values storeFile, storePassword, keyAlias, and keyPassword in release.properties to sign the release.')
     android.buildTypes.release.signingConfig = null
 }
-
-apply plugin: 'com.google.firebase.crashlytics'
-apply plugin: 'com.google.gms.google-services'
