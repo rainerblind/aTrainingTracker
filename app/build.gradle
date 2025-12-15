@@ -8,19 +8,19 @@ android {
     // Travis update separately
     compileSdkVersion = 36
     buildToolsVersion = '36.0.0'
-    namespace "com.atrainingtracker"
+    namespace = "com.atrainingtracker"
 
     compileOptions {
-        sourceCompatibility JavaVersion.toVersion("17")
-        targetCompatibility JavaVersion.toVersion("17")
+        sourceCompatibility = JavaVersion.toVersion("17")
+        targetCompatibility = JavaVersion.toVersion("17")
     }
 
     defaultConfig {
         minSdkVersion 26 // Android 8
         targetSdkVersion 35 // Android 15
-        multiDexEnabled true
-        versionName "4.2.99.1"
-        versionCode 217
+        multiDexEnabled = true
+        versionName = "4.2.99.1"
+        versionCode = 217
     }
 
     signingConfigs {
@@ -34,16 +34,17 @@ android {
     buildTypes {
         debug {
             // Separate the debug build
-            applicationIdSuffix ".debug"
-            versionNameSuffix "-${getGitHash}"
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-${getGitHash}"
+            debuggable = true
         }
         release {
             applicationIdSuffix ""
 
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard.txt'
-            signingConfig signingConfigs.release
-            debuggable false
+            minifyEnabled = false
+            proguardFiles = [getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard.txt']
+            signingConfig = signingConfigs.release
+            debuggable = false
         }
     }
     packagingOptions {
@@ -53,12 +54,12 @@ android {
     }
 
     lint {
-        baseline file('lint-baseline.xml')
-        checkReleaseBuilds true
+        baseline = file('lint-baseline.xml')
+        checkReleaseBuilds = true
         // TODO fix Range, some hundred occurrences
-        disable 'DuplicatePlatformClasses', 'MissingTranslation', 'Range'
-        showAll true
-        textReport true
+        disable = ['DuplicatePlatformClasses', 'MissingTranslation', 'Range']
+        showAll = true
+        textReport = true
     }
 }
 
