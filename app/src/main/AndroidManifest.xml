@@ -30,7 +30,7 @@
         tools:targetApi="tiramisu">
         <meta-data
             android:name="com.google.android.maps.v2.API_KEY"
-            android:value="AIzaSyBVPLxC7EDQXCKTS0Mu6Xzdf7LtS9nQGvQ" />
+            android:value="${MAPS_API_KEY}"/>  <!-- stored under secrets.properties -->
 
         <activity
             android:name=".trainingtracker.activities.MainActivityWithNavigation"
