@@ -110,6 +110,10 @@ public abstract class BaseGetAccessTokenActivity
         super.onCreate(savedInstanceState);
         if (DEBUG) Log.d(TAG, "onCreate");
 
+        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(getAuthorizationUrl()));
+        startActivity(intent);
+
+        /*
         dialog = new ProgressDialog(this);
         dialog.setMessage(getString(R.string.connecting_to_string, getName()));
         dialog.show();
@@ -171,6 +175,7 @@ public abstract class BaseGetAccessTokenActivity
         webview.loadUrl(getAuthorizationUrl());
 
         setContentView(webview);
+        */
     }
 
     protected void onJsonResponse(JSONObject jsonObject) {
