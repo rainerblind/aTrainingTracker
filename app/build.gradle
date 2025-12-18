@@ -25,7 +25,7 @@ android {
         targetSdkVersion 35 // Android 15
         multiDexEnabled = true
         versionName = "4.2.99.1"
-        versionCode = 217
+        versionCode = 218
     }
 
     signingConfigs {
