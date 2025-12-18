@@ -44,7 +44,7 @@ public class StravaGetAccessTokenActivity
                 .appendPath(MOBILE)
                 .appendPath(AUTHORIZE)
                 .appendQueryParameter(CLIENT_ID, MY_CLIENT_ID)
-                .appendQueryParameter(REDIRECT_URI, "rainerblind.github.io/strava")
+                .appendQueryParameter(REDIRECT_URI, "https://rainerblind.github.io")
                 .appendQueryParameter(RESPONSE_TYPE, CODE)
                 .appendQueryParameter(APPROVAL_PROMPT, AUTO)
                 .appendQueryParameter(SCOPE, READ + ',' + ACTIVITY_WRITE + ',' + ACTIVITY_READ_ALL + ',' + PROFILE_READ_ALL);
