@@ -109,8 +109,18 @@
 
         <activity
             android:name=".trainingtracker.onlinecommunities.strava.StravaGetAccessTokenActivity"
+            android:exported="true"
             android:label="@string/StravaGetAccessTokenActivityLabel"
-            android:theme="@style/Theme.aTrainingTracker" />
+            android:theme="@style/Theme.aTrainingTracker">
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="rainerblind.github.io" />
+                <data android:pathPattern="/strava" />
+            </intent-filter>
+        </activity>
 
         <activity
             android:name=".trainingtracker.onlinecommunities.trainingpeaks.TrainingpeaksGetAccessTokenActivity"
