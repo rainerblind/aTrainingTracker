@@ -24,7 +24,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
-import android.os.AsyncTask;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
 import com.atrainingtracker.R;
@@ -47,7 +48,7 @@ import java.io.IOException;
 import java.text.DateFormat;
 import java.util.Date;
 
-public class StravaEquipmentSynchronizeTask extends AsyncTask<String, String, String> {
+public class StravaEquipmentSynchronizeThread extends Thread {
     public static final String SYNCHRONIZE_EQUIPMENT_STRAVA_START = "de.rainerblind.trainingtracker.equipment.StravaEquipmentHelper.SYNCHRONIZE_EQUIPMENT_STRAVA_START";
     public static final String SYNCHRONIZE_EQUIPMENT_STRAVA_FINISHED = "de.rainerblind.trainingtracker.equipment.StravaEquipmentHelper.SYNCHRONIZE_EQUIPMENT_STRAVA_FINISHED";
     protected static final String STRAVA_URL_ATHLETE = "https://www.strava.com/api/v3/athlete";
@@ -64,54 +65,51 @@ public class StravaEquipmentSynchronizeTask extends AsyncTask<String, String, St
     private static final String TAG = "StravaEquipmentHelperTask";
     private static final boolean DEBUG = false;
     protected Context mContext;
-    private ProgressDialog mProgressDialog;
+    private final ProgressDialog mProgressDialog;
 
-    public StravaEquipmentSynchronizeTask(Context context) {
+    public StravaEquipmentSynchronizeThread(Context context) {
         mContext = context;
         mProgressDialog = new ProgressDialog(context);
     }
 
-
-    @Override
-    protected void onPreExecute() {
-        mProgressDialog.setMessage(mContext.getString(R.string.getting_equipment_from_strava));
-        mProgressDialog.show();
-        // mProgressDialog.setCancelable(false);
-        // mProgressDialog.setCanceledOnTouchOutside(false);
+    protected void publishProgress(String progress) {
+        new Handler(Looper.getMainLooper()).post(() -> {
+            // TODO: update some Progress Dialog
+            mProgressDialog.setMessage(progress);
+        });
     }
 
     @Override
-    protected String doInBackground(String... params) {
-        return getStravaEquipment();
-    }
+    public void run() {
+        new Handler(Looper.getMainLooper()).post(() -> {
+            mProgressDialog.setMessage(mContext.getString(R.string.getting_equipment_from_strava));
+            mProgressDialog.show();
+            // mProgressDialog.setCancelable(false);
+            // mProgressDialog.setCanceledOnTouchOutside(false);
+        });
 
-    protected void onProgressUpdate(String... progress) {
-        // TODO: update some Progress Dialog
-        mProgressDialog.setMessage(progress[0]);
-    }
+        final String result = getStravaEquipment();
+        new Handler(Looper.getMainLooper()).post(() -> {
+            if (DEBUG) Log.d(TAG, "updated Strava equipment");
 
-
-    @Override
-    protected void onPostExecute(String result) {
-        if (DEBUG) Log.d(TAG, "updated Strava equipment");
-
-        if (mProgressDialog.isShowing()) {
-            try {
-                mProgressDialog.dismiss();
-                // sometimes this gives the following exception:
-                // java.lang.IllegalArgumentException: View not attached to window manager
-                // so we catch this exception
-            } catch (IllegalArgumentException e) {
-                // and nothing
-                // http://stackoverflow.com/questions/2745061/java-lang-illegalargumentexception-view-not-attached-to-window-manager
+            if (mProgressDialog.isShowing()) {
+                try {
+                    mProgressDialog.dismiss();
+                    // sometimes this gives the following exception:
+                    // java.lang.IllegalArgumentException: View not attached to window manager
+                    // so we catch this exception
+                } catch (IllegalArgumentException e) {
+                    // and nothing
+                    // http://stackoverflow.com/questions/2745061/java-lang-illegalargumentexception-view-not-attached-to-window-manager
+                }
             }
-        }
 
-        TrainingApplication.setLastUpdateTimeOfStravaEquipment(result);// DateFormat.getDateTimeInstance().format(new Date()));
+            TrainingApplication.setLastUpdateTimeOfStravaEquipment(result);// DateFormat.getDateTimeInstance().format(new Date()));
 
-        mContext.sendBroadcast(new Intent(SYNCHRONIZE_EQUIPMENT_STRAVA_FINISHED));
+            mContext.sendBroadcast(new Intent(SYNCHRONIZE_EQUIPMENT_STRAVA_FINISHED)
+                    .setPackage(mContext.getPackageName()));
+        });
     }
-
 
     private String getStravaEquipment() {
         if (DEBUG) Log.d(TAG, "getStravaEquipment");

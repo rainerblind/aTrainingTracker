@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.fragments.mapFragments;
 
+import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -27,6 +28,9 @@ import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 import android.util.Log;
 
+import androidx.core.content.ContextCompat;
+import androidx.core.content.res.ResourcesCompat;
+
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.trainingtracker.MyHelper;
@@ -34,7 +38,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.ExtremaType;
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
-import com.atrainingtracker.trainingtracker.helpers.CalcExtremaValuesTask;
+import com.atrainingtracker.trainingtracker.helpers.CalcExtremaValuesThread;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.MarkerOptions;
@@ -43,16 +47,16 @@ import com.google.android.gms.maps.model.MarkerOptions;
 public class TrackOnMapAftermathFragment
         extends TrackOnMapBaseFragment {
     public static final String TAG = TrackOnMapAftermathFragment.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG & false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
-    private final IntentFilter mFinishedCalculatingExtremaValueFilter = new IntentFilter(CalcExtremaValuesTask.FINISHED_CALCULATING_EXTREMA_VALUE);
+    private final IntentFilter mFinishedCalculatingExtremaValueFilter = new IntentFilter(CalcExtremaValuesThread.FINISHED_CALCULATING_EXTREMA_VALUE);
 
     // for these SensorTypes we want to add extrema markers
     protected SensorType[] mExtremaSensorTypes = {SensorType.ALTITUDE, SensorType.CADENCE, SensorType.HR, SensorType.LINE_DISTANCE_m, SensorType.POWER, SensorType.SPEED_mps, SensorType.TEMPERATURE, SensorType.TORQUE};
     BroadcastReceiver mFinishedCalculatingExtremaValueReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            SensorType sensorType = SensorType.valueOf(intent.getStringExtra(CalcExtremaValuesTask.SENSOR_TYPE));
+            SensorType sensorType = SensorType.valueOf(intent.getStringExtra(CalcExtremaValuesThread.SENSOR_TYPE));
             addExtremaMarker(sensorType);
         }
     };
@@ -82,7 +86,7 @@ public class TrackOnMapAftermathFragment
     public void onResume() {
         super.onResume();
 
-        getActivity().registerReceiver(mFinishedCalculatingExtremaValueReceiver, mFinishedCalculatingExtremaValueFilter);
+        ContextCompat.registerReceiver(getActivity(), mFinishedCalculatingExtremaValueReceiver, mFinishedCalculatingExtremaValueFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
 
@@ -100,6 +104,7 @@ public class TrackOnMapAftermathFragment
         }
     }
 
+    @SuppressLint("MissingPermission")
     @Override
     public void onMapReady(final GoogleMap map) {
         if (DEBUG) Log.i(TAG, "onMapReady");
@@ -184,7 +189,7 @@ public class TrackOnMapAftermathFragment
                             sensorType.getMyFormatter().format(latLngValue.value),
                             getString(MyHelper.getShortUnitsId(sensorType))));
             if (drawableId != null) {
-                Bitmap marker = ((BitmapDrawable) getResources().getDrawable(drawableId)).getBitmap();
+                Bitmap marker = ((BitmapDrawable) ResourcesCompat.getDrawable(getResources(), drawableId, null)).getBitmap();
                 markerOptions.icon(BitmapDescriptorFactory.fromBitmap(marker));
             }
             mMap.addMarker(markerOptions);

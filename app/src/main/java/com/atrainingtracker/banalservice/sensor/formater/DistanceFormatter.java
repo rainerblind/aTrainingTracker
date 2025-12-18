@@ -23,6 +23,8 @@ package com.atrainingtracker.banalservice.sensor.formater;
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 
+import java.util.Locale;
+
 
 public class DistanceFormatter implements MyFormatter<Number> {
 
@@ -35,10 +37,10 @@ public class DistanceFormatter implements MyFormatter<Number> {
 
         switch (TrainingApplication.getUnit()) {
             case METRIC:
-                return String.format("%.2f", distance_m.doubleValue() / 1000);
+                return String.format(Locale.getDefault(), "%.2f", distance_m.doubleValue() / 1000);
             // return NumberFormat.getInstance().format(distance_m.doubleValue()/1000);
             case IMPERIAL:
-                return String.format("%.2f", distance_m.doubleValue() / BANALService.METER_PER_MILE);
+                return String.format(Locale.getDefault(), "%.2f", distance_m.doubleValue() / BANALService.METER_PER_MILE);
             // return NumberFormat.getInstance().format(distance_m.doubleValue()/BANALService.METER_PER_MILE);
             default:
                 return "--";
@@ -54,13 +56,13 @@ public class DistanceFormatter implements MyFormatter<Number> {
         switch (TrainingApplication.getUnit()) {
             case METRIC:
                 if (distance_m.intValue() < 1000) {
-                    return String.format("%d m", distance_m.intValue());
+                    return String.format(Locale.getDefault(), "%d m", distance_m.intValue());
                 } else {
-                    return String.format("%.2f km", distance_m.doubleValue() / 1000);
+                    return String.format(Locale.getDefault(), "%.2f km", distance_m.doubleValue() / 1000);
                 }
                 // return NumberFormat.getInstance().format(distance_m.doubleValue()/1000);
             case IMPERIAL:
-                return String.format("%.2f mile", distance_m.doubleValue() / BANALService.METER_PER_MILE);
+                return String.format(Locale.getDefault(), "%.2f mile", distance_m.doubleValue() / BANALService.METER_PER_MILE);
             // return NumberFormat.getInstance().format(distance_m.doubleValue()/BANALService.METER_PER_MILE);
             default:
                 return "--";
@@ -75,10 +77,10 @@ public class DistanceFormatter implements MyFormatter<Number> {
 
         switch (TrainingApplication.getUnit()) {
             case METRIC:
-                return String.format("%.3f", distance_m.doubleValue() / 1000);
+                return String.format(Locale.getDefault(), "%.3f", distance_m.doubleValue() / 1000);
             // return NumberFormat.getInstance().format(distance_m.doubleValue()/1000);
             case IMPERIAL:
-                return String.format("%.3f", distance_m.doubleValue() / BANALService.METER_PER_MILE);
+                return String.format(Locale.getDefault(), "%.3f", distance_m.doubleValue() / BANALService.METER_PER_MILE);
             // return NumberFormat.getInstance().format(distance_m.doubleValue()/BANALService.METER_PER_MILE);
             default:
                 return "--";

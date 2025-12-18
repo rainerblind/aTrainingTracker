@@ -71,7 +71,7 @@ public class MySensorManager extends MyDevice {
     private static final String TAG = "MySensorManager";
     // String        mGCData            = EMPTY_GC_DATA;
     // protected int mAccumulatedSensors = 0; 
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     protected Map<SensorType, Object> mInitialValues = new HashMap<SensorType, Object>();
     protected StringBuilder mAccumulatedGCData = new StringBuilder(EMPTY_GC_DATA);
     protected Set<SensorType> mAccumulatedSensorTypeSet = new HashSet<SensorType>();
@@ -230,7 +230,7 @@ public class MySensorManager extends MyDevice {
             MySensor newBestSensor = getBestSensor(sensorType);
             if (newBestSensor == null) {
                 if (DEBUG) Log.d(TAG, "newBestSensor == null => removeSensor");
-                removeSensor(sensorType); // foo
+                removeSensor(sensorType);
                 sensorRemoved = true;
             }
 
@@ -308,7 +308,7 @@ public class MySensorManager extends MyDevice {
         // Intent intent =  new Intent(BANALService.NEW_SENSOR_INTENT);
         // intent.putExtra(BANALService.SENSOR_TYPE_NAME, mySensor.getSensorType().name());
         // intent.putExtra(BANALService.SENSOR_UNIT, mContext.getString(mySensor.getSensorType().getUnitId()));
-        // mContext.sendBroadcast(intent);
+        // mContext.sendBroadcast(intent.setPackage(getActivity().getPackageName()));
     }
 
 
@@ -322,7 +322,7 @@ public class MySensorManager extends MyDevice {
 
         // Intent intent = new Intent(BANALService.SENSOR_REMOVED_INTENT);
         // intent.putExtra(BANALService.SENSOR_TYPE_NAME, mySensor.getSensorType().name());
-        // mContext.sendBroadcast(intent);
+        // mContext.sendBroadcast(intent.setPackage(getActivity().getPackageName()));
     }
 
     private void updateGCData() {
@@ -334,7 +334,7 @@ public class MySensorManager extends MyDevice {
             addGCSensor(mySensor.getSensorType(), GCdata);
         }
         mSensorsSensor.newValue(GCdata.toString());
-        if (DEBUG) Log.d(TAG, "updatedGCData: " + GCdata.toString());
+        if (DEBUG) Log.d(TAG, "updatedGCData: " + GCdata);
     }
 
     private void addGCSensor(SensorType sensorType, StringBuilder gcDataString) {

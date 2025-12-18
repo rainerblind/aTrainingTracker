@@ -18,7 +18,7 @@
 
 package com.atrainingtracker.banalservice.devices.bluetooth_le;
 
-import android.annotation.TargetApi;
+import android.Manifest;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;
@@ -28,9 +28,11 @@ import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
 import android.content.Context;
-import android.os.Build;
+import android.content.pm.PackageManager;
 import android.os.Handler;
 import android.util.Log;
+
+import androidx.core.app.ActivityCompat;
 
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.devices.DeviceType;
@@ -46,9 +48,8 @@ import java.util.Queue;
 
 // TODO: where/when to register and unregister the sensors
 
-@TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
 public abstract class MyBTLEDevice extends MyRemoteDevice {
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     private static final int SEARCH_PERIOD = 10 * 1000; // 10 seconds (same as for ANT+)
     private static final int READ_BATTERY_PERCENTAGE_PERIOD = 5 * 60 * 1000; // 5 minutes
     protected String mAddress; // the MAC Address
@@ -57,7 +58,7 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
     protected Queue<BluetoothGattCharacteristic> mReadCharacteristicQueue = new LinkedList<BluetoothGattCharacteristic>();
     protected State mState = State.DISCONNECTED;
     Handler mHandler;
-    private String TAG = "MyBTLEDevice";
+    private final String TAG = "MyBTLEDevice";
     private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
@@ -71,6 +72,9 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
                 mHandler.post(new Runnable() {
                     @Override
                     public void run() {
+                        if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                            return;
+                        }
                         mBluetoothGatt.discoverServices();
                         notifyStopSearching(true);  // we found the device
                     }
@@ -174,6 +178,9 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
             @Override
             public void run() {
                 if (DEBUG) Log.i(TAG, "trying to connect gatt");
+                if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                    return;
+                }
                 mBluetoothGatt = device.connectGatt(mContext, false, mGattCallback);
             }
         });
@@ -186,6 +193,9 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
             mHandler.post(new Runnable() {
                 @Override
                 public void run() {
+                    if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                        return;
+                    }
                     mBluetoothGatt.disconnect();
                     mBluetoothGatt.close();
                 }
@@ -254,6 +264,9 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
             mHandler.post(new Runnable() {
                 @Override
                 public void run() {
+                    if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                        return;
+                    }
                     mBluetoothGatt.readCharacteristic(gattChar);
                 }
             });
@@ -269,6 +282,9 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
                         BluetoothGattService btGattService = mBluetoothGatt.getService(BluetoothConstants.getServiceUUID(getDeviceType()));
                         if (btGattService == null) {
                             Log.d(TAG, "WTF, we expected a service here!");
+                            return;
+                        }
+                        if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
                             return;
                         }
                         BluetoothGattCharacteristic btGattChar = btGattService.getCharacteristic(BluetoothConstants.getCharacteristicUUID(getDeviceType()));

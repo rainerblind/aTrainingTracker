@@ -318,7 +318,7 @@ public class Manufacturer {
             "Vdo",                       // 287
             "MagneticDays"};             // 288
     private static final String TAG = "Manufacturer";
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
 
     /**
      * maps the Manufacturer ID to a string

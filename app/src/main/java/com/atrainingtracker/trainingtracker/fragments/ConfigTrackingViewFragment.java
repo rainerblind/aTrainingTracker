@@ -23,6 +23,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
+
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 import android.text.Editable;
@@ -68,7 +70,7 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
     // public static final String VIEW_ID = "VIEW_ID";
     // public static final String NAME    = "NAME";
     private static final String TAG = ConfigTrackingViewFragment.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     // protected ActivityType mActivityType;
     // protected long mViewId;
     protected LinearLayout mLLSensors;
@@ -217,7 +219,7 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
 
         mViewChangedFilter.addAction(FILTERS_CHANGED_INTENT);
         mViewChangedFilter.addAction(TRACKING_VIEW_CHANGED_INTENT);
-        getContext().registerReceiver(mFilterChangedReceiver, mViewChangedFilter);
+        ContextCompat.registerReceiver(getContext(), mFilterChangedReceiver, mViewChangedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     protected void getViewInfoMapAndAddSensorFields() {
@@ -343,7 +345,8 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
         super.onPause();
         if (DEBUG) Log.i(TAG, "onPause()");
 
-        getActivity().sendBroadcast(new Intent(TRACKING_VIEW_CHANGED_INTENT));
+        getActivity().sendBroadcast(new Intent(TRACKING_VIEW_CHANGED_INTENT)
+                .setPackage(getActivity().getPackageName()));
 
         getContext().unregisterReceiver(mFilterChangedReceiver);
     }

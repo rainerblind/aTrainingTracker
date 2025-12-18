@@ -21,7 +21,6 @@ package com.atrainingtracker.trainingtracker.segments;
 import android.content.Context;
 import android.os.Bundle;
 import androidx.fragment.app.ListFragment;
-import androidx.core.view.ViewCompat;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import android.view.LayoutInflater;
@@ -44,16 +43,7 @@ public class SwipeRefreshListFragment extends ListFragment {
      * needed.
      */
     private static boolean canListViewScrollUp(ListView listView) {
-        if (android.os.Build.VERSION.SDK_INT >= 14) {
-            // For ICS and above we can call canScrollVertically() to determine this
-            return ViewCompat.canScrollVertically(listView, -1);
-        } else {
-            // Pre-ICS we need to manually check the first visible item and the child view's top
-            // value
-            return listView.getChildCount() > 0 &&
-                    (listView.getFirstVisiblePosition() > 0
-                            || listView.getChildAt(0).getTop() < listView.getPaddingTop());
-        }
+        return listView.canScrollVertically(-1);
     }
 
     @Override
@@ -121,8 +111,6 @@ public class SwipeRefreshListFragment extends ListFragment {
 
     /**
      * Set the color scheme for the {@link SwipeRefreshLayout}.
-     *
-     * @see SwipeRefreshLayout#setColorScheme(int, int, int, int)
      */
     public void setColorScheme(int colorRes1, int colorRes2, int colorRes3, int colorRes4) {
         mSwipeRefreshLayout.setColorScheme(colorRes1, colorRes2, colorRes3, colorRes4);

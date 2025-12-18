@@ -27,7 +27,7 @@
         android:id="@+id/status_icon"
         android:layout_width="wrap_content"
         android:layout_height="fill_parent"
-        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
         tools:ignore="ContentDescription" />
 
     <RelativeLayout

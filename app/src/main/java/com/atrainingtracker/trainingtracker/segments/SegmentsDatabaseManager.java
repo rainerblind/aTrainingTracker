@@ -30,7 +30,7 @@ import java.io.File;
 
 public class SegmentsDatabaseManager {
     private static final String TAG = SegmentsDatabaseManager.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private static SegmentsDatabaseManager cInstance;
     private static SegmentsDbHelper cSegmentsDbHelper;
     private int mOpenCounter;
@@ -235,8 +235,8 @@ public class SegmentsDatabaseManager {
                 + Segments.CADENCE + " int, "
                 + Segments.WATTS + " real)";
         private static final String TAG = SegmentsDbHelper.class.getName();
-        private static final boolean DEBUG = TrainingApplication.DEBUG & true;
-        private Context mContext;
+        private static final boolean DEBUG = TrainingApplication.getDebug(true);
+        private final Context mContext;
 
 
         // Constructor

@@ -26,6 +26,8 @@ import android.content.IntentFilter;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
+
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.ListFragment;
 import androidx.cursoradapter.widget.CursorAdapter;
 import android.util.Log;
@@ -60,7 +62,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseMan
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.MyMapViewHolder;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.Roughness;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapHelper;
-import com.atrainingtracker.trainingtracker.helpers.DeleteWorkoutTask;
+import com.atrainingtracker.trainingtracker.helpers.DeleteWorkoutThread;
 import com.atrainingtracker.trainingtracker.interfaces.ReallyDeleteDialogInterface;
 import com.atrainingtracker.trainingtracker.interfaces.ShowWorkoutDetailsInterface;
 import com.google.android.gms.common.ConnectionResult;
@@ -77,9 +79,9 @@ import java.util.EnumMap;
 
 public class WorkoutSummariesWithMapListFragment extends ListFragment {
     public static final String TAG = WorkoutSummariesWithMapListFragment.class.getSimpleName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG & false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private final IntentFilter mExportStatusChangedFilter = new IntentFilter(ExportManager.EXPORT_STATUS_CHANGED_INTENT);
-    private final IntentFilter mFinishedDeletingFilter = new IntentFilter(DeleteWorkoutTask.FINISHED_DELETING);
+    private final IntentFilter mFinishedDeletingFilter = new IntentFilter(DeleteWorkoutThread.FINISHED_DELETING);
     protected SQLiteDatabase mDb;
     protected ExportManager mExportManager;
     protected Cursor mCursor;
@@ -100,7 +102,7 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
     private ShowWorkoutDetailsInterface mShowWorkoutDetailsListener;
     private ReallyDeleteDialogInterface mReallyDeleteDialogInterface;
     private boolean isPlayServiceAvailable = true;
-    private AbsListView.RecyclerListener mRecycleListener = new AbsListView.RecyclerListener() {
+    private final AbsListView.RecyclerListener mRecycleListener = new AbsListView.RecyclerListener() {
 
         @Override
         public void onMovedToScrapHeap(View view) {
@@ -130,13 +132,13 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
         try {
             mShowWorkoutDetailsListener = (ShowWorkoutDetailsInterface) context;
         } catch (ClassCastException e) {
-            throw new ClassCastException(context.toString() + " must implement UpdateWorkoutInterface");
+            throw new ClassCastException(context + " must implement UpdateWorkoutInterface");
         }
 
         try {
             mReallyDeleteDialogInterface = (ReallyDeleteDialogInterface) context;
         } catch (ClassCastException e) {
-            throw new ClassCastException(context.toString() + " must implement ReallyDeleteWorkoutDialogInterface");
+            throw new ClassCastException(context + " must implement ReallyDeleteWorkoutDialogInterface");
         }
     }
 
@@ -178,9 +180,8 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
         mExportManager = new ExportManager(getActivity(), TAG);
         updateCursor();
 
-        getActivity().registerReceiver(mExportStatusChangedReceiver, mExportStatusChangedFilter);
-        getActivity().registerReceiver(mFinishedDeletingReceiver, mFinishedDeletingFilter);
-
+        ContextCompat.registerReceiver(getActivity(), mExportStatusChangedReceiver, mExportStatusChangedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(getActivity(), mFinishedDeletingReceiver, mFinishedDeletingFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     @Override
@@ -291,8 +292,8 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
     private void setStatusInfo(ViewHolder viewHolder, final Context context, final String fileBaseName) {
         if (DEBUG) Log.d(TAG, "setStatusInfo: " + fileBaseName);
 
-        EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>> foo = mExportManager.getExportStatus(fileBaseName);
-        if (DEBUG && foo == null) Log.d(TAG, "WTF: foo == null");
+        EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>> exportStatuses = mExportManager.getExportStatus(fileBaseName);
+        if (DEBUG && exportStatuses == null) Log.d(TAG, "WTF: exportStatuses == null");
 
         for (ExportType exportType : ExportType.values()) {
             if (DEBUG) Log.d(TAG, "looking for " + exportType);
@@ -319,7 +320,7 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
                 exportStatusCounter.put(exportStatus, 0);
             }
 
-            EnumMap<FileFormat, ExportStatus> bar = foo.get(exportType);
+            EnumMap<FileFormat, ExportStatus> bar = exportStatuses.get(exportType);
             for (FileFormat fileFormat : FileFormat.values()) {
                 ExportStatus exportStatus = bar.get(fileFormat);
                 // avoid a NullPointer Exception when there is a workout in the summaries DB but not in the exportStatus DB
@@ -350,25 +351,27 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
                         text = context.getString(R.string.uploading_to_community_not_wanted);
                         break;
                 }
-            } else if (exportStatusCounter.get(ExportStatus.FINISHED_FAILED) == 1) {
 
-                ivStatus.setImageResource(R.drawable.export_failed);
-
-                switch (exportType) {
-                    case FILE:
-                        text = context.getString(R.string.exporting_to_file_failed_for_one, wanted);
-                        break;
-                    case DROPBOX:
-                        text = context.getString(R.string.uploading_to_dropbox_failed_for_one, wanted);
-                        break;
-                    case COMMUNITY:
-                        text = context.getString(R.string.uploading_to_community_failed_for_one, wanted);
-                        break; // TODO: which one???
-                }
-            } else if (exportStatusCounter.get(ExportStatus.FINISHED_FAILED) > 1) {
+            } else if (exportStatusCounter.get(ExportStatus.FINISHED_FAILED) > 0) {
 
                 ivStatus.setImageResource(R.drawable.export_failed);
                 int failed = exportStatusCounter.get(ExportStatus.FINISHED_FAILED);
+                switch (exportType) {
+                    case FILE:
+                        text = context.getString(R.string.exporting_to_file_failed_for_several, failed, wanted);
+                        break;
+                    case DROPBOX:
+                        text = context.getString(R.string.uploading_to_dropbox_failed_for_several, failed, wanted);
+                        break;
+                    case COMMUNITY:
+                        text = context.getString(R.string.uploading_to_community_failed_for_several, failed, wanted);
+                        break;
+                }
+
+            } else if (exportStatusCounter.get(ExportStatus.FINISHED_RETRY) > 0) {
+
+                ivStatus.setImageResource(R.drawable.export_error);
+                int failed = exportStatusCounter.get(ExportStatus.FINISHED_RETRY);
                 switch (exportType) {
                     case FILE:
                         text = context.getString(R.string.exporting_to_file_failed_for_several, failed, wanted);
@@ -471,7 +474,7 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
     class WorkoutSummaryWithMapAdapter
             extends CursorAdapter {
         private final String TAG = WorkoutSummaryWithMapAdapter.class.getName();
-        private final boolean DEBUG = TrainingApplication.DEBUG & true;
+        private final boolean DEBUG = TrainingApplication.getDebug(true);
 
         protected Context mContext = null;
 
@@ -487,7 +490,7 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
             try {
                 mUpdateWorkoutListener = (ShowWorkoutDetailsInterface) activity;
             } catch (ClassCastException e) {
-                throw new ClassCastException(activity.toString() + " must implement ShowWorkoutDetailsInterface");
+                throw new ClassCastException(activity + " must implement ShowWorkoutDetailsInterface");
             }
         }
 

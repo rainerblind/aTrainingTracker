@@ -34,10 +34,10 @@ public class CSVReader implements Closeable {
      * The default line to start reading.
      */
     public static final int DEFAULT_SKIP_LINES = 0;
-    private BufferedReader br;
+    private final BufferedReader br;
     private boolean hasNext = true;
-    private CSVParser parser;
-    private int skipLines;
+    private final CSVParser parser;
+    private final int skipLines;
     private boolean linesSkiped;
 
     /**

@@ -26,7 +26,7 @@ import com.atrainingtracker.banalservice.devices.MyDevice;
 
 public class ProxySensor<T> extends MySensor<T> {
     protected MySensor<T> mSourceSensor;
-    private String TAG = "ProxySensor";
+    private final String TAG = "ProxySensor";
 
     public ProxySensor(MyDevice myDevice, SensorType sensorType, MySensor<T> sourceSensor) {
         super(myDevice, sensorType);

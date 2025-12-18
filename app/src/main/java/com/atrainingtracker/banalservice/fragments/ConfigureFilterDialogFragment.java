@@ -52,7 +52,7 @@ public class ConfigureFilterDialogFragment
         extends DialogFragment {
     public static final String TAG = ConfigureFilterDialogFragment.class.getName();
     public static final String FILTERS_CHANGED_INTENT = "FILTERS_CHANGED_INTENT";
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     long mRowId;
     FilterType mFilterType;
     double mFilterConstant;
@@ -158,7 +158,8 @@ public class ConfigureFilterDialogFragment
         builder.setPositiveButton(getString(R.string.OK), new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int id) {
-                getActivity().sendBroadcast(new Intent(FILTERS_CHANGED_INTENT));
+                getActivity().sendBroadcast(new Intent(FILTERS_CHANGED_INTENT)
+                        .setPackage(getActivity().getPackageName()));
                 saveEverything();
             }
         });
@@ -395,7 +396,7 @@ public class ConfigureFilterDialogFragment
                     null);
         } catch (SQLException e) {
             // TODO: use Toast?
-            Log.e(TAG, "Error while writing" + e.toString());
+            Log.e(TAG, "Error while writing" + e);
         }
         databaseManager.closeDatabase(); // db.close();
 

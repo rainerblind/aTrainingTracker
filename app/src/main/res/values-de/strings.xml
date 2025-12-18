@@ -92,7 +92,6 @@
     <string name="number_of_fields">Anzahl von Feldern:</string>
     <string name="Lap_NR">Runde %1$d</string>
     <string name="build_in">Standard</string>
-    <string name="user_name">Benutzername</string>
     <string name="no_user_name">kein Benutzername</string>
     <string name="no_password">kein Passwort</string>
     <string name="add_sensor">Sensor hinzufügen</string>
@@ -444,7 +443,7 @@
     <string name="wheel_circumference">Radumfang</string>
     <string name="Calibration_Factor">Kalibrierungsfaktor</string>
     <string name="Wheel_Circumference">Radumfang</string>
-    <string name="Set_foo">%1$s berechnen</string>
+    <string name="Set_calibration">%1$s berechnen</string>
 
     <!--     <string name="textDeviceNumber">device Number</string> -->
     <!--     <string name="textPaired">paired</string> -->
@@ -780,5 +779,10 @@
     <string name="config_tracking__Lap">Runde</string>
     <string name="config_tracking__day_or_night">Tag oder Nacht</string>
 
+    <string name="location_permission_required">Berechtigungen</string>
+    <string name="location_permission_text">Diese App ist dazu da, deine Trainingseinheiten aufzuzeichen, auch wenn die App nicht direkt sichtbar ist.  Bitte gib der App die Berechtigung den genauen Standort zu lesen.</string>
+    <string name="location_permission_text_pre_Android10">Bitte gib der App die Berechtigung den genauen Standort zu lesen.</string>
+    <string name="location_permission_text_Android12">Diese App ist dazu da, deine Trainingseinheiten aufzuzeichen, auch wenn die App nicht direkt sichtbar ist.  Bitte gib der App die Berechtigung den genauen Standort zu lesen.\n\nDarüber hinaus wird die Berechtigung \"Geräte in der Nähe\" benötigt um Bluetooth LE Sensoren zu finden.</string>
+    <string name="Request_permission_text">Durch klickern auf \"OK\" kommst du direkt zu den Berechtigungseinstellungen.</string>
 
 </resources>

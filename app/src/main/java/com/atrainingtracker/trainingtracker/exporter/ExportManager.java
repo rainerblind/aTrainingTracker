@@ -41,9 +41,9 @@ public class ExportManager {
     private static final boolean DEBUG = false;
     protected static SQLiteDatabase cExportStatusDb;
     protected static int cInstances = 0;
-    private static int DEFAULT_RETRIES_FILE = 1;
-    private static int DEFAULT_RETRIES_DROPBOX = 10;
-    private static int DEFAULT_RETRIES_COMMUNITY = 1;
+    private static final int DEFAULT_RETRIES_FILE = 1;
+    private static final int DEFAULT_RETRIES_DROPBOX = 10;
+    private static final int DEFAULT_RETRIES_COMMUNITY = 1;
     protected Context mContext;
     // protected static HashMap<String, EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>>> cCash = new HashMap<String, EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>>>();
 
@@ -89,7 +89,7 @@ public class ExportManager {
                 try {
                     cExportStatusDb.insert(ExportStatusDbHelper.TABLE, null, exportProgressValues);
                 } catch (SQLException e) {
-                    Log.e(TAG, "Error while writing" + e.toString() + "to ExportStatusDbHelper.TABLE");
+                    Log.e(TAG, "Error while writing" + e + "to ExportStatusDbHelper.TABLE");
                 }
             }
         }
@@ -334,7 +334,7 @@ public class ExportManager {
 
         for (ExportType exportType : ExportType.values()) {
 
-            EnumMap<FileFormat, ExportStatus> foo = new EnumMap<FileFormat, ExportStatus>(FileFormat.class);
+            EnumMap<FileFormat, ExportStatus> enumMap = new EnumMap<FileFormat, ExportStatus>(FileFormat.class);
             for (FileFormat fileFormat : FileFormat.values()) {
                 cursor = cExportStatusDb.query(ExportStatusDbHelper.TABLE,
                         new String[]{ExportStatusDbHelper.EXPORT_STATUS},
@@ -345,11 +345,11 @@ public class ExportManager {
                         null);
                 if (cursor.getCount() > 0) {
                     cursor.moveToFirst();
-                    foo.put(fileFormat, ExportStatus.valueOf(cursor.getString(cursor.getColumnIndex(ExportStatusDbHelper.EXPORT_STATUS))));
+                    enumMap.put(fileFormat, ExportStatus.valueOf(cursor.getString(cursor.getColumnIndex(ExportStatusDbHelper.EXPORT_STATUS))));
                 }
                 cursor.close();
             }
-            result.put(exportType, foo);
+            result.put(exportType, enumMap);
         }
 
         if (DEBUG) Log.d(TAG, "getExportStatus finished");
@@ -412,10 +412,10 @@ public class ExportManager {
 
         // TODO: switch fileFormat?  But this does not allow to do multiple actions, e.g. uploading to Dropbox and Strava!
 
-        if (fileFormat == FileFormat.GC | fileFormat == FileFormat.TCX | fileFormat == FileFormat.GPX | fileFormat == FileFormat.CSV
-            // | fileFormat == FileFormat.STRAVA            // only for debugging
-            // | fileFormat == FileFormat.RUNKEEPER         // only for debugging
-            // | fileFormat == FileFormat.TRAINING_PEAKS    // only for debugging
+        if (fileFormat == FileFormat.GC || fileFormat == FileFormat.TCX || fileFormat == FileFormat.GPX || fileFormat == FileFormat.CSV
+            // || fileFormat == FileFormat.STRAVA            // only for debugging
+            // || fileFormat == FileFormat.RUNKEEPER         // only for debugging
+            // || fileFormat == FileFormat.TRAINING_PEAKS    // only for debugging
         ) {
 
             if (TrainingApplication.uploadToDropbox()) {
@@ -439,7 +439,8 @@ public class ExportManager {
 
     protected void exportStatusChanged() {
         if (DEBUG) Log.d(TAG, "exportStatusChanged");
-        mContext.sendBroadcast(new Intent(EXPORT_STATUS_CHANGED_INTENT));
+        mContext.sendBroadcast(new Intent(EXPORT_STATUS_CHANGED_INTENT)
+                .setPackage(mContext.getPackageName()));
     }
 
     public void deleteWorkout(String baseFileName) {

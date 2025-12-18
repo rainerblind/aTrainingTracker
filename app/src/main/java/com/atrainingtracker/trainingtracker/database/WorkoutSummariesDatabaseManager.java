@@ -39,7 +39,7 @@ import java.util.Set;
 
 public class WorkoutSummariesDatabaseManager {
     private static final String TAG = WorkoutSummariesDatabaseManager.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private static WorkoutSummariesDatabaseManager cInstance;
     private static WorkoutSummariesDbHelper cWorkoutSummariesDbHelper;
     private int mOpenCounter;
@@ -221,19 +221,17 @@ public class WorkoutSummariesDatabaseManager {
 
         SQLiteDatabase summariesDb = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
 
-        Cursor cursor = summariesDb.query(WorkoutSummaries.TABLE,
+        try (Cursor cursor = summariesDb.query(WorkoutSummaries.TABLE,
                 null,
                 WorkoutSummaries.FILE_BASE_NAME + "=?",
                 new String[]{baseFileName},
-                null, null, null);
-        if (cursor.moveToFirst()) {
-            try {
+                null, null, null)) {
+            if (cursor.moveToFirst()) {
                 value = cursor.getInt(cursor.getColumnIndexOrThrow(key));
-            } catch (Exception e) {
-                Log.d(TAG, "in getInt(): probably undefined key is used: " + key);
             }
+        } catch (Exception e) {
+            Log.d(TAG, "in getInt(): probably undefined key is used: " + key);
         }
-        cursor.close();
         WorkoutSummariesDatabaseManager.getInstance().closeDatabase(); // summariesDb.close();
 
         return value;
@@ -848,8 +846,8 @@ public class WorkoutSummariesDatabaseManager {
                 + WorkoutSummaries.COUNTER + " int, "
                 + WorkoutSummaries.ADD_VIA + " int)";
         private static final String TAG = "WorkoutSummariesDbHelper";
-        private static final boolean DEBUG = TrainingApplication.DEBUG & true;
-        private Context mContext;
+        private static final boolean DEBUG = TrainingApplication.getDebug(true);
+        private final Context mContext;
 
         // Constructor
         public WorkoutSummariesDbHelper(Context context) {

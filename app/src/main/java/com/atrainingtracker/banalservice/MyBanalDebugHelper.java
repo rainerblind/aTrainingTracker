@@ -27,6 +27,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
 
 public class MyBanalDebugHelper {
     protected static final String TAG = "MyBanalDebugHelper";
@@ -37,7 +38,7 @@ public class MyBanalDebugHelper {
     public MyBanalDebugHelper() {
         if (DEBUG && dateString == null) {
             try {
-                dateString = (new SimpleDateFormat("yyyy-MM-dd_HHmm")).format(new Date());
+                dateString = (new SimpleDateFormat("yyyy-MM-dd_HHmm", Locale.US)).format(new Date());
 
                 // TODO: copied from TrainingTracker -> BaseExporter
                 File sdCard = Environment.getExternalStorageDirectory();
@@ -59,7 +60,7 @@ public class MyBanalDebugHelper {
     public void log(String tag, String text) {
         if (DEBUG) {
             try {
-                bufferedWriter.append((new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")).format(new Date()) + ": " + tag + ", " + text + "\n");
+                bufferedWriter.append((new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)).format(new Date()) + ": " + tag + ", " + text + "\n");
                 bufferedWriter.flush();
             } catch (IOException e) {
                 Log.e(TAG, "IOException in MyBanalDebugHelper()");

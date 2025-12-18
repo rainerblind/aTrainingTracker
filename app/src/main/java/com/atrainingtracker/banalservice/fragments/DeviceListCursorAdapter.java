@@ -46,7 +46,7 @@ public class DeviceListCursorAdapter extends SimpleCursorAdapter {
     protected static final String[] FROM = {DevicesDbHelper.DEVICE_TYPE, DevicesDbHelper.NAME, DevicesDbHelper.C_ID, DevicesDbHelper.PAIRED, DevicesDbHelper.C_ID};
     protected static final int[] TO = {R.id.ivIcon, R.id.tvDeviceName, R.id.tvMainValue, R.id.cbPaired, R.id.tvEquipment};
     private static final String TAG = "DeviceListCursorAdapter";
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     protected PairingChangedInterface mPairingChangedInterface;
     protected Context mContext;
     protected Map<Long, TextView> mDeviceId2tvMainValue;

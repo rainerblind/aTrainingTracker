@@ -55,7 +55,7 @@ public enum FileFormat {
         return mDirName;
     }
 
-    public String getFileEnding() {
+    protected String getFileEnding() {
         return mFileEnding;
     }
 

@@ -28,7 +28,7 @@ import com.google.android.gms.maps.model.LatLng;
 public class SegmentHelper {
 
     private static final String TAG = SegmentHelper.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
     public static double LatitudeDegreeInMeters(LatLng latLng) {
         // from http://gis.stackexchange.com/questions/75528/length-of-a-degree-where-do-the-terms-in-this-formula-come-from

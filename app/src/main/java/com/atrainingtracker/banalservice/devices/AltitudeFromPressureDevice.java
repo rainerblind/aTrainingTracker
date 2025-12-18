@@ -28,6 +28,8 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.util.Log;
 
+import androidx.core.content.ContextCompat;
+
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.sensor.MySensor;
@@ -43,13 +45,13 @@ public class AltitudeFromPressureDevice extends MyDevice
     public static final String ALTITUDE_CORRECTION_VALUE = "com.atrainingtracker.banalservice.Devices.AltitudeFromPressureDevice.ALTITUDE_CORRECTION_VALUE";
     public static final String ALTITUDE_CORRECTION_INTENT = "com.atrainingtracker.banalservice.Devices.AltitudeFromPressureDevice.ALTITUDE_CORRECTION_INTENT";
     protected static final double MY_PRESSURE_STANDARD_ATMOSPHERE = 1013.25;
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     protected final IntentFilter mGPSProviderEnabledFilter = new IntentFilter(BANALService.LOCATION_AVAILABLE_INTENT);
     protected MySensor<Number> mAltitudeSensor;
 
     protected Sensor mPressureSensor;
     protected boolean mPressureSensorRegistered = false;
-    private String TAG = "AltitudeFromPressureDevice";
+    private final String TAG = "AltitudeFromPressureDev";
     private double mAltitudeCorrection = 0;
     private boolean mPressureSensorInitialized = false;
     private final BroadcastReceiver mGPSProviderEnabledReceiver = new BroadcastReceiver() {
@@ -68,7 +70,7 @@ public class AltitudeFromPressureDevice extends MyDevice
             sensorManager.registerListener(this, mPressureSensor, SensorManager.SENSOR_DELAY_NORMAL);
         }
 
-        context.registerReceiver(mGPSProviderEnabledReceiver, mGPSProviderEnabledFilter);
+        ContextCompat.registerReceiver(context, mGPSProviderEnabledReceiver, mGPSProviderEnabledFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     @Override
@@ -88,6 +90,7 @@ public class AltitudeFromPressureDevice extends MyDevice
         super.shutDown();
         ((SensorManager) mContext.getSystemService(Context.SENSOR_SERVICE)).unregisterListener(this);
 
+        ContextCompat.registerReceiver(mContext, mGPSProviderEnabledReceiver, mGPSProviderEnabledFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
         mContext.unregisterReceiver(mGPSProviderEnabledReceiver);
     }
 
@@ -129,8 +132,9 @@ public class AltitudeFromPressureDevice extends MyDevice
 
         if (mAltitudeCorrection != 0.0) {
             // 	also send broadcast to inform the others (like a tracker) of this change such that they can update all previous samples accordingly!
-            Intent intent = new Intent(ALTITUDE_CORRECTION_INTENT);
-            intent.putExtra(ALTITUDE_CORRECTION_VALUE, mAltitudeCorrection);
+            Intent intent = new Intent(ALTITUDE_CORRECTION_INTENT)
+                    .setPackage(mContext.getPackageName())
+                    .putExtra(ALTITUDE_CORRECTION_VALUE, mAltitudeCorrection);
             mContext.sendBroadcast(intent);
         }
     }

@@ -36,7 +36,7 @@
 
         <EditTextPreference
             android:key="samplingTime"
-            android:numeric="integer"
+            android:inputType="number"
             android:summary="@string/prefsSamplingTimeSummary"
             android:title="@string/prefsSamplingTimeTitle" />
 
@@ -160,9 +160,9 @@
                         android:summary="@string/prefSendWorkoutEmailSummary"
                         android:title="@string/prefSendWorkoutEmailTitle" />
                     <EditTextPreference
-                        android:defaultValue="first.last@example.com"
                         android:dependency="spSendWorkoutEmail"
                         android:inputType="textEmailAddress"
+                        android:autofillHints="emailAddress"
                         android:key="spEmailAddress"
                         android:summary="first.last@example.com"
                         android:title="@string/prefSendEmailTo" />
@@ -255,7 +255,6 @@
                             android:title="@string/uploadCadence" />
                     </PreferenceCategory>
                 </PreferenceScreen>
-
 
                 <PreferenceScreen
                     android:icon="@drawable/logo_square_runkeeper"

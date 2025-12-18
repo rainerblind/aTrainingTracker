@@ -22,6 +22,8 @@ package com.atrainingtracker.banalservice.sensor.formater;
 
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 
+import java.util.Locale;
+
 public class SpeedFormatter implements MyFormatter<Number> {
     @Override
     public String format(Number speed_mps) {
@@ -29,18 +31,17 @@ public class SpeedFormatter implements MyFormatter<Number> {
             return "--";
         }
 
-        double foo = 0;
+        double speed = 0;
         switch (TrainingApplication.getUnit()) {
             case METRIC:
-                foo = speed_mps.doubleValue() * 3.6;
+                speed = speed_mps.doubleValue() * 3.6;
                 break;
 
             case IMPERIAL:
-                foo = speed_mps.doubleValue() * 2.23693629;
+                speed = speed_mps.doubleValue() * 2.23693629;
                 break;
         }
-        return String.format("%.1f", foo);
-        // return NumberFormat.getInstance().format(foo);
+        return String.format(Locale.getDefault(), "%.1f", speed);
     }
 
     public String format_with_units(Number speed_mps) {

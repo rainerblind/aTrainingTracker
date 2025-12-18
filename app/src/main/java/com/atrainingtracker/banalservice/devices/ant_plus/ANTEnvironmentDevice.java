@@ -39,7 +39,7 @@ import java.util.EnumSet;
  */
 public class ANTEnvironmentDevice extends MyANTDevice {
     private static final String TAG = "ANTEnvironmentDevice";
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
 
     protected AntPlusEnvironmentPcc mEnvironmentPcc = null;
 

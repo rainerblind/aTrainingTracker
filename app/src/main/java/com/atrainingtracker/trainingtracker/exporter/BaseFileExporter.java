@@ -31,8 +31,6 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseMan
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
 
 import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 
 public abstract class BaseFileExporter extends BaseExporter {
@@ -115,25 +113,20 @@ public abstract class BaseFileExporter extends BaseExporter {
     }
 
     protected BufferedWriter getBufferedWriter(ExportInfo exportInfo) throws IOException {
-        File file = new File(getDir(mContext, exportInfo.getFileFormat().getDirName()), exportInfo.getFileBaseName() + exportInfo.getFileFormat().getFileEnding());
-        file.createNewFile();
-        return new BufferedWriter(new FileWriter(file));
-    }
-
-    protected boolean doesFileAlreadyExist(ExportInfo exportInfo) {
-        return (new File(getDir(mContext, exportInfo.getFileFormat().getDirName()), exportInfo.getFileBaseName() + exportInfo.getFileFormat().getFileEnding())).exists();
+        // set mime type to guess storage
+        return getWriter(mContext, exportInfo.getShortPath(), "application/gpx+xml");
     }
 
     protected String myGet(Cursor cursor, String name, String defaultValue) {
-        String foo = defaultValue;
+        String defVal = defaultValue;
         try {
-            foo = cursor.getString(cursor.getColumnIndexOrThrow(name));
+            defVal = cursor.getString(cursor.getColumnIndexOrThrow(name));
         } catch (CursorIndexOutOfBoundsException e) {
             Log.e(TAG, e.toString());
         }
-        if (foo == null || foo.equals("")) {
-            foo = defaultValue;
+        if (defVal == null || defVal.isEmpty()) {
+            defVal = defaultValue;
         }
-        return foo;
+        return defVal;
     }
 }

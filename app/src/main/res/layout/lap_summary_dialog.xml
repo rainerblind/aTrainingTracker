@@ -37,7 +37,7 @@
         android:layout_weight="1"
         android:gravity="center"
         android:text="0:01:00"
-        android:textSize="30dp" />
+        android:textSize="30sp" />
 
     <TextView
         android:layout_width="fill_parent"
@@ -54,7 +54,7 @@
         android:layout_weight="1"
         android:gravity="center"
         android:text="1.001 km"
-        android:textSize="30dp" />
+        android:textSize="30sp" />
 
     <TextView
         android:layout_width="fill_parent"
@@ -71,7 +71,7 @@
         android:layout_weight="1"
         android:gravity="center"
         android:text="19.3 km/h"
-        android:textSize="30dp" />
+        android:textSize="30sp" />
 
 
 </LinearLayout>

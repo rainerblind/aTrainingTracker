@@ -30,6 +30,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import androidx.core.content.res.ResourcesCompat;
+
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -55,7 +57,7 @@ public abstract class BaseMapFragment
         extends SupportMapFragment
         implements OnMapReadyCallback {
     public static final String TAG = BaseMapFragment.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
     // map related stuff
     protected GoogleMap mMap;
@@ -156,7 +158,7 @@ public abstract class BaseMapFragment
     protected Marker addMarker(LatLng position, int drawableId, String title) {
         if (position == null) return null;
 
-        Bitmap marker = ((BitmapDrawable) getResources().getDrawable(drawableId)).getBitmap();
+        Bitmap marker = ((BitmapDrawable) ResourcesCompat.getDrawable(getResources(), drawableId, null)).getBitmap();
 
         return mMap.addMarker(new MarkerOptions()
                 .position(position)
@@ -171,7 +173,7 @@ public abstract class BaseMapFragment
             return null;
         }
 
-        Bitmap marker = ((BitmapDrawable) getResources().getDrawable(drawableId)).getBitmap();
+        Bitmap marker = ((BitmapDrawable) ResourcesCompat.getDrawable(getResources(), drawableId, null)).getBitmap();
         Bitmap scaledMarker = Bitmap.createScaledBitmap(marker, (int) (marker.getWidth() * scale), (int) (marker.getHeight() * scale), false);
 
         return mMap.addMarker(new MarkerOptions()

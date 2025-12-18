@@ -32,7 +32,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 public abstract class BaseTrackingFragment extends Fragment {
 
     public static final String TAG = ControlTrackingFragment.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG & false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
 
     protected BANALService.GetBanalServiceInterface mGetBanalServiceIf;
@@ -46,7 +46,7 @@ public abstract class BaseTrackingFragment extends Fragment {
         try {
             mGetBanalServiceIf = (BANALService.GetBanalServiceInterface) context;
         } catch (ClassCastException e) {
-            throw new ClassCastException(context.toString() + " must implement GetBanalServiceInterface");
+            throw new ClassCastException(context + " must implement GetBanalServiceInterface");
         }
     }
 

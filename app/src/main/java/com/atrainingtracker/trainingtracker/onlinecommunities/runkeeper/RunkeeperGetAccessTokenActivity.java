@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.onlinecommunities.runkeeper;
 
 import android.net.Uri;
 
+import com.atrainingtracker.BuildConfig;
 import com.atrainingtracker.R;
 import com.atrainingtracker.trainingtracker.onlinecommunities.BaseGetAccessTokenActivity;
 
@@ -28,8 +29,8 @@ import com.atrainingtracker.trainingtracker.onlinecommunities.BaseGetAccessToken
 public class RunkeeperGetAccessTokenActivity
         extends BaseGetAccessTokenActivity {
     protected static final String RUNKEEPER_AUTHORITY = "runkeeper.com";
-    protected static final String MY_CLIENT_ID = "218435e7bc7f4ca1a43def3ab9589bda";
-    protected static final String MY_CLIENT_SECRET = "199c2e26b25e457a97b048977f02a732";
+    protected static final String MY_CLIENT_ID = BuildConfig.RUNKEEPER_CLIENT_ID;
+    protected static final String MY_CLIENT_SECRET = BuildConfig.RUNKEEPER_CLIENT_SECRET;
     private static final String TAG = "RunkeeperGetAccessTokenActivity";
     private static final boolean DEBUG = false;
 

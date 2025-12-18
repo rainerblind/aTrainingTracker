@@ -37,7 +37,7 @@ import java.util.List;
  */
 public class SearchFragment extends PreferenceFragmentCompat
         implements SharedPreferences.OnSharedPreferenceChangeListener {
-    private static final boolean DEBUG = TrainingApplication.DEBUG;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private static final String TAG = SearchFragment.class.getName();
 
     private SharedPreferences mSharedPreferences;
@@ -51,7 +51,7 @@ public class SearchFragment extends PreferenceFragmentCompat
 
         setPreferencesFromResource(R.xml.prefs, rootKey);
 
-        mNumberOfSearchTriesPref = (EditTextPreference) getPreferenceScreen().findPreference(TrainingApplication.SP_NUMBER_OF_SEARCH_TRIES);
+        mNumberOfSearchTriesPref = getPreferenceScreen().findPreference(TrainingApplication.SP_NUMBER_OF_SEARCH_TRIES);
         mStartSearchPref = getPreferenceScreen().findPreference(TrainingApplication.PREF_KEY_START_SEARCH);
     }
 

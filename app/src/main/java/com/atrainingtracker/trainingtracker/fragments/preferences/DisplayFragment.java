@@ -28,7 +28,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
  * Created by rainer on 01.02.16.
  */
 public class DisplayFragment extends androidx.preference.PreferenceFragmentCompat {
-    private static final boolean DEBUG = TrainingApplication.DEBUG;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private static final String TAG = DisplayFragment.class.getName();
 
     @Override

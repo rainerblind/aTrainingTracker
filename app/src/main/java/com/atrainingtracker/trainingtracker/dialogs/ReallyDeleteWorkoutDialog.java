@@ -58,7 +58,7 @@ public class ReallyDeleteWorkoutDialog extends DialogFragment {
             mReallyDeleteDialogListener = (ReallyDeleteDialogInterface) activity;
         } catch (ClassCastException e) {
             // The activity doesn't implement the interface, throw exception
-            throw new ClassCastException(activity.toString() + " must implement ReallyDeleteDialogListener");
+            throw new ClassCastException(activity + " must implement ReallyDeleteDialogListener");
         }
     }
 

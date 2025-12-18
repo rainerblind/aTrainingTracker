@@ -38,7 +38,7 @@ public class KnownLocationsDatabaseManager {
     // private static final double maxDistanceDiff = 200;
     public static final int DEFAULT_RADIUS = 200;
     private static final String TAG = KnownLocationsDatabaseManager.class.getName();
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     private static KnownLocationsDatabaseManager cInstance;
     private static KnownLocationsDbHelper cDbHelper;
     private int mOpenCounter;
@@ -77,7 +77,7 @@ public class KnownLocationsDatabaseManager {
         try {
             db.insert(KnownLocationsDbHelper.TABLE, null, values);
         } catch (SQLException e) {
-            Log.e(TAG, "Error while writing" + e.toString());
+            Log.e(TAG, "Error while writing" + e);
         }
         getInstance().closeDatabase();
     }
@@ -101,7 +101,7 @@ public class KnownLocationsDatabaseManager {
             long id = db.insert(KnownLocationsDbHelper.TABLE, null, values);
             myLocation = new MyLocation(id, latitude, longitude, name, altitude, radius);
         } catch (SQLException e) {
-            Log.e(TAG, "Error while writing" + e.toString());
+            Log.e(TAG, "Error while writing" + e);
         }
         getInstance().closeDatabase();
 
@@ -336,7 +336,7 @@ public class KnownLocationsDatabaseManager {
         public static final String LATITUDE = "latitude";
         public static final String RADIUS = "radius";
         protected static final String TAG = KnownLocationsDbHelper.class.getName();
-        protected static final boolean DEBUG = BANALService.DEBUG & false;
+        protected static final boolean DEBUG = BANALService.getDebug(false);
         protected static final String CREATE_TABLE_V1 = "create table " + TABLE + " ("
                 + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                 + NAME + " text,"

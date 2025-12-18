@@ -23,6 +23,13 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import com.google.android.material.navigation.NavigationView;
+
+import androidx.activity.OnBackPressedCallback;
+import androidx.annotation.NonNull;
+import androidx.core.graphics.Insets;
+import androidx.core.view.OnApplyWindowInsetsListener;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
 import androidx.core.view.GravityCompat;
@@ -33,6 +40,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import android.util.Log;
 import android.view.MenuItem;
+import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 
 import com.atrainingtracker.R;
@@ -47,7 +56,7 @@ public class SegmentDetailsActivity extends AppCompatActivity
     public static final String SELECTED_FRAGMENT = "SELECTED_FRAGMENT";
     public static final String SELECTED_FRAGMENT_ID = "SELECTED_FRAGMENT_ID";
     private static final String TAG = SegmentDetailsActivity.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private static final int DEFAULT_SELECTED_FRAGMENT_ID = R.id.drawer_map;
     // remember which fragment should be shown
     protected int mSelectedFragmentId = DEFAULT_SELECTED_FRAGMENT_ID;
@@ -118,6 +127,39 @@ public class SegmentDetailsActivity extends AppCompatActivity
         if (DEBUG) Log.i(TAG, "now, we select the main fragment");
         // now, create and show the main fragment
         onNavigationItemSelected(mNavigationView.getMenu().findItem(mSelectedFragmentId));
+
+        ViewCompat.setOnApplyWindowInsetsListener(
+                mDrawerLayout,
+                new OnApplyWindowInsetsListener() {
+                    @NonNull
+                    @Override
+                    public WindowInsetsCompat onApplyWindowInsets(
+                            @NonNull View v, @NonNull WindowInsetsCompat windowInsets) {
+                        Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+                        v.setPadding(insets.left, 0, insets.right, insets.bottom);
+                        ViewGroup.MarginLayoutParams mlp = (ViewGroup.MarginLayoutParams) v.getLayoutParams();
+                        mlp.topMargin = insets.top;
+                        return WindowInsetsCompat.CONSUMED;
+                    }
+                });
+
+        getOnBackPressedDispatcher().addCallback(this,
+                new OnBackPressedCallback(true) {
+                    @Override
+                    public void handleOnBackPressed() {
+                        if (mDrawerLayout.isDrawerOpen(GravityCompat.START)) {
+                            mDrawerLayout.closeDrawer(GravityCompat.START);
+                        }
+                        // else if (getSupportFragmentManager().getBackStackEntryCount() == 0
+                        //        && mSelectedFragmentId != R.id.drawer_map) {
+                        //     onNavigationItemSelected(mNavigationView.getMenu().findItem(R.id.drawer_map));
+                        // }
+                        else {
+                            finish();
+                        }
+                    }
+                }
+        );
     }
 
     @Override
@@ -136,21 +178,6 @@ public class SegmentDetailsActivity extends AppCompatActivity
         savedInstanceState.putInt(SELECTED_FRAGMENT_ID, mSelectedFragmentId);
 
         super.onSaveInstanceState(savedInstanceState);
-    }
-
-    @Override
-    public void onBackPressed() {
-
-        if (mDrawerLayout.isDrawerOpen(GravityCompat.START)) {
-            mDrawerLayout.closeDrawer(GravityCompat.START);
-        }
-        // else if (getSupportFragmentManager().getBackStackEntryCount() == 0
-        //        && mSelectedFragmentId != R.id.drawer_map) {
-        //     onNavigationItemSelected(mNavigationView.getMenu().findItem(R.id.drawer_map));
-        // }
-        else {
-            super.onBackPressed();
-        }
     }
 
     /* Called when an options item is clicked */

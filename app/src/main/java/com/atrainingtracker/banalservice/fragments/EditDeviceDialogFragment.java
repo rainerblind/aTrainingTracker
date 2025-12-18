@@ -59,7 +59,7 @@ import java.util.List;
 public class EditDeviceDialogFragment
         extends DialogFragment {
     public static final String TAG = "EditDeviceDialogFragment";
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
 
     // public interface OnEditDeviceFinishedListener
     // {
@@ -327,7 +327,8 @@ public class EditDeviceDialogFragment
 //                // inform everybody that pairing has changed
 //                Intent intent = new Intent(BANALService.PAIRING_CHANGED);
 //                intent.putExtra(BANALService.DEVICE_ID, mDeviceID);
-//                intent.putExtra(BANALService.PAIRED, cbPaired.isChecked());
+//                intent.putExtra(BANALService.PAIRED, cbPaired.isChecked())
+//                intent.setPackage(getActivity().getPackageName())
 //                getActivity().sendBroadcast(intent);
 //            }
 //        });
@@ -429,7 +430,7 @@ public class EditDeviceDialogFragment
                     null);
         } catch (SQLException e) {
             // TODO: use Toast?
-            Log.e(TAG, "Error while writing" + e.toString());
+            Log.e(TAG, "Error while writing" + e);
         }
         databaseManager.closeDatabase(); // db.close();
 
@@ -447,15 +448,17 @@ public class EditDeviceDialogFragment
 
         // TODO: store original value and do this only when necessary???
         // inform everybody that pairing has changed
-        Intent intent = new Intent(BANALService.PAIRING_CHANGED);
-        intent.putExtra(BANALService.DEVICE_ID, mDeviceID);
-        intent.putExtra(BANALService.PAIRED, cbPaired.isChecked());
+        Intent intent = new Intent(BANALService.PAIRING_CHANGED)
+                .putExtra(BANALService.DEVICE_ID, mDeviceID)
+                .putExtra(BANALService.PAIRED, cbPaired.isChecked())
+                .setPackage(getActivity().getPackageName());
         getActivity().sendBroadcast(intent);
 
         if (mCalibrationFactorChanged) {
-            intent = new Intent(BANALService.CALIBRATION_FACTOR_CHANGED);
-            intent.putExtra(BANALService.DEVICE_ID, mDeviceID);
-            intent.putExtra(BANALService.CALIBRATION_FACTOR, newCalibrationFactor);
+            intent = new Intent(BANALService.CALIBRATION_FACTOR_CHANGED)
+                    .putExtra(BANALService.DEVICE_ID, mDeviceID)
+                    .putExtra(BANALService.CALIBRATION_FACTOR, newCalibrationFactor)
+                    .setPackage(getActivity().getPackageName());
             getActivity().sendBroadcast(intent);
         }
 

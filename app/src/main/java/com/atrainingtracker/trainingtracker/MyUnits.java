@@ -24,7 +24,7 @@ public enum MyUnits {
     METRIC(R.string.units_type_metric),
     IMPERIAL(R.string.units_type_imperial);
 
-    private int nameId;
+    private final int nameId;
 
     MyUnits(int nameId) {
         this.nameId = nameId;

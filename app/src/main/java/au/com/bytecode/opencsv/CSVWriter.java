@@ -57,12 +57,12 @@ public class CSVWriter implements Closeable {
      * Default line terminator uses platform encoding.
      */
     public static final String DEFAULT_LINE_END = "\n";
-    private Writer rawWriter;
-    private PrintWriter pw;
-    private char separator;
-    private char quotechar;
-    private char escapechar;
-    private String lineEnd;
+    private final Writer rawWriter;
+    private final PrintWriter pw;
+    private final char separator;
+    private final char quotechar;
+    private final char escapechar;
+    private final String lineEnd;
     private ResultSetHelper resultService = new ResultSetHelperService();
 
     /**

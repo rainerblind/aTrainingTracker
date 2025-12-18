@@ -23,6 +23,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
+
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -46,7 +48,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 
 public class TrackingModeFragment extends Fragment {
     private static final String TAG = TrackingModeFragment.class.getName();
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
 
     private LinearLayout mLLSensors;
     private ProgressBar mPBSearching;
@@ -62,7 +64,7 @@ public class TrackingModeFragment extends Fragment {
             updateView(context);
         }
     };
-    private IntentFilter mUpdateViewFilter = new IntentFilter();  // Intents will be added in onResume
+    private final IntentFilter mUpdateViewFilter = new IntentFilter();  // Intents will be added in onResume
 
     // onCreate()
 
@@ -85,7 +87,7 @@ public class TrackingModeFragment extends Fragment {
                 }
             });
         } catch (ClassCastException e) {
-            throw new ClassCastException(context.toString() + " must implement GetBanalServiceInterface");
+            throw new ClassCastException(context + " must implement GetBanalServiceInterface");
         }
 
     }
@@ -121,7 +123,7 @@ public class TrackingModeFragment extends Fragment {
         mUpdateViewFilter.addAction(BANALService.SEARCHING_STARTED_FOR_ONE_INTENT);
         mUpdateViewFilter.addAction(BANALService.SPORT_TYPE_CHANGED_BY_USER_INTENT);
         mUpdateViewFilter.addAction(TrainingApplication.TRACKING_STATE_CHANGED);
-        getActivity().registerReceiver(mUpdateViewReceiver, mUpdateViewFilter);
+        ContextCompat.registerReceiver(getActivity(), mUpdateViewReceiver, mUpdateViewFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     @Override
@@ -135,7 +137,7 @@ public class TrackingModeFragment extends Fragment {
     public void updateView(Context context) {
         if (DEBUG) Log.d(TAG, "updateView");
 
-        if (!mViewCreated | !isAdded()) {
+        if (!mViewCreated || !isAdded()) {
             return;
         }
 
