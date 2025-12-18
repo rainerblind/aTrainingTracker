@@ -47,7 +47,7 @@ import java.util.List;
 public class ConfigPebbleViewFragment extends ConfigViewFragment {
     public static final String PEBBLE_VIEW_CHANGED_INTENT = "PEBBLE_VIEW_CHANGED_INTENT";
     private static final String TAG = ConfigPebbleViewFragment.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && true;
+    private static final boolean DEBUG = TrainingApplication.getDebug(true);
     protected static ArrayAdapter<Integer> NUMBER_OF_FIELDS_ARRAY_ADAPTER;
     protected static SensorArrayAdapter SENSOR_ARRAY_ADAPTER;
 
@@ -166,11 +166,11 @@ public class ConfigPebbleViewFragment extends ConfigViewFragment {
 
         // sensor fields
         mSensorTypeSpinners.clear();
-        mSensorTypeSpinners.add((Spinner) view.findViewById(R.id.spinnerField1));
-        mSensorTypeSpinners.add((Spinner) view.findViewById(R.id.spinnerField2));
-        mSensorTypeSpinners.add((Spinner) view.findViewById(R.id.spinnerField3));
-        mSensorTypeSpinners.add((Spinner) view.findViewById(R.id.spinnerField4));
-        mSensorTypeSpinners.add((Spinner) view.findViewById(R.id.spinnerField5));
+        mSensorTypeSpinners.add(view.findViewById(R.id.spinnerField1));
+        mSensorTypeSpinners.add(view.findViewById(R.id.spinnerField2));
+        mSensorTypeSpinners.add(view.findViewById(R.id.spinnerField3));
+        mSensorTypeSpinners.add(view.findViewById(R.id.spinnerField4));
+        mSensorTypeSpinners.add(view.findViewById(R.id.spinnerField5));
 
         int counter = 0;
         for (SensorType sensorType : sensorTypeList) {
@@ -227,7 +227,8 @@ public class ConfigPebbleViewFragment extends ConfigViewFragment {
         super.onPause();
         if (DEBUG) Log.i(TAG, "onPause()");
 
-        getActivity().sendBroadcast(new Intent(PEBBLE_VIEW_CHANGED_INTENT));
+        getActivity().sendBroadcast(new Intent(PEBBLE_VIEW_CHANGED_INTENT)
+                .setPackage(getActivity().getPackageName()));
     }
 
 }

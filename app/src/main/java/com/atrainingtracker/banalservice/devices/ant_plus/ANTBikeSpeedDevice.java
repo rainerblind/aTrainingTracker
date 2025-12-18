@@ -43,7 +43,7 @@ import java.util.EnumSet;
 public class ANTBikeSpeedDevice extends MyANTDevice {
     protected static final int SPEED_THRESHOLD = 8;
     private static final String TAG = "ANTBikeSpeedDevice";
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
 
 
     // everything is stored as int, so we do not have to take care about all the castings

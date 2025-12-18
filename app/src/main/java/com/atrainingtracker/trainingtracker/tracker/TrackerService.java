@@ -32,6 +32,8 @@ import android.database.sqlite.SQLiteDatabase;
 import android.os.IBinder;
 import android.util.Log;
 
+import androidx.core.content.ContextCompat;
+
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.BANALService.BANALServiceComm;
 import com.atrainingtracker.banalservice.devices.AltitudeFromPressureDevice;
@@ -71,7 +73,7 @@ public class TrackerService extends Service {
     // public static final String WORKOUT_ID               = "de.rainerblind.trainingtracker.TrackerService.WORKOUT_ID";
     public static final String START_TYPE = "START_TYPE";
     private static final String TAG = "TrackerService";
-    private static final boolean DEBUG = TrainingApplication.DEBUG & false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     protected final IntentFilter mAltitudeCorrectionFilter = new IntentFilter(AltitudeFromPressureDevice.ALTITUDE_CORRECTION_INTENT);
     protected final IntentFilter mSearchingFinishedFilter = new IntentFilter(BANALService.SEARCHING_FINISHED_FOR_ALL_INTENT);
     // BANALConnection banalConnection;
@@ -169,7 +171,7 @@ public class TrackerService extends Service {
         }
     };
     // class BANALConnection implements ServiceConnection
-    private ServiceConnection mBanalConnection = new ServiceConnection() {
+    private final ServiceConnection mBanalConnection = new ServiceConnection() {
         public void onServiceConnected(ComponentName name, IBinder service) {
             mBanalService = (BANALServiceComm) service;
             if (DEBUG) Log.i(TAG, "connected to BANAL Service");
@@ -192,7 +194,8 @@ public class TrackerService extends Service {
                 recreateValuesWhenResuming();
                 mResumeTrackingWhenConnectedToBanalService = false;
                 // mBanalService.resumeTracking();
-                sendBroadcast(new Intent(BANALService.RESET_ACCUMULATORS_INTENT));
+                sendBroadcast(new Intent(BANALService.RESET_ACCUMULATORS_INTENT)
+                        .setPackage(getPackageName()));
             }
         }
 
@@ -214,9 +217,9 @@ public class TrackerService extends Service {
         // request bind to the BANAL Service
         bindService(new Intent(this, BANALService.class), mBanalConnection, Context.BIND_AUTO_CREATE);
 
-        registerReceiver(mSearchingFinishedReceiver, mSearchingFinishedFilter);
-        registerReceiver(mAltitudeCorrectionReceiver, mAltitudeCorrectionFilter);
-        registerReceiver(mLapSummaryReceiver, mLapSummaryFilter);
+        ContextCompat.registerReceiver(this, mSearchingFinishedReceiver, mSearchingFinishedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mAltitudeCorrectionReceiver, mAltitudeCorrectionFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mLapSummaryReceiver, mLapSummaryFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     @Override
@@ -276,8 +279,9 @@ public class TrackerService extends Service {
                 TimeUnit.SECONDS);
 
         // notify others
-        Intent trackingStartedIntent = new Intent(TRACKING_STARTED_INTENT);
-        trackingStartedIntent.putExtra(WorkoutSummaries.WORKOUT_ID, mWorkoutID);
+        Intent trackingStartedIntent = new Intent(TRACKING_STARTED_INTENT)
+                .putExtra(WorkoutSummaries.WORKOUT_ID, mWorkoutID)
+                .setPackage(this.getPackageName());
         this.sendBroadcast(trackingStartedIntent);
 
         this.startForeground(TrainingApplication.TRACKING_NOTIFICATION_ID, mTrainingApplication.getSearchingAndTrackingNotification());
@@ -537,7 +541,8 @@ public class TrackerService extends Service {
         exportManager.workoutFinished(mBaseFileName);
         exportManager.onFinished(TAG);
 
-        sendBroadcast(new Intent(TRACKING_FINISHED_INTENT));
+        sendBroadcast(new Intent(TRACKING_FINISHED_INTENT)
+                .setPackage(getPackageName()));
     }
 
     private void sampleAndWriteToDb() {

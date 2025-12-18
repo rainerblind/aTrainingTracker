@@ -35,7 +35,7 @@ import java.util.List;
 
 public class DeviceTypeChoiceFragment extends ListFragment {
     public static final String TAG = "DeviceTypeChoiceFragment";
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
 
     OnDeviceTypeSelectedListener mCallback;
     Protocol mProtocol;
@@ -61,7 +61,7 @@ public class DeviceTypeChoiceFragment extends ListFragment {
         try {
             mCallback = (OnDeviceTypeSelectedListener) context;
         } catch (ClassCastException e) {
-            throw new ClassCastException(context.toString() + " must implement OnDeviceTypeSelectedListener");
+            throw new ClassCastException(context + " must implement OnDeviceTypeSelectedListener");
         }
     }
 

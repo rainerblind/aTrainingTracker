@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.onlinecommunities.trainingpeaks;
 import android.net.Uri;
 import android.util.Log;
 
+import com.atrainingtracker.BuildConfig;
 import com.atrainingtracker.R;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.onlinecommunities.BaseGetAccessTokenActivity;
@@ -46,11 +47,11 @@ import java.util.List;
 
 public class TrainingpeaksGetAccessTokenActivity
         extends BaseGetAccessTokenActivity {
-    public static final String MY_CLIENT_ID = "atrainingtracker";
+    public static final String MY_CLIENT_ID = BuildConfig.TRAININGPEAKS_CLIENT_ID;
+    private static final String MY_CLIENT_SECRET = BuildConfig.TRAININGPEAKS_CLIENT_SECRET;
     private static final String TAG = TrainingpeaksGetAccessTokenActivity.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private static final String TRAININGPEAKS_AUTHORITY = "oauth.trainingpeaks.com";
-    private static final String MY_CLIENT_SECRET = "h7QYlGBrygVkGpjsifNbZED14FqIxxfWgrHcib8bP8w";
 
     @Override
     protected String getAuthorizationUrl() {

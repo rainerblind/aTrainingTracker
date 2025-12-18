@@ -27,7 +27,7 @@ import com.atrainingtracker.banalservice.sensor.MySensorManager;
 
 public class BTLEBikeSpeedAndCadenceDevice extends BTLEBikeDevice {
     private static final String TAG = "BTLEBikeSpeedAndCadenceDevice";
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
 
     /**
      * constructor

@@ -18,14 +18,22 @@
 
 package com.atrainingtracker.trainingtracker.activities;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import android.content.DialogInterface;
 import android.os.Bundle;
+
+import androidx.core.graphics.Insets;
+import androidx.core.view.OnApplyWindowInsetsListener;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import android.util.Log;
+import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 
 import com.atrainingtracker.R;
@@ -44,7 +52,7 @@ public abstract class ConfigViewsActivity
     public static final String NAME = "NAME";
     public static final String NAME_CHANGED_INTENT = "NAME_CHANGED_INTENT";
     private static final String TAG = ConfigViewsActivity.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG & true;
+    private static final boolean DEBUG = TrainingApplication.getDebug(true);
     // public static final String VIEW_CHANGED_INTENT = "VIEW_CHANGED_INTENT";
     long mViewId = -1;
     ActivityType mActivityType = null;
@@ -81,6 +89,22 @@ public abstract class ConfigViewsActivity
         // supportAB.setHomeAsUpIndicator(R.drawable.abc_ic_ab_back_mtrl_am_alpha);
         // supportAB.setDisplayHomeAsUpEnabled(true);
 
+        View rootView = findViewById(R.id.main_activity_without_navigation_layout);
+
+        ViewCompat.setOnApplyWindowInsetsListener(
+                rootView,
+                new OnApplyWindowInsetsListener() {
+                    @NonNull
+                    @Override
+                    public WindowInsetsCompat onApplyWindowInsets(
+                            @NonNull View v, @NonNull WindowInsetsCompat windowInsets) {
+                        Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+                        v.setPadding(insets.left, 0, insets.right, insets.bottom);
+                        ViewGroup.MarginLayoutParams mlp = (ViewGroup.MarginLayoutParams) v.getLayoutParams();
+                        mlp.topMargin = insets.top;
+                        return WindowInsetsCompat.CONSUMED;
+                    }
+                });
         showMainFragment();
     }
 

@@ -33,7 +33,7 @@ import com.atrainingtracker.banalservice.database.DevicesDatabaseManager.Devices
  */
 public class PairedRemoteDevicesFragment extends RemoteDevicesFragment {
     public static final String TAG = "PairedRemoteDevicesFragment";
-    private static final boolean DEBUG = BANALService.DEBUG && true;
+    private static final boolean DEBUG = BANALService.getDebug(true);
 
     public static PairedRemoteDevicesFragment newInstance(Protocol protocol, DeviceType deviceType) {
         if (DEBUG) Log.i(TAG, "newInstance()");

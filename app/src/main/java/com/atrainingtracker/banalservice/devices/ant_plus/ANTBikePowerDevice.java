@@ -56,7 +56,7 @@ public class ANTBikePowerDevice extends MyANTDevice {
     protected static final int SPEED_THRESHOLD = 8;
     protected static final int POWER_THRESHOLD = 8;
     protected static final int TORQUE_THRESHOLD = 8;
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     private static final MyBanalDebugHelper myDebugHelper = new MyBanalDebugHelper();
     protected MySensor<Integer> mPowerSensor;
     protected MySensor<Double> mTorqueSensor;
@@ -73,7 +73,7 @@ public class ANTBikePowerDevice extends MyANTDevice {
     protected MySensor<Integer> mTorqueEffectivenessLeftSensor;
     protected boolean mInvertPowerBalanceValues;
     AntPlusBikePowerPcc bikePowerPcc = null;
-    private String TAG = "ANTBikePowerDevice";
+    private final String TAG = "ANTBikePowerDevice";
 
     /**
      * constructor

@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker;
 
+import android.annotation.SuppressLint;
 import android.app.Application;
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -29,15 +30,17 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+
+import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.atrainingtracker.BuildConfig;
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.BSportType;
@@ -66,9 +69,10 @@ import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleServiceBuild
 import com.atrainingtracker.trainingtracker.smartwatch.pebble.Watchapp;
 
 import java.util.HashMap;
+import java.util.Locale;
 
 public class TrainingApplication extends Application {
-    public static final boolean DEBUG = false;
+    private static final boolean DEBUG = false;
     // some Strings to handle tracking globally
     public static final String REQUEST_START_TRACKING = "com.atrainingtracker.trainingapplication.REQUEST_START_TRACKING";
     public static final String REQUEST_PAUSE_TRACKING = "com.atrainingtracker.trainingapplication.REQUEST_PAUSE_TRACKING";
@@ -158,8 +162,8 @@ public class TrainingApplication extends Application {
     public static final float MIN_DISTANCE_BETWEEN_START_AND_STOP = 100;
     public static final double DISTANCE_TO_MAX_THRESHOLD_FOR_TRAINER = 200;
     public static final double DISTANCE_TO_MAX_RATIO_FOR_COMMUTE = Math.PI / 2; // probably the best value ;-)
-    protected final static String DROPBOX_APP_KEY = "iknmdmr31sf64r0";
-    protected final static String DROPBOX_APP_SECRET = "w7jkk5ri8sl7sd7";
+    protected final static String DROPBOX_APP_KEY = BuildConfig.DROPBOX_APP_KEY;
+    protected final static String DROPBOX_APP_SECRET = BuildConfig.DROPBOX_APP_SECRET;
     protected static final String SP_DROPBOX_TOKEN = "dropboxToken";
     private static final String TAG = "TrainingApplication";
     private static final String SP_PLAY_SERVICE_INSTALLATION_TRIES = "playServiceInstallationTries";
@@ -211,8 +215,8 @@ public class TrainingApplication extends Application {
     private final IntentFilter mSearchingStartedFilter = new IntentFilter(BANALService.SEARCHING_STARTED_FOR_ONE_INTENT);
     public TrackOnMapHelper trackOnMapHelper;
     public SegmentOnMapHelper segmentOnMapHelper;
-    private HashMap<Long, Boolean> mSegmentListUpdating = new HashMap();
-    private HashMap<Long, Boolean> mLeaderboardUpdating = new HashMap();
+    private final HashMap<Long, Boolean> mSegmentListUpdating = new HashMap();
+    private final HashMap<Long, Boolean> mLeaderboardUpdating = new HashMap();
     private long mWorkoutID = -1;
     protected BroadcastReceiver mTrackingStartedReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
@@ -230,15 +234,19 @@ public class TrainingApplication extends Application {
     private NotificationCompat.Builder mTrackingAndSearchingNotificationBuilder;
     private PendingIntent mStartMainActivityPendingIntent;
     private String mNotificationSummary = "searching";
-    private DistanceFormatter mDistanceFormatter = new DistanceFormatter();
+    private final DistanceFormatter mDistanceFormatter = new DistanceFormatter();
 
     // protected void showNotification()
     // {
     //     mNotificationManager.notify(TRACKING_NOTIFICATION_ID, mTrackingAndSearchingNotificationBuilder.getNotification());
     // }
-    private TimeFormatter mTimeFormatter = new TimeFormatter();
+    private final TimeFormatter mTimeFormatter = new TimeFormatter();
     private String mDeviceCurrentlySearchingFor = null;
     /***********************************************************************************************/
+
+    public static boolean getDebug(boolean defaultVal) {
+        return DEBUG && defaultVal;
+    }
 
     protected BroadcastReceiver mStartTrackingReceiver = new BroadcastReceiver() {
         @Override
@@ -264,13 +272,13 @@ public class TrainingApplication extends Application {
             resumeFromPaused();
         }
     };
-    private BroadcastReceiver mSearchingFinishedReceiver = new BroadcastReceiver() {
+    private final BroadcastReceiver mSearchingFinishedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             notifySearchingFinished();
         }
     };
-    private BroadcastReceiver mSearchingStartedReceiver = new BroadcastReceiver() {
+    private final BroadcastReceiver mSearchingStartedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             notifySearchingStartedFor(intent.getStringExtra(BANALService.DEVICE_NAME));
@@ -278,9 +286,8 @@ public class TrainingApplication extends Application {
     };
 
     public static boolean havePermission(String permission) {
-        return ContextCompat.checkSelfPermission(cAppContext, permission) == PackageManager.PERMISSION_GRANTED;
+        return ActivityCompat.checkSelfPermission(cAppContext, permission) == PackageManager.PERMISSION_GRANTED;
     }
-
 
     public static boolean isAppInstalled(String uri) {
         PackageManager pm = cAppContext.getPackageManager();
@@ -470,19 +477,19 @@ public class TrainingApplication extends Application {
     }
 
     public static double getMinWalkSpeed_UserUnits() {
-        return MyHelper.string2Double(cSharedPreferences.getString(MIN_WALK_SPEED, String.format("%f", MyHelper.mps2userUnit(DEFAULT_MIN_WALK_SPEED_mps))));
+        return MyHelper.string2Double(cSharedPreferences.getString(MIN_WALK_SPEED, String.format(Locale.getDefault(), "%f", MyHelper.mps2userUnit(DEFAULT_MIN_WALK_SPEED_mps))));
     }
 
     public static double getMaxWalkSpeed_UserUnits() {
-        return MyHelper.string2Double(cSharedPreferences.getString(MAX_WALK_SPEED, String.format("%f", MyHelper.mps2userUnit(DEFAULT_MAX_WALK_SPEED_mps))));
+        return MyHelper.string2Double(cSharedPreferences.getString(MAX_WALK_SPEED, String.format(Locale.getDefault(), "%f", MyHelper.mps2userUnit(DEFAULT_MAX_WALK_SPEED_mps))));
     }
 
     public static double getMaxRunSpeed_UserUnits() {
-        return MyHelper.string2Double(cSharedPreferences.getString(MAX_RUN_SPEED, String.format("%f", MyHelper.mps2userUnit(DEFAULT_MAX_RUN_SPEED_mps))));
+        return MyHelper.string2Double(cSharedPreferences.getString(MAX_RUN_SPEED, String.format(Locale.getDefault(), "%f", MyHelper.mps2userUnit(DEFAULT_MAX_RUN_SPEED_mps))));
     }
 
     public static double getMaxMTBSpeed_UserUnits() {
-        return MyHelper.string2Double(cSharedPreferences.getString(MAX_MTB_SPEED, String.format("%f", MyHelper.mps2userUnit(DEFAULT_MAX_MTB_SPEED_mps))));
+        return MyHelper.string2Double(cSharedPreferences.getString(MAX_MTB_SPEED, String.format(Locale.getDefault(), "%f", MyHelper.mps2userUnit(DEFAULT_MAX_MTB_SPEED_mps))));
     }
 
     public static double getMinWalkSpeed_mps() {
@@ -867,15 +874,15 @@ public class TrainingApplication extends Application {
         mTrackingAndSearchingNotificationBuilder = getNewNotificationBuilder();
         addActionsToNotificationBuilder();
 
-        registerReceiver(mSearchingFinishedReceiver, mSearchingFinishedFilter);
-        registerReceiver(mSearchingStartedReceiver, mSearchingStartedFilter);
+        ContextCompat.registerReceiver(this, mSearchingFinishedReceiver, mSearchingFinishedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mSearchingStartedReceiver, mSearchingStartedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
 
-        registerReceiver(mStartTrackingReceiver, new IntentFilter(REQUEST_START_TRACKING));
-        registerReceiver(mTrackingStartedReceiver, new IntentFilter(TrackerService.TRACKING_STARTED_INTENT));
-        registerReceiver(mStopTrackingReceiver, new IntentFilter(REQUEST_STOP_TRACKING));
-        registerReceiver(mTrackingStoppedReceiver, new IntentFilter(TrackerService.TRACKING_FINISHED_INTENT));
-        registerReceiver(mPauseTrackingReceiver, new IntentFilter(REQUEST_PAUSE_TRACKING));
-        registerReceiver(mResumeFromPaused, new IntentFilter(REQUEST_RESUME_FROM_PAUSED));
+        ContextCompat.registerReceiver(this, mStartTrackingReceiver, new IntentFilter(REQUEST_START_TRACKING), ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mTrackingStartedReceiver, new IntentFilter(TrackerService.TRACKING_STARTED_INTENT), ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mStopTrackingReceiver, new IntentFilter(REQUEST_STOP_TRACKING), ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mTrackingStoppedReceiver, new IntentFilter(TrackerService.TRACKING_FINISHED_INTENT), ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mPauseTrackingReceiver, new IntentFilter(REQUEST_PAUSE_TRACKING), ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mResumeFromPaused, new IntentFilter(REQUEST_RESUME_FROM_PAUSED), ContextCompat.RECEIVER_NOT_EXPORTED);
 
         // eventually get the starred segments
         // TODO: do this in the main activity???
@@ -898,7 +905,7 @@ public class TrainingApplication extends Application {
         newIntent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
         newIntent.putExtras(bundle);
         newIntent.setAction("TrackerService");
-        mStartMainActivityPendingIntent = PendingIntent.getActivity(this, 0, newIntent, 0);  // TODO: correct???
+        mStartMainActivityPendingIntent = PendingIntent.getActivity(this, 0, newIntent, PendingIntent.FLAG_IMMUTABLE);  // TODO: correct???
 
         NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL__TRACKING_2)
                 .setSmallIcon(R.drawable.logo)
@@ -909,6 +916,7 @@ public class TrainingApplication extends Application {
         return notificationBuilder;
     }
 
+    @SuppressLint("RestrictedApi")
     protected void addActionsToNotificationBuilder() {
         if (DEBUG) Log.i(TAG, "addActionsToNotificationBuilder");
 
@@ -919,34 +927,48 @@ public class TrainingApplication extends Application {
         }
 
         if (!BANALService.isSearching()) {
-            mTrackingAndSearchingNotificationBuilder.addAction((new NotificationCompat.Action.Builder(R.drawable.research_icon, getString(R.string.research),
-                    PendingIntent.getBroadcast(this, 0, new Intent(REQUEST_START_SEARCH_FOR_PAIRED_DEVICES), 0))).build());
+            mTrackingAndSearchingNotificationBuilder.addAction(
+                    (new NotificationCompat.Action.Builder(R.drawable.research_icon, getString(R.string.research),
+                        PendingIntent.getBroadcast(this, 0,
+                                new Intent(REQUEST_START_SEARCH_FOR_PAIRED_DEVICES).setPackage(getPackageName()), PendingIntent.FLAG_IMMUTABLE)))
+                    .build());
         }
 
         if (isPaused()) {
-            mTrackingAndSearchingNotificationBuilder.addAction((new NotificationCompat.Action.Builder(R.drawable.control_start, getString(R.string.Resume),
-                    PendingIntent.getBroadcast(this, 0, new Intent(REQUEST_RESUME_FROM_PAUSED), 0))).build());
+            mTrackingAndSearchingNotificationBuilder.addAction(
+                    (new NotificationCompat.Action.Builder(R.drawable.control_start, getString(R.string.Resume),
+                        PendingIntent.getBroadcast(this, 0,
+                                new Intent(REQUEST_RESUME_FROM_PAUSED).setPackage(getPackageName()), PendingIntent.FLAG_IMMUTABLE)))
+                    .build());
 
-            mTrackingAndSearchingNotificationBuilder.addAction((new NotificationCompat.Action.Builder(R.drawable.control_stop, getString(R.string.Stop),
-                    PendingIntent.getBroadcast(this, 0, new Intent(REQUEST_STOP_TRACKING), 0))).build());
+            mTrackingAndSearchingNotificationBuilder.addAction(
+                    (new NotificationCompat.Action.Builder(R.drawable.control_stop, getString(R.string.Stop),
+                        PendingIntent.getBroadcast(this, 0,
+                                new Intent(REQUEST_STOP_TRACKING).setPackage(getPackageName()), PendingIntent.FLAG_IMMUTABLE)))
+                    .build());
         } else {
-            mTrackingAndSearchingNotificationBuilder.addAction((new NotificationCompat.Action.Builder(R.drawable.control_pause, getString(R.string.Pause),
-                    PendingIntent.getBroadcast(this, 0, new Intent(REQUEST_PAUSE_TRACKING), 0))).build());
+            mTrackingAndSearchingNotificationBuilder.addAction(
+                    (new NotificationCompat.Action.Builder(R.drawable.control_pause, getString(R.string.Pause),
+                        PendingIntent.getBroadcast(this, 0,
+                                new Intent(REQUEST_PAUSE_TRACKING).setPackage(getPackageName()), PendingIntent.FLAG_IMMUTABLE)))
+                    .build());
         }
     }
 
     public void updateTimeAndDistanceToNotification(SensorData<Integer> time, SensorData<Number> distance, String sportType) {
         if (DEBUG) Log.i(TAG, "updateTimeAndDistanceToNotification(" + time + ", " + distance);
 
-        String sTime = mTimeFormatter.format_with_units(time == null ? null : time.getValue());
-        String sDistance = mDistanceFormatter.format_with_units(distance == null ? null : distance.getValue());
+        if (mNotificationManager.areNotificationsEnabled()) {
+            String sTime = mTimeFormatter.format_with_units(time == null ? null : time.getValue());
+            String sDistance = mDistanceFormatter.format_with_units(distance == null ? null : distance.getValue());
 
-        // mTrackingAndSearchingNotificationBuilder.setDefaults(Notification.DEFAULT_ALL) // requires VIBRATE permission
-        mTrackingAndSearchingNotificationBuilder.setStyle(new NotificationCompat.BigTextStyle()
-                .bigText(getString(R.string.tracking_details_format, mNotificationSummary, sDistance, sportType, sTime)));
+            // mTrackingAndSearchingNotificationBuilder.setDefaults(Notification.DEFAULT_ALL) // requires VIBRATE permission
+            mTrackingAndSearchingNotificationBuilder.setStyle(new NotificationCompat.BigTextStyle()
+                    .bigText(getString(R.string.tracking_details_format, mNotificationSummary, sDistance, sportType, sTime)));
 
-        // showNotification();
-        mNotificationManager.notify(TRACKING_NOTIFICATION_ID, mTrackingAndSearchingNotificationBuilder.build());
+            // showNotification();
+            mNotificationManager.notify(TRACKING_NOTIFICATION_ID, mTrackingAndSearchingNotificationBuilder.build());
+        }
     }
 
     private void updateNotificationSummary() {
@@ -1096,11 +1118,13 @@ public class TrainingApplication extends Application {
     /*  Broadcast Receivers for handling the tracking state                                        */
     protected void startTracking() {
         if (!cResumeFromCrash) {
-            sendBroadcast(new Intent(BANALService.RESET_ACCUMULATORS_INTENT));
+            sendBroadcast(new Intent(BANALService.RESET_ACCUMULATORS_INTENT)
+                    .setPackage(getPackageName()));
         }
 
         if (startSearchWhenTrackingStarts()) {
-            sendBroadcast(new Intent(REQUEST_START_SEARCH_FOR_PAIRED_DEVICES));
+            sendBroadcast(new Intent(REQUEST_START_SEARCH_FOR_PAIRED_DEVICES)
+                    .setPackage(getPackageName()));
         }
 
         Intent intent = new Intent(this, TrackerService.class);
@@ -1120,7 +1144,8 @@ public class TrainingApplication extends Application {
     protected void pauseTracking() {
         if (DEBUG) Log.d(TAG, "pause tracking");
 
-        sendBroadcast(new Intent(REQUEST_NEW_LAP));
+        sendBroadcast(new Intent(REQUEST_NEW_LAP)
+                .setPackage(getPackageName()));
 
         cTrackingMode = TrackingMode.PAUSED;
         notifyTrackingStateChanged();
@@ -1130,10 +1155,12 @@ public class TrainingApplication extends Application {
         if (DEBUG) Log.d(TAG, "resume tracking");
 
         if (TrainingApplication.startSearchWhenResumeFromPaused()) {
-            sendBroadcast(new Intent(REQUEST_START_SEARCH_FOR_PAIRED_DEVICES));
+            sendBroadcast(new Intent(REQUEST_START_SEARCH_FOR_PAIRED_DEVICES)
+                    .setPackage(getPackageName()));
         }
 
-        sendBroadcast(new Intent(REQUEST_NEW_LAP));
+        sendBroadcast(new Intent(REQUEST_NEW_LAP)
+                .setPackage(getPackageName()));
 
         cTrackingMode = TrackingMode.TRACKING;
         notifyTrackingStateChanged();
@@ -1149,7 +1176,8 @@ public class TrainingApplication extends Application {
     }
 
     protected void trackingStopped() {
-        sendBroadcast(new Intent(BANALService.RESET_ACCUMULATORS_INTENT));
+        sendBroadcast(new Intent(BANALService.RESET_ACCUMULATORS_INTENT)
+                .setPackage(getPackageName()));
         startWorkoutDetailsActivity(mWorkoutID, WorkoutDetailsActivity.SelectedFragment.EDIT_DETAILS);
         mNotificationManager.cancel(TRACKING_NOTIFICATION_ID);
     }
@@ -1159,31 +1187,30 @@ public class TrainingApplication extends Application {
         addActionsToNotificationBuilder();
         updateNotificationSummary();
 
-        sendBroadcast(new Intent(TRACKING_STATE_CHANGED));
+        sendBroadcast(new Intent(TRACKING_STATE_CHANGED)
+                .setPackage(getPackageName()));
     }
 
 
     private void createNotificationChannel() {
         // Create the NotificationChannel, but only on API 26+ because
         // the NotificationChannel class is new and not in the support library
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationManager notificationManager = getSystemService(NotificationManager.class);
+        NotificationManager notificationManager = getSystemService(NotificationManager.class);
 
-            notificationManager.deleteNotificationChannel(NOTIFICATION_CHANNEL__TRACKING);
+        notificationManager.deleteNotificationChannel(NOTIFICATION_CHANNEL__TRACKING);
 
-            // Channel for Tracking
-            NotificationChannel channel = new NotificationChannel(NOTIFICATION_CHANNEL__TRACKING_2,
-                    getString(R.string.notification_channel_name__tracking),
-                    NotificationManager.IMPORTANCE_LOW);
-            channel.setDescription(getString(R.string.notification_channel_description__tracking));
-            notificationManager.createNotificationChannel(channel); // Register the channel with the system;
+        // Channel for Tracking
+        NotificationChannel channel = new NotificationChannel(NOTIFICATION_CHANNEL__TRACKING_2,
+                getString(R.string.notification_channel_name__tracking),
+                NotificationManager.IMPORTANCE_LOW);
+        channel.setDescription(getString(R.string.notification_channel_description__tracking));
+        notificationManager.createNotificationChannel(channel); // Register the channel with the system;
 
-            channel = new NotificationChannel(NOTIFICATION_CHANNEL__EXPORT,
-                    getString(R.string.notification_channel_name__export),
-                    NotificationManager.IMPORTANCE_DEFAULT);
-            channel.setDescription(getString(R.string.notification_channel_description__export));
-            notificationManager.createNotificationChannel(channel);
-        }
+        channel = new NotificationChannel(NOTIFICATION_CHANNEL__EXPORT,
+                getString(R.string.notification_channel_name__export),
+                NotificationManager.IMPORTANCE_DEFAULT);
+        channel.setDescription(getString(R.string.notification_channel_description__export));
+        notificationManager.createNotificationChannel(channel);
     }
 
 

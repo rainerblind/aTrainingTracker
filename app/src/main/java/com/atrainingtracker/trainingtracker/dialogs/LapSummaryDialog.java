@@ -42,7 +42,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 
 public class LapSummaryDialog extends DialogFragment {
     public static final String TAG = LapSummaryDialog.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
 
     private static final int SHOW_LAP_SUMMARY_TIME = 3000;
@@ -133,6 +133,7 @@ public class LapSummaryDialog extends DialogFragment {
             }
         };
 
+        // todo ondismiss()
         alert.setOnDismissListener(new DialogInterface.OnDismissListener() {
             @Override
             public void onDismiss(DialogInterface dialog) {
@@ -145,6 +146,4 @@ public class LapSummaryDialog extends DialogFragment {
 
         return alert;
     }
-
-
 }

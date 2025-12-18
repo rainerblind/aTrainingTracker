@@ -25,7 +25,7 @@ import java.util.ArrayList;
 
 public class NumberedMovingAverageFilter
         extends MovingAverageFilter {
-    private static final boolean DEBUG = BANALService.DEBUG & false;
+    private static final boolean DEBUG = BANALService.getDebug(false);
     private static final String TAG = NumberedMovingAverageFilter.class.getName();
 
     protected int mSize;

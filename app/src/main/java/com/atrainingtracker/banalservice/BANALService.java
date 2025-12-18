@@ -53,9 +53,11 @@ import java.util.Set;
 import static com.atrainingtracker.trainingtracker.TrainingApplication.REQUEST_NEW_LAP;
 import static com.atrainingtracker.trainingtracker.TrainingApplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES;
 
+import androidx.core.content.ContextCompat;
+
 public class BANALService
         extends Service {
-    public static final boolean DEBUG = false;
+    private static final boolean DEBUG = false;
 
     /**
      * the Log TAG
@@ -139,7 +141,12 @@ public class BANALService
     private static MySensorManager cSensorManager;
     private static FilterManager cFilterManager;
     protected ActivityType mActivityTypeMax = ActivityType.GENERIC;
+
     /***********************************************************************************************/
+
+    public static boolean getDebug(boolean defaultVal) {
+        return DEBUG && defaultVal;
+    }
 
     protected BroadcastReceiver mStartSearchForPairedDevices = new BroadcastReceiver() {
         @Override
@@ -180,8 +187,8 @@ public class BANALService
 
     public static boolean isANTProperlyInstalled(Context context) {
         return (!isANTPluginServiceInstalled(context)
-                | !isANTRadioServiceInstalled()
-                | !hasUsbHostFeature(context) & isANTUSBServiceInstalled());
+                || !isANTRadioServiceInstalled()
+                || !hasUsbHostFeature(context) & isANTUSBServiceInstalled());
     }
 
     public static boolean isProtocolSupported(Context context, Protocol protocol) {
@@ -190,8 +197,7 @@ public class BANALService
                 return isANTPluginServiceInstalled(context); // TODO: more precise test possible?
 
             case BLUETOOTH_LE:
-                return (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN_MR2)
-                        && context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE);
+                return context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE);
 
             default:
                 return false;
@@ -226,6 +232,7 @@ public class BANALService
         return DeviceManager.isSearchingForARemoteDevice();
     }
 
+    /* unused
     public static DeviceManager getDeviceManager() {
         return cDeviceManager;
     }
@@ -233,6 +240,7 @@ public class BANALService
     public static MySensorManager getSensorManager() {
         return cSensorManager;
     }
+    */
 
     public static List<MySensor> getSensorList(SensorType sensorType) {
         return cDeviceManager.getSensorList(sensorType);
@@ -269,9 +277,11 @@ public class BANALService
     private void setUserSelectedSportTypeId(long sportTypeId) {
         mHaveUserSelectedSportType = true;
         mUserSelectedSportTypeId = sportTypeId;
-        sendBroadcast(new Intent(SPORT_TYPE_CHANGED_BY_USER_INTENT));
+        sendBroadcast(new Intent(SPORT_TYPE_CHANGED_BY_USER_INTENT)
+                .setPackage(this.getPackageName()));
         if (TrainingApplication.startSearchWhenUserChangesSport()) {
-            sendBroadcast(new Intent(TrainingApplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES));
+            sendBroadcast(new Intent(TrainingApplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES)
+                    .setPackage(this.getPackageName()));
         }
     }
 
@@ -323,7 +333,8 @@ public class BANALService
         // if (cPaused == true) { return; }
 
         if (TrainingApplication.startSearchWhenNewLap()) {
-            sendBroadcast(new Intent(TrainingApplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES));
+            sendBroadcast(new Intent(TrainingApplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES)
+                    .setPackage(getPackageName()));
         }
 
         SensorData sensorData;
@@ -356,14 +367,15 @@ public class BANALService
         cDeviceManager.newLap();
 
         // send broadcast with these values
-        Intent intent = new Intent(BANALService.LAP_SUMMARY);
-        intent.putExtra(BANALService.PREV_LAP_NR, prevLapNr);
-        intent.putExtra(PREV_LAP_TIME_S, lapTime_s);
-        intent.putExtra(PREV_LAP_TIME_STRING, lapTime);
-        intent.putExtra(PREV_LAP_DISTANCE_m, lapDistance);
-        intent.putExtra(PREV_LAP_DISTANCE_STRING, lapDistance_String);
-        intent.putExtra(PREV_LAP_SPEED_mps, lapSpeed);
-        intent.putExtra(PREV_LAP_SPEED_STRING, lapSpeedString);
+        Intent intent = new Intent(BANALService.LAP_SUMMARY)
+                .putExtra(BANALService.PREV_LAP_NR, prevLapNr)
+                .putExtra(PREV_LAP_TIME_S, lapTime_s)
+                .putExtra(PREV_LAP_TIME_STRING, lapTime)
+                .putExtra(PREV_LAP_DISTANCE_m, lapDistance)
+                .putExtra(PREV_LAP_DISTANCE_STRING, lapDistance_String)
+                .putExtra(PREV_LAP_SPEED_mps, lapSpeed)
+                .putExtra(PREV_LAP_SPEED_STRING, lapSpeedString)
+                .setPackage(getPackageName());
         sendBroadcast(intent);
     }
 
@@ -476,8 +488,8 @@ public class BANALService
         cDeviceManager = new DeviceManager(this, cSensorManager);
         cFilterManager = new FilterManager(this, cDeviceManager, cSensorManager);
 
-        registerReceiver(mStartSearchForPairedDevices, new IntentFilter(REQUEST_START_SEARCH_FOR_PAIRED_DEVICES));
-        registerReceiver(mNewLapReceiver, new IntentFilter(REQUEST_NEW_LAP));
+        ContextCompat.registerReceiver(this, mStartSearchForPairedDevices, new IntentFilter(REQUEST_START_SEARCH_FOR_PAIRED_DEVICES), ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mNewLapReceiver, new IntentFilter(REQUEST_NEW_LAP), ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     @Override

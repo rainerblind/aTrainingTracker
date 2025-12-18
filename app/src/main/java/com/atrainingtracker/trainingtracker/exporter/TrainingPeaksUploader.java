@@ -60,7 +60,7 @@ public class TrainingPeaksUploader extends BaseExporter {
     protected static final String COMMENT = "Comment";
     protected static final String TYPE = "Type";
     private static final String TAG = TrainingPeaksUploader.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
     public TrainingPeaksUploader(Context context) {
         super(context);
@@ -116,13 +116,13 @@ public class TrainingPeaksUploader extends BaseExporter {
         JSONObject jsonObject = new JSONObject();
         jsonObject.put(UPLOAD_CLIENT, TrainingApplication.getAppName());
         // jsonObject.put(UPLOAD_CLIENT, TrainingpeaksGetAccessTokenActivity.MY_CLIENT_ID);
-        jsonObject.put(FILENAME, exportInfo.getFileBaseName() + FileFormat.TRAINING_PEAKS.getFileEnding());
+        jsonObject.put(FILENAME, exportInfo.getFileName());
         jsonObject.put(SET_WORKOUT_PUBLIC, !isPrivate);
         jsonObject.put(TITLE, name);
         jsonObject.put(COMMENT, description);
         jsonObject.put(TYPE, sportName);
 
-        File file = new File(getDir(mContext, FileFormat.TRAINING_PEAKS.getDirName()), exportInfo.getFileBaseName() + FileFormat.TRAINING_PEAKS.getFileEnding());
+        File file = new File(getBaseDirFile(mContext), exportInfo.getShortPath());
         InputStream inputStream = new FileInputStream(file.getAbsolutePath());
         byte[] buffer = new byte[8192];
         int bytesRead;
@@ -143,7 +143,7 @@ public class TrainingPeaksUploader extends BaseExporter {
         // TODO: do this in background!
         if (DEBUG) Log.d(TAG, "starting to upload to TrainingPeaks");
         if (DEBUG) Log.i(TAG, "URI=" + httpPost.getURI());
-        if (DEBUG) Log.i(TAG, "content:" + jsonObject.toString());
+        if (DEBUG) Log.i(TAG, "content:" + jsonObject);
         HttpResponse httpResponse = httpClient.execute(httpPost);
         String response = EntityUtils.toString(httpResponse.getEntity());
         if (DEBUG) Log.d(TAG, "status: " + httpResponse.getStatusLine());

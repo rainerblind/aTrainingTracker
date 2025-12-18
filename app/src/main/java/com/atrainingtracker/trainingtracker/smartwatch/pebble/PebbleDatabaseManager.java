@@ -38,7 +38,7 @@ import java.util.LinkedList;
  */
 public class PebbleDatabaseManager {
     private static final String TAG = PebbleDatabaseManager.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && true;
+    private static final boolean DEBUG = TrainingApplication.getDebug(true);
     private static PebbleDatabaseManager cInstance;
     private static PebbleDbHelper cPebbleDbHelper;
     private int mOpenCounter;
@@ -404,8 +404,8 @@ public class PebbleDatabaseManager {
                 + NAME + " text, "
                 + LAYOUT_NR + " int)";  // since layouts might be deleted, this makes no longer sense?
         private static final String TAG = PebbleDbHelper.class.getName();
-        private static final boolean DEBUG = TrainingApplication.DEBUG & true;
-        private Context mContext;
+        private static final boolean DEBUG = TrainingApplication.getDebug(true);
+        private final Context mContext;
 
 
         // Constructor

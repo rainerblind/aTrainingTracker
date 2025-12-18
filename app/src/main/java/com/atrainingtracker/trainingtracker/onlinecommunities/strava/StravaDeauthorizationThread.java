@@ -20,7 +20,8 @@ package com.atrainingtracker.trainingtracker.onlinecommunities.strava;
 
 import android.app.ProgressDialog;
 import android.content.Context;
-import android.os.AsyncTask;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
 import com.atrainingtracker.R;
@@ -38,38 +39,27 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 
-public class StravaDeauthorizationAsyncTask extends
-        AsyncTask<String, String, String> {
+public class StravaDeauthorizationThread extends Thread {
 
-    private static final String TAG = "StravaDeauthorizationAsyncTask";
+    private static final String TAG = "StravaDeauthorizationThread";
     private static final boolean DEBUG = false;
 
-    private ProgressDialog progressDialog;
-    private Context mContext;
+    private final ProgressDialog progressDialog;
+    private final Context mContext;
 
-    public StravaDeauthorizationAsyncTask(Context context) {
+    public StravaDeauthorizationThread(Context context) {
         progressDialog = new ProgressDialog(context);
         mContext = context;
     }
 
     @Override
-    protected void onPreExecute() {
-        super.onPreExecute();
-        progressDialog.setMessage(mContext.getString(R.string.deauthorization));
-        if (!progressDialog.isShowing()) {
-            progressDialog.show();
-        }
-    }
-
-    @Override
-    protected void onPostExecute(String accessToken) {
-        if (progressDialog.isShowing()) {
-            progressDialog.dismiss();
-        }
-    }
-
-    @Override
-    protected String doInBackground(String... params) {
+    public void run() {
+        new Handler(Looper.getMainLooper()).post(() -> {
+            progressDialog.setMessage(mContext.getString(R.string.deauthorization));
+            if (!progressDialog.isShowing()) {
+                progressDialog.show();
+            }
+        });
 
         HttpClient httpClient = new DefaultHttpClient();
         HttpPost httpPost = new HttpPost("https://www.strava.com/oauth/deauthorize");
@@ -106,8 +96,11 @@ public class StravaDeauthorizationAsyncTask extends
         }
 
         TrainingApplication.deleteStravaToken();
-        return "foo";
 
+        new Handler(Looper.getMainLooper()).post(() -> {
+            if (progressDialog.isShowing()) {
+                progressDialog.dismiss();
+            }
+        });
     }
-
 }

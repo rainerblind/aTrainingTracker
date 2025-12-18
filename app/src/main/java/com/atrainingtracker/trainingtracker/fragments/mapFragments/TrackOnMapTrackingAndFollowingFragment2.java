@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.fragments.mapFragments;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.location.Location;
 import android.os.Bundle;
@@ -39,7 +40,7 @@ import com.google.android.gms.maps.model.LatLng;
 public class TrackOnMapTrackingAndFollowingFragment2
         extends TrackOnMapTrackingFragment {
     public static final String TAG = TrackOnMapTrackingAndFollowingFragment2.class.getName();
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
     private static final float ZOOM_SUPER_CLOSE_THRESHOLD = 10f / 3.6f;
     private static final float ZOOM_CLOSE_THRESHOLD = 20f / 3.6f;
@@ -147,10 +148,10 @@ public class TrackOnMapTrackingAndFollowingFragment2
             LocationListener {
 
         private OnLocationChangedListener mListener;
-        private LocationRequest mLocationRequest;
+        private final LocationRequest mLocationRequest;
         private double mLatitudeFiltered, mLongitudeFiltered;
         private float mBearingFiltered, mSpeedFiltered;
-        private CameraPosition.Builder mCameraPositionBuilder = new CameraPosition.Builder();
+        private final CameraPosition.Builder mCameraPositionBuilder = new CameraPosition.Builder();
 
 
         private FollowMeLocationSource() {
@@ -160,6 +161,7 @@ public class TrackOnMapTrackingAndFollowingFragment2
             mLocationRequest.setInterval(500); // Update location every half second
         }
 
+        @SuppressLint("MissingPermission")
         @Override
         public void onConnected(Bundle bundle) {
 
@@ -186,6 +188,7 @@ public class TrackOnMapTrackingAndFollowingFragment2
         /* Activates this provider. This provider will notify the supplied listener
          * periodically, until you call deactivate().
          * This method is automatically invoked by enabling my-location layer. */
+        @SuppressLint("MissingPermission")
         @Override
         public void activate(OnLocationChangedListener listener) {
             // We need to keep a reference to my-location layer's listener so we can push forward
@@ -199,6 +202,7 @@ public class TrackOnMapTrackingAndFollowingFragment2
 
         /* Deactivates this provider.
          * This method is automatically invoked by disabling my-location layer. */
+        @SuppressLint("MissingPermission")
         @Override
         public void deactivate() {
             // Remove location updates from Location Manager
@@ -207,6 +211,7 @@ public class TrackOnMapTrackingAndFollowingFragment2
             mListener = null;
         }
 
+        @SuppressLint("MissingPermission")
         @Override
         public void onLocationChanged(Location location) {
             /* Push location updates to the registered listener..

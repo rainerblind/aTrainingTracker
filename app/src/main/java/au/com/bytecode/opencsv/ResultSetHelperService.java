@@ -28,6 +28,7 @@ import java.sql.Types;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * helper class for processing JDBC ResultSet objects
@@ -100,7 +101,7 @@ public class ResultSetHelperService implements ResultSetHelper {
         java.sql.Date date = rs.getDate(columnIndex);
         String value = null;
         if (date != null) {
-            SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MMM-yyyy");
+            SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MMM-yyyy", Locale.US);
             value = dateFormat.format(date);
         }
         return value;
@@ -111,7 +112,7 @@ public class ResultSetHelperService implements ResultSetHelper {
     }
 
     private String handleTimestamp(Timestamp timestamp) {
-        SimpleDateFormat timeFormat = new SimpleDateFormat("dd-MMM-yyyy HH:mm:ss");
+        SimpleDateFormat timeFormat = new SimpleDateFormat("dd-MMM-yyyy HH:mm:ss", Locale.US);
         return timestamp == null ? null : timeFormat.format(timestamp);
     }
 

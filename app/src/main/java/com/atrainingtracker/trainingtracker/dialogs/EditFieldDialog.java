@@ -27,6 +27,7 @@ import android.content.IntentFilter;
 import android.os.Bundle;
 
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.DialogFragment;
 import android.util.Log;
 import android.view.Gravity;
@@ -60,7 +61,7 @@ public class EditFieldDialog extends DialogFragment {
     public static final String TAG = EditFieldDialog.class.getName();
     public static final String TRACKING_VIEW_CHANGED_INTENT = "TRACKING_VIEW_CHANGED_INTENT";
     protected static final Integer[] TEXT_SIZES = {20, 25, 30, 35, 40, 45, 50, 60, 70, 80};
-    private static final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private static final String ACTIVITY_TYPE = "ACTIVITY_TYPE";
     private static final String ROW_ID = "ROW_ID";
     private static final String SENSOR_TYPE = "SENSOR_TYPE";
@@ -141,7 +142,7 @@ public class EditFieldDialog extends DialogFragment {
     @Override
     public void onResume() {
         super.onResume();
-        getContext().registerReceiver(mFilterChangedReceiver, mFilterChangedFilter);
+        ContextCompat.registerReceiver(getContext(), mFilterChangedReceiver, mFilterChangedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     public void onPause() {
@@ -229,7 +230,8 @@ public class EditFieldDialog extends DialogFragment {
                 TrackingViewsDatabaseManager.updateTextSizeOfRow(mRowId, mTextSize);
                 TrackingViewsDatabaseManager.updateSensorTypeOfRow(mRowId, mSensorType);
                 TrackingViewsDatabaseManager.updateSourceDeviceIdOfRow(mRowId, mDeviceId);
-                getActivity().sendBroadcast(new Intent(TRACKING_VIEW_CHANGED_INTENT));
+                getActivity().sendBroadcast(new Intent(TRACKING_VIEW_CHANGED_INTENT)
+                        .setPackage(getActivity().getPackageName()));
             }
         });
         builder.setNegativeButton(R.string.Cancel, null);
@@ -262,7 +264,7 @@ public class EditFieldDialog extends DialogFragment {
             LinkedList<Long> deviceIds = deviceIdAndNameLists.deviceIds;
             LinkedList<String> names = deviceIdAndNameLists.names;
 
-            deviceIds.addFirst(new Long(0));
+            deviceIds.addFirst(Long.valueOf(0));
             names.addFirst(getContext().getString(R.string.bestSensor));
 
             if (mDeviceId < 0) {

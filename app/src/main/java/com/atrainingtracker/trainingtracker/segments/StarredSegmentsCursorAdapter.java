@@ -52,6 +52,7 @@ import com.google.android.gms.maps.model.LatLng;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
 
 /**
  * Created by rainer on 10.08.16.
@@ -60,15 +61,15 @@ import java.util.Date;
 public class StarredSegmentsCursorAdapter extends CursorAdapter {
     protected static final String[] FROM = {Segments.SEGMENT_ID, Segments.C_ID, Segments.SEGMENT_NAME, Segments.DISTANCE, Segments.AVERAGE_GRADE, Segments.CLIMB_CATEGORY, Segments.PR_TIME, Segments.OWN_RANK, Segments.PR_DATE, Segments.LAST_UPDATED};
     private final String TAG = StarredSegmentsCursorAdapter.class.getSimpleName();
-    private final boolean DEBUG = TrainingApplication.DEBUG && false;
+    private final boolean DEBUG = TrainingApplication.getDebug(false);
     protected Activity mActivity;
     protected Context mContext;
     // protected static final int[]    TO   = {R.id.tvSegmentName,  R.id.tvSegmentName, R.id.tvSegmentName,    R.id.tvSegmentDistance, R.id.tvSegmentAverageGrade, R.id.tvSegmentClimbCategory, R.id.tvSegmentPRTime, R.id.tvSegmentRank, R.id.tvSegmentPRDate, R.id.tvSegmentLastUpdated};
     ShowSegmentDetailsInterface mShowSegmentDetailsListener = null;
     DistanceFormatter distanceFormatter = new DistanceFormatter();
     TimeFormatter timeFormatter = new TimeFormatter();
-    SimpleDateFormat dateAndTimeFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'"); // 2013-03-29T13:49:35Z
-    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");               // 2013-03-29
+    SimpleDateFormat dateAndTimeFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US); // 2013-03-29T13:49:35Z
+    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.US);               // 2013-03-29
     StravaSegmentsHelper mStravaSegmentsHelper;
     private boolean isPlayServiceAvailable = true;
 
@@ -121,7 +122,7 @@ public class StarredSegmentsCursorAdapter extends CursorAdapter {
 
         viewHolder.tvName.setText(cursor.getString(cursor.getColumnIndex(Segments.SEGMENT_NAME)));
         viewHolder.tvDistance.setText(distanceFormatter.format_with_units(cursor.getDouble(cursor.getColumnIndex(Segments.DISTANCE))));
-        viewHolder.tvAverageGrade.setText(String.format("%.1f %%", cursor.getDouble(cursor.getColumnIndex(Segments.AVERAGE_GRADE))));
+        viewHolder.tvAverageGrade.setText(String.format(Locale.getDefault(), "%.1f %%", cursor.getDouble(cursor.getColumnIndex(Segments.AVERAGE_GRADE))));
         viewHolder.tvClimbCategory.setText(StravaHelper.translateClimbCategory(cursor.getInt(cursor.getColumnIndex(Segments.CLIMB_CATEGORY))));
         if (!cursor.isNull(cursor.getColumnIndex(Segments.PR_TIME))) {
             viewHolder.tvPRTime.setText(timeFormatter.format_with_units(cursor.getInt(cursor.getColumnIndex(Segments.PR_TIME))));

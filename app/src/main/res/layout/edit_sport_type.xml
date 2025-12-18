@@ -20,11 +20,12 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:fillViewport="true">
 
     <GridLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
         android:alignmentMode="alignBounds"
         android:columnCount="3"
         android:columnOrderPreserved="false"
@@ -86,7 +87,7 @@
 
         <TextView
             android:id="@+id/est_tvStrava"
-            android:drawableLeft="@drawable/logo_square_strava"
+            app:drawableLeftCompat="@drawable/logo_square_strava"
             android:gravity="center_vertical"
             android:text="@string/Strava" />
 
@@ -95,10 +96,9 @@
             android:layout_columnSpan="2"
             android:entries="@array/Strava_Sport_Types_UI_Names" />
 
-
         <TextView
             android:id="@+id/est_tvRunkeeper"
-            android:drawableLeft="@drawable/logo_square_runkeeper"
+            app:drawableLeftCompat="@drawable/logo_square_runkeeper"
             android:gravity="center_vertical"
             android:text="@string/Runkeeper" />
 
@@ -110,7 +110,7 @@
 
         <TextView
             android:id="@+id/est_tvTrainingPeaks"
-            android:drawableLeft="@drawable/logo_square_training_peaks"
+            app:drawableLeftCompat="@drawable/logo_square_training_peaks"
             android:gravity="center_vertical"
             android:text="@string/TrainingPeaks" />
 

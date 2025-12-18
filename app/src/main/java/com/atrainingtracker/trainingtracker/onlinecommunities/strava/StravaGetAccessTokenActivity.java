@@ -19,31 +19,19 @@
 package com.atrainingtracker.trainingtracker.onlinecommunities.strava;
 
 import android.net.Uri;
-import android.util.Log;
 
+import com.atrainingtracker.BuildConfig;
 import com.atrainingtracker.R;
-import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.onlinecommunities.BaseGetAccessTokenActivity;
 
-import org.apache.http.HttpResponse;
-import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.protocol.HTTP;
-import org.apache.http.util.EntityUtils;
-import org.json.JSONException;
 import org.json.JSONObject;
-
-import java.io.IOException;
 
 
 public class StravaGetAccessTokenActivity
         extends BaseGetAccessTokenActivity {
     protected static final String STRAVA_AUTHORITY = "www.strava.com";
-    protected static final String MY_CLIENT_ID = "344";
-    protected static final String MY_CLIENT_SECRET = "272b5ca4ba09a932e73ef2574162f04d7f41a643";
+    protected static final String MY_CLIENT_ID = BuildConfig.STRAVA_CLIENT_ID;
+    protected static final String MY_CLIENT_SECRET = BuildConfig.STRAVA_CLIENT_SECRET;
     private static final String TAG = "StravaGetAccessTokenActivity";
     private static final boolean DEBUG = true;
 
