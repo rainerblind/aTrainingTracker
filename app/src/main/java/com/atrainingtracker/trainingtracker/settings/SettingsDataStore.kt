@@ -20,16 +20,12 @@ class SettingsDataStore(context: Context) {
     companion object {
         val INT_HR_Zone1_Max = intPreferencesKey("int_hr_zone1_max")
 
-        val INT_HR_Zone2_Min = intPreferencesKey("int_hr_zone2_min")
         val INT_HR_Zone2_Max = intPreferencesKey("int_hr_zone2_max")
 
-        val INT_HR_Zone3_Min = intPreferencesKey("int_hr_zone3_min")
         val INT_HR_Zone3_Max = intPreferencesKey("int_hr_zone3_max")
 
-        val INT_HR_Zone4_Min = intPreferencesKey("int_hr_zone4_min")
         val INT_HR_Zone4_Max = intPreferencesKey("int_hr_zone4_max")
 
-        val INT_HR_Zone5_Min = intPreferencesKey("int_hr_zone5_min")
 
         // TODO same as for HR
         val INT_PWR_Zone1_Max = intPreferencesKey("int_pwr_zone1_max")
@@ -41,16 +37,12 @@ class SettingsDataStore(context: Context) {
     // --- READ (Expose as Flows) ---
     val hrZone1MaxFlow: Flow<Int> = appContext.dataStore.data.map { it[INT_HR_Zone1_Max] ?: 140 }
 
-    val hrZone2MinFlow: Flow<Int> = appContext.dataStore.data.map { it[INT_HR_Zone2_Min] ?: 141 }
     val hrZone2MaxFlow: Flow<Int> = appContext.dataStore.data.map { it[INT_HR_Zone2_Max] ?: 160 }
 
-    val hrZone3MinFlow: Flow<Int> = appContext.dataStore.data.map { it[INT_HR_Zone3_Min] ?: 161 }
     val hrZone3MaxFlow: Flow<Int> = appContext.dataStore.data.map { it[INT_HR_Zone3_Max] ?: 170}
 
-    val hrZone4MinFlow: Flow<Int> = appContext.dataStore.data.map { it[INT_HR_Zone4_Min] ?: 171 }
     val hrZone4MaxFlow: Flow<Int> = appContext.dataStore.data.map { it[INT_HR_Zone4_Max] ?: 180 }
 
-    val hrZone5MinFlow: Flow<Int> = appContext.dataStore.data.map { it[INT_HR_Zone5_Min] ?: 181 }
 
     // TODO same as for HR
     val pwrZone1MaxFlow: Flow<Int> = appContext.dataStore.data.map { it[INT_PWR_Zone1_Max] ?: 150 }
@@ -63,30 +55,18 @@ class SettingsDataStore(context: Context) {
         appContext.dataStore.edit { it[INT_HR_Zone1_Max] = value }
     }
 
-    suspend fun saveHrZone2Min(value: Int) {
-        appContext.dataStore.edit { it[INT_HR_Zone2_Min] = value }
-    }
     suspend fun saveHrZone2Max(value: Int) {
         appContext.dataStore.edit { it[INT_HR_Zone2_Max] = value }
     }
 
-    suspend fun saveHrZone3Min(value: Int) {
-        appContext.dataStore.edit { it[INT_HR_Zone3_Min] = value }
-    }
     suspend fun saveHrZone3Max(value: Int) {
         appContext.dataStore.edit { it[INT_HR_Zone3_Max] = value }
     }
 
-    suspend fun saveHrZone4Min(value: Int) {
-        appContext.dataStore.edit { it[INT_HR_Zone4_Min] = value }
-    }
     suspend fun saveHrZone4Max(value: Int) {
         appContext.dataStore.edit { it[INT_HR_Zone4_Max] = value }
     }
 
-    suspend fun saveHrZone5Min(value: Int) {
-        appContext.dataStore.edit { it[INT_HR_Zone5_Min] = value }
-    }
 
 
     // TODO: same as for HR
