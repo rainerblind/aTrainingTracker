@@ -33,6 +33,7 @@ import com.atrainingtracker.R;
 import com.atrainingtracker.trainingtracker.activities.HrZonesSettingsActivity;
 import com.atrainingtracker.trainingtracker.exporter.FileFormat;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStore;
 
 
 public class RootPrefsFragment extends PreferenceFragmentCompat
@@ -46,6 +47,7 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
     private Preference mHrZonesPref, mExport, mPebble, mLocationSources, mCloudUpload;
 
     private SharedPreferences mSharedPreferences;
+    private SettingsDataStore mSettingsDataStore;
 
 
     @Override
@@ -80,7 +82,7 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
+        mSettingsDataStore = new SettingsDataStore(requireContext());
         if (DEBUG) Log.i(TAG, "onCreate()");
     }
 
@@ -98,7 +100,8 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
 
 
         mAthleteNamePref.setSummary(TrainingApplication.getAthleteName());
-        // TODO: hr zones
+        updateHrZonesSummary();
+
         if (DEBUG) Log.d(TAG, "sampling time: " + TrainingApplication.getSamplingTime());
         setSamplingTimeSummary();
 
@@ -110,6 +113,19 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
 
 
         mSharedPreferences.registerOnSharedPreferenceChangeListener(this);
+    }
+
+    private void updateHrZonesSummary() {
+        if (mHrZonesPref != null && mSettingsDataStore != null) {
+            try {
+                // Fetch the summary string from the Kotlin helper
+                String summary = mSettingsDataStore.getZonesSummary();
+                mHrZonesPref.setSummary(summary);
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to load HR Zones summary", e);
+                mHrZonesPref.setSummary("Configure your heart rate zones");
+            }
+        }
     }
 
     @Override

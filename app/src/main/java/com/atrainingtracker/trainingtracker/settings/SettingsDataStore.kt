@@ -7,12 +7,14 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.runBlocking
 
 // Create a single instance of DataStore for the entire app context
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "user_settings")
 
-class SettingsDataStore(context: Context) {
+class SettingsDataStore(private val context: Context) {
 
     private val appContext = context.applicationContext
 
@@ -42,6 +44,25 @@ class SettingsDataStore(context: Context) {
     val hrZone3MaxFlow: Flow<Int> = appContext.dataStore.data.map { it[INT_HR_Zone3_Max] ?: 170}
 
     val hrZone4MaxFlow: Flow<Int> = appContext.dataStore.data.map { it[INT_HR_Zone4_Max] ?: 180 }
+
+    fun getZonesSummary(): String = runBlocking {
+        val prefs = context.dataStore.data.first() // Get current snapshot
+        val z1Max = prefs[INT_HR_Zone1_Max] ?: 140
+        val z2Max = prefs[INT_HR_Zone2_Max] ?: 160
+        val z3Max = prefs[INT_HR_Zone3_Max] ?: 170
+        val z4Max = prefs[INT_HR_Zone4_Max] ?: 180
+
+        // Format: "Z1: -140, Z2: 141-160, ..." or just Max values
+        // Let's do a simple range summary
+        "Z1: <$z1Max, Z2: <$z2Max, Z3: <$z3Max, Z4: <$z4Max"
+
+        val z2Min = z1Max + 1
+        val z3Min = z2Max + 1
+        val z4Min = z3Max + 1
+        val z5Min = z4Max + 1
+
+        "Z1: <$z1Max, Z2: $z2Min-$z2Max, Z3: $z3Min-$z3Max, Z4: $z4Min-$z4Max, Z5: >$z5Min"
+    }
 
 
     // TODO same as for HR
