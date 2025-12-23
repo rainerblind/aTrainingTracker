@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.fragments.preferences;
 
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.os.Bundle;
@@ -29,6 +30,7 @@ import androidx.preference.PreferenceManager;
 import android.util.Log;
 
 import com.atrainingtracker.R;
+import com.atrainingtracker.trainingtracker.activities.HrZonesSettingsActivity;
 import com.atrainingtracker.trainingtracker.exporter.FileFormat;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 
@@ -41,7 +43,7 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
 
     private EditTextPreference mAthleteNamePref, mSamplingTimePref, mSearchRoundsPref;
     private ListPreference mUnitPref;
-    private Preference mExport, mPebble, mLocationSources, mCloudUpload;
+    private Preference mHrZonesPref, mExport, mPebble, mLocationSources, mCloudUpload;
 
     private SharedPreferences mSharedPreferences;
 
@@ -57,6 +59,14 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
         mUnitPref = getPreferenceScreen().findPreference(TrainingApplication.SP_UNITS);
 
         mAthleteNamePref = getPreferenceScreen().findPreference(TrainingApplication.SP_ATHLETE_NAME);
+        mHrZonesPref = getPreferenceScreen().findPreference("hr_zones_settings");
+        if (mHrZonesPref != null) {
+            mHrZonesPref.setOnPreferenceClickListener(preference -> {
+                Intent intent = new Intent(getActivity(), HrZonesSettingsActivity.class);
+                startActivity(intent);
+                return true;
+            });
+        }
         mSamplingTimePref = getPreferenceScreen().findPreference(TrainingApplication.SP_SAMPLING_TIME);
         mSearchRoundsPref = getPreferenceScreen().findPreference(TrainingApplication.SP_NUMBER_OF_SEARCH_TRIES);
 
@@ -88,6 +98,7 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
 
 
         mAthleteNamePref.setSummary(TrainingApplication.getAthleteName());
+        // TODO: hr zones
         if (DEBUG) Log.d(TAG, "sampling time: " + TrainingApplication.getSamplingTime());
         setSamplingTimeSummary();
 
@@ -99,8 +110,6 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
 
 
         mSharedPreferences.registerOnSharedPreferenceChangeListener(this);
-
-
     }
 
     @Override

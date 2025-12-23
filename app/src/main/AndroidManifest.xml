@@ -69,6 +69,13 @@
         </activity>
 
         <activity
+            android:name=".trainingtracker.activities.HrZonesSettingsActivity"
+            android:label="Heart Rate Zones"
+            android:theme="@style/Theme.aTrainingTracker" />
+        <!-- Ensure the theme is a Material3 compatible theme or Theme.AppCompat -->
+
+
+        <activity
             android:name=".trainingtracker.smartwatch.pebble.ConfigPebbleViewsActivity"
             android:exported="true"
             android:label="@string/PebbleConfigActivityLabel"

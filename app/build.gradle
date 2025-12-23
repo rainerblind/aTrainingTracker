@@ -3,6 +3,8 @@ plugins {
     id 'com.google.gms.google-services'
     id 'com.google.firebase.crashlytics'
     id 'com.google.android.libraries.mapsplatform.secrets-gradle-plugin'
+    id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
 }
 
 def getGitHash = providers.exec {
@@ -38,6 +40,7 @@ android {
 
     buildFeatures {
         buildConfig = true
+        compose = true
     }
 
     buildTypes {
@@ -70,6 +73,9 @@ android {
         showAll = true
         textReport = true
     }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
 }
 
 configurations {
@@ -89,7 +95,8 @@ dependencies {
     implementation 'androidx.preference:preference:1.2.1'
     implementation 'androidx.appcompat:appcompat:1.7.1'
     implementation 'androidx.work:work-runtime:2.11.0'
-    implementation 'androidx.activity:activity:1.12.1'
+    implementation 'androidx.activity:activity:1.12.2'
+    implementation 'androidx.activity:activity-compose:1.12.2'
 
     implementation 'com.google.android.material:material:1.13.0'
     implementation 'com.google.android.gms:play-services-maps:19.2.0'
@@ -102,6 +109,14 @@ dependencies {
     implementation 'com.dropbox.core:dropbox-android-sdk:7.0.0'
     implementation 'com.squareup.picasso:picasso:2.71828' // Consider using Glide or Coil
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.2.0'
+    implementation 'androidx.core:core-ktx:1.17.0'
+    implementation 'androidx.datastore:datastore:1.2.0'
+    implementation 'androidx.datastore:datastore-preferences:1.2.0'
+    implementation 'androidx.compose.foundation:foundation:1.10.0'
+    implementation 'androidx.compose.material3:material3:1.4.0'
+    implementation 'androidx.datastore:datastore-preferences-core:1.2.0'
+    implementation 'androidx.compose.ui:ui-tooling-preview:1.10.0'
+    implementation 'androidx.compose.ui:ui-tooling:1.10.0'
 }
 
 secrets {
