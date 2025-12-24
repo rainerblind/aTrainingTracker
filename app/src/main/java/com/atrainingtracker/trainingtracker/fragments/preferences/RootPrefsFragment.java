@@ -30,7 +30,7 @@ import androidx.preference.PreferenceManager;
 import android.util.Log;
 
 import com.atrainingtracker.R;
-import com.atrainingtracker.trainingtracker.activities.HrZonesSettingsActivity;
+import com.atrainingtracker.trainingtracker.activities.ZonesSettingsActivity;
 import com.atrainingtracker.trainingtracker.exporter.FileFormat;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore;
@@ -64,7 +64,7 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
         mHrZonesPref = getPreferenceScreen().findPreference("hr_zones_settings");
         if (mHrZonesPref != null) {
             mHrZonesPref.setOnPreferenceClickListener(preference -> {
-                Intent intent = new Intent(getActivity(), HrZonesSettingsActivity.class);
+                Intent intent = new Intent(getActivity(), ZonesSettingsActivity.class);
                 startActivity(intent);
                 return true;
             });

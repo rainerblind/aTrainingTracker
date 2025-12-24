@@ -23,7 +23,7 @@ import com.atrainingtracker.trainingtracker.settings.SettingsDataStore.ZoneType
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore.Zone
 import kotlinx.coroutines.launch
 
-class HrZonesSettingsActivity : ComponentActivity() {
+class ZonesSettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
