@@ -11,61 +11,26 @@ import kotlinx.coroutines.runBlocking
  */
 object SettingsDataStoreJavaHelper {
 
+    /**
+     * Generic helper to get a max zone value for a specific profile (Run, Bike, Power).
+     * @param context The application context
+     * @param zoneTypeId The integer ID of the ZoneType (0=Run, 1=Bike, 2=Power)
+     * @param zoneIndex The zone number (1-4). Zone 5 is usually > Zone 4.
+     * @return The max value for that zone.
+     */
     @JvmStatic
-    fun getHrZone1Max(context: Context): Int {
-        // runBlocking is used here to bridge the async Flow world with sync Java world.
-        return runBlocking {
-            SettingsDataStore(context).hrZone1MaxFlow.first()
-        }
-    }
+    fun getZoneMax(context: Context, zoneTypeId: Int, zoneIndex: Int): Int {
+        val zoneType = SettingsDataStore.ZoneType.fromId(zoneTypeId)
+        val dataStore = SettingsDataStore(context)
 
-    @JvmStatic
-    fun getHrZone2Max(context: Context): Int {
         return runBlocking {
-            SettingsDataStore(context).hrZone2MaxFlow.first()
-        }
-    }
-
-    @JvmStatic
-    fun getHrZone3Max(context: Context): Int {
-        return runBlocking {
-            SettingsDataStore(context).hrZone3MaxFlow.first()
-        }
-    }
-
-    @JvmStatic
-    fun getHrZone4Max(context: Context): Int {
-        return runBlocking {
-            SettingsDataStore(context).hrZone4MaxFlow.first()
-        }
-    }
-
-    @JvmStatic
-    fun getPwrZone1Max(context: Context): Int {
-        // runBlocking is used here to bridge the async Flow world with sync Java world.
-        return runBlocking {
-            SettingsDataStore(context).pwrZone1MaxFlow.first()
-        }
-    }
-
-    @JvmStatic
-    fun getPwrZone2Max(context: Context): Int {
-        return runBlocking {
-            SettingsDataStore(context).pwrZone2MaxFlow.first()
-        }
-    }
-
-    @JvmStatic
-    fun getPwrZone3Max(context: Context): Int {
-        return runBlocking {
-            SettingsDataStore(context).pwrZone3MaxFlow.first()
-        }
-    }
-
-    @JvmStatic
-    fun getPwrZone4Max(context: Context): Int {
-        return runBlocking {
-            SettingsDataStore(context).pwrZone4MaxFlow.first()
+            when (zoneIndex) {
+                1 -> dataStore.getZone1MaxFlow(zoneType).first()
+                2 -> dataStore.getZone2MaxFlow(zoneType).first()
+                3 -> dataStore.getZone3MaxFlow(zoneType).first()
+                4 -> dataStore.getZone4MaxFlow(zoneType).first()
+                else -> 0 // Fallback
+            }
         }
     }
 }

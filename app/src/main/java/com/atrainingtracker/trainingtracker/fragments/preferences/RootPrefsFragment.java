@@ -119,7 +119,9 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
         if (mHrZonesPref != null && mSettingsDataStore != null) {
             try {
                 // Fetch the summary string from the Kotlin helper
-                String summary = mSettingsDataStore.getZonesSummary();
+                String summary = "HR Run: " + mSettingsDataStore.getSummary(SettingsDataStore.ZoneType.HR_RUN);
+                summary += "\n\nHR Bike: " + mSettingsDataStore.getSummary(SettingsDataStore.ZoneType.HR_BIKE);
+                summary += "\n\nPWR Bike: " + mSettingsDataStore.getSummary(SettingsDataStore.ZoneType.PWR_BIKE);
                 mHrZonesPref.setSummary(summary);
             } catch (Exception e) {
                 Log.e(TAG, "Failed to load HR Zones summary", e);
