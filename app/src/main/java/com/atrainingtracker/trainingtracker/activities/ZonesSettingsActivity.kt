@@ -225,12 +225,12 @@ fun SettingsScreenContent(
             .fillMaxSize()
             .padding(16.dp)
             .verticalScroll(scrollState),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Text(
             text = title,
             style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.padding(bottom = 8.dp),
+            modifier = Modifier.padding(bottom = 4.dp),
             color = MaterialTheme.colorScheme.primary
         )
         // Zone 1
@@ -285,7 +285,7 @@ fun SettingsScreenContent(
             containerColor = zone5Color
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
     }
 }
 
@@ -305,16 +305,16 @@ fun ZoneRow(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(8.dp)
         ) {
             Text(
                 text = zoneLabel,
                 style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 8.dp)
+                modifier = Modifier.padding(bottom = 4.dp)
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // Min Field
                 Box(modifier = Modifier.weight(1f)) {
