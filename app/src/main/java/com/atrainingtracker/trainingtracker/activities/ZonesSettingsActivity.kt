@@ -82,7 +82,7 @@ fun SettingsScreenRoute(onFinish: () -> Unit = {}) {
     }
 
     // --- AUTO-SAVE LOGIC ---
-    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     // rememberUpdatedState ensures the observer uses the very latest data when the event triggers
     val currentData by rememberUpdatedState(allProfilesData)
 
