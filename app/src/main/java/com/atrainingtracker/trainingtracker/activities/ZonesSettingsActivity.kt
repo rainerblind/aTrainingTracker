@@ -10,20 +10,21 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-// Removed Icon imports as they are no longer needed for the FAB
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore.ZoneType
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore.Zone
@@ -59,7 +60,11 @@ fun SettingsScreenRoute(onFinish: () -> Unit = {}) {
     val dataStore = remember { SettingsDataStore(context) }
     val scope = rememberCoroutineScope()
 
-    val profiles = listOf("HR Run", "HR Bike", "PWR Bike")
+    val profileNameResIds = listOf(
+        R.string.tab_hr_run,
+        R.string.tab_hr_bike,
+        R.string.tab_pwr_bike
+    )
     val zoneTypes = listOf(ZoneType.HR_RUN, ZoneType.HR_BIKE, ZoneType.PWR_BIKE)
 
     // Local state to hold data for swiping performance
@@ -112,20 +117,19 @@ fun SettingsScreenRoute(onFinish: () -> Unit = {}) {
     }
 
     // Pager State
-    val pagerState = rememberPagerState(pageCount = { profiles.size })
+    val pagerState = rememberPagerState(pageCount = { profileNameResIds.size })
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Edit Zones") }) }
+        topBar = { TopAppBar(title = { Text(stringResource(R.string.title_edit_zones)) }) }
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {
             // TABS
             TabRow(selectedTabIndex = pagerState.currentPage) {
-                profiles.forEachIndexed { index, title ->
+                profileNameResIds.forEachIndexed { index, titleResId ->
                     Tab(
                         selected = pagerState.currentPage == index,
                         onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
-                        text = { Text(title) }
-                    )
+                        text = { Text(stringResource(titleResId)) }                    )
                 }
             }
 
@@ -207,12 +211,12 @@ fun SettingsScreenContent(
     onUpdateZone3Max: (Int) -> Unit,
     onUpdateZone4Max: (Int) -> Unit
 ) {
-    // Define standard HR Zone colors (Grey, Blue, Green, Orange, Red)
-    val zone1Color = Color(0xFF7FFF00) // Chartreuse
-    val zone2Color = Color(0xFF008000) // Green
-    val zone3Color = Color(0xFFFFA500) // Orange
-    val zone4Color = Color(0xFFFF0000) // Red
-    val zone5Color = Color(0xFF9400D3) // Dark Violet
+    // Load Colors from resources
+    val zone1Color = colorResource(id = R.color.zone_1)
+    val zone2Color = colorResource(id = R.color.zone_2)
+    val zone3Color = colorResource(id = R.color.zone_3)
+    val zone4Color = colorResource(id = R.color.zone_4)
+    val zone5Color = colorResource(id = R.color.zone_5)
 
     val scrollState = rememberScrollState()
 
@@ -225,7 +229,7 @@ fun SettingsScreenContent(
     ) {
         // Zone 1
         ZoneRow(
-            zoneLabel = "Zone 1 (Recovery)",
+            zoneLabel = stringResource(R.string.zone_1_label),
             minValue = 100,
             maxValue = z1Max,
             onMinChange = { },
@@ -236,7 +240,7 @@ fun SettingsScreenContent(
 
         // Zone 2
         ZoneRow(
-            zoneLabel = "Zone 2 (Aerobic)",
+            zoneLabel = stringResource(R.string.zone_2_label),
             minValue = z1Max + 1,
             maxValue = z2Max,
             onMinChange = { onUpdateZone1Max(it - 1) },
@@ -246,7 +250,7 @@ fun SettingsScreenContent(
 
         // Zone 3
         ZoneRow(
-            zoneLabel = "Zone 3 (Tempo)",
+            zoneLabel = stringResource(R.string.zone_3_label),
             minValue = z2Max + 1,
             maxValue = z3Max,
             onMinChange = { onUpdateZone2Max(it - 1) },
@@ -256,7 +260,7 @@ fun SettingsScreenContent(
 
         // Zone 4
         ZoneRow(
-            zoneLabel = "Zone 4 (Threshold)",
+            zoneLabel = stringResource(R.string.zone_4_label),
             minValue = z3Max + 1,
             maxValue = z4Max,
             onMinChange = { onUpdateZone3Max(it - 1) },
@@ -266,7 +270,7 @@ fun SettingsScreenContent(
 
         // Zone 5
         ZoneRow(
-            zoneLabel = "Zone 5 (Anaerobic)",
+            zoneLabel = stringResource(R.string.zone_5_label),
             minValue = z4Max + 1,
             maxValue = 210,
             onMinChange = { onUpdateZone4Max(it - 1) },
@@ -309,7 +313,7 @@ fun ZoneRow(
                 // Min Field
                 Box(modifier = Modifier.weight(1f)) {
                     IntegerInputField(
-                        label = "Min",
+                        label = stringResource(R.string.label_min),
                         currentValue = minValue,
                         onValueChange = onMinChange,
                         enabled = minEnabled
@@ -318,7 +322,7 @@ fun ZoneRow(
                 // Max Field
                 Box(modifier = Modifier.weight(1f)) {
                     IntegerInputField(
-                        label = "Max",
+                        label = stringResource(R.string.label_max),
                         currentValue = maxValue,
                         onValueChange = onMaxChange,
                         enabled = maxEnabled

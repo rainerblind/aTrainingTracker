@@ -27,9 +27,9 @@
             android:title="@string/prefsAthleteNameTitle" />
 
         <Preference
-            android:key="hr_zones_settings"
-            android:title="Heart Rate Zones"
-            android:summary="Configure your 5 heart rate zones" />
+            android:key="training_zones_settings"
+            android:title="@string/prefs_training_zones"
+            android:summary="@string/prefs_training_zones_summary" />
             <!-- TODO android:icon="@drawable/ic_heart_rate" /> -->
 
         <ListPreference

@@ -61,7 +61,7 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
         mUnitPref = getPreferenceScreen().findPreference(TrainingApplication.SP_UNITS);
 
         mAthleteNamePref = getPreferenceScreen().findPreference(TrainingApplication.SP_ATHLETE_NAME);
-        mHrZonesPref = getPreferenceScreen().findPreference("hr_zones_settings");
+        mHrZonesPref = getPreferenceScreen().findPreference("training_zones_settings");
         if (mHrZonesPref != null) {
             mHrZonesPref.setOnPreferenceClickListener(preference -> {
                 Intent intent = new Intent(getActivity(), ZonesSettingsActivity.class);
@@ -119,13 +119,13 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
         if (mHrZonesPref != null && mSettingsDataStore != null) {
             try {
                 // Fetch the summary string from the Kotlin helper
-                String summary = "HR Run: " + mSettingsDataStore.getSummary(SettingsDataStore.ZoneType.HR_RUN);
-                summary += "\n\nHR Bike: " + mSettingsDataStore.getSummary(SettingsDataStore.ZoneType.HR_BIKE);
-                summary += "\n\nPWR Bike: " + mSettingsDataStore.getSummary(SettingsDataStore.ZoneType.PWR_BIKE);
+                String summary = getString(R.string.tab_hr_run) + ":\n" + mSettingsDataStore.getSummary(SettingsDataStore.ZoneType.HR_RUN);
+                summary += "\n\n" + getString(R.string.tab_hr_bike) + ":\n" + mSettingsDataStore.getSummary(SettingsDataStore.ZoneType.HR_BIKE);
+                summary += "\n\n" + getString(R.string.tab_pwr_bike) + ":\n" + mSettingsDataStore.getSummary(SettingsDataStore.ZoneType.PWR_BIKE);
                 mHrZonesPref.setSummary(summary);
             } catch (Exception e) {
                 Log.e(TAG, "Failed to load HR Zones summary", e);
-                mHrZonesPref.setSummary("Configure your heart rate zones");
+                mHrZonesPref.setSummary("Configure your training zones");
             }
         }
     }
