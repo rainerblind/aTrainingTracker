@@ -46,7 +46,6 @@ class ZonesSettingsActivity : ComponentActivity() {
 // Data class to hold the full state of a profile
 data class ZoneProfileState(
     val type: ZoneType,
-    val title: String,
     val z1: Int,
     val z2: Int,
     val z3: Int,
@@ -72,7 +71,6 @@ fun SettingsScreenRoute(onFinish: () -> Unit = {}) {
             val loadedData = zoneTypes.mapIndexed { index, type ->
                 ZoneProfileState(
                     type = type,
-                    title = profiles[index],
                     z1 = dataStore.getZone1MaxFlow(type).first(),
                     z2 = dataStore.getZone2MaxFlow(type).first(),
                     z3 = dataStore.getZone3MaxFlow(type).first(),
@@ -146,7 +144,6 @@ fun SettingsScreenRoute(onFinish: () -> Unit = {}) {
                     val profileState = allProfilesData[page]
 
                     SettingsScreenContent(
-                        title = profileState.title,
                         z1Max = profileState.z1,
                         z2Max = profileState.z2,
                         z3Max = profileState.z3,
@@ -201,7 +198,6 @@ private fun updateProfile(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreenContent(
-    title: String,
     z1Max: Int,
     z2Max: Int,
     z3Max: Int,
@@ -227,12 +223,6 @@ fun SettingsScreenContent(
             .verticalScroll(scrollState),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.padding(bottom = 4.dp),
-            color = MaterialTheme.colorScheme.primary
-        )
         // Zone 1
         ZoneRow(
             zoneLabel = "Zone 1 (Recovery)",
@@ -376,7 +366,6 @@ fun IntegerInputField(
 fun SettingsScreenPreview() {
     MaterialTheme {
         SettingsScreenContent(
-            title = "HR Run",
             z1Max = 130,
             z2Max = 150,
             z3Max = 170,
