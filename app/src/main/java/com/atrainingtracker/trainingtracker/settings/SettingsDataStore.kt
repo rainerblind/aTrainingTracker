@@ -137,7 +137,8 @@ class SettingsDataStore(private val context: Context) {
         val z4Min = z3Max + 1
         val z5Min = z4Max + 1
 
-        "Z1: <$z1Max, Z2: $z2Min-$z2Max, Z3: $z3Min-$z3Max, Z4: $z4Min-$z4Max, Z5: >$z5Min"
+        // "Z1: <$z1Max, Z2: $z2Min-$z2Max, Z3: $z3Min-$z3Max, Z4: $z4Min-$z4Max, Z5: >$z5Min"
+        "Z1: <$z1Max, Z2: <$z2Max, Z3: <$z3Max, Z4: <$z4Max" //, Z5: >$z5Min"
     }
 
     // --- WRITE FUNCTIONS ---

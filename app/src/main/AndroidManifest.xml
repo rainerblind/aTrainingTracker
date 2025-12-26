@@ -70,7 +70,7 @@
 
         <activity
             android:name=".trainingtracker.activities.ZonesSettingsActivity"
-            android:label="Heart Rate Zones"
+            android:label="Training Zones"
             android:theme="@style/Theme.aTrainingTracker" />
         <!-- Ensure the theme is a Material3 compatible theme or Theme.AppCompat -->
 

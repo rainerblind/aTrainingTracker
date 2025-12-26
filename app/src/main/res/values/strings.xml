@@ -895,5 +895,22 @@
     <string name="location_permission_text_Android12">The main purpose of this app is to track your training sessions, even when the app is not directly visible.  Please give the app the permission to get your location (precise).\n\nFurthermore, in oder to use Bluetooth LE devices, the permission \" Nearby devices\" is required.</string>
     <string name="Request_permission_text">Allow permission by clicking \"OK\".</string>
 
+    <!-- Zone Settings Screen -->
+    <string name="prefs_training_zones">Training Zones</string>
+    <string name="prefs_training_zones_summary">Configure your training zones</string>
+    <string name="title_edit_zones">Edit Zones</string>
+    <string name="tab_hr_run">Run HR</string>
+    <string name="tab_hr_bike">Bike HR</string>
+    <string name="tab_pwr_bike">Bike Power</string>
+
+    <string name="zone_1_label">Zone 1 (Recovery)</string>
+    <string name="zone_2_label">Zone 2 (Aerobic)</string>
+    <string name="zone_3_label">Zone 3 (Tempo)</string>
+    <string name="zone_4_label">Zone 4 (Threshold)</string>
+    <string name="zone_5_label">Zone 5 (Anaerobic)</string>
+
+    <string name="label_min">Min</string>
+    <string name="label_max">Max</string>
+
     <string name="url_privacy">https://github.com/rainerblind/aTrainingTracker/blob/develop/privacy.md</string> <!-- TODO: replace develop with master -->
 </resources>
