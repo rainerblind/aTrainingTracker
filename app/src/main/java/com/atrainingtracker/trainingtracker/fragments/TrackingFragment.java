@@ -480,6 +480,11 @@ public class TrackingFragment extends BaseTrackingFragment {
         }
     }
 
+
+    /**
+     * Parses the value and sets the background color of the sensor text view
+     * based on the zones defined in Settings.
+     */
     protected void setZoneBasedBackgroundColor(TvSensorType tvSensorType, String valueStr) {
         // 1. Initial Checks: If no context or invalid data, return transparent
         if (getContext() == null || valueStr == null || valueStr.equals("--") || valueStr.equals(getString(R.string.NoData))) {
