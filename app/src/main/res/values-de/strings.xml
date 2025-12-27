@@ -786,7 +786,7 @@
     <string name="Request_permission_text">Durch klickern auf \"OK\" kommst du direkt zu den Berechtigungseinstellungen.</string>
 
     <!-- Zone Settings Screen -->
-    <string name="prefs_training_zones">Training Zonen</string>
+    <string name="prefs_training_zones">Trainings Zonen</string>
     <string name="prefs_training_zones_summary">Passe deine Trainingszonen an</string>
     <string name="title_edit_zones">Trainings Zonen anpassen</string>
     <string name="tab_hr_run">Lauf HR</string>
