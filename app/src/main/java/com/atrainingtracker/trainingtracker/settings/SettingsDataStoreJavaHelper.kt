@@ -14,7 +14,7 @@ object SettingsDataStoreJavaHelper {
     /**
      * Generic helper to get a max zone value for a specific profile (Run, Bike, Power).
      * @param context The application context
-     * @param zoneType The ZoneType (0=Run, 1=Bike, 2=Power)
+     * @param zoneType The ZoneType
      * @param zoneIndex The zone number (1-4). Zone 5 is usually > Zone 4.
      * @return The max value for that zone.
      */
