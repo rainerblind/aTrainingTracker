@@ -785,4 +785,20 @@
     <string name="location_permission_text_Android12">Diese App ist dazu da, deine Trainingseinheiten aufzuzeichen, auch wenn die App nicht direkt sichtbar ist.  Bitte gib der App die Berechtigung den genauen Standort zu lesen.\n\nDarüber hinaus wird die Berechtigung \"Geräte in der Nähe\" benötigt um Bluetooth LE Sensoren zu finden.</string>
     <string name="Request_permission_text">Durch klickern auf \"OK\" kommst du direkt zu den Berechtigungseinstellungen.</string>
 
+    <!-- Zone Settings Screen -->
+    <string name="prefs_training_zones">Trainings Zonen</string>
+    <string name="prefs_training_zones_summary">Passe deine Trainingszonen an</string>
+    <string name="title_edit_zones">Trainings Zonen anpassen</string>
+    <string name="tab_hr_run">Lauf HR</string>
+    <string name="tab_hr_bike">Rad HR</string>
+    <string name="tab_pwr_bike">Rad Leistung</string>
+
+    <string name="zone_1_label">Zone 1 (Recovery)</string>
+    <string name="zone_2_label">Zone 2 (Aerobic)</string>
+    <string name="zone_3_label">Zone 3 (Tempo)</string>
+    <string name="zone_4_label">Zone 4 (Threshold)</string>
+    <string name="zone_5_label">Zone 5 (Anaerobic)</string>
+
+    <string name="label_min">Min</string>
+    <string name="label_max">Max</string>
 </resources>
