@@ -90,9 +90,4 @@ public class StravaGetAccessTokenActivity
         return getString(R.string.Strava);
     }
 
-
-    protected void onJsonResponse(JSONObject jsonObject) {
-        StravaHelper.storeJSONData(jsonObject);
-    }
-
 }

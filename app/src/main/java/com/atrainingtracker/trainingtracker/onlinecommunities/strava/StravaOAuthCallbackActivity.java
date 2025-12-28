@@ -5,6 +5,8 @@ import android.net.Uri;
 import com.atrainingtracker.BuildConfig;
 import com.atrainingtracker.trainingtracker.onlinecommunities.BaseOAuthCallbackActivity;
 
+import org.json.JSONObject;
+
 
 public class StravaOAuthCallbackActivity extends BaseOAuthCallbackActivity {
     public static final String HTTPS = "https";
@@ -40,5 +42,10 @@ public class StravaOAuthCallbackActivity extends BaseOAuthCallbackActivity {
                 .appendQueryParameter(CODE, code);
         return builder.build().toString();
     }
-    // Optionally override onJsonResponse if you need to save refresh tokens etc
+
+    // override onJsonResponse if you need to save refresh tokens etc
+    protected void onJsonResponse(JSONObject jsonObject) {
+        StravaHelper.storeJSONData(jsonObject);
+    }
+
 }
