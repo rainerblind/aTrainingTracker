@@ -23,6 +23,7 @@ import android.net.Uri;
 import com.atrainingtracker.BuildConfig;
 import com.atrainingtracker.R;
 import com.atrainingtracker.trainingtracker.onlinecommunities.BaseGetAccessTokenActivity;
+import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaOAuthCallbackActivity;
 
 import org.json.JSONObject;
 
@@ -35,6 +36,16 @@ public class StravaGetAccessTokenActivity
     private static final String TAG = "StravaGetAccessTokenActivity";
     private static final boolean DEBUG = true;
 
+
+    protected String getRedirectUri() {
+        return "strava://rainerblind.github.io";
+    }
+
+    @Override
+    protected Class<?> getCallbackActivityClass() {
+        return StravaOAuthCallbackActivity.class;
+    }
+
     @Override
     protected String getAuthorizationUrl() {
         Uri.Builder builder = new Uri.Builder();
@@ -44,7 +55,7 @@ public class StravaGetAccessTokenActivity
                 .appendPath(MOBILE)
                 .appendPath(AUTHORIZE)
                 .appendQueryParameter(CLIENT_ID, MY_CLIENT_ID)
-                .appendQueryParameter(REDIRECT_URI, "https://rainerblind.github.io")
+                .appendQueryParameter(REDIRECT_URI, getRedirectUri())
                 .appendQueryParameter(RESPONSE_TYPE, CODE)
                 .appendQueryParameter(APPROVAL_PROMPT, AUTO)
                 .appendQueryParameter(SCOPE, READ + ',' + ACTIVITY_WRITE + ',' + ACTIVITY_READ_ALL + ',' + PROFILE_READ_ALL);
@@ -79,7 +90,7 @@ public class StravaGetAccessTokenActivity
         return getString(R.string.Strava);
     }
 
-    @Override
+
     protected void onJsonResponse(JSONObject jsonObject) {
         StravaHelper.storeJSONData(jsonObject);
     }

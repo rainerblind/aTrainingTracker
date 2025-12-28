@@ -107,18 +107,21 @@
             android:label="@string/RunkeeperGetAccessTokenActivityLabel"
             android:theme="@style/Theme.aTrainingTracker" />
 
+        <!-- 1. The Launcher (No filters needed, standard launch mode) -->
+        <activity android:name=".trainingtracker.onlinecommunities.strava.StravaGetAccessTokenActivity" />
+
+        <!-- 2. The Worker (Needs the filter and singleTop) -->
         <activity
-            android:name=".trainingtracker.onlinecommunities.strava.StravaGetAccessTokenActivity"
-            android:exported="true"
-            android:label="@string/StravaGetAccessTokenActivityLabel"
-            android:theme="@style/Theme.aTrainingTracker">
-            <intent-filter android:autoVerify="true">
+            android:name=".trainingtracker.onlinecommunities.strava.StravaOAuthCallbackActivity"
+            android:launchMode="singleTop"
+            android:exported="true">
+
+            <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" />
+                <data android:scheme="strava" />
                 <data android:host="rainerblind.github.io" />
-                <data android:pathPattern="/strava" />
             </intent-filter>
         </activity>
 
