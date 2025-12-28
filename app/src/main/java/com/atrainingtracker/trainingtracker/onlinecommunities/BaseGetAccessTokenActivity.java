@@ -84,36 +84,18 @@ public abstract class BaseGetAccessTokenActivity
     protected static final String FORCE = "force";
     protected static final String AUTO = "auto";
     protected static final String APPS = "apps";
-    protected static final String MY_REDIRECT_URI = "https://rainer-blind.de";  // must not be changed because strava checks this uri
     private static final String TAG = "BaseGetAccessTokenActivity";
     private static final boolean DEBUG = TrainingApplication.getDebug(true);
-    private ProgressDialog dialog;
-    private boolean showDialog = true;  // TODO: bad name!
 
     protected abstract String getAuthorizationUrl();
 
-    protected abstract String getAccessUrl(String code);
-
-    protected UrlEncodedFormEntity getAccessUrlEncodedFormEntity(String code) {
-        return null;
-    }
-
-    protected abstract String getAcceptApplicationUrl();
-
-    protected abstract String getName();
-
-
-    // These abstract methods are now needed by the Callback activity,
-    // but since we are splitting, we need a way to pass this logic or share it.
-    // For simplicity, we will assume the subclass knows which concrete Callback class to use.
-    protected abstract Class<?> getCallbackActivityClass();
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         if (DEBUG) Log.d(TAG, "onCreate");
 
-        // 1. Launch the Browser directly
+        // Simply, launch the Browser.
         String authUrl = getAuthorizationUrl();
         if (DEBUG) Log.i(TAG, "Launching auth url: " + authUrl);
         Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(authUrl));
