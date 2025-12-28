@@ -490,7 +490,8 @@ public class MainActivityWithNavigation
         if (TrainingApplication.uploadToStrava() && TrainingApplication.getStravaTokenExpiresAt() == 0) {
             Log.i(TAG, "migrating to new Strava OAuth");
             // TrainingApplication.setStravaTokenExpiresAt(1); // avoid starting the StravaGetAccessToken Activity again and again...
-            startActivityForResult(new Intent(this, StravaGetAccessTokenActivity.class), StravaUploadFragment.GET_STRAVA_ACCESS_TOKEN);
+            // startActivityForResult(new Intent(this, StravaGetAccessTokenActivity.class), StravaUploadFragment.GET_STRAVA_ACCESS_TOKEN);
+            // TODO: It looks like, we have to fix this case later on...
         }
 
         if (TrainingApplication.uploadToRunKeeper() && TrainingApplication.getRunkeeperToken() == null) {

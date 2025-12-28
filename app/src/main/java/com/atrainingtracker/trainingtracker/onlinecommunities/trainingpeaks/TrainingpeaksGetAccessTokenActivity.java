@@ -53,6 +53,14 @@ public class TrainingpeaksGetAccessTokenActivity
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private static final String TRAININGPEAKS_AUTHORITY = "oauth.trainingpeaks.com";
 
+    protected String getRedirectUri() {
+        return "TODO";
+    }
+
+    @Override
+    protected Class<?> getCallbackActivityClass() {
+        return null;  // TODO: implement
+    }
     @Override
     protected String getAuthorizationUrl() {
         Uri.Builder builder = new Uri.Builder();
@@ -63,7 +71,7 @@ public class TrainingpeaksGetAccessTokenActivity
                 .appendQueryParameter(CLIENT_ID, MY_CLIENT_ID)
                 .appendQueryParameter(RESPONSE_TYPE, CODE)
                 .appendQueryParameter(SCOPE, FILE_WRITE)
-                .appendQueryParameter(REDIRECT_URI, MY_REDIRECT_URI);
+                .appendQueryParameter(REDIRECT_URI, getRedirectUri());
 
         return builder.build().toString();
     }
@@ -84,7 +92,7 @@ public class TrainingpeaksGetAccessTokenActivity
         nameValuePairs.add(new BasicNameValuePair(GRANT_TYPE, AUTHORIZATION_CODE));
         nameValuePairs.add(new BasicNameValuePair(CLIENT_ID, MY_CLIENT_ID));
         nameValuePairs.add(new BasicNameValuePair(CLIENT_SECRET, MY_CLIENT_SECRET));
-        nameValuePairs.add(new BasicNameValuePair(REDIRECT_URI, MY_REDIRECT_URI));
+        nameValuePairs.add(new BasicNameValuePair(REDIRECT_URI, getRedirectUri()));
         nameValuePairs.add(new BasicNameValuePair(CODE, code));
         // .appendQueryParameter(CODE,          code.replaceAll("!", "%21"));
         try {
@@ -133,7 +141,7 @@ public class TrainingpeaksGetAccessTokenActivity
         return getString(R.string.TrainingPeaks);
     }
 
-    @Override
+
     protected void onJsonResponse(JSONObject jsonObject) {
         try {
             if (jsonObject.has(REFRESH_TOKEN)) {

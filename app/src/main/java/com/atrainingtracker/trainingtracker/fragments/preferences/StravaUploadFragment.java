@@ -19,9 +19,14 @@
 package com.atrainingtracker.trainingtracker.fragments.preferences;
 
 import android.app.Activity;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.preference.CheckBoxPreference;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceManager;
@@ -35,6 +40,7 @@ import com.atrainingtracker.trainingtracker.onlinecommunities.BaseGetAccessToken
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaDeauthorizationThread;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSynchronizeThread;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaGetAccessTokenActivity;
+import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaOAuthCallbackActivity;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaSegmentsHelper;
 
 /**
@@ -43,12 +49,27 @@ import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaSegme
 public class StravaUploadFragment extends androidx.preference.PreferenceFragmentCompat
         implements SharedPreferences.OnSharedPreferenceChangeListener {
     public static final int GET_STRAVA_ACCESS_TOKEN = 3;
-    private static final boolean DEBUG = TrainingApplication.getDebug(false);
+    private static final boolean DEBUG = TrainingApplication.getDebug(true);
     private static final String TAG = StravaUploadFragment.class.getName();
     private CheckBoxPreference mStravaUpload;
     private Preference mUpdateStravaEquipment;
 
     private SharedPreferences mSharedPreferences;
+
+    private enum RequestTokenState {
+        REQUESTING,
+        GOT
+    }
+    private RequestTokenState requestTokenState = null;
+
+    private final BroadcastReceiver tokenReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String token = intent.getStringExtra("access_token");
+            handleToken(token);
+        }
+    };
+
 
     @Override
     public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
@@ -58,6 +79,8 @@ public class StravaUploadFragment extends androidx.preference.PreferenceFragment
 
         mStravaUpload = this.getPreferenceScreen().findPreference(TrainingApplication.SP_UPLOAD_TO_STRAVA);
         mUpdateStravaEquipment = this.getPreferenceScreen().findPreference(TrainingApplication.UPDATE_STRAVA_EQUIPMENT);
+
+        LocalBroadcastManager.getInstance(getActivity()).registerReceiver(tokenReceiver, new IntentFilter(StravaOAuthCallbackActivity.StravaOAuthSuccess));
     }
 
     @Override
@@ -88,6 +111,12 @@ public class StravaUploadFragment extends androidx.preference.PreferenceFragment
         mSharedPreferences.unregisterOnSharedPreferenceChangeListener(this);
     }
 
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        LocalBroadcastManager.getInstance(getActivity()).unregisterReceiver(tokenReceiver);
+    }
+
 
     @Override
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
@@ -103,40 +132,27 @@ public class StravaUploadFragment extends androidx.preference.PreferenceFragment
                 TrainingApplication.deleteStravaToken();
                 new StravaDeauthorizationThread(getActivity()).start();
             } else {
-                startActivityForResult(new Intent(getActivity(), StravaGetAccessTokenActivity.class), GET_STRAVA_ACCESS_TOKEN);
+                requestTokenState = RequestTokenState.REQUESTING;
+                startActivity(new Intent(getActivity(), StravaGetAccessTokenActivity.class));
             }
         }
 
     }
 
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (DEBUG) Log.i(TAG, "onActivityResult: requestCode=" + requestCode);
 
-        switch (requestCode) {
-            case (GET_STRAVA_ACCESS_TOKEN):
-                if (DEBUG) Log.i(TAG, "result from strava");
-                if (resultCode == Activity.RESULT_OK) {
-                    if (DEBUG) Log.i(TAG, "result_ok");
-                    String accessToken = data.getStringExtra(BaseGetAccessTokenActivity.ACCESS_TOKEN);
-                    TrainingApplication.setStravaAccessToken(accessToken);
+    protected void handleToken(String token) {
+        if (token != null) {
+            requestTokenState = RequestTokenState.GOT;
 
-                    // synchronize equipment
-                    new StravaEquipmentSynchronizeThread(getActivity()).start();
+            TrainingApplication.setStravaAccessToken(token);
 
-                    // update Segments
-                    StravaSegmentsHelper stravaSegmentsHelper = new StravaSegmentsHelper(getContext());
-                    stravaSegmentsHelper.getStarredStravaSegments(SportTypeDatabaseManager.getSportTypeId(BSportType.BIKE));
-                    stravaSegmentsHelper.getStarredStravaSegments(SportTypeDatabaseManager.getSportTypeId(BSportType.RUN));
+            // synchronize equipment
+            new StravaEquipmentSynchronizeThread(getActivity()).start();
 
-                    // Log.d(TAG, "we got the access token: " + accessToken);
-                } else if (resultCode == Activity.RESULT_CANCELED) {
-                    if (DEBUG) Log.i(TAG, "result_canceled");
-                    // Log.d(TAG, "WTF, something went wrong");
-                    TrainingApplication.deleteStravaToken();
-                    mStravaUpload.setChecked(false);
-                }
-                break;
+            // update Segments
+            StravaSegmentsHelper stravaSegmentsHelper = new StravaSegmentsHelper(getContext());
+            stravaSegmentsHelper.getStarredStravaSegments(SportTypeDatabaseManager.getSportTypeId(BSportType.BIKE));
+            stravaSegmentsHelper.getStarredStravaSegments(SportTypeDatabaseManager.getSportTypeId(BSportType.RUN));
         }
     }
 }

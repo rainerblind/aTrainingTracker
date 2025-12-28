@@ -34,6 +34,15 @@ public class RunkeeperGetAccessTokenActivity
     private static final String TAG = "RunkeeperGetAccessTokenActivity";
     private static final boolean DEBUG = false;
 
+
+
+    protected String getRedirectUri() {
+        return "runkeeper://rainerblind.github.io";
+    }
+    protected Class<?> getCallbackActivityClass() {
+        return null; // TODO: implement
+    }
+
     @Override
     protected String getAuthorizationUrl() {
         Uri.Builder builder = new Uri.Builder();
@@ -43,7 +52,7 @@ public class RunkeeperGetAccessTokenActivity
                 .appendPath(AUTHORIZE)
                 .appendQueryParameter(CLIENT_ID, MY_CLIENT_ID)
                 .appendQueryParameter(RESPONSE_TYPE, CODE)
-                .appendQueryParameter(REDIRECT_URI, MY_REDIRECT_URI);
+                .appendQueryParameter(REDIRECT_URI, getRedirectUri());
         return builder.build().toString();
     }
 
@@ -57,7 +66,7 @@ public class RunkeeperGetAccessTokenActivity
                 .appendQueryParameter(GRANT_TYPE, AUTHORIZATION_CODE)
                 .appendQueryParameter(CLIENT_ID, MY_CLIENT_ID)
                 .appendQueryParameter(CLIENT_SECRET, MY_CLIENT_SECRET)
-                .appendQueryParameter(REDIRECT_URI, MY_REDIRECT_URI)
+                .appendQueryParameter(REDIRECT_URI, getRedirectUri())
                 .appendQueryParameter(CODE, code);
         return builder.build().toString();
     }
