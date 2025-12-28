@@ -120,5 +120,7 @@ public abstract class BaseGetAccessTokenActivity
         // No history for the browser step keeps the stack clean
         browserIntent.setFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
         startActivity(browserIntent);
+
+        finish();
     }
 }
