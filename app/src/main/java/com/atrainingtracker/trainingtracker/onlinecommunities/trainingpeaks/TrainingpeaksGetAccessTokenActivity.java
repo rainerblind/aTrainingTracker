@@ -58,10 +58,6 @@ public class TrainingpeaksGetAccessTokenActivity
     }
 
     @Override
-    protected Class<?> getCallbackActivityClass() {
-        return null;  // TODO: implement
-    }
-    @Override
     protected String getAuthorizationUrl() {
         Uri.Builder builder = new Uri.Builder();
         builder.scheme(HTTPS)
@@ -76,7 +72,7 @@ public class TrainingpeaksGetAccessTokenActivity
         return builder.build().toString();
     }
 
-    @Override
+
     protected String getAccessUrl(String code) {
         Uri.Builder builder = new Uri.Builder();
         builder.scheme(HTTPS)
@@ -86,7 +82,7 @@ public class TrainingpeaksGetAccessTokenActivity
         return builder.build().toString();
     }
 
-    @Override
+
     protected UrlEncodedFormEntity getAccessUrlEncodedFormEntity(String code) {
         List<NameValuePair> nameValuePairs = new ArrayList<>();
         nameValuePairs.add(new BasicNameValuePair(GRANT_TYPE, AUTHORIZATION_CODE));
@@ -126,7 +122,7 @@ public class TrainingpeaksGetAccessTokenActivity
         return null;
     }
 
-    @Override
+
     protected String getAcceptApplicationUrl() {
         Uri.Builder builder = new Uri.Builder();
         builder.scheme(HTTPS)
@@ -136,7 +132,7 @@ public class TrainingpeaksGetAccessTokenActivity
         return builder.build().toString();
     }
 
-    @Override
+
     protected String getName() {
         return getString(R.string.TrainingPeaks);
     }

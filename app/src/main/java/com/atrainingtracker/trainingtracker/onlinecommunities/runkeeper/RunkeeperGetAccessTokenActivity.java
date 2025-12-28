@@ -39,9 +39,6 @@ public class RunkeeperGetAccessTokenActivity
     protected String getRedirectUri() {
         return "runkeeper://rainerblind.github.io";
     }
-    protected Class<?> getCallbackActivityClass() {
-        return null; // TODO: implement
-    }
 
     @Override
     protected String getAuthorizationUrl() {
@@ -56,7 +53,7 @@ public class RunkeeperGetAccessTokenActivity
         return builder.build().toString();
     }
 
-    @Override
+
     protected String getAccessUrl(String code) {
         Uri.Builder builder = new Uri.Builder();
         builder.scheme(HTTPS)
@@ -71,7 +68,7 @@ public class RunkeeperGetAccessTokenActivity
         return builder.build().toString();
     }
 
-    @Override
+
     protected String getAcceptApplicationUrl() {
         Uri.Builder builder = new Uri.Builder();
         builder.scheme(HTTPS)
@@ -80,11 +77,6 @@ public class RunkeeperGetAccessTokenActivity
                 .appendPath(ACCEPT_APPLICATION);
         return builder.build().toString();
         // return "https://www.runkeeper.com/oauth/accept_application";
-    }
-
-    @Override
-    protected String getName() {
-        return getString(R.string.Runkeeper);
     }
 
 }

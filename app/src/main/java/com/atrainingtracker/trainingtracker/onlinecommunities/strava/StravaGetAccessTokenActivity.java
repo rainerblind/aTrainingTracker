@@ -41,10 +41,6 @@ public class StravaGetAccessTokenActivity
         return "strava://rainerblind.github.io";
     }
 
-    @Override
-    protected Class<?> getCallbackActivityClass() {
-        return StravaOAuthCallbackActivity.class;
-    }
 
     @Override
     protected String getAuthorizationUrl() {
@@ -61,33 +57,4 @@ public class StravaGetAccessTokenActivity
                 .appendQueryParameter(SCOPE, READ + ',' + ACTIVITY_WRITE + ',' + ACTIVITY_READ_ALL + ',' + PROFILE_READ_ALL);
         return builder.build().toString();
     }
-
-    @Override
-    protected String getAccessUrl(String code) {
-        Uri.Builder builder = new Uri.Builder();
-        builder.scheme(HTTPS)
-                .authority(STRAVA_AUTHORITY)
-                .appendPath(OAUTH)
-                .appendPath(TOKEN)
-                .appendQueryParameter(CLIENT_ID, MY_CLIENT_ID)
-                .appendQueryParameter(CLIENT_SECRET, MY_CLIENT_SECRET)
-                .appendQueryParameter(CODE, code);
-        return builder.build().toString();
-    }
-
-    @Override
-    protected String getAcceptApplicationUrl() {
-        Uri.Builder builder = new Uri.Builder();
-        builder.scheme(HTTPS)
-                .authority(STRAVA_AUTHORITY)
-                .appendPath(OAUTH)
-                .appendPath(ACCEPT_APPLICATION);
-        return builder.build().toString();
-    }
-
-    @Override
-    protected String getName() {
-        return getString(R.string.Strava);
-    }
-
 }
