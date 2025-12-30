@@ -39,8 +39,8 @@ class StravaUploader(context: Context) : BaseExporter(context) {
         private const val URL_STRAVA_ACTIVITY = "https://www.strava.com/api/v3/activities/"
 
         private const val MAX_REQUESTS = 10
-        private const val INITIAL_WAITING_TIME = 10 * 1000L // 10 seconds
-        private const val WAITING_TIME_UPDATE = 1000L // 1 second
+        private const val INITIAL_WAITING_TIME = 1000L // 1 seconds
+        private const val INCREASE_WAITING_TIME_MULT = 1.4
 
         // JSON / Form Keys
         private const val ID = "id"
