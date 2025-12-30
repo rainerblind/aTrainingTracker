@@ -56,10 +56,10 @@ class StravaUploader(context: Context) : BaseExporter(context) {
         private const val TYPE = "type"
         private const val GEAR_ID = "gear_id"
         private const val DESCRIPTION = "description"
-        private const val PRIVATE = "private"
+        private const val PRIVATE = "private"  // TODO: remove.  This seems to be no longer supported by Strava.
+        private const val HIDE = "hide_from_home"
         private const val COMMUTE = "commute"
         private const val TRAINER = "trainer"
-        private const val TRUE = "true"
 
         // Strava Status messages
         private const val STATUS_PROCESSING = "Your activity is still being processed."
@@ -279,91 +279,75 @@ class StravaUploader(context: Context) : BaseExporter(context) {
         cursor.close()
         dbManager.closeDatabase()
 
-        // 1. Ensure Type is correct
+
+        // First of all, we have to update the sport type.  Thereby, query Strava several times to make sure that the sport type is correct.
+        // In the past, we had problems when updating the sport type and the gear in one step.
+        updateStravaActivity(activityId, FormBody.Builder().add(TYPE, sportName).build())
         var activityJSON: JSONObject? = getStravaActivity(activityId) ?: return ExportResult(false, "updating Strava failed (get)")
 
-        // Update type loop
-        updateStravaActivity(activityId, FormBody.Builder().add(TYPE, sportName).build())
-
-        var counter = 0
-        try {
-            while (!sportName.equals(activityJSON!!.optString(TYPE), ignoreCase = true) && counter++ < MAX_REQUESTS) {
-                Thread.sleep(WAITING_TIME_UPDATE)
-                activityJSON = getStravaActivity(activityId)
-                if (DEBUG) Log.i(TAG, "Type Check: $sportName ?= ${activityJSON?.optString(TYPE)}")
-                if (activityJSON == null) break
+        for (attempt in 1..MAX_REQUESTS) {
+            if (activityJSON != null && sportName.equals(activityJSON?.optString(TYPE), ignoreCase = true)) {
+                break
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
+
+            Thread.sleep(WAITING_TIME_UPDATE)
+            activityJSON = getStravaActivity(activityId)
         }
 
-        // 2. Prepare Form Body for metadata update
+        // Now, that we are pretty sure that the sport type is correct, we can continue to update all other fields.
+
+
+        // Prepare Form Body for metadata update
         val formBuilder = FormBody.Builder()
-        var hasUpdates = false
 
         if (!name.isNullOrEmpty()) {
             formBuilder.add(NAME, name)
-            hasUpdates = true
         }
         if (!gearId.isNullOrEmpty()) {
             formBuilder.add(GEAR_ID, gearId)
-            hasUpdates = true
         }
         if (!description.isNullOrEmpty()) {
             formBuilder.add(DESCRIPTION, description)
-            hasUpdates = true
         }
-        if (isPrivate) {
-            formBuilder.add(PRIVATE, TRUE)
-            hasUpdates = true
-        }
-        if (trainer) {
-            formBuilder.add(TRAINER, TRUE)
-            hasUpdates = true
-        }
-        if (commute) {
-            formBuilder.add(COMMUTE, TRUE)
-            hasUpdates = true
-        }
+        formBuilder.add(PRIVATE, isPrivate.toString())
+        formBuilder.add(HIDE, isPrivate.toString())
+        formBuilder.add(TRAINER, trainer.toString())
+        formBuilder.add(COMMUTE, commute.toString())
 
-        if (hasUpdates) {
-            activityJSON = updateStravaActivity(activityId, formBuilder.build())
-                ?: return ExportResult(false, "Update request failed")
+        // update the activity
+        activityJSON = updateStravaActivity(activityId, formBuilder.build())
+            ?: return ExportResult(false, "Update request failed")
 
-            if (DEBUG) Log.i(TAG, "Update Result: $activityJSON")
+        if (DEBUG) Log.i(TAG, "Update Result: $activityJSON")
 
-            // Verify
-            val errors = StringBuilder("errors:")
-            var correctUpdate = true
+        // Verify
+        // TODO: do we really need this?
+        val errors = StringBuilder("errors:")
+        var correctUpdate = true
 
-            fun check(key: String, expected: String?) {
-                if (expected != null) {
-                    val actual = activityJSON?.optString(key) ?: ""
-                    // Strava might return null for empty gear
-                    if (expected.isEmpty() && actual == "null") return
+        fun check(key: String, expected: String?) {
+            if (expected != null) {
+                val actual = activityJSON?.optString(key) ?: ""
+                // Strava might return null for empty gear
+                if (expected.isEmpty() && actual == "null") return
 
-                    if (expected != actual) {
-                        // Loose boolean check (Strava returns boolean in JSON, we might compare "true" string)
-                        if (expected == "true" && actual == "true") return
-                        errors.append(" $key")
-                        correctUpdate = false
-                    }
+                if (expected != actual) {
+                    errors.append(" $key")
+                    correctUpdate = false
                 }
             }
-
-            check(NAME, name)
-            check(GEAR_ID, gearId)
-            check(DESCRIPTION, description)
-            if (isPrivate) check(PRIVATE, TRUE)
-            if (trainer) check(TRAINER, TRUE)
-            if (commute) check(COMMUTE, TRUE)
-
-            return if (correctUpdate) ExportResult(true, "successfully updated")
-            else ExportResult(false, errors.toString())
-
-        } else {
-            return ExportResult(true, "nothing to update")
         }
+
+        check(NAME, name)
+        check(GEAR_ID, gearId)
+        check(DESCRIPTION, description)
+        check(HIDE, isPrivate.toString())
+        check(PRIVATE, isPrivate.toString())
+        check(TRAINER, trainer.toString())
+        check(COMMUTE, commute.toString())
+
+        return if (correctUpdate) ExportResult(true, "successfully updated")
+        else ExportResult(false, errors.toString())
     }
 
     private fun updateStravaActivity(stravaActivityId: String, requestBody: RequestBody): JSONObject? {
