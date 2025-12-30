@@ -78,11 +78,6 @@ class StravaUploader(context: Context) : BaseExporter(context) {
     override fun doExport(exportInfo: ExportInfo): ExportResult {
         if (DEBUG) Log.d(TAG, "doExport: ${exportInfo.fileBaseName}")
 
-        if (ExportStatus.FINISHED_SUCCESS == cExportManager.getExportStatus(exportInfo)) {
-            if (DEBUG) Log.d(TAG, "workout already successfully uploaded")
-            return doUpdate(exportInfo)
-        }
-
         val file = File(getBaseDirFile(mContext), exportInfo.shortPath)
         val accessToken = StravaHelper.getRefreshedAccessToken()
 
@@ -319,6 +314,8 @@ class StravaUploader(context: Context) : BaseExporter(context) {
             ?: return ExportResult(false, "Update request failed")
 
         if (DEBUG) Log.i(TAG, "Update Result: $activityJSON")
+
+        return ExportResult(true, "successfully updated")
 
         // Verify
         // TODO: do we really need this?
