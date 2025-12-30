@@ -280,12 +280,14 @@ class StravaUploader(context: Context) : BaseExporter(context) {
         updateStravaActivity(activityId, FormBody.Builder().add(TYPE, sportName).build())
         var activityJSON: JSONObject? = getStravaActivity(activityId) ?: return ExportResult(false, "updating Strava failed (get)")
 
+        var waitingTime = INITIAL_WAITING_TIME
         for (attempt in 1..MAX_REQUESTS) {
             if (activityJSON != null && sportName.equals(activityJSON?.optString(TYPE), ignoreCase = true)) {
                 break
             }
 
-            Thread.sleep(WAITING_TIME_UPDATE)
+            waitingTime = (waitingTime * INCREASE_WAITING_TIME_MULT).toLong()
+            Thread.sleep(waitingTime)
             activityJSON = getStravaActivity(activityId)
         }
 
