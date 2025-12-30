@@ -145,7 +145,7 @@ class StravaUploader(context: Context) : BaseExporter(context) {
             for (attempt in 1..MAX_REQUESTS) {
                 if (exportResult != null) break
                 Thread.sleep(waitingTime)
-                waitingTime = (waitingTime * 1.4).toLong()
+                waitingTime = (waitingTime * INCREASE_WAITING_TIME_MULT).toLong()
 
                 val uploadStatusJsonAnswer = getStravaUploadStatus(uploadId)
                 if (uploadStatusJsonAnswer == null) {
