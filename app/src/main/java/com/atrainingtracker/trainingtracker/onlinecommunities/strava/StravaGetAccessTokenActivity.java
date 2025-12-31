@@ -28,6 +28,8 @@ import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaOAuth
 import org.json.JSONObject;
 
 
+// Use StravaHelper insead.
+@Deprecated
 public class StravaGetAccessTokenActivity
         extends BaseGetAccessTokenActivity {
     protected static final String STRAVA_AUTHORITY = "www.strava.com";

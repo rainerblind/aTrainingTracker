@@ -43,6 +43,7 @@ import android.os.Handler;
 import android.os.IBinder;
 
 import com.atrainingtracker.trainingtracker.exporter.ExportWorkoutWorker;
+import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
 import com.google.android.material.navigation.NavigationView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -490,7 +491,8 @@ public class MainActivityWithNavigation
         if (TrainingApplication.uploadToStrava() && TrainingApplication.getStravaTokenExpiresAt() == 0) {
             Log.i(TAG, "migrating to new Strava OAuth");
             // TrainingApplication.setStravaTokenExpiresAt(1); // avoid starting the StravaGetAccessToken Activity again and again...
-            startActivityForResult(new Intent(this, StravaGetAccessTokenActivity.class), StravaUploadFragment.GET_STRAVA_ACCESS_TOKEN);
+            // startActivityForResult(new Intent(this, StravaGetAccessTokenActivity.class), StravaUploadFragment.GET_STRAVA_ACCESS_TOKEN);
+            StravaHelper.requestAccessToken(this);
         }
 
         if (TrainingApplication.uploadToRunKeeper() && TrainingApplication.getRunkeeperToken() == null) {

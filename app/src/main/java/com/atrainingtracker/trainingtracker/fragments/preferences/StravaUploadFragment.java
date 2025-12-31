@@ -40,6 +40,7 @@ import com.atrainingtracker.trainingtracker.onlinecommunities.BaseGetAccessToken
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaDeauthorizationThread;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSynchronizeThread;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaGetAccessTokenActivity;
+import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaOAuthCallbackActivity;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaSegmentsHelper;
 
@@ -133,7 +134,8 @@ public class StravaUploadFragment extends androidx.preference.PreferenceFragment
                 new StravaDeauthorizationThread(getActivity()).start();
             } else {
                 requestTokenState = RequestTokenState.REQUESTING;
-                startActivity(new Intent(getActivity(), StravaGetAccessTokenActivity.class));
+                // startActivity(new Intent(getActivity(), StravaGetAccessTokenActivity.class));
+                StravaHelper.requestAccessToken(getContext());
             }
         }
 
