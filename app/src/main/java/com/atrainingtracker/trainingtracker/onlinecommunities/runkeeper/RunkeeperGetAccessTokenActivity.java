@@ -34,6 +34,12 @@ public class RunkeeperGetAccessTokenActivity
     private static final String TAG = "RunkeeperGetAccessTokenActivity";
     private static final boolean DEBUG = false;
 
+
+
+    protected String getRedirectUri() {
+        return "runkeeper://rainerblind.github.io";
+    }
+
     @Override
     protected String getAuthorizationUrl() {
         Uri.Builder builder = new Uri.Builder();
@@ -43,11 +49,11 @@ public class RunkeeperGetAccessTokenActivity
                 .appendPath(AUTHORIZE)
                 .appendQueryParameter(CLIENT_ID, MY_CLIENT_ID)
                 .appendQueryParameter(RESPONSE_TYPE, CODE)
-                .appendQueryParameter(REDIRECT_URI, MY_REDIRECT_URI);
+                .appendQueryParameter(REDIRECT_URI, getRedirectUri());
         return builder.build().toString();
     }
 
-    @Override
+
     protected String getAccessUrl(String code) {
         Uri.Builder builder = new Uri.Builder();
         builder.scheme(HTTPS)
@@ -57,12 +63,12 @@ public class RunkeeperGetAccessTokenActivity
                 .appendQueryParameter(GRANT_TYPE, AUTHORIZATION_CODE)
                 .appendQueryParameter(CLIENT_ID, MY_CLIENT_ID)
                 .appendQueryParameter(CLIENT_SECRET, MY_CLIENT_SECRET)
-                .appendQueryParameter(REDIRECT_URI, MY_REDIRECT_URI)
+                .appendQueryParameter(REDIRECT_URI, getRedirectUri())
                 .appendQueryParameter(CODE, code);
         return builder.build().toString();
     }
 
-    @Override
+
     protected String getAcceptApplicationUrl() {
         Uri.Builder builder = new Uri.Builder();
         builder.scheme(HTTPS)
@@ -71,11 +77,6 @@ public class RunkeeperGetAccessTokenActivity
                 .appendPath(ACCEPT_APPLICATION);
         return builder.build().toString();
         // return "https://www.runkeeper.com/oauth/accept_application";
-    }
-
-    @Override
-    protected String getName() {
-        return getString(R.string.Runkeeper);
     }
 
 }

@@ -19,13 +19,14 @@
 package com.atrainingtracker.trainingtracker.onlinecommunities.strava;
 
 import android.content.Context;
+import android.content.Intent;
 import android.net.Uri;
 import android.util.Log;
 
+import com.atrainingtracker.BuildConfig;
 import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
-import com.atrainingtracker.trainingtracker.onlinecommunities.BaseGetAccessTokenActivity;
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager;
 
 import org.apache.http.HttpResponse;
@@ -45,6 +46,38 @@ import java.io.IOException;
  */
 
 public class StravaHelper {
+    // TODO: define these constants somewhere better...
+    public static final String ACCESS_TOKEN = "access_token";
+    public static final String HTTPS = "https";
+    public static final String TOKEN = "token";
+    protected static final String AUTHORIZE = "authorize";
+    public static final String OAUTH = "oauth";
+    protected static final String MOBILE = "mobile";
+    protected static final String CODE = "code";
+    protected static final String AUTHORIZATION_CODE = "authorization_code";
+    protected static final String ACCEPT_APPLICATION = "accept_application";
+    public static final String CLIENT_ID = "client_id";
+    public static final String CLIENT_SECRET = "client_secret";
+    protected static final String RESPONSE_TYPE = "response_type";
+    protected static final String REDIRECT_URI = "redirect_uri";
+    public static final String GRANT_TYPE = "grant_type";
+    protected static final String TOKEN_TYPE = "token_type";
+    public static final String REFRESH_TOKEN = "refresh_token";
+    public static final String EXPIRES_AT = "expires_at";
+    protected static final String SCOPE = "scope";
+    protected static final String WRITE = "write";
+    protected static final String FILE_WRITE = "file:write";
+    protected static final String ACTIVITY_WRITE = "activity:write";
+    protected static final String ACTIVITY_READ_ALL = "activity:read_all";
+    protected static final String PROFILE_READ_ALL = "profile:read_all";
+    protected static final String READ = "read";
+    protected static final String APPROVAL_PROMPT = "approval_prompt";
+    protected static final String FORCE = "force";
+    protected static final String AUTO = "auto";
+    protected static final String APPS = "apps";
+    protected static final String STRAVA_AUTHORITY = "www.strava.com";
+    protected static final String MY_CLIENT_ID = BuildConfig.STRAVA_CLIENT_ID;
+    protected static final String MY_CLIENT_SECRET = BuildConfig.STRAVA_CLIENT_SECRET;
     public static final String AUTHORIZATION = "Authorization";
     public static final String BEARER = "Bearer";
     protected static final String ID = "id";
@@ -83,24 +116,57 @@ public class StravaHelper {
                 int athleteId = athlete.getInt("id");
                 TrainingApplication.setStravaAthleteId(athleteId);
             }
-            TrainingApplication.setStravaAccessToken(jsonObject.getString(BaseGetAccessTokenActivity.ACCESS_TOKEN));
-            TrainingApplication.setStravaRefreshToken(jsonObject.getString(BaseGetAccessTokenActivity.REFRESH_TOKEN));
-            TrainingApplication.setStravaTokenExpiresAt(jsonObject.getInt(BaseGetAccessTokenActivity.EXPIRES_AT));
+            TrainingApplication.setStravaAccessToken(jsonObject.getString(ACCESS_TOKEN));
+            TrainingApplication.setStravaRefreshToken(jsonObject.getString(REFRESH_TOKEN));
+            TrainingApplication.setStravaTokenExpiresAt(jsonObject.getInt(EXPIRES_AT));
         } catch (JSONException e) {
             e.printStackTrace();
         }
     }
 
+
+    protected static String getRedirectUri() {
+        return "strava://rainerblind.github.io";
+    }
+
+    protected static String getAuthorizationUrl() {
+        Uri.Builder builder = new Uri.Builder();
+        builder.scheme(HTTPS)
+                .authority(STRAVA_AUTHORITY)
+                .appendPath(OAUTH)
+                .appendPath(MOBILE)
+                .appendPath(AUTHORIZE)
+                .appendQueryParameter(CLIENT_ID, MY_CLIENT_ID)
+                .appendQueryParameter(REDIRECT_URI, getRedirectUri())
+                .appendQueryParameter(RESPONSE_TYPE, CODE)
+                .appendQueryParameter(APPROVAL_PROMPT, AUTO)
+                .appendQueryParameter(SCOPE, READ + ',' + ACTIVITY_WRITE + ',' + ACTIVITY_READ_ALL + ',' + PROFILE_READ_ALL);
+        return builder.build().toString();
+    }
+
+
+    public static void requestAccessToken(Context context) {
+        if (DEBUG) Log.i(TAG, "requestAccessToken");
+
+        // Simply, launch the Browser.
+        String authUrl = getAuthorizationUrl();
+        if (DEBUG) Log.i(TAG, "Launching auth url: " + authUrl);
+        Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(authUrl));
+        // No history for the browser step keeps the stack clean
+        browserIntent.setFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
+        context.startActivity(browserIntent);
+    }
+
     protected static String getRefreshUrl() {
         Uri.Builder builder = new Uri.Builder();
-        builder.scheme(BaseGetAccessTokenActivity.HTTPS)
-                .authority(StravaGetAccessTokenActivity.STRAVA_AUTHORITY)
-                .appendPath(BaseGetAccessTokenActivity.OAUTH)
-                .appendPath(BaseGetAccessTokenActivity.TOKEN)
-                .appendQueryParameter(BaseGetAccessTokenActivity.CLIENT_ID, StravaGetAccessTokenActivity.MY_CLIENT_ID)
-                .appendQueryParameter(BaseGetAccessTokenActivity.CLIENT_SECRET, StravaGetAccessTokenActivity.MY_CLIENT_SECRET)
-                .appendQueryParameter(BaseGetAccessTokenActivity.GRANT_TYPE, BaseGetAccessTokenActivity.REFRESH_TOKEN)
-                .appendQueryParameter(BaseGetAccessTokenActivity.REFRESH_TOKEN, TrainingApplication.getStravaRefreshToken());
+        builder.scheme(HTTPS)
+                .authority(STRAVA_AUTHORITY)
+                .appendPath(OAUTH)
+                .appendPath(TOKEN)
+                .appendQueryParameter(CLIENT_ID, MY_CLIENT_ID)
+                .appendQueryParameter(CLIENT_SECRET, MY_CLIENT_SECRET)
+                .appendQueryParameter(GRANT_TYPE, REFRESH_TOKEN)
+                .appendQueryParameter(REFRESH_TOKEN, TrainingApplication.getStravaRefreshToken());
         return builder.build().toString();
     }
 
@@ -129,9 +195,9 @@ public class StravaHelper {
             JSONObject responseJson = new JSONObject(response);
             storeJSONData(responseJson);
 
-            if (responseJson.has(BaseGetAccessTokenActivity.ACCESS_TOKEN)) {
+            if (responseJson.has(ACCESS_TOKEN)) {
                 // String tokenType   = responseJson.getString(TOKEN_TYPE);
-                return responseJson.getString(BaseGetAccessTokenActivity.ACCESS_TOKEN);
+                return responseJson.getString(ACCESS_TOKEN);
             }
         } catch (ClientProtocolException e) {
             // TODO Auto-generated catch block
@@ -153,9 +219,6 @@ public class StravaHelper {
     /* returns the athleteId stored in the shared preferences.  If this is not available (== 0), get the id from strava in the background and also get the segments
      * But this method still returns 0. */
     public int getAthleteId(Context context) {
-        // Disable Strava segments
-        return 0;
-        /*
         int athleteId = TrainingApplication.getStravaAthleteId();
 
         if (athleteId == 0) {
@@ -163,7 +226,6 @@ public class StravaHelper {
         }
 
         return athleteId;
-        */
     }
 
     class GetAthleteIdFromStravaThread extends Thread {
