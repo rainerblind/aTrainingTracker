@@ -27,7 +27,6 @@ import com.atrainingtracker.BuildConfig;
 import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
-import com.atrainingtracker.trainingtracker.onlinecommunities.BaseGetAccessTokenActivity;
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager;
 
 import org.apache.http.HttpResponse;
@@ -196,9 +195,9 @@ public class StravaHelper {
             JSONObject responseJson = new JSONObject(response);
             storeJSONData(responseJson);
 
-            if (responseJson.has(BaseGetAccessTokenActivity.ACCESS_TOKEN)) {
+            if (responseJson.has(ACCESS_TOKEN)) {
                 // String tokenType   = responseJson.getString(TOKEN_TYPE);
-                return responseJson.getString(BaseGetAccessTokenActivity.ACCESS_TOKEN);
+                return responseJson.getString(ACCESS_TOKEN);
             }
         } catch (ClientProtocolException e) {
             // TODO Auto-generated catch block
