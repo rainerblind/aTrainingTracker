@@ -98,8 +98,6 @@
     <string name="lastSeenText">Zum letzten mal gesehen</string>
     <string name="now">jetzt</string>
 
-    <string name="privateString">privat</string>
-
     <string name="commute">Pendeln</string>
     <string name="trainer_general">Indoor Trainer</string>
     <string name="trainer_bike">Rolle</string>
@@ -363,8 +361,6 @@
     <string name="prefsUploadSummary">Hochladen zu Cloud Diensten und Online Communities</string>
     <string name="prefsOnlineStorage">Online Speicher</string>
     <string name="prefsOnlineCommunities">Online Gemeinschaften</string>
-    <string name="prefsDefaultToPrivateTitle">Privatsphäre</string>
-    <string name="prefsDefaultToPrivateSummary">Standardmäßig sind alle Einheiten privat</string>
     <string name="prefsUploadToDropboxSummary">Exportierte Dateien auch zu Dropbox hochladen</string>
     <string name="prefsUploadToStravaSummary">Trainingseinheiten bei Strava hochladen</string>
     <string name="prefsUploadToRunkeeperSummary">Trainingseinheiten bei Runkeeper hochladen</string>
