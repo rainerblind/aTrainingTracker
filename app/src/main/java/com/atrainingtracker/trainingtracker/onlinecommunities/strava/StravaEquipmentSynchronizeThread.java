@@ -1,19 +1,11 @@
 /*
  * aTrainingTracker (ANT+ BTLE)
- * Copyright (C) 2011 - 2019 Rainer Blind <rainer.blind@gmail.com>
+ * Copyright (C) 2011 - 2025 Rainer Blind <rainer.blind@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
 package com.atrainingtracker.trainingtracker.onlinecommunities.strava;
@@ -33,78 +25,83 @@ import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper;
 
-import org.apache.http.HttpResponse;
-import org.apache.http.ParseException;
-import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.util.EntityUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.util.Date;
+import java.util.Map;
 
 public class StravaEquipmentSynchronizeThread extends Thread {
+
     public static final String SYNCHRONIZE_EQUIPMENT_STRAVA_START = "de.rainerblind.trainingtracker.equipment.StravaEquipmentHelper.SYNCHRONIZE_EQUIPMENT_STRAVA_START";
     public static final String SYNCHRONIZE_EQUIPMENT_STRAVA_FINISHED = "de.rainerblind.trainingtracker.equipment.StravaEquipmentHelper.SYNCHRONIZE_EQUIPMENT_STRAVA_FINISHED";
-    protected static final String STRAVA_URL_ATHLETE = "https://www.strava.com/api/v3/athlete";
-    protected static final String STRAVA_URL_GEAR = "https://www.strava.com/api/v3/gear";
-    protected static final String AUTHORIZATION = "Authorization";
-    protected static final String BEARER = "Bearer";
-    protected static final String MESSAGE = "message";
-    protected static final String AUTHORIZATION_ERROR = "Authorization Error";
-    protected static final String BIKES = "bikes";
-    protected static final String SHOES = "shoes";
-    protected static final String ID = "id";
-    protected static final String NAME = "name";
-    protected static final String FRAME_TYPE = "frame_type";
-    private static final String TAG = "StravaEquipmentHelperTask";
-    private static final boolean DEBUG = false;
-    protected Context mContext;
+
+    private static final String STRAVA_URL_ATHLETE = "https://www.strava.com/api/v3/athlete";
+    private static final String STRAVA_URL_GEAR = "https://www.strava.com/api/v3/gear";
+    private static final String AUTHORIZATION = "Authorization";
+    private static final String BEARER = "Bearer";
+    private static final String MESSAGE = "message";
+    private static final String BIKES = "bikes";
+    private static final String SHOES = "shoes";
+    private static final String ID = "id";
+    private static final String NAME = "name";
+    private static final String FRAME_TYPE = "frame_type";
+
+    private static final String TAG = "StravaEquipmentThread";
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
+
+    private final Context mContext;
     private final ProgressDialog mProgressDialog;
+    private final Handler mMainHandler;
 
     public StravaEquipmentSynchronizeThread(Context context) {
         mContext = context;
         mProgressDialog = new ProgressDialog(context);
+        mMainHandler = new Handler(Looper.getMainLooper());
     }
 
-    protected void publishProgress(String progress) {
-        new Handler(Looper.getMainLooper()).post(() -> {
-            // TODO: update some Progress Dialog
-            mProgressDialog.setMessage(progress);
+    private void publishProgress(String progress) {
+        mMainHandler.post(() -> {
+            if (mProgressDialog != null && mProgressDialog.isShowing()) {
+                mProgressDialog.setMessage(progress);
+            }
         });
     }
 
     @Override
     public void run() {
-        new Handler(Looper.getMainLooper()).post(() -> {
-            mProgressDialog.setMessage(mContext.getString(R.string.getting_equipment_from_strava));
-            mProgressDialog.show();
-            // mProgressDialog.setCancelable(false);
-            // mProgressDialog.setCanceledOnTouchOutside(false);
+        mMainHandler.post(() -> {
+            try {
+                mProgressDialog.setMessage(mContext.getString(R.string.getting_equipment_from_strava));
+                mProgressDialog.show();
+            } catch (Exception e) {
+                // Window might not be attached
+            }
         });
 
         final String result = getStravaEquipment();
-        new Handler(Looper.getMainLooper()).post(() -> {
+
+        mMainHandler.post(() -> {
             if (DEBUG) Log.d(TAG, "updated Strava equipment");
 
-            if (mProgressDialog.isShowing()) {
+            if (mProgressDialog != null && mProgressDialog.isShowing()) {
                 try {
                     mProgressDialog.dismiss();
-                    // sometimes this gives the following exception:
-                    // java.lang.IllegalArgumentException: View not attached to window manager
-                    // so we catch this exception
                 } catch (IllegalArgumentException e) {
-                    // and nothing
-                    // http://stackoverflow.com/questions/2745061/java-lang-illegalargumentexception-view-not-attached-to-window-manager
+                    // View not attached to window manager
                 }
             }
 
-            TrainingApplication.setLastUpdateTimeOfStravaEquipment(result);// DateFormat.getDateTimeInstance().format(new Date()));
+            TrainingApplication.setLastUpdateTimeOfStravaEquipment(result);
 
             mContext.sendBroadcast(new Intent(SYNCHRONIZE_EQUIPMENT_STRAVA_FINISHED)
                     .setPackage(mContext.getPackageName()));
@@ -114,167 +111,159 @@ public class StravaEquipmentSynchronizeThread extends Thread {
     private String getStravaEquipment() {
         if (DEBUG) Log.d(TAG, "getStravaEquipment");
 
-        HttpClient httpClient = new DefaultHttpClient();
-        HttpGet httpGet = new HttpGet(STRAVA_URL_ATHLETE);
-        // httpPost.addHeader(AUTHORIZATION, "Bearer " + TrainingApplication.getRunkeeperToken());
-        httpGet.addHeader(AUTHORIZATION, BEARER + " " + StravaHelper.getRefreshedAccessToken());
-
-        HttpResponse httpResponse;
+        HttpURLConnection urlConnection = null;
         try {
-            httpResponse = httpClient.execute(httpGet);
+            URL url = new URL(STRAVA_URL_ATHLETE);
+            urlConnection = (HttpURLConnection) url.openConnection();
+            urlConnection.setRequestMethod("GET");
+            String accessToken = StravaHelper.getRefreshedAccessToken();
+            urlConnection.setRequestProperty(AUTHORIZATION, BEARER + " " + accessToken);
+            //urlConnection.addRequestProperty(AUTHORIZATION, BEARER + " " + StravaHelper.getRefreshedAccessToken());
+            urlConnection.setConnectTimeout(15000);
+            urlConnection.setReadTimeout(15000);
 
-            String response;
-            response = EntityUtils.toString(httpResponse.getEntity());
+            Map headers = urlConnection.getHeaderFields();
+
+            int responseCode = urlConnection.getResponseCode();
+            String response = readStream(urlConnection, responseCode);
+
             if (DEBUG) Log.d(TAG, "getStravaEquipment response: " + response);
 
             JSONObject responseJson = new JSONObject(response);
 
-            if (responseJson.has(MESSAGE)) {
+            if (responseJson.has(MESSAGE) && responseJson.has("errors")) {
                 String message = responseJson.getString(MESSAGE);
-                if (DEBUG) Log.d(TAG, message);
+                Log.e(TAG, "Strava Error: " + message);
                 return message;
             }
 
             return fillDbFromJsonObject(responseJson);
 
-        } catch (ClientProtocolException e) {
-            // TODO Auto-generated catch block
-            Log.e(TAG, e.toString());
-            e.printStackTrace();
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            Log.e(TAG, e.toString());
-            e.printStackTrace();
-        } catch (JSONException e) {
-            // TODO Auto-generated catch block
-            Log.e(TAG, e.toString());
-            e.printStackTrace();
+        } catch (IOException | JSONException e) {
+            Log.e(TAG, "Error fetching equipment", e);
+        } finally {
+            if (urlConnection != null) {
+                urlConnection.disconnect();
+            }
         }
-        return ("updating failed");
+        return "updating failed";
     }
 
-    public String fillDbFromJsonObject(JSONObject jsonObject) {
-        SQLiteDatabase equipmentDb = new EquipmentDbHelper(mContext).getWritableDatabase();
-        ContentValues values = new ContentValues();
+    private String fillDbFromJsonObject(JSONObject jsonObject) {
+        try (SQLiteDatabase equipmentDb = new EquipmentDbHelper(mContext).getWritableDatabase()) {
+            ContentValues values = new ContentValues();
 
-        // equipmentDb.delete(EquipmentDbHelper.SHOES, null, null);
-        // equipmentDb.delete(EquipmentDbHelper.BIKES, null, null);
+            if (DEBUG) Log.d(TAG, "checking strava shoes");
+            publishProgress("checking Strava shoes"); // Ideally use string resource
 
-        if (DEBUG) Log.d(TAG, "checking strava shoes");
-        publishProgress("checking Strava shoes");
-        JSONArray shoes;
-        try {
-            shoes = jsonObject.getJSONArray(SHOES);
-            for (int i = 0; i < shoes.length(); i++) {
+            if (jsonObject.has(SHOES)) {
+                JSONArray shoes = jsonObject.getJSONArray(SHOES);
+                for (int i = 0; i < shoes.length(); i++) {
+                    JSONObject shoe = shoes.getJSONObject(i);
+                    String id = shoe.getString(ID);
+                    String name = shoe.getString(NAME);
 
-                JSONObject shoe = shoes.getJSONObject(i);
-                String id = shoe.getString(ID);
-                String name = shoe.getString(NAME);
-                if (DEBUG) Log.d(TAG, "got shoe: " + name + "id: " + id);
-                publishProgress(mContext.getString(R.string.got_shoe, name));
+                    if (DEBUG) Log.d(TAG, "got shoe: " + name + " id: " + id);
+                    publishProgress(mContext.getString(R.string.got_shoe, name));
 
-                values.clear();
-                values.put(EquipmentDbHelper.STRAVA_NAME, name);
-                values.put(EquipmentDbHelper.SPORT_TYPE, BSportType.RUN.name());
+                    values.clear();
+                    values.put(EquipmentDbHelper.STRAVA_NAME, name);
+                    values.put(EquipmentDbHelper.SPORT_TYPE, BSportType.RUN.name());
 
-                int updates = 0;
-                try {
-                    updates = equipmentDb.update(EquipmentDbHelper.EQUIPMENT,
+                    int updates = equipmentDb.update(EquipmentDbHelper.EQUIPMENT,
                             values,
                             EquipmentDbHelper.STRAVA_ID + "=?",
                             new String[]{id});
-                    if (DEBUG) Log.d(TAG, "updated shoe " + name + " id: " + id);
-                } catch (SQLException e) {
-                    if (DEBUG) Log.d(TAG, e.getMessage());
-                    if (DEBUG) Log.d(TAG, "Exception! for shoe " + name + " id: " + id);
-                }
-                if (updates < 1) {  // if nothing is updated, we create the entry
-                    if (DEBUG) Log.d(TAG, "adding shoe: " + name + " id: " + id);
-                    values.put(EquipmentDbHelper.NAME, name);
-                    values.put(EquipmentDbHelper.STRAVA_ID, id);
-                    equipmentDb.insert(EquipmentDbHelper.EQUIPMENT, null, values);
+
+                    if (updates < 1) {
+                        if (DEBUG) Log.d(TAG, "adding shoe: " + name + " id: " + id);
+                        values.put(EquipmentDbHelper.NAME, name);
+                        values.put(EquipmentDbHelper.STRAVA_ID, id);
+                        equipmentDb.insert(EquipmentDbHelper.EQUIPMENT, null, values);
+                    }
                 }
             }
-        } catch (JSONException e1) {
-            // TODO Auto-generated catch block
-            e1.printStackTrace();
-        }
 
-        if (DEBUG) Log.d(TAG, "checking strava bikes");
-        JSONArray bikes;
-        try {
-            bikes = jsonObject.getJSONArray(BIKES);
-            for (int i = 0; i < bikes.length(); i++) {
-                JSONObject bike = bikes.getJSONObject(i);
-                String id = bike.getString(ID);
-                String name = bike.getString(NAME);
-                publishProgress(mContext.getString(R.string.got_bike, name));
+            if (DEBUG) Log.d(TAG, "checking strava bikes");
+            if (jsonObject.has(BIKES)) {
+                JSONArray bikes = jsonObject.getJSONArray(BIKES);
+                for (int i = 0; i < bikes.length(); i++) {
+                    JSONObject bike = bikes.getJSONObject(i);
+                    String id = bike.getString(ID);
+                    String name = bike.getString(NAME);
 
-                int frameType = getStravaFrameType(id);
-                if (DEBUG) Log.d(TAG, "got frameType for bike " + name + ": " + frameType);
+                    publishProgress(mContext.getString(R.string.got_bike, name));
 
-                values.clear();
-                values.put(EquipmentDbHelper.STRAVA_NAME, name);
-                values.put(EquipmentDbHelper.FRAME_TYPE, frameType);
-                values.put(EquipmentDbHelper.SPORT_TYPE, BSportType.BIKE.name());
+                    int frameType = getStravaFrameType(id);
+                    if (DEBUG) Log.d(TAG, "got frameType for bike " + name + ": " + frameType);
 
-                int updates = 0;
-                try {
-                    updates = equipmentDb.update(EquipmentDbHelper.EQUIPMENT,
+                    values.clear();
+                    values.put(EquipmentDbHelper.STRAVA_NAME, name);
+                    values.put(EquipmentDbHelper.FRAME_TYPE, frameType);
+                    values.put(EquipmentDbHelper.SPORT_TYPE, BSportType.BIKE.name());
+
+                    int updates = equipmentDb.update(EquipmentDbHelper.EQUIPMENT,
                             values,
                             EquipmentDbHelper.STRAVA_ID + "=?",
                             new String[]{id});
-                } catch (SQLException e) {
-                    // do nothing?
-                }
-                if (updates < 1) {  // if nothing is updated, we create the entry
-                    if (DEBUG) Log.d(TAG, "creating bike: " + name);
-                    values.put(EquipmentDbHelper.NAME, name);
-                    values.put(EquipmentDbHelper.STRAVA_ID, id);
-                    equipmentDb.insert(EquipmentDbHelper.EQUIPMENT, null, values);
+
+                    if (updates < 1) {
+                        if (DEBUG) Log.d(TAG, "creating bike: " + name);
+                        values.put(EquipmentDbHelper.NAME, name);
+                        values.put(EquipmentDbHelper.STRAVA_ID, id);
+                        equipmentDb.insert(EquipmentDbHelper.EQUIPMENT, null, values);
+                    }
                 }
             }
-        } catch (JSONException e1) {
-            // TODO Auto-generated catch block
-            e1.printStackTrace();
+        } catch (Exception e) {
+            Log.e(TAG, "Error parsing equipment JSON", e);
         }
-
-        equipmentDb.close();
 
         return DateFormat.getDateTimeInstance().format(new Date());
     }
 
-
-    protected int getStravaFrameType(String bikeId) {
-
-        HttpClient httpClient = new DefaultHttpClient();
-        HttpGet httpGet = new HttpGet(STRAVA_URL_GEAR + "/" + bikeId);
-        // httpPost.addHeader(AUTHORIZATION, "Bearer " + TrainingApplication.getRunkeeperToken());
-        httpGet.addHeader(AUTHORIZATION, BEARER + " " + StravaHelper.getRefreshedAccessToken());
-
+    private int getStravaFrameType(String bikeId) {
+        HttpURLConnection urlConnection = null;
         try {
-            HttpResponse httpResponse = httpClient.execute(httpGet);
-            String response;
-            response = EntityUtils.toString(httpResponse.getEntity());
-            if (DEBUG) Log.d(TAG, "getStravaEquipment response: " + response);
+            URL url = new URL(STRAVA_URL_GEAR + "/" + bikeId);
+            urlConnection = (HttpURLConnection) url.openConnection();
+            urlConnection.setRequestMethod("GET");
+            urlConnection.setRequestProperty(AUTHORIZATION, BEARER + " " + StravaHelper.getRefreshedAccessToken());
+
+            int responseCode = urlConnection.getResponseCode();
+            String response = readStream(urlConnection, responseCode);
 
             JSONObject responseJson = new JSONObject(response);
-            return responseJson.getInt(FRAME_TYPE);
+            if (responseJson.has(FRAME_TYPE)) {
+                return responseJson.getInt(FRAME_TYPE);
+            }
+        } catch (IOException | JSONException e) {
+            Log.e(TAG, "Error fetching frame type for " + bikeId, e);
+        } finally {
+            if (urlConnection != null) {
+                urlConnection.disconnect();
+            }
+        }
+        return 0;
+    }
 
-        } catch (JSONException e) {
-            // TODO Auto-generated catch block
-            Log.e(TAG, e.toString());
-            e.printStackTrace();
-        } catch (ParseException e) {
-            // TODO Auto-generated catch block
-            Log.e(TAG, e.toString());
-            e.printStackTrace();
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            Log.e(TAG, e.toString());
-            e.printStackTrace();
+    private String readStream(HttpURLConnection connection, int responseCode) throws IOException {
+        InputStream inputStream;
+        if (responseCode >= 200 && responseCode < 300) {
+            inputStream = connection.getInputStream();
+        } else {
+            inputStream = connection.getErrorStream();
         }
 
-        return 0;
+        if (inputStream == null) return "";
+
+        StringBuilder builder = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                builder.append(line);
+            }
+        }
+        return builder.toString();
     }
 }
