@@ -110,8 +110,6 @@
     <string name="lastSeenDefaultValue" translatable="false">2014-10-18 09:10:11</string>
     <string name="now">now</string>
 
-    <string name="privateString">private</string>
-
     <string name="commute">commute</string>
     <string name="trainer_general">indoor trainer</string>
     <string name="trainer_bike">indoor trainer</string>
@@ -430,8 +428,6 @@
     <string name="prefsUploadSummary">Upload to cloud services and online communities</string>
     <string name="prefsOnlineStorage">Online storage</string>
     <string name="prefsOnlineCommunities">Online communities</string>
-    <string name="prefsDefaultToPrivateTitle">Privacy</string>
-    <string name="prefsDefaultToPrivateSummary">By default, all workouts are private</string>
     <string name="prefsUploadToDropboxTitle" translatable="false">Dropbox</string>
     <string name="prefsUploadToDropboxSummary">Automatically upload all exported formats also to your Dropbox</string>
     <string name="prefsUploadToStravaTitle" translatable="false">Strava</string>

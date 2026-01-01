@@ -56,8 +56,6 @@ class StravaUploader(context: Context) : BaseExporter(context) {
         private const val TYPE = "type"
         private const val GEAR_ID = "gear_id"
         private const val DESCRIPTION = "description"
-        private const val PRIVATE = "private"  // TODO: remove.  This seems to be no longer supported by Strava.
-        private const val HIDE = "hide_from_home"
         private const val COMMUTE = "commute"
         private const val TRAINER = "trainer"
 
@@ -262,7 +260,6 @@ class StravaUploader(context: Context) : BaseExporter(context) {
         val sportName = SportTypeDatabaseManager.getStravaName(sportId)
         val name = myGetStringFromCursor(cursor, WorkoutSummaries.WORKOUT_NAME)
         val description = myGetStringFromCursor(cursor, WorkoutSummaries.DESCRIPTION)
-        val isPrivate = myGetBooleanFromCursor(cursor, WorkoutSummaries.PRIVATE)
         val trainer = myGetBooleanFromCursor(cursor, WorkoutSummaries.TRAINER)
         val commute = myGetBooleanFromCursor(cursor, WorkoutSummaries.COMMUTE)
 
@@ -306,8 +303,6 @@ class StravaUploader(context: Context) : BaseExporter(context) {
         if (!description.isNullOrEmpty()) {
             formBuilder.add(DESCRIPTION, description)
         }
-        formBuilder.add(PRIVATE, isPrivate.toString())
-        formBuilder.add(HIDE, isPrivate.toString())
         formBuilder.add(TRAINER, trainer.toString())
         formBuilder.add(COMMUTE, commute.toString())
 
@@ -340,8 +335,6 @@ class StravaUploader(context: Context) : BaseExporter(context) {
         check(NAME, name)
         check(GEAR_ID, gearId)
         check(DESCRIPTION, description)
-        check(HIDE, isPrivate.toString())
-        check(PRIVATE, isPrivate.toString())
         check(TRAINER, trainer.toString())
         check(COMMUTE, commute.toString())
 

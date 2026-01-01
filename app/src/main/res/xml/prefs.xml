@@ -208,11 +208,6 @@
             </PreferenceCategory>
 
             <PreferenceCategory android:title="@string/prefsOnlineCommunities">
-                <CheckBoxPreference
-                    android:defaultValue="false"
-                    android:key="defaultToPrivate"
-                    android:summary="@string/prefsDefaultToPrivateSummary"
-                    android:title="@string/prefsDefaultToPrivateTitle" />
 
                 <PreferenceScreen
                     android:icon="@drawable/logo_square_strava"
