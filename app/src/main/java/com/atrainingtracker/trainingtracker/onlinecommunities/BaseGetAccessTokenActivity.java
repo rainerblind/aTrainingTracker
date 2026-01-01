@@ -53,7 +53,7 @@ import java.io.IOException;
 // import org.apache.http.impl.client.DefaultHttpClient;
 // import org.apache.http.util.EntityUtils;
 
-
+@Deprecated
 public abstract class BaseGetAccessTokenActivity
         extends Activity {
     public static final String ACCESS_TOKEN = "access_token";
