@@ -21,9 +21,7 @@ package com.atrainingtracker.trainingtracker.onlinecommunities.strava;
 import android.net.Uri;
 
 import com.atrainingtracker.BuildConfig;
-import com.atrainingtracker.R;
 import com.atrainingtracker.trainingtracker.onlinecommunities.BaseGetAccessTokenActivity;
-import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaOAuthCallbackActivity;
 
 import org.json.JSONObject;
 
