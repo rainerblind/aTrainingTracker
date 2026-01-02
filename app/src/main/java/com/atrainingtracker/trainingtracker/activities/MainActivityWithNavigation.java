@@ -348,9 +348,10 @@ public class MainActivityWithNavigation
                 new OnBackPressedCallback(true) {
                     @Override
                     public void handleOnBackPressed() {
-                        // TODO: optimize: when showing "deeper fragments", we only want to go back one step and not completely to the start_tracking fragment
                         if (mDrawerLayout.isDrawerOpen(GravityCompat.START)) {
                             mDrawerLayout.closeDrawer(GravityCompat.START);
+                        }  if (getSupportFragmentManager().getBackStackEntryCount() > 0) {  // when showing "deeper fragments", we only want to go back one step and not completely to the start_tracking fragment
+                            getSupportFragmentManager().popBackStack();
                         } else if (getSupportFragmentManager().getBackStackEntryCount() == 0
                                 && mSelectedFragmentId != R.id.drawer_start_tracking) {
                             onNavigationItemSelected(mNavigationView.getMenu().findItem(R.id.drawer_start_tracking));
