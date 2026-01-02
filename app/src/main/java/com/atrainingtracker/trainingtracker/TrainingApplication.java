@@ -105,7 +105,6 @@ public class TrainingApplication extends Application {
     //    protected static final String SP_DROPBOX_KEY       = "dropboxKey";
 //    protected static final String SP_DROPBOX_SECRET    = "dropboxSecret";
     public static final String SP_UPLOAD_TO_DROPBOX = "uploadToDropbox";
-    public static final String SP_DEFAULT_TO_PRIVATE = "defaultToPrivate";
     public static final String PREFERENCE_SCREEN_EMAIL_UPLOAD = "psSendEmail";
     public static final String SP_SEND_EMAIL = "spSendWorkoutEmail";
     public static final String SP_EMAIL_ADDRESS = "spEmailAddress";
@@ -720,8 +719,10 @@ public class TrainingApplication extends Application {
         return cSharedPreferences.getBoolean(SP_UPLOAD_TRAINING_PEAKS_CADENCE, true);
     }
 
-    public static boolean defaultToPrivate() {
-        return cSharedPreferences.getBoolean(SP_DEFAULT_TO_PRIVATE, false);
+    @Deprecated
+    public static boolean defaultToPrivate() {  // in the past, it was possible to mark activities in Strava as private via the API.  Unfortunately, this is no longer possible.
+        return false;
+        // cSharedPreferences.getBoolean(SP_DEFAULT_TO_PRIVATE, false);
     }
 
     public static boolean exportToTCX() {

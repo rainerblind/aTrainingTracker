@@ -96,7 +96,6 @@ public class EditWorkoutFragment extends Fragment {
     private static final String EQUIPMENT = "EQUIPMENT";
     private static final String COMMUTE = "COMMUTE";
     private static final String TRAINER = "TRAINER";
-    private static final String PRIVATE = "PRIVATE";
     private static final String DESCRIPTION = "DESCRIPTION";
     private static final String GOAL = "GOAL";
     private static final String METHOD = "METHOD";
@@ -170,7 +169,6 @@ public class EditWorkoutFragment extends Fragment {
     private TextView tvEquipment;
     private RadioGroup rgCommuteTrainer;
     private RadioButton rbCommute, rbTrainer;
-    private CheckBox cbPrivate;
     private boolean radioButtonAlreadyChecked = false;  // necessary to allow deselect of the radio buttons within the group for Commute and Trainer
     private final double MAX_WORKOUT_TIME_TO_SHOW_DELETE_BUTTON = 10 * 60;  // 10 min
     private String ALL = "all";
@@ -272,7 +270,6 @@ public class EditWorkoutFragment extends Fragment {
         rgCommuteTrainer = view.findViewById(R.id.rgCommuteTrainer);
         rbCommute = view.findViewById(R.id.rbCommute);
         rbTrainer = view.findViewById(R.id.rbTrainer);
-        cbPrivate = view.findViewById(R.id.cbPrivate);
 
 
         // configure the views
@@ -487,7 +484,6 @@ public class EditWorkoutFragment extends Fragment {
         savedInstanceState.putString(EQUIPMENT, mEquipmentName);
         savedInstanceState.putBoolean(COMMUTE, rbCommute.isChecked());
         savedInstanceState.putBoolean(TRAINER, rbTrainer.isChecked());
-        savedInstanceState.putBoolean(PRIVATE, cbPrivate.isChecked());
         savedInstanceState.putString(DESCRIPTION, editDescription.getText().toString());
         savedInstanceState.putString(GOAL, editGoal.getText().toString());
         savedInstanceState.putString(METHOD, editMethod.getText().toString());
@@ -588,7 +584,6 @@ public class EditWorkoutFragment extends Fragment {
 
         rbCommute.setChecked(cursor.getInt(cursor.getColumnIndex(WorkoutSummaries.COMMUTE)) > 0);
         rbTrainer.setChecked(cursor.getInt(cursor.getColumnIndex(WorkoutSummaries.TRAINER)) > 0);
-        cbPrivate.setChecked(cursor.getInt(cursor.getColumnIndex(WorkoutSummaries.PRIVATE)) > 0);
 
         // finally, the remaining views
         // ((TextView) getActivity().findViewById(R.id.tvStartTime)).setText(cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_START)));
@@ -791,7 +786,6 @@ public class EditWorkoutFragment extends Fragment {
 
         ((RadioButton) getActivity().findViewById(R.id.rbCommute)).setChecked(savedInstanceState.getBoolean(COMMUTE));
         ((RadioButton) getActivity().findViewById(R.id.rbTrainer)).setChecked(savedInstanceState.getBoolean(TRAINER));
-        ((CheckBox) getActivity().findViewById(R.id.cbPrivate)).setChecked(savedInstanceState.getBoolean(PRIVATE));
         ((EditText) getActivity().findViewById(R.id.editDescription)).setText(savedInstanceState.getString(DESCRIPTION));
         ((EditText) getActivity().findViewById(R.id.editGoal)).setText(savedInstanceState.getString(GOAL));
         ((EditText) getActivity().findViewById(R.id.editMethod)).setText(savedInstanceState.getString(METHOD));
@@ -1070,7 +1064,6 @@ public class EditWorkoutFragment extends Fragment {
         values.put(WorkoutSummaries.DESCRIPTION, editDescription.getText().toString());
         values.put(WorkoutSummaries.COMMUTE, rbCommute.isChecked());
         values.put(WorkoutSummaries.TRAINER, rbTrainer.isChecked());
-        values.put(WorkoutSummaries.PRIVATE, cbPrivate.isChecked());
         values.put(WorkoutSummaries.FINISHED, 1);  // when the user saves the changes, the workout is finished properly (by my definition ;-)
 
         if (spinnerEquipment.getSelectedItem() != null) {

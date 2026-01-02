@@ -53,7 +53,7 @@ import java.io.IOException;
 // import org.apache.http.impl.client.DefaultHttpClient;
 // import org.apache.http.util.EntityUtils;
 
-
+@Deprecated
 public abstract class BaseGetAccessTokenActivity
         extends Activity {
     public static final String ACCESS_TOKEN = "access_token";
@@ -84,161 +84,25 @@ public abstract class BaseGetAccessTokenActivity
     protected static final String FORCE = "force";
     protected static final String AUTO = "auto";
     protected static final String APPS = "apps";
-    protected static final String MY_REDIRECT_URI = "https://rainer-blind.de";  // must not be changed because strava checks this uri
     private static final String TAG = "BaseGetAccessTokenActivity";
-    private static final boolean DEBUG = TrainingApplication.getDebug(false);
-    private ProgressDialog dialog;
-    private boolean showDialog = true;  // TODO: bad name!
+    private static final boolean DEBUG = TrainingApplication.getDebug(true);
 
     protected abstract String getAuthorizationUrl();
 
-    protected abstract String getAccessUrl(String code);
 
-    protected UrlEncodedFormEntity getAccessUrlEncodedFormEntity(String code) {
-        return null;
-    }
-
-    protected abstract String getAcceptApplicationUrl();
-
-    protected abstract String getName();
-
-    /**
-     * Called when the activity is first created.
-     */
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         if (DEBUG) Log.d(TAG, "onCreate");
 
-        dialog = new ProgressDialog(this);
-        dialog.setMessage(getString(R.string.connecting_to_string, getName()));
-        dialog.show();
-        dialog.setCancelable(false);
-        dialog.setCanceledOnTouchOutside(false);
+        // Simply, launch the Browser.
+        String authUrl = getAuthorizationUrl();
+        if (DEBUG) Log.i(TAG, "Launching auth url: " + authUrl);
+        Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(authUrl));
+        // No history for the browser step keeps the stack clean
+        browserIntent.setFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
+        startActivity(browserIntent);
 
-        final WebView webview = new WebView(this);
-
-        webview.getSettings().setJavaScriptEnabled(true);
-        webview.setWebViewClient(new WebViewClient() {
-            @Override
-            public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                if (DEBUG) Log.d(TAG, "shouldOverrideUrlLoading: " + url);
-                if (url.startsWith(MY_REDIRECT_URI)) {
-
-                    dialog.setMessage(getString(R.string.please_wait));
-                    if (!dialog.isShowing()) {
-                        dialog.show();
-                    }
-
-                    Uri uri = Uri.parse(url);
-                    String code = uri.getQueryParameter(CODE);
-                    if (DEBUG) Log.d(TAG, "we got the code: " + code);
-
-                    new GetAccessTokenThread(code).start();
-                    return true;
-                } else {
-                    return false;
-                }
-            }
-
-            @Override
-            public void onLoadResource(WebView view, String url) {
-                if (DEBUG) Log.d(TAG, "onLoadResource: " + url);
-
-                if (url.startsWith(getAcceptApplicationUrl())) {
-                    dialog.setMessage(getString(R.string.please_wait));
-                    if (!dialog.isShowing()) {
-                        dialog.show();
-                    }
-                }
-            }
-
-        });
-
-        webview.setWebChromeClient(new WebChromeClient() {
-            @Override
-            public void onProgressChanged(WebView view, int newProgress) {
-                if (showDialog && dialog.isShowing() && newProgress >= 50) {
-                    dialog.dismiss();
-                    showDialog = false;
-                }
-            }
-
-        });
-
-        if (DEBUG) Log.i(TAG, "authorization url = " + getAuthorizationUrl());
-
-        webview.loadUrl(getAuthorizationUrl());
-
-        setContentView(webview);
-    }
-
-    protected void onJsonResponse(JSONObject jsonObject) {
-    }
-
-    class GetAccessTokenThread extends Thread {
-        final String code;
-        public GetAccessTokenThread(String code) {
-            this.code = code;
-        }
-
-        @Override
-        public void run() {
-            HttpPost httpPost = new HttpPost(getAccessUrl(code));
-
-            httpPost.setHeader(HTTP.CONTENT_TYPE, "application/x-www-form-urlencoded");
-
-            UrlEncodedFormEntity urlEncodedFormEntity = getAccessUrlEncodedFormEntity(code);
-            if (urlEncodedFormEntity != null) {
-                httpPost.setEntity(urlEncodedFormEntity);
-            }
-
-            String result = null;
-            HttpClient httpClient = new DefaultHttpClient();
-            try {
-                HttpResponse httpResponse = httpClient.execute(httpPost);
-
-                String response = EntityUtils.toString(httpResponse.getEntity());
-
-                // Uri uri = Uri.parse(response);
-                JSONObject responseJson = new JSONObject(response);
-
-                onJsonResponse(responseJson);
-
-                if (responseJson.has(ACCESS_TOKEN)) {
-                    // String tokenType   = responseJson.getString(TOKEN_TYPE);
-                    result = responseJson.getString(ACCESS_TOKEN);
-                }
-            } catch (ClientProtocolException e) {
-                // TODO Auto-generated catch block
-                Log.e(TAG, e.toString());
-                e.printStackTrace();
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
-                Log.e(TAG, e.toString());
-                e.printStackTrace();
-            } catch (JSONException e) {
-                // TODO Auto-generated catch block
-                Log.e(TAG, e.toString());
-                e.printStackTrace();
-            }
-
-            final String accessToken = result;
-            new Handler(Looper.getMainLooper()).post(() -> {
-                Intent resultIntent = new Intent();
-                if (accessToken == null) { // something went wrong
-                    setResult(Activity.RESULT_CANCELED, resultIntent);
-                } else {
-                    resultIntent.putExtra(ACCESS_TOKEN, accessToken);
-                    setResult(Activity.RESULT_OK, resultIntent);
-                }
-
-                if (dialog.isShowing()) {
-                    dialog.dismiss();
-                }
-
-                finish();
-            });
-        }
+        finish();
     }
 }

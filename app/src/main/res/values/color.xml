@@ -79,4 +79,13 @@
     <color name="baby_blue_eyes">#A1CAF1</color>
     <color name="little_boy_blue">#6CA0DC</color>
 
+
+
+    <!-- Heart Rate / Power Zone Colors -->
+    <color name="zone_1">#7FFF00</color> <!-- Chartreuse -->
+    <color name="zone_2">#008000</color> <!-- Green -->
+    <color name="zone_3">#FFA500</color> <!-- Orange -->
+    <color name="zone_4">#FF0000</color> <!-- Red -->
+    <color name="zone_5">#9400D3</color> <!-- Dark Violet -->
+
 </resources>

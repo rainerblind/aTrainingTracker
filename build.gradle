@@ -1,5 +1,9 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 buildscript {
+    ext {
+        kotlin_version = '2.2.0'
+        compose_compiler_version = '2.2.0'
+    }
     repositories {
         google()
         mavenCentral()
@@ -9,6 +13,8 @@ buildscript {
         classpath 'com.google.gms:google-services:4.4.4'
         classpath 'com.google.firebase:firebase-crashlytics-gradle:3.0.6'
         classpath "com.google.android.libraries.mapsplatform.secrets-gradle-plugin:secrets-gradle-plugin:2.0.1"
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath "org.jetbrains.kotlin:compose-compiler-gradle-plugin:$compose_compiler_version"
     }
 }
 

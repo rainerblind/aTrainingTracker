@@ -42,6 +42,7 @@ import android.widget.TextView;
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.ActivityType;
 import com.atrainingtracker.banalservice.BANALService;
+import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 import com.atrainingtracker.banalservice.filters.FilterData;
@@ -55,6 +56,7 @@ import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManage
 import com.atrainingtracker.trainingtracker.dialogs.EditFieldDialog;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapTrackingAndFollowingFragment;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapTrackingFragment;
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStore;
 
 import java.util.HashMap;
 import java.util.TreeMap;
@@ -470,8 +472,77 @@ public class TrackingFragment extends BaseTrackingFragment {
                 } else {
                     tvSensorType.textView.setText(value);
                 }
+
+                // Set background color depending on the Zone
+                setZoneBasedBackgroundColor(tvSensorType, value);
+
             }
         }
+    }
+
+
+    /**
+     * Parses the value and sets the background color of the sensor text view
+     * based on the zones defined in Settings.
+     */
+    protected void setZoneBasedBackgroundColor(TvSensorType tvSensorType, String valueStr) {
+        // 1. Initial Checks: If no context or invalid data, return transparent
+        if (getContext() == null || valueStr == null || valueStr.equals("--") || valueStr.equals(getString(R.string.NoData))) {
+            return;
+        }
+
+        // 2. Parse the numeric value
+        double currentVal;
+        try {
+            currentVal = Double.parseDouble(valueStr);
+        } catch (NumberFormatException e) {
+            return;
+        }
+
+        // 3. Determine Zone Type based on Sensor and ActivityType
+        SettingsDataStore.ZoneType zoneType = null;
+
+        if (tvSensorType.sensorType == SensorType.HR) {
+            if (mActivityType.getSportType() == BSportType.RUN) {
+                zoneType = SettingsDataStore.ZoneType.HR_RUN;
+            } else if (mActivityType.getSportType() == BSportType.BIKE) {
+                zoneType = SettingsDataStore.ZoneType.HR_BIKE;
+            }
+        } else if (tvSensorType.sensorType == SensorType.POWER) {
+            if (mActivityType.getSportType() == BSportType.BIKE) {
+                zoneType = SettingsDataStore.ZoneType.PWR_BIKE;
+            }
+        }
+
+        // Simply return if this sensor/activity combo doesn't support zones,
+        if (zoneType == null) {
+            return;
+        }
+
+        // 4. Get Zone Limits using the Java Helper
+        Context context = getContext();
+        int z1Max = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 1);
+        int z2Max = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2);
+        int z3Max = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3);
+        int z4Max = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4);
+
+        // 5. Determine the Color
+        int color;
+        if (currentVal <= z1Max) {
+            color = ContextCompat.getColor(context, R.color.zone_1);
+        } else if (currentVal <= z2Max) {
+            color = ContextCompat.getColor(context, R.color.zone_2);
+        } else if (currentVal <= z3Max) {
+            color = ContextCompat.getColor(context, R.color.zone_3);
+        } else if (currentVal <= z4Max) {
+            color = ContextCompat.getColor(context, R.color.zone_4);
+        } else {
+            // Zone 5 (Anaerobic)
+            color = ContextCompat.getColor(context, R.color.zone_5);
+        }
+
+        // Finally, set the background color
+        tvSensorType.textView.setBackgroundColor(color);
     }
 
 

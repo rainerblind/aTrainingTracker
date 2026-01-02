@@ -21,12 +21,13 @@ package com.atrainingtracker.trainingtracker.onlinecommunities.strava;
 import android.net.Uri;
 
 import com.atrainingtracker.BuildConfig;
-import com.atrainingtracker.R;
 import com.atrainingtracker.trainingtracker.onlinecommunities.BaseGetAccessTokenActivity;
 
 import org.json.JSONObject;
 
 
+// Use StravaHelper insead.
+@Deprecated
 public class StravaGetAccessTokenActivity
         extends BaseGetAccessTokenActivity {
     protected static final String STRAVA_AUTHORITY = "www.strava.com";
@@ -34,6 +35,12 @@ public class StravaGetAccessTokenActivity
     protected static final String MY_CLIENT_SECRET = BuildConfig.STRAVA_CLIENT_SECRET;
     private static final String TAG = "StravaGetAccessTokenActivity";
     private static final boolean DEBUG = true;
+
+
+    protected String getRedirectUri() {
+        return "strava://rainerblind.github.io";
+    }
+
 
     @Override
     protected String getAuthorizationUrl() {
@@ -44,44 +51,10 @@ public class StravaGetAccessTokenActivity
                 .appendPath(MOBILE)
                 .appendPath(AUTHORIZE)
                 .appendQueryParameter(CLIENT_ID, MY_CLIENT_ID)
-                .appendQueryParameter(REDIRECT_URI, MY_REDIRECT_URI)
+                .appendQueryParameter(REDIRECT_URI, getRedirectUri())
                 .appendQueryParameter(RESPONSE_TYPE, CODE)
                 .appendQueryParameter(APPROVAL_PROMPT, AUTO)
                 .appendQueryParameter(SCOPE, READ + ',' + ACTIVITY_WRITE + ',' + ACTIVITY_READ_ALL + ',' + PROFILE_READ_ALL);
         return builder.build().toString();
     }
-
-    @Override
-    protected String getAccessUrl(String code) {
-        Uri.Builder builder = new Uri.Builder();
-        builder.scheme(HTTPS)
-                .authority(STRAVA_AUTHORITY)
-                .appendPath(OAUTH)
-                .appendPath(TOKEN)
-                .appendQueryParameter(CLIENT_ID, MY_CLIENT_ID)
-                .appendQueryParameter(CLIENT_SECRET, MY_CLIENT_SECRET)
-                .appendQueryParameter(CODE, code);
-        return builder.build().toString();
-    }
-
-    @Override
-    protected String getAcceptApplicationUrl() {
-        Uri.Builder builder = new Uri.Builder();
-        builder.scheme(HTTPS)
-                .authority(STRAVA_AUTHORITY)
-                .appendPath(OAUTH)
-                .appendPath(ACCEPT_APPLICATION);
-        return builder.build().toString();
-    }
-
-    @Override
-    protected String getName() {
-        return getString(R.string.Strava);
-    }
-
-    @Override
-    protected void onJsonResponse(JSONObject jsonObject) {
-        StravaHelper.storeJSONData(jsonObject);
-    }
-
 }
