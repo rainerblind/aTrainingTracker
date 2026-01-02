@@ -22,6 +22,8 @@
 
     <!--Base custom theme which will be shared between both light and dark theme variants-->
     <style name="Base.aTrainingTracker" parent="Base.MaterialThemeBuilder">
+        <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item>
+
         <!--Material color attributes -->
         <item name="colorPrimary">@color/color_primary</item>
         <item name="colorPrimaryVariant">@color/color_primary_variant</item>
