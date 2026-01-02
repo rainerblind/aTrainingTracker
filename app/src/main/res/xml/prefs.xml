@@ -26,6 +26,12 @@
             android:summary="@string/prefsAthleteNameSummary"
             android:title="@string/prefsAthleteNameTitle" />
 
+        <Preference
+            android:key="training_zones_settings"
+            android:title="@string/prefs_training_zones"
+            android:summary="@string/prefs_training_zones_summary" />
+            <!-- TODO android:icon="@drawable/ic_heart_rate" /> -->
+
         <ListPreference
             android:defaultValue="METRIC"
             android:entries="@array/units"
@@ -202,11 +208,6 @@
             </PreferenceCategory>
 
             <PreferenceCategory android:title="@string/prefsOnlineCommunities">
-                <CheckBoxPreference
-                    android:defaultValue="false"
-                    android:key="defaultToPrivate"
-                    android:summary="@string/prefsDefaultToPrivateSummary"
-                    android:title="@string/prefsDefaultToPrivateTitle" />
 
                 <PreferenceScreen
                     android:icon="@drawable/logo_square_strava"

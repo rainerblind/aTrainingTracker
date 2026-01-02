@@ -142,13 +142,6 @@
                     android:text="@string/trainer_general" />
             </RadioGroup>
 
-            <!-- a check box for private -->
-            <CheckBox
-                android:id="@+id/cbPrivate"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/privateString" />
-
             <!-- separator -->
             <View
                 android:layout_width="match_parent"

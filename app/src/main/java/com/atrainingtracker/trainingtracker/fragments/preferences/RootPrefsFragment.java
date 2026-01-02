@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.fragments.preferences;
 
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.os.Bundle;
@@ -29,8 +30,10 @@ import androidx.preference.PreferenceManager;
 import android.util.Log;
 
 import com.atrainingtracker.R;
+import com.atrainingtracker.trainingtracker.activities.ZonesSettingsActivity;
 import com.atrainingtracker.trainingtracker.exporter.FileFormat;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStore;
 
 
 public class RootPrefsFragment extends PreferenceFragmentCompat
@@ -41,9 +44,10 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
 
     private EditTextPreference mAthleteNamePref, mSamplingTimePref, mSearchRoundsPref;
     private ListPreference mUnitPref;
-    private Preference mExport, mPebble, mLocationSources, mCloudUpload;
+    private Preference mHrZonesPref, mExport, mPebble, mLocationSources, mCloudUpload;
 
     private SharedPreferences mSharedPreferences;
+    private SettingsDataStore mSettingsDataStore;
 
 
     @Override
@@ -57,6 +61,14 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
         mUnitPref = getPreferenceScreen().findPreference(TrainingApplication.SP_UNITS);
 
         mAthleteNamePref = getPreferenceScreen().findPreference(TrainingApplication.SP_ATHLETE_NAME);
+        mHrZonesPref = getPreferenceScreen().findPreference("training_zones_settings");
+        if (mHrZonesPref != null) {
+            mHrZonesPref.setOnPreferenceClickListener(preference -> {
+                Intent intent = new Intent(getActivity(), ZonesSettingsActivity.class);
+                startActivity(intent);
+                return true;
+            });
+        }
         mSamplingTimePref = getPreferenceScreen().findPreference(TrainingApplication.SP_SAMPLING_TIME);
         mSearchRoundsPref = getPreferenceScreen().findPreference(TrainingApplication.SP_NUMBER_OF_SEARCH_TRIES);
 
@@ -70,7 +82,7 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
+        mSettingsDataStore = new SettingsDataStore(requireContext());
         if (DEBUG) Log.i(TAG, "onCreate()");
     }
 
@@ -88,6 +100,8 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
 
 
         mAthleteNamePref.setSummary(TrainingApplication.getAthleteName());
+        updateHrZonesSummary();
+
         if (DEBUG) Log.d(TAG, "sampling time: " + TrainingApplication.getSamplingTime());
         setSamplingTimeSummary();
 
@@ -99,8 +113,21 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
 
 
         mSharedPreferences.registerOnSharedPreferenceChangeListener(this);
+    }
 
-
+    private void updateHrZonesSummary() {
+        if (mHrZonesPref != null && mSettingsDataStore != null) {
+            try {
+                // Fetch the summary string from the Kotlin helper
+                String summary = getString(R.string.tab_hr_run) + ":\n" + mSettingsDataStore.getSummary(SettingsDataStore.ZoneType.HR_RUN);
+                summary += "\n\n" + getString(R.string.tab_hr_bike) + ":\n" + mSettingsDataStore.getSummary(SettingsDataStore.ZoneType.HR_BIKE);
+                summary += "\n\n" + getString(R.string.tab_pwr_bike) + ":\n" + mSettingsDataStore.getSummary(SettingsDataStore.ZoneType.PWR_BIKE);
+                mHrZonesPref.setSummary(summary);
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to load HR Zones summary", e);
+                mHrZonesPref.setSummary("Configure your training zones");
+            }
+        }
     }
 
     @Override
