@@ -133,7 +133,7 @@
     <string name="activity_type_bike_power">Rad Leistung</string>
     <string name="activity_type_bike_speed_and_cadence">Rad Geschw. und Freq.</string>
     <string name="activity_type_bike_speed">Rad Geschwindigkeit</string>
-    <string name="activity_type_multisport_with_hr">Multisport mit HR</string>
+    <string name="activity_type_multisport_with_hr">Multisport mit HF</string>
     <string name="activity_type_multisport">Multisport</string>
     <string name="activity_type_run_speed_and_cadence">Lauf Geschw. und Freq.</string>
     <string name="activity_type_run_speed">Lauf Geschwindigkeit</string>
@@ -142,7 +142,7 @@
     <string name="activity_type_short_bike_power">Rad Leistung</string>
     <string name="activity_type_short_bike_speed_and_cadence">Rad Spd &amp; Cad</string>
     <string name="activity_type_short_bike_speed">Rad Geschw.</string>
-    <string name="activity_type_short_multisport_with_hr">Multisport HR</string>
+    <string name="activity_type_short_multisport_with_hr">Multisport HF</string>
     <string name="activity_type_short_multisport">Multisport</string>
     <string name="activity_type_short_run_speed_and_cadence">Lauf Spd &amp; Cad</string>
     <string name="activity_type_short_run_speed">Lauf Geschw.</string>
@@ -164,7 +164,7 @@
     <string name="device_type_bike_speed">Rad Geschwindigkeit</string>
     <string name="device_type_short_bike_speed">spd</string>
     <string name="device_type_heart_rate">Herzfrequenz</string>
-    <string name="device_type_short_heart_rate">HR</string>
+    <string name="device_type_short_heart_rate">HF</string>
     <string name="device_type_run_speed">Lauf Geschwindigkeit</string>
     <string name="device_type_short_run_speed">run spd</string>
     <string name="device_type_environment">Temperatur</string>
@@ -203,7 +203,7 @@
     <string name="distance_lap">Distanz Lap</string>
     <string name="distance_lap_short">Dist. Lap</string>
     <string name="heart_rate">Herzfrequenz</string>
-    <string name="heart_rate_short">HR</string>
+    <string name="heart_rate_short">HF</string>
     <string name="lap_number">Lap Nummer</string>
     <string name="lap_number_short">Lap Nr</string>
     <string name="latitude">Latitude</string>
@@ -785,8 +785,8 @@
     <string name="prefs_training_zones">Trainings Zonen</string>
     <string name="prefs_training_zones_summary">Passe deine Trainingszonen an</string>
     <string name="title_edit_zones">Trainings Zonen anpassen</string>
-    <string name="tab_hr_run">Lauf HR</string>
-    <string name="tab_hr_bike">Rad HR</string>
+    <string name="tab_hr_run">Lauf HF</string>
+    <string name="tab_hr_bike">Rad HF</string>
     <string name="tab_pwr_bike">Rad Leistung</string>
 
     <string name="zone_1_label">Zone 1 (Recovery)</string>
