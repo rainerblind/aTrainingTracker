@@ -319,7 +319,7 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
             for (FileFormat fileFormat : FileFormat.values()) {
                 ExportStatus exportStatus = bar.get(fileFormat);
                 // avoid a NullPointer Exception when there is a workout in the summaries DB but not in the exportStatus DB
-                if (exportStatus != null && exportStatusCounter != null && exportStatusCounter.get(exportStatus) != null) {
+                if (exportStatus != null && exportStatusCounter.get(exportStatus) != null) {
                     exportStatusCounter.put(exportStatus, exportStatusCounter.get(exportStatus) + 1);
                     if (exportStatus == ExportStatus.PROCESSING) {
                         processingFileFormat = fileFormat;

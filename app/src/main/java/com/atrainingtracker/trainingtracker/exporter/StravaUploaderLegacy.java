@@ -195,7 +195,7 @@ public class StravaUploaderLegacy extends BaseExporter {
             for (int attempt = 1; attempt <= MAX_REQUESTS && exportResult == null; attempt++) {
                 // wait some time before we ask the server
                 Thread.sleep(waiting_time);
-                waiting_time *= 1.4;  // next time, we wait somewhat longer
+                waiting_time = (long) (waiting_time * 1.4);  // next time, we wait somewhat longer
 
                 JSONObject uploadStatusJson = getStravaUploadStatus(uploadId);
 
@@ -210,30 +210,33 @@ public class StravaUploaderLegacy extends BaseExporter {
                     if (DEBUG) Log.d(TAG, "strava response status: " + status);
                     stravaUploadDbHelper.updateStatus(exportInfo.getFileBaseName(), status);
 
-                    if (STATUS_PROCESSING.equals(status)) {
-                        // here, we do nothing (wait for the next iteration of the loop)
-                    } else if (STATUS_DELETED.equals(status)) {
-                        exportResult = new ExportResult(false, STATUS_DELETED);
-                    } else if (STATUS_ERROR.equals(status)) {
-                        // should have been already handled???
-                        exportResult = new ExportResult(false, uploadStatusJson.getString(ERROR));
-                    } else if (STATUS_READY.equals(status)) {
-                        // all right
-                        cExportManager.exportingFinished(exportInfo, true, getPositiveAnswer(exportInfo));
-                        // but not everything is uploaded to strava, e.g., the gear data is missing.
-                        // Thus, we update it
-                        String activity_id = uploadStatusJson.getString(ACTIVITY_ID);
-                        if (activity_id != null) {
-                            stravaUploadDbHelper.updateActivityId(exportInfo.getFileBaseName(), activity_id);
-                            exportResult = doUpdate(exportInfo);
-                        } else {
-                            if (DEBUG)
-                                Log.d(TAG, "ERROR while uploading to Strava: could not get activity_id from response");
+                    switch (status) {
+                        case STATUS_PROCESSING -> {
+                            // here, we do nothing (wait for the next iteration of the loop)
                         }
-
-                    } else {
-                        if (DEBUG) Log.d(TAG, "unknown response status: " + status);
-                        exportResult = new ExportResult(false, "successfully uploaded but unknown status " + status);
+                        case STATUS_DELETED ->
+                                exportResult = new ExportResult(false, STATUS_DELETED);
+                        case STATUS_ERROR ->
+                            // should have been already handled???
+                                exportResult = new ExportResult(false, uploadStatusJson.getString(ERROR));
+                        case STATUS_READY -> {
+                            // all right
+                            cExportManager.exportingFinished(exportInfo, true, getPositiveAnswer(exportInfo));
+                            // but not everything is uploaded to strava, e.g., the gear data is missing.
+                            // Thus, we update it
+                            String activity_id = uploadStatusJson.getString(ACTIVITY_ID);
+                            if (activity_id != null) {
+                                stravaUploadDbHelper.updateActivityId(exportInfo.getFileBaseName(), activity_id);
+                                exportResult = doUpdate(exportInfo);
+                            } else {
+                                if (DEBUG)
+                                    Log.d(TAG, "ERROR while uploading to Strava: could not get activity_id from response");
+                            }
+                        }
+                        default -> {
+                            if (DEBUG) Log.d(TAG, "unknown response status: " + status);
+                            exportResult = new ExportResult(false, "successfully uploaded but unknown status " + status);
+                        }
                     }
                 }
             }

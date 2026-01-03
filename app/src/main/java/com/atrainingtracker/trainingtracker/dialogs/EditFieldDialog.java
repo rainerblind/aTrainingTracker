@@ -81,7 +81,7 @@ public class EditFieldDialog extends DialogFragment {
     private long mDeviceId;
     private int mTextSize;
 
-    protected static final int textSize2Pos(int textSize) {
+    protected static int textSize2Pos(int textSize) {
         if (textSize == 20) {
             return 0;
         } else if (textSize == 25) {
@@ -251,7 +251,7 @@ public class EditFieldDialog extends DialogFragment {
             sourceSpinner.setVisibility(View.GONE);
             textViewSource.setVisibility(View.VISIBLE);
             textViewSource.setText(R.string.smartphone);
-        } else if (deviceIdAndNameLists.deviceIds.size() == 0) {     // no sensors available
+        } else if (deviceIdAndNameLists.deviceIds.isEmpty()) {     // no sensors available
             if (DEBUG) Log.i(TAG, "size of list is zero");
             sourceSpinner.setVisibility(View.GONE);
             textViewSource.setVisibility(View.VISIBLE);

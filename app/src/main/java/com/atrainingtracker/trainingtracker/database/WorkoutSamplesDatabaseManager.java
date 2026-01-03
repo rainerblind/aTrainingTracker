@@ -280,9 +280,7 @@ public class WorkoutSamplesDatabaseManager {
         lat = Math.toDegrees(lat);
         lon = Math.toDegrees(lon);
 
-        LatLng newPoint = new LatLng(lat, lon);
-
-        return newPoint;
+        return new LatLng(lat, lon);
     }
 
     public static LatLngValue getExtremaPosition(long workoutId, SensorType sensorType, ExtremaType extremaType) {

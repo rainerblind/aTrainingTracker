@@ -178,9 +178,6 @@ public class StravaHelper {
         }
 
         String refreshUrl = getRefreshUrl();
-        if (refreshUrl == null) {
-            return null;
-        }
 
         HttpPost httpPost = new HttpPost(refreshUrl);
         HttpClient httpClient = new DefaultHttpClient();
@@ -228,7 +225,7 @@ public class StravaHelper {
         return athleteId;
     }
 
-    class GetAthleteIdFromStravaThread extends Thread {
+    static class GetAthleteIdFromStravaThread extends Thread {
         Context mContext;
 
         GetAthleteIdFromStravaThread(Context context) {

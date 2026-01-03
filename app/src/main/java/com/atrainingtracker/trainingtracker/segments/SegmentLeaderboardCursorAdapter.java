@@ -35,7 +35,6 @@ import com.atrainingtracker.trainingtracker.MyHelper;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager.Segments;
-import com.squareup.picasso.Picasso;
 
 /**
  * Created by rainer on 10.08.16.

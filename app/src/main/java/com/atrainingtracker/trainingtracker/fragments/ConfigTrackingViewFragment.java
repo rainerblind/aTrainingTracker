@@ -248,7 +248,7 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
 
 
     protected void addRow(final TreeMap<Integer, TrackingViewsDatabaseManager.ViewInfo> rowMap) {
-        if (rowMap.size() == 0) {
+        if (rowMap.isEmpty()) {
             if (DEBUG) Log.i(TAG, "row contains no entries => returning");
             return;
         }

@@ -208,7 +208,7 @@ public class TrackOnMapHelper {
 
         PolylineOptions polylineOptions = getPolylineOptions(workoutId, roughness, trackType);
 
-        if (polylineOptions != null && polylineOptions.getPoints().size() != 0) {
+        if (polylineOptions != null && !polylineOptions.getPoints().isEmpty()) {
             if (!mTrackCache.containsKey(roughness)) {
                 mTrackCache.put(roughness, new EnumMap<TrackType, HashMap<Long, TrackData>>(TrackType.class));
             }
@@ -228,8 +228,8 @@ public class TrackOnMapHelper {
         NETWORK(Color.MAGENTA, "network"),
         FUSED(Color.YELLOW, "google_fused");
 
-        int color;
-        String source;
+        final int color;
+        final String source;
 
         TrackType(int color, String source) {
             this.color = color;
@@ -258,7 +258,7 @@ public class TrackOnMapHelper {
 
     }
 
-    private class TrackData {
+    private static class TrackData {
         PolylineOptions polylineOptions;
         LatLngBounds latLngBounds;
 

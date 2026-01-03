@@ -27,6 +27,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.fragments.ConfigViewsFragment;
 
 import java.util.LinkedList;
+import java.util.Objects;
 
 /**
  * Created by rainer on 20.01.16.
@@ -42,11 +43,7 @@ public class ConfigPebbleViewsFragment extends ConfigViewsFragment {
         ConfigPebbleViewsFragment fragment = new ConfigPebbleViewsFragment();
 
         Bundle args = new Bundle();
-        if (activityType == null) {
-            args.putString(ConfigViewsActivity.ACTIVITY_TYPE, ActivityType.getDefaultActivityType().name());
-        } else {
-            args.putString(ConfigViewsActivity.ACTIVITY_TYPE, activityType.name());
-        }
+        args.putString(ConfigViewsActivity.ACTIVITY_TYPE, Objects.requireNonNullElseGet(activityType, ActivityType::getDefaultActivityType).name());
         args.putLong(ConfigViewsActivity.VIEW_ID, viewId);
         fragment.setArguments(args);
 

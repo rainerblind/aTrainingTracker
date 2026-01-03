@@ -569,8 +569,6 @@ public class MyLocationsFragment
                     null,
                     null);
 
-            boolean calculatedMaxLineDistance = false;
-
             while (cursor.moveToNext()) {
                 long workoutId = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.C_ID));
                 if (DEBUG) Log.i(TAG, "checking workoutId=" + workoutId);
@@ -598,15 +596,13 @@ public class MyLocationsFragment
                         mMarkerMap.get(mSportTypeId).get(mExtremaType).add(marker);
                         mMarker2WorkoutIdMap.put(marker, workoutId);
                     });
-                } else if (!calculatedMaxLineDistance && mExtremaType == ExtremaType.MAX_LINE_DISTANCE) {
+                } else if (mExtremaType == ExtremaType.MAX_LINE_DISTANCE) {
                     if (DEBUG)
                         Log.i(TAG, "try to calculate the max line distance of workoutId=" + workoutId);
                     CalcExtremaValuesThread.calcAndSaveMaxLineDistancePosition(workoutId);
                     cursor.moveToPrevious();
-                    calculatedMaxLineDistance = true;
 
                 }
-                calculatedMaxLineDistance = false;
                 if (DEBUG)
                     Log.i(TAG, "no valid location for ExtremaType=" + mExtremaType + ", mSportTypeId=" + mSportTypeId);
 

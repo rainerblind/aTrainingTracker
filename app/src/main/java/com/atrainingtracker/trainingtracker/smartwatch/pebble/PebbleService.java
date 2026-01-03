@@ -287,7 +287,7 @@ public class PebbleService extends Service {
 //        }
 //    };
 
-    private static final String cutString(String inputString) {
+    private static String cutString(String inputString) {
         if (inputString.length() < MAX_STRING_SIZE) {
             return inputString;
         } else {

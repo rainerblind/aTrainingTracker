@@ -24,6 +24,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
 
+import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 
 import android.util.Log;
@@ -361,7 +362,7 @@ public class TrackingFragment extends BaseTrackingFragment {
     }
 
     protected void addRow(final TreeMap<Integer, TrackingViewsDatabaseManager.ViewInfo> rowMap) {
-        if (rowMap.size() == 0) {
+        if (rowMap.isEmpty()) {
             if (DEBUG) Log.i(TAG, "row contains no entries => returning");
             return;
         }
@@ -500,19 +501,7 @@ public class TrackingFragment extends BaseTrackingFragment {
         }
 
         // 3. Determine Zone Type based on Sensor and ActivityType
-        SettingsDataStore.ZoneType zoneType = null;
-
-        if (tvSensorType.sensorType == SensorType.HR) {
-            if (mActivityType.getSportType() == BSportType.RUN) {
-                zoneType = SettingsDataStore.ZoneType.HR_RUN;
-            } else if (mActivityType.getSportType() == BSportType.BIKE) {
-                zoneType = SettingsDataStore.ZoneType.HR_BIKE;
-            }
-        } else if (tvSensorType.sensorType == SensorType.POWER) {
-            if (mActivityType.getSportType() == BSportType.BIKE) {
-                zoneType = SettingsDataStore.ZoneType.PWR_BIKE;
-            }
-        }
+        SettingsDataStore.ZoneType zoneType = getZoneType(tvSensorType);
 
         // Simply return if this sensor/activity combo doesn't support zones,
         if (zoneType == null) {
@@ -545,6 +534,23 @@ public class TrackingFragment extends BaseTrackingFragment {
         tvSensorType.textView.setBackgroundColor(color);
     }
 
+    private SettingsDataStore.ZoneType getZoneType(TvSensorType tvSensorType) {
+        SettingsDataStore.ZoneType zoneType = null;
+
+        if (tvSensorType.sensorType == SensorType.HR) {
+            if (mActivityType.getSportType() == BSportType.RUN) {
+                zoneType = SettingsDataStore.ZoneType.HR_RUN;
+            } else if (mActivityType.getSportType() == BSportType.BIKE) {
+                zoneType = SettingsDataStore.ZoneType.HR_BIKE;
+            }
+        } else if (tvSensorType.sensorType == SensorType.POWER) {
+            if (mActivityType.getSportType() == BSportType.BIKE) {
+                zoneType = SettingsDataStore.ZoneType.PWR_BIKE;
+            }
+        }
+        return zoneType;
+    }
+
 
     protected boolean getSensorData() {
         if (DEBUG) Log.d(TAG, "getSensorData for " + mViewId);
@@ -568,7 +574,7 @@ public class TrackingFragment extends BaseTrackingFragment {
 
     public enum Mode {TRACKING, PREVIEW}
 
-    protected class TvSensorType {
+    protected static class TvSensorType {
         protected TextView textView;
         protected SensorType sensorType;
 

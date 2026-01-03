@@ -183,7 +183,7 @@ public class SegmentOnMapHelper {
         return true;
     }
 
-    private class SegmentData {
+    private static class SegmentData {
         PolylineOptions polylineOptions;
         LatLngBounds latLngBounds;
 
@@ -219,11 +219,7 @@ public class SegmentOnMapHelper {
             new Handler(Looper.getMainLooper()).post(() -> {
                 if (DEBUG) Log.i(TAG, "onPostExecute segmentId=" + segmentId);
 
-                if (segmentId == segmentId) {  // is the workoutId still valid?
-                    plotSegmentOnMap(myMapViewHolder, segmentId, roughness, zoomToMap, animateZoom);
-                } else {
-                    Log.i(TAG, "do not plot the segment because the segmentId has changed!");
-                }
+                plotSegmentOnMap(myMapViewHolder, segmentId, roughness, zoomToMap, animateZoom);
             });
         }
     }
