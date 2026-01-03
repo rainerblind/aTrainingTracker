@@ -909,4 +909,5 @@
     <string name="label_max">Max</string>
 
     <string name="url_privacy">https://github.com/rainerblind/aTrainingTracker/blob/develop/privacy.md</string> <!-- TODO: replace develop with master -->
+    <string name="prefEmailExport">e-Mail</string>
 </resources>

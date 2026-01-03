@@ -771,10 +771,10 @@ public class TrainingApplication extends Application {
                 return exportToGPX();
             case STRAVA:
                 return uploadToStrava();
-            case RUNKEEPER:
-                return uploadToRunKeeper();
-            case TRAINING_PEAKS:
-                return uploadToTrainingPeaks();
+            /* case RUNKEEPER:
+                return uploadToRunKeeper(); */
+            /* case TRAINING_PEAKS:
+                return uploadToTrainingPeaks(); */
             default:
                 return false;
         }
@@ -803,10 +803,10 @@ public class TrainingApplication extends Application {
         switch (fileFormat) {
             case STRAVA:
                 return uploadToStrava();
-            case RUNKEEPER:
-                return uploadToRunKeeper();
-            case TRAINING_PEAKS:
-                return uploadToTrainingPeaks();
+            /* case RUNKEEPER:
+                return uploadToRunKeeper(); */
+            /* case TRAINING_PEAKS:
+                return uploadToTrainingPeaks(); */
             default:
                 return false;
         }
