@@ -382,12 +382,10 @@ public class WorkoutSamplesDatabaseManager {
         getInstance().closeDatabase(); // db.close();
     }
 
-    public static boolean deleteWorkout(String baseFileName) {
+    public static void deleteWorkout(String baseFileName) {
         SQLiteDatabase db = getInstance().getOpenDatabase();// getWritableDatabase();
         db.execSQL("drop table if exists " + getTableName(baseFileName));
         getInstance().closeDatabase(); // db.close();
-
-        return true;
     }
 
     // stolen from http://stackoverflow.com/questions/4719594/checking-if-a-column-exists-in-an-application-database-in-android
@@ -474,8 +472,8 @@ public class WorkoutSamplesDatabaseManager {
     }
 
     public static class LatLngValue {
-        public LatLng latLng;
-        public Double value;
+        public final LatLng latLng;
+        public final Double value;
 
         public LatLngValue(LatLng latLng_, Double value_) {
             latLng = latLng_;
@@ -495,7 +493,7 @@ public class WorkoutSamplesDatabaseManager {
                 + TIME + " DATETIME DEFAULT CURRENT_TIMESTAMP";
         static final String TAG = "WorkoutSamplesDbHelper";
         static final boolean DEBUG = TrainingApplication.getDebug(true);
-        protected Context mContext;
+        protected final Context mContext;
 
         // Constructor
         public WorkoutSamplesDbHelper(Context context) {

@@ -29,9 +29,9 @@ import android.widget.TextView;
 public class DeviceIdAndNameArrayAdapter extends ArrayAdapter<Long> {
     private static final String TAG = "DeviceIdAndNameSpinnerAdapter";
 
-    protected Context mContext;
-    protected Long[] mDeviceIdsArray;
-    protected String[] mNamesArray;
+    protected final Context mContext;
+    protected final Long[] mDeviceIdsArray;
+    protected final String[] mNamesArray;
 
     public DeviceIdAndNameArrayAdapter(Context context, int textViewResourceId, Long[] deviceIdsArray, String[] namesArray) {
         super(context, textViewResourceId, deviceIdsArray);

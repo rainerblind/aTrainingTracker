@@ -127,7 +127,7 @@ public class SegmentOnMapHelper {
         return segmentData;
     }
 
-    private boolean calcSegmentData(Context context, long segmentId, Roughness roughness) {
+    private void calcSegmentData(Context context, long segmentId, Roughness roughness) {
         if (DEBUG)
             Log.i(TAG, "calcSegmentData for segmentId=" + segmentId + ", roughness=" + roughness.name());
 
@@ -167,7 +167,6 @@ public class SegmentOnMapHelper {
             mSegmentCache.get(roughness).put(segmentId, new SegmentData(polylineOptions, latLngBoundsBuilder.build()));
         }
 
-        return true;
     }
 
     // TODO: this is stolen several times, so make it a static method of a DatabaseHelper Class
@@ -184,8 +183,8 @@ public class SegmentOnMapHelper {
     }
 
     private static class SegmentData {
-        PolylineOptions polylineOptions;
-        LatLngBounds latLngBounds;
+        final PolylineOptions polylineOptions;
+        final LatLngBounds latLngBounds;
 
         SegmentData(PolylineOptions polylineOptions, LatLngBounds latLngBounds) {
             this.polylineOptions = polylineOptions;
@@ -194,12 +193,12 @@ public class SegmentOnMapHelper {
     }
 
     private class SegmentDataThread extends Thread {
-        Context context;
-        MyMapViewHolder myMapViewHolder;
-        long segmentId;
-        Roughness roughness;
-        boolean zoomToMap;
-        boolean animateZoom;
+        final Context context;
+        final MyMapViewHolder myMapViewHolder;
+        final long segmentId;
+        final Roughness roughness;
+        final boolean zoomToMap;
+        final boolean animateZoom;
 
         SegmentDataThread(Context context, MyMapViewHolder myMapViewHolder, long segmentId, Roughness roughness, boolean zoomToMap, boolean animateZoom) {
             this.context = context;

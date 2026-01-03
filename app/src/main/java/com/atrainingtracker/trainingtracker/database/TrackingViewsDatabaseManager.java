@@ -662,8 +662,8 @@ public class TrackingViewsDatabaseManager {
     }
 
     public static class FilterInfo {
-        public FilterType filterType;
-        public double filterConstant;
+        public final FilterType filterType;
+        public final double filterConstant;
 
         FilterInfo(FilterType filterType, double filterConstant) {
             this.filterType = filterType;
@@ -672,15 +672,15 @@ public class TrackingViewsDatabaseManager {
     }
 
     public static class ViewInfo {
-        public long viewId;
-        public long rowId;
-        public int rowNr;
-        public int colNr;
-        public SensorType sensorType;
-        public int textSize;
-        public long sourceDeviceId;
-        public FilterType filterType;
-        public double filterConstant;
+        public final long viewId;
+        public final long rowId;
+        public final int rowNr;
+        public final int colNr;
+        public final SensorType sensorType;
+        public final int textSize;
+        public final long sourceDeviceId;
+        public final FilterType filterType;
+        public final double filterConstant;
 
         public ViewInfo(long viewId, long rowId, int rowNr, int colNr, SensorType sensorType, int textSize, long sourceDeviceId, FilterType filterType, double filterConstant) {
             this.viewId = viewId;
@@ -1071,10 +1071,10 @@ public class TrackingViewsDatabaseManager {
         }
 
         protected static class RowData {
-            public SensorType sensorType;
-            public int textSize;
-            public int row;
-            public int col;
+            public final SensorType sensorType;
+            public final int textSize;
+            public final int row;
+            public final int col;
 
             public RowData(SensorType sensorType, int textSize, int row, int col) {
                 this.sensorType = sensorType;

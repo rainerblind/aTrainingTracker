@@ -55,7 +55,7 @@ public class TrackOnMapTrackingFragment
 
     protected PolylineOptions mPolylineOptions = null;
     protected Polyline mPolyline = null;
-    BroadcastReceiver mNewLocationReceiver = new BroadcastReceiver() {
+    final BroadcastReceiver mNewLocationReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             if (LocationManager.GPS_PROVIDER.equals(intent.getStringExtra(BANALService.LOCATION_PROVIDER))
@@ -75,7 +75,7 @@ public class TrackOnMapTrackingFragment
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // lifecycle methods
     ////////////////////////////////////////////////////////////////////////////////////////////////
-    BroadcastReceiver mTrackingStartedReceiver = new BroadcastReceiver() {
+    final BroadcastReceiver mTrackingStartedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             mWorkoutID = intent.getLongExtra(WorkoutSummaries.WORKOUT_ID, -1);

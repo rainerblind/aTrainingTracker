@@ -44,7 +44,7 @@ public class ExportManager {
     private static final int DEFAULT_RETRIES_FILE = 1;
     private static final int DEFAULT_RETRIES_DROPBOX = 10;
     private static final int DEFAULT_RETRIES_COMMUNITY = 1;
-    protected Context mContext;
+    protected final Context mContext;
     // protected static HashMap<String, EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>>> cCash = new HashMap<String, EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>>>();
 
     public ExportManager(Context context, String caller) {

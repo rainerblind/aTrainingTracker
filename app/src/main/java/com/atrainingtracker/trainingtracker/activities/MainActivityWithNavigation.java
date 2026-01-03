@@ -172,9 +172,9 @@ public class MainActivityWithNavigation
     protected Handler mHandler;  // necessary to wait some time before we disconnect from the BANALService when the app is paused.
     protected boolean mStartAndNotResume = true;        // start a new workout or continue with the previous one
     protected BANALService.BANALServiceComm mBanalServiceComm = null;
-    LinkedList<ConnectionStatusListener> mConnectionStatusListeners = new LinkedList<>();
+    final LinkedList<ConnectionStatusListener> mConnectionStatusListeners = new LinkedList<>();
     /* Broadcast Receiver to adapt the title based on the tracking state */
-    BroadcastReceiver mStartTrackingReceiver = new BroadcastReceiver() {
+    final BroadcastReceiver mStartTrackingReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             setTitle(R.string.Tracking);
@@ -184,14 +184,14 @@ public class MainActivityWithNavigation
 
     // protected ActivityType mActivityType = ActivityType.GENERIC;  // no longer necessary since we have the getActivity() method
     // protected long mWorkoutID = -1;
-    BroadcastReceiver mPauseTrackingReceiver = new BroadcastReceiver() {
+    final BroadcastReceiver mPauseTrackingReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             setTitle(R.string.Paused);
             mNavigationView.getMenu().findItem(R.id.drawer_start_tracking).setTitle(R.string.Pause);
         }
     };
-    BroadcastReceiver mStopTrackingReceiver = new BroadcastReceiver() {
+    final BroadcastReceiver mStopTrackingReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             setTitle(R.string.app_name);
@@ -231,7 +231,7 @@ public class MainActivityWithNavigation
             }
         }
     };
-    protected Runnable mDisconnectFromBANALServiceRunnable = new Runnable() {
+    protected final Runnable mDisconnectFromBANALServiceRunnable = new Runnable() {
         @Override
         public void run() {
             disconnectFromBANALService();

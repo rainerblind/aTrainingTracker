@@ -23,6 +23,7 @@ import android.app.Dialog;
 import android.content.DialogInterface;
 import android.os.Bundle;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.DialogFragment;
 
@@ -56,15 +57,7 @@ public class StartOrResumeDialog extends DialogFragment {
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
 
-        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(getContext());
-        alertDialogBuilder.setMessage(R.string.start_or_resume_dialog_message);
-        // alertDialogBuilder.setCancelable(false);
-        alertDialogBuilder.setPositiveButton(R.string.start_new_workout, new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int id) {
-                mStartOrResumeInterface.chooseStart();
-                dialog.cancel();
-            }
-        });
+        AlertDialog.Builder alertDialogBuilder = getAlertDialogBuilder();
 
         alertDialogBuilder.setNegativeButton(R.string.resume_workout, new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int id) {
@@ -75,5 +68,19 @@ public class StartOrResumeDialog extends DialogFragment {
         });
 
         return alertDialogBuilder.create();
+    }
+
+    @NonNull
+    private AlertDialog.Builder getAlertDialogBuilder() {
+        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(getContext());
+        alertDialogBuilder.setMessage(R.string.start_or_resume_dialog_message);
+        // alertDialogBuilder.setCancelable(false);
+        alertDialogBuilder.setPositiveButton(R.string.start_new_workout, new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                mStartOrResumeInterface.chooseStart();
+                dialog.cancel();
+            }
+        });
+        return alertDialogBuilder;
     }
 }

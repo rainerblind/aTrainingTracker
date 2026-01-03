@@ -66,7 +66,7 @@ public abstract class BaseExporter {
     protected static ExportManager cExportManager;
     private static NotificationCompat.Builder mNotificationBuilder;
     private static NotificationManagerCompat cNotificationManager;
-    protected Context mContext;
+    protected final Context mContext;
 
     public BaseExporter(Context context) {
         mContext = context;

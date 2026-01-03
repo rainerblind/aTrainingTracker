@@ -76,9 +76,9 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
     protected LinearLayout mLLSensors;
     protected LayoutInflater mLayoutInflater;
     protected String mName = null;
-    protected IntentFilter mViewChangedFilter = new IntentFilter();  // actions will be added later on
+    protected final IntentFilter mViewChangedFilter = new IntentFilter();  // actions will be added later on
     TreeMap<Integer, TreeMap<Integer, TrackingViewsDatabaseManager.ViewInfo>> mViewInfoMap = TrackingViewsDatabaseManager.getViewInfoMap(mViewId);
-    BroadcastReceiver mFilterChangedReceiver = new BroadcastReceiver() {
+    final BroadcastReceiver mFilterChangedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             getViewInfoMapAndAddSensorFields();

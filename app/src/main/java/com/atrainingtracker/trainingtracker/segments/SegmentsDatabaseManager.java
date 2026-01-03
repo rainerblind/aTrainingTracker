@@ -236,14 +236,12 @@ public class SegmentsDatabaseManager {
                 + Segments.WATTS + " real)";
         private static final String TAG = SegmentsDbHelper.class.getName();
         private static final boolean DEBUG = TrainingApplication.getDebug(true);
-        private final Context mContext;
 
 
         // Constructor
         public SegmentsDbHelper(Context context) {
             super(context, DB_NAME, null, DB_VERSION);
 
-            mContext = context;
         }
 
         // Called only once, first time the DB is created

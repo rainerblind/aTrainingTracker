@@ -42,8 +42,8 @@ public class GCFileExporter extends BaseFileExporter {
     private static final String TAG = "GCFileExporter";
     private static final boolean DEBUG = false;
     // DateFormats to convert from Db style dates to Strava style dates
-    protected static SimpleDateFormat msdfFromDb = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
-    protected static SimpleDateFormat msdfToGC = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss", Locale.US);
+    protected static final SimpleDateFormat msdfFromDb = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
+    protected static final SimpleDateFormat msdfToGC = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss", Locale.US);
 
     public GCFileExporter(Context context) {
         super(context);

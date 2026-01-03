@@ -95,14 +95,14 @@ public class MyLocationsFragment
 
     MultiSelectionSpinner mSportSpinner, mExtremaTypeSpinner;
 
-    HashMap<Long, EnumMap<ExtremaType, List<Marker>>> mMarkerMap = new HashMap<Long, EnumMap<ExtremaType, List<Marker>>>();
+    final HashMap<Long, EnumMap<ExtremaType, List<Marker>>> mMarkerMap = new HashMap<Long, EnumMap<ExtremaType, List<Marker>>>();
 
-    Map<Marker, Long> mMarker2WorkoutIdMap = new HashMap<>();
-    Map<Marker, Long> mMarker2MyLocationsIdMap = new HashMap<>();
-    Map<Long, Circle> mMarkerId2CircleMap = new HashMap<>();
+    final Map<Marker, Long> mMarker2WorkoutIdMap = new HashMap<>();
+    final Map<Marker, Long> mMarker2MyLocationsIdMap = new HashMap<>();
+    final Map<Long, Circle> mMarkerId2CircleMap = new HashMap<>();
 
-    List<Long> mSportTypesIdList = SportTypeDatabaseManager.getSportTypesIdList();
-    List<String> mSportTypesUiNamList = SportTypeDatabaseManager.getSportTypesUiNameList();
+    final List<Long> mSportTypesIdList = SportTypeDatabaseManager.getSportTypesIdList();
+    final List<String> mSportTypesUiNamList = SportTypeDatabaseManager.getSportTypesUiNameList();
 
     /**
      * stolen from BaseExporter

@@ -294,8 +294,8 @@ public class KnownLocationsDatabaseManager {
     }
 
     public static class MyLocation {
-        public long id;
-        public LatLng latLng;
+        public final long id;
+        public final LatLng latLng;
         public String name;
         public int altitude;
         public int radius;
@@ -310,8 +310,8 @@ public class KnownLocationsDatabaseManager {
     }
 
     public static class NamedLatLng {
-        public LatLng latLng;
-        public String name;
+        public final LatLng latLng;
+        public final String name;
 
         public NamedLatLng(LatLng latLng, String name) {
             this.latLng = latLng;

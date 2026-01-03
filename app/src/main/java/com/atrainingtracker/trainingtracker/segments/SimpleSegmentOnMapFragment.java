@@ -40,8 +40,6 @@ public class SimpleSegmentOnMapFragment
 
     protected long mSegmentID = -1;
 
-    private boolean mSegmentOnMapLoaded = false;
-
 
     public static SimpleSegmentOnMapFragment newInstance(long segmentId) {
         SimpleSegmentOnMapFragment simpleSegmentOnMapFragment = new SimpleSegmentOnMapFragment();
@@ -74,7 +72,6 @@ public class SimpleSegmentOnMapFragment
         super.onPause();
         if (DEBUG) Log.i(TAG, "onPause()");
 
-        mSegmentOnMapLoaded = false;
     }
 
 

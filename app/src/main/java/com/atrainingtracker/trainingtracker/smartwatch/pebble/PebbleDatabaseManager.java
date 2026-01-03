@@ -481,6 +481,7 @@ public class PebbleDatabaseManager {
                     break;
 
                 case GENERIC_HR:
+                    //noinspection DuplicateBranchesInSwitch
                     result.add(SensorType.TIME_ACTIVE); // 1
                     result.add(SensorType.HR);          // 2
                     result.add(SensorType.SPEED_mps);   // 3

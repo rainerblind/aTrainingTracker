@@ -847,13 +847,11 @@ public class WorkoutSummariesDatabaseManager {
                 + WorkoutSummaries.ADD_VIA + " int)";
         private static final String TAG = "WorkoutSummariesDbHelper";
         private static final boolean DEBUG = TrainingApplication.getDebug(true);
-        private final Context mContext;
 
         // Constructor
         public WorkoutSummariesDbHelper(Context context) {
             super(context, DB_NAME, null, DB_VERSION);
 
-            mContext = context;
         }
         // TODO: add location (latitude and longitude) and add them when needed
 

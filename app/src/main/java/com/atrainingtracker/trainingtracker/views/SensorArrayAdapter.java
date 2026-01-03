@@ -32,8 +32,8 @@ import com.atrainingtracker.banalservice.sensor.SensorType;
 public class SensorArrayAdapter extends ArrayAdapter<SensorType> {
     private static final String TAG = "SensorSpinnerAdapter";
 
-    protected Context mContext;
-    protected SensorType[] mSensorTypeArray;
+    protected final Context mContext;
+    protected final SensorType[] mSensorTypeArray;
 
     public SensorArrayAdapter(Context context, int textViewResourceId, SensorType[] sensorTypeArray) {
         super(context, textViewResourceId, sensorTypeArray);

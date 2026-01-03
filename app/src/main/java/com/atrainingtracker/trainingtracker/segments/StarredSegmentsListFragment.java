@@ -64,10 +64,10 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
     protected StravaSegmentsHelper mStravaSegmentsHelper;
     protected StartSegmentDetailsActivityInterface startSegmentDetailsActivityInterface;
     // actions will be added later
-    protected IntentFilter mSegmentUpdateStartedFilter = new IntentFilter();
-    protected IntentFilter mUpdateSegmentsListFilter = new IntentFilter();
-    protected IntentFilter mUpdatingSegmentsCompleteFilter = new IntentFilter();
-    BroadcastReceiver mSegmentUpdateStartedReceiver = new BroadcastReceiver() {
+    protected final IntentFilter mSegmentUpdateStartedFilter = new IntentFilter();
+    protected final IntentFilter mUpdateSegmentsListFilter = new IntentFilter();
+    protected final IntentFilter mUpdatingSegmentsCompleteFilter = new IntentFilter();
+    final BroadcastReceiver mSegmentUpdateStartedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             if (intent.hasExtra(StravaSegmentsIntentService.SPORT_TYPE_ID)
@@ -76,7 +76,7 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
             }
         }
     };
-    BroadcastReceiver mUpdateSegmentsListReceiver = new BroadcastReceiver() {
+    final BroadcastReceiver mUpdateSegmentsListReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             if (DEBUG) Log.i(TAG, "update segment list");
@@ -87,7 +87,7 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
             }
         }
     };
-    BroadcastReceiver mUpdatingSegmentsCompleteReceiver = new BroadcastReceiver() {
+    final BroadcastReceiver mUpdatingSegmentsCompleteReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             if (DEBUG) Log.i(TAG, "updating segments list completed");
