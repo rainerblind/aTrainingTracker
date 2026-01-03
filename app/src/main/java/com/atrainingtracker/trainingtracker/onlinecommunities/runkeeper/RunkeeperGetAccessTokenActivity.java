@@ -25,7 +25,7 @@ import com.atrainingtracker.BuildConfig;
 import com.atrainingtracker.R;
 import com.atrainingtracker.trainingtracker.onlinecommunities.BaseGetAccessTokenActivity;
 
-
+@Deprecated
 public class RunkeeperGetAccessTokenActivity
         extends BaseGetAccessTokenActivity {
     protected static final String RUNKEEPER_AUTHORITY = "runkeeper.com";
@@ -41,6 +41,7 @@ public class RunkeeperGetAccessTokenActivity
     }
 
     @Override
+    @Deprecated
     protected String getAuthorizationUrl() {
         Uri.Builder builder = new Uri.Builder();
         builder.scheme(HTTPS)
@@ -54,6 +55,7 @@ public class RunkeeperGetAccessTokenActivity
     }
 
 
+    @Deprecated
     protected String getAccessUrl(String code) {
         Uri.Builder builder = new Uri.Builder();
         builder.scheme(HTTPS)
@@ -69,6 +71,7 @@ public class RunkeeperGetAccessTokenActivity
     }
 
 
+    @Deprecated
     protected String getAcceptApplicationUrl() {
         Uri.Builder builder = new Uri.Builder();
         builder.scheme(HTTPS)

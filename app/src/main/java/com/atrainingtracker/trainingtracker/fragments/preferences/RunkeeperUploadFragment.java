@@ -30,6 +30,7 @@ import com.atrainingtracker.R;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.onlinecommunities.BaseGetAccessTokenActivity;
 import com.atrainingtracker.trainingtracker.onlinecommunities.runkeeper.RunkeeperGetAccessTokenActivity;
+import com.atrainingtracker.trainingtracker.onlinecommunities.runkeeper.RunkeeperHelper;
 
 /**
  * Created by rainer on 01.02.16.
@@ -80,7 +81,7 @@ public class RunkeeperUploadFragment extends androidx.preference.PreferenceFragm
                 if (DEBUG) Log.d(TAG, "deleting Runkeeper token");
                 TrainingApplication.deleteRunkeeperToken();
             } else {
-                startActivityForResult(new Intent(getActivity(), RunkeeperGetAccessTokenActivity.class), GET_RUNKEEPER_ACCESS_TOKEN);
+                RunkeeperHelper.Companion.requestAccessToken(getActivity());
             }
         }
 
