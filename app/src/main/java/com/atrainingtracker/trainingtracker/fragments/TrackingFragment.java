@@ -374,7 +374,7 @@ public class TrackingFragment extends BaseTrackingFragment {
         for (int colNr : rowMap.keySet()) {
             final TrackingViewsDatabaseManager.ViewInfo viewInfo = rowMap.get(colNr);
             if (DEBUG)
-                Log.i(TAG, "add view: rowNr=" + viewInfo.rowNr + ", colNr=" + viewInfo.colNr + ", SensorType=" + viewInfo.sensorType + ", TextSize=" + viewInfo.textSize);
+                Log.i(TAG, "add view: rowNr=" + viewInfo.rowNr() + ", colNr=" + viewInfo.colNr() + ", SensorType=" + viewInfo.sensorType() + ", TextSize=" + viewInfo.textSize());
 
             LinearLayout llField = (LinearLayout) mLayoutInflater.inflate(R.layout.sensor_field, llRow, false);
             llRow.addView(llField);
@@ -389,8 +389,8 @@ public class TrackingFragment extends BaseTrackingFragment {
                 });
             }
 
-            SensorType sensorType = viewInfo.sensorType;
-            long deviceId = viewInfo.sourceDeviceId;
+            SensorType sensorType = viewInfo.sensorType();
+            long deviceId = viewInfo.sourceDeviceId();
             String deviceName = null;
             if (deviceId > 0) {
                 deviceName = DevicesDatabaseManager.getDeviceName(deviceId);
@@ -403,7 +403,7 @@ public class TrackingFragment extends BaseTrackingFragment {
             TextView tv = new TextView(getContext());
             // tv.setBackgroundColor(getResources().getColor(R.color.my_white));
             tv.setTextSize(TEXT_SIZE_TITLE);
-            String filterSummary = getShortFilterSummary(getContext(), viewInfo.filterType, viewInfo.filterConstant);
+            String filterSummary = getShortFilterSummary(getContext(), viewInfo.filterType(), viewInfo.filterConstant());
             if (deviceName == null) {
                 tv.setText(filterSummary + getString(sensorType.getFullNameId()) + ":");
             } else {
@@ -416,13 +416,13 @@ public class TrackingFragment extends BaseTrackingFragment {
             // TextView for the content
             tv = new TextView(getContext());
             // tv.setBackgroundColor(getResources().getColor(R.color.my_white));
-            tv.setTextSize(viewInfo.textSize);
+            tv.setTextSize(viewInfo.textSize());
             // tv.setGravity(Gravity.CENTER_VERTICAL || Gravity.CENTER_HORIZONTAL);
             tv.setGravity(Gravity.CENTER_HORIZONTAL);
             llField.addView(tv);
 
             // finally, add this TextView to the Map
-            mHashMapTextViews.put((new FilterData(deviceName, sensorType, viewInfo.filterType, viewInfo.filterConstant)).getHashKey(),
+            mHashMapTextViews.put((new FilterData(deviceName, sensorType, viewInfo.filterType(), viewInfo.filterConstant())).getHashKey(),
                     new TvSensorType(tv, sensorType));
         }
     }
@@ -573,13 +573,6 @@ public class TrackingFragment extends BaseTrackingFragment {
 
     public enum Mode {TRACKING, PREVIEW}
 
-    protected static class TvSensorType {
-        protected final TextView textView;
-        protected final SensorType sensorType;
-
-        public TvSensorType(TextView textView, SensorType sensorType) {
-            this.textView = textView;
-            this.sensorType = sensorType;
-        }
+    protected record TvSensorType(TextView textView, SensorType sensorType) {
     }
 }

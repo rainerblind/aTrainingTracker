@@ -374,6 +374,7 @@ public class StartAndTrackingFragmentTabbedContainer extends Fragment {
 
         @Override
         public int getCount() {
+            //noinspection UnnecessaryLocalVariable
             int count = mViewIdList.size() + 1;
 
             // if (DEBUG) Log.i(TAG, "SectionsPagerAdapter.getCount(): returning " + count);

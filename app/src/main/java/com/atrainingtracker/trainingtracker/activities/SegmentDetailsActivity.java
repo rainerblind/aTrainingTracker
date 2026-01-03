@@ -184,14 +184,13 @@ public class SegmentDetailsActivity extends AppCompatActivity
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         // Log.d(TAG, "onOptionsItemSelected");
-        switch (item.getItemId()) {
-            case android.R.id.home:
+        return switch (item.getItemId()) {
+            case android.R.id.home -> {
                 mDrawerLayout.openDrawer(GravityCompat.START);
-                return true;
-
-            default:
-                return super.onOptionsItemSelected(item);
-        }
+                yield true;
+            }
+            default -> super.onOptionsItemSelected(item);
+        };
     }
 
     @Override
@@ -222,18 +221,17 @@ public class SegmentDetailsActivity extends AppCompatActivity
     // TODO: inline???
     private void setContentFragment(int menuId) {
         Fragment fragment = null;
-        String tag = null;
-        switch (menuId) {
-            case R.id.drawer_segment_leaderboard:
+        String tag = switch (menuId) {
+            case R.id.drawer_segment_leaderboard -> {
                 fragment = SegmentLeaderboardListFragment.newInstance(mSegmentId);
-                tag = SegmentLeaderboardListFragment.TAG;
-                break;
-
-            case R.id.drawer_map:
+                yield SegmentLeaderboardListFragment.TAG;
+            }
+            case R.id.drawer_map -> {
                 fragment = SimpleSegmentOnMapFragment.newInstance(mSegmentId);
-                tag = SimpleSegmentOnMapFragment.TAG;
-                break;
-        }
+                yield SimpleSegmentOnMapFragment.TAG;
+            }
+            default -> null;
+        };
 
         if (fragment != null) {
             FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();

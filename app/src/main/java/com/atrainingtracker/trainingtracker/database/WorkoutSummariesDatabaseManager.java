@@ -392,7 +392,7 @@ public class WorkoutSummariesDatabaseManager {
     public static Set<SensorType> getAccumulatedSensorTypes(long workoutId) {
         if (DEBUG) Log.i(TAG, "getAccumulatedSensorTypes for workoutId: " + workoutId);
 
-        Set<SensorType> accumulatedSensorTypesSet = new HashSet<SensorType>();
+        Set<SensorType> accumulatedSensorTypesSet = new HashSet<>();
 
         SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
         Cursor cursor = db.query(WorkoutSummaries.TABLE_ACCUMULATED_SENSORS,
@@ -418,7 +418,7 @@ public class WorkoutSummariesDatabaseManager {
      */
 
     public static List<Long> getWorkoutIds() {
-        List<Long> workoutIds = new LinkedList<Long>();
+        List<Long> workoutIds = new LinkedList<>();
 
         SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
 
@@ -440,7 +440,7 @@ public class WorkoutSummariesDatabaseManager {
     public static List<Long> getOldWorkouts(int days) {
         if (DEBUG) Log.i(TAG, "getOldWorkouts(" + days + ")");
 
-        List<Long> oldWorkoutIds = new LinkedList<Long>();
+        List<Long> oldWorkoutIds = new LinkedList<>();
 
         SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
 

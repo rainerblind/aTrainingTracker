@@ -95,7 +95,7 @@ public class MyLocationsFragment
 
     MultiSelectionSpinner mSportSpinner, mExtremaTypeSpinner;
 
-    final HashMap<Long, EnumMap<ExtremaType, List<Marker>>> mMarkerMap = new HashMap<Long, EnumMap<ExtremaType, List<Marker>>>();
+    final HashMap<Long, EnumMap<ExtremaType, List<Marker>>> mMarkerMap = new HashMap<>();
 
     final Map<Marker, Long> mMarker2WorkoutIdMap = new HashMap<>();
     final Map<Marker, Long> mMarker2MyLocationsIdMap = new HashMap<>();
@@ -547,10 +547,10 @@ public class MyLocationsFragment
 
                 // make sure that mMarkerMap it correctly initialized
                 if (!mMarkerMap.containsKey(mSportTypeId)) {
-                    mMarkerMap.put(mSportTypeId, new EnumMap<ExtremaType, List<Marker>>(ExtremaType.class));
+                    mMarkerMap.put(mSportTypeId, new EnumMap<>(ExtremaType.class));
                 }
                 if (!mMarkerMap.get(mSportTypeId).containsKey(mExtremaType)) {
-                    mMarkerMap.get(mSportTypeId).put(mExtremaType, new LinkedList<Marker>());
+                    mMarkerMap.get(mSportTypeId).put(mExtremaType, new LinkedList<>());
                 }
 
             });

@@ -135,7 +135,7 @@ public class StravaUploaderLegacy extends BaseExporter {
         if (DEBUG) Log.d(TAG, "uploadToStrava response: " + response);
 
         // check the response
-        if (response == null || response.equals("")) {  // hm, there is no response
+        if (response == null || response.isEmpty()) {  // hm, there is no response
             if (DEBUG) Log.d(TAG, "no response");
             return new ExportResult(false, "no response");
         }
@@ -312,7 +312,7 @@ public class StravaUploaderLegacy extends BaseExporter {
 
 
         // first, make sure that the type is correct
-        List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>(1);
+        List<NameValuePair> nameValuePairs = new ArrayList<>(1);
         nameValuePairs.add(new BasicNameValuePair(TYPE, sportName));
         updateStravaActivity(activityId, nameValuePairs);             // update
         int counter = 0;
@@ -339,7 +339,7 @@ public class StravaUploaderLegacy extends BaseExporter {
 
         // now, that the type is correct, we can update the equipment! (and the other fields)
         boolean update = false;
-        nameValuePairs = new ArrayList<NameValuePair>(3);
+        nameValuePairs = new ArrayList<>(3);
 
         if (name != null) {
             nameValuePairs.add(new BasicNameValuePair(NAME, name));

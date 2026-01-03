@@ -608,7 +608,7 @@ public class TrackingViewsDatabaseManager {
             double filterConstant = cursor.getDouble(cursor.getColumnIndex(TrackingViewsDbHelper.FILTER_CONSTANT));
 
             if (!result.containsKey(rowNr)) {
-                result.put(rowNr, new TreeMap<Integer, ViewInfo>());
+                result.put(rowNr, new TreeMap<>());
             }
 
             result.get(rowNr).put(colNr, new ViewInfo(viewId, rowId, rowNr, colNr, sensorType, textSize, sourceDeviceId, filterType, filterConstant));
@@ -671,28 +671,9 @@ public class TrackingViewsDatabaseManager {
         }
     }
 
-    public static class ViewInfo {
-        public final long viewId;
-        public final long rowId;
-        public final int rowNr;
-        public final int colNr;
-        public final SensorType sensorType;
-        public final int textSize;
-        public final long sourceDeviceId;
-        public final FilterType filterType;
-        public final double filterConstant;
-
-        public ViewInfo(long viewId, long rowId, int rowNr, int colNr, SensorType sensorType, int textSize, long sourceDeviceId, FilterType filterType, double filterConstant) {
-            this.viewId = viewId;
-            this.rowId = rowId;
-            this.rowNr = rowNr;
-            this.colNr = colNr;
-            this.sensorType = sensorType;
-            this.textSize = textSize;
-            this.sourceDeviceId = sourceDeviceId;
-            this.filterType = filterType;
-            this.filterConstant = filterConstant;
-        }
+    public record ViewInfo(long viewId, long rowId, int rowNr, int colNr, SensorType sensorType,
+                           int textSize, long sourceDeviceId, FilterType filterType,
+                           double filterConstant) {
     }
 
 
@@ -977,11 +958,11 @@ public class TrackingViewsDatabaseManager {
 
         protected EnumMap<ActivityType, List<RowData>> createViewMap() {
             if (DEBUG) Log.d(TAG, "createViewMap");
-            EnumMap<ActivityType, List<RowData>> viewMap = new EnumMap<ActivityType, List<RowData>>(ActivityType.class);
+            EnumMap<ActivityType, List<RowData>> viewMap = new EnumMap<>(ActivityType.class);
             List<RowData> rowDataList;
 
             // GENERIC
-            rowDataList = new LinkedList<RowData>();
+            rowDataList = new LinkedList<>();
             rowDataList.add(new RowData(SensorType.TIME_ACTIVE, SMALL, 1, 1));
             rowDataList.add(new RowData(SensorType.TIME_OF_DAY, SMALL, 1, 2));
             rowDataList.add(new RowData(SensorType.SPEED_mps, LARGE, 2, 1));
@@ -992,7 +973,7 @@ public class TrackingViewsDatabaseManager {
             viewMap.put(ActivityType.GENERIC, rowDataList);
 
             // GENERIC_HR
-            rowDataList = new LinkedList<RowData>();
+            rowDataList = new LinkedList<>();
             rowDataList.add(new RowData(SensorType.TIME_ACTIVE, SMALL, 1, 1));
             rowDataList.add(new RowData(SensorType.TIME_OF_DAY, SMALL, 1, 2));
             rowDataList.add(new RowData(SensorType.HR, LARGE, 2, 1));
@@ -1004,7 +985,7 @@ public class TrackingViewsDatabaseManager {
             viewMap.put(ActivityType.GENERIC_HR, rowDataList);
 
             // RUN_SPEED_AND_CADENCE
-            rowDataList = new LinkedList<RowData>();
+            rowDataList = new LinkedList<>();
             rowDataList.add(new RowData(SensorType.TIME_ACTIVE, SMALL, 1, 1));
             rowDataList.add(new RowData(SensorType.TIME_OF_DAY, SMALL, 1, 2));
             rowDataList.add(new RowData(SensorType.HR, LARGE, 2, 1));
@@ -1017,7 +998,7 @@ public class TrackingViewsDatabaseManager {
             viewMap.put(ActivityType.RUN_SPEED_AND_CADENCE, rowDataList);
 
             // RUN_SPEED
-            rowDataList = new LinkedList<RowData>();
+            rowDataList = new LinkedList<>();
             rowDataList.add(new RowData(SensorType.TIME_ACTIVE, SMALL, 1, 1));
             rowDataList.add(new RowData(SensorType.TIME_OF_DAY, SMALL, 1, 2));
             rowDataList.add(new RowData(SensorType.HR, LARGE, 2, 1));
@@ -1029,7 +1010,7 @@ public class TrackingViewsDatabaseManager {
             viewMap.put(ActivityType.RUN_SPEED, rowDataList);
 
             // BIKE_SPEED
-            rowDataList = new LinkedList<RowData>();
+            rowDataList = new LinkedList<>();
             rowDataList.add(new RowData(SensorType.TIME_ACTIVE, SMALL, 1, 1));
             rowDataList.add(new RowData(SensorType.TIME_OF_DAY, SMALL, 1, 2));
             rowDataList.add(new RowData(SensorType.HR, LARGE, 2, 1));
@@ -1041,7 +1022,7 @@ public class TrackingViewsDatabaseManager {
             viewMap.put(ActivityType.BIKE_SPEED, rowDataList);
 
             // BIKE_SPEED_AND_CADENCE
-            rowDataList = new LinkedList<RowData>();
+            rowDataList = new LinkedList<>();
             rowDataList.add(new RowData(SensorType.TIME_ACTIVE, SMALL, 1, 1));
             rowDataList.add(new RowData(SensorType.TIME_OF_DAY, SMALL, 1, 2));
             rowDataList.add(new RowData(SensorType.HR, LARGE, 2, 1));
@@ -1054,7 +1035,7 @@ public class TrackingViewsDatabaseManager {
             viewMap.put(ActivityType.BIKE_SPEED_AND_CADENCE, rowDataList);
 
             // BIKE_POWER
-            rowDataList = new LinkedList<RowData>();
+            rowDataList = new LinkedList<>();
             rowDataList.add(new RowData(SensorType.TIME_ACTIVE, SMALL, 1, 1));
             rowDataList.add(new RowData(SensorType.TIME_OF_DAY, SMALL, 1, 2));
             rowDataList.add(new RowData(SensorType.POWER, HUGE, 2, 1));
@@ -1070,18 +1051,7 @@ public class TrackingViewsDatabaseManager {
             return viewMap;
         }
 
-        protected static class RowData {
-            public final SensorType sensorType;
-            public final int textSize;
-            public final int row;
-            public final int col;
-
-            public RowData(SensorType sensorType, int textSize, int row, int col) {
-                this.sensorType = sensorType;
-                this.textSize = textSize;
-                this.row = row;
-                this.col = col;
-            }
+        protected record RowData(SensorType sensorType, int textSize, int row, int col) {
 
         }
 

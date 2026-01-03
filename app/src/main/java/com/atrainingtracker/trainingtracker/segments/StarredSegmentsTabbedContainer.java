@@ -122,16 +122,13 @@ public class StarredSegmentsTabbedContainer extends Fragment {
             // getItem is called to instantiate the fragment for the given page.
             if (DEBUG) Log.i(TAG, "SectionsPagerAdapter.getItem(" + position + ")");
 
-            switch (position) {
-                case 0:
-                    return StarredSegmentsListFragment.newInstance(SportTypeDatabaseManager.getSportTypeId(BSportType.BIKE));
-
-                case 1:
-                    return StarredSegmentsListFragment.newInstance(SportTypeDatabaseManager.getSportTypeId(BSportType.RUN));
-
-                default:
-                    return new Fragment();
-            }
+            return switch (position) {
+                case 0 ->
+                        StarredSegmentsListFragment.newInstance(SportTypeDatabaseManager.getSportTypeId(BSportType.BIKE));
+                case 1 ->
+                        StarredSegmentsListFragment.newInstance(SportTypeDatabaseManager.getSportTypeId(BSportType.RUN));
+                default -> new Fragment();
+            };
 
         }
 
@@ -142,16 +139,12 @@ public class StarredSegmentsTabbedContainer extends Fragment {
 
         @Override
         public CharSequence getPageTitle(int position) {
-            switch (position) {
-                case 0:
-                    return getString(R.string.starred_bike_segments);
+            return switch (position) {
+                case 0 -> getString(R.string.starred_bike_segments);
+                case 1 -> getString(R.string.starred_run_segments);
+                default -> null;
+            };
 
-                case 1:
-                    return getString(R.string.starred_run_segments);
-
-            }
-
-            return null;
         }
     }
 }

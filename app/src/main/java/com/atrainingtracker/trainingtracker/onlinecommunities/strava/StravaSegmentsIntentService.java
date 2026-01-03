@@ -238,19 +238,19 @@ public class StravaSegmentsIntentService extends IntentService {
                 int initialTime = effortStreams[0].getAsInteger("time");
                 int prevTime = initialTime - 1;
                 int curTime = initialTime - 1;
-                for (int j = 0; j < effortStreams.length; j++) {
+                for (ContentValues effortStream : effortStreams) {
                     prevTime = curTime;
-                    curTime = effortStreams[j].getAsInteger("time");
-                    effortStreams[j].remove("time");
-                    effortStreams[j].put(streamType.idName, id);
+                    curTime = effortStream.getAsInteger("time");
+                    effortStream.remove("time");
+                    effortStream.put(streamType.idName, id);
                     for (int delta = 1; delta <= curTime - prevTime; delta++) {
-                        db.insert(streamType.table, null, effortStreams[j]);
+                        db.insert(streamType.table, null, effortStream);
                     }
                 }
             } else {
-                for (int j = 0; j < effortStreams.length; j++) {
-                    effortStreams[j].put(streamType.idName, id);
-                    db.insert(streamType.table, null, effortStreams[j]);
+                for (ContentValues effortStream : effortStreams) {
+                    effortStream.put(streamType.idName, id);
+                    db.insert(streamType.table, null, effortStream);
                 }
             }
 

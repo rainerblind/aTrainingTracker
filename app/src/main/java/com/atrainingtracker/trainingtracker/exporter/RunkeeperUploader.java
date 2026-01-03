@@ -75,7 +75,7 @@ public class RunkeeperUploader extends BaseExporter {
         if (DEBUG) Log.d(TAG, "uploadToRunkeeper response: " + response);
         if (response == null) {
             return new ExportResult(false, "no response");
-        } else if (response.equals("")) {
+        } else if (response.isEmpty()) {
             return new ExportResult(true, "successfully uploaded " + exportInfo.getFileBaseName() + " to RunKeeper");
         }
 

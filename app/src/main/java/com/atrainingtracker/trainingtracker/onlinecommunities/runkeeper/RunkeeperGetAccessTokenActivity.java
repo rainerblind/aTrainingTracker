@@ -22,7 +22,6 @@ package com.atrainingtracker.trainingtracker.onlinecommunities.runkeeper;
 import android.net.Uri;
 
 import com.atrainingtracker.BuildConfig;
-import com.atrainingtracker.R;
 import com.atrainingtracker.trainingtracker.onlinecommunities.BaseGetAccessTokenActivity;
 
 

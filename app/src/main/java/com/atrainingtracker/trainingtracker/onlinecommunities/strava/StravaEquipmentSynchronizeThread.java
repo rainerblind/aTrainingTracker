@@ -37,6 +37,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 
 public class StravaEquipmentSynchronizeThread extends Thread {
@@ -121,7 +122,7 @@ public class StravaEquipmentSynchronizeThread extends Thread {
             urlConnection.setConnectTimeout(15000);
             urlConnection.setReadTimeout(15000);
 
-            Map headers = urlConnection.getHeaderFields();
+            Map<String, List<String>> headers = urlConnection.getHeaderFields();
 
             int responseCode = urlConnection.getResponseCode();
             String response = readStream(urlConnection, responseCode);

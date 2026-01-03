@@ -228,7 +228,7 @@ public class ExportManager {
     public synchronized ArrayList<ExportInfo> getExportQueue() {
         if (DEBUG) Log.d(TAG, "getExportQueue");
 
-        ArrayList<ExportInfo> result = new ArrayList<ExportInfo>();
+        ArrayList<ExportInfo> result = new ArrayList<>();
 
         // 
         Cursor cursor = cExportStatusDb.query(ExportStatusDbHelper.TABLE,
@@ -328,13 +328,13 @@ public class ExportManager {
     public synchronized EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>> getExportStatus(String fileBaseName) {
         if (DEBUG) Log.d(TAG, "getExportStatus");
 
-        EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>> result = new EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>>(ExportType.class);
+        EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>> result = new EnumMap<>(ExportType.class);
 
         Cursor cursor;
 
         for (ExportType exportType : ExportType.values()) {
 
-            EnumMap<FileFormat, ExportStatus> enumMap = new EnumMap<FileFormat, ExportStatus>(FileFormat.class);
+            EnumMap<FileFormat, ExportStatus> enumMap = new EnumMap<>(FileFormat.class);
             for (FileFormat fileFormat : FileFormat.values()) {
                 cursor = cExportStatusDb.query(ExportStatusDbHelper.TABLE,
                         new String[]{ExportStatusDbHelper.EXPORT_STATUS},

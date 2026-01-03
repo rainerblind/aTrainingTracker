@@ -223,14 +223,13 @@ public class WorkoutDetailsActivity extends AppCompatActivity
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         // Log.d(TAG, "onOptionsItemSelected");
-        switch (item.getItemId()) {
-            case android.R.id.home:
+        return switch (item.getItemId()) {
+            case android.R.id.home -> {
                 mDrawerLayout.openDrawer(GravityCompat.START);
-                return true;
-
-            default:
-                return super.onOptionsItemSelected(item);
-        }
+                yield true;
+            }
+            default -> super.onOptionsItemSelected(item);
+        };
     }
 
     @Override
@@ -261,23 +260,21 @@ public class WorkoutDetailsActivity extends AppCompatActivity
     // TODO: inline
     private void setContentFragment(int menuId) {
         Fragment fragment = null;
-        String tag = null;
-        switch (menuId) {
-            case R.id.edit_workout_details:
+        String tag = switch (menuId) {
+            case R.id.edit_workout_details -> {
                 fragment = EditWorkoutFragment.newInstance(mWorkoutID);
-                tag = EditWorkoutFragment.TAG;
-                break;
-
-            case R.id.drawer_map:
+                yield EditWorkoutFragment.TAG;
+            }
+            case R.id.drawer_map -> {
                 fragment = TrackOnMapAftermathFragment.newInstance(mWorkoutID);
-                tag = TrackOnMapAftermathFragment.TAG;
-                break;
-
-            case R.id.drawer_export_status:
+                yield TrackOnMapAftermathFragment.TAG;
+            }
+            case R.id.drawer_export_status -> {
                 fragment = ExportStatusDialogFragment.newInstance(mWorkoutID);
-                tag = ExportStatusDialogFragment.TAG;
-                break;
-        }
+                yield ExportStatusDialogFragment.TAG;
+            }
+            default -> null;
+        };
 
         if (fragment != null) {
             FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();

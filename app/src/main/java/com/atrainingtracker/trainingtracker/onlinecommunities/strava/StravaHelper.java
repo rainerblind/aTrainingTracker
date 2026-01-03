@@ -85,25 +85,14 @@ public class StravaHelper {
     private static final boolean DEBUG = true; // TrainingApplication.getDebug(true);
 
     public static String translateClimbCategory(int climbCategory) {
-        switch (climbCategory) {
-            case 1:
-                return "cat. 4";
-
-            case 2:
-                return "cat. 3";
-
-            case 3:
-                return "cat. 2";
-
-            case 4:
-                return "cat. 1";
-
-            case 5:
-                return "HC";
-
-            default:
-                return "";
-        }
+        return switch (climbCategory) {
+            case 1 -> "cat. 4";
+            case 2 -> "cat. 3";
+            case 3 -> "cat. 2";
+            case 4 -> "cat. 1";
+            case 5 -> "HC";
+            default -> "";
+        };
     }
 
     protected static void storeJSONData(JSONObject jsonObject) {

@@ -248,19 +248,11 @@ public abstract class BaseExporter {
         String workoutName = exportInfo.getFileBaseName();
         FileFormat format = exportInfo.getFileFormat();
         ExportType type = exportInfo.getExportType();
-        int notification_format_id = R.string.notification_export_unknown;
-
-        switch (type) {
-            case FILE:
-                notification_format_id = R.string.notification_export_file;
-                break;
-            case DROPBOX:
-                notification_format_id = R.string.notification_export_dropbox;
-                break;
-            case COMMUNITY:
-                notification_format_id = R.string.notification_export_community;
-                break;
-        }
+        int notification_format_id = switch (type) {
+            case FILE -> R.string.notification_export_file;
+            case DROPBOX -> R.string.notification_export_dropbox;
+            case COMMUNITY -> R.string.notification_export_community;
+        };
 
         return mContext.getString(notification_format_id,
                 mContext.getString(getAction().getIngId()),
@@ -273,19 +265,11 @@ public abstract class BaseExporter {
         String workoutName = exportInfo.getFileBaseName();
         FileFormat format = exportInfo.getFileFormat();
         ExportType type = exportInfo.getExportType();
-        int notification_format_id = R.string.notification_finished_unknown;
-
-        switch (type) {
-            case FILE:
-                notification_format_id = R.string.notification_finished_file;
-                break;
-            case DROPBOX:
-                notification_format_id = R.string.notification_finished_dropbox;
-                break;
-            case COMMUNITY:
-                notification_format_id = R.string.notification_finished_community;
-                break;
-        }
+        int notification_format_id = switch (type) {
+            case FILE -> R.string.notification_finished_file;
+            case DROPBOX -> R.string.notification_finished_dropbox;
+            case COMMUNITY -> R.string.notification_finished_community;
+        };
 
         return mContext.getString(notification_format_id,
                 mContext.getString(getAction().getPastId()),

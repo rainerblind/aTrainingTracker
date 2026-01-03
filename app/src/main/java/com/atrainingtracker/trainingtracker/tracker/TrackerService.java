@@ -643,17 +643,11 @@ public class TrackerService extends Service {
                 String queryKey = key.replace("'", "");
                 if (cursor.getColumnIndex(queryKey) < 0) {  // column is really missing
                     if (DEBUG) Log.i(TAG, "column " + key + " is missing.  Adding it.");
-                    String type = "";
-                    switch (sensorName2Type.get(key)) {
-                        case INTEGER:
-                            type = "int";
-                            break;
-                        case DOUBLE:
-                            type = "double";
-                            break;
-                        default:
-                            type = "text";
-                    }
+                    String type = switch (sensorName2Type.get(key)) {
+                        case INTEGER -> "int";
+                        case DOUBLE -> "double";
+                        default -> "text";
+                    };
 
                     String sqlCommand = "ALTER TABLE " + mSamplesTableName + " ADD COLUMN " + key + " " + type + " null;";
                     if (DEBUG) Log.i(TAG, "sql command: " + sqlCommand);
