@@ -646,7 +646,7 @@ public class WorkoutSummariesDatabaseManager {
                 stringBuilder.append("2");
                 stringBuilder.append(endLocation.name);
             } else { // a loop
-                stringBuilder.append(SportTypeDatabaseManager.getUIName(sportTypeId) + "@" + startLocation.name);
+                stringBuilder.append(SportTypeDatabaseManager.getUIName(sportTypeId)).append("@").append(startLocation.name);
             }
 
             String baseName = stringBuilder.toString();
