@@ -115,13 +115,13 @@ public class ExportWorkoutWorker extends Worker {
                             case STRAVA:
                                 exporter = new TCXFileExporter(mContext);
                                 break;
-                            case RUNKEEPER:
+                            /* case RUNKEEPER:
                                 exporter = new RunkeeperFileExporter(mContext);
-                                break;
-                            case TRAINING_PEAKS:
+                                break; */
+                            /* case TRAINING_PEAKS:
                                 exporter = new TCXFileExporter(mContext);
                                 // exporter = new TrainingPeaksFileExporter(mContext);
-                                break;
+                                break; */
                         }
                         break;
 
@@ -137,12 +137,12 @@ public class ExportWorkoutWorker extends Worker {
                                 case STRAVA:
                                     exporter = new StravaUploader(mContext);
                                     break;
-                                case RUNKEEPER:
+                                /* case RUNKEEPER:
                                     exporter = new RunkeeperUploader(mContext);
-                                    break;
-                                case TRAINING_PEAKS:
+                                    break; */
+                                /* case TRAINING_PEAKS:
                                     exporter = new TrainingPeaksUploader(mContext);
-                                    break;
+                                    break; */
                                 default:
                                     // exporter remains null
                                     break;

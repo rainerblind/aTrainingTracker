@@ -276,14 +276,14 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
                 if (DEBUG) Log.i(TAG, "uploading to Strava selected");
                 mShowWorkoutDetailsListener.exportWorkout(info.id, FileFormat.STRAVA);
                 return true;
-            case R.id.runkeeperUpload:
+            /* case R.id.runkeeperUpload:
                 if (DEBUG) Log.i(TAG, "uploading to RunKeeper selected");
                 mShowWorkoutDetailsListener.exportWorkout(info.id, FileFormat.RUNKEEPER);
-                return true;
-            case R.id.trainingPeaksUpload:
+                return true; */
+            /* case R.id.trainingPeaksUpload:
                 if (DEBUG) Log.i(TAG, "uploading to TrainingPeaks selected");
                 mShowWorkoutDetailsListener.exportWorkout(info.id, FileFormat.TRAINING_PEAKS);
-                return true;
+                return true; */
             default:
                 return super.onContextItemSelected(item);
         }

@@ -42,7 +42,7 @@ public class CloudUploadFragment extends androidx.preference.PreferenceFragmentC
     private static final String TAG = CloudUploadFragment.class.getName();
 
     private CheckBoxPreference mDropboxUpload;
-    private PreferenceScreen mPSStrava, mPSRunkeeper, mPSTrainingPeaks, mPSEmailUpload;
+    private PreferenceScreen mPSStrava, /* mPSRunkeeper, mPSTrainingPeaks, */ mPSEmailUpload;
 
     private SharedPreferences mSharedPreferences;
 
@@ -57,8 +57,8 @@ public class CloudUploadFragment extends androidx.preference.PreferenceFragmentC
         mDropboxUpload = this.getPreferenceScreen().findPreference(TrainingApplication.SP_UPLOAD_TO_DROPBOX);
 
         mPSStrava = this.getPreferenceScreen().findPreference(TrainingApplication.PREFERENCE_SCREEN_STRAVA);
-        mPSRunkeeper = this.getPreferenceScreen().findPreference(TrainingApplication.PREFERENCE_SCREEN_RUNKEEPER);
-        mPSTrainingPeaks = this.getPreferenceScreen().findPreference(TrainingApplication.PREFERENCE_SCREEN_TRAINING_PEAKS);
+        // mPSRunkeeper = this.getPreferenceScreen().findPreference(TrainingApplication.PREFERENCE_SCREEN_RUNKEEPER);
+        // mPSTrainingPeaks = this.getPreferenceScreen().findPreference(TrainingApplication.PREFERENCE_SCREEN_TRAINING_PEAKS);
         mPSEmailUpload = this.getPreferenceScreen().findPreference(TrainingApplication.PREFERENCE_SCREEN_EMAIL_UPLOAD);
     }
 
@@ -68,8 +68,8 @@ public class CloudUploadFragment extends androidx.preference.PreferenceFragmentC
         if (DEBUG) Log.i(TAG, "onResume()");
 
         mPSStrava.setSummary(getPSStravaSummary());
-        mPSRunkeeper.setSummary(getPSRunkeeperSummary());
-        mPSTrainingPeaks.setSummary(getPSTrainingPeaksSummary());
+        // mPSRunkeeper.setSummary(getPSRunkeeperSummary());
+        // mPSTrainingPeaks.setSummary(getPSTrainingPeaksSummary());
         mPSEmailUpload.setSummary(getPSEmailUploadSummary());
 
         if (TrainingApplication.uploadToDropbox() && !TrainingApplication.hasDropboxToken()) {
