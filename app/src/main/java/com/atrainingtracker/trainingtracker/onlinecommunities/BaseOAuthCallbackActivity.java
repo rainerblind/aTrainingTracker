@@ -180,8 +180,7 @@ public abstract class BaseOAuthCallbackActivity extends Activity {
             }
         }
 
-        String responseStr = responseBuilder.toString();
-        return responseStr;
+        return responseBuilder.toString();
     }
 
     protected void onJsonResponse(JSONObject json) {}

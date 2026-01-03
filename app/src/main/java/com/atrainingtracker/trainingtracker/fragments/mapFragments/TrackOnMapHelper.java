@@ -201,7 +201,7 @@ public class TrackOnMapHelper {
         return trackData;
     }
 
-    private boolean calcTrackData(long workoutId, Roughness roughness, TrackType trackType) {
+    private void calcTrackData(long workoutId, Roughness roughness, TrackType trackType) {
         if (DEBUG)
             Log.i(TAG, "calcTrackData for workoutId=" + workoutId + ", roughness=" + roughness.name() + ", trackType=" + trackType.name());
         if (DEBUG) Log.i(TAG, "sensorTypeLatitude=" + trackType.getLatitudeName());
@@ -219,7 +219,6 @@ public class TrackOnMapHelper {
             mTrackCache.get(roughness).get(trackType).put(workoutId, new TrackData(polylineOptions, getLatLngBounds(polylineOptions)));
         }
 
-        return true;
     }
 
     public enum TrackType {
@@ -259,8 +258,8 @@ public class TrackOnMapHelper {
     }
 
     private static class TrackData {
-        PolylineOptions polylineOptions;
-        LatLngBounds latLngBounds;
+        final PolylineOptions polylineOptions;
+        final LatLngBounds latLngBounds;
 
         TrackData(PolylineOptions polylineOptions, LatLngBounds latLngBounds) {
             this.polylineOptions = polylineOptions;
@@ -268,12 +267,12 @@ public class TrackOnMapHelper {
         }
     }
     private class TrackOnMapThread extends Thread {
-        MyMapViewHolder myMapViewHolder;
-        long workoutId;
-        Roughness roughness;
-        TrackType trackType;
-        boolean zoomToMap;
-        boolean animateZoom;
+        final MyMapViewHolder myMapViewHolder;
+        final long workoutId;
+        final Roughness roughness;
+        final TrackType trackType;
+        final boolean zoomToMap;
+        final boolean animateZoom;
 
         public TrackOnMapThread(MyMapViewHolder myMapViewHolder, long workoutId, Roughness roughness, TrackType trackType, boolean zoomToMap, boolean animateZoom) {
             this.myMapViewHolder = myMapViewHolder;

@@ -217,13 +217,13 @@ public class TrainingApplication extends Application {
     private final HashMap<Long, Boolean> mSegmentListUpdating = new HashMap<>();
     private final HashMap<Long, Boolean> mLeaderboardUpdating = new HashMap<>();
     private long mWorkoutID = -1;
-    protected BroadcastReceiver mTrackingStartedReceiver = new BroadcastReceiver() {
+    protected final BroadcastReceiver mTrackingStartedReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
             setWorkoutID(intent.getLongExtra(WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_ID, -1));
         }
     };
     private Watchapp startedWatchapp = null;
-    protected BroadcastReceiver mTrackingStoppedReceiver = new BroadcastReceiver() {
+    protected final BroadcastReceiver mTrackingStoppedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             trackingStopped();
@@ -231,7 +231,6 @@ public class TrainingApplication extends Application {
     };
     private NotificationManagerCompat mNotificationManager;
     private NotificationCompat.Builder mTrackingAndSearchingNotificationBuilder;
-    private PendingIntent mStartMainActivityPendingIntent;
     private String mNotificationSummary = "searching";
     private final DistanceFormatter mDistanceFormatter = new DistanceFormatter();
 
@@ -247,25 +246,25 @@ public class TrainingApplication extends Application {
         return DEBUG && defaultVal;
     }
 
-    protected BroadcastReceiver mStartTrackingReceiver = new BroadcastReceiver() {
+    protected final BroadcastReceiver mStartTrackingReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             startTracking();
         }
     };
-    protected BroadcastReceiver mStopTrackingReceiver = new BroadcastReceiver() {
+    protected final BroadcastReceiver mStopTrackingReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             stopTracking();
         }
     };
-    protected BroadcastReceiver mPauseTrackingReceiver = new BroadcastReceiver() {
+    protected final BroadcastReceiver mPauseTrackingReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             pauseTracking();
         }
     };
-    protected BroadcastReceiver mResumeFromPaused = new BroadcastReceiver() {
+    protected final BroadcastReceiver mResumeFromPaused = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             resumeFromPaused();
@@ -770,7 +769,6 @@ public class TrainingApplication extends Application {
                 return uploadToRunKeeper(); */
             /* case TRAINING_PEAKS:
                 return uploadToTrainingPeaks(); */
-            default -> false;
         };
     }
 
@@ -895,7 +893,7 @@ public class TrainingApplication extends Application {
         newIntent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
         newIntent.putExtras(bundle);
         newIntent.setAction("TrackerService");
-        mStartMainActivityPendingIntent = PendingIntent.getActivity(this, 0, newIntent, PendingIntent.FLAG_IMMUTABLE);  // TODO: correct???
+        PendingIntent mStartMainActivityPendingIntent = PendingIntent.getActivity(this, 0, newIntent, PendingIntent.FLAG_IMMUTABLE);  // TODO: correct???
 
         return new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL__TRACKING_2)
                 .setSmallIcon(R.drawable.logo)

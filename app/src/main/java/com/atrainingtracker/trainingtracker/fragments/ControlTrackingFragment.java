@@ -54,7 +54,7 @@ public class ControlTrackingFragment extends BaseTrackingFragment {
     private final IntentFilter mStartTrackingFilter = new IntentFilter();
     protected RemoteDevicesSettingsInterface mRemoteDevicesSettingsInterface;
     protected StartOrResumeInterface mStartOrResumeInterface;
-    protected BroadcastReceiver mUpdateResearchReceiver = new BroadcastReceiver() {
+    protected final BroadcastReceiver mUpdateResearchReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             updateResearchButton();
@@ -69,7 +69,7 @@ public class ControlTrackingFragment extends BaseTrackingFragment {
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // BroadcastReceivers
     ////////////////////////////////////////////////////////////////////////////////////////////////
-    protected BroadcastReceiver mStartTrackingReceiver = new BroadcastReceiver() {
+    protected final BroadcastReceiver mStartTrackingReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             // showStartLayout();
@@ -81,7 +81,7 @@ public class ControlTrackingFragment extends BaseTrackingFragment {
             disableResumeAndStopLayout();
         }
     };
-    protected BroadcastReceiver mPauseTrackingReceiver = new BroadcastReceiver() {
+    protected final BroadcastReceiver mPauseTrackingReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             // showStartLayout();
@@ -93,7 +93,7 @@ public class ControlTrackingFragment extends BaseTrackingFragment {
             // disableResumeAndStopLayout();
         }
     };
-    protected BroadcastReceiver mStopTrackingReceiver = new BroadcastReceiver() {
+    protected final BroadcastReceiver mStopTrackingReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             showStartLayout();

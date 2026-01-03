@@ -67,12 +67,12 @@ public class EditFieldDialog extends DialogFragment {
     private static final String SENSOR_TYPE = "SENSOR_TYPE";
     private static final String DEVICE_ID = "DEVICE_ID";
     private static final String TEXT_SIZE = "TEXT_SIZE";
-    protected IntentFilter mFilterChangedFilter = new IntentFilter(ConfigureFilterDialogFragment.FILTERS_CHANGED_INTENT);
+    protected final IntentFilter mFilterChangedFilter = new IntentFilter(ConfigureFilterDialogFragment.FILTERS_CHANGED_INTENT);
     private ActivityType mActivityType;
     private View mMainView;
     private long mRowId;
     private SensorType mSensorType;
-    BroadcastReceiver mFilterChangedReceiver = new BroadcastReceiver() {
+    final BroadcastReceiver mFilterChangedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             configureConfigureFilterButton(mMainView);

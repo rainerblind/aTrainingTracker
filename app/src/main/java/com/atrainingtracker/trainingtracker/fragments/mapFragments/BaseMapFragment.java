@@ -42,7 +42,6 @@ import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 
 import java.util.List;
@@ -154,13 +153,13 @@ public abstract class BaseMapFragment
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // some helpers to add markers
-    ////////////////////////////////////////////////////////////////////////////////////////////////
-    protected Marker addMarker(LatLng position, int drawableId, String title) {
-        if (position == null) return null;
+    /// /////////////////////////////////////////////////////////////////////////////////////////////
+    protected void addMarker(LatLng position, int drawableId, String title) {
+        if (position == null) return;
 
         Bitmap marker = ((BitmapDrawable) ResourcesCompat.getDrawable(getResources(), drawableId, null)).getBitmap();
 
-        return mMap.addMarker(new MarkerOptions()
+        mMap.addMarker(new MarkerOptions()
                 .position(position)
                 .title(title)
                 .icon(BitmapDescriptorFactory.fromBitmap(marker)));
@@ -181,13 +180,13 @@ public abstract class BaseMapFragment
                 .icon(BitmapDescriptorFactory.fromBitmap(scaledMarker)));
     }
 
-    protected Polyline addPolyline(List<LatLng> latLngs, int color) {
+    protected void addPolyline(List<LatLng> latLngs, int color) {
         if (DEBUG) Log.i(TAG, "addPolyline");
 
         PolylineOptions polylineOptions = new PolylineOptions().color(color);
         polylineOptions.addAll(latLngs);
 
-        return mMap.addPolyline(polylineOptions);
+        mMap.addPolyline(polylineOptions);
     }
 
 

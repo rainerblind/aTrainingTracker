@@ -84,9 +84,9 @@ public class StartAndTrackingFragmentTabbedContainer extends Fragment {
     ViewPager mViewPager;
     ActivityType mActivityType = null; // ActivityType.getDefaultActivityType();
     int mSelectedItemNr = CONTROL_ITEM;
-    LinkedList<Integer> mViewIdList = new LinkedList<>();
-    LinkedList<String> mTitleList = new LinkedList<>();
-    BroadcastReceiver mTrackingStartedReceiver = new BroadcastReceiver() {
+    final LinkedList<Integer> mViewIdList = new LinkedList<>();
+    final LinkedList<String> mTitleList = new LinkedList<>();
+    final BroadcastReceiver mTrackingStartedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
 
@@ -94,7 +94,7 @@ public class StartAndTrackingFragmentTabbedContainer extends Fragment {
             mViewPager.setCurrentItem(1);
         }
     };
-    BroadcastReceiver mTrackingFinishedReceiver = new BroadcastReceiver() {
+    final BroadcastReceiver mTrackingFinishedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
 
@@ -102,7 +102,7 @@ public class StartAndTrackingFragmentTabbedContainer extends Fragment {
             mViewPager.setCurrentItem(0);
         }
     };
-    BroadcastReceiver mLapSummaryReceiver = new BroadcastReceiver() {
+    final BroadcastReceiver mLapSummaryReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             showLapSummaryDialog(intent.getIntExtra(BANALService.PREV_LAP_NR, 0),
@@ -111,14 +111,14 @@ public class StartAndTrackingFragmentTabbedContainer extends Fragment {
                     intent.getStringExtra(BANALService.PREV_LAP_SPEED_STRING));
         }
     };
-    BroadcastReceiver mPauseChangedReceiver = new BroadcastReceiver() {
+    final BroadcastReceiver mPauseChangedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             // get a new title for the first fragment
             mSectionsPagerAdapter.notifyDataSetChanged(); // hope this makes the job
         }
     };
-    BroadcastReceiver mUpdateActivityTypeReceiver = new BroadcastReceiver() {
+    final BroadcastReceiver mUpdateActivityTypeReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             if (DEBUG) Log.i(TAG, "update activity type");

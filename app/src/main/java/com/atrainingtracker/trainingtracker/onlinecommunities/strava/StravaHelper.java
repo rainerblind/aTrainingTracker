@@ -226,7 +226,7 @@ public class StravaHelper {
     }
 
     static class GetAthleteIdFromStravaThread extends Thread {
-        Context mContext;
+        final Context mContext;
 
         GetAthleteIdFromStravaThread(Context context) {
             mContext = context;

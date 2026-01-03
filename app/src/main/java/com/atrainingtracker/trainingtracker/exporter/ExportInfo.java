@@ -21,9 +21,9 @@ package com.atrainingtracker.trainingtracker.exporter;
 import java.io.File;
 
 public class ExportInfo {
-    protected String mFileBaseName;
-    protected FileFormat mFileFormat;
-    protected ExportType mExportType;
+    protected final String mFileBaseName;
+    protected final FileFormat mFileFormat;
+    protected final ExportType mExportType;
 
     public ExportInfo(String fileBaseName, FileFormat fileFormat, ExportType exportType) {
         mFileBaseName = fileBaseName;

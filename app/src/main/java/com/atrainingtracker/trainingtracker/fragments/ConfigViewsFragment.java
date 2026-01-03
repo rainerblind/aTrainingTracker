@@ -62,8 +62,8 @@ public abstract class ConfigViewsFragment extends Fragment {
     protected int mCurrentItem = -1;
     protected LinkedList<Long> mViewIdList = new LinkedList<>();
     protected LinkedList<String> mTitleList = new LinkedList<>();
-    protected HashMap<Long, Integer> mViewId2Position = new HashMap<>();
-    protected HashMap<Integer, Long> mPosition2ViewId = new HashMap<>();
+    protected final HashMap<Long, Integer> mViewId2Position = new HashMap<>();
+    protected final HashMap<Integer, Long> mPosition2ViewId = new HashMap<>();
     /**
      * The {@link PagerAdapter} that will provide
      * fragments for each of the sections. We use a
@@ -80,7 +80,7 @@ public abstract class ConfigViewsFragment extends Fragment {
      */
     ViewPager mViewPager;
     Button mDeleteButton;
-    BroadcastReceiver mNameChangedReceiver = new BroadcastReceiver() {
+    final BroadcastReceiver mNameChangedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
 

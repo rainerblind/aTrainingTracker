@@ -53,7 +53,7 @@ public class PebbleServiceBuildIn extends Service {
     protected final IntentFilter mUpdatePebbleFilter = new IntentFilter(BANALService.NEW_TIME_EVENT_INTENT);
     protected final IntentFilter mPebbleConnectedFilter = new IntentFilter("com.getpebble.action.PEBBLE_CONNECTED");
     // Pebble helpers
-    protected BroadcastReceiver mPebbleConnectedReceiver = new BroadcastReceiver() {
+    protected final BroadcastReceiver mPebbleConnectedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             if (DEBUG) Log.d(TAG, "pebble became connected");

@@ -120,8 +120,8 @@ public class TrackOnMapTrackingAndFollowingFragment
         private final Criteria criteria = new Criteria();
         /* Updates are restricted to one every halve seconds, and only when
          * movement of more than 1 meters has been detected.*/
-        private final int minTime = 500;     // minimum time interval between location updates, in milliseconds
-        private final int minDistance = 1;    // minimum distance between location updates, in meters
+        private static final int minTime = 500;     // minimum time interval between location updates, in milliseconds
+        private static final int minDistance = 1;    // minimum distance between location updates, in meters
         private OnLocationChangedListener mListener;
         private final LocationManager locationManager;
         private String bestAvailableProvider;

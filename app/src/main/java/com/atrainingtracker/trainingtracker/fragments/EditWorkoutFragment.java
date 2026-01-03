@@ -161,15 +161,14 @@ public class EditWorkoutFragment extends Fragment {
     protected ReallyDeleteDialogInterface mReallyDeleteDialogInterface;
     private long mWorkoutID;
 
-    // all the interactive views
-    private Button buttonSaveWorkout, buttonDeleteWorkout, buttonFancyName;
+    private Button buttonDeleteWorkout;
     private Spinner spinnerSport, spinnerEquipment;
     private EditText editExportName, editGoal, editMethod, editDescription;
     private TextView tvEquipment;
     private RadioGroup rgCommuteTrainer;
     private RadioButton rbCommute, rbTrainer;
     private boolean radioButtonAlreadyChecked = false;  // necessary to allow deselect of the radio buttons within the group for Commute and Trainer
-    private final double MAX_WORKOUT_TIME_TO_SHOW_DELETE_BUTTON = 10 * 60;  // 10 min
+    private static final double MAX_WORKOUT_TIME_TO_SHOW_DELETE_BUTTON = 10 * 60;  // 10 min
     private String ALL = "all";
     private boolean mPaceExtremaValuesAvailable = false;
 
@@ -252,9 +251,10 @@ public class EditWorkoutFragment extends Fragment {
         View view = inflater.inflate(R.layout.edit_workout, container, false);
 
         // find interactive views
-        buttonSaveWorkout = view.findViewById(R.id.buttonSaveWorkout);
+        // all the interactive views
+        Button buttonSaveWorkout = view.findViewById(R.id.buttonSaveWorkout);
         buttonDeleteWorkout = view.findViewById(R.id.buttonDeleteWorkout);
-        buttonFancyName = view.findViewById(R.id.buttonFancyName);
+        Button buttonFancyName = view.findViewById(R.id.buttonFancyName);
 
         spinnerSport = view.findViewById(R.id.spinnerSport);
         spinnerEquipment = view.findViewById(R.id.spinnerEquipment);

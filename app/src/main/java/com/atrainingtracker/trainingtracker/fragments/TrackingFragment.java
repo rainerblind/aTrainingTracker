@@ -24,7 +24,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
 
-import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 
 import android.util.Log;
@@ -80,7 +79,7 @@ public class TrackingFragment extends BaseTrackingFragment {
 
     // protected List<TvSensorType> mLTvSensorType;  // contains all the TvSensorTypes
     protected HashMap<String, TvSensorType> mHashMapTextViews = new HashMap<>(); // HashMap<String, TvSensorType>   for the TextViews and SensorType
-    protected HashMap<String, String> mHashMapValues = new HashMap<>();     // HashMap<String, String>     for the values
+    protected final HashMap<String, String> mHashMapValues = new HashMap<>();     // HashMap<String, String>     for the values
     protected LinearLayout mLLSensors;
     protected FrameLayout mMapContainer;
     protected Button mButtonLap;
@@ -90,13 +89,13 @@ public class TrackingFragment extends BaseTrackingFragment {
 
     // protected String mUnitSpeed, mUnitPace, mUnitDistance;
     protected TrackOnMapTrackingFragment mTrackOnMapTrackingFragment = null;
-    BroadcastReceiver mNewTimeEventReceiver = new BroadcastReceiver() {
+    final BroadcastReceiver mNewTimeEventReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             doDisplayUpdate();
         }
     };
-    BroadcastReceiver mTrackingViewChangedReceiver = new BroadcastReceiver() {
+    final BroadcastReceiver mTrackingViewChangedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             updateSensorFields();
@@ -575,8 +574,8 @@ public class TrackingFragment extends BaseTrackingFragment {
     public enum Mode {TRACKING, PREVIEW}
 
     protected static class TvSensorType {
-        protected TextView textView;
-        protected SensorType sensorType;
+        protected final TextView textView;
+        protected final SensorType sensorType;
 
         public TvSensorType(TextView textView, SensorType sensorType) {
             this.textView = textView;

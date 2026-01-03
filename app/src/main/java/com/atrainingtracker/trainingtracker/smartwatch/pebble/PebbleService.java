@@ -268,7 +268,7 @@ public class PebbleService extends Service {
         }
     };
     // Pebble helpers
-    protected BroadcastReceiver mPebbleConnectedReceiver = new BroadcastReceiver() {
+    protected final BroadcastReceiver mPebbleConnectedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             if (DEBUG) Log.d(TAG, "pebble became connected");

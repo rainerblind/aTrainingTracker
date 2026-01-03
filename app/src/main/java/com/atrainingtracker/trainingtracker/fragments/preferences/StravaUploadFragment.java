@@ -26,7 +26,6 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-import androidx.preference.CheckBoxPreference;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceManager;
 import android.util.Log;
@@ -49,7 +48,6 @@ public class StravaUploadFragment extends androidx.preference.PreferenceFragment
     public static final int GET_STRAVA_ACCESS_TOKEN = 3;
     private static final boolean DEBUG = TrainingApplication.getDebug(true);
     private static final String TAG = StravaUploadFragment.class.getName();
-    private CheckBoxPreference mStravaUpload;
     private Preference mUpdateStravaEquipment;
 
     private SharedPreferences mSharedPreferences;
@@ -75,7 +73,6 @@ public class StravaUploadFragment extends androidx.preference.PreferenceFragment
 
         setPreferencesFromResource(R.xml.prefs, rootKey);
 
-        mStravaUpload = this.getPreferenceScreen().findPreference(TrainingApplication.SP_UPLOAD_TO_STRAVA);
         mUpdateStravaEquipment = this.getPreferenceScreen().findPreference(TrainingApplication.UPDATE_STRAVA_EQUIPMENT);
 
         LocalBroadcastManager.getInstance(getActivity()).registerReceiver(tokenReceiver, new IntentFilter(StravaOAuthCallbackActivity.StravaOAuthSuccess));

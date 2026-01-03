@@ -52,8 +52,8 @@ public class TrackOnMapAftermathFragment
     private final IntentFilter mFinishedCalculatingExtremaValueFilter = new IntentFilter(CalcExtremaValuesThread.FINISHED_CALCULATING_EXTREMA_VALUE);
 
     // for these SensorTypes we want to add extrema markers
-    protected SensorType[] mExtremaSensorTypes = {SensorType.ALTITUDE, SensorType.CADENCE, SensorType.HR, SensorType.LINE_DISTANCE_m, SensorType.POWER, SensorType.SPEED_mps, SensorType.TEMPERATURE, SensorType.TORQUE};
-    BroadcastReceiver mFinishedCalculatingExtremaValueReceiver = new BroadcastReceiver() {
+    protected final SensorType[] mExtremaSensorTypes = {SensorType.ALTITUDE, SensorType.CADENCE, SensorType.HR, SensorType.LINE_DISTANCE_m, SensorType.POWER, SensorType.SPEED_mps, SensorType.TEMPERATURE, SensorType.TORQUE};
+    final BroadcastReceiver mFinishedCalculatingExtremaValueReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             SensorType sensorType = SensorType.valueOf(intent.getStringExtra(CalcExtremaValuesThread.SENSOR_TYPE));

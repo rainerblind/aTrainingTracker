@@ -58,7 +58,7 @@ public class FancyWorkoutNameListFragment
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
     protected Cursor mCursor;
     protected SimpleCursorAdapter mAdapter;
-    protected IntentFilter mFancyWorkoutNamesChangedFilter = new IntentFilter(EditFancyWorkoutNameDialog.FANCY_WORKOUT_NAME_CHANGED_INTENT);
+    protected final IntentFilter mFancyWorkoutNamesChangedFilter = new IntentFilter(EditFancyWorkoutNameDialog.FANCY_WORKOUT_NAME_CHANGED_INTENT);
 
     // onAttach
 
@@ -81,7 +81,7 @@ public class FancyWorkoutNameListFragment
     // onDestroy
 
     // onDetach
-    BroadcastReceiver mFancyWorkoutNamesChangedReceiver = new BroadcastReceiver() {
+    final BroadcastReceiver mFancyWorkoutNamesChangedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             mCursor.requery();

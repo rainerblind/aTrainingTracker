@@ -54,9 +54,9 @@ public class SegmentLeaderboardListFragment extends SwipeRefreshListFragment {
     protected long mSegmentId;
     protected StravaSegmentsHelper mStravaSegmentsHelper;
 
-    protected IntentFilter mLeaderboardUpdateCompleteFilter = new IntentFilter(StravaSegmentsIntentService.LEADERBOARD_UPDATE_COMPLETE_INTENT);
-    protected IntentFilter mNewLeaderboardEntryFilter = new IntentFilter(StravaSegmentsIntentService.NEW_LEADERBOARD_ENTRY_INTENT);
-    protected BroadcastReceiver mLeaderboardUpdateCompleteReceiver = new BroadcastReceiver() {
+    protected final IntentFilter mLeaderboardUpdateCompleteFilter = new IntentFilter(StravaSegmentsIntentService.LEADERBOARD_UPDATE_COMPLETE_INTENT);
+    protected final IntentFilter mNewLeaderboardEntryFilter = new IntentFilter(StravaSegmentsIntentService.NEW_LEADERBOARD_ENTRY_INTENT);
+    protected final BroadcastReceiver mLeaderboardUpdateCompleteReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             long segmentId = intent.getLongExtra(Segments.SEGMENT_ID, -1);
@@ -71,7 +71,7 @@ public class SegmentLeaderboardListFragment extends SwipeRefreshListFragment {
             }
         }
     };
-    BroadcastReceiver mNewLeaderboardEntryReceiver = new BroadcastReceiver() {
+    final BroadcastReceiver mNewLeaderboardEntryReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             if (DEBUG) Log.i(TAG, "newLeaderboardEntry");

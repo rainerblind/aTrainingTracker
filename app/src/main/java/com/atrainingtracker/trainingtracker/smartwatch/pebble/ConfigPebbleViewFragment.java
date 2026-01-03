@@ -52,7 +52,7 @@ public class ConfigPebbleViewFragment extends ConfigViewFragment {
     protected static SensorArrayAdapter SENSOR_ARRAY_ADAPTER;
 
     protected SensorType[] mSensorTypes = ActivityType.getSensorTypeArray(ActivityType.GENERIC, null);
-    protected List<Spinner> mSensorTypeSpinners = new LinkedList<Spinner>();
+    protected final List<Spinner> mSensorTypeSpinners = new LinkedList<Spinner>();
 
     // protected ActivityType mActivityType;
     // protected long mViewId;

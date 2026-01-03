@@ -444,7 +444,7 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
         private final String TAG = WorkoutSummaryWithMapAdapter.class.getName();
         private final boolean DEBUG = TrainingApplication.getDebug(true);
 
-        protected Context mContext;
+        protected final Context mContext;
 
         protected ShowWorkoutDetailsInterface mUpdateWorkoutListener;
 
