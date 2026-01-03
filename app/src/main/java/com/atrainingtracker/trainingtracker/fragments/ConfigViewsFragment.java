@@ -231,7 +231,7 @@ public abstract class ConfigViewsFragment extends Fragment {
         if (mCurrentItem >= 0) {
             if (DEBUG) Log.i(TAG, "setCurrentItem based on mCurrentItem=" + mCurrentItem);
             mViewPager.setCurrentItem(mCurrentItem);
-        } else if (mViewId >= 0 && mViewId2Position != null && mViewId2Position.get(mViewId) != null) {
+        } else if (mViewId >= 0 && mViewId2Position.get(mViewId) != null) {
             if (DEBUG)
                 Log.i(TAG, "setCurrentItem based on mViewId2Position and mViewId=" + mViewId);
             mViewPager.setCurrentItem(mViewId2Position.get(mViewId));
