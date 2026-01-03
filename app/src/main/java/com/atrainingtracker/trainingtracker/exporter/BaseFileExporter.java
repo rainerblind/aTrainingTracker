@@ -94,7 +94,7 @@ public abstract class BaseFileExporter extends BaseExporter {
                 haveHR = haveHR & TrainingApplication.uploadStravaHR();
                 havePower = havePower & TrainingApplication.uploadStravaPower();
                 haveCadence = haveCadence & TrainingApplication.uploadStravaCadence();
-            } else if (exportInfo.getFileFormat() == FileFormat.RUNKEEPER) {
+            } /* else if (exportInfo.getFileFormat() == FileFormat.RUNKEEPER) {
                 haveGeo = haveGeo & TrainingApplication.uploadRunkeeperGPS();
                 haveHR = haveHR & TrainingApplication.uploadRunkeeperHR();
             } else if (exportInfo.getFileFormat() == FileFormat.TRAINING_PEAKS) {
@@ -104,7 +104,7 @@ public abstract class BaseFileExporter extends BaseExporter {
                 haveHR = haveHR & TrainingApplication.uploadTrainingPeaksHR();
                 havePower = havePower & TrainingApplication.uploadTrainingPeaksPower();
                 haveCadence = haveCadence & TrainingApplication.uploadTrainingPeaksCadence();
-            }
+            } */
         }
 
         BSportType bSportType = SportTypeDatabaseManager.getBSportType(sportTypeId);
