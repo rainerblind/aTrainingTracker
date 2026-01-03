@@ -28,6 +28,8 @@ import android.content.ServiceConnection;
 import android.os.IBinder;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 
 import com.atrainingtracker.banalservice.BANALService;
@@ -61,9 +63,11 @@ public class PebbleServiceBuildIn extends Service {
         }
     };
     boolean mShowPace = false;
+    @NonNull
     MyUnits mUnits = MyUnits.METRIC;
     // protected final IntentFilter mPauseFilter             = new IntentFilter(BANALService.PAUSE_INTENT);
     // protected final IntentFilter mResumeFilter            = new IntentFilter(BANALService.RESUME_INTENT);
+    @Nullable
     private BANALServiceComm banalService;
     private final BroadcastReceiver mUpdatePebbleReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {

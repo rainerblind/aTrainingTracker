@@ -23,6 +23,9 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper;
@@ -96,12 +99,13 @@ public class StravaUploaderLegacy extends BaseExporter {
     private static final String TRAINER = "trainer";
     private static final String TRUE = "true";
 
-    public StravaUploaderLegacy(Context context) {
+    public StravaUploaderLegacy(@NonNull Context context) {
         super(context);
     }
 
+    @Nullable
     @Override
-    protected ExportResult doExport(ExportInfo exportInfo)
+    protected ExportResult doExport(@NonNull ExportInfo exportInfo)
             throws IOException, JSONException, InterruptedException {
         if (DEBUG) Log.d(TAG, "doExport: " + exportInfo.getFileBaseName() + " ignoring as success, upload is broken.");
 
@@ -249,7 +253,8 @@ public class StravaUploaderLegacy extends BaseExporter {
         }
     }
 
-    protected ExportResult doUpdate(ExportInfo exportInfo) {
+    @NonNull
+    protected ExportResult doUpdate(@NonNull ExportInfo exportInfo) {
         Log.e(TAG, "doUpdate: " + exportInfo.getFileBaseName());
         if (DEBUG) Log.d(TAG, "doUpdate");
         // Strava fields:
@@ -406,7 +411,8 @@ public class StravaUploaderLegacy extends BaseExporter {
 
     }
 
-    protected JSONObject updateStravaActivity(String stravaActivityId, List<NameValuePair> nameValuePairs) {
+    @Nullable
+    protected JSONObject updateStravaActivity(String stravaActivityId, @NonNull List<NameValuePair> nameValuePairs) {
         if (DEBUG) Log.i(TAG, "updateStravaActivity(...)");
         Log.e(TAG, "updateStravaActivity: " + stravaActivityId);
 
@@ -444,6 +450,7 @@ public class StravaUploaderLegacy extends BaseExporter {
         return responseJson;
     }
 
+    @Nullable
     protected JSONObject getStravaActivity(String stravaActivityId) {
         JSONObject responseJson = null;
         Log.e(TAG, "getStravaUploadStatus: " + stravaActivityId);
@@ -477,6 +484,7 @@ public class StravaUploaderLegacy extends BaseExporter {
     }
 
 
+    @Nullable
     protected JSONObject getStravaUploadStatus(String stravaUploadId) {
         JSONObject responseJson = null;
         Log.e(TAG, "getStravaUploadStatus: " + stravaUploadId);
@@ -509,6 +517,7 @@ public class StravaUploaderLegacy extends BaseExporter {
         return responseJson;
     }
 
+    @NonNull
     @Override
     protected Action getAction() {
         return Action.UPLOAD;

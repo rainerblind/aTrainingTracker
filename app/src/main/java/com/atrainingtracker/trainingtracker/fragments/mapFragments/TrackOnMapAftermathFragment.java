@@ -28,6 +28,8 @@ import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.res.ResourcesCompat;
 
@@ -55,12 +57,13 @@ public class TrackOnMapAftermathFragment
     protected final SensorType[] mExtremaSensorTypes = {SensorType.ALTITUDE, SensorType.CADENCE, SensorType.HR, SensorType.LINE_DISTANCE_m, SensorType.POWER, SensorType.SPEED_mps, SensorType.TEMPERATURE, SensorType.TORQUE};
     final BroadcastReceiver mFinishedCalculatingExtremaValueReceiver = new BroadcastReceiver() {
         @Override
-        public void onReceive(Context context, Intent intent) {
+        public void onReceive(Context context, @NonNull Intent intent) {
             SensorType sensorType = SensorType.valueOf(intent.getStringExtra(CalcExtremaValuesThread.SENSOR_TYPE));
             addExtremaMarker(sensorType);
         }
     };
 
+    @NonNull
     public static TrackOnMapAftermathFragment newInstance(long workoutId) {
         TrackOnMapAftermathFragment trackOnMapFragment = new TrackOnMapAftermathFragment();
 
@@ -150,7 +153,7 @@ public class TrackOnMapAftermathFragment
         }
     }
 
-    protected void addExtremaMarker(SensorType sensorType) {
+    protected void addExtremaMarker(@NonNull SensorType sensorType) {
         switch (sensorType) {
             case ALTITUDE:
             case TEMPERATURE:
@@ -171,7 +174,7 @@ public class TrackOnMapAftermathFragment
         }
     }
 
-    protected void addExtremaMarker(SensorType sensorType, ExtremaType extremaType, Integer drawableId) {
+    protected void addExtremaMarker(@NonNull SensorType sensorType, @NonNull ExtremaType extremaType, @Nullable Integer drawableId) {
         if (DEBUG)
             Log.i(TAG, "addExtremaMarkerToMap for " + extremaType.name() + " " + sensorType.name());
         if (mMap == null) {

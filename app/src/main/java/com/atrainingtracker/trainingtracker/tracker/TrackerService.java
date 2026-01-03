@@ -32,6 +32,8 @@ import android.database.sqlite.SQLiteDatabase;
 import android.os.IBinder;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 
 import com.atrainingtracker.banalservice.BANALService;
@@ -87,6 +89,7 @@ public class TrackerService extends Service {
     protected boolean mCreateNewLapWhenConnectedToBanalService = false;
     protected boolean mResumeFromPausedWhenConnectedToBanalService = false;
     protected boolean mResumeTrackingWhenConnectedToBanalService = false;
+    @Nullable
     BANALServiceComm mBanalService;
     private TrainingApplication mTrainingApplication;
     private ScheduledFuture mTrackerHandle;
@@ -102,7 +105,7 @@ public class TrackerService extends Service {
     private int mSamplingTime;
     private long mWorkoutID;
     private final BroadcastReceiver mLapSummaryReceiver = new BroadcastReceiver() {
-        public void onReceive(Context context, Intent intent) {
+        public void onReceive(Context context, @NonNull Intent intent) {
             if (DEBUG) Log.i(TAG, "received lap summary intent");
 
             saveLap(intent.getIntExtra(BANALService.PREV_LAP_NR, 0),
@@ -120,7 +123,7 @@ public class TrackerService extends Service {
     private final BroadcastReceiver mAltitudeCorrectionReceiver = new BroadcastReceiver() {
 
         @Override
-        public void onReceive(Context context, Intent intent) {
+        public void onReceive(Context context, @NonNull Intent intent) {
             double altitudeCorrection = intent.getDoubleExtra(AltitudeFromPressureDevice.ALTITUDE_CORRECTION_VALUE, 0.0);
 
             if (DEBUG)
@@ -223,7 +226,7 @@ public class TrackerService extends Service {
     }
 
     @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
+    public int onStartCommand(@Nullable Intent intent, int flags, int startId) {
         super.onStartCommand(intent, flags, startId);
         if (DEBUG) {
             Log.d(TAG, "onStartCommand Received start id " + startId + ": " + intent);

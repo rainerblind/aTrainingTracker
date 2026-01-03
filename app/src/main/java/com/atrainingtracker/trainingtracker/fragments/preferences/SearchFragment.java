@@ -20,6 +20,9 @@ package com.atrainingtracker.trainingtracker.fragments.preferences;
 
 import android.content.SharedPreferences;
 import android.os.Bundle;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.preference.EditTextPreference;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
@@ -42,7 +45,9 @@ public class SearchFragment extends PreferenceFragmentCompat
 
     private SharedPreferences mSharedPreferences;
 
+    @Nullable
     private EditTextPreference mNumberOfSearchTriesPref;
+    @Nullable
     private Preference mStartSearchPref;
 
     @Override
@@ -111,7 +116,7 @@ public class SearchFragment extends PreferenceFragmentCompat
 
     }
 
-    private String listToString(List<String> listOfString) {
+    private String listToString(@NonNull List<String> listOfString) {
         int size = listOfString.size();
         if (size == 0) {
             return getString(R.string.startSearchOnlyManually);

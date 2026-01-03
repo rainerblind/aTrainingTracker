@@ -24,6 +24,8 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import com.atrainingtracker.R;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 
@@ -44,6 +46,7 @@ public class StravaDeauthorizationThread extends Thread {
     private static final String TAG = "StravaDeauthorizationThread";
     private static final boolean DEBUG = false;
 
+    @NonNull
     private final ProgressDialog progressDialog;
     private final Context mContext;
 

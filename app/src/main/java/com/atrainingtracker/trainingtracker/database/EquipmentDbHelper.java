@@ -26,6 +26,9 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.BaseColumns;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.atrainingtracker.banalservice.BSportType;
 
 import java.util.ArrayList;
@@ -78,13 +81,15 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         mContext = context;
     }
 
+    @NonNull
     public List<String> getLinkedEquipment(int workoutId) {
         if (DEBUG) Log.d(TAG, "getLinkedEquipment, workoutId=" + workoutId);
 
         return getLinkedEquipment(new ActiveDevicesDbHelper(mContext).getDatabaseIdsOfActiveDevices(workoutId));
     }
 
-    protected List<String> getLinkedEquipment(List<Integer> antDeviceIds) {
+    @NonNull
+    protected List<String> getLinkedEquipment(@Nullable List<Integer> antDeviceIds) {
         if (DEBUG) Log.d(TAG, "getLinkedEquipment with antDeviceList");
 
         if (antDeviceIds == null || antDeviceIds.isEmpty()) {
@@ -121,12 +126,14 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         return new ArrayList<>(linkedEquipment);
     }
 
-    public List<String> getEquipment(BSportType sportType) {
+    @NonNull
+    public List<String> getEquipment(@NonNull BSportType sportType) {
         return getEquipment(sportType, 0);
     }
 
 
-    public List<String> getEquipment(BSportType sportType, int frameType) {
+    @NonNull
+    public List<String> getEquipment(@NonNull BSportType sportType, int frameType) {
         if (DEBUG)
             Log.d(TAG, "getEquipment, sportType=" + sportType.name() + "frameType=" + frameType);
 
@@ -167,6 +174,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         return equipmentList;
     }
 
+    @Nullable
     public String getLinkedEquipmentStringFromDeviceId(long deviceId) {
         String equipment = null;
         List<String> equipmentList = getLinkedEquipmentFromDeviceId(deviceId);
@@ -177,6 +185,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         return equipment;
     }
 
+    @NonNull
     public List<String> getLinkedEquipmentFromDeviceId(long deviceId) {
         if (DEBUG) Log.d(TAG, "getLinkedEquipmentFromDeviceId: " + deviceId);
 
@@ -222,7 +231,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     }
 
 
-    public void setEquipmentLinks(int antDeviceId, List<String> equipmentList) {
+    public void setEquipmentLinks(int antDeviceId, @NonNull List<String> equipmentList) {
         if (DEBUG) Log.d(TAG, "setEquipmentLinks: " + antDeviceId);
 
         // first of all, delete all existing links
@@ -246,7 +255,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         if (DEBUG) Log.d(TAG, "inserted");
     }
 
-    private int getEquipmentId(SQLiteDatabase db, String equipmentName) {
+    private int getEquipmentId(@NonNull SQLiteDatabase db, @NonNull String equipmentName) {
         equipmentName.isEmpty();  // throw an exception when equipmentName is null
 
         int equipmentId = -1;
@@ -262,13 +271,14 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         return equipmentId;
     }
 
-    public int getEquipmentId(String equipmentName) {
+    public int getEquipmentId(@NonNull String equipmentName) {
         SQLiteDatabase db = this.getReadableDatabase();
         int equipmentId = getEquipmentId(db, equipmentName);
         db.close();
         return equipmentId;
     }
 
+    @Nullable
     public String getEquipmentFromId(int equipmentId) {
         String equipmentName = null;
 
@@ -287,6 +297,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         return equipmentName;
     }
 
+    @Nullable
     public String getStravaIdFromId(int equipmentId) {
         String stravaId = null;
 
@@ -306,7 +317,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     }
 
     @Override
-    public void onCreate(SQLiteDatabase db) {
+    public void onCreate(@NonNull SQLiteDatabase db) {
         db.execSQL(CREATE_EQUIPMENT_TABLE);
         db.execSQL(CREATE_LINKS_TABLE);
 
@@ -316,7 +327,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     }
 
     @Override
-    public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+    public void onUpgrade(@NonNull SQLiteDatabase db, int oldVersion, int newVersion) {
         // TODO: alter table instead of deleting!
 
         db.execSQL("drop table if exists " + EQUIPMENT);  // drops the old database

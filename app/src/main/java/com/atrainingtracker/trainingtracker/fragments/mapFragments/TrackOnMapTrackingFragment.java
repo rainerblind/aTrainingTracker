@@ -28,6 +28,8 @@ import android.location.LocationManager;
 import android.os.Bundle;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
@@ -53,11 +55,13 @@ public class TrackOnMapTrackingFragment
     private final IntentFilter mNewLocationFilter = new IntentFilter(BANALService.NEW_LOCATION_INTENT);
     private final IntentFilter mTrackingStartedFilter = new IntentFilter(TrackerService.TRACKING_STARTED_INTENT);
 
+    @Nullable
     protected PolylineOptions mPolylineOptions = null;
+    @Nullable
     protected Polyline mPolyline = null;
     final BroadcastReceiver mNewLocationReceiver = new BroadcastReceiver() {
         @Override
-        public void onReceive(Context context, Intent intent) {
+        public void onReceive(Context context, @NonNull Intent intent) {
             if (LocationManager.GPS_PROVIDER.equals(intent.getStringExtra(BANALService.LOCATION_PROVIDER))
                     && intent.hasExtra(BANALService.LATITUDE)
                     && intent.hasExtra(BANALService.LONGITUDE)) {
@@ -77,13 +81,14 @@ public class TrackOnMapTrackingFragment
     ////////////////////////////////////////////////////////////////////////////////////////////////
     final BroadcastReceiver mTrackingStartedReceiver = new BroadcastReceiver() {
         @Override
-        public void onReceive(Context context, Intent intent) {
+        public void onReceive(Context context, @NonNull Intent intent) {
             mWorkoutID = intent.getLongExtra(WorkoutSummaries.WORKOUT_ID, -1);
             showTrackOnMap();
         }
     };
 
     // TODO: does this really make sense when we try to get the workoutId during onResume???
+    @NonNull
     public static TrackOnMapTrackingFragment newInstance() {
         if (DEBUG) Log.i(TAG, "newInstance");
 

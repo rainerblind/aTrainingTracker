@@ -26,6 +26,9 @@ import android.location.LocationManager;
 import android.os.Bundle;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -57,6 +60,7 @@ public class TrackOnMapTrackingAndFollowingFragment
     private FollowMeLocationSource mFollowMeLocationSource;
 
     // TODO: does this really make sense when we try to get the workoutId during onResume???
+    @NonNull
     public static TrackOnMapTrackingAndFollowingFragment newInstance() {
         if (DEBUG) Log.i(TAG, "newInstance");
 
@@ -122,8 +126,10 @@ public class TrackOnMapTrackingAndFollowingFragment
          * movement of more than 1 meters has been detected.*/
         private static final int minTime = 500;     // minimum time interval between location updates, in milliseconds
         private static final int minDistance = 1;    // minimum distance between location updates, in meters
+        @Nullable
         private OnLocationChangedListener mListener;
         private final LocationManager locationManager;
+        @Nullable
         private String bestAvailableProvider;
         // private double mLatitudeFiltered, mLongitudeFiltered;
         // private float mBearingFiltered, mSpeedFiltered;
@@ -180,7 +186,7 @@ public class TrackOnMapTrackingAndFollowingFragment
         }
 
         @Override
-        public void onLocationChanged(Location location) {
+        public void onLocationChanged(@NonNull Location location) {
             /* Push location updates to the registered listener..
              * (this ensures that my-location layer will set the blue dot at the new/received location) */
             if (mListener != null) {
@@ -210,7 +216,8 @@ public class TrackOnMapTrackingAndFollowingFragment
 
         }
 
-        CameraPosition getCameraPosition(Location location) {
+        @NonNull
+        CameraPosition getCameraPosition(@NonNull Location location) {
             // mLatitudeFiltered  = (mLatitudeFiltered  == 0 ? location.getLatitude()  : (mLatitudeFiltered  + location.getLatitude())/2);
             // mLongitudeFiltered = (mLongitudeFiltered == 0 ? location.getLongitude() : (mLongitudeFiltered + location.getLongitude())/2);
             // mBearingFiltered   = (mBearingFiltered   + location.getBearing())/2;  unfortunately, this does not work when the one is close to 0 and the other close to 360 degree

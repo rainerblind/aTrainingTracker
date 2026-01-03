@@ -26,6 +26,8 @@ import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.DialogFragment;
@@ -43,10 +45,11 @@ public class EnableBluetoothDialog extends DialogFragment {
     public static final String TAG = EnableBluetoothDialog.class.getName();
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
+    @Nullable
     RemoteDevicesSettingsInterface mRemoteDevicesSettingsInterface = null;
 
     @Override
-    public void onAttach(Activity activity) {
+    public void onAttach(@NonNull Activity activity) {
         super.onAttach(activity);
         // Verify that the host activity implements the callback interface
         try {
@@ -59,6 +62,7 @@ public class EnableBluetoothDialog extends DialogFragment {
     }
 
 
+    @NonNull
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(getContext());
@@ -75,7 +79,7 @@ public class EnableBluetoothDialog extends DialogFragment {
                     }
                 });
         alertDialogBuilder.setNegativeButton(R.string.Cancel, new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int id) {
+            public void onClick(@NonNull DialogInterface dialog, int id) {
                 dialog.cancel();
             }
         });

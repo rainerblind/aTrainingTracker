@@ -30,6 +30,8 @@ import android.database.sqlite.SQLiteDatabase;
 import android.os.IBinder;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 
 import com.atrainingtracker.R;
@@ -155,7 +157,7 @@ public class PebbleService extends Service {
     };
     private final BroadcastReceiver mLapSummaryReceiver = new BroadcastReceiver() {
         @Override
-        public void onReceive(Context context, Intent intent) {
+        public void onReceive(Context context, @NonNull Intent intent) {
             if (DEBUG) Log.d(TAG, "received Lap Summary");
 
             PebbleDictionary data = new PebbleDictionary();
@@ -172,9 +174,13 @@ public class PebbleService extends Service {
     // protected String mLayoutName;  // called viewName elsewhere => TODO: change names
     protected int mRows = 3;
     protected boolean mReceiversRegistered = false;
+    @NonNull
     protected Number prevLapDistance = 0;
+    @NonNull
     protected DistanceFormatter distanceFormatter = new DistanceFormatter();
+    @Nullable
     private BANALServiceComm banalService;
+    @NonNull
     private List<SensorType> mSensorTypeList = new LinkedList<>();
     private final BroadcastReceiver mConfigurePebbleWatchAppReceiver = new BroadcastReceiver() {
         @Override
@@ -209,7 +215,7 @@ public class PebbleService extends Service {
     // Pebble stuff
     private final PebbleKit.PebbleDataReceiver mPebbleDataReceiver = new PebbleKit.PebbleDataReceiver(TRAINING_TRACKER_UUID) {
         @Override
-        public void receiveData(final Context context, final int transactionId, final PebbleDictionary data) {
+        public void receiveData(@NonNull final Context context, final int transactionId, @NonNull final PebbleDictionary data) {
             // first, we have to send immediately an ack to the pebble
             PebbleKit.sendAckToPebble(context, transactionId);
 
@@ -287,7 +293,8 @@ public class PebbleService extends Service {
 //        }
 //    };
 
-    private static String cutString(String inputString) {
+    @NonNull
+    private static String cutString(@NonNull String inputString) {
         if (inputString.length() < MAX_STRING_SIZE) {
             return inputString;
         } else {

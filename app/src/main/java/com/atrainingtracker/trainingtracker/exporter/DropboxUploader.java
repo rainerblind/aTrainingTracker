@@ -21,6 +21,8 @@ package com.atrainingtracker.trainingtracker.exporter;
 import android.content.Context;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.dropbox.core.DbxException;
 import com.dropbox.core.v2.DbxClientV2;
@@ -35,12 +37,13 @@ public class DropboxUploader extends BaseExporter {
     private static final String TAG = "DropboxUploader";
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
-    public DropboxUploader(Context context) {
+    public DropboxUploader(@NonNull Context context) {
         super(context);
     }
 
+    @NonNull
     @Override
-    protected ExportResult doExport(ExportInfo exportInfo) throws IOException, IllegalArgumentException {
+    protected ExportResult doExport(@NonNull ExportInfo exportInfo) throws IOException, IllegalArgumentException {
         String filename = exportInfo.getShortPath();
         File file = new File(getBaseDirFile(mContext), filename);
         if (!file.exists()) {
@@ -76,6 +79,7 @@ public class DropboxUploader extends BaseExporter {
         return new ExportResult(true, "successfully uploaded " + filename + " to Dropbox");
     }
 
+    @NonNull
     @Override
     protected Action getAction() {
         return Action.UPLOAD;

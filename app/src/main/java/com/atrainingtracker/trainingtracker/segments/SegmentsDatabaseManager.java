@@ -24,6 +24,8 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.BaseColumns;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 
 import java.io.File;
@@ -43,6 +45,7 @@ public class SegmentsDatabaseManager {
         }
     }
 
+    @NonNull
     public static synchronized SegmentsDatabaseManager getInstance() {
         if (cInstance == null) {
             throw new IllegalStateException(SegmentsDatabaseManager.class.getSimpleName() +
@@ -52,7 +55,7 @@ public class SegmentsDatabaseManager {
         return cInstance;
     }
 
-    public static boolean doesDatabaseExist(Context context) {
+    public static boolean doesDatabaseExist(@NonNull Context context) {
         File dbFile = context.getDatabasePath(SegmentsDbHelper.DB_NAME);
         return dbFile.exists();
     }
@@ -60,7 +63,7 @@ public class SegmentsDatabaseManager {
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // some high level helper methods
     ////////////////////////////////////////////////////////////////////////////////////////////////
-    public static void deleteAllTables(Context context) {
+    public static void deleteAllTables(@NonNull Context context) {
 
         SQLiteDatabase db = getInstance().getOpenDatabase();
 
@@ -246,7 +249,7 @@ public class SegmentsDatabaseManager {
 
         // Called only once, first time the DB is created
         @Override
-        public void onCreate(SQLiteDatabase db) {
+        public void onCreate(@NonNull SQLiteDatabase db) {
 
             db.execSQL(CREATE_TABLE_STARRED_SEGMENTS_V1);
             if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_STARRED_SEGMENTS_V1);
@@ -262,13 +265,13 @@ public class SegmentsDatabaseManager {
 
         }
 
-        private void addColumn(SQLiteDatabase db, String table, String column, String type) {
+        private void addColumn(@NonNull SQLiteDatabase db, String table, String column, String type) {
             db.execSQL("ALTER TABLE " + table + " ADD COLUMN " + column + " " + type + ";");
         }
 
         //Called whenever newVersion != oldVersion
         @Override
-        public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        public void onUpgrade(@NonNull SQLiteDatabase db, int oldVersion, int newVersion) {
 
             if (newVersion <= 3) {  // simply clear everything
 

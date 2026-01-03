@@ -19,6 +19,8 @@
 package com.atrainingtracker.trainingtracker.smartwatch.pebble;
 
 
+import androidx.annotation.NonNull;
+
 import com.atrainingtracker.banalservice.ActivityType;
 import com.atrainingtracker.trainingtracker.activities.ConfigViewsActivity;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
@@ -30,11 +32,13 @@ public class ConfigPebbleViewsActivity extends ConfigViewsActivity {
     private static final boolean DEBUG = TrainingApplication.getDebug(true);
 
 
+    @NonNull
     @Override
     public ActivityType getActivityType(long viewId) {
         return PebbleDatabaseManager.getActivityType(viewId);
     }
 
+    @NonNull
     @Override
     public ConfigViewsFragment getNewConfigViewsFragment(ActivityType activityType, long viewId) {
         return ConfigPebbleViewsFragment.newInstance(activityType, viewId);

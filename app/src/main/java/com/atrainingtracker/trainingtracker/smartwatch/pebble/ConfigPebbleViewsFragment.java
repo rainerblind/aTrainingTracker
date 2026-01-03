@@ -19,6 +19,8 @@
 package com.atrainingtracker.trainingtracker.smartwatch.pebble;
 
 import android.os.Bundle;
+
+import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 
 import com.atrainingtracker.banalservice.ActivityType;
@@ -38,6 +40,7 @@ public class ConfigPebbleViewsFragment extends ConfigViewsFragment {
     public static final String TAG = ConfigPebbleViewsFragment.class.getSimpleName();
     private static final boolean DEBUG = TrainingApplication.getDebug(true);
 
+    @NonNull
     public static ConfigPebbleViewsFragment newInstance(ActivityType activityType, long viewId) {
 
         ConfigPebbleViewsFragment fragment = new ConfigPebbleViewsFragment();
@@ -55,11 +58,13 @@ public class ConfigPebbleViewsFragment extends ConfigViewsFragment {
         PebbleDatabaseManager.ensureEntryForActivityTypeExists(getContext(), mActivityType);
     }
 
+    @NonNull
     @Override
     protected LinkedList<Long> getViewIdList() {
         return PebbleDatabaseManager.getViewIdList(mActivityType);
     }
 
+    @NonNull
     @Override
     protected LinkedList<String> getTitleList() {
         return PebbleDatabaseManager.getTitleList(mActivityType);
@@ -76,6 +81,7 @@ public class ConfigPebbleViewsFragment extends ConfigViewsFragment {
         return PebbleDatabaseManager.addDefaultView(getContext(), viewId, addAfterCurrentLayout);
     }
 
+    @NonNull
     @Override
     protected Fragment getNewChildFragment(long viewId) {
         return ConfigPebbleViewFragment.newInstance(viewId);

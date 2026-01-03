@@ -22,6 +22,7 @@ import android.Manifest;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 
 import android.annotation.SuppressLint;
@@ -168,9 +169,11 @@ public class MainActivityWithNavigation
     protected DrawerLayout mDrawerLayout;
     protected NavigationView mNavigationView;
     protected MenuItem mPreviousMenuItem;
+    @Nullable
     protected Fragment mFragment;
     protected Handler mHandler;  // necessary to wait some time before we disconnect from the BANALService when the app is paused.
     protected boolean mStartAndNotResume = true;        // start a new workout or continue with the previous one
+    @Nullable
     protected BANALService.BANALServiceComm mBanalServiceComm = null;
     final LinkedList<ConnectionStatusListener> mConnectionStatusListeners = new LinkedList<>();
     /* Broadcast Receiver to adapt the title based on the tracking state */
@@ -239,7 +242,7 @@ public class MainActivityWithNavigation
     };
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         if (DEBUG) Log.d(TAG, "onCreate");
 
@@ -362,6 +365,7 @@ public class MainActivityWithNavigation
         );
     }
 
+    @NonNull
     private List<String> getPermissions() {
         List<String> requiredPerms = new ArrayList<>();
         requiredPerms.add(Manifest.permission.ACCESS_FINE_LOCATION);
@@ -574,7 +578,7 @@ public class MainActivityWithNavigation
     }
 
     @Override
-    public void onSaveInstanceState(Bundle savedInstanceState) {
+    public void onSaveInstanceState(@NonNull Bundle savedInstanceState) {
         if (DEBUG) Log.i(TAG, "onSaveInstanceState");
 
         //Save the fragment's instance
@@ -618,7 +622,7 @@ public class MainActivityWithNavigation
     }
 
     @Override
-    public boolean onNavigationItemSelected(MenuItem menuItem) {
+    public boolean onNavigationItemSelected(@Nullable MenuItem menuItem) {
         if (DEBUG) Log.i(TAG, "onNavigationItemSelected");
 
         if (menuItem == null) {
@@ -732,7 +736,7 @@ public class MainActivityWithNavigation
 
     /* Called when an options item is clicked */
     @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         if (DEBUG) Log.i(TAG, "onOptionsItemSelected");
 
         // Log.d(TAG, "onOptionsItemSelected");
@@ -782,7 +786,7 @@ public class MainActivityWithNavigation
     }
 
     @Override
-    public void startPairing(Protocol protocol) {
+    public void startPairing(@NonNull Protocol protocol) {
         if (DEBUG) Log.d(TAG, "startPairingActivity: " + protocol);
         switch (protocol) {
             case ANT_PLUS:
@@ -836,7 +840,7 @@ public class MainActivityWithNavigation
     }
 
     @Override
-    public void startSegmentDetailsActivity(int segmentId, SegmentDetailsActivity.SelectedFragment selectedFragment) {
+    public void startSegmentDetailsActivity(int segmentId, @NonNull SegmentDetailsActivity.SelectedFragment selectedFragment) {
         if (DEBUG) Log.i(TAG, "startSegmentDetailsActivity: segmentId=" + segmentId);
 
         Bundle bundle = new Bundle();
@@ -848,7 +852,7 @@ public class MainActivityWithNavigation
     }
 
     @Override
-    public void exportWorkout(long id, FileFormat fileFormat) {
+    public void exportWorkout(long id, @NonNull FileFormat fileFormat) {
         if (DEBUG) Log.i(TAG, "exportWorkout");
 
         ExportManager exportManager = new ExportManager(this, TAG);
@@ -887,7 +891,7 @@ public class MainActivityWithNavigation
     }
 
     @Override
-    public void onDeviceTypeSelected(DeviceType deviceType, Protocol protocol) {
+    public void onDeviceTypeSelected(@NonNull DeviceType deviceType, @NonNull Protocol protocol) {
         if (DEBUG)
             Log.i(TAG, "onDeviceTypeSelected(" + deviceType.name() + "), mProtocol=" + protocol);
 
@@ -910,7 +914,7 @@ public class MainActivityWithNavigation
 
     // stolen from http://stackoverflow.com/questions/32487206/inner-preferencescreen-not-opens-with-preferencefragmentcompat
     @Override
-    public boolean onPreferenceStartScreen(PreferenceFragmentCompat preferenceFragmentCompat, PreferenceScreen preferenceScreen) {
+    public boolean onPreferenceStartScreen(PreferenceFragmentCompat preferenceFragmentCompat, @NonNull PreferenceScreen preferenceScreen) {
         if (DEBUG) Log.i(TAG, "onPreferenceStartScreen: " + preferenceScreen.getKey());
         String key = preferenceScreen.getKey();
         PreferenceFragmentCompat fragment = null;
@@ -974,6 +978,7 @@ public class MainActivityWithNavigation
         mConnectionStatusListeners.add(connectionStatusListener);
     }
 
+    @Nullable
     @Override
     public BANALService.BANALServiceComm getBanalServiceComm() {
         return mBanalServiceComm;

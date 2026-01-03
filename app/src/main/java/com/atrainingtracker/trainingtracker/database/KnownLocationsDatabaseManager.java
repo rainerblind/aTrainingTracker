@@ -28,6 +28,9 @@ import android.location.Location;
 import android.provider.BaseColumns;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.atrainingtracker.banalservice.BANALService;
 import com.google.android.gms.maps.model.LatLng;
 
@@ -51,6 +54,7 @@ public class KnownLocationsDatabaseManager {
         }
     }
 
+    @NonNull
     public static synchronized KnownLocationsDatabaseManager getInstance() {
         if (cInstance == null) {
             throw new IllegalStateException(KnownLocationsDatabaseManager.class.getSimpleName() +
@@ -82,6 +86,7 @@ public class KnownLocationsDatabaseManager {
         getInstance().closeDatabase();
     }
 
+    @Nullable
     public static MyLocation addNewLocation(String name, int altitude, int radius, double latitude, double longitude) {
         if (DEBUG)
             Log.d(TAG, "addNewLocation: " + name + " " + altitude + " m" + ", radius=" + radius);
@@ -109,7 +114,8 @@ public class KnownLocationsDatabaseManager {
     }
 
     // public static Integer getStartAltitude(Context context, double latitude, double longitude)
-    public static MyLocation getMyLocation(LatLng latLng) {
+    @Nullable
+    public static MyLocation getMyLocation(@NonNull LatLng latLng) {
         MyLocation myLocation = null;
 
         Location currentLocation = new Location("");
@@ -165,7 +171,7 @@ public class KnownLocationsDatabaseManager {
         getInstance().closeDatabase();
     }
 
-    public static void updateLocation(long id, LatLng latLng) {
+    public static void updateLocation(long id, @NonNull LatLng latLng) {
         ContentValues contentValues = new ContentValues();
         contentValues.put(KnownLocationsDbHelper.LATITUDE, latLng.latitude);
         contentValues.put(KnownLocationsDbHelper.LONGITUDE, latLng.longitude);
@@ -173,7 +179,7 @@ public class KnownLocationsDatabaseManager {
         updateId(id, contentValues);
     }
 
-    public static void updateMyLocation(long id, MyLocation myLocation) {
+    public static void updateMyLocation(long id, @NonNull MyLocation myLocation) {
         ContentValues contentValues = new ContentValues();
         contentValues.put(KnownLocationsDbHelper.NAME, myLocation.name);
         contentValues.put(KnownLocationsDbHelper.ALTITUDE, myLocation.altitude);
@@ -196,6 +202,7 @@ public class KnownLocationsDatabaseManager {
         getInstance().closeDatabase();
     }
 
+    @Nullable
     public static MyLocation getMyLocation(long myLocationId) {
         MyLocation myLocation = null;
 
@@ -225,6 +232,7 @@ public class KnownLocationsDatabaseManager {
         return myLocation;
     }
 
+    @NonNull
     public static List<String> getMyLocationNameList() {
         List<String> result = new LinkedList<>();
 
@@ -248,7 +256,8 @@ public class KnownLocationsDatabaseManager {
         return result;
     }
 
-    public static List<NamedLatLng> getLocationsList(ExtremaType extremaType) {
+    @NonNull
+    public static List<NamedLatLng> getLocationsList(@NonNull ExtremaType extremaType) {
         List<NamedLatLng> startLocations = new LinkedList<>();
 
         SQLiteDatabase db = getInstance().getOpenDatabase();
@@ -295,6 +304,7 @@ public class KnownLocationsDatabaseManager {
 
     public static class MyLocation {
         public final long id;
+        @NonNull
         public final LatLng latLng;
         public String name;
         public int altitude;
@@ -361,7 +371,7 @@ public class KnownLocationsDatabaseManager {
 
         // Called only once, first time the DB is created
         @Override
-        public void onCreate(SQLiteDatabase db) {
+        public void onCreate(@NonNull SQLiteDatabase db) {
 
             switch (DB_VERSION) {
                 case 1:
@@ -382,13 +392,13 @@ public class KnownLocationsDatabaseManager {
             }
         }
 
-        private void addColumn(SQLiteDatabase db, String column, String type) {
+        private void addColumn(@NonNull SQLiteDatabase db, String column, String type) {
             db.execSQL("ALTER TABLE " + TABLE + " ADD COLUMN " + column + " " + type + ";");
         }
 
         //Called whenever newVersion != oldVersion
         @Override
-        public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        public void onUpgrade(@NonNull SQLiteDatabase db, int oldVersion, int newVersion) {
 
             if (oldVersion < 2) {
                 addColumn(db, RADIUS, "int");

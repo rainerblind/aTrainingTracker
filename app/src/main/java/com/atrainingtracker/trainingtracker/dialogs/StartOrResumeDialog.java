@@ -42,7 +42,7 @@ public class StartOrResumeDialog extends DialogFragment {
     private StartOrResumeInterface mStartOrResumeInterface;
 
     @Override
-    public void onAttach(Activity activity) {
+    public void onAttach(@NonNull Activity activity) {
         super.onAttach(activity);
         // Verify that the host activity implements the callback interface
         try {
@@ -54,13 +54,14 @@ public class StartOrResumeDialog extends DialogFragment {
         }
     }
 
+    @NonNull
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
 
         AlertDialog.Builder alertDialogBuilder = getAlertDialogBuilder();
 
         alertDialogBuilder.setNegativeButton(R.string.resume_workout, new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int id) {
+            public void onClick(@NonNull DialogInterface dialog, int id) {
                 mStartOrResumeInterface.chooseResume();
                 dialog.cancel();
 
@@ -76,7 +77,7 @@ public class StartOrResumeDialog extends DialogFragment {
         alertDialogBuilder.setMessage(R.string.start_or_resume_dialog_message);
         // alertDialogBuilder.setCancelable(false);
         alertDialogBuilder.setPositiveButton(R.string.start_new_workout, new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int id) {
+            public void onClick(@NonNull DialogInterface dialog, int id) {
                 mStartOrResumeInterface.chooseStart();
                 dialog.cancel();
             }

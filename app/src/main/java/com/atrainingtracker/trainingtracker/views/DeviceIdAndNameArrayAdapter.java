@@ -25,15 +25,20 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 
 public class DeviceIdAndNameArrayAdapter extends ArrayAdapter<Long> {
     private static final String TAG = "DeviceIdAndNameSpinnerAdapter";
 
+    @NonNull
     protected final Context mContext;
+    @NonNull
     protected final Long[] mDeviceIdsArray;
     protected final String[] mNamesArray;
 
-    public DeviceIdAndNameArrayAdapter(Context context, int textViewResourceId, Long[] deviceIdsArray, String[] namesArray) {
+    public DeviceIdAndNameArrayAdapter(@NonNull Context context, int textViewResourceId, @NonNull Long[] deviceIdsArray, String[] namesArray) {
         super(context, textViewResourceId, deviceIdsArray);
         mContext = context;
         mDeviceIdsArray = deviceIdsArray;
@@ -41,8 +46,9 @@ public class DeviceIdAndNameArrayAdapter extends ArrayAdapter<Long> {
     }
 
     // This is for the "passive" state of the spinner
+    @NonNull
     @Override
-    public View getView(int position, View convertView, ViewGroup parent) {
+    public View getView(int position, @Nullable View convertView, ViewGroup parent) {
         if (convertView == null) {
             LayoutInflater inflater = LayoutInflater.from(mContext);
             convertView = inflater.inflate(android.R.layout.simple_spinner_item, parent, false);
@@ -55,8 +61,9 @@ public class DeviceIdAndNameArrayAdapter extends ArrayAdapter<Long> {
     }
 
     // And here is when the "chooser" is popped up
+    @NonNull
     @Override
-    public View getDropDownView(int position, View convertView, ViewGroup parent) {
+    public View getDropDownView(int position, @Nullable View convertView, ViewGroup parent) {
         if (convertView == null) {
             LayoutInflater inflater = LayoutInflater.from(mContext);
             convertView = inflater.inflate(android.R.layout.simple_spinner_item, parent, false);

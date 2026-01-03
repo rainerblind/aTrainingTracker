@@ -19,6 +19,8 @@
 package com.atrainingtracker.trainingtracker.fragments;
 
 import android.os.Bundle;
+
+import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 
 import com.atrainingtracker.banalservice.ActivityType;
@@ -38,6 +40,7 @@ public class ConfigTrackingViewsFragment extends ConfigViewsFragment {
     public static final String TAG = ConfigTrackingViewsFragment.class.getSimpleName();
     private static final boolean DEBUG = TrainingApplication.getDebug(true);
 
+    @NonNull
     public static ConfigTrackingViewsFragment newInstance(ActivityType activityType, long viewId) {
 
         ConfigTrackingViewsFragment fragment = new ConfigTrackingViewsFragment();
@@ -55,11 +58,13 @@ public class ConfigTrackingViewsFragment extends ConfigViewsFragment {
         TrackingViewsDatabaseManager.ensureEntryForActivityTypeExists(getContext(), mActivityType);
     }
 
+    @NonNull
     @Override
     protected LinkedList<Long> getViewIdList() {
         return TrackingViewsDatabaseManager.getViewIdList(mActivityType);
     }
 
+    @NonNull
     @Override
     protected LinkedList<String> getTitleList() {
         return TrackingViewsDatabaseManager.getTitleList(mActivityType);
@@ -77,6 +82,7 @@ public class ConfigTrackingViewsFragment extends ConfigViewsFragment {
         return TrackingViewsDatabaseManager.addDefaultView(getContext(), viewId, mActivityType, addAfterCurrentLayout);
     }
 
+    @NonNull
     @Override
     protected Fragment getNewChildFragment(long viewId) {
         return ConfigTrackingViewFragment.newInstance(viewId);

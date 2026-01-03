@@ -22,6 +22,7 @@ import android.content.Context;
 import android.util.Log;
 import android.view.View;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.fragment.app.Fragment;
@@ -39,7 +40,7 @@ public abstract class BaseTrackingFragment extends Fragment {
 
 
     @Override
-    public void onAttach(Context context) {
+    public void onAttach(@NonNull Context context) {
         super.onAttach(context);
         if (DEBUG) Log.d(TAG, "onAttach");
 

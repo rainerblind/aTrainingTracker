@@ -23,6 +23,9 @@ import android.content.Intent;
 import android.net.Uri;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.atrainingtracker.BuildConfig;
 import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
@@ -84,6 +87,7 @@ public class StravaHelper {
     private static final String TAG = StravaHelper.class.getSimpleName();
     private static final boolean DEBUG = true; // TrainingApplication.getDebug(true);
 
+    @NonNull
     public static String translateClimbCategory(int climbCategory) {
         return switch (climbCategory) {
             case 1 -> "cat. 4";
@@ -95,7 +99,7 @@ public class StravaHelper {
         };
     }
 
-    protected static void storeJSONData(JSONObject jsonObject) {
+    protected static void storeJSONData(@NonNull JSONObject jsonObject) {
         if (DEBUG) {
             Log.i(TAG, "string JSON response: " + jsonObject);
         }
@@ -114,10 +118,12 @@ public class StravaHelper {
     }
 
 
+    @NonNull
     protected static String getRedirectUri() {
         return "strava://rainerblind.github.io";
     }
 
+    @NonNull
     protected static String getAuthorizationUrl() {
         Uri.Builder builder = new Uri.Builder();
         builder.scheme(HTTPS)
@@ -134,7 +140,7 @@ public class StravaHelper {
     }
 
 
-    public static void requestAccessToken(Context context) {
+    public static void requestAccessToken(@NonNull Context context) {
         if (DEBUG) Log.i(TAG, "requestAccessToken");
 
         // Simply, launch the Browser.
@@ -146,6 +152,7 @@ public class StravaHelper {
         context.startActivity(browserIntent);
     }
 
+    @NonNull
     protected static String getRefreshUrl() {
         Uri.Builder builder = new Uri.Builder();
         builder.scheme(HTTPS)
@@ -159,6 +166,7 @@ public class StravaHelper {
         return builder.build().toString();
     }
 
+    @Nullable
     public static String getRefreshedAccessToken() {
         if (DEBUG) Log.i(TAG, "getRefreshedAccessToken()");
         // first, check if we really need a new access token

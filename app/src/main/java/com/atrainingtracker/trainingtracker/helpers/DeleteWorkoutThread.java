@@ -27,6 +27,8 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import com.atrainingtracker.R;
 import com.atrainingtracker.trainingtracker.exporter.ExportManager;
 import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager;
@@ -39,6 +41,7 @@ public class DeleteWorkoutThread extends Thread {
     public static final String FINISHED_DELETING = "de.rainerblind.trainingtracker.helpers.DeleteWorkoutThread.FINISHED_DELETING";
     private static final String TAG = "DeleteWorkoutThread";
     private static final boolean DEBUG = false;
+    @NonNull
     private final ProgressDialog progressDialog;
     private final Context context;
     private final Long[] oldWorkouts;

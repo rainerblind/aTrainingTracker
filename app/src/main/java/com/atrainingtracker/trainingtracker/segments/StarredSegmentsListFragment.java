@@ -26,6 +26,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 
+import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 import androidx.cursoradapter.widget.CursorAdapter;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
@@ -69,7 +70,7 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
     protected final IntentFilter mUpdatingSegmentsCompleteFilter = new IntentFilter();
     final BroadcastReceiver mSegmentUpdateStartedReceiver = new BroadcastReceiver() {
         @Override
-        public void onReceive(Context context, Intent intent) {
+        public void onReceive(Context context, @NonNull Intent intent) {
             if (intent.hasExtra(StravaSegmentsIntentService.SPORT_TYPE_ID)
                     && mSportTypeId == intent.getLongExtra(StravaSegmentsIntentService.SPORT_TYPE_ID, -1)) {
                 setRefreshing(true);
@@ -78,7 +79,7 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
     };
     final BroadcastReceiver mUpdateSegmentsListReceiver = new BroadcastReceiver() {
         @Override
-        public void onReceive(Context context, Intent intent) {
+        public void onReceive(Context context, @NonNull Intent intent) {
             if (DEBUG) Log.i(TAG, "update segment list");
 
             if (intent.hasExtra(StravaSegmentsIntentService.SPORT_TYPE_ID)
@@ -89,7 +90,7 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
     };
     final BroadcastReceiver mUpdatingSegmentsCompleteReceiver = new BroadcastReceiver() {
         @Override
-        public void onReceive(Context context, Intent intent) {
+        public void onReceive(@NonNull Context context, @NonNull Intent intent) {
             if (DEBUG) Log.i(TAG, "updating segments list completed");
 
             long sportTypeId = intent.getLongExtra(StravaSegmentsIntentService.SPORT_TYPE_ID, -1);
@@ -108,7 +109,7 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
     private final AbsListView.RecyclerListener mRecycleListener = new AbsListView.RecyclerListener() {
 
         @Override
-        public void onMovedToScrapHeap(View view) {
+        public void onMovedToScrapHeap(@NonNull View view) {
             StarredSegmentsCursorAdapter.ViewHolder holder = (StarredSegmentsCursorAdapter.ViewHolder) view.getTag();
             if (holder != null && holder.map != null) {
                 // Clear the map and free up resources by changing the map type to none
@@ -119,6 +120,7 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
         }
     };
 
+    @NonNull
     public static StarredSegmentsListFragment newInstance(long sportTypeId) {
         if (DEBUG) Log.i(TAG, "newInstance()");
 
@@ -132,7 +134,7 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
     }
 
     @Override
-    public void onAttach(Context context) {
+    public void onAttach(@NonNull Context context) {
         super.onAttach(context);
         if (DEBUG) Log.i(TAG, "onAttach");
 
@@ -167,12 +169,12 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
 
     // BEGIN_INCLUDE (setup_views)
     @Override
-    public void onViewCreated(View view, Bundle savedInstanceState) {
+    public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
         mStarredSegmentsCursorAdapter = new StarredSegmentsCursorAdapter(getActivity(), mStarredSegmentsCursor, mStravaSegmentsHelper, new StarredSegmentsCursorAdapter.ShowSegmentDetailsInterface() {
             @Override
-            public void startSegmentDetailsActivity(long segmentId, SegmentDetailsActivity.SelectedFragment selectedFragment) {
+            public void startSegmentDetailsActivity(long segmentId, @NonNull SegmentDetailsActivity.SelectedFragment selectedFragment) {
                 if (DEBUG) Log.i(TAG, "startSegmentDetailsActivity(" + segmentId + ")");
 
                 Bundle bundle = new Bundle();
@@ -233,7 +235,7 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
      * Called first time user clicks on the menu button
      */
     @Override
-    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+    public void onCreateOptionsMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
         super.onCreateOptionsMenu(menu, inflater);
         if (DEBUG) Log.d(TAG, "onCreateOptionsMenu");
 
@@ -242,7 +244,7 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
 
     /* Called when an options item is clicked */
     @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         if (DEBUG) Log.i(TAG, "onOptionsItemSelected");
 
         switch (item.getItemId()) {

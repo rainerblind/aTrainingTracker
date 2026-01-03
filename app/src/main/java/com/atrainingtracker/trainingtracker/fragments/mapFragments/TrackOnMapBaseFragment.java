@@ -26,6 +26,8 @@ import android.location.Location;
 import android.os.Bundle;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.content.res.ResourcesCompat;
 
 import com.atrainingtracker.R;
@@ -115,7 +117,7 @@ public abstract class TrackOnMapBaseFragment
 
 
     /** helper method to check whether there is some data */
-    protected boolean dataValid(Cursor cursor, String string) {
+    protected boolean dataValid(@NonNull Cursor cursor, String string) {
         if (cursor.getColumnIndex(string) == -1) {
             if (DEBUG) Log.d(TAG, "dataValid: no such columnIndex!: " + string);
             return false;
@@ -143,7 +145,8 @@ public abstract class TrackOnMapBaseFragment
 
 
     // helper method to get START and END position
-    LatLng getExtremaPosition(ExtremaType extremaType, boolean calculateWhenNotInDb) {
+    @Nullable
+    LatLng getExtremaPosition(@NonNull ExtremaType extremaType, boolean calculateWhenNotInDb) {
         String baseFileName = WorkoutSummariesDatabaseManager.getBaseFileName(mWorkoutID);
 
         Double lat = WorkoutSummariesDatabaseManager.getExtremaValue(mWorkoutID, SensorType.LATITUDE, extremaType);
@@ -163,7 +166,7 @@ public abstract class TrackOnMapBaseFragment
     // helpers for Segments
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    public void showStarredSegmentsOnMap(SegmentHelper.SegmentType segmentType) {
+    public void showStarredSegmentsOnMap(@NonNull SegmentHelper.SegmentType segmentType) {
         String selection = SegmentsDatabaseManager.Segments.ACTIVITY_TYPE + "=?";
         String[] selectionArgs = null;
         switch (segmentType) {
@@ -308,7 +311,7 @@ public abstract class TrackOnMapBaseFragment
 
     }
 
-    protected void addOrthogonalLine(Cursor cursor) {
+    protected void addOrthogonalLine(@NonNull Cursor cursor) {
         if (cursor.moveToFirst()) {
             if (DEBUG) Log.i(TAG, "moved to first :-)");
 

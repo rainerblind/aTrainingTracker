@@ -21,6 +21,8 @@ package com.atrainingtracker.trainingtracker.exporter;
 import android.content.Context;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 
 import org.apache.http.HttpResponse;
@@ -43,12 +45,13 @@ public class RunkeeperUploader extends BaseExporter {
     private static final String TAG = "RunkeeperUploader";
     private static final boolean DEBUG = false;
 
-    public RunkeeperUploader(Context context) {
+    public RunkeeperUploader(@NonNull Context context) {
         super(context);
     }
 
+    @NonNull
     @Override
-    protected ExportResult doExport(ExportInfo exportInfo)
+    protected ExportResult doExport(@NonNull ExportInfo exportInfo)
             throws IOException, JSONException {
         if (DEBUG) Log.d(TAG, "doExport: " + exportInfo.getFileBaseName());
 
@@ -82,6 +85,7 @@ public class RunkeeperUploader extends BaseExporter {
         return new ExportResult(true, response);
     }
 
+    @NonNull
     @Override
     protected Action getAction() {
         return Action.UPLOAD;

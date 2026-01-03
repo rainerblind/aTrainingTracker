@@ -23,6 +23,8 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 
@@ -34,6 +36,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.protocol.BasicHttpContext;
 import org.apache.http.protocol.HttpContext;
+import org.jetbrains.annotations.Contract;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -126,7 +129,7 @@ public class MyHelper {
         return netInfo != null && netInfo.isConnectedOrConnecting();
     }
 
-    public static double string2Double(String doubleString) {
+    public static double string2Double(@NonNull String doubleString) {
         try {
             return Double.parseDouble(doubleString);
         } catch (NumberFormatException e) {
@@ -157,7 +160,7 @@ public class MyHelper {
         return mps2userUnit(speed, TrainingApplication.getUnit());
     }
 
-    public static double mps2userUnit(double speed, MyUnits myUnits) {
+    public static double mps2userUnit(double speed, @NonNull MyUnits myUnits) {
         return switch (myUnits) {
             case METRIC -> speed * 3.6;
             case IMPERIAL -> speed * 2.23693629;
@@ -207,7 +210,7 @@ public class MyHelper {
     }
 
 
-    public static int getUnitsId(SensorType sensorType) {
+    public static int getUnitsId(@NonNull SensorType sensorType) {
         return switch (sensorType) {
             case SPEED_mps -> getSpeedUnitNameId();
             case PACE_spm -> getPaceUnitNameId();
@@ -216,7 +219,7 @@ public class MyHelper {
         };
     }
 
-    public static int getShortUnitsId(SensorType sensorType) {
+    public static int getShortUnitsId(@NonNull SensorType sensorType) {
         return switch (sensorType) {
             case SPEED_mps -> getShortSpeedUnitNameId();
             case PACE_spm -> getShortPaceUnitNameId();
@@ -227,6 +230,8 @@ public class MyHelper {
         };
     }
 
+    @NonNull
+    @Contract(pure = true)
     public static String formatRank(int i) {
         int j = i % 10,
                 k = i % 100;

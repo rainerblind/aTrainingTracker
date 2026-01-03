@@ -26,6 +26,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.DialogFragment;
 import android.util.Log;
@@ -59,6 +60,7 @@ public class EditFancyWorkoutNameDialog extends DialogFragment {
 
     private long mFancyNameId = -1;
 
+    @NonNull
     public static EditFancyWorkoutNameDialog newInstance(long fancyNameId) {
         if (DEBUG) Log.i(TAG, "newInstance");
 
@@ -83,6 +85,7 @@ public class EditFancyWorkoutNameDialog extends DialogFragment {
     }
 
 
+    @NonNull
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         long sportTypeId;
@@ -202,7 +205,7 @@ public class EditFancyWorkoutNameDialog extends DialogFragment {
         builder.setView(view);
         builder.setPositiveButton(R.string.OK,
                 new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int whichButton) {
+                    public void onClick(@NonNull DialogInterface dialog, int whichButton) {
                         Log.i(TAG, "OK clicked");
 
                         // save everything
@@ -235,7 +238,7 @@ public class EditFancyWorkoutNameDialog extends DialogFragment {
                 });
         builder.setNegativeButton(R.string.Cancel,
                 new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int whichButton) {
+                    public void onClick(@NonNull DialogInterface dialog, int whichButton) {
                         Log.i(TAG, "Cancel clicked");
 
                         WorkoutSummariesDatabaseManager.getInstance().closeDatabase();

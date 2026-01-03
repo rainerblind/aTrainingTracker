@@ -24,6 +24,8 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
@@ -75,8 +77,10 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
     // protected long mViewId;
     protected LinearLayout mLLSensors;
     protected LayoutInflater mLayoutInflater;
+    @Nullable
     protected String mName = null;
     protected final IntentFilter mViewChangedFilter = new IntentFilter();  // actions will be added later on
+    @NonNull
     TreeMap<Integer, TreeMap<Integer, TrackingViewsDatabaseManager.ViewInfo>> mViewInfoMap = TrackingViewsDatabaseManager.getViewInfoMap(mViewId);
     final BroadcastReceiver mFilterChangedReceiver = new BroadcastReceiver() {
         @Override
@@ -85,6 +89,7 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
         }
     };
 
+    @NonNull
     public static ConfigTrackingViewFragment newInstance(long viewId) {
         if (DEBUG) Log.i(TAG, "newInstance(" + viewId + ")");
 
@@ -114,7 +119,7 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, final ViewGroup container, Bundle savedInstanceState) {
+    public View onCreateView(@NonNull LayoutInflater inflater, final ViewGroup container, Bundle savedInstanceState) {
         super.onCreateView(inflater, container, savedInstanceState);
         if (DEBUG) Log.d(TAG, "onCreateView, mViewId=" + mViewId);
 
@@ -247,7 +252,7 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
     }
 
 
-    protected void addRow(final TreeMap<Integer, TrackingViewsDatabaseManager.ViewInfo> rowMap) {
+    protected void addRow(@NonNull final TreeMap<Integer, TrackingViewsDatabaseManager.ViewInfo> rowMap) {
         if (rowMap.isEmpty()) {
             if (DEBUG) Log.i(TAG, "row contains no entries => returning");
             return;
@@ -356,7 +361,7 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
      * Called first time user clicks on the menu button
      */
     @Override
-    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+    public void onCreateOptionsMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
         super.onCreateOptionsMenu(menu, inflater);
         if (DEBUG) Log.d(TAG, "onCreateOptionsMenu");
 
@@ -365,7 +370,7 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
 
 
     @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         if (DEBUG) Log.i(TAG, "onOptionsItemSelected");
 
         return switch (item.getItemId()) {
@@ -379,7 +384,7 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
 
     }
 
-    private void showEditFieldDialog(TrackingViewsDatabaseManager.ViewInfo viewInfo) {
+    private void showEditFieldDialog(@NonNull TrackingViewsDatabaseManager.ViewInfo viewInfo) {
         EditFieldDialog editFieldDialog = EditFieldDialog.newInstance(mActivityType, viewInfo);
         editFieldDialog.show(getFragmentManager(), EditFieldDialog.TAG);
     }
