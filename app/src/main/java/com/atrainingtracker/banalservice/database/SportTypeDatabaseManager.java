@@ -64,7 +64,7 @@ public class SportTypeDatabaseManager {
         return cInstance;
     }
 
-    public static final long getDefaultSportTypeId() {
+    public static long getDefaultSportTypeId() {
         return 1;
     }
 

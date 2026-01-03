@@ -87,7 +87,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     protected List<String> getLinkedEquipment(List<Integer> antDeviceIds) {
         if (DEBUG) Log.d(TAG, "getLinkedEquipment with antDeviceList");
 
-        if (antDeviceIds == null || antDeviceIds.size() == 0) {
+        if (antDeviceIds == null || antDeviceIds.isEmpty()) {
             return new ArrayList<String>();
         }
 
@@ -97,7 +97,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         // find first device with linked equipment
         for (; i < antDeviceIds.size(); i++) {
             List<String> tmpEquipment = getLinkedEquipmentFromDeviceId(antDeviceIds.get(i));
-            if (tmpEquipment.size() != 0) {
+            if (!tmpEquipment.isEmpty()) {
                 if (DEBUG)
                     Log.d(TAG, "found device with linked equipment: " + i + ", " + antDeviceIds.get(i));
                 linkedEquipment = new HashSet<String>(tmpEquipment);
@@ -110,7 +110,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         // for the rest of the devices, we do a set intersectionL
         for (; i < antDeviceIds.size(); i++) {
             List<String> tmpEquipment = getLinkedEquipmentFromDeviceId(antDeviceIds.get(i));
-            if (tmpEquipment.size() != 0) {
+            if (!tmpEquipment.isEmpty()) {
                 linkedEquipment.retainAll(new HashSet<String>(tmpEquipment));
                 if (DEBUG) Log.d(TAG, "did set intersection for " + i + ", " + antDeviceIds.get(i));
             } else {
@@ -170,7 +170,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     public String getLinkedEquipmentStringFromDeviceId(long deviceId) {
         String equipment = null;
         List<String> equipmentList = getLinkedEquipmentFromDeviceId(deviceId);
-        if (equipmentList.size() > 0) {
+        if (!equipmentList.isEmpty()) {
             equipment = equipmentList.toString().replace("[", "").replace("]", "");
         }
 

@@ -120,7 +120,6 @@ import com.atrainingtracker.trainingtracker.interfaces.ReallyDeleteDialogInterfa
 import com.atrainingtracker.trainingtracker.interfaces.RemoteDevicesSettingsInterface;
 import com.atrainingtracker.trainingtracker.interfaces.ShowWorkoutDetailsInterface;
 import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface;
-import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaGetAccessTokenActivity;
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager;
 import com.atrainingtracker.trainingtracker.segments.StarredSegmentsListFragment;
 import com.dropbox.core.android.Auth;
@@ -815,7 +814,7 @@ public class MainActivityWithNavigation
 
     protected void checkBatteryStatus() {
         final List<DevicesDatabaseManager.NameAndBatteryPercentage> criticalBatteryDevices = DevicesDatabaseManager.getCriticalBatteryDevices(CRITICAL_BATTERY_LEVEL);
-        if (criticalBatteryDevices.size() > 0) {
+        if (!criticalBatteryDevices.isEmpty()) {
 
             final List<String> stringList = new LinkedList<>();
             for (DevicesDatabaseManager.NameAndBatteryPercentage device : criticalBatteryDevices) {
@@ -915,50 +914,43 @@ public class MainActivityWithNavigation
         if (DEBUG) Log.i(TAG, "onPreferenceStartScreen: " + preferenceScreen.getKey());
         String key = preferenceScreen.getKey();
         PreferenceFragmentCompat fragment = null;
-        if (key.equals("root")) {
-            fragment = new RootPrefsFragment();
-        } else if (key.equals("display")) {
-            fragment = new DisplayFragment();
-        }
-        // else if (key.equals("smoothing")) {
-        //     fragment = new SmoothingFragment();
-        // }
-        else if (key.equals("search_settings")) {
-            fragment = new SearchFragment();
-        } else if (key.equals(TrainingApplication.PREF_KEY_START_SEARCH)) {
-            fragment = new StartSearchFragment();
-        } else if (key.equals("fileExport")) {
-            fragment = new FileExportFragment();
-        } else if (key.equals("cloudUpload")) {
-            fragment = new CloudUploadFragment();
-        } else if (key.equals(TrainingApplication.PREFERENCE_SCREEN_EMAIL_UPLOAD)) {
-            fragment = new EmailUploadFragment();
-        } else if (key.equals(TrainingApplication.PREFERENCE_SCREEN_STRAVA)) {
-            fragment = new StravaUploadFragment();
-        } else if (key.equals(TrainingApplication.PREFERENCE_SCREEN_RUNKEEPER)) {
-            fragment = new RunkeeperUploadFragment();
-        } else if (key.equals(TrainingApplication.PREFERENCE_SCREEN_TRAINING_PEAKS)) {
-            fragment = new TrainingpeaksUploadFragment();
-        } else if (key.equals("pebbleScreen")) {
-            fragment = new PebbleScreenFragment();
-        } else if (key.equals("prefsLocationSources")) {
-            fragment = new LocationSourcesFragment();
-        } else if (key.equals("altitudeCorrection")) {
-            fragment = new AltitudeCorrectionFragment();
-        } else if (key.equals("sportTypes")) {
-            FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
-            ft.replace(R.id.content, new SportTypeListFragment(), preferenceScreen.getKey());
-            ft.addToBackStack(preferenceScreen.getKey());
-            ft.commit();
-            return true;
-        } else if (key.equals("fancyWorkoutNames")) {
-            FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
-            ft.replace(R.id.content, new FancyWorkoutNameListFragment(), preferenceScreen.getKey());
-            ft.addToBackStack(preferenceScreen.getKey());
-            ft.commit();
-            return true;
-        } else {
-            Log.d(TAG, "WTF: unknown key");
+        switch (key) {
+            case "root" -> fragment = new RootPrefsFragment();
+            case "display" -> fragment = new DisplayFragment();
+
+            // else if (key.equals("smoothing")) {
+            //     fragment = new SmoothingFragment();
+            // }
+            case "search_settings" -> fragment = new SearchFragment();
+            case TrainingApplication.PREF_KEY_START_SEARCH -> fragment = new StartSearchFragment();
+            case "fileExport" -> fragment = new FileExportFragment();
+            case "cloudUpload" -> fragment = new CloudUploadFragment();
+            case TrainingApplication.PREFERENCE_SCREEN_EMAIL_UPLOAD ->
+                    fragment = new EmailUploadFragment();
+            case TrainingApplication.PREFERENCE_SCREEN_STRAVA ->
+                    fragment = new StravaUploadFragment();
+            case TrainingApplication.PREFERENCE_SCREEN_RUNKEEPER ->
+                    fragment = new RunkeeperUploadFragment();
+            case TrainingApplication.PREFERENCE_SCREEN_TRAINING_PEAKS ->
+                    fragment = new TrainingpeaksUploadFragment();
+            case "pebbleScreen" -> fragment = new PebbleScreenFragment();
+            case "prefsLocationSources" -> fragment = new LocationSourcesFragment();
+            case "altitudeCorrection" -> fragment = new AltitudeCorrectionFragment();
+            case "sportTypes" -> {
+                FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
+                ft.replace(R.id.content, new SportTypeListFragment(), preferenceScreen.getKey());
+                ft.addToBackStack(preferenceScreen.getKey());
+                ft.commit();
+                return true;
+            }
+            case "fancyWorkoutNames" -> {
+                FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
+                ft.replace(R.id.content, new FancyWorkoutNameListFragment(), preferenceScreen.getKey());
+                ft.addToBackStack(preferenceScreen.getKey());
+                ft.commit();
+                return true;
+            }
+            default -> Log.d(TAG, "WTF: unknown key");
         }
 
 

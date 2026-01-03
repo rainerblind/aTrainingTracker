@@ -890,7 +890,7 @@ public class WorkoutSummariesDatabaseManager {
         //         + WorkoutSummaries.ADD_COUNTER          + " int, "
         //         + WorkoutSummaries.ADD_VIA              + " int)";
 
-        private final void addColumn(SQLiteDatabase db, String table, String column, String type) {
+        private void addColumn(SQLiteDatabase db, String table, String column, String type) {
             db.execSQL("ALTER TABLE " + table + " ADD COLUMN " + column + " " + type + ";");
         }
 

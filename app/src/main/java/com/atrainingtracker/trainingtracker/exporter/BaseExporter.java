@@ -32,6 +32,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 
+import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
@@ -115,15 +116,7 @@ public abstract class BaseExporter {
 
     private static OutputStream getOutputStream(Context context, String shortPath, String mimeType) throws IOException {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            File shortFile = new File(shortPath);
-            final String relativeLocation = getRelativePath() + File.separator + shortFile.getParent();
-
-            final ContentValues contentValues = new ContentValues();
-            contentValues.put(MediaStore.Files.FileColumns.DISPLAY_NAME, shortFile.getName());
-            contentValues.put(MediaStore.Files.FileColumns.RELATIVE_PATH, relativeLocation);
-            // TODO int mediaType = Build.VERSION.SDK_INT == Build.VERSION_CODES.Q ? 0 : MediaStore.Files.FileColumns.MEDIA_TYPE_DOCUMENT;
-            contentValues.put(MediaStore.Files.FileColumns.MEDIA_TYPE, 0);
-            contentValues.put(MediaStore.Files.FileColumns.MIME_TYPE, mimeType);
+            final ContentValues contentValues = getContentValues(shortPath, mimeType);
 
             final ContentResolver resolver = context.getApplicationContext().getContentResolver();
 
@@ -139,6 +132,20 @@ public abstract class BaseExporter {
             File file = new File(path);
             return new BufferedOutputStream(new FileOutputStream(file));
         }
+    }
+
+    @NonNull
+    private static ContentValues getContentValues(String shortPath, String mimeType) {
+        File shortFile = new File(shortPath);
+        final String relativeLocation = getRelativePath() + File.separator + shortFile.getParent();
+
+        final ContentValues contentValues = new ContentValues();
+        contentValues.put(MediaStore.Files.FileColumns.DISPLAY_NAME, shortFile.getName());
+        contentValues.put(MediaStore.Files.FileColumns.RELATIVE_PATH, relativeLocation);
+        // TODO int mediaType = Build.VERSION.SDK_INT == Build.VERSION_CODES.Q ? 0 : MediaStore.Files.FileColumns.MEDIA_TYPE_DOCUMENT;
+        contentValues.put(MediaStore.Files.FileColumns.MEDIA_TYPE, 0);
+        contentValues.put(MediaStore.Files.FileColumns.MIME_TYPE, mimeType);
+        return contentValues;
     }
 
     public static BufferedWriter getWriter(Context context, String shortPath, String mimeType) throws IOException {
@@ -357,7 +364,7 @@ public abstract class BaseExporter {
         }
     }
 
-    protected class ExportResult {
+    protected static class ExportResult {
         private final boolean mSuccess;
         private final String mAnswer;
 

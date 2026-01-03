@@ -830,7 +830,7 @@ public class TrackingViewsDatabaseManager {
             mHavePressureSensor = HavePressureSensor.havePressureSensor(mContext);
         }
 
-        private static final void addColumn(SQLiteDatabase db, String table, String column, String type) {
+        private static void addColumn(SQLiteDatabase db, String table, String column, String type) {
             db.execSQL("ALTER TABLE " + table + " ADD COLUMN " + column + " " + type + ";");
         }
 
@@ -1070,7 +1070,7 @@ public class TrackingViewsDatabaseManager {
             return viewMap;
         }
 
-        protected class RowData {
+        protected static class RowData {
             public SensorType sensorType;
             public int textSize;
             public int row;

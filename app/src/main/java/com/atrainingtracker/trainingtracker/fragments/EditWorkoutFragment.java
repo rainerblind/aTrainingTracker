@@ -52,7 +52,6 @@ import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.EditText;
@@ -615,7 +614,7 @@ public class EditWorkoutFragment extends Fragment {
         // calories when available and not zero
         TextView tvCalories = getActivity().findViewById(R.id.tvCalories);
         Integer calories = cursor.getInt(cursor.getColumnIndex(WorkoutSummaries.CALORIES));
-        if (calories == null || calories == 0) {
+        if (calories == 0) {
             getActivity().findViewById(R.id.trCalories).setVisibility(View.GONE);
         } else {
             getActivity().findViewById(R.id.trCalories).setVisibility(View.VISIBLE);
@@ -753,11 +752,9 @@ public class EditWorkoutFragment extends Fragment {
             Double value = cursor.getDouble(cursor.getColumnIndex(WorkoutSummaries.VALUE));
             if (DEBUG)
                 Log.i(TAG, "got " + value + " for " + extremaType.name() + " " + sensorType.name() + " of workout " + mWorkoutID);
-            if (value != null) {
-                ((TextView) getActivity().findViewById(tvId)).setText(sensorType.getMyFormatter().format(value));
-                if (value != 0) {
-                    validData = true;
-                }
+            ((TextView) getActivity().findViewById(tvId)).setText(sensorType.getMyFormatter().format(value));
+            if (value != 0) {
+                validData = true;
             }
         } else {
             if (DEBUG)
@@ -1033,7 +1030,7 @@ public class EditWorkoutFragment extends Fragment {
             }
         }
 
-        if (equipmentList.size() == 0) {
+        if (equipmentList.isEmpty()) {
             // there is no equipment, so the spinner is removed.
             spinnerEquipment.setVisibility(View.GONE);
             return;

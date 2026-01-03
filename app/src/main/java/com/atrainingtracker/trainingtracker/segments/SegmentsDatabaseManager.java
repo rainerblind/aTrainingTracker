@@ -264,7 +264,7 @@ public class SegmentsDatabaseManager {
 
         }
 
-        private final void addColumn(SQLiteDatabase db, String table, String column, String type) {
+        private void addColumn(SQLiteDatabase db, String table, String column, String type) {
             db.execSQL("ALTER TABLE " + table + " ADD COLUMN " + column + " " + type + ";");
         }
 

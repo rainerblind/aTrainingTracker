@@ -23,8 +23,6 @@ import android.net.Uri;
 import com.atrainingtracker.BuildConfig;
 import com.atrainingtracker.trainingtracker.onlinecommunities.BaseGetAccessTokenActivity;
 
-import org.json.JSONObject;
-
 
 // Use StravaHelper insead.
 @Deprecated

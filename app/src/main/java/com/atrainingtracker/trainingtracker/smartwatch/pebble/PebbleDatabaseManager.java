@@ -450,7 +450,7 @@ public class PebbleDatabaseManager {
             return viewID;
         }
 
-        private static final void addColumn(SQLiteDatabase db, String table, String column, String type) {
+        private static void addColumn(SQLiteDatabase db, String table, String column, String type) {
             db.execSQL("ALTER TABLE " + table + " ADD COLUMN " + column + " " + type + ";");
         }
 

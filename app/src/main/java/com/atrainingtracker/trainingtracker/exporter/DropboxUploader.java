@@ -68,7 +68,7 @@ public class DropboxUploader extends BaseExporter {
             return new ExportResult(false, "IOException: " + e.getMessage());
 
         } finally {
-            if (inputStream != null) inputStream.close();
+            inputStream.close();
         }
 
 

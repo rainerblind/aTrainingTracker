@@ -134,17 +134,17 @@ public class EditFancyWorkoutNameDialog extends DialogFragment {
         final CheckBox cbAddVia = view.findViewById(R.id.checkBoxAddVia);
 
         // configure the main view
-        spinnerSport.setAdapter(new ArrayAdapter(getContext(), android.R.layout.simple_list_item_1, sportTypesList));
+        spinnerSport.setAdapter(new ArrayAdapter<>(getContext(), android.R.layout.simple_list_item_1, sportTypesList));
         if (sportTypeName != null) {
             spinnerSport.setSelection(sportTypesList.indexOf(sportTypeName));
         }
 
-        spinnerStartName.setAdapter(new ArrayAdapter(getContext(), android.R.layout.simple_list_item_1, myLocationNameList));
+        spinnerStartName.setAdapter(new ArrayAdapter<>(getContext(), android.R.layout.simple_list_item_1, myLocationNameList));
         if (startLocationName != null) {
             spinnerStartName.setSelection(myLocationNameList.indexOf(startLocationName));
         }
 
-        spinnerEndName.setAdapter(new ArrayAdapter(getContext(), android.R.layout.simple_list_item_1, myLocationNameList));
+        spinnerEndName.setAdapter(new ArrayAdapter<>(getContext(), android.R.layout.simple_list_item_1, myLocationNameList));
         if (endLocationName != null) {
             spinnerEndName.setSelection(myLocationNameList.indexOf(endLocationName));
         }

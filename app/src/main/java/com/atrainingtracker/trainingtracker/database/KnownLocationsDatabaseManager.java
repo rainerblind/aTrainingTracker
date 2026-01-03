@@ -389,7 +389,7 @@ public class KnownLocationsDatabaseManager {
             }
         }
 
-        private final void addColumn(SQLiteDatabase db, String column, String type) {
+        private void addColumn(SQLiteDatabase db, String column, String type) {
             db.execSQL("ALTER TABLE " + TABLE + " ADD COLUMN " + column + " " + type + ";");
         }
 

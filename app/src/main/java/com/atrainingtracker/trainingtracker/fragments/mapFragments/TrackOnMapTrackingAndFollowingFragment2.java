@@ -66,9 +66,8 @@ public class TrackOnMapTrackingAndFollowingFragment2
     // TODO: does this really make sense when we try to get the workoutId during onResume???
     public static TrackOnMapTrackingAndFollowingFragment2 newInstance() {
         if (DEBUG) Log.i(TAG, "newInstance");
-        TrackOnMapTrackingAndFollowingFragment2 trackOnMapTrackingFragment = new TrackOnMapTrackingAndFollowingFragment2();
 
-        return trackOnMapTrackingFragment;
+        return new TrackOnMapTrackingAndFollowingFragment2();
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
