@@ -15,7 +15,7 @@ class RunkeeperHelper {
         val DEBUG = TrainingApplication.getDebug(true);
 
         val MY_CLIENT_ID = BuildConfig.RUNKEEPER_CLIENT_ID
-        val REDIRECT_URI = "runkeeper://rainerblind.github.io"
+        val REDIRECT_URI =  "https://rainer-blind.de"
 
 
 
