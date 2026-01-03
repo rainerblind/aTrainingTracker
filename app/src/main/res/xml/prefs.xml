@@ -148,13 +148,8 @@
             android:key="cloudUpload"
             android:summary="@string/prefsUploadSummary"
             android:title="@string/prefsUploadTitle">
-            <PreferenceCategory android:title="@string/prefsOnlineStorage">
-                <CheckBoxPreference
-                    android:defaultValue="false"
-                    android:icon="@drawable/dropbox_logo_blue"
-                    android:key="uploadToDropbox"
-                    android:summary="@string/prefsUploadToDropboxSummary"
-                    android:title="@string/prefsUploadToDropboxTitle" />
+
+            <PreferenceCategory android:title="@string/prefEmailExport">
                 <PreferenceScreen
                     android:icon="@drawable/ic_mail_outline_black_48dp"
                     android:key="psSendEmail"
@@ -204,7 +199,15 @@
                         android:summary="@string/prefSendGCEmailSummary"
                         android:title="@string/prefSendGCEmailTitle" />
                 </PreferenceScreen>
+            </PreferenceCategory>
 
+            <PreferenceCategory android:title="@string/prefsOnlineStorage">
+                <CheckBoxPreference
+                    android:defaultValue="false"
+                    android:icon="@drawable/dropbox_logo_blue"
+                    android:key="uploadToDropbox"
+                    android:summary="@string/prefsUploadToDropboxSummary"
+                    android:title="@string/prefsUploadToDropboxTitle" />
             </PreferenceCategory>
 
             <PreferenceCategory android:title="@string/prefsOnlineCommunities">
@@ -257,6 +260,7 @@
                     </PreferenceCategory>
                 </PreferenceScreen>
 
+                <!-- Runkeeper
                 <PreferenceScreen
                     android:icon="@drawable/logo_square_runkeeper"
                     android:key="psUploadToRunkeeper"
@@ -283,7 +287,9 @@
                             android:title="@string/uploadHR" />
                     </PreferenceCategory>
                 </PreferenceScreen>
+                -->
 
+                <!-- TrainingPeaks
                 <PreferenceScreen
                     android:icon="@drawable/logo_square_training_peaks"
                     android:key="psUploadToTrainingPeaks"
@@ -325,6 +331,7 @@
                             android:title="@string/uploadCadence" />
                     </PreferenceCategory>
                 </PreferenceScreen>
+                -->
 
             </PreferenceCategory>
         </PreferenceScreen>

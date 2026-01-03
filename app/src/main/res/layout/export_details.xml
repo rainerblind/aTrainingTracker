@@ -195,8 +195,8 @@
             tools:ignore="ContentDescription" />
     </TableRow>
 
+    <!-- Runkeeper
     <TableRow>
-
         <TextView
             android:layout_weight="1"
             android:text="@string/Runkeeper" />
@@ -225,9 +225,10 @@
             android:src="@drawable/export_success"
             tools:ignore="ContentDescription" />
     </TableRow>
+    -->
 
+    <!-- TrainingPeaks
     <TableRow>
-
         <TextView
             android:layout_weight="1"
             android:text="@string/TrainingPeaks" />
@@ -256,5 +257,6 @@
             android:src="@drawable/export_success"
             tools:ignore="ContentDescription" />
     </TableRow>
+    -->
 
 </TableLayout>

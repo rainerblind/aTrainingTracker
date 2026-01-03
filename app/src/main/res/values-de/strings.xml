@@ -797,4 +797,5 @@
 
     <string name="label_min">Min</string>
     <string name="label_max">Max</string>
+    <string name="prefEmailExport">e-Mail</string>
 </resources>
