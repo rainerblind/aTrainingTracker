@@ -214,8 +214,8 @@ public class TrainingApplication extends Application {
     private final IntentFilter mSearchingStartedFilter = new IntentFilter(BANALService.SEARCHING_STARTED_FOR_ONE_INTENT);
     public TrackOnMapHelper trackOnMapHelper;
     public SegmentOnMapHelper segmentOnMapHelper;
-    private final HashMap<Long, Boolean> mSegmentListUpdating = new HashMap();
-    private final HashMap<Long, Boolean> mLeaderboardUpdating = new HashMap();
+    private final HashMap<Long, Boolean> mSegmentListUpdating = new HashMap<>();
+    private final HashMap<Long, Boolean> mLeaderboardUpdating = new HashMap<>();
     private long mWorkoutID = -1;
     protected BroadcastReceiver mTrackingStartedReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
@@ -319,11 +319,11 @@ public class TrainingApplication extends Application {
     public static int getNumberOfSearchTries() {
         String numberOfSearchTries = cSharedPreferences.getString(SP_NUMBER_OF_SEARCH_TRIES, null);
         if (DEBUG) Log.i(TAG, "number of search tries=" + numberOfSearchTries);
-        if (numberOfSearchTries == null || numberOfSearchTries.equals("")) {
+        if (numberOfSearchTries == null || numberOfSearchTries.isEmpty()) {
             return DEFAULT_NUMBER_OF_SEARCH_TRIES;
         } else {
             try {
-                return Integer.valueOf(numberOfSearchTries);
+                return Integer.parseInt(numberOfSearchTries);
             } catch (Exception e) {
                 return DEFAULT_NUMBER_OF_SEARCH_TRIES;
             }
@@ -456,11 +456,11 @@ public class TrainingApplication extends Application {
 
     public static int getSamplingTime() {
         String samplingTimePref = cSharedPreferences.getString(SP_SAMPLING_TIME, null);
-        if (samplingTimePref == null || samplingTimePref.equals("")) {
+        if (samplingTimePref == null || samplingTimePref.isEmpty()) {
             return DEFAULT_SAMPLING_TIME;
         } else {
             try {
-                return Integer.valueOf(samplingTimePref);
+                return Integer.parseInt(samplingTimePref);
             } catch (Exception e) {
                 return DEFAULT_SAMPLING_TIME;
             }
@@ -674,7 +674,7 @@ public class TrainingApplication extends Application {
     }
 
     public static void setUploadToTrainingPeaks(boolean value) {
-        cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_RUNKEEPER, false).apply();
+        cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_RUNKEEPER, value).apply();
     }
 
     public static String getTrainingPeaksAccessToken() {
@@ -760,40 +760,29 @@ public class TrainingApplication extends Application {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     public static boolean exportToFile(FileFormat fileFormat) {
-        switch (fileFormat) {
-            case CSV:
-                return exportToCSV();
-            case GC:
-                return exportToGCJson();
-            case TCX:
-                return exportToTCX();
-            case GPX:
-                return exportToGPX();
-            case STRAVA:
-                return uploadToStrava();
+        return switch (fileFormat) {
+            case CSV -> exportToCSV();
+            case GC -> exportToGCJson();
+            case TCX -> exportToTCX();
+            case GPX -> exportToGPX();
+            case STRAVA -> uploadToStrava();
             /* case RUNKEEPER:
                 return uploadToRunKeeper(); */
             /* case TRAINING_PEAKS:
                 return uploadToTrainingPeaks(); */
-            default:
-                return false;
-        }
+            default -> false;
+        };
     }
 
     public static boolean exportViaEmail(FileFormat fileFormat) {
         if (sendEmail()) {
-            switch (fileFormat) {
-                case CSV:
-                    return sendCSVEmail();
-                case GC:
-                    return sendGCEmail();
-                case TCX:
-                    return sendTCXEmail();
-                case GPX:
-                    return sendGPXEmail();
-                default:
-                    return false;
-            }
+            return switch (fileFormat) {
+                case CSV -> sendCSVEmail();
+                case GC -> sendGCEmail();
+                case TCX -> sendTCXEmail();
+                case GPX -> sendGPXEmail();
+                default -> false;
+            };
         } else {
             return false;
         }
@@ -908,13 +897,11 @@ public class TrainingApplication extends Application {
         newIntent.setAction("TrackerService");
         mStartMainActivityPendingIntent = PendingIntent.getActivity(this, 0, newIntent, PendingIntent.FLAG_IMMUTABLE);  // TODO: correct???
 
-        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL__TRACKING_2)
+        return new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL__TRACKING_2)
                 .setSmallIcon(R.drawable.logo)
                 .setContentTitle(getString(R.string.TrainingTracker))
                 .setContentText(getString(R.string.notification_tracking))
                 .setContentIntent(mStartMainActivityPendingIntent);
-
-        return notificationBuilder;
     }
 
     @SuppressLint("RestrictedApi")
@@ -1091,11 +1078,7 @@ public class TrainingApplication extends Application {
     }
 
     public boolean isLeaderboardUpdating(Long segmentId) {
-        if (mLeaderboardUpdating.containsKey(segmentId)) {
-            return mLeaderboardUpdating.get(segmentId);
-        } else {
-            return false;
-        }
+        return mLeaderboardUpdating.getOrDefault(segmentId, false);
     }
 
     public long getWorkoutID() {

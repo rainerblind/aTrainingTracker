@@ -18,6 +18,8 @@
 
 package com.atrainingtracker.trainingtracker.exporter;
 
+import androidx.annotation.NonNull;
+
 import com.atrainingtracker.R;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 
@@ -34,6 +36,7 @@ public enum ExportType {
         this.exportToFileFormats = exportToFileFormats;
     }
 
+    @NonNull
     @Override
     public String toString() {
         return TrainingApplication.getAppContext().getString(uiId);
