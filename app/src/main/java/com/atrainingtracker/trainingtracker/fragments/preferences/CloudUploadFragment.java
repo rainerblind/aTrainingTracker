@@ -41,7 +41,6 @@ public class CloudUploadFragment extends androidx.preference.PreferenceFragmentC
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private static final String TAG = CloudUploadFragment.class.getName();
 
-    private CheckBoxPreference mDropboxUpload;
     private PreferenceScreen mPSStrava, /* mPSRunkeeper, mPSTrainingPeaks, */ mPSEmailUpload;
 
     private SharedPreferences mSharedPreferences;
@@ -53,8 +52,6 @@ public class CloudUploadFragment extends androidx.preference.PreferenceFragmentC
         if (DEBUG) Log.i(TAG, "onCreatePreferences(savedInstanceState, rootKey=" + rootKey + ")");
 
         setPreferencesFromResource(R.xml.prefs, rootKey);
-
-        mDropboxUpload = this.getPreferenceScreen().findPreference(TrainingApplication.SP_UPLOAD_TO_DROPBOX);
 
         mPSStrava = this.getPreferenceScreen().findPreference(TrainingApplication.PREFERENCE_SCREEN_STRAVA);
         // mPSRunkeeper = this.getPreferenceScreen().findPreference(TrainingApplication.PREFERENCE_SCREEN_RUNKEEPER);
@@ -193,7 +190,7 @@ public class CloudUploadFragment extends androidx.preference.PreferenceFragmentC
                 list.add(getString(R.string.GC));
             }
 
-            if (list.size() == 0) {
+            if (list.isEmpty()) {
                 return getString(R.string.send_email_only_summary_format, TrainingApplication.getSpEmailAddress());
             } else if (list.size() == 1) {
                 return getString(R.string.send_email_format, list.get(0), TrainingApplication.getSpEmailAddress());

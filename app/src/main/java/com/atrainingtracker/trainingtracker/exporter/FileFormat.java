@@ -33,8 +33,8 @@ public enum FileFormat {
     // TRAINING_PEAKS("TrainingPeaks", ".tcx", R.string.TrainingPeaks);//       new TrainingPeaksFileExporter(), new TrainingPeaksUploader());
     // TRAINING_PEAKS("TrainingPeaks", ".pwx",  "TrainingPeaks");//       new TrainingPeaksFileExporter(), new TrainingPeaksUploader());
 
-    public static FileFormat[] STANDARD_FILE_FORMATS = new FileFormat[]{CSV, GC, TCX, GPX};
-    public static FileFormat[] ONLINE_COMMUNITIES = new FileFormat[]{STRAVA /*, RUNKEEPER, TRAINING_PEAKS*/};
+    public static final FileFormat[] STANDARD_FILE_FORMATS = new FileFormat[]{CSV, GC, TCX, GPX};
+    public static final FileFormat[] ONLINE_COMMUNITIES = new FileFormat[]{STRAVA /*, RUNKEEPER, TRAINING_PEAKS*/};
 
     private final String mDirName;
     private final String mFileEnding;
@@ -55,7 +55,7 @@ public enum FileFormat {
         return mDirName;
     }
 
-    protected String getFileEnding() {
+    public String getFileEnding() {
         return mFileEnding;
     }
 
