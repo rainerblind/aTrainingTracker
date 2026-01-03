@@ -88,10 +88,10 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         if (DEBUG) Log.d(TAG, "getLinkedEquipment with antDeviceList");
 
         if (antDeviceIds == null || antDeviceIds.isEmpty()) {
-            return new ArrayList<String>();
+            return new ArrayList<>();
         }
 
-        Set<String> linkedEquipment = new HashSet<String>();
+        Set<String> linkedEquipment = new HashSet<>();
 
         int i = 0;
         // find first device with linked equipment
@@ -100,7 +100,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
             if (!tmpEquipment.isEmpty()) {
                 if (DEBUG)
                     Log.d(TAG, "found device with linked equipment: " + i + ", " + antDeviceIds.get(i));
-                linkedEquipment = new HashSet<String>(tmpEquipment);
+                linkedEquipment = new HashSet<>(tmpEquipment);
                 break;
             } else {
                 if (DEBUG) Log.d(TAG, "no linked equipment for " + i + ", " + antDeviceIds.get(i));
@@ -111,14 +111,14 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         for (; i < antDeviceIds.size(); i++) {
             List<String> tmpEquipment = getLinkedEquipmentFromDeviceId(antDeviceIds.get(i));
             if (!tmpEquipment.isEmpty()) {
-                linkedEquipment.retainAll(new HashSet<String>(tmpEquipment));
+                linkedEquipment.retainAll(new HashSet<>(tmpEquipment));
                 if (DEBUG) Log.d(TAG, "did set intersection for " + i + ", " + antDeviceIds.get(i));
             } else {
                 if (DEBUG) Log.d(TAG, "no linked equipment for " + i + ", " + antDeviceIds.get(i));
             }
         }
 
-        return new ArrayList<String>(linkedEquipment);
+        return new ArrayList<>(linkedEquipment);
     }
 
     public List<String> getEquipment(BSportType sportType) {
@@ -130,7 +130,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         if (DEBUG)
             Log.d(TAG, "getEquipment, sportType=" + sportType.name() + "frameType=" + frameType);
 
-        List<String> equipmentList = new LinkedList<String>();
+        List<String> equipmentList = new LinkedList<>();
 
         SQLiteDatabase db = this.getReadableDatabase();
         Cursor cursor;
@@ -180,7 +180,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     public List<String> getLinkedEquipmentFromDeviceId(long deviceId) {
         if (DEBUG) Log.d(TAG, "getLinkedEquipmentFromDeviceId: " + deviceId);
 
-        List<String> equipmentList = new LinkedList<String>();
+        List<String> equipmentList = new LinkedList<>();
 
         SQLiteDatabase db = this.getReadableDatabase();
         Cursor linkCursor = db.query(LINKS,
@@ -247,7 +247,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     }
 
     private int getEquipmentId(SQLiteDatabase db, String equipmentName) {
-        equipmentName.equals("");  // throw an exception when equipmentName is null
+        equipmentName.isEmpty();  // throw an exception when equipmentName is null
 
         int equipmentId = -1;
 

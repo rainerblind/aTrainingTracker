@@ -50,16 +50,11 @@ public enum TrackingMode {
     }
 
     public int getSportId(BSportType sportType) {
-        switch (sportType) {
-            case RUN:
-                return runId;
-
-            case BIKE:
-                return bikeId;
-
-            default:
-                return otherId;
-        }
+        return switch (sportType) {
+            case RUN -> runId;
+            case BIKE -> bikeId;
+            default -> otherId;
+        };
     }
 
 }

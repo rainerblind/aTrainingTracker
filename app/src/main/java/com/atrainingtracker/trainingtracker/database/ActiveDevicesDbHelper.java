@@ -63,7 +63,7 @@ public class ActiveDevicesDbHelper extends SQLiteOpenHelper {
     public List<Integer> getDatabaseIdsOfActiveDevices(int workoutId) {
         if (DEBUG) Log.d(TAG, "getDatabaseIdsOfActiveDevices workoutId=" + workoutId);
 
-        List<Integer> result = new LinkedList<Integer>();
+        List<Integer> result = new LinkedList<>();
         SQLiteDatabase db = getReadableDatabase();
         Cursor cursor = db.query(ActiveDevices.TABLE,
                 null,

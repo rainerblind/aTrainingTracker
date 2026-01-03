@@ -48,8 +48,8 @@ import java.util.HashMap;
 public class TrackOnMapHelper {
     private static final String TAG = TrackOnMapHelper.class.getName();
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
-    private final EnumMap<Roughness, EnumMap<TrackType, HashMap<Long, TrackData>>> mTrackCache = new EnumMap<Roughness, EnumMap<TrackType, HashMap<Long, TrackData>>>(Roughness.class);
-    private final EnumMap<TrackType, HashMap<GoogleMap, Polyline>> mPolylines = new EnumMap<TrackType, HashMap<GoogleMap, Polyline>>(TrackType.class);
+    private final EnumMap<Roughness, EnumMap<TrackType, HashMap<Long, TrackData>>> mTrackCache = new EnumMap<>(Roughness.class);
+    private final EnumMap<TrackType, HashMap<GoogleMap, Polyline>> mPolylines = new EnumMap<>(TrackType.class);
 
     public static PolylineOptions getPolylineOptions(long workoutId, Roughness roughness, TrackType trackType) {
         String baseFileName = WorkoutSummariesDatabaseManager.getBaseFileName(workoutId);
@@ -163,7 +163,7 @@ public class TrackOnMapHelper {
         Polyline polyline = myMapViewHolder.map.addPolyline(trackData.polylineOptions);
 
         if (!mPolylines.containsKey(trackType)) {
-            mPolylines.put(trackType, new HashMap<GoogleMap, Polyline>());
+            mPolylines.put(trackType, new HashMap<>());
         }
         mPolylines.get(trackType).put(myMapViewHolder.map, polyline);
 
@@ -210,10 +210,10 @@ public class TrackOnMapHelper {
 
         if (polylineOptions != null && !polylineOptions.getPoints().isEmpty()) {
             if (!mTrackCache.containsKey(roughness)) {
-                mTrackCache.put(roughness, new EnumMap<TrackType, HashMap<Long, TrackData>>(TrackType.class));
+                mTrackCache.put(roughness, new EnumMap<>(TrackType.class));
             }
             if (!mTrackCache.get(roughness).containsKey(trackType)) {
-                mTrackCache.get(roughness).put(trackType, new HashMap<Long, TrackData>());
+                mTrackCache.get(roughness).put(trackType, new HashMap<>());
             }
 
             mTrackCache.get(roughness).get(trackType).put(workoutId, new TrackData(polylineOptions, getLatLngBounds(polylineOptions)));
@@ -257,14 +257,7 @@ public class TrackOnMapHelper {
 
     }
 
-    private static class TrackData {
-        final PolylineOptions polylineOptions;
-        final LatLngBounds latLngBounds;
-
-        TrackData(PolylineOptions polylineOptions, LatLngBounds latLngBounds) {
-            this.polylineOptions = polylineOptions;
-            this.latLngBounds = latLngBounds;
-        }
+    private record TrackData(PolylineOptions polylineOptions, LatLngBounds latLngBounds) {
     }
     private class TrackOnMapThread extends Thread {
         final MyMapViewHolder myMapViewHolder;

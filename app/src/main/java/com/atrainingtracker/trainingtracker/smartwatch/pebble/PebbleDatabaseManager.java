@@ -455,7 +455,7 @@ public class PebbleDatabaseManager {
         }
 
         public static LinkedList<SensorType> getDefaultSensorList(ActivityType activityType) {
-            LinkedList<SensorType> result = new LinkedList<SensorType>();
+            LinkedList<SensorType> result = new LinkedList<>();
 
             switch (activityType) {
                 case BIKE_POWER:

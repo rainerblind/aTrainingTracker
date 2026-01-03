@@ -309,14 +309,7 @@ public class KnownLocationsDatabaseManager {
         }
     }
 
-    public static class NamedLatLng {
-        public final LatLng latLng;
-        public final String name;
-
-        public NamedLatLng(LatLng latLng, String name) {
-            this.latLng = latLng;
-            this.name = name;
-        }
+    public record NamedLatLng(LatLng latLng, String name) {
     }
 
 

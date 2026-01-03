@@ -115,10 +115,10 @@ public class EditFieldDialog extends DialogFragment {
 
         Bundle args = new Bundle();
         args.putString(ACTIVITY_TYPE, activityType.name());
-        args.putString(SENSOR_TYPE, viewInfo.sensorType.name());
-        args.putLong(ROW_ID, viewInfo.rowId);
-        args.putInt(TEXT_SIZE, viewInfo.textSize);
-        args.putLong(DEVICE_ID, viewInfo.sourceDeviceId);
+        args.putString(SENSOR_TYPE, viewInfo.sensorType().name());
+        args.putLong(ROW_ID, viewInfo.rowId());
+        args.putInt(TEXT_SIZE, viewInfo.textSize());
+        args.putLong(DEVICE_ID, viewInfo.sourceDeviceId());
         fragment.setArguments(args);
 
         return fragment;
@@ -264,7 +264,7 @@ public class EditFieldDialog extends DialogFragment {
             LinkedList<Long> deviceIds = deviceIdAndNameLists.deviceIds;
             LinkedList<String> names = deviceIdAndNameLists.names;
 
-            deviceIds.addFirst(Long.valueOf(0));
+            deviceIds.addFirst(0L);
             names.addFirst(getContext().getString(R.string.bestSensor));
 
             if (mDeviceId < 0) {

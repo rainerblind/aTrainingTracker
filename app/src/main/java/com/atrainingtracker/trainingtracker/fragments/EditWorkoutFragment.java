@@ -717,7 +717,7 @@ public class EditWorkoutFragment extends Fragment {
         }
     }
 
-    protected boolean fillTrExtrema(SQLiteDatabase db, SensorType sensorType, int trId, int tvMeanId, int tvMaxId, int tvMinId) {
+    protected void fillTrExtrema(SQLiteDatabase db, SensorType sensorType, int trId, int tvMeanId, int tvMaxId, int tvMinId) {
         if (DEBUG) Log.i(TAG, "fillTrExtrema for sensor: " + sensorType.name());
 
         // if one of the extrema values contains valid data (not 0), we want to show the complete row
@@ -736,7 +736,6 @@ public class EditWorkoutFragment extends Fragment {
             mPaceExtremaValuesAvailable = dataAvailable;
         }
 
-        return dataAvailable;
     }
 
     protected boolean fillTvExtrema(SQLiteDatabase db, SensorType sensorType, ExtremaType extremaType, int tvId) {
@@ -1001,7 +1000,7 @@ public class EditWorkoutFragment extends Fragment {
         if (DEBUG) Log.d(TAG, "setSpinnerEquipment " + (allEquipment ? "ALL" : "selected"));
 
         EquipmentDbHelper equipmentDbHelper = new EquipmentDbHelper(getActivity());
-        List<String> equipmentList = new ArrayList<String>();
+        List<String> equipmentList = new ArrayList<>();
 
         if (!allEquipment) {
             equipmentList = equipmentDbHelper.getLinkedEquipment((int) mWorkoutID);
@@ -1040,7 +1039,7 @@ public class EditWorkoutFragment extends Fragment {
 
         String[] equipment = equipmentList.toArray(new String[equipmentList.size()]);
 
-        spinnerEquipment.setAdapter(new ArrayAdapter<String>(getActivity(), android.R.layout.simple_spinner_item, equipment));
+        spinnerEquipment.setAdapter(new ArrayAdapter<>(getActivity(), android.R.layout.simple_spinner_item, equipment));
 
         if (mEquipmentName != null) {
             spinnerEquipment.setSelection(equipmentList.indexOf(mEquipmentName));

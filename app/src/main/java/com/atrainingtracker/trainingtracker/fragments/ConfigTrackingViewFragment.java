@@ -262,35 +262,35 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
         for (final int colNr : rowMap.keySet()) {
             final TrackingViewsDatabaseManager.ViewInfo viewInfo = rowMap.get(colNr);
             if (DEBUG)
-                Log.i(TAG, "add view: rowNr=" + viewInfo.rowNr + ", colNr=" + viewInfo.colNr + ", SensorType=" + viewInfo.sensorType + ", TextSize=" + viewInfo.textSize);
+                Log.i(TAG, "add view: rowNr=" + viewInfo.rowNr() + ", colNr=" + viewInfo.colNr() + ", SensorType=" + viewInfo.sensorType() + ", TextSize=" + viewInfo.textSize());
 
             final LinearLayout llView = (LinearLayout) mLayoutInflater.inflate(R.layout.config_tracking_view_entry_static, llFields, false);
             llFields.addView(llView);
 
             TextView tvSensor = llView.findViewById(R.id.tvSensor);
-            tvSensor.setText(viewInfo.sensorType.toString());
+            tvSensor.setText(viewInfo.sensorType().toString());
 
             TextView tvSource = llView.findViewById(R.id.tvSource);
-            if (viewInfo.sourceDeviceId <= 0) {
+            if (viewInfo.sourceDeviceId() <= 0) {
                 tvSource.setText(R.string.bestSensor);
             } else {
-                tvSource.setText(DevicesDatabaseManager.getDeviceName(viewInfo.sourceDeviceId));
+                tvSource.setText(DevicesDatabaseManager.getDeviceName(viewInfo.sourceDeviceId()));
             }
 
             TextView tvFilterTitle = llView.findViewById(R.id.tvConfigureFilterTitle);
             TextView tvFilterValue = llView.findViewById(R.id.tvConfigureFilterValue);
-            if (viewInfo.sensorType.filteringPossible) {
+            if (viewInfo.sensorType().filteringPossible) {
                 tvFilterTitle.setVisibility(View.VISIBLE);
                 tvFilterValue.setVisibility(View.VISIBLE);
 
-                tvFilterValue.setText(ConfigureFilterDialogFragment.getFilterSummary(getContext(), viewInfo.filterType, viewInfo.filterConstant));
+                tvFilterValue.setText(ConfigureFilterDialogFragment.getFilterSummary(getContext(), viewInfo.filterType(), viewInfo.filterConstant()));
             } else {
                 tvFilterTitle.setVisibility(View.GONE);
                 tvFilterValue.setVisibility(View.GONE);
             }
 
             TextView tvSize = llView.findViewById(R.id.tvTextSize);
-            tvSize.setText(viewInfo.textSize + "");
+            tvSize.setText(viewInfo.textSize() + "");
 
             LinearLayout llSummary = llView.findViewById(R.id.llConfigSummary);
             llSummary.setOnClickListener(new View.OnClickListener() {
@@ -304,9 +304,9 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
             deleteButton.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
                     if (DEBUG) Log.i(TAG, "delete button pressed");
-                    TrackingViewsDatabaseManager.deleteRow(viewInfo.rowId);
+                    TrackingViewsDatabaseManager.deleteRow(viewInfo.rowId());
 
-                    mViewInfoMap.get(viewInfo.rowNr).remove(viewInfo.colNr);
+                    mViewInfoMap.get(viewInfo.rowNr()).remove(viewInfo.colNr());
                     addSensorFields();
                 }
             });
@@ -318,9 +318,9 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
                 if (DEBUG) Log.i(TAG, "add view button clicked");
 
                 TrackingViewsDatabaseManager.ViewInfo viewInfo = rowMap.get(rowMap.lastKey());
-                viewInfo = TrackingViewsDatabaseManager.addSensorToRow(viewInfo.viewId, viewInfo.rowNr, SENSOR_TYPE_DEFAULT, TEXT_SIZE_DEFAULT);
+                viewInfo = TrackingViewsDatabaseManager.addSensorToRow(viewInfo.viewId(), viewInfo.rowNr(), SENSOR_TYPE_DEFAULT, TEXT_SIZE_DEFAULT);
 
-                mViewInfoMap.get(viewInfo.rowNr).put(viewInfo.colNr, viewInfo);
+                mViewInfoMap.get(viewInfo.rowNr()).put(viewInfo.colNr(), viewInfo);
                 addSensorFields();
             }
         });
@@ -330,7 +330,7 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
             public void onClick(View v) {
                 Log.i(TAG, "buttonAddNewRow clicked");
                 TrackingViewsDatabaseManager.ViewInfo viewInfo = rowMap.get(rowMap.lastKey());
-                viewInfo = TrackingViewsDatabaseManager.addRowAfter(viewInfo.viewId, viewInfo.rowNr, SENSOR_TYPE_DEFAULT, TEXT_SIZE_DEFAULT);
+                viewInfo = TrackingViewsDatabaseManager.addRowAfter(viewInfo.viewId(), viewInfo.rowNr(), SENSOR_TYPE_DEFAULT, TEXT_SIZE_DEFAULT);
 
                 getViewInfoMapAndAddSensorFields();
 
@@ -368,14 +368,15 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
     public boolean onOptionsItemSelected(MenuItem item) {
         if (DEBUG) Log.i(TAG, "onOptionsItemSelected");
 
-        switch (item.getItemId()) {
-            case R.id.itemPreview:
+        return switch (item.getItemId()) {
+            case R.id.itemPreview -> {
                 showPreview();
 
-                return true;
-        }
+                yield true;
+            }
+            default -> false;
+        };
 
-        return false;
     }
 
     private void showEditFieldDialog(TrackingViewsDatabaseManager.ViewInfo viewInfo) {

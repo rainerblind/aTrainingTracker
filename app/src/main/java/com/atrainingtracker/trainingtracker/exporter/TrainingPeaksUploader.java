@@ -150,7 +150,7 @@ public class TrainingPeaksUploader extends BaseExporter {
         if (DEBUG) Log.d(TAG, "uploadToTrainingPeaks response: " + response);
         if (response == null) {
             return new ExportResult(false, "no response");
-        } else if (response.equals("")) {
+        } else if (response.isEmpty()) {
             return new ExportResult(true, "successfully uploaded " + exportInfo.getFileBaseName() + " to TrainingPeaks");
         }
 

@@ -115,9 +115,6 @@ public abstract class TrackOnMapBaseFragment
 
 
     /** helper method to check whether there is some data */
-    /**
-     * stolen from BaseExporter
-     */
     protected boolean dataValid(Cursor cursor, String string) {
         if (cursor.getColumnIndex(string) == -1) {
             if (DEBUG) Log.d(TAG, "dataValid: no such columnIndex!: " + string);

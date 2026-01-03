@@ -427,25 +427,25 @@ public class WorkoutSamplesDatabaseManager {
     }
 
     protected static String makeColumns(List<SensorType> sensorTypes) {
-        String result = WorkoutSamplesDbHelper.BASE_COLUMNS;
+        StringBuilder result = new StringBuilder(WorkoutSamplesDbHelper.BASE_COLUMNS);
 
         for (SensorType sensorType : sensorTypes) {
             switch (sensorType.getSensorValueType()) {
                 case INTEGER:
-                    result += ", " + sensorType.name() + " int";
+                    result.append(", ").append(sensorType.name()).append(" int");
                     break;
                 case DOUBLE:
-                    result += ", " + sensorType.name() + " real";
+                    result.append(", ").append(sensorType.name()).append(" real");
                     break;
                 case STRING:
-                    result += ", " + sensorType.name() + " text";
+                    result.append(", ").append(sensorType.name()).append(" text");
                     break;
                 default:
                     if (DEBUG) Log.d(TAG, "WTF: this should never ever happen: unknown type");
             }
         }
 
-        return result;
+        return result.toString();
     }
 
 

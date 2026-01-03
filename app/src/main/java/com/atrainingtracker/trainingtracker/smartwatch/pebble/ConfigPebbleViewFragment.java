@@ -52,7 +52,7 @@ public class ConfigPebbleViewFragment extends ConfigViewFragment {
     protected static SensorArrayAdapter SENSOR_ARRAY_ADAPTER;
 
     protected SensorType[] mSensorTypes = ActivityType.getSensorTypeArray(ActivityType.GENERIC, null);
-    protected final List<Spinner> mSensorTypeSpinners = new LinkedList<Spinner>();
+    protected final List<Spinner> mSensorTypeSpinners = new LinkedList<>();
 
     // protected ActivityType mActivityType;
     // protected long mViewId;
@@ -74,7 +74,7 @@ public class ConfigPebbleViewFragment extends ConfigViewFragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        NUMBER_OF_FIELDS_ARRAY_ADAPTER = new ArrayAdapter<Integer>(getContext(), android.R.layout.simple_spinner_item, new Integer[]{3, 5});
+        NUMBER_OF_FIELDS_ARRAY_ADAPTER = new ArrayAdapter<>(getContext(), android.R.layout.simple_spinner_item, new Integer[]{3, 5});
 
         mViewId = getArguments().getLong(ConfigViewsActivity.VIEW_ID);
     }

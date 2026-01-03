@@ -175,13 +175,14 @@ public class FancyWorkoutNameListFragment
 
         if (DEBUG) Log.i(TAG, "onContextItemSelected: id=" + id);
 
-        switch (item.getItemId()) {
-            case R.id.itemDelete:
+        return switch (item.getItemId()) {
+            case R.id.itemDelete -> {
                 showReallyDeleteDialog(id);
-                return true;
-        }
+                yield true;
+            }
+            default -> false;
+        };
 
-        return false;
     }
 
     private void showReallyDeleteDialog(final long id) {

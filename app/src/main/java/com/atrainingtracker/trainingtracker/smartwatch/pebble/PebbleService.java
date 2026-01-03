@@ -175,7 +175,7 @@ public class PebbleService extends Service {
     protected Number prevLapDistance = 0;
     protected DistanceFormatter distanceFormatter = new DistanceFormatter();
     private BANALServiceComm banalService;
-    private List<SensorType> mSensorTypeList = new LinkedList<SensorType>();
+    private List<SensorType> mSensorTypeList = new LinkedList<>();
     private final BroadcastReceiver mConfigurePebbleWatchAppReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -298,7 +298,7 @@ public class PebbleService extends Service {
     protected void updateSensorTypeList() {
         if (DEBUG) Log.d(TAG, "updateSensorTypeList");
 
-        List<SensorType> result = new LinkedList<SensorType>();
+        List<SensorType> result = new LinkedList<>();
 
         SQLiteDatabase db = (new PebbleDbHelper(this)).getReadableDatabase();
         Cursor cursor = db.query(PebbleDbHelper.ROWS_TABLE,
