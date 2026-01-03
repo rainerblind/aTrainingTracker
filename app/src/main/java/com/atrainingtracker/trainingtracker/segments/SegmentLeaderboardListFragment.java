@@ -26,6 +26,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 
+import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 import androidx.cursoradapter.widget.CursorAdapter;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
@@ -58,7 +59,7 @@ public class SegmentLeaderboardListFragment extends SwipeRefreshListFragment {
     protected final IntentFilter mNewLeaderboardEntryFilter = new IntentFilter(StravaSegmentsIntentService.NEW_LEADERBOARD_ENTRY_INTENT);
     protected final BroadcastReceiver mLeaderboardUpdateCompleteReceiver = new BroadcastReceiver() {
         @Override
-        public void onReceive(Context context, Intent intent) {
+        public void onReceive(@NonNull Context context, @NonNull Intent intent) {
             long segmentId = intent.getLongExtra(Segments.SEGMENT_ID, -1);
             if (segmentId == mSegmentId) {
                 if (isRefreshing()
@@ -73,7 +74,7 @@ public class SegmentLeaderboardListFragment extends SwipeRefreshListFragment {
     };
     final BroadcastReceiver mNewLeaderboardEntryReceiver = new BroadcastReceiver() {
         @Override
-        public void onReceive(Context context, Intent intent) {
+        public void onReceive(Context context, @NonNull Intent intent) {
             if (DEBUG) Log.i(TAG, "newLeaderboardEntry");
 
             if (intent.hasExtra(Segments.SEGMENT_ID)
@@ -83,6 +84,7 @@ public class SegmentLeaderboardListFragment extends SwipeRefreshListFragment {
         }
     };
 
+    @NonNull
     public static SegmentLeaderboardListFragment newInstance(long segmentId) {
         if (DEBUG) Log.i(TAG, "newInstance()");
 
@@ -109,7 +111,7 @@ public class SegmentLeaderboardListFragment extends SwipeRefreshListFragment {
 
     // BEGIN_INCLUDE (setup_views)
     @Override
-    public void onViewCreated(View view, Bundle savedInstanceState) {
+    public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
         mCursorAdapter = new SegmentLeaderboardCursorAdapter(getActivity(), mCursor);

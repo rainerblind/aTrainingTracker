@@ -22,6 +22,9 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.os.Bundle;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.preference.EditTextPreference;
 import androidx.preference.ListPreference;
 import androidx.preference.Preference;
@@ -42,8 +45,11 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
 
+    @Nullable
     private EditTextPreference mAthleteNamePref, mSamplingTimePref, mSearchRoundsPref;
+    @Nullable
     private ListPreference mUnitPref;
+    @Nullable
     private Preference mTrainingZonesPref, mExport, mPebble, mLocationSources, mCloudUpload;
 
     private SharedPreferences mSharedPreferences;
@@ -196,6 +202,7 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
         }
     }
 
+    @NonNull
     protected String exportSummary() {
         if (DEBUG) Log.i(TAG, "exportSummary()");
 
@@ -224,6 +231,7 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
         return exportTo;
     }
 
+    @NonNull
     protected String cloudUploadSummary() {
         if (DEBUG) Log.i(TAG, "cloudUploadSummary()");
 
@@ -251,7 +259,8 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
         return cloudUpload;
     }
 
-    protected String incString(String string) {
+    @NonNull
+    protected String incString(@Nullable String string) {
         if (string != null) {
             string += ", ";
         } else {
@@ -260,6 +269,7 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
         return string;
     }
 
+    @NonNull
     protected String pebbleSummary() {
         if (TrainingApplication.pebbleSupport()) {
             return getString(TrainingApplication.getPebbleWatchapp().getUiId());
@@ -268,6 +278,7 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
         }
     }
 
+    @NonNull
     protected String locationSourcesSummary() {
         String locationSources = null;
 

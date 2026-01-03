@@ -33,6 +33,7 @@ import android.os.Build;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
@@ -66,9 +67,10 @@ public abstract class BaseExporter {
     protected static ExportManager cExportManager;
     private static NotificationCompat.Builder mNotificationBuilder;
     private static NotificationManagerCompat cNotificationManager;
+    @NonNull
     protected final Context mContext;
 
-    public BaseExporter(Context context) {
+    public BaseExporter(@NonNull Context context) {
         mContext = context;
         cExportManager = new ExportManager(context, TAG);
 
@@ -97,7 +99,8 @@ public abstract class BaseExporter {
      * @param context
      * @return the path
      */
-    public static File getBaseDirFile(Context context) {
+    @NonNull
+    public static File getBaseDirFile(@NonNull Context context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             // relative path
             return Environment.getExternalStoragePublicDirectory(getRelativePath()).getAbsoluteFile();
@@ -110,11 +113,13 @@ public abstract class BaseExporter {
      * Get the relative "base path" to identify the file for >=Q
      * @return the path
      */
+    @NonNull
     private static String getRelativePath() {
         return Environment.DIRECTORY_DOCUMENTS + File.separator + "aTrainingTracker";
     }
 
-    private static OutputStream getOutputStream(Context context, String shortPath, String mimeType) throws IOException {
+    @Nullable
+    private static OutputStream getOutputStream(@NonNull Context context, @NonNull String shortPath, String mimeType) throws IOException {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             final ContentValues contentValues = getContentValues(shortPath, mimeType);
 
@@ -135,7 +140,7 @@ public abstract class BaseExporter {
     }
 
     @NonNull
-    private static ContentValues getContentValues(String shortPath, String mimeType) {
+    private static ContentValues getContentValues(@NonNull String shortPath, String mimeType) {
         File shortFile = new File(shortPath);
         final String relativeLocation = getRelativePath() + File.separator + shortFile.getParent();
 
@@ -148,7 +153,8 @@ public abstract class BaseExporter {
         return contentValues;
     }
 
-    public static BufferedWriter getWriter(Context context, String shortPath, String mimeType) throws IOException {
+    @NonNull
+    public static BufferedWriter getWriter(@NonNull Context context, @NonNull String shortPath, String mimeType) throws IOException {
         OutputStream outputStream = getOutputStream(context, shortPath, mimeType);
         OutputStreamWriter outputStreamWriter = new OutputStreamWriter(outputStream, StandardCharsets.UTF_8);
         return new BufferedWriter(outputStreamWriter);
@@ -158,7 +164,7 @@ public abstract class BaseExporter {
         cExportManager.onFinished(TAG);
     }
 
-    public final boolean export(ExportInfo exportInfo) {
+    public final boolean export(@NonNull ExportInfo exportInfo) {
         if (DEBUG) Log.d(TAG, "export: " + exportInfo.toString());
 
         boolean success = false;
@@ -204,13 +210,14 @@ public abstract class BaseExporter {
         return success;
     }
 
+    @Nullable
     abstract protected ExportResult doExport(ExportInfo exportInfo)
             throws IOException, IllegalArgumentException, JSONException, ParseException, InterruptedException;
 
     /**
      * helper method to check whether there is some data
      */
-    protected boolean dataValid(Cursor cursor, String string) {
+    protected boolean dataValid(@NonNull Cursor cursor, String string) {
         int index = cursor.getColumnIndex(string);
         if (index < 0) {
             if (DEBUG) Log.d(TAG, "dataValid: no such columnIndex!: " + string);
@@ -226,7 +233,8 @@ public abstract class BaseExporter {
     /**
      * create a notification that informs the user about the progress
      **/
-    public Notification getExportProgressNotification(ExportInfo exportInfo) {
+    @NonNull
+    public Notification getExportProgressNotification(@NonNull ExportInfo exportInfo) {
         mNotificationBuilder.setProgress(0, 0, false)
                 .setContentText(getExportMessage(exportInfo));
 
@@ -238,13 +246,15 @@ public abstract class BaseExporter {
                 .setContentText(message);
     }
 
-    protected String getExportTitle(ExportInfo exportInfo) {
+    @NonNull
+    protected String getExportTitle(@NonNull ExportInfo exportInfo) {
         return mContext.getString(R.string.notification_title,
                 mContext.getString(getAction().getIngId()),
                 mContext.getString(exportInfo.getExportType().getUiId()));
     }
 
-    protected String getExportMessage(ExportInfo exportInfo) {
+    @NonNull
+    protected String getExportMessage(@NonNull ExportInfo exportInfo) {
         String workoutName = exportInfo.getFileBaseName();
         FileFormat format = exportInfo.getFileFormat();
         ExportType type = exportInfo.getExportType();
@@ -261,7 +271,8 @@ public abstract class BaseExporter {
     }
 
     // copied code from getExportMessage
-    protected String getPositiveAnswer(ExportInfo exportInfo) {
+    @NonNull
+    protected String getPositiveAnswer(@NonNull ExportInfo exportInfo) {
         String workoutName = exportInfo.getFileBaseName();
         FileFormat format = exportInfo.getFileFormat();
         ExportType type = exportInfo.getExportType();
@@ -287,6 +298,7 @@ public abstract class BaseExporter {
         }
     }
 
+    @NonNull
     protected String getSamplePrefix(boolean isFirst) {
         if (isFirst) {
             return PREFIX_FIRST;
@@ -295,7 +307,8 @@ public abstract class BaseExporter {
         }
     }
 
-    protected String myGetStringFromCursor(Cursor cursor, String key) {
+    @Nullable
+    protected String myGetStringFromCursor(@NonNull Cursor cursor, String key) {
         int index = cursor.getColumnIndex(key);
         if (index <= 0) {
             if (DEBUG) Log.d(TAG, "myGetStringFromCursor: no such columnIndex!: " + key);
@@ -313,7 +326,7 @@ public abstract class BaseExporter {
         return result;
     }
 
-    protected boolean myGetBooleanFromCursor(Cursor cursor, String key) {
+    protected boolean myGetBooleanFromCursor(@NonNull Cursor cursor, String key) {
         int index = cursor.getColumnIndex(key);
         if (index <= 0) {
             if (DEBUG) Log.d(TAG, "myGetBooleanFromCursor: no such columnIndex!: " + key);

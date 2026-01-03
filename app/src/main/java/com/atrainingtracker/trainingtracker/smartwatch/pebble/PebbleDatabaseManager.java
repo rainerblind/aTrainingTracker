@@ -26,6 +26,9 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.BaseColumns;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.ActivityType;
 import com.atrainingtracker.banalservice.sensor.SensorType;
@@ -51,6 +54,7 @@ public class PebbleDatabaseManager {
         }
     }
 
+    @NonNull
     public static synchronized PebbleDatabaseManager getInstance() {
         if (cInstance == null) {
             throw new IllegalStateException(PebbleDatabaseManager.class.getSimpleName() +
@@ -60,7 +64,8 @@ public class PebbleDatabaseManager {
         return cInstance;
     }
 
-    private static Cursor getViewsCursor(SQLiteDatabase db, long viewId) {
+    @NonNull
+    private static Cursor getViewsCursor(@NonNull SQLiteDatabase db, long viewId) {
         return db.query(PebbleDbHelper.VIEWS_TABLE,
                 null,
                 PebbleDbHelper.C_ID + "=?",
@@ -70,6 +75,7 @@ public class PebbleDatabaseManager {
                 null);
     }
 
+    @NonNull
     public static ActivityType getActivityType(long viewId) {
 
         ActivityType activityType = ActivityType.getDefaultActivityType();
@@ -91,6 +97,7 @@ public class PebbleDatabaseManager {
     // some helper methods
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
+    @Nullable
     public static String getName(long viewId) {
         String name = null;
 
@@ -106,7 +113,7 @@ public class PebbleDatabaseManager {
         return name;
     }
 
-    public static void updateSensorType(long viewId, int rowNr, SensorType sensorType) {
+    public static void updateSensorType(long viewId, int rowNr, @NonNull SensorType sensorType) {
         ContentValues values = new ContentValues();
         values.put(PebbleDbHelper.SENSOR_TYPE, sensorType.name());
 
@@ -131,7 +138,7 @@ public class PebbleDatabaseManager {
         getInstance().closeDatabase();
     }
 
-    public static long getFirstViewId(ActivityType activityType) // the first view is the one with a negative value for PREV_VIEW_ID
+    public static long getFirstViewId(@NonNull ActivityType activityType) // the first view is the one with a negative value for PREV_VIEW_ID
     {
         long viewId = -1;
 
@@ -183,7 +190,7 @@ public class PebbleDatabaseManager {
         return nextViewId;
     }
 
-    public static void ensureEntryForActivityTypeExists(Context context, ActivityType activityType) {
+    public static void ensureEntryForActivityTypeExists(@NonNull Context context, @NonNull ActivityType activityType) {
         if (getFirstViewId(activityType) == -1) {  // entry does not exist
             PebbleDatabaseManager databaseManager = getInstance();
             SQLiteDatabase db = databaseManager.getOpenDatabase();
@@ -192,7 +199,8 @@ public class PebbleDatabaseManager {
         }
     }
 
-    public static LinkedList<Long> getViewIdList(ActivityType activityType) {
+    @NonNull
+    public static LinkedList<Long> getViewIdList(@NonNull ActivityType activityType) {
         LinkedList<Long> result = new LinkedList<>();
 
         long viewId = getFirstViewId(activityType);
@@ -204,7 +212,8 @@ public class PebbleDatabaseManager {
         return result;
     }
 
-    public static LinkedList<String> getTitleList(ActivityType activityType) {
+    @NonNull
+    public static LinkedList<String> getTitleList(@NonNull ActivityType activityType) {
         LinkedList<String> result = new LinkedList<>();
 
         for (long viewId : getViewIdList(activityType)) {
@@ -214,6 +223,7 @@ public class PebbleDatabaseManager {
         return result;
     }
 
+    @NonNull
     public static LinkedList<SensorType> getSensorTypeList(long viewId) {
         LinkedList<SensorType> result = new LinkedList<>();
 
@@ -263,7 +273,7 @@ public class PebbleDatabaseManager {
         getInstance().closeDatabase();
     }
 
-    public static long addDefaultView(Context context, long viewId, boolean addAfterCurrentLayout) {
+    public static long addDefaultView(@NonNull Context context, long viewId, boolean addAfterCurrentLayout) {
         long newViewId = -1;
 
         SQLiteDatabase db = getInstance().getOpenDatabase();
@@ -319,7 +329,7 @@ public class PebbleDatabaseManager {
         getInstance().closeDatabase();
     }
 
-    public static void addRow(long viewId, int rowNr, SensorType sensorType) {
+    public static void addRow(long viewId, int rowNr, @NonNull SensorType sensorType) {
         if (DEBUG)
             Log.i(TAG, "addRow viewId=" + viewId + ", rowNr=" + rowNr + ", sensorType=" + sensorType.name());
         ContentValues values = new ContentValues();
@@ -414,7 +424,7 @@ public class PebbleDatabaseManager {
             mContext = context;
         }
 
-        public static long insertDefaultViewToDb(Context context, SQLiteDatabase db, ActivityType activityType, long prevViewId, long nextViewId) {
+        public static long insertDefaultViewToDb(@NonNull Context context, @NonNull SQLiteDatabase db, @NonNull ActivityType activityType, long prevViewId, long nextViewId) {
             String name = context.getString(R.string.text_default);
 
             Cursor cursor = db.query(VIEWS_TABLE,
@@ -450,11 +460,12 @@ public class PebbleDatabaseManager {
             return viewID;
         }
 
-        private static void addColumn(SQLiteDatabase db, String table, String column, String type) {
+        private static void addColumn(@NonNull SQLiteDatabase db, String table, String column, String type) {
             db.execSQL("ALTER TABLE " + table + " ADD COLUMN " + column + " " + type + ";");
         }
 
-        public static LinkedList<SensorType> getDefaultSensorList(ActivityType activityType) {
+        @NonNull
+        public static LinkedList<SensorType> getDefaultSensorList(@NonNull ActivityType activityType) {
             LinkedList<SensorType> result = new LinkedList<>();
 
             switch (activityType) {
@@ -515,7 +526,7 @@ public class PebbleDatabaseManager {
         }
 
         @Override
-        public void onCreate(SQLiteDatabase db) {
+        public void onCreate(@NonNull SQLiteDatabase db) {
             db.execSQL(CREATE_VIEWS_TABLE_V3);
             db.execSQL(CREATE_LAYOUTS_TABLE_V3);
 
@@ -532,7 +543,7 @@ public class PebbleDatabaseManager {
 
         // Called whenever newVersion != oldVersion
         @Override
-        public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        public void onUpgrade(@NonNull SQLiteDatabase db, int oldVersion, int newVersion) {
 
             if (oldVersion < 3) {
                 // first, add new columns

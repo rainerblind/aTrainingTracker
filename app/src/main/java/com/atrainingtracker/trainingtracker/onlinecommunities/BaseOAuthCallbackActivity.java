@@ -57,14 +57,14 @@ public abstract class BaseOAuthCallbackActivity extends Activity {
     }
 
     @Override
-    protected void onNewIntent(Intent intent) {
+    protected void onNewIntent(@NonNull Intent intent) {
         super.onNewIntent(intent);
         if (DEBUG) Log.d(TAG, "onNewIntent");
         setIntent(intent);
         handleIntent(intent);
     }
 
-    private void handleIntent(Intent intent) {
+    private void handleIntent(@NonNull Intent intent) {
         if (isProcessing) return;
 
         Uri data = intent.getData();
@@ -164,7 +164,7 @@ public abstract class BaseOAuthCallbackActivity extends Activity {
     }
 
     @NonNull
-    private static String getResponseStr(HttpURLConnection urlConnection) throws IOException {
+    private static String getResponseStr(@NonNull HttpURLConnection urlConnection) throws IOException {
         int responseCode = urlConnection.getResponseCode();
 
         // Read Stream Logic ...

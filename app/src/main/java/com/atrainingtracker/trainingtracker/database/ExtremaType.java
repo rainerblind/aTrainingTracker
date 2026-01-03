@@ -18,6 +18,8 @@
 
 package com.atrainingtracker.trainingtracker.database;
 
+import androidx.annotation.NonNull;
+
 import com.atrainingtracker.R;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 
@@ -39,6 +41,7 @@ public enum ExtremaType {
         this.nameId = nameId;
     }
 
+    @NonNull
     public static List<String> getLocationNameList() {
         List<String> result = new LinkedList<>();
         for (ExtremaType extremaType : LOCATION_EXTREMA_TYPES) {
@@ -48,6 +51,7 @@ public enum ExtremaType {
         return result;
     }
 
+    @NonNull
     @Override
     public String toString() {
         return TrainingApplication.getAppContext().getString(nameId);

@@ -20,6 +20,9 @@ package com.atrainingtracker.trainingtracker.fragments.preferences;
 
 import android.content.SharedPreferences;
 import android.os.Bundle;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.preference.PreferenceManager;
 import androidx.preference.PreferenceScreen;
 import android.util.Log;
@@ -40,6 +43,7 @@ public class CloudUploadFragment extends androidx.preference.PreferenceFragmentC
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private static final String TAG = CloudUploadFragment.class.getName();
 
+    @Nullable
     private PreferenceScreen mPSStrava, /* mPSRunkeeper, mPSTrainingPeaks, */ mPSEmailUpload;
 
     private SharedPreferences mSharedPreferences;
@@ -105,6 +109,7 @@ public class CloudUploadFragment extends androidx.preference.PreferenceFragmentC
         }
     }
 
+    @NonNull
     private String getPSStravaSummary() {
         if (!TrainingApplication.uploadToStrava()) {
             return getString(R.string.prefsUploadToStravaSummary);
@@ -130,6 +135,7 @@ public class CloudUploadFragment extends androidx.preference.PreferenceFragmentC
         }
     }
 
+    @NonNull
     private String getPSRunkeeperSummary() {
         if (!TrainingApplication.uploadToRunKeeper()) {
             return getString(R.string.prefsUploadToRunkeeperSummary);
@@ -146,6 +152,7 @@ public class CloudUploadFragment extends androidx.preference.PreferenceFragmentC
         }
     }
 
+    @NonNull
     private String getPSTrainingPeaksSummary() {
         if (!TrainingApplication.uploadToTrainingPeaks()) {
             return getString(R.string.prefsUploadToTrainingPeaksSummary);
@@ -171,6 +178,7 @@ public class CloudUploadFragment extends androidx.preference.PreferenceFragmentC
         }
     }
 
+    @NonNull
     private String getPSEmailUploadSummary() {
         if (!TrainingApplication.sendEmail()) {
             return getString(R.string.upload_via_email);
@@ -199,7 +207,7 @@ public class CloudUploadFragment extends androidx.preference.PreferenceFragmentC
         }
     }
 
-    private String listToString(List<String> listOfString, int max) {
+    private String listToString(@NonNull List<String> listOfString, int max) {
         int size = listOfString.size();
         if (size == max) {
             return getString(R.string.everything);

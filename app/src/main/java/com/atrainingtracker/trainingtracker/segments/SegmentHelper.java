@@ -18,6 +18,8 @@
 
 package com.atrainingtracker.trainingtracker.segments;
 
+import androidx.annotation.NonNull;
+
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.google.android.gms.maps.model.LatLng;
 
@@ -30,7 +32,7 @@ public class SegmentHelper {
     private static final String TAG = SegmentHelper.class.getName();
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
-    public static double LatitudeDegreeInMeters(LatLng latLng) {
+    public static double LatitudeDegreeInMeters(@NonNull LatLng latLng) {
         // from http://gis.stackexchange.com/questions/75528/length-of-a-degree-where-do-the-terms-in-this-formula-come-from
         // Set up "Constants"
         double m1 = 111132.92;     // latitude calculation term 1
@@ -43,7 +45,7 @@ public class SegmentHelper {
                 (m4 * Math.cos(Math.toRadians(6 * latLng.latitude)));
     }
 
-    public static double LongitudeDegreeInMeters(LatLng latLng) {
+    public static double LongitudeDegreeInMeters(@NonNull LatLng latLng) {
         // from http://gis.stackexchange.com/questions/75528/length-of-a-degree-where-do-the-terms-in-this-formula-come-from
         // Set up "Constants"
         double p1 = 111412.84;     // longitude calculation term 1

@@ -21,6 +21,9 @@ package com.atrainingtracker.trainingtracker.segments;
 import android.app.Activity;
 import android.content.Context;
 import android.database.Cursor;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.cursoradapter.widget.CursorAdapter;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -65,6 +68,7 @@ public class StarredSegmentsCursorAdapter extends CursorAdapter {
     protected final Activity mActivity;
     protected final Context mContext;
     // protected static final int[]    TO   = {R.id.tvSegmentName,  R.id.tvSegmentName, R.id.tvSegmentName,    R.id.tvSegmentDistance, R.id.tvSegmentAverageGrade, R.id.tvSegmentClimbCategory, R.id.tvSegmentPRTime, R.id.tvSegmentRank, R.id.tvSegmentPRDate, R.id.tvSegmentLastUpdated};
+    @Nullable
     ShowSegmentDetailsInterface mShowSegmentDetailsListener = null;
     final DistanceFormatter distanceFormatter = new DistanceFormatter();
     final TimeFormatter timeFormatter = new TimeFormatter();
@@ -85,6 +89,7 @@ public class StarredSegmentsCursorAdapter extends CursorAdapter {
         isPlayServiceAvailable = checkPlayServices();
     }
 
+    @NonNull
     @Override
     public View newView(Context context, Cursor cursor, ViewGroup parent) {
         if (DEBUG) Log.i(TAG, "newView");
@@ -114,7 +119,7 @@ public class StarredSegmentsCursorAdapter extends CursorAdapter {
     }
 
     @Override
-    public void bindView(View view, Context context, Cursor cursor) {
+    public void bindView(@NonNull View view, @NonNull Context context, @NonNull Cursor cursor) {
         final ViewHolder viewHolder = (ViewHolder) view.getTag();
 
         final long segmentId = cursor.getLong(cursor.getColumnIndex(Segments.SEGMENT_ID));

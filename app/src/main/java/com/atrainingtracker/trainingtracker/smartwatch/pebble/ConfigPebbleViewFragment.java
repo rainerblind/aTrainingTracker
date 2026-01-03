@@ -33,6 +33,8 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.Spinner;
 
+import androidx.annotation.NonNull;
+
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.ActivityType;
 import com.atrainingtracker.banalservice.sensor.SensorType;
@@ -60,6 +62,7 @@ public class ConfigPebbleViewFragment extends ConfigViewFragment {
     protected SensorType mSensorType4 = SensorType.DISTANCE_m;
     protected SensorType mSensorType5 = SensorType.LAP_NR;
 
+    @NonNull
     public static ConfigPebbleViewFragment newInstance(long viewId) {
         ConfigPebbleViewFragment fragment = new ConfigPebbleViewFragment();
 
@@ -80,7 +83,7 @@ public class ConfigPebbleViewFragment extends ConfigViewFragment {
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, final ViewGroup container, Bundle savedInstanceState) {
+    public View onCreateView(@NonNull LayoutInflater inflater, final ViewGroup container, Bundle savedInstanceState) {
         super.onCreateView(inflater, container, savedInstanceState);
         if (DEBUG) Log.d(TAG, "onCreateView");
 

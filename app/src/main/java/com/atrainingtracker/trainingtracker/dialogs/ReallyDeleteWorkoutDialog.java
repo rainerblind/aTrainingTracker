@@ -23,6 +23,7 @@ import android.app.Dialog;
 import android.content.DialogInterface;
 import android.os.Bundle;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.DialogFragment;
 import android.util.Log;
@@ -37,6 +38,7 @@ public class ReallyDeleteWorkoutDialog extends DialogFragment {
     ReallyDeleteDialogInterface mReallyDeleteDialogListener;
     private long mWorkoutId;
 
+    @NonNull
     public static ReallyDeleteWorkoutDialog newInstance(long workoutId) {
         if (DEBUG) Log.i(TAG, "newInstance");
 
@@ -50,7 +52,7 @@ public class ReallyDeleteWorkoutDialog extends DialogFragment {
     }
 
     @Override
-    public void onAttach(Activity activity) {
+    public void onAttach(@NonNull Activity activity) {
         super.onAttach(activity);
         // Verify that the host activity implements the callback interface
         try {
@@ -75,6 +77,7 @@ public class ReallyDeleteWorkoutDialog extends DialogFragment {
     }
 
 
+    @NonNull
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
@@ -82,13 +85,13 @@ public class ReallyDeleteWorkoutDialog extends DialogFragment {
                 .setMessage(R.string.really_delete_workout)
                 .setIcon(android.R.drawable.ic_menu_delete)
                 .setPositiveButton(R.string.delete_workout, new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int whichButton) {
+                    public void onClick(@NonNull DialogInterface dialog, int whichButton) {
                         mReallyDeleteDialogListener.reallyDeleteWorkout(mWorkoutId);
                         dialog.dismiss();
                     }
                 })
                 .setNegativeButton(R.string.Cancel, new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int which) {
+                    public void onClick(@NonNull DialogInterface dialog, int which) {
                         dialog.dismiss();
                     }
                 });

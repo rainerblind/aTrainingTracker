@@ -30,6 +30,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.content.res.ResourcesCompat;
 
 import com.atrainingtracker.trainingtracker.TrainingApplication;
@@ -77,8 +79,9 @@ public abstract class BaseMapFragment
         this.getMapAsync(this);
     }
 
+    @NonNull
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         if (DEBUG) Log.d(TAG, "onCreateView");
         setHasOptionsMenu(true);
 
@@ -139,7 +142,7 @@ public abstract class BaseMapFragment
         centerMapAt(locationBest, zoomLevel, tilt);
     }
 
-    protected void centerMapAt(Location location, int zoomLevel, int tilt) {
+    protected void centerMapAt(@Nullable Location location, int zoomLevel, int tilt) {
         if (location != null) {
             // mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(locationBest.getLatitude(), locationBest.getLongitude()), zoomLevel));
             CameraPosition cameraPosition = new CameraPosition.Builder()
@@ -154,7 +157,7 @@ public abstract class BaseMapFragment
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // some helpers to add markers
     /// /////////////////////////////////////////////////////////////////////////////////////////////
-    protected void addMarker(LatLng position, int drawableId, String title) {
+    protected void addMarker(@Nullable LatLng position, int drawableId, String title) {
         if (position == null) return;
 
         Bitmap marker = ((BitmapDrawable) ResourcesCompat.getDrawable(getResources(), drawableId, null)).getBitmap();
@@ -165,7 +168,8 @@ public abstract class BaseMapFragment
                 .icon(BitmapDescriptorFactory.fromBitmap(marker)));
     }
 
-    protected Marker addScaledMarker(LatLng position, int drawableId, double scale) {
+    @Nullable
+    protected Marker addScaledMarker(@Nullable LatLng position, int drawableId, double scale) {
         if (DEBUG) Log.i(TAG, "addScaledMarker");
         if (position == null) {
             Log.i(TAG, "WTF: position == null");
@@ -180,7 +184,7 @@ public abstract class BaseMapFragment
                 .icon(BitmapDescriptorFactory.fromBitmap(scaledMarker)));
     }
 
-    protected void addPolyline(List<LatLng> latLngs, int color) {
+    protected void addPolyline(@NonNull List<LatLng> latLngs, int color) {
         if (DEBUG) Log.i(TAG, "addPolyline");
 
         PolylineOptions polylineOptions = new PolylineOptions().color(color);

@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.activities;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import android.content.DialogInterface;
 import android.os.Bundle;
@@ -55,6 +56,7 @@ public abstract class ConfigViewsActivity
     private static final boolean DEBUG = TrainingApplication.getDebug(true);
     // public static final String VIEW_CHANGED_INTENT = "VIEW_CHANGED_INTENT";
     long mViewId = -1;
+    @Nullable
     ActivityType mActivityType = null;
 
     public abstract ActivityType getActivityType(long viewId);

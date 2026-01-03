@@ -50,6 +50,7 @@ import static com.atrainingtracker.trainingtracker.TrainingApplication.NOTIFICAT
 public class ExportWorkoutWorker extends Worker {
     private static final String TAG = "ExportWorkoutWorker";
     private static final boolean DEBUG = TrainingApplication.getDebug(true);
+ @NonNull
  private final Context mContext;
 
     boolean exported = false;

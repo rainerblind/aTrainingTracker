@@ -18,6 +18,8 @@
 
 package com.atrainingtracker.trainingtracker.views;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -34,13 +36,16 @@ import java.util.List;
 // code taken from http://v4all123.blogspot.de/2013/09/spinner-with-multiple-selection-in.html
 public class MultiSelectionSpinner extends AppCompatSpinner implements
         OnMultiChoiceClickListener {
+    @Nullable
     String[] _items = null;
+    @Nullable
     boolean[] mSelection = null;
 
+    @NonNull
     final ArrayAdapter<String> simple_adapter;
     private MSSOnItemClickedListener mMSSOnitemClickedListener;
 
-    public MultiSelectionSpinner(Context context) {
+    public MultiSelectionSpinner(@NonNull Context context) {
         super(context);
 
         simple_adapter = new ArrayAdapter<>(context,
@@ -48,7 +53,7 @@ public class MultiSelectionSpinner extends AppCompatSpinner implements
         super.setAdapter(simple_adapter);
     }
 
-    public MultiSelectionSpinner(Context context, AttributeSet attrs) {
+    public MultiSelectionSpinner(@NonNull Context context, AttributeSet attrs) {
         super(context, attrs);
 
         simple_adapter = new ArrayAdapter<>(context,
@@ -99,7 +104,7 @@ public class MultiSelectionSpinner extends AppCompatSpinner implements
         Arrays.fill(mSelection, false);
     }
 
-    public void setItems(List<String> items) {
+    public void setItems(@NonNull List<String> items) {
         _items = items.toArray(new String[items.size()]);
         mSelection = new boolean[_items.length];
         simple_adapter.clear();
@@ -107,7 +112,7 @@ public class MultiSelectionSpinner extends AppCompatSpinner implements
         Arrays.fill(mSelection, false);
     }
 
-    public void setSelection(String[] selection) {
+    public void setSelection(@NonNull String[] selection) {
         for (String cell : selection) {
             for (int j = 0; j < _items.length; ++j) {
                 if (_items[j].equals(cell)) {
@@ -117,7 +122,7 @@ public class MultiSelectionSpinner extends AppCompatSpinner implements
         }
     }
 
-    public void setSelection(List<String> selection) {
+    public void setSelection(@NonNull List<String> selection) {
         Arrays.fill(mSelection, false);
         for (String sel : selection) {
             for (int j = 0; j < _items.length; ++j) {
@@ -142,7 +147,7 @@ public class MultiSelectionSpinner extends AppCompatSpinner implements
         simple_adapter.add(buildSelectedItemString());
     }
 
-    public void setSelection(int[] selectedIndicies) {
+    public void setSelection(@NonNull int[] selectedIndicies) {
         Arrays.fill(mSelection, false);
         for (int index : selectedIndicies) {
             if (index >= 0 && index < mSelection.length) {
@@ -156,6 +161,7 @@ public class MultiSelectionSpinner extends AppCompatSpinner implements
         simple_adapter.add(buildSelectedItemString());
     }
 
+    @NonNull
     public List<String> getSelectedStrings() {
         List<String> selection = new LinkedList<>();
         for (int i = 0; i < _items.length; ++i) {
@@ -166,6 +172,7 @@ public class MultiSelectionSpinner extends AppCompatSpinner implements
         return selection;
     }
 
+    @NonNull
     public List<Integer> getSelectedIndicies() {
         List<Integer> selection = new LinkedList<>();
         for (int i = 0; i < _items.length; ++i) {
@@ -176,6 +183,7 @@ public class MultiSelectionSpinner extends AppCompatSpinner implements
         return selection;
     }
 
+    @NonNull
     private String buildSelectedItemString() {
         StringBuilder sb = new StringBuilder();
         boolean foundOne = false;
@@ -193,6 +201,7 @@ public class MultiSelectionSpinner extends AppCompatSpinner implements
         return sb.toString();
     }
 
+    @NonNull
     public String getSelectedItemsAsString() {
         StringBuilder sb = new StringBuilder();
         boolean foundOne = false;

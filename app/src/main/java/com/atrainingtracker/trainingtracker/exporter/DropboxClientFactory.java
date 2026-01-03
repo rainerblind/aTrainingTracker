@@ -18,6 +18,8 @@
 
 package com.atrainingtracker.trainingtracker.exporter;
 
+import androidx.annotation.NonNull;
+
 import com.dropbox.core.DbxRequestConfig;
 import com.dropbox.core.v2.DbxClientV2;
 
@@ -28,7 +30,7 @@ public class DropboxClientFactory {
 
     private static DbxClientV2 sDbxClient;
 
-    public static void init(String accessToken) {
+    public static void init(@NonNull String accessToken) {
         if (sDbxClient == null) {
             DbxRequestConfig requestConfig = DbxRequestConfig.newBuilder("a Training Tracker")
                     .build();
@@ -37,6 +39,7 @@ public class DropboxClientFactory {
         }
     }
 
+    @NonNull
     public static DbxClientV2 getClient() {
         if (sDbxClient == null) {
             throw new IllegalStateException("Client not initialized.");

@@ -19,6 +19,8 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
@@ -60,7 +62,9 @@ public class StravaEquipmentSynchronizeThread extends Thread {
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
     private final Context mContext;
+    @NonNull
     private final ProgressDialog mProgressDialog;
+    @NonNull
     private final Handler mMainHandler;
 
     public StravaEquipmentSynchronizeThread(Context context) {
@@ -108,6 +112,7 @@ public class StravaEquipmentSynchronizeThread extends Thread {
         });
     }
 
+    @NonNull
     private String getStravaEquipment() {
         if (DEBUG) Log.d(TAG, "getStravaEquipment");
 
@@ -149,7 +154,8 @@ public class StravaEquipmentSynchronizeThread extends Thread {
         return "updating failed";
     }
 
-    private String fillDbFromJsonObject(JSONObject jsonObject) {
+    @NonNull
+    private String fillDbFromJsonObject(@NonNull JSONObject jsonObject) {
         try (SQLiteDatabase equipmentDb = new EquipmentDbHelper(mContext).getWritableDatabase()) {
             ContentValues values = new ContentValues();
 
@@ -247,7 +253,8 @@ public class StravaEquipmentSynchronizeThread extends Thread {
         return 0;
     }
 
-    private String readStream(HttpURLConnection connection, int responseCode) throws IOException {
+    @NonNull
+    private String readStream(@NonNull HttpURLConnection connection, int responseCode) throws IOException {
         InputStream inputStream;
         if (responseCode >= 200 && responseCode < 300) {
             inputStream = connection.getInputStream();

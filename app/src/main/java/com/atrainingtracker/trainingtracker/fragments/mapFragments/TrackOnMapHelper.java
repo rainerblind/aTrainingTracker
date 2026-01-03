@@ -21,6 +21,8 @@ package com.atrainingtracker.trainingtracker.fragments.mapFragments;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Color;
+
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import android.os.Handler;
@@ -51,7 +53,8 @@ public class TrackOnMapHelper {
     private final EnumMap<Roughness, EnumMap<TrackType, HashMap<Long, TrackData>>> mTrackCache = new EnumMap<>(Roughness.class);
     private final EnumMap<TrackType, HashMap<GoogleMap, Polyline>> mPolylines = new EnumMap<>(TrackType.class);
 
-    public static PolylineOptions getPolylineOptions(long workoutId, Roughness roughness, TrackType trackType) {
+    @Nullable
+    public static PolylineOptions getPolylineOptions(long workoutId, @NonNull Roughness roughness, @NonNull TrackType trackType) {
         String baseFileName = WorkoutSummariesDatabaseManager.getBaseFileName(workoutId);
         if (baseFileName == null) {
             return null;
@@ -88,7 +91,8 @@ public class TrackOnMapHelper {
         return polylineOptions;
     }
 
-    public static LatLngBounds getLatLngBounds(PolylineOptions polylineOptions) {
+    @Nullable
+    public static LatLngBounds getLatLngBounds(@NonNull PolylineOptions polylineOptions) {
         if (DEBUG) Log.i(TAG, "getLatLngBounds");
 
         LatLngBounds.Builder latLngBoundsBuilder = new LatLngBounds.Builder();
@@ -103,7 +107,7 @@ public class TrackOnMapHelper {
     }
 
     // TODO: this is stolen several times, so make it a static method of a DatabaseHelper Class
-    protected static boolean dataValid(Cursor cursor, String string) {
+    protected static boolean dataValid(@NonNull Cursor cursor, String string) {
         if (cursor.getColumnIndex(string) == -1) {
             if (DEBUG) Log.d(TAG, "dataValid: no such columnIndex!: " + string);
             return false;
@@ -115,7 +119,7 @@ public class TrackOnMapHelper {
         return true;
     }
 
-    public void showTrackOnMap(MyMapViewHolder myMapViewHolder, long workoutId, Roughness roughness, TrackType trackType, boolean zoomToMap, boolean animateZoom) {
+    public void showTrackOnMap(@NonNull MyMapViewHolder myMapViewHolder, long workoutId, @NonNull Roughness roughness, @NonNull TrackType trackType, boolean zoomToMap, boolean animateZoom) {
         if (DEBUG)
             Log.i(TAG, "showTrackOnMap for workoutId=" + workoutId + ", roughness=" + roughness.name() + ", trackType=" + trackType.name());
 
@@ -140,7 +144,7 @@ public class TrackOnMapHelper {
         }
     }
 
-    private void plotTrackOnMap(final MyMapViewHolder myMapViewHolder, long workoutId, Roughness roughness, TrackType trackType, boolean zoomToMap, final boolean animateZoom) {
+    private void plotTrackOnMap(@NonNull final MyMapViewHolder myMapViewHolder, long workoutId, @NonNull Roughness roughness, @NonNull TrackType trackType, boolean zoomToMap, final boolean animateZoom) {
         if (DEBUG)
             Log.i(TAG, "plotTrackOnMap for workoutId=" + workoutId + ", roughness=" + roughness.name() + ", trackType=" + trackType.name());
 
@@ -184,7 +188,7 @@ public class TrackOnMapHelper {
     }
 
     @Nullable
-    private TrackData getCachedTrackData(long workoutId, Roughness roughness, TrackType trackType) {
+    private TrackData getCachedTrackData(long workoutId, @NonNull Roughness roughness, @NonNull TrackType trackType) {
         if (DEBUG)
             Log.i(TAG, "getCachedTrackData for workoutId=" + workoutId + ", roughness=" + roughness.name() + ", trackType=" + trackType.name());
 
@@ -201,7 +205,7 @@ public class TrackOnMapHelper {
         return trackData;
     }
 
-    private void calcTrackData(long workoutId, Roughness roughness, TrackType trackType) {
+    private void calcTrackData(long workoutId, @NonNull Roughness roughness, @NonNull TrackType trackType) {
         if (DEBUG)
             Log.i(TAG, "calcTrackData for workoutId=" + workoutId + ", roughness=" + roughness.name() + ", trackType=" + trackType.name());
         if (DEBUG) Log.i(TAG, "sensorTypeLatitude=" + trackType.getLatitudeName());
@@ -235,6 +239,7 @@ public class TrackOnMapHelper {
             this.source = source;
         }
 
+        @NonNull
         public String getLatitudeName() {
             String latitudeName = SensorType.LATITUDE.name();
 
@@ -245,6 +250,7 @@ public class TrackOnMapHelper {
             return latitudeName;
         }
 
+        @NonNull
         public String getLongitudeName() {
             String longitudeName = SensorType.LONGITUDE.name();
 

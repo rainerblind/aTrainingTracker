@@ -106,7 +106,7 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
     private final AbsListView.RecyclerListener mRecycleListener = new AbsListView.RecyclerListener() {
 
         @Override
-        public void onMovedToScrapHeap(View view) {
+        public void onMovedToScrapHeap(@NonNull View view) {
             ViewHolder holder = (ViewHolder) view.getTag();
             if (holder != null && holder.map != null) {
                 // Clear the map and free up resources by changing the map type to none
@@ -290,7 +290,7 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
         }
     }
 
-    private void setStatusInfo(ViewHolder viewHolder, final Context context, final String fileBaseName) {
+    private void setStatusInfo(@NonNull ViewHolder viewHolder, @NonNull final Context context, final String fileBaseName) {
         if (DEBUG) Log.d(TAG, "setStatusInfo: " + fileBaseName);
 
         EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>> exportStatuses = mExportManager.getExportStatus(fileBaseName);
@@ -463,6 +463,7 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
         }
 
 
+        @NonNull
         @Override
         public View newView(Context context, Cursor cursor, ViewGroup parent) {
             if (DEBUG) Log.i(TAG, "newView");
@@ -496,7 +497,7 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
         }
 
         @Override
-        public void bindView(View view, Context context, Cursor cursor) {
+        public void bindView(@NonNull View view, @NonNull Context context, @NonNull Cursor cursor) {
             if (DEBUG) Log.i(TAG, "bindView");
 
             final long workoutId = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.C_ID));

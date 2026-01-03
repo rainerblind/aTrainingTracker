@@ -26,6 +26,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.DialogFragment;
@@ -108,7 +109,8 @@ public class EditFieldDialog extends DialogFragment {
 
     }
 
-    public static EditFieldDialog newInstance(ActivityType activityType, TrackingViewsDatabaseManager.ViewInfo viewInfo) {
+    @NonNull
+    public static EditFieldDialog newInstance(@NonNull ActivityType activityType, @NonNull TrackingViewsDatabaseManager.ViewInfo viewInfo) {
         if (DEBUG) Log.i(TAG, "newInstance");
 
         EditFieldDialog fragment = new EditFieldDialog();
@@ -153,6 +155,7 @@ public class EditFieldDialog extends DialogFragment {
     }
 
 
+    @NonNull
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
@@ -240,7 +243,7 @@ public class EditFieldDialog extends DialogFragment {
         return builder.create();
     }
 
-    protected void configureSourceSpinner(View parentView) {
+    protected void configureSourceSpinner(@NonNull View parentView) {
         Spinner sourceSpinner = parentView.findViewById(R.id.spinnerSource);
         TextView textViewSource = parentView.findViewById(R.id.textViewSource);
         DevicesDatabaseManager.DeviceIdAndNameLists deviceIdAndNameLists = DevicesDatabaseManager.getDeviceIdAndNameLists(mSensorType);
@@ -296,7 +299,7 @@ public class EditFieldDialog extends DialogFragment {
 
     }
 
-    protected void configureConfigureFilterButton(View parentView) {
+    protected void configureConfigureFilterButton(@NonNull View parentView) {
         Button button = parentView.findViewById(R.id.buttonConfigureFilter);
         TextView tvConfigure = parentView.findViewById(R.id.tvConfigureFilter);
 

@@ -18,6 +18,8 @@
 
 package com.atrainingtracker.trainingtracker.exporter;
 
+import androidx.annotation.NonNull;
+
 import java.io.File;
 
 public class ExportInfo {
@@ -35,10 +37,12 @@ public class ExportInfo {
         return mFileBaseName;
     }
 
+    @NonNull
     public String getShortPath() {
         return mFileFormat.getDirName() + File.separator + getFileName();
     }
 
+    @NonNull
     public String getFileName() {
         return mFileBaseName + mFileFormat.getFileEnding();
     }
@@ -51,6 +55,7 @@ public class ExportInfo {
         return mExportType;
     }
 
+    @NonNull
     public String toString() {
         return mExportType.name() + ": " + mFileFormat.name() + ": " + mFileBaseName;
     }

@@ -18,6 +18,8 @@
 
 package com.atrainingtracker.trainingtracker.fragments.mapFragments;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 
 import android.Manifest;
@@ -107,7 +109,7 @@ public class MyLocationsFragment
     /**
      * stolen from BaseExporter
      */
-    protected static boolean dataValid(Cursor cursor, String string) {
+    protected static boolean dataValid(@NonNull Cursor cursor, String string) {
         if (cursor.getColumnIndex(string) == -1) {
             if (DEBUG) Log.d(TAG, "dataValid: no such columnIndex!: " + string);
             return false;
@@ -120,7 +122,7 @@ public class MyLocationsFragment
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 
         // inflate the XML layout
         View v = inflater.inflate(R.layout.locations_manager, container, false);
@@ -213,13 +215,13 @@ public class MyLocationsFragment
                     }
 
                     @Override
-                    public void onMarkerDrag(Marker marker) {
+                    public void onMarkerDrag(@NonNull Marker marker) {
                         // move circle
                         mMarkerId2CircleMap.get(mMarker2MyLocationsIdMap.get(marker)).setCenter(marker.getPosition());
                     }
 
                     @Override
-                    public void onMarkerDragEnd(Marker marker) {
+                    public void onMarkerDragEnd(@NonNull Marker marker) {
                         // update position in database
                         KnownLocationsDatabaseManager.updateLocation(mMarker2MyLocationsIdMap.get(marker), marker.getPosition());
                     }
@@ -326,7 +328,7 @@ public class MyLocationsFragment
         mMarkerMap.get(sportTypeId).remove(extremaType);
     }
 
-    protected void addMyLocationToMap(MyLocation myLocation) {
+    protected void addMyLocationToMap(@NonNull MyLocation myLocation) {
 
         Marker marker = mMap.addMarker(new MarkerOptions()
                 .position(myLocation.latLng)
@@ -394,7 +396,7 @@ public class MyLocationsFragment
                     }
                 });
         alertDialogBuilder.setNeutralButton(R.string.Cancel, new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int id) {
+            public void onClick(@NonNull DialogInterface dialog, int id) {
                 mMarkerId2CircleMap.get(myLocationId).setRadius(myLocation.radius);
                 dialog.cancel();
             }
@@ -413,7 +415,7 @@ public class MyLocationsFragment
         alert.show();
     }
 
-    private void deleteMyLocation(final MyLocation myLocation) {
+    private void deleteMyLocation(@NonNull final MyLocation myLocation) {
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
         builder.setTitle(R.string.delete_location)
                 .setMessage(R.string.really_delete_location)
@@ -424,7 +426,7 @@ public class MyLocationsFragment
                     }
                 })
                 .setNegativeButton(R.string.Cancel, new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int which) {
+                    public void onClick(@NonNull DialogInterface dialog, int which) {
                         dialog.dismiss();
                     }
                 });
@@ -432,7 +434,7 @@ public class MyLocationsFragment
         builder.create().show();
     }
 
-    private void reallyDeleteLocation(MyLocation myLocation) {
+    private void reallyDeleteLocation(@NonNull MyLocation myLocation) {
         // remove from database
         KnownLocationsDatabaseManager.deleteId(myLocation.id);
 
@@ -449,7 +451,8 @@ public class MyLocationsFragment
 
     // TODO: copied code from BaseMapFragment?
     // TODO: move these (and similar) methods to MyMapHelper
-    protected Marker addScaledMarker(LatLng position, int drawableId, double scale) {
+    @Nullable
+    protected Marker addScaledMarker(@Nullable LatLng position, int drawableId, double scale) {
         if (DEBUG) Log.i(TAG, "addScaledMarker");
         if (position == null && DEBUG) {
             Log.i(TAG, "WTF: position == null");
@@ -501,6 +504,7 @@ public class MyLocationsFragment
         private final long mSportTypeId;
         private final ExtremaType mExtremaType;
 
+        @NonNull
         private final ProgressDialog progressDialog;
         private final Context context;
 
@@ -643,6 +647,7 @@ public class MyLocationsFragment
      */
 
     class AddMyLocationMarkers extends Thread {
+        @NonNull
         private final ProgressDialog progressDialog;
         private final Context context;
 
@@ -711,6 +716,7 @@ public class MyLocationsFragment
     }
 
     class CreateNewMyLocation extends Thread {
+        @NonNull
         private final ProgressDialog progressDialog;
         private final Context context;
         private final LatLng latLng;

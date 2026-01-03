@@ -21,6 +21,8 @@ package com.atrainingtracker.trainingtracker.segments;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import android.os.Handler;
@@ -51,7 +53,7 @@ public class SegmentOnMapHelper {
     //                                 segmentId
     private final EnumMap<Roughness, HashMap<Long, SegmentData>> mSegmentCache = new EnumMap<>(Roughness.class);
 
-    public void showSegmentOnMap(Context context, MyMapViewHolder myMapViewHolder, long segmentId, Roughness roughness, boolean zoomToMap, boolean animateZoom) {
+    public void showSegmentOnMap(Context context, @NonNull MyMapViewHolder myMapViewHolder, long segmentId, @NonNull Roughness roughness, boolean zoomToMap, boolean animateZoom) {
         if (DEBUG)
             Log.i(TAG, "showSegmentOnMap for segmentId=" + segmentId + ", roughness=" + roughness.name());
 
@@ -76,7 +78,7 @@ public class SegmentOnMapHelper {
         }
     }
 
-    private void plotSegmentOnMap(final MyMapViewHolder myMapViewHolder, long segmentId, Roughness roughness, boolean zoomToMap, final boolean animateZoom) {
+    private void plotSegmentOnMap(@NonNull final MyMapViewHolder myMapViewHolder, long segmentId, @NonNull Roughness roughness, boolean zoomToMap, final boolean animateZoom) {
         if (DEBUG)
             Log.i(TAG, "plotSegmentOnMap for segmentId=" + segmentId + ", roughness=" + roughness.name());
 
@@ -111,7 +113,7 @@ public class SegmentOnMapHelper {
     }
 
     @Nullable
-    private SegmentData getCachedSegmentData(long segmentId, Roughness roughness) {
+    private SegmentData getCachedSegmentData(long segmentId, @NonNull Roughness roughness) {
         if (DEBUG)
             Log.i(TAG, "getCachedTrackData for segmentId=" + segmentId + ", roughness=" + roughness.name());
 
@@ -127,7 +129,7 @@ public class SegmentOnMapHelper {
         return segmentData;
     }
 
-    private void calcSegmentData(Context context, long segmentId, Roughness roughness) {
+    private void calcSegmentData(@NonNull Context context, long segmentId, @NonNull Roughness roughness) {
         if (DEBUG)
             Log.i(TAG, "calcSegmentData for segmentId=" + segmentId + ", roughness=" + roughness.name());
 
@@ -170,7 +172,7 @@ public class SegmentOnMapHelper {
     }
 
     // TODO: this is stolen several times, so make it a static method of a DatabaseHelper Class
-    protected boolean dataValid(Cursor cursor, String string) {
+    protected boolean dataValid(@NonNull Cursor cursor, String string) {
         if (cursor.getColumnIndex(string) == -1) {
             if (DEBUG) Log.d(TAG, "dataValid: no such columnIndex!: " + string);
             return false;

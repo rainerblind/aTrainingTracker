@@ -25,6 +25,8 @@ import android.util.Base64;
 import android.util.Base64OutputStream;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
@@ -62,12 +64,13 @@ public class TrainingPeaksUploader extends BaseExporter {
     private static final String TAG = TrainingPeaksUploader.class.getName();
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
-    public TrainingPeaksUploader(Context context) {
+    public TrainingPeaksUploader(@NonNull Context context) {
         super(context);
     }
 
+    @NonNull
     @Override
-    protected ExportResult doExport(ExportInfo exportInfo)
+    protected ExportResult doExport(@NonNull ExportInfo exportInfo)
             throws IOException, JSONException {
         if (DEBUG) Log.d(TAG, "doExport: " + exportInfo.getFileBaseName());
 
@@ -157,6 +160,7 @@ public class TrainingPeaksUploader extends BaseExporter {
         return new ExportResult(true, response);
     }
 
+    @NonNull
     @Override
     protected Action getAction() {
         return Action.UPLOAD;

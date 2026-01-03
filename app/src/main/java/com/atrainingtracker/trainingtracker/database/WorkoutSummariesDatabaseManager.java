@@ -26,6 +26,9 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.BaseColumns;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
@@ -52,6 +55,7 @@ public class WorkoutSummariesDatabaseManager {
         }
     }
 
+    @NonNull
     public static synchronized WorkoutSummariesDatabaseManager getInstance() {
         if (cInstance == null) {
             throw new IllegalStateException(WorkoutSummariesDatabaseManager.class.getSimpleName() +
@@ -64,6 +68,7 @@ public class WorkoutSummariesDatabaseManager {
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // some high level helper methods
     ////////////////////////////////////////////////////////////////////////////////////////////////
+    @Nullable
     public static String getBaseFileName(long workoutId) {
         if (DEBUG) Log.i(TAG, "getBaseFileName for workoutId: " + workoutId);
 
@@ -85,6 +90,7 @@ public class WorkoutSummariesDatabaseManager {
         return baseFileName;
     }
 
+    @Nullable
     public static Double getDouble(long workoutId, String key) {
         if (DEBUG) Log.i(TAG, "getDouble for workoutId: " + workoutId + ", " + key);
 
@@ -110,7 +116,8 @@ public class WorkoutSummariesDatabaseManager {
         return value;
     }
 
-    public static Double getDouble(String baseFileName, String key) {
+    @Nullable
+    public static Double getDouble(@Nullable String baseFileName, String key) {
         if (DEBUG) Log.i(TAG, "getDouble for baseFileName: " + baseFileName + ", " + key);
 
         if (baseFileName == null) {
@@ -141,6 +148,7 @@ public class WorkoutSummariesDatabaseManager {
         return value;
     }
 
+    @Nullable
     public static String getString(long workoutId, String key) {
         if (DEBUG) Log.i(TAG, "getString(" + workoutId + ", " + key + ")");
 
@@ -164,6 +172,7 @@ public class WorkoutSummariesDatabaseManager {
         return value;
     }
 
+    @Nullable
     public static Integer getInt(long workoutId, String key) {
         if (DEBUG) Log.i(TAG, "getInt for workoutId: " + workoutId + ", " + key);
 
@@ -189,6 +198,7 @@ public class WorkoutSummariesDatabaseManager {
         return value;
     }
 
+    @Nullable
     public static Long getLong(long workoutId, String key) {
         if (DEBUG) Log.i(TAG, "getLong for workoutId: " + workoutId + ", " + key);
 
@@ -214,6 +224,7 @@ public class WorkoutSummariesDatabaseManager {
         return value;
     }
 
+    @Nullable
     public static Integer getInt(String baseFileName, String key) {
         if (DEBUG) Log.i(TAG, "getInt for baseFileName: " + baseFileName + ", " + key);
 
@@ -273,7 +284,8 @@ public class WorkoutSummariesDatabaseManager {
         return result;
     }
 
-    public static Double getExtremaValue(long workoutId, SensorType sensorType, ExtremaType extremaType) {
+    @Nullable
+    public static Double getExtremaValue(long workoutId, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType) {
         Double extremaValue = null;
 
         SQLiteDatabase summariesDb = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
@@ -298,7 +310,8 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     // TODO: make sport specific?
-    public static List<LatLng> getExtremaTypeLocations(ExtremaType extremaType) {
+    @NonNull
+    public static List<LatLng> getExtremaTypeLocations(@NonNull ExtremaType extremaType) {
         if (DEBUG) Log.i(TAG, "getAllStartLocations");
 
         List<LatLng> startLocations = new LinkedList<>();
@@ -360,7 +373,7 @@ public class WorkoutSummariesDatabaseManager {
     /**
      * stolen from BaseExporter
      */
-    protected static boolean dataValid(Cursor cursor, String string) {
+    protected static boolean dataValid(@NonNull Cursor cursor, String string) {
         if (cursor.getColumnIndex(string) == -1) {
             if (DEBUG) Log.d(TAG, "dataValid: no such columnIndex!: " + string);
             return false;
@@ -372,7 +385,7 @@ public class WorkoutSummariesDatabaseManager {
         return true;
     }
 
-    public static void saveAccumulatedSensorTypes(long workoutId, Iterable<SensorType> sensorTypes) {
+    public static void saveAccumulatedSensorTypes(long workoutId, @NonNull Iterable<SensorType> sensorTypes) {
         if (DEBUG) Log.i(TAG, "saveAccumulatedSensors for workoutId: " + workoutId);
 
         SQLiteDatabase summariesDb = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
@@ -389,6 +402,7 @@ public class WorkoutSummariesDatabaseManager {
         if (DEBUG) Log.i(TAG, "end of saveAccumulatedSensors");
     }
 
+    @NonNull
     public static Set<SensorType> getAccumulatedSensorTypes(long workoutId) {
         if (DEBUG) Log.i(TAG, "getAccumulatedSensorTypes for workoutId: " + workoutId);
 
@@ -417,6 +431,7 @@ public class WorkoutSummariesDatabaseManager {
      * helper method to check whether there is some data
      */
 
+    @NonNull
     public static List<Long> getWorkoutIds() {
         List<Long> workoutIds = new LinkedList<>();
 
@@ -437,6 +452,7 @@ public class WorkoutSummariesDatabaseManager {
         return workoutIds;
     }
 
+    @NonNull
     public static List<Long> getOldWorkouts(int days) {
         if (DEBUG) Log.i(TAG, "getOldWorkouts(" + days + ")");
 
@@ -462,6 +478,7 @@ public class WorkoutSummariesDatabaseManager {
         return oldWorkoutIds;
     }
 
+    @Nullable
     public static String getStartTime(long workoutId, String timeZone) {
         if (DEBUG) Log.i(TAG, "getStartTime: workoutId=" + workoutId);
         String startTime = null;
@@ -504,6 +521,7 @@ public class WorkoutSummariesDatabaseManager {
         return startTime;
     }
 
+    @NonNull
     public static List<String> getFancyNameList() {
         List result = new LinkedList();
 
@@ -538,6 +556,7 @@ public class WorkoutSummariesDatabaseManager {
         return fancyNameId;
     }
 
+    @NonNull
     public static String getFancyNameAndIncrement(String fancyName) {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append(fancyName);
@@ -569,10 +588,11 @@ public class WorkoutSummariesDatabaseManager {
         return stringBuilder.toString();
     }
 
+    @Nullable
     public static String getFancyName(long sportTypeId,
-                                      KnownLocationsDatabaseManager.MyLocation startLocation,
-                                      KnownLocationsDatabaseManager.MyLocation maxLineDistanceLocation,
-                                      KnownLocationsDatabaseManager.MyLocation endLocation) {
+                                      @Nullable KnownLocationsDatabaseManager.MyLocation startLocation,
+                                      @Nullable KnownLocationsDatabaseManager.MyLocation maxLineDistanceLocation,
+                                      @Nullable KnownLocationsDatabaseManager.MyLocation endLocation) {
         if (startLocation != null & endLocation != null) {
 
             StringBuilder stringBuilder = new StringBuilder();
@@ -632,10 +652,11 @@ public class WorkoutSummariesDatabaseManager {
         return null;
     }
 
+    @Nullable
     protected static String createDefaultFancyName(long sportTypeId,
-                                                   KnownLocationsDatabaseManager.MyLocation startLocation,
+                                                   @Nullable KnownLocationsDatabaseManager.MyLocation startLocation,
                                                    KnownLocationsDatabaseManager.MyLocation maxLineDistanceLocation,
-                                                   KnownLocationsDatabaseManager.MyLocation endLocation) {
+                                                   @Nullable KnownLocationsDatabaseManager.MyLocation endLocation) {
 
         if (startLocation != null & endLocation != null) {
             StringBuilder stringBuilder = new StringBuilder();
@@ -857,7 +878,7 @@ public class WorkoutSummariesDatabaseManager {
 
         // Called only once, first time the DB is created
         @Override
-        public void onCreate(SQLiteDatabase db) {
+        public void onCreate(@NonNull SQLiteDatabase db) {
 
             db.execSQL(CREATE_TABLE_V11);
             if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_V11);
@@ -888,13 +909,13 @@ public class WorkoutSummariesDatabaseManager {
         //         + WorkoutSummaries.ADD_COUNTER          + " int, "
         //         + WorkoutSummaries.ADD_VIA              + " int)";
 
-        private void addColumn(SQLiteDatabase db, String table, String column, String type) {
+        private void addColumn(@NonNull SQLiteDatabase db, String table, String column, String type) {
             db.execSQL("ALTER TABLE " + table + " ADD COLUMN " + column + " " + type + ";");
         }
 
         //Called whenever newVersion != oldVersion
         @Override
-        public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        public void onUpgrade(@NonNull SQLiteDatabase db, int oldVersion, int newVersion) {
             if (oldVersion < 4) {
                 Log.i(TAG, "upgrading to DB version 4");
                 addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.PRIVATE, "int");

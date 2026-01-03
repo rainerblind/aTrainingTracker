@@ -27,6 +27,9 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager;
@@ -111,6 +114,7 @@ public class StravaSegmentsIntentService extends IntentService {
     private static final String STARRED = "starred";
     private static final String HAZARDOUS = "hazardous";
     private long mSportTypeId = -1;
+    @Nullable
     private String mStravaSportName = null;
     private long mSegmentId = -1;
 
@@ -118,7 +122,7 @@ public class StravaSegmentsIntentService extends IntentService {
         super("StravaSegmentsIntentService");
     }
 
-    private static void getStream(StreamType streamType, long id) {
+    private static void getStream(@NonNull StreamType streamType, long id) {
         SQLiteDatabase db = SegmentsDatabaseManager.getInstance().getOpenDatabase();
 
         // first, check whether this stream is already in the database
@@ -297,7 +301,7 @@ public class StravaSegmentsIntentService extends IntentService {
     }
 
     @Override
-    protected void onHandleIntent(Intent intent) {
+    protected void onHandleIntent(@NonNull Intent intent) {
         Bundle bundle = intent.getExtras();
         String requestType = bundle.getString(REQUEST_TYPE);
 
@@ -668,7 +672,7 @@ public class StravaSegmentsIntentService extends IntentService {
         getStream(StreamType.SEGMENT_EFFORT, effortId);
     }
 
-    private void deleteSegments(Set<Long> segmentIdSet) {
+    private void deleteSegments(@NonNull Set<Long> segmentIdSet) {
         for (long segmentId : segmentIdSet) {
             deleteSegment(segmentId);
         }

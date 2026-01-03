@@ -25,6 +25,8 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceManager;
@@ -48,6 +50,7 @@ public class StravaUploadFragment extends androidx.preference.PreferenceFragment
     public static final int GET_STRAVA_ACCESS_TOKEN = 3;
     private static final boolean DEBUG = TrainingApplication.getDebug(true);
     private static final String TAG = StravaUploadFragment.class.getName();
+    @Nullable
     private Preference mUpdateStravaEquipment;
 
     private SharedPreferences mSharedPreferences;
@@ -56,11 +59,12 @@ public class StravaUploadFragment extends androidx.preference.PreferenceFragment
         REQUESTING,
         GOT
     }
+    @Nullable
     private RequestTokenState requestTokenState = null;
 
     private final BroadcastReceiver tokenReceiver = new BroadcastReceiver() {
         @Override
-        public void onReceive(Context context, Intent intent) {
+        public void onReceive(Context context, @NonNull Intent intent) {
             String token = intent.getStringExtra("access_token");
             handleToken(token);
         }
@@ -136,7 +140,7 @@ public class StravaUploadFragment extends androidx.preference.PreferenceFragment
     }
 
 
-    protected void handleToken(String token) {
+    protected void handleToken(@Nullable String token) {
         if (token != null) {
             requestTokenState = RequestTokenState.GOT;
 
