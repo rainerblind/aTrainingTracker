@@ -470,13 +470,10 @@ public class MainActivityWithNavigation
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         }
 
-
         // register the receivers
         ContextCompat.registerReceiver(this, mStartTrackingReceiver, mStartTrackingFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mPauseTrackingReceiver, new IntentFilter(TrainingApplication.REQUEST_PAUSE_TRACKING), ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mStopTrackingReceiver, new IntentFilter(TrainingApplication.REQUEST_STOP_TRACKING), ContextCompat.RECEIVER_NOT_EXPORTED);
-
-        upgradeDropboxV2();
     }
 
     // method to verify the preferences
@@ -507,37 +504,6 @@ public class MainActivityWithNavigation
             TrainingApplication.setUploadToTrainingPeaks(false);
         }
 
-    }
-
-    protected void upgradeDropboxV2() {
-        if (TrainingApplication.uploadToDropbox() && !TrainingApplication.hasDropboxToken()) {
-
-            String accessToken = Auth.getOAuth2Token();
-            if (accessToken != null) {
-                TrainingApplication.storeDropboxToken(accessToken);
-            } else {
-                if (mAlreadyTriedToRequestDropboxToken) {
-                    TrainingApplication.deleteDropboxToken();
-                } else {
-                    new AlertDialog.Builder(this)
-                            .setTitle(R.string.title_request_dropbox_token)
-                            .setIcon(R.drawable.dropbox_logo_blue)
-                            .setMessage(R.string.message_request_dropbox_token)
-                            .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
-                                public void onClick(DialogInterface dialog, int which) {
-                                    mAlreadyTriedToRequestDropboxToken = true;
-                                    Auth.startOAuth2Authentication(MainActivityWithNavigation.this, TrainingApplication.getDropboxAppKey());
-                                }
-                            })
-                            .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
-                                public void onClick(DialogInterface dialog, int which) {
-                                    TrainingApplication.deleteDropboxToken();
-                                }
-                            })
-                            .show();
-                }
-            }
-        }
     }
 
     @Override
