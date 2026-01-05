@@ -27,9 +27,12 @@ import androidx.preference.PreferenceManager;
 import androidx.preference.PreferenceScreen;
 import android.util.Log;
 
+import com.atrainingtracker.BuildConfig;
 import com.atrainingtracker.R;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
+import com.dropbox.core.DbxRequestConfig;
 import com.dropbox.core.android.Auth;
+import com.dropbox.core.oauth.DbxCredential;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -47,6 +50,8 @@ public class CloudUploadFragment extends androidx.preference.PreferenceFragmentC
     private PreferenceScreen mPSStrava, /* mPSRunkeeper, mPSTrainingPeaks, */ mPSEmailUpload;
 
     private SharedPreferences mSharedPreferences;
+
+    private Boolean mAwaitDropboxResult = false;
 
     // private static DropboxAPI<AndroidAuthSession> mDBApi;
 
@@ -72,19 +77,14 @@ public class CloudUploadFragment extends androidx.preference.PreferenceFragmentC
         // mPSTrainingPeaks.setSummary(getPSTrainingPeaksSummary());
         mPSEmailUpload.setSummary(getPSEmailUploadSummary());
 
-        if (TrainingApplication.uploadToDropbox() && !TrainingApplication.hasDropboxToken()) {
-            String accessToken = Auth.getOAuth2Token();
-            if (accessToken != null) {
-                TrainingApplication.storeDropboxToken(accessToken);
-            } else {
-                TrainingApplication.deleteDropboxToken();
-            }
+        if (mAwaitDropboxResult) {
+            DbxCredential dbxCredential = Auth.getDbxCredential();
+            TrainingApplication.storeDropboxCredential(dbxCredential);
+            mAwaitDropboxResult = false;
         }
-
 
         mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(getActivity());
         mSharedPreferences.registerOnSharedPreferenceChangeListener(this);
-
     }
 
     @Override
@@ -101,10 +101,11 @@ public class CloudUploadFragment extends androidx.preference.PreferenceFragmentC
         if (DEBUG) Log.i(TAG, "onSharedPreferenceChanged: key=" + key);
 
         if (TrainingApplication.SP_UPLOAD_TO_DROPBOX.equals(key)) {
-            if (!TrainingApplication.uploadToDropbox()) {
-                TrainingApplication.deleteDropboxToken();
-            } else {
-                Auth.startOAuth2Authentication(getActivity(), TrainingApplication.getDropboxAppKey());
+            if (!TrainingApplication.uploadToDropbox()) { // -> Upload to Dropbox has been changed to false by the user
+                TrainingApplication.deleteDropboxCredential();
+            } else {                                      // -> Upload to Dropbox has been changed to true by the user
+                Auth.startOAuth2PKCE(getActivity(), BuildConfig.DROPBOX_APP_KEY, new DbxRequestConfig(BuildConfig.DROPBOX_APP_KEY));
+                mAwaitDropboxResult = true;
             }
         }
     }
