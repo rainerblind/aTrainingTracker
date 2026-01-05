@@ -205,11 +205,11 @@ public class BANALService
     }
 
     /* filtered stuff */
-    protected static void createFilter(FilterData filterData) {
+    public static void createFilter(FilterData filterData) {
         cFilterManager.createFilter(filterData);
     }
 
-    protected static FilteredSensorData getFilteredSensorData(FilterData filterData) {
+    public static FilteredSensorData getFilteredSensorData(FilterData filterData) {
         return cFilterManager.getFilteredSensorData(filterData);
     }
 
