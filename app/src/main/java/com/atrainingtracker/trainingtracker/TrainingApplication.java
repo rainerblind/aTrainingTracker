@@ -69,6 +69,8 @@ import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleDatabaseMana
 import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleService;
 import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleServiceBuildIn;
 import com.atrainingtracker.trainingtracker.smartwatch.pebble.Watchapp;
+import com.dropbox.core.json.JsonReadException;
+import com.dropbox.core.oauth.DbxCredential;
 
 import java.util.HashMap;
 import java.util.Locale;
@@ -166,6 +168,7 @@ public class TrainingApplication extends Application {
     protected final static String DROPBOX_APP_KEY = BuildConfig.DROPBOX_APP_KEY;
     protected final static String DROPBOX_APP_SECRET = BuildConfig.DROPBOX_APP_SECRET;
     protected static final String SP_DROPBOX_TOKEN = "dropboxToken";
+    protected static final String SP_DROPBOX_CREDENTIAL = "dropboxCredential";
     private static final String TAG = "TrainingApplication";
     private static final String SP_PLAY_SERVICE_INSTALLATION_TRIES = "playServiceInstallationTries";
     private static final int MAX_PLAY_SERVICE_INSTALLATION_TRIES = 10;
@@ -556,6 +559,25 @@ public class TrainingApplication extends Application {
     public static void deleteDropboxToken() {
         cSharedPreferences.edit().remove(SP_DROPBOX_TOKEN).apply();
         cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_DROPBOX, false).apply();
+    }
+
+    public static void storeDropboxCredential(DbxCredential dbxCredential) {
+        cSharedPreferences.edit().putString(SP_DROPBOX_CREDENTIAL, DbxCredential.Writer.writeToString(dbxCredential)).apply();
+    }
+
+    public static DbxCredential readDropboxCredential() {
+        String credential = cSharedPreferences.getString(SP_DROPBOX_CREDENTIAL, null);
+        DbxCredential dbxCredential = null;
+        try {
+            dbxCredential = DbxCredential.Reader.readFully(credential);
+        } catch (JsonReadException e) {
+            // do nothing
+        }
+        return dbxCredential;
+    }
+
+    public static void deleteDropboxCredential() {
+        cSharedPreferences.edit().remove(SP_DROPBOX_CREDENTIAL).apply();
     }
 
     /*

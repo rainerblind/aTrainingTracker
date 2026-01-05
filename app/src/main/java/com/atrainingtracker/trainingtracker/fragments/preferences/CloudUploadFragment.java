@@ -27,9 +27,12 @@ import androidx.preference.PreferenceManager;
 import androidx.preference.PreferenceScreen;
 import android.util.Log;
 
+import com.atrainingtracker.BuildConfig;
 import com.atrainingtracker.R;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
+import com.dropbox.core.DbxRequestConfig;
 import com.dropbox.core.android.Auth;
+import com.dropbox.core.oauth.DbxCredential;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -47,6 +50,8 @@ public class CloudUploadFragment extends androidx.preference.PreferenceFragmentC
     private PreferenceScreen mPSStrava, /* mPSRunkeeper, mPSTrainingPeaks, */ mPSEmailUpload;
 
     private SharedPreferences mSharedPreferences;
+
+    private Boolean mAwaitDropboxResult = false;
 
     // private static DropboxAPI<AndroidAuthSession> mDBApi;
 
@@ -71,6 +76,12 @@ public class CloudUploadFragment extends androidx.preference.PreferenceFragmentC
         // mPSRunkeeper.setSummary(getPSRunkeeperSummary());
         // mPSTrainingPeaks.setSummary(getPSTrainingPeaksSummary());
         mPSEmailUpload.setSummary(getPSEmailUploadSummary());
+
+        if (mAwaitDropboxResult) {
+            DbxCredential dbxCredential = Auth.getDbxCredential();
+            TrainingApplication.storeDropboxCredential(dbxCredential);
+            mAwaitDropboxResult = false;
+        }
 
         if (TrainingApplication.uploadToDropbox() && !TrainingApplication.hasDropboxToken()) {
             String accessToken = Auth.getOAuth2Token();
@@ -104,7 +115,9 @@ public class CloudUploadFragment extends androidx.preference.PreferenceFragmentC
             if (!TrainingApplication.uploadToDropbox()) {
                 TrainingApplication.deleteDropboxToken();
             } else {
-                Auth.startOAuth2Authentication(getActivity(), TrainingApplication.getDropboxAppKey());
+                // Auth.startOAuth2Authentication(getActivity(), TrainingApplication.getDropboxAppKey());
+                Auth.startOAuth2PKCE(getActivity(), TrainingApplication.getDropboxAppKey(), new DbxRequestConfig(BuildConfig.DROPBOX_APP_KEY));
+                mAwaitDropboxResult = true;
             }
         }
     }
