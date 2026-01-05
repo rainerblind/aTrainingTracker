@@ -34,8 +34,8 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
 
     private static final double MIN_SPEED = 0.01;  // min speed to calculate slope
 
-    public VerticalSpeedAndSlopeDevice(Context context, MySensorManager mySensorManager, DeviceType deviceType) {
-        super(context, mySensorManager, deviceType);
+    public VerticalSpeedAndSlopeDevice(Context context, MySensorManager mySensorManager) {
+        super(context, mySensorManager, DeviceType.VERTICAL_SPEED_AND_SLOPE);
 
         BANALService.createFilter(cAltitudeFilter);
         BANALService.createFilter(cSpeedFilter);

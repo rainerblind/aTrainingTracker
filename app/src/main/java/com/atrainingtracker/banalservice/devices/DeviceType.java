@@ -50,7 +50,8 @@ public enum DeviceType {
 
 
     SENSOR_MANAGER(SensorType.SENSORS, BSportType.UNKNOWN, 1),
-    CLOCK(SensorType.TIME_TOTAL, BSportType.UNKNOWN, 1);   // only last one has ';' rest has ','!
+    CLOCK(SensorType.TIME_TOTAL, BSportType.UNKNOWN, 1),
+    VERTICAL_SPEED_AND_SLOPE(SensorType.VERTICAL_SPEED, BSportType.UNKNOWN, 1);   // only last one has ';' rest has ','!
 
     private final SensorType mainSensorType;
     private final BSportType sportType;
