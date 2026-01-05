@@ -305,6 +305,10 @@
     <string name="torque_effectiveness_l_short">effective l</string>
     <string name="torque_effectiveness_r">torque effectiveness right</string>
     <string name="torque_effectiveness_r_short">effective r</string>
+    <string name="slope">slope</string>
+    <string name="slope_short">slope</string>
+    <string name="vertical_speed">vertical speed (VAM)</string>
+    <string name="vertical_speed_short">VAM</string>
 
     <string name="sport_type_walk">walk</string>
     <string name="sport_type_run">run</string>

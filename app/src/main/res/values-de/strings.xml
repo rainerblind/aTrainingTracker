@@ -284,6 +284,11 @@
     <string name="doublePowerBalanceValues">Verdopple die gemessenen Werte</string>
     <string name="invertPowerBalanceValues">Invertiere die gemessenen Werte.  D.h., vertausche rechts und links</string>
 
+    <string name="slope">Steigung</string>
+    <string name="slope_short">Steigung</string>
+    <string name="vertical_speed">Vertikale Geschwindigkeit (VAM)</string>"
+    <string name="vertical_speed_short">VAM</string>
+
     <string name="PrefsActivityLabel">Einstellungen</string>
     <string name="UpdateWorkoutActivityLabel">Trainingseinheit hochladen</string>
     <string name="TrackOnMapActivityLabel">Trainingseinheit</string>

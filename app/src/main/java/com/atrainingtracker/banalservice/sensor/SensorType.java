@@ -31,6 +31,7 @@ import com.atrainingtracker.banalservice.sensor.formater.MyFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.PaceFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter;
+import com.atrainingtracker.banalservice.sensor.formater.VerticalSpeedFormatter;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 
 public enum SensorType
@@ -77,6 +78,7 @@ public enum SensorType
     // SPEED_mps_network      (R.string.speed,                  R.string.speed_short,                  R.string.units_speed_basic,     SensorValueType.DOUBLE,  new SpeedFormatter()),
     // SPEED_mps_google_fused (R.string.speed,                  R.string.speed_short,                  R.string.units_speed_basic,     SensorValueType.DOUBLE,  new SpeedFormatter()),
     SENSORS(R.string.current_sensors, R.string.current_sensors_short, R.string.units_none, SensorValueType.STRING, new DefaultStringFormatter(), false),
+    SLOPE(R.string.slope, R.string.slope_short, R.string.units_percent, SensorValueType.DOUBLE, new DefaultNumberFormatter(), true),
     STRIDES(R.string.strides, R.string.strides_short, R.string.units_none, SensorValueType.INTEGER, new IntegerFormatter(), true),
     TEMPERATURE(R.string.temperature, R.string.temperature_short, R.string.units_temperature, SensorValueType.DOUBLE, new DefaultNumberFormatter(), true),
     TEMPERATURE_MAX(R.string.temperature_max, R.string.temperature_max_short, R.string.units_temperature, SensorValueType.DOUBLE, new DefaultNumberFormatter(), false),
@@ -87,7 +89,8 @@ public enum SensorType
     TIME_TOTAL(R.string.time_total, R.string.time_total_short, R.string.units_time_basic, SensorValueType.INTEGER, new TimeFormatter(), false),
     TORQUE(R.string.torque, R.string.torque_short, R.string.units_torque, SensorValueType.DOUBLE, new DefaultNumberFormatter(), true),
     TORQUE_EFFECTIVENESS_L(R.string.torque_effectiveness_l, R.string.torque_effectiveness_l_short, R.string.units_percent, SensorValueType.INTEGER, new IntegerFormatter(), true),
-    TORQUE_EFFECTIVENESS_R(R.string.torque_effectiveness_r, R.string.torque_effectiveness_r_short, R.string.units_percent, SensorValueType.INTEGER, new IntegerFormatter(), true);
+    TORQUE_EFFECTIVENESS_R(R.string.torque_effectiveness_r, R.string.torque_effectiveness_r_short, R.string.units_percent, SensorValueType.INTEGER, new IntegerFormatter(), true),
+    VERTICAL_SPEED(R.string.vertical_speed, R.string.vertical_speed_short, R.string.units_speed_basic, SensorValueType.DOUBLE, new VerticalSpeedFormatter(), true);
 
     // max bit = 118
 
