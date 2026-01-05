@@ -2,6 +2,8 @@ package com.atrainingtracker.trainingtracker.onlinecommunities.strava;
 
 import android.net.Uri;
 
+import androidx.annotation.NonNull;
+
 import com.atrainingtracker.BuildConfig;
 import com.atrainingtracker.trainingtracker.onlinecommunities.BaseOAuthCallbackActivity;
 
@@ -19,17 +21,20 @@ public class StravaOAuthCallbackActivity extends BaseOAuthCallbackActivity {
     protected static final String MY_CLIENT_SECRET = BuildConfig.STRAVA_CLIENT_SECRET;
     public static final String StravaOAuthSuccess = "com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaOAuthSuccess";
 
+    @NonNull
     @Override
     protected String getRedirectUri() {
         return "strava://rainerblind.github.io";
     }
 
+    @NonNull
     @Override
     protected String getOAuthSuccessID() {
         return StravaOAuthSuccess;
     }
 
 
+    @NonNull
     @Override
     protected String getAccessUrl(String code) {
         Uri.Builder builder = new Uri.Builder();
@@ -44,7 +49,7 @@ public class StravaOAuthCallbackActivity extends BaseOAuthCallbackActivity {
     }
 
     // override onJsonResponse if you need to save refresh tokens etc
-    protected void onJsonResponse(JSONObject jsonObject) {
+    protected void onJsonResponse(@NonNull JSONObject jsonObject) {
         StravaHelper.storeJSONData(jsonObject);
     }
 

@@ -62,7 +62,7 @@ public enum DeviceType {
         this.defaultCalibrationFactor = defaultCalibrationFactor;
     }
 
-    public static final DeviceType[] getRemoteDeviceTypes(Protocol protocol) {
+    public static DeviceType[] getRemoteDeviceTypes(Protocol protocol) {
         switch (protocol) {
             case ANT_PLUS:
                 return new DeviceType[]{HRM, RUN_SPEED, BIKE_SPEED, BIKE_CADENCE, BIKE_SPEED_AND_CADENCE, BIKE_POWER, ENVIRONMENT}; // add ALL?

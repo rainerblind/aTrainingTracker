@@ -20,6 +20,8 @@ package com.atrainingtracker.trainingtracker.segments;
 
 import android.content.Context;
 import android.database.Cursor;
+
+import androidx.annotation.NonNull;
 import androidx.cursoradapter.widget.CursorAdapter;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -35,7 +37,6 @@ import com.atrainingtracker.trainingtracker.MyHelper;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager.Segments;
-import com.squareup.picasso.Picasso;
 
 /**
  * Created by rainer on 10.08.16.
@@ -50,9 +51,9 @@ public class SegmentLeaderboardCursorAdapter extends CursorAdapter {
     private static final int VIEW_TYPE_COUNT = 3;
     private final String TAG = SegmentLeaderboardCursorAdapter.class.getSimpleName();
     private final boolean DEBUG = TrainingApplication.getDebug(false);
-    protected Context mContext;
-    TimeFormatter timeFormatter = new TimeFormatter();
-    SpeedFormatter speedFormatter = new SpeedFormatter();
+    protected final Context mContext;
+    final TimeFormatter timeFormatter = new TimeFormatter();
+    final SpeedFormatter speedFormatter = new SpeedFormatter();
 
     private final LayoutInflater mInflater;
 
@@ -64,7 +65,7 @@ public class SegmentLeaderboardCursorAdapter extends CursorAdapter {
         mInflater = (LayoutInflater) mContext.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
     }
 
-    private int getItemViewType(Cursor cursor) {
+    private int getItemViewType(@NonNull Cursor cursor) {
         long athleteId = cursor.getLong(cursor.getColumnIndex(Segments.ATHLETE_ID));
 
         if (athleteId == -1) {
@@ -87,8 +88,9 @@ public class SegmentLeaderboardCursorAdapter extends CursorAdapter {
         return VIEW_TYPE_COUNT;
     }
 
+    @NonNull
     @Override
-    public View newView(Context context, Cursor cursor, ViewGroup parent) {
+    public View newView(@NonNull Context context, @NonNull Cursor cursor, ViewGroup parent) {
         if (DEBUG) Log.i(TAG, "newView");
 
         ViewHolder viewHolder = new ViewHolder();
@@ -123,7 +125,7 @@ public class SegmentLeaderboardCursorAdapter extends CursorAdapter {
 
 
     @Override
-    public void bindView(View view, Context context, Cursor cursor) {
+    public void bindView(@NonNull View view, Context context, @NonNull Cursor cursor) {
         if (DEBUG) Log.i(TAG, "bindView");
 
         ViewHolder viewHolder = (ViewHolder) view.getTag();

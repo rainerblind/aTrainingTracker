@@ -23,6 +23,8 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 
@@ -34,6 +36,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.protocol.BasicHttpContext;
 import org.apache.http.protocol.HttpContext;
+import org.jetbrains.annotations.Contract;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -63,7 +66,7 @@ public class MyHelper {
             if (entity != null) {
                 InputStream inputStream = entity.getContent();
                 int r = -1;
-                StringBuffer respStr = new StringBuffer();
+                StringBuilder respStr = new StringBuilder();
                 while ((r = inputStream.read()) != -1)
                     respStr.append((char) r);
                 String tagOpen = "<double>";
@@ -99,7 +102,7 @@ public class MyHelper {
             if (entity != null) {
                 InputStream inputStream = entity.getContent();
                 int r = -1;
-                StringBuffer respStr = new StringBuffer();
+                StringBuilder respStr = new StringBuilder();
                 while ((r = inputStream.read()) != -1)
                     respStr.append((char) r);
                 String tagOpen = "<elevation>";
@@ -126,7 +129,7 @@ public class MyHelper {
         return netInfo != null && netInfo.isConnectedOrConnecting();
     }
 
-    public static double string2Double(String doubleString) {
+    public static double string2Double(@NonNull String doubleString) {
         try {
             return Double.parseDouble(doubleString);
         } catch (NumberFormatException e) {
@@ -157,122 +160,78 @@ public class MyHelper {
         return mps2userUnit(speed, TrainingApplication.getUnit());
     }
 
-    public static double mps2userUnit(double speed, MyUnits myUnits) {
-        switch (myUnits) {
-            case METRIC:
-                return speed * 3.6;
-            case IMPERIAL:
-                return speed * 2.23693629;
-            default:
-                return 0;
-        }
+    public static double mps2userUnit(double speed, @NonNull MyUnits myUnits) {
+        return switch (myUnits) {
+            case METRIC -> speed * 3.6;
+            case IMPERIAL -> speed * 2.23693629;
+        };
     }
 
     public static double UserUnit2mps(double speed) {
-        switch (TrainingApplication.getUnit()) {
-            case METRIC:
-                return speed / 3.6;
-            case IMPERIAL:
-                return speed / 2.23693629;
-            default:
-                return 0;
-        }
+        return switch (TrainingApplication.getUnit()) {
+            case METRIC -> speed / 3.6;
+            case IMPERIAL -> speed / 2.23693629;
+        };
     }
 
     public static int getSpeedUnitNameId() {
-        switch (TrainingApplication.getUnit()) {
-            case METRIC:
-                return R.string.units_speed_metric;
-            case IMPERIAL:
-                return R.string.units_speed_imperial;
-            default:
-                return R.string.units_speed_unknown;
-        }
+        return switch (TrainingApplication.getUnit()) {
+            case METRIC -> R.string.units_speed_metric;
+            case IMPERIAL -> R.string.units_speed_imperial;
+        };
     }
 
     public static int getShortSpeedUnitNameId() {
-        switch (TrainingApplication.getUnit()) {
-            case METRIC:
-                return R.string.units_speed_short_metric;
-            case IMPERIAL:
-                return R.string.units_speed_short_imperial;
-            default:
-                return R.string.units_speed_short_unknown;
-        }
+        return switch (TrainingApplication.getUnit()) {
+            case METRIC -> R.string.units_speed_short_metric;
+            case IMPERIAL -> R.string.units_speed_short_imperial;
+        };
     }
 
     public static int getPaceUnitNameId() {
-        switch (TrainingApplication.getUnit()) {
-            case METRIC:
-                return R.string.units_pace_metric;
-            case IMPERIAL:
-                return R.string.units_pace_imperial;
-            default:
-                return R.string.units_pace_unknown;
-
-        }
+        return switch (TrainingApplication.getUnit()) {
+            case METRIC -> R.string.units_pace_metric;
+            case IMPERIAL -> R.string.units_pace_imperial;
+        };
     }
 
     public static int getShortPaceUnitNameId() {
-        switch (TrainingApplication.getUnit()) {
-            case METRIC:
-                return R.string.units_pace_short_metric;
-            case IMPERIAL:
-                return R.string.units_pace_short_imperial;
-            default:
-                return R.string.units_pace_short_unknown;
-
-        }
+        return switch (TrainingApplication.getUnit()) {
+            case METRIC -> R.string.units_pace_short_metric;
+            case IMPERIAL -> R.string.units_pace_short_imperial;
+        };
     }
 
     public static int getDistanceUnitNameId() {
-        switch (TrainingApplication.getUnit()) {
-            case METRIC:
-                return R.string.units_distance_metric;
-            case IMPERIAL:
-                return R.string.units_distance_imperial;
-            default:
-                return R.string.units_distance_unknown;
-        }
+        return switch (TrainingApplication.getUnit()) {
+            case METRIC -> R.string.units_distance_metric;
+            case IMPERIAL -> R.string.units_distance_imperial;
+        };
     }
 
 
-    public static int getUnitsId(SensorType sensorType) {
-        switch (sensorType) {
-            case SPEED_mps:
-                return getSpeedUnitNameId();
-
-            case PACE_spm:
-                return getPaceUnitNameId();
-
-            case DISTANCE_m:
-            case DISTANCE_m_LAP:
-            case LINE_DISTANCE_m:
-                return getDistanceUnitNameId();
-
-            default:
-                return sensorType.getUnitId();
-        }
+    public static int getUnitsId(@NonNull SensorType sensorType) {
+        return switch (sensorType) {
+            case SPEED_mps -> getSpeedUnitNameId();
+            case PACE_spm -> getPaceUnitNameId();
+            case DISTANCE_m, DISTANCE_m_LAP, LINE_DISTANCE_m -> getDistanceUnitNameId();
+            default -> sensorType.getUnitId();
+        };
     }
 
-    public static int getShortUnitsId(SensorType sensorType) {
-        switch (sensorType) {
-            case SPEED_mps:
-                return getShortSpeedUnitNameId();
+    public static int getShortUnitsId(@NonNull SensorType sensorType) {
+        return switch (sensorType) {
+            case SPEED_mps -> getShortSpeedUnitNameId();
+            case PACE_spm -> getShortPaceUnitNameId();
+            case DISTANCE_m, DISTANCE_m_LAP, LINE_DISTANCE_m ->
+                    getDistanceUnitNameId();  // TODO: also short version?
 
-            case PACE_spm:
-                return getShortPaceUnitNameId();
-
-            case DISTANCE_m:
-            case DISTANCE_m_LAP:
-            case LINE_DISTANCE_m:
-                return getDistanceUnitNameId();  // TODO: also short version?
-
-            default:
-                return sensorType.getUnitId();  // TODO: also short version?
-        }
+            default -> sensorType.getUnitId();  // TODO: also short version?
+        };
     }
 
+    @NonNull
+    @Contract(pure = true)
     public static String formatRank(int i) {
         int j = i % 10,
                 k = i % 100;

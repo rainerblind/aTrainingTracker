@@ -22,6 +22,9 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.preference.CheckBoxPreference;
 import androidx.preference.PreferenceManager;
 import android.util.Log;
@@ -39,6 +42,7 @@ public class RunkeeperUploadFragment extends androidx.preference.PreferenceFragm
     public static final int GET_RUNKEEPER_ACCESS_TOKEN = 4;
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private static final String TAG = RunkeeperUploadFragment.class.getName();
+    @Nullable
     private CheckBoxPreference mRunkeeperUpload;
 
     private SharedPreferences mSharedPreferences;
@@ -87,7 +91,7 @@ public class RunkeeperUploadFragment extends androidx.preference.PreferenceFragm
     }
 
     @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+    public void onActivityResult(int requestCode, int resultCode, @NonNull Intent data) {
         if (DEBUG) Log.i(TAG, "onActivityResult: requestCode=" + requestCode);
 
         switch (requestCode) {

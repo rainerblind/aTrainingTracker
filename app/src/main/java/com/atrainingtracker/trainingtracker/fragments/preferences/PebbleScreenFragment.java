@@ -18,6 +18,8 @@
 
 package com.atrainingtracker.trainingtracker.fragments.preferences;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.DialogInterface;
@@ -47,7 +49,9 @@ public class PebbleScreenFragment extends androidx.preference.PreferenceFragment
 
     private SharedPreferences mSharedPreferences;
 
+    @Nullable
     private ListPreference mPebbleWatchappPref;
+    @Nullable
     private Preference mConfigurePebbleDisplays;
 
     @Override
@@ -71,7 +75,7 @@ public class PebbleScreenFragment extends androidx.preference.PreferenceFragment
 
         mPebbleWatchappPref.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
             @Override
-            public boolean onPreferenceChange(Preference preference, Object newValue) {
+            public boolean onPreferenceChange(@NonNull Preference preference, Object newValue) {
 
                 if (DEBUG)
                     Log.d(TAG, "onPreferenceChange: key=" + preference.getKey() + ", newValue=" + newValue);

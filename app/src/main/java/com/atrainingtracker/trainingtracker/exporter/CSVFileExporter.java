@@ -23,6 +23,8 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.sensor.SensorValueType;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
@@ -43,12 +45,13 @@ public class CSVFileExporter extends BaseExporter {
     private static final String TAG = "CSVFileExporter";
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
-    public CSVFileExporter(Context context) {
+    public CSVFileExporter(@NonNull Context context) {
         super(context);
     }
 
+    @NonNull
     @Override
-    public ExportResult doExport(ExportInfo exportInfo)
+    public ExportResult doExport(@NonNull ExportInfo exportInfo)
             throws IOException {
         if (DEBUG) Log.d(TAG, "exportToFile: " + exportInfo.getFileBaseName());
 
@@ -154,6 +157,7 @@ public class CSVFileExporter extends BaseExporter {
         return new ExportResult(true, getPositiveAnswer(exportInfo));
     }
 
+    @NonNull
     @Override
     protected Action getAction() {
         return Action.EXPORT;

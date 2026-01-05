@@ -23,6 +23,9 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper;
@@ -96,12 +99,13 @@ public class StravaUploaderLegacy extends BaseExporter {
     private static final String TRAINER = "trainer";
     private static final String TRUE = "true";
 
-    public StravaUploaderLegacy(Context context) {
+    public StravaUploaderLegacy(@NonNull Context context) {
         super(context);
     }
 
+    @Nullable
     @Override
-    protected ExportResult doExport(ExportInfo exportInfo)
+    protected ExportResult doExport(@NonNull ExportInfo exportInfo)
             throws IOException, JSONException, InterruptedException {
         if (DEBUG) Log.d(TAG, "doExport: " + exportInfo.getFileBaseName() + " ignoring as success, upload is broken.");
 
@@ -135,7 +139,7 @@ public class StravaUploaderLegacy extends BaseExporter {
         if (DEBUG) Log.d(TAG, "uploadToStrava response: " + response);
 
         // check the response
-        if (response == null || response.equals("")) {  // hm, there is no response
+        if (response == null || response.isEmpty()) {  // hm, there is no response
             if (DEBUG) Log.d(TAG, "no response");
             return new ExportResult(false, "no response");
         }
@@ -195,7 +199,7 @@ public class StravaUploaderLegacy extends BaseExporter {
             for (int attempt = 1; attempt <= MAX_REQUESTS && exportResult == null; attempt++) {
                 // wait some time before we ask the server
                 Thread.sleep(waiting_time);
-                waiting_time *= 1.4;  // next time, we wait somewhat longer
+                waiting_time = (long) (waiting_time * 1.4);  // next time, we wait somewhat longer
 
                 JSONObject uploadStatusJson = getStravaUploadStatus(uploadId);
 
@@ -210,30 +214,33 @@ public class StravaUploaderLegacy extends BaseExporter {
                     if (DEBUG) Log.d(TAG, "strava response status: " + status);
                     stravaUploadDbHelper.updateStatus(exportInfo.getFileBaseName(), status);
 
-                    if (STATUS_PROCESSING.equals(status)) {
-                        // here, we do nothing (wait for the next iteration of the loop)
-                    } else if (STATUS_DELETED.equals(status)) {
-                        exportResult = new ExportResult(false, STATUS_DELETED);
-                    } else if (STATUS_ERROR.equals(status)) {
-                        // should have been already handled???
-                        exportResult = new ExportResult(false, uploadStatusJson.getString(ERROR));
-                    } else if (STATUS_READY.equals(status)) {
-                        // all right
-                        cExportManager.exportingFinished(exportInfo, true, getPositiveAnswer(exportInfo));
-                        // but not everything is uploaded to strava, e.g., the gear data is missing.
-                        // Thus, we update it
-                        String activity_id = uploadStatusJson.getString(ACTIVITY_ID);
-                        if (activity_id != null) {
-                            stravaUploadDbHelper.updateActivityId(exportInfo.getFileBaseName(), activity_id);
-                            exportResult = doUpdate(exportInfo);
-                        } else {
-                            if (DEBUG)
-                                Log.d(TAG, "ERROR while uploading to Strava: could not get activity_id from response");
+                    switch (status) {
+                        case STATUS_PROCESSING -> {
+                            // here, we do nothing (wait for the next iteration of the loop)
                         }
-
-                    } else {
-                        if (DEBUG) Log.d(TAG, "unknown response status: " + status);
-                        exportResult = new ExportResult(false, "successfully uploaded but unknown status " + status);
+                        case STATUS_DELETED ->
+                                exportResult = new ExportResult(false, STATUS_DELETED);
+                        case STATUS_ERROR ->
+                            // should have been already handled???
+                                exportResult = new ExportResult(false, uploadStatusJson.getString(ERROR));
+                        case STATUS_READY -> {
+                            // all right
+                            cExportManager.exportingFinished(exportInfo, true, getPositiveAnswer(exportInfo));
+                            // but not everything is uploaded to strava, e.g., the gear data is missing.
+                            // Thus, we update it
+                            String activity_id = uploadStatusJson.getString(ACTIVITY_ID);
+                            if (activity_id != null) {
+                                stravaUploadDbHelper.updateActivityId(exportInfo.getFileBaseName(), activity_id);
+                                exportResult = doUpdate(exportInfo);
+                            } else {
+                                if (DEBUG)
+                                    Log.d(TAG, "ERROR while uploading to Strava: could not get activity_id from response");
+                            }
+                        }
+                        default -> {
+                            if (DEBUG) Log.d(TAG, "unknown response status: " + status);
+                            exportResult = new ExportResult(false, "successfully uploaded but unknown status " + status);
+                        }
                     }
                 }
             }
@@ -246,7 +253,8 @@ public class StravaUploaderLegacy extends BaseExporter {
         }
     }
 
-    protected ExportResult doUpdate(ExportInfo exportInfo) {
+    @NonNull
+    protected ExportResult doUpdate(@NonNull ExportInfo exportInfo) {
         Log.e(TAG, "doUpdate: " + exportInfo.getFileBaseName());
         if (DEBUG) Log.d(TAG, "doUpdate");
         // Strava fields:
@@ -309,7 +317,7 @@ public class StravaUploaderLegacy extends BaseExporter {
 
 
         // first, make sure that the type is correct
-        List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>(1);
+        List<NameValuePair> nameValuePairs = new ArrayList<>(1);
         nameValuePairs.add(new BasicNameValuePair(TYPE, sportName));
         updateStravaActivity(activityId, nameValuePairs);             // update
         int counter = 0;
@@ -336,7 +344,7 @@ public class StravaUploaderLegacy extends BaseExporter {
 
         // now, that the type is correct, we can update the equipment! (and the other fields)
         boolean update = false;
-        nameValuePairs = new ArrayList<NameValuePair>(3);
+        nameValuePairs = new ArrayList<>(3);
 
         if (name != null) {
             nameValuePairs.add(new BasicNameValuePair(NAME, name));
@@ -403,7 +411,8 @@ public class StravaUploaderLegacy extends BaseExporter {
 
     }
 
-    protected JSONObject updateStravaActivity(String stravaActivityId, List<NameValuePair> nameValuePairs) {
+    @Nullable
+    protected JSONObject updateStravaActivity(String stravaActivityId, @NonNull List<NameValuePair> nameValuePairs) {
         if (DEBUG) Log.i(TAG, "updateStravaActivity(...)");
         Log.e(TAG, "updateStravaActivity: " + stravaActivityId);
 
@@ -441,6 +450,7 @@ public class StravaUploaderLegacy extends BaseExporter {
         return responseJson;
     }
 
+    @Nullable
     protected JSONObject getStravaActivity(String stravaActivityId) {
         JSONObject responseJson = null;
         Log.e(TAG, "getStravaUploadStatus: " + stravaActivityId);
@@ -474,6 +484,7 @@ public class StravaUploaderLegacy extends BaseExporter {
     }
 
 
+    @Nullable
     protected JSONObject getStravaUploadStatus(String stravaUploadId) {
         JSONObject responseJson = null;
         Log.e(TAG, "getStravaUploadStatus: " + stravaUploadId);
@@ -506,6 +517,7 @@ public class StravaUploaderLegacy extends BaseExporter {
         return responseJson;
     }
 
+    @NonNull
     @Override
     protected Action getAction() {
         return Action.UPLOAD;

@@ -26,6 +26,9 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.BaseColumns;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.ActivityType;
 import com.atrainingtracker.banalservice.sensor.SensorType;
@@ -56,6 +59,7 @@ public class TrackingViewsDatabaseManager {
         }
     }
 
+    @NonNull
     public static synchronized TrackingViewsDatabaseManager getInstance() {
         if (cInstance == null) {
             throw new IllegalStateException(TrackingViewsDatabaseManager.class.getSimpleName() +
@@ -80,7 +84,7 @@ public class TrackingViewsDatabaseManager {
         databaseManager.closeDatabase();
     }
 
-    public static void updateSensorTypeOfRow(long rowId, SensorType sensorType) {
+    public static void updateSensorTypeOfRow(long rowId, @NonNull SensorType sensorType) {
         if (DEBUG) Log.i(TAG, "updateSensorTypeOfRow(" + rowId + ", " + sensorType.name() + ")");
 
         ContentValues values = new ContentValues();
@@ -181,6 +185,7 @@ public class TrackingViewsDatabaseManager {
         databaseManager.closeDatabase();
     }
 
+    @Nullable
     public static String getName(long viewId) {
 
         String name = null;
@@ -206,6 +211,7 @@ public class TrackingViewsDatabaseManager {
         return name;
     }
 
+    @NonNull
     public static ActivityType getActivityType(long viewId) {
 
         ActivityType activityType = ActivityType.getDefaultActivityType();
@@ -303,6 +309,7 @@ public class TrackingViewsDatabaseManager {
         return getBoolean(viewId, TrackingViewsDbHelper.SHOW_LAP_BUTTON);
     }
 
+    @Nullable
     public static FilterInfo getFilterInfo(long rowId) {
         FilterInfo filterInfo = null;
 
@@ -329,7 +336,7 @@ public class TrackingViewsDatabaseManager {
         return filterInfo;
     }
 
-    public static void ensureEntryForActivityTypeExists(Context context, ActivityType activityType) {
+    public static void ensureEntryForActivityTypeExists(Context context, @NonNull ActivityType activityType) {
         TrackingViewsDatabaseManager databaseManager = getInstance();
         SQLiteDatabase db = databaseManager.getOpenDatabase();
         Cursor cursor = db.query(TrackingViewsDbHelper.VIEWS_TABLE,
@@ -348,7 +355,8 @@ public class TrackingViewsDatabaseManager {
         databaseManager.closeDatabase();
     }
 
-    public static LinkedList<String> getTitleList(ActivityType activityType) {
+    @NonNull
+    public static LinkedList<String> getTitleList(@NonNull ActivityType activityType) {
         LinkedList<String> titleList = new LinkedList<>();
 
         TrackingViewsDatabaseManager databaseManager = getInstance();
@@ -371,8 +379,9 @@ public class TrackingViewsDatabaseManager {
         return titleList;
     }
 
+    @NonNull
     @Deprecated // use new method ??? instead
-    public static LinkedList<Long> getViewIdList(ActivityType activityType) {
+    public static LinkedList<Long> getViewIdList(@NonNull ActivityType activityType) {
         LinkedList<Long> viewIdList = new LinkedList<>();
 
         TrackingViewsDatabaseManager databaseManager = getInstance();
@@ -394,7 +403,8 @@ public class TrackingViewsDatabaseManager {
         return viewIdList;
     }
 
-    public static ViewInfo addSensorToLayout(long viewId, SensorType sensorType, int textSize) {
+    @NonNull
+    public static ViewInfo addSensorToLayout(long viewId, @NonNull SensorType sensorType, int textSize) {
         if (DEBUG)
             Log.i(TAG, "addSensorToLayout(" + viewId + ", " + sensorType.name() + ", " + textSize + ")");
 
@@ -425,7 +435,8 @@ public class TrackingViewsDatabaseManager {
         return new ViewInfo(viewId, rowId, maxRowNr + 1, 1, sensorType, textSize, 0, FilterType.INSTANTANEOUS, 1);
     }
 
-    public static ViewInfo addSensorToRow(long viewId, int rowNr, SensorType sensorType, int textSize) {
+    @NonNull
+    public static ViewInfo addSensorToRow(long viewId, int rowNr, @NonNull SensorType sensorType, int textSize) {
         if (DEBUG)
             Log.i(TAG, "addSensorToRow(" + viewId + ", " + ", rowNr=" + rowNr + sensorType.name() + ", " + textSize + ")");
 
@@ -457,7 +468,8 @@ public class TrackingViewsDatabaseManager {
         return new ViewInfo(viewId, rowId, rowNr, maxColNr + 1, sensorType, textSize, 0, FilterType.INSTANTANEOUS, 1);
     }
 
-    public static ViewInfo addRowAfter(long viewId, int rowNr, SensorType sensorType, int textSize) {
+    @NonNull
+    public static ViewInfo addRowAfter(long viewId, int rowNr, @NonNull SensorType sensorType, int textSize) {
         if (DEBUG)
             Log.i(TAG, "addRowAfter(" + viewId + ", " + sensorType.name() + ", " + textSize + ")");
 
@@ -555,7 +567,7 @@ public class TrackingViewsDatabaseManager {
         databaseManager.closeDatabase();
     }
 
-    public static long addDefaultView(Context context, long viewId, ActivityType activityType, boolean addAfterLayout) {
+    public static long addDefaultView(Context context, long viewId, @NonNull ActivityType activityType, boolean addAfterLayout) {
         long newViewId = -1;
 
         int layoutNr = getLayoutNr(viewId);
@@ -588,6 +600,7 @@ public class TrackingViewsDatabaseManager {
     }
 
     //                    rowNr            colNr
+    @NonNull
     public static TreeMap<Integer, TreeMap<Integer, ViewInfo>> getViewInfoMap(long viewId) {
         TreeMap<Integer, TreeMap<Integer, ViewInfo>> result = new TreeMap<>();
 
@@ -608,7 +621,7 @@ public class TrackingViewsDatabaseManager {
             double filterConstant = cursor.getDouble(cursor.getColumnIndex(TrackingViewsDbHelper.FILTER_CONSTANT));
 
             if (!result.containsKey(rowNr)) {
-                result.put(rowNr, new TreeMap<Integer, ViewInfo>());
+                result.put(rowNr, new TreeMap<>());
             }
 
             result.get(rowNr).put(colNr, new ViewInfo(viewId, rowId, rowNr, colNr, sensorType, textSize, sourceDeviceId, filterType, filterConstant));
@@ -619,6 +632,7 @@ public class TrackingViewsDatabaseManager {
         return result;
     }
 
+    @NonNull
     public static List<FilterData> getAllFilterData() {
         LinkedList<FilterData> result = new LinkedList<>();
 
@@ -662,8 +676,8 @@ public class TrackingViewsDatabaseManager {
     }
 
     public static class FilterInfo {
-        public FilterType filterType;
-        public double filterConstant;
+        public final FilterType filterType;
+        public final double filterConstant;
 
         FilterInfo(FilterType filterType, double filterConstant) {
             this.filterType = filterType;
@@ -671,28 +685,9 @@ public class TrackingViewsDatabaseManager {
         }
     }
 
-    public static class ViewInfo {
-        public long viewId;
-        public long rowId;
-        public int rowNr;
-        public int colNr;
-        public SensorType sensorType;
-        public int textSize;
-        public long sourceDeviceId;
-        public FilterType filterType;
-        public double filterConstant;
-
-        public ViewInfo(long viewId, long rowId, int rowNr, int colNr, SensorType sensorType, int textSize, long sourceDeviceId, FilterType filterType, double filterConstant) {
-            this.viewId = viewId;
-            this.rowId = rowId;
-            this.rowNr = rowNr;
-            this.colNr = colNr;
-            this.sensorType = sensorType;
-            this.textSize = textSize;
-            this.sourceDeviceId = sourceDeviceId;
-            this.filterType = filterType;
-            this.filterConstant = filterConstant;
-        }
+    public record ViewInfo(long viewId, long rowId, int rowNr, int colNr, SensorType sensorType,
+                           int textSize, long sourceDeviceId, FilterType filterType,
+                           double filterConstant) {
     }
 
 
@@ -830,12 +825,12 @@ public class TrackingViewsDatabaseManager {
             mHavePressureSensor = HavePressureSensor.havePressureSensor(mContext);
         }
 
-        private static final void addColumn(SQLiteDatabase db, String table, String column, String type) {
+        private static void addColumn(@NonNull SQLiteDatabase db, String table, String column, String type) {
             db.execSQL("ALTER TABLE " + table + " ADD COLUMN " + column + " " + type + ";");
         }
 
         @Override
-        public void onCreate(SQLiteDatabase db) {
+        public void onCreate(@NonNull SQLiteDatabase db) {
             db.execSQL(CREATE_VIEWS_TABLE_V7);
             db.execSQL(CREATE_LAYOUTS_TABLE_V6);
 
@@ -852,7 +847,7 @@ public class TrackingViewsDatabaseManager {
             if (DEBUG) Log.d(TAG, "filled db");
         }
 
-        public long addDefaultActivity(SQLiteDatabase db, ActivityType activityType, int layoutNr) {
+        public long addDefaultActivity(@NonNull SQLiteDatabase db, @NonNull ActivityType activityType, int layoutNr) {
             if (DEBUG)
                 Log.i(TAG, "addDefaultActivity: activityType=" + activityType + ", layoutNr=" + layoutNr);
             long newViewId = -1;
@@ -909,7 +904,7 @@ public class TrackingViewsDatabaseManager {
 
         //Called whenever newVersion != oldVersion
         @Override
-        public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        public void onUpgrade(@NonNull SQLiteDatabase db, int oldVersion, int newVersion) {
 
             if (oldVersion < 2) {  // add SHOW_LAP_BUTTON and set its field to 1
                 addColumn(db, VIEWS_TABLE, SHOW_LAP_BUTTON, "int");
@@ -975,13 +970,14 @@ public class TrackingViewsDatabaseManager {
             }
         }
 
+        @NonNull
         protected EnumMap<ActivityType, List<RowData>> createViewMap() {
             if (DEBUG) Log.d(TAG, "createViewMap");
-            EnumMap<ActivityType, List<RowData>> viewMap = new EnumMap<ActivityType, List<RowData>>(ActivityType.class);
+            EnumMap<ActivityType, List<RowData>> viewMap = new EnumMap<>(ActivityType.class);
             List<RowData> rowDataList;
 
             // GENERIC
-            rowDataList = new LinkedList<RowData>();
+            rowDataList = new LinkedList<>();
             rowDataList.add(new RowData(SensorType.TIME_ACTIVE, SMALL, 1, 1));
             rowDataList.add(new RowData(SensorType.TIME_OF_DAY, SMALL, 1, 2));
             rowDataList.add(new RowData(SensorType.SPEED_mps, LARGE, 2, 1));
@@ -992,7 +988,7 @@ public class TrackingViewsDatabaseManager {
             viewMap.put(ActivityType.GENERIC, rowDataList);
 
             // GENERIC_HR
-            rowDataList = new LinkedList<RowData>();
+            rowDataList = new LinkedList<>();
             rowDataList.add(new RowData(SensorType.TIME_ACTIVE, SMALL, 1, 1));
             rowDataList.add(new RowData(SensorType.TIME_OF_DAY, SMALL, 1, 2));
             rowDataList.add(new RowData(SensorType.HR, LARGE, 2, 1));
@@ -1004,7 +1000,7 @@ public class TrackingViewsDatabaseManager {
             viewMap.put(ActivityType.GENERIC_HR, rowDataList);
 
             // RUN_SPEED_AND_CADENCE
-            rowDataList = new LinkedList<RowData>();
+            rowDataList = new LinkedList<>();
             rowDataList.add(new RowData(SensorType.TIME_ACTIVE, SMALL, 1, 1));
             rowDataList.add(new RowData(SensorType.TIME_OF_DAY, SMALL, 1, 2));
             rowDataList.add(new RowData(SensorType.HR, LARGE, 2, 1));
@@ -1017,7 +1013,7 @@ public class TrackingViewsDatabaseManager {
             viewMap.put(ActivityType.RUN_SPEED_AND_CADENCE, rowDataList);
 
             // RUN_SPEED
-            rowDataList = new LinkedList<RowData>();
+            rowDataList = new LinkedList<>();
             rowDataList.add(new RowData(SensorType.TIME_ACTIVE, SMALL, 1, 1));
             rowDataList.add(new RowData(SensorType.TIME_OF_DAY, SMALL, 1, 2));
             rowDataList.add(new RowData(SensorType.HR, LARGE, 2, 1));
@@ -1029,7 +1025,7 @@ public class TrackingViewsDatabaseManager {
             viewMap.put(ActivityType.RUN_SPEED, rowDataList);
 
             // BIKE_SPEED
-            rowDataList = new LinkedList<RowData>();
+            rowDataList = new LinkedList<>();
             rowDataList.add(new RowData(SensorType.TIME_ACTIVE, SMALL, 1, 1));
             rowDataList.add(new RowData(SensorType.TIME_OF_DAY, SMALL, 1, 2));
             rowDataList.add(new RowData(SensorType.HR, LARGE, 2, 1));
@@ -1041,7 +1037,7 @@ public class TrackingViewsDatabaseManager {
             viewMap.put(ActivityType.BIKE_SPEED, rowDataList);
 
             // BIKE_SPEED_AND_CADENCE
-            rowDataList = new LinkedList<RowData>();
+            rowDataList = new LinkedList<>();
             rowDataList.add(new RowData(SensorType.TIME_ACTIVE, SMALL, 1, 1));
             rowDataList.add(new RowData(SensorType.TIME_OF_DAY, SMALL, 1, 2));
             rowDataList.add(new RowData(SensorType.HR, LARGE, 2, 1));
@@ -1054,7 +1050,7 @@ public class TrackingViewsDatabaseManager {
             viewMap.put(ActivityType.BIKE_SPEED_AND_CADENCE, rowDataList);
 
             // BIKE_POWER
-            rowDataList = new LinkedList<RowData>();
+            rowDataList = new LinkedList<>();
             rowDataList.add(new RowData(SensorType.TIME_ACTIVE, SMALL, 1, 1));
             rowDataList.add(new RowData(SensorType.TIME_OF_DAY, SMALL, 1, 2));
             rowDataList.add(new RowData(SensorType.POWER, HUGE, 2, 1));
@@ -1070,18 +1066,7 @@ public class TrackingViewsDatabaseManager {
             return viewMap;
         }
 
-        protected class RowData {
-            public SensorType sensorType;
-            public int textSize;
-            public int row;
-            public int col;
-
-            public RowData(SensorType sensorType, int textSize, int row, int col) {
-                this.sensorType = sensorType;
-                this.textSize = textSize;
-                this.row = row;
-                this.col = col;
-            }
+        protected record RowData(SensorType sensorType, int textSize, int row, int col) {
 
         }
 

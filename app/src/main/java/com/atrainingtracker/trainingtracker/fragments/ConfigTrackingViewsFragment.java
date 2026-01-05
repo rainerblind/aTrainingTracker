@@ -19,6 +19,8 @@
 package com.atrainingtracker.trainingtracker.fragments;
 
 import android.os.Bundle;
+
+import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 
 import com.atrainingtracker.banalservice.ActivityType;
@@ -27,6 +29,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
 
 import java.util.LinkedList;
+import java.util.Objects;
 
 /**
  * Created by rainer on 20.01.16.
@@ -37,16 +40,13 @@ public class ConfigTrackingViewsFragment extends ConfigViewsFragment {
     public static final String TAG = ConfigTrackingViewsFragment.class.getSimpleName();
     private static final boolean DEBUG = TrainingApplication.getDebug(true);
 
+    @NonNull
     public static ConfigTrackingViewsFragment newInstance(ActivityType activityType, long viewId) {
 
         ConfigTrackingViewsFragment fragment = new ConfigTrackingViewsFragment();
 
         Bundle args = new Bundle();
-        if (activityType == null) {
-            args.putString(ConfigViewsActivity.ACTIVITY_TYPE, ActivityType.getDefaultActivityType().name());
-        } else {
-            args.putString(ConfigViewsActivity.ACTIVITY_TYPE, activityType.name());
-        }
+        args.putString(ConfigViewsActivity.ACTIVITY_TYPE, Objects.requireNonNullElseGet(activityType, ActivityType::getDefaultActivityType).name());
         args.putLong(ConfigViewsActivity.VIEW_ID, viewId);
         fragment.setArguments(args);
 
@@ -58,11 +58,13 @@ public class ConfigTrackingViewsFragment extends ConfigViewsFragment {
         TrackingViewsDatabaseManager.ensureEntryForActivityTypeExists(getContext(), mActivityType);
     }
 
+    @NonNull
     @Override
     protected LinkedList<Long> getViewIdList() {
         return TrackingViewsDatabaseManager.getViewIdList(mActivityType);
     }
 
+    @NonNull
     @Override
     protected LinkedList<String> getTitleList() {
         return TrackingViewsDatabaseManager.getTitleList(mActivityType);
@@ -80,6 +82,7 @@ public class ConfigTrackingViewsFragment extends ConfigViewsFragment {
         return TrackingViewsDatabaseManager.addDefaultView(getContext(), viewId, mActivityType, addAfterCurrentLayout);
     }
 
+    @NonNull
     @Override
     protected Fragment getNewChildFragment(long viewId) {
         return ConfigTrackingViewFragment.newInstance(viewId);

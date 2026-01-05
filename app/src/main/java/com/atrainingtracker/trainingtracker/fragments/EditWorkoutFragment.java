@@ -52,7 +52,6 @@ import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.EditText;
@@ -149,9 +148,11 @@ public class EditWorkoutFragment extends Fragment {
     private final IntentFilter mFinishedCalculatingExtremaValueFilter = new IntentFilter(CalcExtremaValuesThread.FINISHED_CALCULATING_EXTREMA_VALUE);
     private final IntentFilter mFinishedGuessingCommuteAndTrainerFilter = new IntentFilter(CalcExtremaValuesThread.FINISHED_GUESSING_COMMUTE_AND_TRAINER);
     private final IntentFilter mFinishedCalculatingFancyNameFilter = new IntentFilter(CalcExtremaValuesThread.FINISHED_CALCULATING_FANCY_NAME);
+    @Nullable
     protected String mBaseFileName;
     // protected TTSportType mTTSportType;  // we want the sport type easily available since the equipment also depends on the sport type
     protected long mSportTypeId = SportTypeDatabaseManager.getDefaultSportTypeId();
+    @Nullable
     protected String mEquipmentName;     // we want to save the equipment name since we get it from some DB and have to find it in the equipment spinner
 
     protected List<String> mSportTypeUiNameList;
@@ -162,22 +163,22 @@ public class EditWorkoutFragment extends Fragment {
     protected ReallyDeleteDialogInterface mReallyDeleteDialogInterface;
     private long mWorkoutID;
 
-    // all the interactive views
-    private Button buttonSaveWorkout, buttonDeleteWorkout, buttonFancyName;
+    private Button buttonDeleteWorkout;
     private Spinner spinnerSport, spinnerEquipment;
     private EditText editExportName, editGoal, editMethod, editDescription;
     private TextView tvEquipment;
     private RadioGroup rgCommuteTrainer;
     private RadioButton rbCommute, rbTrainer;
     private boolean radioButtonAlreadyChecked = false;  // necessary to allow deselect of the radio buttons within the group for Commute and Trainer
-    private final double MAX_WORKOUT_TIME_TO_SHOW_DELETE_BUTTON = 10 * 60;  // 10 min
+    private static final double MAX_WORKOUT_TIME_TO_SHOW_DELETE_BUTTON = 10 * 60;  // 10 min
+    @NonNull
     private String ALL = "all";
     private boolean mPaceExtremaValuesAvailable = false;
 
     // BroadcastReceivers to update the name, commute, and extrema values
     private final BroadcastReceiver mFinishedCalculatingFancyNameReceiver = new BroadcastReceiver() {
         @Override
-        public void onReceive(Context context, Intent intent) {
+        public void onReceive(Context context, @NonNull Intent intent) {
             String workoutName = intent.getExtras().getString(CalcExtremaValuesThread.FANCY_NAME);
             editExportName.setText(workoutName);
         }
@@ -201,7 +202,7 @@ public class EditWorkoutFragment extends Fragment {
         }
     };
     private final BroadcastReceiver mFinishedCalculatingExtremaValueReceiver = new BroadcastReceiver() {
-        public void onReceive(Context context, Intent intent) {
+        public void onReceive(Context context, @NonNull Intent intent) {
             SensorType sensorType = SensorType.valueOf(intent.getExtras().getString(CalcExtremaValuesThread.SENSOR_TYPE));
 
             WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance();
@@ -211,6 +212,7 @@ public class EditWorkoutFragment extends Fragment {
         }
     };
 
+    @NonNull
     public static EditWorkoutFragment newInstance(long workoutId) {
         EditWorkoutFragment editWorkoutFragment = new EditWorkoutFragment();
 
@@ -222,7 +224,7 @@ public class EditWorkoutFragment extends Fragment {
     }
 
     @Override
-    public void onAttach(Context context) {
+    public void onAttach(@NonNull Context context) {
         super.onAttach(context);
         if (DEBUG) Log.d(TAG, "onAttach");
 
@@ -245,7 +247,7 @@ public class EditWorkoutFragment extends Fragment {
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         if (DEBUG) Log.d(TAG, "onCreateView");
 
         setHasOptionsMenu(true);
@@ -253,9 +255,10 @@ public class EditWorkoutFragment extends Fragment {
         View view = inflater.inflate(R.layout.edit_workout, container, false);
 
         // find interactive views
-        buttonSaveWorkout = view.findViewById(R.id.buttonSaveWorkout);
+        // all the interactive views
+        Button buttonSaveWorkout = view.findViewById(R.id.buttonSaveWorkout);
         buttonDeleteWorkout = view.findViewById(R.id.buttonDeleteWorkout);
-        buttonFancyName = view.findViewById(R.id.buttonFancyName);
+        Button buttonFancyName = view.findViewById(R.id.buttonFancyName);
 
         spinnerSport = view.findViewById(R.id.spinnerSport);
         spinnerEquipment = view.findViewById(R.id.spinnerEquipment);
@@ -334,7 +337,7 @@ public class EditWorkoutFragment extends Fragment {
         };
 
         OnClickListener radioClickListener = new OnClickListener() {
-            public void onClick(View v) {
+            public void onClick(@NonNull View v) {
                 if (v.getId() == rgCommuteTrainer.getCheckedRadioButtonId() && radioButtonAlreadyChecked) {
                     rgCommuteTrainer.clearCheck();
                 } else {
@@ -473,7 +476,7 @@ public class EditWorkoutFragment extends Fragment {
     }
 
     @Override
-    public void onSaveInstanceState(Bundle savedInstanceState)//savedInstanceState)
+    public void onSaveInstanceState(@NonNull Bundle savedInstanceState)//savedInstanceState)
     {
         if (DEBUG) Log.i(TAG, "onSaveInstanceState");
 
@@ -538,7 +541,7 @@ public class EditWorkoutFragment extends Fragment {
         super.onSaveInstanceState(savedInstanceState);
     }
 
-    protected void addString(Bundle savedInstanceState, String key, int id) {
+    protected void addString(@NonNull Bundle savedInstanceState, String key, int id) {
         if (getActivity().findViewById(id).isShown()) {
             savedInstanceState.putString(key, ((TextView) getActivity().findViewById(id)).getText().toString());
         }
@@ -615,7 +618,7 @@ public class EditWorkoutFragment extends Fragment {
         // calories when available and not zero
         TextView tvCalories = getActivity().findViewById(R.id.tvCalories);
         Integer calories = cursor.getInt(cursor.getColumnIndex(WorkoutSummaries.CALORIES));
-        if (calories == null || calories == 0) {
+        if (calories == 0) {
             getActivity().findViewById(R.id.trCalories).setVisibility(View.GONE);
         } else {
             getActivity().findViewById(R.id.trCalories).setVisibility(View.VISIBLE);
@@ -634,7 +637,7 @@ public class EditWorkoutFragment extends Fragment {
         databaseManager.closeDatabase(); // db.close();
     }
 
-    protected void fillExtremaValuesFromDb(SQLiteDatabase db) {
+    protected void fillExtremaValuesFromDb(@NonNull SQLiteDatabase db) {
         // simply fill with all the values
         fillTrExtrema(db, SensorType.HR);
         fillTrExtrema(db, SensorType.SPEED_mps);
@@ -676,7 +679,7 @@ public class EditWorkoutFragment extends Fragment {
         }
     }
 
-    protected void fillTrExtrema(SQLiteDatabase db, SensorType sensorType) {
+    protected void fillTrExtrema(@NonNull SQLiteDatabase db, @NonNull SensorType sensorType) {
         switch (sensorType) {
             case HR:
                 fillTrExtrema(db, SensorType.HR, R.id.trHR, R.id.tvHRMean, R.id.tvHRMax, R.id.tvHRMin);
@@ -718,7 +721,7 @@ public class EditWorkoutFragment extends Fragment {
         }
     }
 
-    protected boolean fillTrExtrema(SQLiteDatabase db, SensorType sensorType, int trId, int tvMeanId, int tvMaxId, int tvMinId) {
+    protected void fillTrExtrema(@NonNull SQLiteDatabase db, @NonNull SensorType sensorType, int trId, int tvMeanId, int tvMaxId, int tvMinId) {
         if (DEBUG) Log.i(TAG, "fillTrExtrema for sensor: " + sensorType.name());
 
         // if one of the extrema values contains valid data (not 0), we want to show the complete row
@@ -737,10 +740,9 @@ public class EditWorkoutFragment extends Fragment {
             mPaceExtremaValuesAvailable = dataAvailable;
         }
 
-        return dataAvailable;
     }
 
-    protected boolean fillTvExtrema(SQLiteDatabase db, SensorType sensorType, ExtremaType extremaType, int tvId) {
+    protected boolean fillTvExtrema(@NonNull SQLiteDatabase db, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType, int tvId) {
         boolean validData = false;
         ((TextView) getActivity().findViewById(tvId)).setText(R.string.NoData);
 
@@ -753,11 +755,9 @@ public class EditWorkoutFragment extends Fragment {
             Double value = cursor.getDouble(cursor.getColumnIndex(WorkoutSummaries.VALUE));
             if (DEBUG)
                 Log.i(TAG, "got " + value + " for " + extremaType.name() + " " + sensorType.name() + " of workout " + mWorkoutID);
-            if (value != null) {
-                ((TextView) getActivity().findViewById(tvId)).setText(sensorType.getMyFormatter().format(value));
-                if (value != 0) {
-                    validData = true;
-                }
+            ((TextView) getActivity().findViewById(tvId)).setText(sensorType.getMyFormatter().format(value));
+            if (value != 0) {
+                validData = true;
             }
         } else {
             if (DEBUG)
@@ -770,7 +770,7 @@ public class EditWorkoutFragment extends Fragment {
     }
 
     // TODO: somewhere, we have to store all these values!
-    protected void fillViewsFromSavedInstanceState(Bundle savedInstanceState) {
+    protected void fillViewsFromSavedInstanceState(@NonNull Bundle savedInstanceState) {
         if (DEBUG) Log.i(TAG, "fillViewsFromSavedInstanceState");
 
         // first, the member variables
@@ -1004,7 +1004,7 @@ public class EditWorkoutFragment extends Fragment {
         if (DEBUG) Log.d(TAG, "setSpinnerEquipment " + (allEquipment ? "ALL" : "selected"));
 
         EquipmentDbHelper equipmentDbHelper = new EquipmentDbHelper(getActivity());
-        List<String> equipmentList = new ArrayList<String>();
+        List<String> equipmentList = new ArrayList<>();
 
         if (!allEquipment) {
             equipmentList = equipmentDbHelper.getLinkedEquipment((int) mWorkoutID);
@@ -1033,7 +1033,7 @@ public class EditWorkoutFragment extends Fragment {
             }
         }
 
-        if (equipmentList.size() == 0) {
+        if (equipmentList.isEmpty()) {
             // there is no equipment, so the spinner is removed.
             spinnerEquipment.setVisibility(View.GONE);
             return;
@@ -1043,7 +1043,7 @@ public class EditWorkoutFragment extends Fragment {
 
         String[] equipment = equipmentList.toArray(new String[equipmentList.size()]);
 
-        spinnerEquipment.setAdapter(new ArrayAdapter<String>(getActivity(), android.R.layout.simple_spinner_item, equipment));
+        spinnerEquipment.setAdapter(new ArrayAdapter<>(getActivity(), android.R.layout.simple_spinner_item, equipment));
 
         if (mEquipmentName != null) {
             spinnerEquipment.setSelection(equipmentList.indexOf(mEquipmentName));

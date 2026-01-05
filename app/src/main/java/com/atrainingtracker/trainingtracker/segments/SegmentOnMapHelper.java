@@ -21,6 +21,8 @@ package com.atrainingtracker.trainingtracker.segments;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import android.os.Handler;
@@ -49,9 +51,9 @@ public class SegmentOnMapHelper {
     private static final String TAG = SegmentOnMapHelper.class.getName();
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
     //                                 segmentId
-    private final EnumMap<Roughness, HashMap<Long, SegmentData>> mSegmentCache = new EnumMap<Roughness, HashMap<Long, SegmentData>>(Roughness.class);
+    private final EnumMap<Roughness, HashMap<Long, SegmentData>> mSegmentCache = new EnumMap<>(Roughness.class);
 
-    public void showSegmentOnMap(Context context, MyMapViewHolder myMapViewHolder, long segmentId, Roughness roughness, boolean zoomToMap, boolean animateZoom) {
+    public void showSegmentOnMap(Context context, @NonNull MyMapViewHolder myMapViewHolder, long segmentId, @NonNull Roughness roughness, boolean zoomToMap, boolean animateZoom) {
         if (DEBUG)
             Log.i(TAG, "showSegmentOnMap for segmentId=" + segmentId + ", roughness=" + roughness.name());
 
@@ -76,7 +78,7 @@ public class SegmentOnMapHelper {
         }
     }
 
-    private void plotSegmentOnMap(final MyMapViewHolder myMapViewHolder, long segmentId, Roughness roughness, boolean zoomToMap, final boolean animateZoom) {
+    private void plotSegmentOnMap(@NonNull final MyMapViewHolder myMapViewHolder, long segmentId, @NonNull Roughness roughness, boolean zoomToMap, final boolean animateZoom) {
         if (DEBUG)
             Log.i(TAG, "plotSegmentOnMap for segmentId=" + segmentId + ", roughness=" + roughness.name());
 
@@ -111,7 +113,7 @@ public class SegmentOnMapHelper {
     }
 
     @Nullable
-    private SegmentData getCachedSegmentData(long segmentId, Roughness roughness) {
+    private SegmentData getCachedSegmentData(long segmentId, @NonNull Roughness roughness) {
         if (DEBUG)
             Log.i(TAG, "getCachedTrackData for segmentId=" + segmentId + ", roughness=" + roughness.name());
 
@@ -127,7 +129,7 @@ public class SegmentOnMapHelper {
         return segmentData;
     }
 
-    private boolean calcSegmentData(Context context, long segmentId, Roughness roughness) {
+    private void calcSegmentData(@NonNull Context context, long segmentId, @NonNull Roughness roughness) {
         if (DEBUG)
             Log.i(TAG, "calcSegmentData for segmentId=" + segmentId + ", roughness=" + roughness.name());
 
@@ -162,16 +164,15 @@ public class SegmentOnMapHelper {
 
         if (havePoints) {
             if (!mSegmentCache.containsKey(roughness)) {
-                mSegmentCache.put(roughness, new HashMap<Long, SegmentData>());
+                mSegmentCache.put(roughness, new HashMap<>());
             }
             mSegmentCache.get(roughness).put(segmentId, new SegmentData(polylineOptions, latLngBoundsBuilder.build()));
         }
 
-        return true;
     }
 
     // TODO: this is stolen several times, so make it a static method of a DatabaseHelper Class
-    protected boolean dataValid(Cursor cursor, String string) {
+    protected boolean dataValid(@NonNull Cursor cursor, String string) {
         if (cursor.getColumnIndex(string) == -1) {
             if (DEBUG) Log.d(TAG, "dataValid: no such columnIndex!: " + string);
             return false;
@@ -183,23 +184,16 @@ public class SegmentOnMapHelper {
         return true;
     }
 
-    private class SegmentData {
-        PolylineOptions polylineOptions;
-        LatLngBounds latLngBounds;
-
-        SegmentData(PolylineOptions polylineOptions, LatLngBounds latLngBounds) {
-            this.polylineOptions = polylineOptions;
-            this.latLngBounds = latLngBounds;
-        }
+    private record SegmentData(PolylineOptions polylineOptions, LatLngBounds latLngBounds) {
     }
 
     private class SegmentDataThread extends Thread {
-        Context context;
-        MyMapViewHolder myMapViewHolder;
-        long segmentId;
-        Roughness roughness;
-        boolean zoomToMap;
-        boolean animateZoom;
+        final Context context;
+        final MyMapViewHolder myMapViewHolder;
+        final long segmentId;
+        final Roughness roughness;
+        final boolean zoomToMap;
+        final boolean animateZoom;
 
         SegmentDataThread(Context context, MyMapViewHolder myMapViewHolder, long segmentId, Roughness roughness, boolean zoomToMap, boolean animateZoom) {
             this.context = context;
@@ -219,11 +213,7 @@ public class SegmentOnMapHelper {
             new Handler(Looper.getMainLooper()).post(() -> {
                 if (DEBUG) Log.i(TAG, "onPostExecute segmentId=" + segmentId);
 
-                if (segmentId == segmentId) {  // is the workoutId still valid?
-                    plotSegmentOnMap(myMapViewHolder, segmentId, roughness, zoomToMap, animateZoom);
-                } else {
-                    Log.i(TAG, "do not plot the segment because the segmentId has changed!");
-                }
+                plotSegmentOnMap(myMapViewHolder, segmentId, roughness, zoomToMap, animateZoom);
             });
         }
     }

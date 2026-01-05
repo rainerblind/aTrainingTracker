@@ -26,6 +26,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.DialogFragment;
@@ -67,12 +68,12 @@ public class EditFieldDialog extends DialogFragment {
     private static final String SENSOR_TYPE = "SENSOR_TYPE";
     private static final String DEVICE_ID = "DEVICE_ID";
     private static final String TEXT_SIZE = "TEXT_SIZE";
-    protected IntentFilter mFilterChangedFilter = new IntentFilter(ConfigureFilterDialogFragment.FILTERS_CHANGED_INTENT);
+    protected final IntentFilter mFilterChangedFilter = new IntentFilter(ConfigureFilterDialogFragment.FILTERS_CHANGED_INTENT);
     private ActivityType mActivityType;
     private View mMainView;
     private long mRowId;
     private SensorType mSensorType;
-    BroadcastReceiver mFilterChangedReceiver = new BroadcastReceiver() {
+    final BroadcastReceiver mFilterChangedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             configureConfigureFilterButton(mMainView);
@@ -81,7 +82,7 @@ public class EditFieldDialog extends DialogFragment {
     private long mDeviceId;
     private int mTextSize;
 
-    protected static final int textSize2Pos(int textSize) {
+    protected static int textSize2Pos(int textSize) {
         if (textSize == 20) {
             return 0;
         } else if (textSize == 25) {
@@ -108,17 +109,18 @@ public class EditFieldDialog extends DialogFragment {
 
     }
 
-    public static EditFieldDialog newInstance(ActivityType activityType, TrackingViewsDatabaseManager.ViewInfo viewInfo) {
+    @NonNull
+    public static EditFieldDialog newInstance(@NonNull ActivityType activityType, @NonNull TrackingViewsDatabaseManager.ViewInfo viewInfo) {
         if (DEBUG) Log.i(TAG, "newInstance");
 
         EditFieldDialog fragment = new EditFieldDialog();
 
         Bundle args = new Bundle();
         args.putString(ACTIVITY_TYPE, activityType.name());
-        args.putString(SENSOR_TYPE, viewInfo.sensorType.name());
-        args.putLong(ROW_ID, viewInfo.rowId);
-        args.putInt(TEXT_SIZE, viewInfo.textSize);
-        args.putLong(DEVICE_ID, viewInfo.sourceDeviceId);
+        args.putString(SENSOR_TYPE, viewInfo.sensorType().name());
+        args.putLong(ROW_ID, viewInfo.rowId());
+        args.putInt(TEXT_SIZE, viewInfo.textSize());
+        args.putLong(DEVICE_ID, viewInfo.sourceDeviceId());
         fragment.setArguments(args);
 
         return fragment;
@@ -153,6 +155,7 @@ public class EditFieldDialog extends DialogFragment {
     }
 
 
+    @NonNull
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
@@ -240,7 +243,7 @@ public class EditFieldDialog extends DialogFragment {
         return builder.create();
     }
 
-    protected void configureSourceSpinner(View parentView) {
+    protected void configureSourceSpinner(@NonNull View parentView) {
         Spinner sourceSpinner = parentView.findViewById(R.id.spinnerSource);
         TextView textViewSource = parentView.findViewById(R.id.textViewSource);
         DevicesDatabaseManager.DeviceIdAndNameLists deviceIdAndNameLists = DevicesDatabaseManager.getDeviceIdAndNameLists(mSensorType);
@@ -251,7 +254,7 @@ public class EditFieldDialog extends DialogFragment {
             sourceSpinner.setVisibility(View.GONE);
             textViewSource.setVisibility(View.VISIBLE);
             textViewSource.setText(R.string.smartphone);
-        } else if (deviceIdAndNameLists.deviceIds.size() == 0) {     // no sensors available
+        } else if (deviceIdAndNameLists.deviceIds.isEmpty()) {     // no sensors available
             if (DEBUG) Log.i(TAG, "size of list is zero");
             sourceSpinner.setVisibility(View.GONE);
             textViewSource.setVisibility(View.VISIBLE);
@@ -264,7 +267,7 @@ public class EditFieldDialog extends DialogFragment {
             LinkedList<Long> deviceIds = deviceIdAndNameLists.deviceIds;
             LinkedList<String> names = deviceIdAndNameLists.names;
 
-            deviceIds.addFirst(Long.valueOf(0));
+            deviceIds.addFirst(0L);
             names.addFirst(getContext().getString(R.string.bestSensor));
 
             if (mDeviceId < 0) {
@@ -296,7 +299,7 @@ public class EditFieldDialog extends DialogFragment {
 
     }
 
-    protected void configureConfigureFilterButton(View parentView) {
+    protected void configureConfigureFilterButton(@NonNull View parentView) {
         Button button = parentView.findViewById(R.id.buttonConfigureFilter);
         TextView tvConfigure = parentView.findViewById(R.id.tvConfigureFilter);
 

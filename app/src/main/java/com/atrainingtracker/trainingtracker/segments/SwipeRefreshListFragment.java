@@ -20,6 +20,8 @@ package com.atrainingtracker.trainingtracker.segments;
 
 import android.content.Context;
 import android.os.Bundle;
+
+import androidx.annotation.NonNull;
 import androidx.fragment.app.ListFragment;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
@@ -42,12 +44,12 @@ public class SwipeRefreshListFragment extends ListFragment {
      * Handles platform version differences, providing backwards compatible functionality where
      * needed.
      */
-    private static boolean canListViewScrollUp(ListView listView) {
+    private static boolean canListViewScrollUp(@NonNull ListView listView) {
         return listView.canScrollVertically(-1);
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+    public View onCreateView(@NonNull LayoutInflater inflater, @NonNull ViewGroup container,
                              Bundle savedInstanceState) {
 
         // Create the list fragment's content view by calling the super method
@@ -140,7 +142,7 @@ public class SwipeRefreshListFragment extends ListFragment {
      */
     private class ListFragmentSwipeRefreshLayout extends SwipeRefreshLayout {
 
-        public ListFragmentSwipeRefreshLayout(Context context) {
+        public ListFragmentSwipeRefreshLayout(@NonNull Context context) {
             super(context);
         }
 

@@ -23,6 +23,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.DialogFragment;
 
@@ -37,6 +38,7 @@ public class GPSDisabledDialog extends DialogFragment {
     public static final String TAG = GPSDisabledDialog.class.getName();
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
+    @NonNull
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(getContext());
@@ -49,7 +51,7 @@ public class GPSDisabledDialog extends DialogFragment {
                     }
                 });
         alertDialogBuilder.setNegativeButton(R.string.Cancel, new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int id) {
+            public void onClick(@NonNull DialogInterface dialog, int id) {
                 dialog.cancel();
             }
         });

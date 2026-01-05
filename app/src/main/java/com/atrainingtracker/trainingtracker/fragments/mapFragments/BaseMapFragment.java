@@ -30,6 +30,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.content.res.ResourcesCompat;
 
 import com.atrainingtracker.trainingtracker.TrainingApplication;
@@ -42,7 +44,6 @@ import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 
 import java.util.List;
@@ -78,8 +79,9 @@ public abstract class BaseMapFragment
         this.getMapAsync(this);
     }
 
+    @NonNull
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         if (DEBUG) Log.d(TAG, "onCreateView");
         setHasOptionsMenu(true);
 
@@ -140,7 +142,7 @@ public abstract class BaseMapFragment
         centerMapAt(locationBest, zoomLevel, tilt);
     }
 
-    protected void centerMapAt(Location location, int zoomLevel, int tilt) {
+    protected void centerMapAt(@Nullable Location location, int zoomLevel, int tilt) {
         if (location != null) {
             // mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(locationBest.getLatitude(), locationBest.getLongitude()), zoomLevel));
             CameraPosition cameraPosition = new CameraPosition.Builder()
@@ -154,19 +156,20 @@ public abstract class BaseMapFragment
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // some helpers to add markers
-    ////////////////////////////////////////////////////////////////////////////////////////////////
-    protected Marker addMarker(LatLng position, int drawableId, String title) {
-        if (position == null) return null;
+    /// /////////////////////////////////////////////////////////////////////////////////////////////
+    protected void addMarker(@Nullable LatLng position, int drawableId, String title) {
+        if (position == null) return;
 
         Bitmap marker = ((BitmapDrawable) ResourcesCompat.getDrawable(getResources(), drawableId, null)).getBitmap();
 
-        return mMap.addMarker(new MarkerOptions()
+        mMap.addMarker(new MarkerOptions()
                 .position(position)
                 .title(title)
                 .icon(BitmapDescriptorFactory.fromBitmap(marker)));
     }
 
-    protected Marker addScaledMarker(LatLng position, int drawableId, double scale) {
+    @Nullable
+    protected Marker addScaledMarker(@Nullable LatLng position, int drawableId, double scale) {
         if (DEBUG) Log.i(TAG, "addScaledMarker");
         if (position == null) {
             Log.i(TAG, "WTF: position == null");
@@ -181,13 +184,13 @@ public abstract class BaseMapFragment
                 .icon(BitmapDescriptorFactory.fromBitmap(scaledMarker)));
     }
 
-    protected Polyline addPolyline(List<LatLng> latLngs, int color) {
+    protected void addPolyline(@NonNull List<LatLng> latLngs, int color) {
         if (DEBUG) Log.i(TAG, "addPolyline");
 
         PolylineOptions polylineOptions = new PolylineOptions().color(color);
         polylineOptions.addAll(latLngs);
 
-        return mMap.addPolyline(polylineOptions);
+        mMap.addPolyline(polylineOptions);
     }
 
 

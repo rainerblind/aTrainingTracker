@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.fragments.preferences;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -58,7 +59,7 @@ public class FancyWorkoutNameListFragment
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
     protected Cursor mCursor;
     protected SimpleCursorAdapter mAdapter;
-    protected IntentFilter mFancyWorkoutNamesChangedFilter = new IntentFilter(EditFancyWorkoutNameDialog.FANCY_WORKOUT_NAME_CHANGED_INTENT);
+    protected final IntentFilter mFancyWorkoutNamesChangedFilter = new IntentFilter(EditFancyWorkoutNameDialog.FANCY_WORKOUT_NAME_CHANGED_INTENT);
 
     // onAttach
 
@@ -81,7 +82,7 @@ public class FancyWorkoutNameListFragment
     // onDestroy
 
     // onDetach
-    BroadcastReceiver mFancyWorkoutNamesChangedReceiver = new BroadcastReceiver() {
+    final BroadcastReceiver mFancyWorkoutNamesChangedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             mCursor.requery();
@@ -109,7 +110,7 @@ public class FancyWorkoutNameListFragment
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.workout_name_schemes_list_layout, null);
 
         FloatingActionButton fab = view.findViewById(R.id.fab);
@@ -158,7 +159,7 @@ public class FancyWorkoutNameListFragment
     }
 
     @Override
-    public void onCreateContextMenu(ContextMenu menu, View v,
+    public void onCreateContextMenu(@NonNull ContextMenu menu, @NonNull View v,
                                     ContextMenu.ContextMenuInfo menuInfo) {
         super.onCreateContextMenu(menu, v, menuInfo);
         if (DEBUG) Log.i(TAG, "onCreateContextMenu");
@@ -168,20 +169,21 @@ public class FancyWorkoutNameListFragment
     }
 
     @Override
-    public boolean onContextItemSelected(MenuItem item) {
+    public boolean onContextItemSelected(@NonNull MenuItem item) {
         AdapterView.AdapterContextMenuInfo info = (AdapterView.AdapterContextMenuInfo) item.getMenuInfo();
         // int position = info.position;
         long id = info.id;
 
         if (DEBUG) Log.i(TAG, "onContextItemSelected: id=" + id);
 
-        switch (item.getItemId()) {
-            case R.id.itemDelete:
+        return switch (item.getItemId()) {
+            case R.id.itemDelete -> {
                 showReallyDeleteDialog(id);
-                return true;
-        }
+                yield true;
+            }
+            default -> false;
+        };
 
-        return false;
     }
 
     private void showReallyDeleteDialog(final long id) {
@@ -201,7 +203,7 @@ public class FancyWorkoutNameListFragment
                 .setMessage(getContext().getString(R.string.really_delete_workout_name_scheme, fancyName))
                 .setIcon(android.R.drawable.ic_menu_delete)
                 .setPositiveButton(R.string.delete, new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int whichButton) {
+                    public void onClick(@NonNull DialogInterface dialog, int whichButton) {
                         WorkoutSummariesDatabaseManager.deleteFancyName(id);
                         mCursor.requery();
                         mAdapter.notifyDataSetChanged();
@@ -210,7 +212,7 @@ public class FancyWorkoutNameListFragment
                     }
                 })
                 .setNegativeButton(R.string.Cancel, new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int which) {
+                    public void onClick(@NonNull DialogInterface dialog, int which) {
                         dialog.dismiss();
                     }
                 });

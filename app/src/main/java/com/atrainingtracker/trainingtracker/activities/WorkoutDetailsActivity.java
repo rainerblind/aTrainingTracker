@@ -28,6 +28,7 @@ import com.google.android.material.navigation.NavigationView;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.OnApplyWindowInsetsListener;
@@ -89,7 +90,7 @@ public class WorkoutDetailsActivity extends AppCompatActivity
      * Called when the activity is first created.
      */
     @Override
-    public void onCreate(Bundle savedInstanceState) {
+    public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         if (DEBUG) Log.d(TAG, "onCreate");
 
@@ -199,7 +200,7 @@ public class WorkoutDetailsActivity extends AppCompatActivity
     }
 
     @Override
-    public void onSaveInstanceState(Bundle savedInstanceState) {
+    public void onSaveInstanceState(@NonNull Bundle savedInstanceState) {
         if (DEBUG) Log.i(TAG, "onSaveInstanceState");
 
         savedInstanceState.putInt(SELECTED_FRAGMENT_ID, mSelectedFragmentId);
@@ -221,20 +222,19 @@ public class WorkoutDetailsActivity extends AppCompatActivity
 
     /* Called when an options item is clicked */
     @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         // Log.d(TAG, "onOptionsItemSelected");
-        switch (item.getItemId()) {
-            case android.R.id.home:
+        return switch (item.getItemId()) {
+            case android.R.id.home -> {
                 mDrawerLayout.openDrawer(GravityCompat.START);
-                return true;
-
-            default:
-                return super.onOptionsItemSelected(item);
-        }
+                yield true;
+            }
+            default -> super.onOptionsItemSelected(item);
+        };
     }
 
     @Override
-    public boolean onNavigationItemSelected(MenuItem menuItem) {
+    public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
         if (DEBUG) Log.i(TAG, "onNavigationItemSelected");
 
         mDrawerLayout.closeDrawers();
@@ -261,23 +261,21 @@ public class WorkoutDetailsActivity extends AppCompatActivity
     // TODO: inline
     private void setContentFragment(int menuId) {
         Fragment fragment = null;
-        String tag = null;
-        switch (menuId) {
-            case R.id.edit_workout_details:
+        String tag = switch (menuId) {
+            case R.id.edit_workout_details -> {
                 fragment = EditWorkoutFragment.newInstance(mWorkoutID);
-                tag = EditWorkoutFragment.TAG;
-                break;
-
-            case R.id.drawer_map:
+                yield EditWorkoutFragment.TAG;
+            }
+            case R.id.drawer_map -> {
                 fragment = TrackOnMapAftermathFragment.newInstance(mWorkoutID);
-                tag = TrackOnMapAftermathFragment.TAG;
-                break;
-
-            case R.id.drawer_export_status:
+                yield TrackOnMapAftermathFragment.TAG;
+            }
+            case R.id.drawer_export_status -> {
                 fragment = ExportStatusDialogFragment.newInstance(mWorkoutID);
-                tag = ExportStatusDialogFragment.TAG;
-                break;
-        }
+                yield ExportStatusDialogFragment.TAG;
+            }
+            default -> null;
+        };
 
         if (fragment != null) {
             FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();

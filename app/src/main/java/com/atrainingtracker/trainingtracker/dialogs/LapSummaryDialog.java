@@ -23,6 +23,8 @@ import android.content.DialogInterface;
 import android.os.Bundle;
 import android.os.Handler;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.DialogFragment;
 import android.util.Log;
@@ -53,10 +55,14 @@ public class LapSummaryDialog extends DialogFragment {
     private static final String LAP_SPEED = "LAP_SPEED";
 
     private int mLapNr;
+    @Nullable
     private String mLapTime;
+    @Nullable
     private String mLapDistance;
+    @Nullable
     private String mLapSpeed;
 
+    @NonNull
     public static LapSummaryDialog newInstance(int lapNr, String lapTime, String lapDistance, String lapSpeed) {
         if (DEBUG) Log.i(TAG, "newInstance");
 
@@ -87,6 +93,7 @@ public class LapSummaryDialog extends DialogFragment {
     }
 
 
+    @NonNull
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());

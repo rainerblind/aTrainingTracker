@@ -24,6 +24,8 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.BaseColumns;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 public class LapsDatabaseManager {
 
     private static LapsDatabaseManager cInstance;
@@ -38,6 +40,7 @@ public class LapsDatabaseManager {
         }
     }
 
+    @NonNull
     public static synchronized LapsDatabaseManager getInstance() {
         if (cInstance == null) {
             throw new IllegalStateException(LapsDatabaseManager.class.getSimpleName() +
@@ -99,7 +102,7 @@ public class LapsDatabaseManager {
 
         // Called only once, first time the DB is created
         @Override
-        public void onCreate(SQLiteDatabase db) {
+        public void onCreate(@NonNull SQLiteDatabase db) {
 
             db.execSQL(CREATE_TABLE);
 
@@ -108,7 +111,7 @@ public class LapsDatabaseManager {
 
         //Called whenever newVersion != oldVersion
         @Override
-        public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        public void onUpgrade(@NonNull SQLiteDatabase db, int oldVersion, int newVersion) {
             // TODO: alter table instead of deleting!
 
             db.execSQL("drop table if exists " + Laps.TABLE);

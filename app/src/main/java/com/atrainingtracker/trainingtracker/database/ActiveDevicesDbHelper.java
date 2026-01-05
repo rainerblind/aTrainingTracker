@@ -25,6 +25,8 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.BaseColumns;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import java.util.LinkedList;
 import java.util.List;
 
@@ -42,7 +44,7 @@ public class ActiveDevicesDbHelper extends SQLiteOpenHelper {
 
     // Called only once, first time the DB is created
     @Override
-    public void onCreate(SQLiteDatabase db) {
+    public void onCreate(@NonNull SQLiteDatabase db) {
 
         db.execSQL(ActiveDevices.CREATE_TABLE);
 
@@ -51,7 +53,7 @@ public class ActiveDevicesDbHelper extends SQLiteOpenHelper {
 
     //Called whenever newVersion != oldVersion
     @Override
-    public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+    public void onUpgrade(@NonNull SQLiteDatabase db, int oldVersion, int newVersion) {
         // TODO: alter table instead of deleting!
 
         db.execSQL("drop table if exists " + ActiveDevices.TABLE);
@@ -60,10 +62,11 @@ public class ActiveDevicesDbHelper extends SQLiteOpenHelper {
         onCreate(db);  // run onCreate to get new database
     }
 
+    @NonNull
     public List<Integer> getDatabaseIdsOfActiveDevices(int workoutId) {
         if (DEBUG) Log.d(TAG, "getDatabaseIdsOfActiveDevices workoutId=" + workoutId);
 
-        List<Integer> result = new LinkedList<Integer>();
+        List<Integer> result = new LinkedList<>();
         SQLiteDatabase db = getReadableDatabase();
         Cursor cursor = db.query(ActiveDevices.TABLE,
                 null,

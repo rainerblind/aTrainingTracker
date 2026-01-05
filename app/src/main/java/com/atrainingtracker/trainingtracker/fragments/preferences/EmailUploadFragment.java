@@ -20,6 +20,8 @@ package com.atrainingtracker.trainingtracker.fragments.preferences;
 
 import android.content.SharedPreferences;
 import android.os.Bundle;
+
+import androidx.annotation.Nullable;
 import androidx.preference.EditTextPreference;
 import androidx.preference.PreferenceManager;
 import android.util.Log;
@@ -35,6 +37,7 @@ public class EmailUploadFragment extends androidx.preference.PreferenceFragmentC
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private static final String TAG = EmailUploadFragment.class.getName();
 
+    @Nullable
     EditTextPreference etpAddress, etpSubject;
 
     private SharedPreferences mSharedPreferences;

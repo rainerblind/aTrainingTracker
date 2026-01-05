@@ -28,6 +28,9 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.BaseColumns;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
@@ -39,12 +42,13 @@ public class ExportManager {
     public static final String EXPORT_STATUS_CHANGED_INTENT = "de.rainerblind.trainingtracker.EXPORT_STATUS_CHANGED_INTENT";
     private static final String TAG = "ExportManager";
     private static final boolean DEBUG = false;
+    @Nullable
     protected static SQLiteDatabase cExportStatusDb;
     protected static int cInstances = 0;
     private static final int DEFAULT_RETRIES_FILE = 1;
     private static final int DEFAULT_RETRIES_DROPBOX = 10;
     private static final int DEFAULT_RETRIES_COMMUNITY = 1;
-    protected Context mContext;
+    protected final Context mContext;
     // protected static HashMap<String, EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>>> cCash = new HashMap<String, EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>>>();
 
     public ExportManager(Context context, String caller) {
@@ -173,7 +177,7 @@ public class ExportManager {
     }
 
 
-    public synchronized void exportWorkoutTo(long workoutId, FileFormat fileFormat) {
+    public synchronized void exportWorkoutTo(long workoutId, @NonNull FileFormat fileFormat) {
         if (DEBUG) Log.d(TAG, "exportWorkoutTo " + workoutId + ", " + fileFormat.name());
 
         SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
@@ -225,10 +229,11 @@ public class ExportManager {
 
 
     // TODO: queue changes when exporting to file finished (we have to upload to dropbox/community)
+    @NonNull
     public synchronized ArrayList<ExportInfo> getExportQueue() {
         if (DEBUG) Log.d(TAG, "getExportQueue");
 
-        ArrayList<ExportInfo> result = new ArrayList<ExportInfo>();
+        ArrayList<ExportInfo> result = new ArrayList<>();
 
         // 
         Cursor cursor = cExportStatusDb.query(ExportStatusDbHelper.TABLE,
@@ -255,7 +260,7 @@ public class ExportManager {
     }
 
 
-    public synchronized void exportingStarted(ExportInfo exportInfo) {
+    public synchronized void exportingStarted(@NonNull ExportInfo exportInfo) {
         if (DEBUG) Log.d(TAG, "exportingStarted: " + exportInfo);
 
         ContentValues values = new ContentValues();
@@ -272,7 +277,7 @@ public class ExportManager {
     }
 
 
-    public synchronized void exportingFinished(ExportInfo exportInfo, boolean success, String answer) {
+    public synchronized void exportingFinished(@NonNull ExportInfo exportInfo, boolean success, String answer) {
         if (DEBUG) Log.d(TAG, "exportingFinished: " + exportInfo + ": " + answer);
 
         long retries = 0;
@@ -325,16 +330,17 @@ public class ExportManager {
     }
 
 
+    @NonNull
     public synchronized EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>> getExportStatus(String fileBaseName) {
         if (DEBUG) Log.d(TAG, "getExportStatus");
 
-        EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>> result = new EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>>(ExportType.class);
+        EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>> result = new EnumMap<>(ExportType.class);
 
         Cursor cursor;
 
         for (ExportType exportType : ExportType.values()) {
 
-            EnumMap<FileFormat, ExportStatus> enumMap = new EnumMap<FileFormat, ExportStatus>(FileFormat.class);
+            EnumMap<FileFormat, ExportStatus> enumMap = new EnumMap<>(FileFormat.class);
             for (FileFormat fileFormat : FileFormat.values()) {
                 cursor = cExportStatusDb.query(ExportStatusDbHelper.TABLE,
                         new String[]{ExportStatusDbHelper.EXPORT_STATUS},
@@ -358,7 +364,8 @@ public class ExportManager {
     }
 
 
-    public synchronized String getExportAnswer(ExportInfo exportInfo) {
+    @Nullable
+    public synchronized String getExportAnswer(@NonNull ExportInfo exportInfo) {
         if (DEBUG) Log.d(TAG, "getExportAnswer");
 
         String exportAnswer = null;
@@ -380,7 +387,8 @@ public class ExportManager {
     }
 
 
-    public synchronized ExportStatus getExportStatus(ExportInfo exportInfo) {
+    @Nullable
+    public synchronized ExportStatus getExportStatus(@NonNull ExportInfo exportInfo) {
         if (DEBUG) Log.d(TAG, "getExportStatus");
 
         ExportStatus exportStatus = null;
@@ -402,7 +410,7 @@ public class ExportManager {
     }
 
 
-    protected synchronized void exportingToFileFinished(ExportInfo exportInfo) {
+    protected synchronized void exportingToFileFinished(@NonNull ExportInfo exportInfo) {
         if (DEBUG) Log.d(TAG, "exportingToFileFinished: " + exportInfo.toString());
 
         FileFormat fileFormat = exportInfo.getFileFormat();
@@ -477,7 +485,7 @@ public class ExportManager {
 
         // Called only once, first time the DB is created
         @Override
-        public void onCreate(SQLiteDatabase db) {
+        public void onCreate(@NonNull SQLiteDatabase db) {
 
             db.execSQL(CREATE_TABLE);
 
@@ -486,7 +494,7 @@ public class ExportManager {
 
         //Called whenever newVersion != oldVersion
         @Override
-        public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        public void onUpgrade(@NonNull SQLiteDatabase db, int oldVersion, int newVersion) {
             // TODO: alter table instead of deleting!
 
             db.execSQL("drop table if exists " + TABLE);

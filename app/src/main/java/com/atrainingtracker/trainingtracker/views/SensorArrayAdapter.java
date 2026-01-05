@@ -25,6 +25,9 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.atrainingtracker.banalservice.sensor.SensorType;
 
 // TODO: show an image that represents the SensorType
@@ -32,18 +35,21 @@ import com.atrainingtracker.banalservice.sensor.SensorType;
 public class SensorArrayAdapter extends ArrayAdapter<SensorType> {
     private static final String TAG = "SensorSpinnerAdapter";
 
-    protected Context mContext;
-    protected SensorType[] mSensorTypeArray;
+    @NonNull
+    protected final Context mContext;
+    @NonNull
+    protected final SensorType[] mSensorTypeArray;
 
-    public SensorArrayAdapter(Context context, int textViewResourceId, SensorType[] sensorTypeArray) {
+    public SensorArrayAdapter(@NonNull Context context, int textViewResourceId, @NonNull SensorType[] sensorTypeArray) {
         super(context, textViewResourceId, sensorTypeArray);
         mContext = context;
         mSensorTypeArray = sensorTypeArray;
     }
 
     // This is for the "passive" state of the spinner
+    @NonNull
     @Override
-    public View getView(int position, View convertView, ViewGroup parent) {
+    public View getView(int position, @Nullable View convertView, ViewGroup parent) {
         if (convertView == null) {
             LayoutInflater inflater = LayoutInflater.from(mContext);
             convertView = inflater.inflate(android.R.layout.simple_spinner_item, parent, false);
@@ -60,8 +66,9 @@ public class SensorArrayAdapter extends ArrayAdapter<SensorType> {
     }
 
     // And here is when the "chooser" is popped up
+    @NonNull
     @Override
-    public View getDropDownView(int position, View convertView, ViewGroup parent) {
+    public View getDropDownView(int position, @Nullable View convertView, ViewGroup parent) {
         if (convertView == null) {
             LayoutInflater inflater = LayoutInflater.from(mContext);
             convertView = inflater.inflate(android.R.layout.simple_spinner_item, parent, false);

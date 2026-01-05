@@ -28,6 +28,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 
+import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
@@ -54,7 +55,7 @@ public class ControlTrackingFragment extends BaseTrackingFragment {
     private final IntentFilter mStartTrackingFilter = new IntentFilter();
     protected RemoteDevicesSettingsInterface mRemoteDevicesSettingsInterface;
     protected StartOrResumeInterface mStartOrResumeInterface;
-    protected BroadcastReceiver mUpdateResearchReceiver = new BroadcastReceiver() {
+    protected final BroadcastReceiver mUpdateResearchReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             updateResearchButton();
@@ -69,7 +70,7 @@ public class ControlTrackingFragment extends BaseTrackingFragment {
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // BroadcastReceivers
     ////////////////////////////////////////////////////////////////////////////////////////////////
-    protected BroadcastReceiver mStartTrackingReceiver = new BroadcastReceiver() {
+    protected final BroadcastReceiver mStartTrackingReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             // showStartLayout();
@@ -81,7 +82,7 @@ public class ControlTrackingFragment extends BaseTrackingFragment {
             disableResumeAndStopLayout();
         }
     };
-    protected BroadcastReceiver mPauseTrackingReceiver = new BroadcastReceiver() {
+    protected final BroadcastReceiver mPauseTrackingReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             // showStartLayout();
@@ -93,7 +94,7 @@ public class ControlTrackingFragment extends BaseTrackingFragment {
             // disableResumeAndStopLayout();
         }
     };
-    protected BroadcastReceiver mStopTrackingReceiver = new BroadcastReceiver() {
+    protected final BroadcastReceiver mStopTrackingReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             showStartLayout();
@@ -112,7 +113,7 @@ public class ControlTrackingFragment extends BaseTrackingFragment {
     // Lifecycle methods
     ////////////////////////////////////////////////////////////////////////////////////////////////
     @Override
-    public void onAttach(Context context) {
+    public void onAttach(@NonNull Context context) {
         super.onAttach(context);
         if (DEBUG) Log.d(TAG, "onAttach");
 
@@ -155,7 +156,7 @@ public class ControlTrackingFragment extends BaseTrackingFragment {
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         super.onCreateView(inflater, container, savedInstanceState);
         if (DEBUG) Log.d(TAG, "onCreateView");
 
