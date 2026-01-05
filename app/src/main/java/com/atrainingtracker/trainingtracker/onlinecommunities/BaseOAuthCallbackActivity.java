@@ -9,6 +9,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.atrainingtracker.R;
@@ -17,6 +18,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -55,19 +57,19 @@ public abstract class BaseOAuthCallbackActivity extends Activity {
     }
 
     @Override
-    protected void onNewIntent(Intent intent) {
+    protected void onNewIntent(@NonNull Intent intent) {
         super.onNewIntent(intent);
         if (DEBUG) Log.d(TAG, "onNewIntent");
         setIntent(intent);
         handleIntent(intent);
     }
 
-    private void handleIntent(Intent intent) {
+    private void handleIntent(@NonNull Intent intent) {
         if (isProcessing) return;
 
         Uri data = intent.getData();
         if (data != null && data.toString().startsWith(getRedirectUri())) {
-            if (DEBUG) Log.d(TAG, "Redirect received: " + data.toString());
+            if (DEBUG) Log.d(TAG, "Redirect received: " + data);
 
             String error = data.getQueryParameter("error");
             if (error != null) {
@@ -112,22 +114,7 @@ public abstract class BaseOAuthCallbackActivity extends Activity {
                 urlConnection.setConnectTimeout(10000);
                 urlConnection.setReadTimeout(10000);
 
-                int responseCode = urlConnection.getResponseCode();
-
-                // Read Stream Logic ...
-                java.io.InputStream inputStream = (responseCode >= 200 && responseCode < 300)
-                        ? urlConnection.getInputStream()
-                        : urlConnection.getErrorStream();
-
-                StringBuilder responseBuilder = new StringBuilder();
-                if (inputStream != null) {
-                    try (BufferedReader br = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
-                        String line;
-                        while ((line = br.readLine()) != null) responseBuilder.append(line);
-                    }
-                }
-
-                String responseStr = responseBuilder.toString();
+                String responseStr = getResponseStr(urlConnection);
                 if (DEBUG) Log.d(TAG, "Response: " + responseStr);
 
                 if (!responseStr.isEmpty()) {
@@ -174,6 +161,26 @@ public abstract class BaseOAuthCallbackActivity extends Activity {
                 finish(); // Finishes THIS Callback activity, returning to BaseGetAccessTokenActivity
             });
         });
+    }
+
+    @NonNull
+    private static String getResponseStr(@NonNull HttpURLConnection urlConnection) throws IOException {
+        int responseCode = urlConnection.getResponseCode();
+
+        // Read Stream Logic ...
+        java.io.InputStream inputStream = (responseCode >= 200 && responseCode < 300)
+                ? urlConnection.getInputStream()
+                : urlConnection.getErrorStream();
+
+        StringBuilder responseBuilder = new StringBuilder();
+        if (inputStream != null) {
+            try (BufferedReader br = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = br.readLine()) != null) responseBuilder.append(line);
+            }
+        }
+
+        return responseBuilder.toString();
     }
 
     protected void onJsonResponse(JSONObject json) {}

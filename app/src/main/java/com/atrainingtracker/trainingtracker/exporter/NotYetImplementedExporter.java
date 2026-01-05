@@ -20,17 +20,21 @@ package com.atrainingtracker.trainingtracker.exporter;
 
 import android.content.Context;
 
+import androidx.annotation.NonNull;
+
 public class NotYetImplementedExporter extends BaseExporter {
 
-    public NotYetImplementedExporter(Context context) {
+    public NotYetImplementedExporter(@NonNull Context context) {
         super(context);
     }
 
+    @NonNull
     @Override
     protected ExportResult doExport(ExportInfo exportInfo) {
         return new ExportResult(false, "not yet implemented");
     }
 
+    @NonNull
     @Override
     protected Action getAction() {
         return Action.EXPORT;

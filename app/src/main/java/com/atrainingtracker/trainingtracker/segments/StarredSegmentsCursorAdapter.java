@@ -21,6 +21,9 @@ package com.atrainingtracker.trainingtracker.segments;
 import android.app.Activity;
 import android.content.Context;
 import android.database.Cursor;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.cursoradapter.widget.CursorAdapter;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -62,15 +65,16 @@ public class StarredSegmentsCursorAdapter extends CursorAdapter {
     protected static final String[] FROM = {Segments.SEGMENT_ID, Segments.C_ID, Segments.SEGMENT_NAME, Segments.DISTANCE, Segments.AVERAGE_GRADE, Segments.CLIMB_CATEGORY, Segments.PR_TIME, Segments.OWN_RANK, Segments.PR_DATE, Segments.LAST_UPDATED};
     private final String TAG = StarredSegmentsCursorAdapter.class.getSimpleName();
     private final boolean DEBUG = TrainingApplication.getDebug(false);
-    protected Activity mActivity;
-    protected Context mContext;
+    protected final Activity mActivity;
+    protected final Context mContext;
     // protected static final int[]    TO   = {R.id.tvSegmentName,  R.id.tvSegmentName, R.id.tvSegmentName,    R.id.tvSegmentDistance, R.id.tvSegmentAverageGrade, R.id.tvSegmentClimbCategory, R.id.tvSegmentPRTime, R.id.tvSegmentRank, R.id.tvSegmentPRDate, R.id.tvSegmentLastUpdated};
+    @Nullable
     ShowSegmentDetailsInterface mShowSegmentDetailsListener = null;
-    DistanceFormatter distanceFormatter = new DistanceFormatter();
-    TimeFormatter timeFormatter = new TimeFormatter();
-    SimpleDateFormat dateAndTimeFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US); // 2013-03-29T13:49:35Z
-    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.US);               // 2013-03-29
-    StravaSegmentsHelper mStravaSegmentsHelper;
+    final DistanceFormatter distanceFormatter = new DistanceFormatter();
+    final TimeFormatter timeFormatter = new TimeFormatter();
+    final SimpleDateFormat dateAndTimeFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US); // 2013-03-29T13:49:35Z
+    final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.US);               // 2013-03-29
+    final StravaSegmentsHelper mStravaSegmentsHelper;
     private boolean isPlayServiceAvailable = true;
 
     public StarredSegmentsCursorAdapter(Activity activity, Cursor cursor, StravaSegmentsHelper stravaSegmentsHelper, ShowSegmentDetailsInterface showSegmentDetailsInterface) {
@@ -85,6 +89,7 @@ public class StarredSegmentsCursorAdapter extends CursorAdapter {
         isPlayServiceAvailable = checkPlayServices();
     }
 
+    @NonNull
     @Override
     public View newView(Context context, Cursor cursor, ViewGroup parent) {
         if (DEBUG) Log.i(TAG, "newView");
@@ -114,7 +119,7 @@ public class StarredSegmentsCursorAdapter extends CursorAdapter {
     }
 
     @Override
-    public void bindView(View view, Context context, Cursor cursor) {
+    public void bindView(@NonNull View view, @NonNull Context context, @NonNull Cursor cursor) {
         final ViewHolder viewHolder = (ViewHolder) view.getTag();
 
         final long segmentId = cursor.getLong(cursor.getColumnIndex(Segments.SEGMENT_ID));

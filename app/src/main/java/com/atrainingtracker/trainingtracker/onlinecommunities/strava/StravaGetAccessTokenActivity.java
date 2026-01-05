@@ -20,10 +20,10 @@ package com.atrainingtracker.trainingtracker.onlinecommunities.strava;
 
 import android.net.Uri;
 
+import androidx.annotation.NonNull;
+
 import com.atrainingtracker.BuildConfig;
 import com.atrainingtracker.trainingtracker.onlinecommunities.BaseGetAccessTokenActivity;
-
-import org.json.JSONObject;
 
 
 // Use StravaHelper insead.
@@ -37,11 +37,13 @@ public class StravaGetAccessTokenActivity
     private static final boolean DEBUG = true;
 
 
+    @NonNull
     protected String getRedirectUri() {
         return "strava://rainerblind.github.io";
     }
 
 
+    @NonNull
     @Override
     protected String getAuthorizationUrl() {
         Uri.Builder builder = new Uri.Builder();

@@ -33,6 +33,8 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
@@ -67,6 +69,8 @@ import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleDatabaseMana
 import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleService;
 import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleServiceBuildIn;
 import com.atrainingtracker.trainingtracker.smartwatch.pebble.Watchapp;
+import com.dropbox.core.json.JsonReadException;
+import com.dropbox.core.oauth.DbxCredential;
 
 import java.util.HashMap;
 import java.util.Locale;
@@ -161,9 +165,7 @@ public class TrainingApplication extends Application {
     public static final float MIN_DISTANCE_BETWEEN_START_AND_STOP = 100;
     public static final double DISTANCE_TO_MAX_THRESHOLD_FOR_TRAINER = 200;
     public static final double DISTANCE_TO_MAX_RATIO_FOR_COMMUTE = Math.PI / 2; // probably the best value ;-)
-    protected final static String DROPBOX_APP_KEY = BuildConfig.DROPBOX_APP_KEY;
-    protected final static String DROPBOX_APP_SECRET = BuildConfig.DROPBOX_APP_SECRET;
-    protected static final String SP_DROPBOX_TOKEN = "dropboxToken";
+    protected static final String SP_DROPBOX_CREDENTIAL = "dropboxCredential";
     private static final String TAG = "TrainingApplication";
     private static final String SP_PLAY_SERVICE_INSTALLATION_TRIES = "playServiceInstallationTries";
     private static final int MAX_PLAY_SERVICE_INSTALLATION_TRIES = 10;
@@ -207,6 +209,7 @@ public class TrainingApplication extends Application {
     private static final String DEFAULT_ATHLETE_NAME = "Athlete";
     private static final String APPLICATION_NAME = TAG;
     protected static Context cAppContext;
+    @NonNull
     protected static TrackingMode cTrackingMode = TrackingMode.READY;
     protected static boolean cResumeFromCrash = false;
     private static SharedPreferences cSharedPreferences;
@@ -214,16 +217,17 @@ public class TrainingApplication extends Application {
     private final IntentFilter mSearchingStartedFilter = new IntentFilter(BANALService.SEARCHING_STARTED_FOR_ONE_INTENT);
     public TrackOnMapHelper trackOnMapHelper;
     public SegmentOnMapHelper segmentOnMapHelper;
-    private final HashMap<Long, Boolean> mSegmentListUpdating = new HashMap();
-    private final HashMap<Long, Boolean> mLeaderboardUpdating = new HashMap();
+    private final HashMap<Long, Boolean> mSegmentListUpdating = new HashMap<>();
+    private final HashMap<Long, Boolean> mLeaderboardUpdating = new HashMap<>();
     private long mWorkoutID = -1;
-    protected BroadcastReceiver mTrackingStartedReceiver = new BroadcastReceiver() {
-        public void onReceive(Context context, Intent intent) {
+    protected final BroadcastReceiver mTrackingStartedReceiver = new BroadcastReceiver() {
+        public void onReceive(Context context, @NonNull Intent intent) {
             setWorkoutID(intent.getLongExtra(WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_ID, -1));
         }
     };
+    @Nullable
     private Watchapp startedWatchapp = null;
-    protected BroadcastReceiver mTrackingStoppedReceiver = new BroadcastReceiver() {
+    protected final BroadcastReceiver mTrackingStoppedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             trackingStopped();
@@ -231,7 +235,7 @@ public class TrainingApplication extends Application {
     };
     private NotificationManagerCompat mNotificationManager;
     private NotificationCompat.Builder mTrackingAndSearchingNotificationBuilder;
-    private PendingIntent mStartMainActivityPendingIntent;
+    @NonNull
     private String mNotificationSummary = "searching";
     private final DistanceFormatter mDistanceFormatter = new DistanceFormatter();
 
@@ -240,6 +244,7 @@ public class TrainingApplication extends Application {
     //     mNotificationManager.notify(TRACKING_NOTIFICATION_ID, mTrackingAndSearchingNotificationBuilder.getNotification());
     // }
     private final TimeFormatter mTimeFormatter = new TimeFormatter();
+    @Nullable
     private String mDeviceCurrentlySearchingFor = null;
     /***********************************************************************************************/
 
@@ -247,25 +252,25 @@ public class TrainingApplication extends Application {
         return DEBUG && defaultVal;
     }
 
-    protected BroadcastReceiver mStartTrackingReceiver = new BroadcastReceiver() {
+    protected final BroadcastReceiver mStartTrackingReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             startTracking();
         }
     };
-    protected BroadcastReceiver mStopTrackingReceiver = new BroadcastReceiver() {
+    protected final BroadcastReceiver mStopTrackingReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             stopTracking();
         }
     };
-    protected BroadcastReceiver mPauseTrackingReceiver = new BroadcastReceiver() {
+    protected final BroadcastReceiver mPauseTrackingReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             pauseTracking();
         }
     };
-    protected BroadcastReceiver mResumeFromPaused = new BroadcastReceiver() {
+    protected final BroadcastReceiver mResumeFromPaused = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             resumeFromPaused();
@@ -279,16 +284,16 @@ public class TrainingApplication extends Application {
     };
     private final BroadcastReceiver mSearchingStartedReceiver = new BroadcastReceiver() {
         @Override
-        public void onReceive(Context context, Intent intent) {
+        public void onReceive(Context context, @NonNull Intent intent) {
             notifySearchingStartedFor(intent.getStringExtra(BANALService.DEVICE_NAME));
         }
     };
 
-    public static boolean havePermission(String permission) {
+    public static boolean havePermission(@NonNull String permission) {
         return ActivityCompat.checkSelfPermission(cAppContext, permission) == PackageManager.PERMISSION_GRANTED;
     }
 
-    public static boolean isAppInstalled(String uri) {
+    public static boolean isAppInstalled(@NonNull String uri) {
         PackageManager pm = cAppContext.getPackageManager();
         try {
             pm.getPackageInfo(uri, PackageManager.GET_ACTIVITIES);
@@ -319,11 +324,11 @@ public class TrainingApplication extends Application {
     public static int getNumberOfSearchTries() {
         String numberOfSearchTries = cSharedPreferences.getString(SP_NUMBER_OF_SEARCH_TRIES, null);
         if (DEBUG) Log.i(TAG, "number of search tries=" + numberOfSearchTries);
-        if (numberOfSearchTries == null || numberOfSearchTries.equals("")) {
+        if (numberOfSearchTries == null || numberOfSearchTries.isEmpty()) {
             return DEFAULT_NUMBER_OF_SEARCH_TRIES;
         } else {
             try {
-                return Integer.valueOf(numberOfSearchTries);
+                return Integer.parseInt(numberOfSearchTries);
             } catch (Exception e) {
                 return DEFAULT_NUMBER_OF_SEARCH_TRIES;
             }
@@ -362,10 +367,12 @@ public class TrainingApplication extends Application {
         return cSharedPreferences.getBoolean(SP_SEND_EMAIL, false);
     }
 
+    @NonNull
     public static String getSpEmailAddress() {
         return cSharedPreferences.getString(SP_EMAIL_ADDRESS, "first.last@example.com");
     }
 
+    @NonNull
     public static String getSpEmailSubject() {
         return cSharedPreferences.getString(SP_EMAIL_SUBJECT, getAppName());
     }
@@ -414,6 +421,7 @@ public class TrainingApplication extends Application {
         return cSharedPreferences.getBoolean(SHOW_ALL_LOCATION_SOURCES_ON_MAP, false);
     }
 
+    @NonNull
     public static MyUnits getUnit() {
         return MyUnits.valueOf(cSharedPreferences.getString(SP_UNITS, MyUnits.METRIC.name()));
     }
@@ -422,6 +430,7 @@ public class TrainingApplication extends Application {
         return cSharedPreferences.getBoolean(SP_PEBBLE_SUPPORT, false);
     }
 
+    @NonNull
     public static Watchapp getPebbleWatchapp() {
         return Watchapp.valueOf(cSharedPreferences.getString(SP_PEBBLE_WATCHAPP, Watchapp.BUILD_IN.name()));
     }
@@ -456,21 +465,23 @@ public class TrainingApplication extends Application {
 
     public static int getSamplingTime() {
         String samplingTimePref = cSharedPreferences.getString(SP_SAMPLING_TIME, null);
-        if (samplingTimePref == null || samplingTimePref.equals("")) {
+        if (samplingTimePref == null || samplingTimePref.isEmpty()) {
             return DEFAULT_SAMPLING_TIME;
         } else {
             try {
-                return Integer.valueOf(samplingTimePref);
+                return Integer.parseInt(samplingTimePref);
             } catch (Exception e) {
                 return DEFAULT_SAMPLING_TIME;
             }
         }
     }
 
+    @NonNull
     public static String getAppName() {
         return cAppContext.getString(R.string.application_name);
     }
 
+    @NonNull
     public static String getAthleteName() {
         return cSharedPreferences.getString(SP_ATHLETE_NAME, DEFAULT_ATHLETE_NAME);
     }
@@ -524,25 +535,23 @@ public class TrainingApplication extends Application {
         cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_DROPBOX, value).apply();
     }
 
-    public static String getDropboxAppKey() {
-        return TrainingApplication.DROPBOX_APP_KEY;
+    public static void storeDropboxCredential(DbxCredential dbxCredential) {
+        cSharedPreferences.edit().putString(SP_DROPBOX_CREDENTIAL, DbxCredential.Writer.writeToString(dbxCredential)).apply();
     }
 
-    public static void storeDropboxToken(String token) {
-        cSharedPreferences.edit().putString(SP_DROPBOX_TOKEN, token).apply();
+    public static DbxCredential readDropboxCredential() {
+        String credential = cSharedPreferences.getString(SP_DROPBOX_CREDENTIAL, null);
+        DbxCredential dbxCredential = null;
+        try {
+            dbxCredential = DbxCredential.Reader.readFully(credential);
+        } catch (JsonReadException e) {
+            // do nothing
+        }
+        return dbxCredential;
     }
 
-    public static boolean hasDropboxToken() {
-        return cSharedPreferences.getString(SP_DROPBOX_TOKEN, null) != null;
-    }
-
-    public static String getDropboxToken() {
-        return cSharedPreferences.getString(SP_DROPBOX_TOKEN, null);
-    }
-
-    public static void deleteDropboxToken() {
-        cSharedPreferences.edit().remove(SP_DROPBOX_TOKEN).apply();
-        cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_DROPBOX, false).apply();
+    public static void deleteDropboxCredential() {
+        cSharedPreferences.edit().remove(SP_DROPBOX_CREDENTIAL).apply();
     }
 
     /*
@@ -556,6 +565,7 @@ public class TrainingApplication extends Application {
         cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_STRAVA, value).apply();
     }
 
+    @Nullable
     public static String getStravaAccessToken() {
         return cSharedPreferences.getString(SP_STRAVA_TOKEN, null);
     }
@@ -567,6 +577,7 @@ public class TrainingApplication extends Application {
     public static void setStravaRefreshToken(String refreshToken) {
         cSharedPreferences.edit().putString(SP_STRAVA_REFRESH_TOKEN, refreshToken).apply();
     }
+    @Nullable
     public static String getStravaRefreshToken() {
         return cSharedPreferences.getString(SP_STRAVA_REFRESH_TOKEN, null);
     }
@@ -586,6 +597,7 @@ public class TrainingApplication extends Application {
         if (DEBUG) Log.i(TAG, "end of deleteStravaToken");
     }
 
+    @NonNull
     public static String getLastUpdateTimeOfStravaEquipment() {
         return cSharedPreferences.getString(SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT, cAppContext.getString(R.string.lastUpdateOfEquipmentNever));
     }
@@ -633,6 +645,7 @@ public class TrainingApplication extends Application {
         cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_RUNKEEPER, value).apply();
     }
 
+    @Nullable
     public static String getRunkeeperToken() {
         return cSharedPreferences.getString(SP_RUNKEEPER_TOKEN, null);
     }
@@ -674,9 +687,10 @@ public class TrainingApplication extends Application {
     }
 
     public static void setUploadToTrainingPeaks(boolean value) {
-        cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_RUNKEEPER, false).apply();
+        cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_RUNKEEPER, value).apply();
     }
 
+    @Nullable
     public static String getTrainingPeaksAccessToken() {
         return cSharedPreferences.getString(SP_TRAINING_PEAKS_ACCESS_TOKEN, null);
     }
@@ -685,6 +699,7 @@ public class TrainingApplication extends Application {
         cSharedPreferences.edit().putString(SP_TRAINING_PEAKS_ACCESS_TOKEN, token).apply();
     }
 
+    @Nullable
     public static String getTrainingPeaksRefreshToken() {
         return cSharedPreferences.getString(SP_TRAINING_PEAKS_REFRESH_TOKEN, null);
     }
@@ -759,47 +774,35 @@ public class TrainingApplication extends Application {
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    public static boolean exportToFile(FileFormat fileFormat) {
-        switch (fileFormat) {
-            case CSV:
-                return exportToCSV();
-            case GC:
-                return exportToGCJson();
-            case TCX:
-                return exportToTCX();
-            case GPX:
-                return exportToGPX();
-            case STRAVA:
-                return uploadToStrava();
+    public static boolean exportToFile(@NonNull FileFormat fileFormat) {
+        return switch (fileFormat) {
+            case CSV -> exportToCSV();
+            case GC -> exportToGCJson();
+            case TCX -> exportToTCX();
+            case GPX -> exportToGPX();
+            case STRAVA -> uploadToStrava();
             /* case RUNKEEPER:
                 return uploadToRunKeeper(); */
             /* case TRAINING_PEAKS:
                 return uploadToTrainingPeaks(); */
-            default:
-                return false;
-        }
+        };
     }
 
     public static boolean exportViaEmail(FileFormat fileFormat) {
         if (sendEmail()) {
-            switch (fileFormat) {
-                case CSV:
-                    return sendCSVEmail();
-                case GC:
-                    return sendGCEmail();
-                case TCX:
-                    return sendTCXEmail();
-                case GPX:
-                    return sendGPXEmail();
-                default:
-                    return false;
-            }
+            return switch (fileFormat) {
+                case CSV -> sendCSVEmail();
+                case GC -> sendGCEmail();
+                case TCX -> sendTCXEmail();
+                case GPX -> sendGPXEmail();
+                default -> false;
+            };
         } else {
             return false;
         }
     }
 
-    public static boolean uploadToCommunity(FileFormat fileFormat) {
+    public static boolean uploadToCommunity(@NonNull FileFormat fileFormat) {
         switch (fileFormat) {
             case STRAVA:
                 return uploadToStrava();
@@ -822,6 +825,7 @@ public class TrainingApplication extends Application {
         return cTrackingMode != TrackingMode.READY;
     }  // correct?
 
+    @NonNull
     public static TrackingMode getTrackingMode() {
         return cTrackingMode;
     }
@@ -830,7 +834,7 @@ public class TrainingApplication extends Application {
         cResumeFromCrash = resumeFromCrash;
     }
 
-    public static void startWorkoutDetailsActivity(long workoutId, WorkoutDetailsActivity.SelectedFragment selectedFragment) {
+    public static void startWorkoutDetailsActivity(long workoutId, @NonNull WorkoutDetailsActivity.SelectedFragment selectedFragment) {
         if (DEBUG) Log.i(TAG, "startWorkoutDetailsActivity(" + workoutId + ")");
 
         Bundle bundle = new Bundle();
@@ -898,6 +902,7 @@ public class TrainingApplication extends Application {
     }
 
     // helper method to create the Notification Builder
+    @NonNull
     protected NotificationCompat.Builder getNewNotificationBuilder() {
         Bundle bundle = new Bundle();
         bundle.putString(MainActivityWithNavigation.SELECTED_FRAGMENT, MainActivityWithNavigation.SelectedFragment.START_OR_TRACKING.name());
@@ -906,15 +911,13 @@ public class TrainingApplication extends Application {
         newIntent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
         newIntent.putExtras(bundle);
         newIntent.setAction("TrackerService");
-        mStartMainActivityPendingIntent = PendingIntent.getActivity(this, 0, newIntent, PendingIntent.FLAG_IMMUTABLE);  // TODO: correct???
+        PendingIntent mStartMainActivityPendingIntent = PendingIntent.getActivity(this, 0, newIntent, PendingIntent.FLAG_IMMUTABLE);  // TODO: correct???
 
-        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL__TRACKING_2)
+        return new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL__TRACKING_2)
                 .setSmallIcon(R.drawable.logo)
                 .setContentTitle(getString(R.string.TrainingTracker))
                 .setContentText(getString(R.string.notification_tracking))
                 .setContentIntent(mStartMainActivityPendingIntent);
-
-        return notificationBuilder;
     }
 
     @SuppressLint("RestrictedApi")
@@ -956,7 +959,7 @@ public class TrainingApplication extends Application {
         }
     }
 
-    public void updateTimeAndDistanceToNotification(SensorData<Integer> time, SensorData<Number> distance, String sportType) {
+    public void updateTimeAndDistanceToNotification(@Nullable SensorData<Integer> time, @Nullable SensorData<Number> distance, String sportType) {
         if (DEBUG) Log.i(TAG, "updateTimeAndDistanceToNotification(" + time + ", " + distance);
 
         if (mNotificationManager.areNotificationsEnabled()) {
@@ -1030,6 +1033,7 @@ public class TrainingApplication extends Application {
 
     }
 
+    @NonNull
     public Notification getSearchingAndTrackingNotification() {
         return mTrackingAndSearchingNotificationBuilder.build();
     }
@@ -1091,11 +1095,7 @@ public class TrainingApplication extends Application {
     }
 
     public boolean isLeaderboardUpdating(Long segmentId) {
-        if (mLeaderboardUpdating.containsKey(segmentId)) {
-            return mLeaderboardUpdating.get(segmentId);
-        } else {
-            return false;
-        }
+        return mLeaderboardUpdating.getOrDefault(segmentId, false);
     }
 
     public long getWorkoutID() {

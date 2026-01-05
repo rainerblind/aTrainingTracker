@@ -19,32 +19,12 @@
 package com.atrainingtracker.trainingtracker.onlinecommunities;
 
 import android.app.Activity;
-import android.app.ProgressDialog;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.util.Log;
-import android.webkit.WebChromeClient;
-import android.webkit.WebView;
-import android.webkit.WebViewClient;
 
-import com.atrainingtracker.R;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
-
-import org.apache.http.HttpResponse;
-import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.protocol.HTTP;
-import org.apache.http.util.EntityUtils;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import java.io.IOException;
 
 // import org.apache.http.HttpResponse;
 // import org.apache.http.client.ClientProtocolException;

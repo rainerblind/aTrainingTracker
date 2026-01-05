@@ -24,6 +24,8 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 
 import android.util.Log;
@@ -72,14 +74,16 @@ public class TrackingFragment extends BaseTrackingFragment {
     private static final int TEXT_SIZE_TITLE = 15;
     private final IntentFilter mNewTimeEventFilter = new IntentFilter(BANALService.NEW_TIME_EVENT_INTENT);
     private final IntentFilter mTrackingViewChangedFilter = new IntentFilter(TRACKING_VIEW_CHANGED_INTENT);
+    @NonNull
     protected Mode mMode = Mode.TRACKING;
 
     // protected static final String BEST = "BEST_1353485234512395476534439475247";
     // protected EnumMap<SensorType, HashMap<String, String>> mSensorValueMap = new EnumMap<SensorType, HashMap<String, String>>(SensorType.class); // maps (SensorType, DeviceName) -> value
 
     // protected List<TvSensorType> mLTvSensorType;  // contains all the TvSensorTypes
+    @NonNull
     protected HashMap<String, TvSensorType> mHashMapTextViews = new HashMap<>(); // HashMap<String, TvSensorType>   for the TextViews and SensorType
-    protected HashMap<String, String> mHashMapValues = new HashMap<>();     // HashMap<String, String>     for the values
+    protected final HashMap<String, String> mHashMapValues = new HashMap<>();     // HashMap<String, String>     for the values
     protected LinearLayout mLLSensors;
     protected FrameLayout mMapContainer;
     protected Button mButtonLap;
@@ -88,21 +92,23 @@ public class TrackingFragment extends BaseTrackingFragment {
     protected LayoutInflater mLayoutInflater;
 
     // protected String mUnitSpeed, mUnitPace, mUnitDistance;
+    @Nullable
     protected TrackOnMapTrackingFragment mTrackOnMapTrackingFragment = null;
-    BroadcastReceiver mNewTimeEventReceiver = new BroadcastReceiver() {
+    final BroadcastReceiver mNewTimeEventReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             doDisplayUpdate();
         }
     };
-    BroadcastReceiver mTrackingViewChangedReceiver = new BroadcastReceiver() {
+    final BroadcastReceiver mTrackingViewChangedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             updateSensorFields();
         }
     };
 
-    public static TrackingFragment newInstance(long viewId, ActivityType activityType) {
+    @NonNull
+    public static TrackingFragment newInstance(long viewId, @NonNull ActivityType activityType) {
         TrackingFragment trackingFragment = new TrackingFragment();
 
         Bundle args = new Bundle();
@@ -121,7 +127,8 @@ public class TrackingFragment extends BaseTrackingFragment {
     //	}
     //}
 
-    public static TrackingFragment newInstance(long viewId, Mode mode, ActivityType activityType) {
+    @NonNull
+    public static TrackingFragment newInstance(long viewId, @NonNull Mode mode, @NonNull ActivityType activityType) {
         if (DEBUG) Log.i(TAG, "newInstance viewId=" + viewId + ", mode=" + mode);
 
         TrackingFragment trackingFragment = new TrackingFragment();
@@ -135,7 +142,8 @@ public class TrackingFragment extends BaseTrackingFragment {
         return trackingFragment;
     }
 
-    public static String getShortFilterSummary(Context context, FilterType filterType, double filterConstant) {
+    @NonNull
+    public static String getShortFilterSummary(@NonNull Context context, @NonNull FilterType filterType, double filterConstant) {
         switch (filterType) {
             case INSTANTANEOUS: // instantaneous
                 return context.getString(R.string.filter_instantaneous_short);
@@ -181,7 +189,7 @@ public class TrackingFragment extends BaseTrackingFragment {
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         super.onCreateView(inflater, container, savedInstanceState);
         if (DEBUG) Log.d(TAG, "onCreateView " + mViewId);
 
@@ -308,7 +316,7 @@ public class TrackingFragment extends BaseTrackingFragment {
      * Called first time user clicks on the menu button
      */
     @Override
-    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+    public void onCreateOptionsMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
         super.onCreateOptionsMenu(menu, inflater);
         if (DEBUG) Log.d(TAG, "onCreateOptionsMenu");
 
@@ -316,7 +324,7 @@ public class TrackingFragment extends BaseTrackingFragment {
     }
 
     @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         if (DEBUG) Log.i(TAG, "onOptionsItemSelected");
 
         // Log.d(TAG, "onOptionsItemSelected");
@@ -360,8 +368,8 @@ public class TrackingFragment extends BaseTrackingFragment {
         doDisplayUpdate();
     }
 
-    protected void addRow(final TreeMap<Integer, TrackingViewsDatabaseManager.ViewInfo> rowMap) {
-        if (rowMap.size() == 0) {
+    protected void addRow(@NonNull final TreeMap<Integer, TrackingViewsDatabaseManager.ViewInfo> rowMap) {
+        if (rowMap.isEmpty()) {
             if (DEBUG) Log.i(TAG, "row contains no entries => returning");
             return;
         }
@@ -374,7 +382,7 @@ public class TrackingFragment extends BaseTrackingFragment {
         for (int colNr : rowMap.keySet()) {
             final TrackingViewsDatabaseManager.ViewInfo viewInfo = rowMap.get(colNr);
             if (DEBUG)
-                Log.i(TAG, "add view: rowNr=" + viewInfo.rowNr + ", colNr=" + viewInfo.colNr + ", SensorType=" + viewInfo.sensorType + ", TextSize=" + viewInfo.textSize);
+                Log.i(TAG, "add view: rowNr=" + viewInfo.rowNr() + ", colNr=" + viewInfo.colNr() + ", SensorType=" + viewInfo.sensorType() + ", TextSize=" + viewInfo.textSize());
 
             LinearLayout llField = (LinearLayout) mLayoutInflater.inflate(R.layout.sensor_field, llRow, false);
             llRow.addView(llField);
@@ -389,8 +397,8 @@ public class TrackingFragment extends BaseTrackingFragment {
                 });
             }
 
-            SensorType sensorType = viewInfo.sensorType;
-            long deviceId = viewInfo.sourceDeviceId;
+            SensorType sensorType = viewInfo.sensorType();
+            long deviceId = viewInfo.sourceDeviceId();
             String deviceName = null;
             if (deviceId > 0) {
                 deviceName = DevicesDatabaseManager.getDeviceName(deviceId);
@@ -403,7 +411,7 @@ public class TrackingFragment extends BaseTrackingFragment {
             TextView tv = new TextView(getContext());
             // tv.setBackgroundColor(getResources().getColor(R.color.my_white));
             tv.setTextSize(TEXT_SIZE_TITLE);
-            String filterSummary = getShortFilterSummary(getContext(), viewInfo.filterType, viewInfo.filterConstant);
+            String filterSummary = getShortFilterSummary(getContext(), viewInfo.filterType(), viewInfo.filterConstant());
             if (deviceName == null) {
                 tv.setText(filterSummary + getString(sensorType.getFullNameId()) + ":");
             } else {
@@ -416,18 +424,18 @@ public class TrackingFragment extends BaseTrackingFragment {
             // TextView for the content
             tv = new TextView(getContext());
             // tv.setBackgroundColor(getResources().getColor(R.color.my_white));
-            tv.setTextSize(viewInfo.textSize);
+            tv.setTextSize(viewInfo.textSize());
             // tv.setGravity(Gravity.CENTER_VERTICAL || Gravity.CENTER_HORIZONTAL);
             tv.setGravity(Gravity.CENTER_HORIZONTAL);
             llField.addView(tv);
 
             // finally, add this TextView to the Map
-            mHashMapTextViews.put((new FilterData(deviceName, sensorType, viewInfo.filterType, viewInfo.filterConstant)).getHashKey(),
+            mHashMapTextViews.put((new FilterData(deviceName, sensorType, viewInfo.filterType(), viewInfo.filterConstant())).getHashKey(),
                     new TvSensorType(tv, sensorType));
         }
     }
 
-    private void showEditFieldDialog(TrackingViewsDatabaseManager.ViewInfo viewInfo) {
+    private void showEditFieldDialog(@NonNull TrackingViewsDatabaseManager.ViewInfo viewInfo) {
         EditFieldDialog editFieldDialog = EditFieldDialog.newInstance(mActivityType, viewInfo);
         editFieldDialog.show(getFragmentManager(), EditFieldDialog.TAG);
     }
@@ -485,7 +493,7 @@ public class TrackingFragment extends BaseTrackingFragment {
      * Parses the value and sets the background color of the sensor text view
      * based on the zones defined in Settings.
      */
-    protected void setZoneBasedBackgroundColor(TvSensorType tvSensorType, String valueStr) {
+    protected void setZoneBasedBackgroundColor(@NonNull TvSensorType tvSensorType, @Nullable String valueStr) {
         // 1. Initial Checks: If no context or invalid data, return transparent
         if (getContext() == null || valueStr == null || valueStr.equals("--") || valueStr.equals(getString(R.string.NoData))) {
             return;
@@ -500,19 +508,7 @@ public class TrackingFragment extends BaseTrackingFragment {
         }
 
         // 3. Determine Zone Type based on Sensor and ActivityType
-        SettingsDataStore.ZoneType zoneType = null;
-
-        if (tvSensorType.sensorType == SensorType.HR) {
-            if (mActivityType.getSportType() == BSportType.RUN) {
-                zoneType = SettingsDataStore.ZoneType.HR_RUN;
-            } else if (mActivityType.getSportType() == BSportType.BIKE) {
-                zoneType = SettingsDataStore.ZoneType.HR_BIKE;
-            }
-        } else if (tvSensorType.sensorType == SensorType.POWER) {
-            if (mActivityType.getSportType() == BSportType.BIKE) {
-                zoneType = SettingsDataStore.ZoneType.PWR_BIKE;
-            }
-        }
+        SettingsDataStore.ZoneType zoneType = getZoneType(tvSensorType);
 
         // Simply return if this sensor/activity combo doesn't support zones,
         if (zoneType == null) {
@@ -545,6 +541,24 @@ public class TrackingFragment extends BaseTrackingFragment {
         tvSensorType.textView.setBackgroundColor(color);
     }
 
+    @Nullable
+    private SettingsDataStore.ZoneType getZoneType(@NonNull TvSensorType tvSensorType) {
+        SettingsDataStore.ZoneType zoneType = null;
+
+        if (tvSensorType.sensorType == SensorType.HR) {
+            if (mActivityType.getSportType() == BSportType.RUN) {
+                zoneType = SettingsDataStore.ZoneType.HR_RUN;
+            } else if (mActivityType.getSportType() == BSportType.BIKE) {
+                zoneType = SettingsDataStore.ZoneType.HR_BIKE;
+            }
+        } else if (tvSensorType.sensorType == SensorType.POWER) {
+            if (mActivityType.getSportType() == BSportType.BIKE) {
+                zoneType = SettingsDataStore.ZoneType.PWR_BIKE;
+            }
+        }
+        return zoneType;
+    }
+
 
     protected boolean getSensorData() {
         if (DEBUG) Log.d(TAG, "getSensorData for " + mViewId);
@@ -568,13 +582,6 @@ public class TrackingFragment extends BaseTrackingFragment {
 
     public enum Mode {TRACKING, PREVIEW}
 
-    protected class TvSensorType {
-        protected TextView textView;
-        protected SensorType sensorType;
-
-        public TvSensorType(TextView textView, SensorType sensorType) {
-            this.textView = textView;
-            this.sensorType = sensorType;
-        }
+    protected record TvSensorType(TextView textView, SensorType sensorType) {
     }
 }

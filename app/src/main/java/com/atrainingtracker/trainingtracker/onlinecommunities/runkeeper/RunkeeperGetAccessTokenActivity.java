@@ -21,8 +21,9 @@ package com.atrainingtracker.trainingtracker.onlinecommunities.runkeeper;
 
 import android.net.Uri;
 
+import androidx.annotation.NonNull;
+
 import com.atrainingtracker.BuildConfig;
-import com.atrainingtracker.R;
 import com.atrainingtracker.trainingtracker.onlinecommunities.BaseGetAccessTokenActivity;
 
 
@@ -36,10 +37,12 @@ public class RunkeeperGetAccessTokenActivity
 
 
 
+    @NonNull
     protected String getRedirectUri() {
         return "runkeeper://rainerblind.github.io";
     }
 
+    @NonNull
     @Override
     protected String getAuthorizationUrl() {
         Uri.Builder builder = new Uri.Builder();
@@ -54,6 +57,7 @@ public class RunkeeperGetAccessTokenActivity
     }
 
 
+    @NonNull
     protected String getAccessUrl(String code) {
         Uri.Builder builder = new Uri.Builder();
         builder.scheme(HTTPS)
@@ -69,6 +73,7 @@ public class RunkeeperGetAccessTokenActivity
     }
 
 
+    @NonNull
     protected String getAcceptApplicationUrl() {
         Uri.Builder builder = new Uri.Builder();
         builder.scheme(HTTPS)

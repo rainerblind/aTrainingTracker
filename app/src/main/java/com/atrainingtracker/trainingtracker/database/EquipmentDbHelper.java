@@ -26,6 +26,9 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.BaseColumns;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.atrainingtracker.banalservice.BSportType;
 
 import java.util.ArrayList;
@@ -78,29 +81,31 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         mContext = context;
     }
 
+    @NonNull
     public List<String> getLinkedEquipment(int workoutId) {
         if (DEBUG) Log.d(TAG, "getLinkedEquipment, workoutId=" + workoutId);
 
         return getLinkedEquipment(new ActiveDevicesDbHelper(mContext).getDatabaseIdsOfActiveDevices(workoutId));
     }
 
-    protected List<String> getLinkedEquipment(List<Integer> antDeviceIds) {
+    @NonNull
+    protected List<String> getLinkedEquipment(@Nullable List<Integer> antDeviceIds) {
         if (DEBUG) Log.d(TAG, "getLinkedEquipment with antDeviceList");
 
-        if (antDeviceIds == null || antDeviceIds.size() == 0) {
-            return new ArrayList<String>();
+        if (antDeviceIds == null || antDeviceIds.isEmpty()) {
+            return new ArrayList<>();
         }
 
-        Set<String> linkedEquipment = new HashSet<String>();
+        Set<String> linkedEquipment = new HashSet<>();
 
         int i = 0;
         // find first device with linked equipment
         for (; i < antDeviceIds.size(); i++) {
             List<String> tmpEquipment = getLinkedEquipmentFromDeviceId(antDeviceIds.get(i));
-            if (tmpEquipment.size() != 0) {
+            if (!tmpEquipment.isEmpty()) {
                 if (DEBUG)
                     Log.d(TAG, "found device with linked equipment: " + i + ", " + antDeviceIds.get(i));
-                linkedEquipment = new HashSet<String>(tmpEquipment);
+                linkedEquipment = new HashSet<>(tmpEquipment);
                 break;
             } else {
                 if (DEBUG) Log.d(TAG, "no linked equipment for " + i + ", " + antDeviceIds.get(i));
@@ -110,27 +115,29 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         // for the rest of the devices, we do a set intersectionL
         for (; i < antDeviceIds.size(); i++) {
             List<String> tmpEquipment = getLinkedEquipmentFromDeviceId(antDeviceIds.get(i));
-            if (tmpEquipment.size() != 0) {
-                linkedEquipment.retainAll(new HashSet<String>(tmpEquipment));
+            if (!tmpEquipment.isEmpty()) {
+                linkedEquipment.retainAll(new HashSet<>(tmpEquipment));
                 if (DEBUG) Log.d(TAG, "did set intersection for " + i + ", " + antDeviceIds.get(i));
             } else {
                 if (DEBUG) Log.d(TAG, "no linked equipment for " + i + ", " + antDeviceIds.get(i));
             }
         }
 
-        return new ArrayList<String>(linkedEquipment);
+        return new ArrayList<>(linkedEquipment);
     }
 
-    public List<String> getEquipment(BSportType sportType) {
+    @NonNull
+    public List<String> getEquipment(@NonNull BSportType sportType) {
         return getEquipment(sportType, 0);
     }
 
 
-    public List<String> getEquipment(BSportType sportType, int frameType) {
+    @NonNull
+    public List<String> getEquipment(@NonNull BSportType sportType, int frameType) {
         if (DEBUG)
             Log.d(TAG, "getEquipment, sportType=" + sportType.name() + "frameType=" + frameType);
 
-        List<String> equipmentList = new LinkedList<String>();
+        List<String> equipmentList = new LinkedList<>();
 
         SQLiteDatabase db = this.getReadableDatabase();
         Cursor cursor;
@@ -167,20 +174,22 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         return equipmentList;
     }
 
+    @Nullable
     public String getLinkedEquipmentStringFromDeviceId(long deviceId) {
         String equipment = null;
         List<String> equipmentList = getLinkedEquipmentFromDeviceId(deviceId);
-        if (equipmentList.size() > 0) {
+        if (!equipmentList.isEmpty()) {
             equipment = equipmentList.toString().replace("[", "").replace("]", "");
         }
 
         return equipment;
     }
 
+    @NonNull
     public List<String> getLinkedEquipmentFromDeviceId(long deviceId) {
         if (DEBUG) Log.d(TAG, "getLinkedEquipmentFromDeviceId: " + deviceId);
 
-        List<String> equipmentList = new LinkedList<String>();
+        List<String> equipmentList = new LinkedList<>();
 
         SQLiteDatabase db = this.getReadableDatabase();
         Cursor linkCursor = db.query(LINKS,
@@ -222,7 +231,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     }
 
 
-    public void setEquipmentLinks(int antDeviceId, List<String> equipmentList) {
+    public void setEquipmentLinks(int antDeviceId, @NonNull List<String> equipmentList) {
         if (DEBUG) Log.d(TAG, "setEquipmentLinks: " + antDeviceId);
 
         // first of all, delete all existing links
@@ -246,8 +255,8 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         if (DEBUG) Log.d(TAG, "inserted");
     }
 
-    private int getEquipmentId(SQLiteDatabase db, String equipmentName) {
-        equipmentName.equals("");  // throw an exception when equipmentName is null
+    private int getEquipmentId(@NonNull SQLiteDatabase db, @NonNull String equipmentName) {
+        equipmentName.isEmpty();  // throw an exception when equipmentName is null
 
         int equipmentId = -1;
 
@@ -262,13 +271,14 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         return equipmentId;
     }
 
-    public int getEquipmentId(String equipmentName) {
+    public int getEquipmentId(@NonNull String equipmentName) {
         SQLiteDatabase db = this.getReadableDatabase();
         int equipmentId = getEquipmentId(db, equipmentName);
         db.close();
         return equipmentId;
     }
 
+    @Nullable
     public String getEquipmentFromId(int equipmentId) {
         String equipmentName = null;
 
@@ -287,6 +297,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         return equipmentName;
     }
 
+    @Nullable
     public String getStravaIdFromId(int equipmentId) {
         String stravaId = null;
 
@@ -306,7 +317,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     }
 
     @Override
-    public void onCreate(SQLiteDatabase db) {
+    public void onCreate(@NonNull SQLiteDatabase db) {
         db.execSQL(CREATE_EQUIPMENT_TABLE);
         db.execSQL(CREATE_LINKS_TABLE);
 
@@ -316,7 +327,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     }
 
     @Override
-    public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+    public void onUpgrade(@NonNull SQLiteDatabase db, int oldVersion, int newVersion) {
         // TODO: alter table instead of deleting!
 
         db.execSQL("drop table if exists " + EQUIPMENT);  // drops the old database

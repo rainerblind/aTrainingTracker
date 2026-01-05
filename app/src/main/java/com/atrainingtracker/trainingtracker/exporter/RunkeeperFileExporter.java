@@ -23,6 +23,8 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager;
@@ -43,20 +45,22 @@ public class RunkeeperFileExporter extends BaseFileExporter {
     private static final String TAG = "RunkeeperFileExporter";
     private static final boolean DEBUG = true;
     // DateFormats to convert from Db style dates to XML style dates
-    protected static SimpleDateFormat msdfFromDb = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
-    protected static SimpleDateFormat msdfToRK = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss", Locale.US);
+    protected static final SimpleDateFormat msdfFromDb = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
+    protected static final SimpleDateFormat msdfToRK = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss", Locale.US);
     // Sat, 1 Jan 2011 00:00:00
 
-    public RunkeeperFileExporter(Context context) {
+    public RunkeeperFileExporter(@NonNull Context context) {
         super(context);
     }
 
-    protected static String dbTime2RunkeeperTime(String dbTime) throws ParseException {
+    @NonNull
+    protected static String dbTime2RunkeeperTime(@NonNull String dbTime) throws ParseException {
         return msdfToRK.format(msdfFromDb.parse(dbTime));
     }
 
+    @NonNull
     @Override
-    protected ExportResult doExport(ExportInfo exportInfo) throws IOException, IllegalArgumentException, ParseException, JSONException {
+    protected ExportResult doExport(@NonNull ExportInfo exportInfo) throws IOException, IllegalArgumentException, ParseException, JSONException {
         if (DEBUG) Log.d(TAG, "exportToFile");
 
         final String FORMAT_qq = "  \"%s\":\"%s\",\n";
@@ -216,6 +220,7 @@ public class RunkeeperFileExporter extends BaseFileExporter {
         // }
     }
 
+    @NonNull
     @Override
     protected Action getAction() {
         return Action.EXPORT;

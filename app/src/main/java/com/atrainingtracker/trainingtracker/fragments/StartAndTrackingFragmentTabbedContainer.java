@@ -26,6 +26,8 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
@@ -82,11 +84,12 @@ public class StartAndTrackingFragmentTabbedContainer extends Fragment {
      * The {@link ViewPager} that will host the section contents.
      */
     ViewPager mViewPager;
+    @Nullable
     ActivityType mActivityType = null; // ActivityType.getDefaultActivityType();
     int mSelectedItemNr = CONTROL_ITEM;
-    LinkedList<Integer> mViewIdList = new LinkedList<>();
-    LinkedList<String> mTitleList = new LinkedList<>();
-    BroadcastReceiver mTrackingStartedReceiver = new BroadcastReceiver() {
+    final LinkedList<Integer> mViewIdList = new LinkedList<>();
+    final LinkedList<String> mTitleList = new LinkedList<>();
+    final BroadcastReceiver mTrackingStartedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
 
@@ -94,7 +97,7 @@ public class StartAndTrackingFragmentTabbedContainer extends Fragment {
             mViewPager.setCurrentItem(1);
         }
     };
-    BroadcastReceiver mTrackingFinishedReceiver = new BroadcastReceiver() {
+    final BroadcastReceiver mTrackingFinishedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
 
@@ -102,23 +105,23 @@ public class StartAndTrackingFragmentTabbedContainer extends Fragment {
             mViewPager.setCurrentItem(0);
         }
     };
-    BroadcastReceiver mLapSummaryReceiver = new BroadcastReceiver() {
+    final BroadcastReceiver mLapSummaryReceiver = new BroadcastReceiver() {
         @Override
-        public void onReceive(Context context, Intent intent) {
+        public void onReceive(Context context, @NonNull Intent intent) {
             showLapSummaryDialog(intent.getIntExtra(BANALService.PREV_LAP_NR, 0),
                     intent.getStringExtra(BANALService.PREV_LAP_TIME_STRING),
                     intent.getStringExtra(BANALService.PREV_LAP_DISTANCE_STRING),
                     intent.getStringExtra(BANALService.PREV_LAP_SPEED_STRING));
         }
     };
-    BroadcastReceiver mPauseChangedReceiver = new BroadcastReceiver() {
+    final BroadcastReceiver mPauseChangedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             // get a new title for the first fragment
             mSectionsPagerAdapter.notifyDataSetChanged(); // hope this makes the job
         }
     };
-    BroadcastReceiver mUpdateActivityTypeReceiver = new BroadcastReceiver() {
+    final BroadcastReceiver mUpdateActivityTypeReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             if (DEBUG) Log.i(TAG, "update activity type");
@@ -126,7 +129,8 @@ public class StartAndTrackingFragmentTabbedContainer extends Fragment {
         }
     };
 
-    public static StartAndTrackingFragmentTabbedContainer newInstance(ActivityType activityType, int selectedItem) {
+    @NonNull
+    public static StartAndTrackingFragmentTabbedContainer newInstance(@NonNull ActivityType activityType, int selectedItem) {
         if (DEBUG) Log.i(TAG, "newInstance");
 
         StartAndTrackingFragmentTabbedContainer startAndTrackingFragmentTabbedContainer = new StartAndTrackingFragmentTabbedContainer();
@@ -140,7 +144,7 @@ public class StartAndTrackingFragmentTabbedContainer extends Fragment {
     }
 
     @Override
-    public void onCreate(Bundle savedInstanceState) {
+    public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         if (DEBUG) Log.i(TAG, "onCreate()");
 
@@ -157,7 +161,7 @@ public class StartAndTrackingFragmentTabbedContainer extends Fragment {
     }
 
     @Override
-    public void onAttach(Context context) {
+    public void onAttach(@NonNull Context context) {
         super.onAttach(context);
         if (DEBUG) Log.i(TAG, "onAttach");
 
@@ -193,7 +197,7 @@ public class StartAndTrackingFragmentTabbedContainer extends Fragment {
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         if (DEBUG) Log.i(TAG, "onCreateView()");
 
         View v = inflater.inflate(R.layout.tabbed_tracking_fragment, container, false);
@@ -208,7 +212,7 @@ public class StartAndTrackingFragmentTabbedContainer extends Fragment {
     }
 
     @Override
-    public void onActivityCreated(Bundle savedInstanceState) {
+    public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
 
         if (DEBUG) Log.i(TAG, "onActivityCreated, savedInstanceState=" + savedInstanceState);
@@ -272,7 +276,7 @@ public class StartAndTrackingFragmentTabbedContainer extends Fragment {
     }
 
     @Override
-    public void onSaveInstanceState(Bundle outState) {
+    public void onSaveInstanceState(@NonNull Bundle outState) {
         mSelectedItemNr = mViewPager.getCurrentItem();
         outState.putInt(SELECTED_ITEM, mSelectedItemNr);
         if (DEBUG)
@@ -354,10 +358,11 @@ public class StartAndTrackingFragmentTabbedContainer extends Fragment {
      */
     public class SectionsPagerAdapter extends FragmentPagerAdapter {
 
-        public SectionsPagerAdapter(FragmentManager fm) {
+        public SectionsPagerAdapter(@NonNull FragmentManager fm) {
             super(fm, BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT);
         }
 
+        @NonNull
         @Override
         public Fragment getItem(int position) {
             // getItem is called to instantiate the fragment for the given page.
@@ -374,6 +379,7 @@ public class StartAndTrackingFragmentTabbedContainer extends Fragment {
 
         @Override
         public int getCount() {
+            //noinspection UnnecessaryLocalVariable
             int count = mViewIdList.size() + 1;
 
             // if (DEBUG) Log.i(TAG, "SectionsPagerAdapter.getCount(): returning " + count);

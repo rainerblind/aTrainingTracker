@@ -22,6 +22,7 @@ import android.Manifest;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 
 import android.annotation.SuppressLint;
@@ -120,7 +121,6 @@ import com.atrainingtracker.trainingtracker.interfaces.ReallyDeleteDialogInterfa
 import com.atrainingtracker.trainingtracker.interfaces.RemoteDevicesSettingsInterface;
 import com.atrainingtracker.trainingtracker.interfaces.ShowWorkoutDetailsInterface;
 import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface;
-import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaGetAccessTokenActivity;
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager;
 import com.atrainingtracker.trainingtracker.segments.StarredSegmentsListFragment;
 import com.dropbox.core.android.Auth;
@@ -169,13 +169,15 @@ public class MainActivityWithNavigation
     protected DrawerLayout mDrawerLayout;
     protected NavigationView mNavigationView;
     protected MenuItem mPreviousMenuItem;
+    @Nullable
     protected Fragment mFragment;
     protected Handler mHandler;  // necessary to wait some time before we disconnect from the BANALService when the app is paused.
     protected boolean mStartAndNotResume = true;        // start a new workout or continue with the previous one
+    @Nullable
     protected BANALService.BANALServiceComm mBanalServiceComm = null;
-    LinkedList<ConnectionStatusListener> mConnectionStatusListeners = new LinkedList<>();
+    final LinkedList<ConnectionStatusListener> mConnectionStatusListeners = new LinkedList<>();
     /* Broadcast Receiver to adapt the title based on the tracking state */
-    BroadcastReceiver mStartTrackingReceiver = new BroadcastReceiver() {
+    final BroadcastReceiver mStartTrackingReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             setTitle(R.string.Tracking);
@@ -185,14 +187,14 @@ public class MainActivityWithNavigation
 
     // protected ActivityType mActivityType = ActivityType.GENERIC;  // no longer necessary since we have the getActivity() method
     // protected long mWorkoutID = -1;
-    BroadcastReceiver mPauseTrackingReceiver = new BroadcastReceiver() {
+    final BroadcastReceiver mPauseTrackingReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             setTitle(R.string.Paused);
             mNavigationView.getMenu().findItem(R.id.drawer_start_tracking).setTitle(R.string.Pause);
         }
     };
-    BroadcastReceiver mStopTrackingReceiver = new BroadcastReceiver() {
+    final BroadcastReceiver mStopTrackingReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             setTitle(R.string.app_name);
@@ -232,7 +234,7 @@ public class MainActivityWithNavigation
             }
         }
     };
-    protected Runnable mDisconnectFromBANALServiceRunnable = new Runnable() {
+    protected final Runnable mDisconnectFromBANALServiceRunnable = new Runnable() {
         @Override
         public void run() {
             disconnectFromBANALService();
@@ -240,7 +242,7 @@ public class MainActivityWithNavigation
     };
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         if (DEBUG) Log.d(TAG, "onCreate");
 
@@ -363,6 +365,7 @@ public class MainActivityWithNavigation
         );
     }
 
+    @NonNull
     private List<String> getPermissions() {
         List<String> requiredPerms = new ArrayList<>();
         requiredPerms.add(Manifest.permission.ACCESS_FINE_LOCATION);
@@ -467,13 +470,10 @@ public class MainActivityWithNavigation
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         }
 
-
         // register the receivers
         ContextCompat.registerReceiver(this, mStartTrackingReceiver, mStartTrackingFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mPauseTrackingReceiver, new IntentFilter(TrainingApplication.REQUEST_PAUSE_TRACKING), ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mStopTrackingReceiver, new IntentFilter(TrainingApplication.REQUEST_STOP_TRACKING), ContextCompat.RECEIVER_NOT_EXPORTED);
-
-        upgradeDropboxV2();
     }
 
     // method to verify the preferences
@@ -504,37 +504,6 @@ public class MainActivityWithNavigation
             TrainingApplication.setUploadToTrainingPeaks(false);
         }
 
-    }
-
-    protected void upgradeDropboxV2() {
-        if (TrainingApplication.uploadToDropbox() && !TrainingApplication.hasDropboxToken()) {
-
-            String accessToken = Auth.getOAuth2Token();
-            if (accessToken != null) {
-                TrainingApplication.storeDropboxToken(accessToken);
-            } else {
-                if (mAlreadyTriedToRequestDropboxToken) {
-                    TrainingApplication.deleteDropboxToken();
-                } else {
-                    new AlertDialog.Builder(this)
-                            .setTitle(R.string.title_request_dropbox_token)
-                            .setIcon(R.drawable.dropbox_logo_blue)
-                            .setMessage(R.string.message_request_dropbox_token)
-                            .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
-                                public void onClick(DialogInterface dialog, int which) {
-                                    mAlreadyTriedToRequestDropboxToken = true;
-                                    Auth.startOAuth2Authentication(MainActivityWithNavigation.this, TrainingApplication.getDropboxAppKey());
-                                }
-                            })
-                            .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
-                                public void onClick(DialogInterface dialog, int which) {
-                                    TrainingApplication.deleteDropboxToken();
-                                }
-                            })
-                            .show();
-                }
-            }
-        }
     }
 
     @Override
@@ -575,7 +544,7 @@ public class MainActivityWithNavigation
     }
 
     @Override
-    public void onSaveInstanceState(Bundle savedInstanceState) {
+    public void onSaveInstanceState(@NonNull Bundle savedInstanceState) {
         if (DEBUG) Log.i(TAG, "onSaveInstanceState");
 
         //Save the fragment's instance
@@ -619,7 +588,7 @@ public class MainActivityWithNavigation
     }
 
     @Override
-    public boolean onNavigationItemSelected(MenuItem menuItem) {
+    public boolean onNavigationItemSelected(@Nullable MenuItem menuItem) {
         if (DEBUG) Log.i(TAG, "onNavigationItemSelected");
 
         if (menuItem == null) {
@@ -733,7 +702,7 @@ public class MainActivityWithNavigation
 
     /* Called when an options item is clicked */
     @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         if (DEBUG) Log.i(TAG, "onOptionsItemSelected");
 
         // Log.d(TAG, "onOptionsItemSelected");
@@ -783,7 +752,7 @@ public class MainActivityWithNavigation
     }
 
     @Override
-    public void startPairing(Protocol protocol) {
+    public void startPairing(@NonNull Protocol protocol) {
         if (DEBUG) Log.d(TAG, "startPairingActivity: " + protocol);
         switch (protocol) {
             case ANT_PLUS:
@@ -815,7 +784,7 @@ public class MainActivityWithNavigation
 
     protected void checkBatteryStatus() {
         final List<DevicesDatabaseManager.NameAndBatteryPercentage> criticalBatteryDevices = DevicesDatabaseManager.getCriticalBatteryDevices(CRITICAL_BATTERY_LEVEL);
-        if (criticalBatteryDevices.size() > 0) {
+        if (!criticalBatteryDevices.isEmpty()) {
 
             final List<String> stringList = new LinkedList<>();
             for (DevicesDatabaseManager.NameAndBatteryPercentage device : criticalBatteryDevices) {
@@ -837,7 +806,7 @@ public class MainActivityWithNavigation
     }
 
     @Override
-    public void startSegmentDetailsActivity(int segmentId, SegmentDetailsActivity.SelectedFragment selectedFragment) {
+    public void startSegmentDetailsActivity(int segmentId, @NonNull SegmentDetailsActivity.SelectedFragment selectedFragment) {
         if (DEBUG) Log.i(TAG, "startSegmentDetailsActivity: segmentId=" + segmentId);
 
         Bundle bundle = new Bundle();
@@ -849,7 +818,7 @@ public class MainActivityWithNavigation
     }
 
     @Override
-    public void exportWorkout(long id, FileFormat fileFormat) {
+    public void exportWorkout(long id, @NonNull FileFormat fileFormat) {
         if (DEBUG) Log.i(TAG, "exportWorkout");
 
         ExportManager exportManager = new ExportManager(this, TAG);
@@ -888,7 +857,7 @@ public class MainActivityWithNavigation
     }
 
     @Override
-    public void onDeviceTypeSelected(DeviceType deviceType, Protocol protocol) {
+    public void onDeviceTypeSelected(@NonNull DeviceType deviceType, @NonNull Protocol protocol) {
         if (DEBUG)
             Log.i(TAG, "onDeviceTypeSelected(" + deviceType.name() + "), mProtocol=" + protocol);
 
@@ -911,54 +880,47 @@ public class MainActivityWithNavigation
 
     // stolen from http://stackoverflow.com/questions/32487206/inner-preferencescreen-not-opens-with-preferencefragmentcompat
     @Override
-    public boolean onPreferenceStartScreen(PreferenceFragmentCompat preferenceFragmentCompat, PreferenceScreen preferenceScreen) {
+    public boolean onPreferenceStartScreen(PreferenceFragmentCompat preferenceFragmentCompat, @NonNull PreferenceScreen preferenceScreen) {
         if (DEBUG) Log.i(TAG, "onPreferenceStartScreen: " + preferenceScreen.getKey());
         String key = preferenceScreen.getKey();
         PreferenceFragmentCompat fragment = null;
-        if (key.equals("root")) {
-            fragment = new RootPrefsFragment();
-        } else if (key.equals("display")) {
-            fragment = new DisplayFragment();
-        }
-        // else if (key.equals("smoothing")) {
-        //     fragment = new SmoothingFragment();
-        // }
-        else if (key.equals("search_settings")) {
-            fragment = new SearchFragment();
-        } else if (key.equals(TrainingApplication.PREF_KEY_START_SEARCH)) {
-            fragment = new StartSearchFragment();
-        } else if (key.equals("fileExport")) {
-            fragment = new FileExportFragment();
-        } else if (key.equals("cloudUpload")) {
-            fragment = new CloudUploadFragment();
-        } else if (key.equals(TrainingApplication.PREFERENCE_SCREEN_EMAIL_UPLOAD)) {
-            fragment = new EmailUploadFragment();
-        } else if (key.equals(TrainingApplication.PREFERENCE_SCREEN_STRAVA)) {
-            fragment = new StravaUploadFragment();
-        } else if (key.equals(TrainingApplication.PREFERENCE_SCREEN_RUNKEEPER)) {
-            fragment = new RunkeeperUploadFragment();
-        } else if (key.equals(TrainingApplication.PREFERENCE_SCREEN_TRAINING_PEAKS)) {
-            fragment = new TrainingpeaksUploadFragment();
-        } else if (key.equals("pebbleScreen")) {
-            fragment = new PebbleScreenFragment();
-        } else if (key.equals("prefsLocationSources")) {
-            fragment = new LocationSourcesFragment();
-        } else if (key.equals("altitudeCorrection")) {
-            fragment = new AltitudeCorrectionFragment();
-        } else if (key.equals("sportTypes")) {
-            FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
-            ft.replace(R.id.content, new SportTypeListFragment(), preferenceScreen.getKey());
-            ft.addToBackStack(preferenceScreen.getKey());
-            ft.commit();
-            return true;
-        } else if (key.equals("fancyWorkoutNames")) {
-            FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
-            ft.replace(R.id.content, new FancyWorkoutNameListFragment(), preferenceScreen.getKey());
-            ft.addToBackStack(preferenceScreen.getKey());
-            ft.commit();
-            return true;
-        } else {
-            Log.d(TAG, "WTF: unknown key");
+        switch (key) {
+            case "root" -> fragment = new RootPrefsFragment();
+            case "display" -> fragment = new DisplayFragment();
+
+            // else if (key.equals("smoothing")) {
+            //     fragment = new SmoothingFragment();
+            // }
+            case "search_settings" -> fragment = new SearchFragment();
+            case TrainingApplication.PREF_KEY_START_SEARCH -> fragment = new StartSearchFragment();
+            case "fileExport" -> fragment = new FileExportFragment();
+            case "cloudUpload" -> fragment = new CloudUploadFragment();
+            case TrainingApplication.PREFERENCE_SCREEN_EMAIL_UPLOAD ->
+                    fragment = new EmailUploadFragment();
+            case TrainingApplication.PREFERENCE_SCREEN_STRAVA ->
+                    fragment = new StravaUploadFragment();
+            case TrainingApplication.PREFERENCE_SCREEN_RUNKEEPER ->
+                    fragment = new RunkeeperUploadFragment();
+            case TrainingApplication.PREFERENCE_SCREEN_TRAINING_PEAKS ->
+                    fragment = new TrainingpeaksUploadFragment();
+            case "pebbleScreen" -> fragment = new PebbleScreenFragment();
+            case "prefsLocationSources" -> fragment = new LocationSourcesFragment();
+            case "altitudeCorrection" -> fragment = new AltitudeCorrectionFragment();
+            case "sportTypes" -> {
+                FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
+                ft.replace(R.id.content, new SportTypeListFragment(), preferenceScreen.getKey());
+                ft.addToBackStack(preferenceScreen.getKey());
+                ft.commit();
+                return true;
+            }
+            case "fancyWorkoutNames" -> {
+                FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
+                ft.replace(R.id.content, new FancyWorkoutNameListFragment(), preferenceScreen.getKey());
+                ft.addToBackStack(preferenceScreen.getKey());
+                ft.commit();
+                return true;
+            }
+            default -> Log.d(TAG, "WTF: unknown key");
         }
 
 
@@ -982,6 +944,7 @@ public class MainActivityWithNavigation
         mConnectionStatusListeners.add(connectionStatusListener);
     }
 
+    @Nullable
     @Override
     public BANALService.BANALServiceComm getBanalServiceComm() {
         return mBanalServiceComm;

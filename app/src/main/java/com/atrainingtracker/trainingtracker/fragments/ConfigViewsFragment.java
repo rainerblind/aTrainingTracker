@@ -18,6 +18,8 @@
 
 package com.atrainingtracker.trainingtracker.fragments;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -57,13 +59,14 @@ public abstract class ConfigViewsFragment extends Fragment {
     private static final boolean DEBUG = TrainingApplication.getDebug(true);
     private static final String CURRENT_ITEM = "CURRENT_ITEM";
     private final IntentFilter mNameChangedFilter = new IntentFilter(ConfigViewsActivity.NAME_CHANGED_INTENT);
+    @NonNull
     protected ActivityType mActivityType = ActivityType.getDefaultActivityType();
     protected long mViewId = -1;
     protected int mCurrentItem = -1;
     protected LinkedList<Long> mViewIdList = new LinkedList<>();
     protected LinkedList<String> mTitleList = new LinkedList<>();
-    protected HashMap<Long, Integer> mViewId2Position = new HashMap<>();
-    protected HashMap<Integer, Long> mPosition2ViewId = new HashMap<>();
+    protected final HashMap<Long, Integer> mViewId2Position = new HashMap<>();
+    protected final HashMap<Integer, Long> mPosition2ViewId = new HashMap<>();
     /**
      * The {@link PagerAdapter} that will provide
      * fragments for each of the sections. We use a
@@ -80,9 +83,9 @@ public abstract class ConfigViewsFragment extends Fragment {
      */
     ViewPager mViewPager;
     Button mDeleteButton;
-    BroadcastReceiver mNameChangedReceiver = new BroadcastReceiver() {
+    final BroadcastReceiver mNameChangedReceiver = new BroadcastReceiver() {
         @Override
-        public void onReceive(Context context, Intent intent) {
+        public void onReceive(Context context, @NonNull Intent intent) {
 
             long viewId = intent.getLongExtra(ConfigViewsActivity.VIEW_ID, -1);
             String name = intent.getStringExtra(ConfigViewsActivity.NAME);
@@ -99,6 +102,7 @@ public abstract class ConfigViewsFragment extends Fragment {
             }
         }
     };
+    @Nullable
     private ViewSetChangedListener mViewSetChangedListener = null;
 
     protected abstract void ensureEntryForActivityTypeExists();
@@ -131,7 +135,7 @@ public abstract class ConfigViewsFragment extends Fragment {
 //	}
 
     @Override
-    public void onAttach(Context context) {
+    public void onAttach(@NonNull Context context) {
         super.onAttach(context);
         if (DEBUG) Log.i(TAG, "onAttach()");
 
@@ -143,7 +147,7 @@ public abstract class ConfigViewsFragment extends Fragment {
     }
 
     @Override
-    public void onCreate(Bundle savedInstanceState) {
+    public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         mActivityType = ActivityType.valueOf(getArguments().getString(ConfigViewsActivity.ACTIVITY_TYPE));
@@ -164,7 +168,7 @@ public abstract class ConfigViewsFragment extends Fragment {
 //    }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         if (DEBUG) Log.i(TAG, "onCreateView()");
 
         View v = inflater.inflate(R.layout.tabbed_config_views, container, false);
@@ -231,7 +235,7 @@ public abstract class ConfigViewsFragment extends Fragment {
         if (mCurrentItem >= 0) {
             if (DEBUG) Log.i(TAG, "setCurrentItem based on mCurrentItem=" + mCurrentItem);
             mViewPager.setCurrentItem(mCurrentItem);
-        } else if (mViewId >= 0 && mViewId2Position != null && mViewId2Position.get(mViewId) != null) {
+        } else if (mViewId >= 0 && mViewId2Position.get(mViewId) != null) {
             if (DEBUG)
                 Log.i(TAG, "setCurrentItem based on mViewId2Position and mViewId=" + mViewId);
             mViewPager.setCurrentItem(mViewId2Position.get(mViewId));
@@ -254,7 +258,7 @@ public abstract class ConfigViewsFragment extends Fragment {
     }
 
     @Override
-    public void onSaveInstanceState(Bundle outState) {
+    public void onSaveInstanceState(@NonNull Bundle outState) {
         if (mViewPager != null) {
             outState.putInt(CURRENT_ITEM, mViewPager.getCurrentItem());
         }
@@ -292,7 +296,7 @@ public abstract class ConfigViewsFragment extends Fragment {
                 .setMessage(getString(R.string.really_delete_view_format, mTitleList.get(mViewPager.getCurrentItem())))
                 .setIcon(android.R.drawable.ic_menu_delete)
                 .setPositiveButton(R.string.delete_view, new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int whichButton) {
+                    public void onClick(@NonNull DialogInterface dialog, int whichButton) {
                         int position = mViewPager.getCurrentItem();
                         long viewId = mPosition2ViewId.get(position);
                         if (DEBUG) Log.i(TAG, "delete position=" + position);
@@ -314,7 +318,7 @@ public abstract class ConfigViewsFragment extends Fragment {
                     }
                 })
                 .setNegativeButton(R.string.Cancel, new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int which) {
+                    public void onClick(@NonNull DialogInterface dialog, int which) {
                         dialog.dismiss();
                     }
                 });
@@ -348,7 +352,7 @@ public abstract class ConfigViewsFragment extends Fragment {
      */
     public class SectionsPagerAdapter extends FragmentPagerAdapter {
 
-        public SectionsPagerAdapter(FragmentManager fm) {
+        public SectionsPagerAdapter(@NonNull FragmentManager fm) {
             super(fm);
         }
 
@@ -376,6 +380,7 @@ public abstract class ConfigViewsFragment extends Fragment {
             }
         }
 
+        @NonNull
         @Override
         public Fragment getItem(int position) {
             // getItem is called to instantiate the fragment for the given page.

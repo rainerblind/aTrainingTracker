@@ -21,6 +21,9 @@ package com.atrainingtracker.trainingtracker.onlinecommunities.trainingpeaks;
 import android.net.Uri;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.atrainingtracker.BuildConfig;
 import com.atrainingtracker.R;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
@@ -53,10 +56,12 @@ public class TrainingpeaksGetAccessTokenActivity
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private static final String TRAININGPEAKS_AUTHORITY = "oauth.trainingpeaks.com";
 
+    @NonNull
     protected String getRedirectUri() {
         return "TODO";
     }
 
+    @NonNull
     @Override
     protected String getAuthorizationUrl() {
         Uri.Builder builder = new Uri.Builder();
@@ -73,6 +78,7 @@ public class TrainingpeaksGetAccessTokenActivity
     }
 
 
+    @NonNull
     protected String getAccessUrl(String code) {
         Uri.Builder builder = new Uri.Builder();
         builder.scheme(HTTPS)
@@ -83,6 +89,7 @@ public class TrainingpeaksGetAccessTokenActivity
     }
 
 
+    @Nullable
     protected UrlEncodedFormEntity getAccessUrlEncodedFormEntity(String code) {
         List<NameValuePair> nameValuePairs = new ArrayList<>();
         nameValuePairs.add(new BasicNameValuePair(GRANT_TYPE, AUTHORIZATION_CODE));
@@ -99,6 +106,7 @@ public class TrainingpeaksGetAccessTokenActivity
         return null;
     }
 
+    @NonNull
     protected String getRefreshUrl() {
         Uri.Builder builder = new Uri.Builder();
         builder.scheme(HTTPS)
@@ -108,6 +116,7 @@ public class TrainingpeaksGetAccessTokenActivity
         return builder.build().toString();
     }
 
+    @Nullable
     protected UrlEncodedFormEntity getRefreshUrlEncodedFormEntity() {
         List<NameValuePair> nameValuePairs = new ArrayList<>();
         nameValuePairs.add(new BasicNameValuePair(CLIENT_ID, MY_CLIENT_ID));
@@ -123,6 +132,7 @@ public class TrainingpeaksGetAccessTokenActivity
     }
 
 
+    @NonNull
     protected String getAcceptApplicationUrl() {
         Uri.Builder builder = new Uri.Builder();
         builder.scheme(HTTPS)
@@ -133,12 +143,13 @@ public class TrainingpeaksGetAccessTokenActivity
     }
 
 
+    @NonNull
     protected String getName() {
         return getString(R.string.TrainingPeaks);
     }
 
 
-    protected void onJsonResponse(JSONObject jsonObject) {
+    protected void onJsonResponse(@NonNull JSONObject jsonObject) {
         try {
             if (jsonObject.has(REFRESH_TOKEN)) {
                 if (DEBUG) Log.i(TAG, "FTW: we have the refresh token!");
@@ -149,6 +160,7 @@ public class TrainingpeaksGetAccessTokenActivity
         }
     }
 
+    @Nullable
     public String getRefreshedAccessToken() {
         if (DEBUG) Log.i(TAG, "getRefreshedAccessToken()");
 

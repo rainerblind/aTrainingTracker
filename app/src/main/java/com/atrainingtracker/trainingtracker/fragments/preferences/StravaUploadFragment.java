@@ -18,7 +18,6 @@
 
 package com.atrainingtracker.trainingtracker.fragments.preferences;
 
-import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -26,8 +25,9 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-import androidx.preference.CheckBoxPreference;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceManager;
 import android.util.Log;
@@ -36,10 +36,8 @@ import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
-import com.atrainingtracker.trainingtracker.onlinecommunities.BaseGetAccessTokenActivity;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaDeauthorizationThread;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSynchronizeThread;
-import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaGetAccessTokenActivity;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaOAuthCallbackActivity;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaSegmentsHelper;
@@ -52,7 +50,7 @@ public class StravaUploadFragment extends androidx.preference.PreferenceFragment
     public static final int GET_STRAVA_ACCESS_TOKEN = 3;
     private static final boolean DEBUG = TrainingApplication.getDebug(true);
     private static final String TAG = StravaUploadFragment.class.getName();
-    private CheckBoxPreference mStravaUpload;
+    @Nullable
     private Preference mUpdateStravaEquipment;
 
     private SharedPreferences mSharedPreferences;
@@ -61,11 +59,12 @@ public class StravaUploadFragment extends androidx.preference.PreferenceFragment
         REQUESTING,
         GOT
     }
+    @Nullable
     private RequestTokenState requestTokenState = null;
 
     private final BroadcastReceiver tokenReceiver = new BroadcastReceiver() {
         @Override
-        public void onReceive(Context context, Intent intent) {
+        public void onReceive(Context context, @NonNull Intent intent) {
             String token = intent.getStringExtra("access_token");
             handleToken(token);
         }
@@ -78,7 +77,6 @@ public class StravaUploadFragment extends androidx.preference.PreferenceFragment
 
         setPreferencesFromResource(R.xml.prefs, rootKey);
 
-        mStravaUpload = this.getPreferenceScreen().findPreference(TrainingApplication.SP_UPLOAD_TO_STRAVA);
         mUpdateStravaEquipment = this.getPreferenceScreen().findPreference(TrainingApplication.UPDATE_STRAVA_EQUIPMENT);
 
         LocalBroadcastManager.getInstance(getActivity()).registerReceiver(tokenReceiver, new IntentFilter(StravaOAuthCallbackActivity.StravaOAuthSuccess));
@@ -142,7 +140,7 @@ public class StravaUploadFragment extends androidx.preference.PreferenceFragment
     }
 
 
-    protected void handleToken(String token) {
+    protected void handleToken(@Nullable String token) {
         if (token != null) {
             requestTokenState = RequestTokenState.GOT;
 

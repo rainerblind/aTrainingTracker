@@ -26,6 +26,9 @@ import android.location.Location;
 import android.provider.BaseColumns;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
@@ -48,6 +51,7 @@ public class WorkoutSamplesDatabaseManager {
         }
     }
 
+    @NonNull
     public static synchronized WorkoutSamplesDatabaseManager getInstance() {
         if (cInstance == null) {
             throw new IllegalStateException(WorkoutSamplesDatabaseManager.class.getSimpleName() +
@@ -60,7 +64,8 @@ public class WorkoutSamplesDatabaseManager {
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // some high level helper methods
     ////////////////////////////////////////////////////////////////////////////////////////////////
-    public static Double calcExtremaValue(String baseFileName, ExtremaType extremaType, SensorType sensorType) {
+    @Nullable
+    public static Double calcExtremaValue(String baseFileName, @NonNull ExtremaType extremaType, @NonNull SensorType sensorType) {
         if (DEBUG)
             Log.i(TAG, "calcExtremaValue(" + baseFileName + ", " + extremaType.name() + ", " + sensorType.name() + ")");
 
@@ -167,7 +172,7 @@ public class WorkoutSamplesDatabaseManager {
     }
 
     // since this method goes through all? samples, this might take long.
-    public static double calcAverageAroundLocation(LatLng center, double radius, SensorType sensorType) {
+    public static double calcAverageAroundLocation(@NonNull LatLng center, double radius, @NonNull SensorType sensorType) {
         // based on http://stackoverflow.com/questions/3695224/sqlite-getting-nearest-locations-with-latitude-and-longitude
 
         Location centerLocation = new Location("center");
@@ -256,7 +261,8 @@ public class WorkoutSamplesDatabaseManager {
      * @param bearing Bearing in degrees
      * @return End-point from the source given the desired range and bearing.
      */
-    public static LatLng calculateDerivedPosition(LatLng point,
+    @NonNull
+    public static LatLng calculateDerivedPosition(@NonNull LatLng point,
                                                   double range, double bearing) {
         double EarthRadius = 6371000; // m
 
@@ -280,12 +286,11 @@ public class WorkoutSamplesDatabaseManager {
         lat = Math.toDegrees(lat);
         lon = Math.toDegrees(lon);
 
-        LatLng newPoint = new LatLng(lat, lon);
-
-        return newPoint;
+        return new LatLng(lat, lon);
     }
 
-    public static LatLngValue getExtremaPosition(long workoutId, SensorType sensorType, ExtremaType extremaType) {
+    @Nullable
+    public static LatLngValue getExtremaPosition(long workoutId, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType) {
         if (DEBUG)
             Log.i(TAG, "getExtremaPosition for " + extremaType.name() + " " + sensorType.name());
 
@@ -367,7 +372,7 @@ public class WorkoutSamplesDatabaseManager {
         return result;
     }
 
-    public static void createNewTable(String workoutName, List<SensorType> sensorTypes) {
+    public static void createNewTable(String workoutName, @NonNull List<SensorType> sensorTypes) {
         if (DEBUG) Log.d(TAG, "createNewTable: " + WorkoutSamplesDbHelper.DB_NAME);
 
         SQLiteDatabase db = getInstance().getOpenDatabase();
@@ -384,16 +389,14 @@ public class WorkoutSamplesDatabaseManager {
         getInstance().closeDatabase(); // db.close();
     }
 
-    public static boolean deleteWorkout(String baseFileName) {
+    public static void deleteWorkout(String baseFileName) {
         SQLiteDatabase db = getInstance().getOpenDatabase();// getWritableDatabase();
         db.execSQL("drop table if exists " + getTableName(baseFileName));
         getInstance().closeDatabase(); // db.close();
-
-        return true;
     }
 
     // stolen from http://stackoverflow.com/questions/4719594/checking-if-a-column-exists-in-an-application-database-in-android
-    private static boolean existsColumnInTable(SQLiteDatabase inDatabase, String inTable, String columnToCheck) {
+    private static boolean existsColumnInTable(@NonNull SQLiteDatabase inDatabase, String inTable, String columnToCheck) {
         Cursor mCursor = null;
         try {
             // Query 1 row
@@ -414,7 +417,7 @@ public class WorkoutSamplesDatabaseManager {
     /**
      * stolen from BaseExporter
      */
-    protected static boolean dataValid(Cursor cursor, String string) {
+    protected static boolean dataValid(@NonNull Cursor cursor, String string) {
         if (cursor.getColumnIndex(string) == -1) {
             if (DEBUG) Log.d(TAG, "dataValid: no such columnIndex!: " + string);
             return false;
@@ -426,30 +429,32 @@ public class WorkoutSamplesDatabaseManager {
         return true;
     }
 
+    @NonNull
     public static String getTableName(String workoutName) {
         return "\"" + workoutName + "\"";
     }
 
-    protected static String makeColumns(List<SensorType> sensorTypes) {
-        String result = WorkoutSamplesDbHelper.BASE_COLUMNS;
+    @NonNull
+    protected static String makeColumns(@NonNull List<SensorType> sensorTypes) {
+        StringBuilder result = new StringBuilder(WorkoutSamplesDbHelper.BASE_COLUMNS);
 
         for (SensorType sensorType : sensorTypes) {
             switch (sensorType.getSensorValueType()) {
                 case INTEGER:
-                    result += ", " + sensorType.name() + " int";
+                    result.append(", ").append(sensorType.name()).append(" int");
                     break;
                 case DOUBLE:
-                    result += ", " + sensorType.name() + " real";
+                    result.append(", ").append(sensorType.name()).append(" real");
                     break;
                 case STRING:
-                    result += ", " + sensorType.name() + " text";
+                    result.append(", ").append(sensorType.name()).append(" text");
                     break;
                 default:
                     if (DEBUG) Log.d(TAG, "WTF: this should never ever happen: unknown type");
             }
         }
 
-        return result;
+        return result.toString();
     }
 
 
@@ -476,8 +481,8 @@ public class WorkoutSamplesDatabaseManager {
     }
 
     public static class LatLngValue {
-        public LatLng latLng;
-        public Double value;
+        public final LatLng latLng;
+        public final Double value;
 
         public LatLngValue(LatLng latLng_, Double value_) {
             latLng = latLng_;
@@ -497,7 +502,7 @@ public class WorkoutSamplesDatabaseManager {
                 + TIME + " DATETIME DEFAULT CURRENT_TIMESTAMP";
         static final String TAG = "WorkoutSamplesDbHelper";
         static final boolean DEBUG = TrainingApplication.getDebug(true);
-        protected Context mContext;
+        protected final Context mContext;
 
         // Constructor
         public WorkoutSamplesDbHelper(Context context) {

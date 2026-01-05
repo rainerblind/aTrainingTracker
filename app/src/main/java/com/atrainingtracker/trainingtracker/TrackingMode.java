@@ -18,6 +18,8 @@
 
 package com.atrainingtracker.trainingtracker;
 
+import androidx.annotation.NonNull;
+
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BSportType;
 
@@ -49,17 +51,12 @@ public enum TrackingMode {
         return titleId;
     }
 
-    public int getSportId(BSportType sportType) {
-        switch (sportType) {
-            case RUN:
-                return runId;
-
-            case BIKE:
-                return bikeId;
-
-            default:
-                return otherId;
-        }
+    public int getSportId(@NonNull BSportType sportType) {
+        return switch (sportType) {
+            case RUN -> runId;
+            case BIKE -> bikeId;
+            default -> otherId;
+        };
     }
 
 }

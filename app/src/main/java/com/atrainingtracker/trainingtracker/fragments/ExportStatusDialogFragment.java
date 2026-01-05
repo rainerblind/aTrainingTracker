@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.fragments;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import android.app.Dialog;
 import android.os.Bundle;
@@ -53,6 +54,7 @@ public class ExportStatusDialogFragment extends DialogFragment {
 
     // TODO: listen to export_status_changed_intent
 
+    @NonNull
     public static ExportStatusDialogFragment newInstance(long workoutId) {
         ExportStatusDialogFragment exportDetailsFragment = new ExportStatusDialogFragment();
 
@@ -76,7 +78,7 @@ public class ExportStatusDialogFragment extends DialogFragment {
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         if (DEBUG) Log.d(TAG, "onCreateView");
 
         if (!getShowsDialog()) {
@@ -86,6 +88,7 @@ public class ExportStatusDialogFragment extends DialogFragment {
         }
     }
 
+    @NonNull
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         // super.onCreateDialog(savedInstanceState);
@@ -108,6 +111,7 @@ public class ExportStatusDialogFragment extends DialogFragment {
     }
 
 
+    @NonNull
     private View createView() {
         if (DEBUG) Log.i(TAG, "createView");
 

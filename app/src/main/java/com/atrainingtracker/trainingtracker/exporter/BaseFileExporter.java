@@ -24,6 +24,8 @@ import android.database.CursorIndexOutOfBoundsException;
 import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
@@ -41,11 +43,11 @@ public abstract class BaseFileExporter extends BaseExporter {
     boolean indoorTrainerSession, haveDistance, haveSpeed, havePower, haveHR, haveCadence, haveRunCadence, haveBikeCadence, haveTorque, haveAltitude, haveGeo;
     long workoutID, sportTypeId;
 
-    public BaseFileExporter(Context context) {
+    public BaseFileExporter(@NonNull Context context) {
         super(context);
     }
 
-    protected void getHeaderData(ExportInfo exportInfo) {
+    protected void getHeaderData(@NonNull ExportInfo exportInfo) {
         WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance();
         SQLiteDatabase db = databaseManager.getOpenDatabase();
 
@@ -112,12 +114,13 @@ public abstract class BaseFileExporter extends BaseExporter {
         haveRunCadence = haveCadence & bSportType == BSportType.RUN;
     }
 
-    protected BufferedWriter getBufferedWriter(ExportInfo exportInfo) throws IOException {
+    @NonNull
+    protected BufferedWriter getBufferedWriter(@NonNull ExportInfo exportInfo) throws IOException {
         // set mime type to guess storage
         return getWriter(mContext, exportInfo.getShortPath(), "application/gpx+xml");
     }
 
-    protected String myGet(Cursor cursor, String name, String defaultValue) {
+    protected String myGet(@NonNull Cursor cursor, String name, String defaultValue) {
         String defVal = defaultValue;
         try {
             defVal = cursor.getString(cursor.getColumnIndexOrThrow(name));

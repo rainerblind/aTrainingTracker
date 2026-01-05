@@ -18,12 +18,14 @@
 
 package com.atrainingtracker.trainingtracker.exporter;
 
+import androidx.annotation.NonNull;
+
 import java.io.File;
 
 public class ExportInfo {
-    protected String mFileBaseName;
-    protected FileFormat mFileFormat;
-    protected ExportType mExportType;
+    protected final String mFileBaseName;
+    protected final FileFormat mFileFormat;
+    protected final ExportType mExportType;
 
     public ExportInfo(String fileBaseName, FileFormat fileFormat, ExportType exportType) {
         mFileBaseName = fileBaseName;
@@ -35,10 +37,12 @@ public class ExportInfo {
         return mFileBaseName;
     }
 
+    @NonNull
     public String getShortPath() {
         return mFileFormat.getDirName() + File.separator + getFileName();
     }
 
+    @NonNull
     public String getFileName() {
         return mFileBaseName + mFileFormat.getFileEnding();
     }
@@ -51,6 +55,7 @@ public class ExportInfo {
         return mExportType;
     }
 
+    @NonNull
     public String toString() {
         return mExportType.name() + ": " + mFileFormat.name() + ": " + mFileBaseName;
     }

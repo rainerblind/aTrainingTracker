@@ -23,6 +23,7 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 
 import com.atrainingtracker.trainingtracker.TrainingApplication;
@@ -40,9 +41,8 @@ public class SimpleSegmentOnMapFragment
 
     protected long mSegmentID = -1;
 
-    private boolean mSegmentOnMapLoaded = false;
 
-
+    @NonNull
     public static SimpleSegmentOnMapFragment newInstance(long segmentId) {
         SimpleSegmentOnMapFragment simpleSegmentOnMapFragment = new SimpleSegmentOnMapFragment();
 
@@ -74,7 +74,6 @@ public class SimpleSegmentOnMapFragment
         super.onPause();
         if (DEBUG) Log.i(TAG, "onPause()");
 
-        mSegmentOnMapLoaded = false;
     }
 
 

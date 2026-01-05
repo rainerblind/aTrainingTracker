@@ -18,11 +18,12 @@
 
 package com.atrainingtracker.trainingtracker.exporter;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
+
+import androidx.annotation.NonNull;
 
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
@@ -43,19 +44,21 @@ public class GCFileExporter extends BaseFileExporter {
     private static final String TAG = "GCFileExporter";
     private static final boolean DEBUG = false;
     // DateFormats to convert from Db style dates to Strava style dates
-    protected static SimpleDateFormat msdfFromDb = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
-    protected static SimpleDateFormat msdfToGC = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss", Locale.US);
+    protected static final SimpleDateFormat msdfFromDb = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
+    protected static final SimpleDateFormat msdfToGC = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss", Locale.US);
 
-    public GCFileExporter(Context context) {
+    public GCFileExporter(@NonNull Context context) {
         super(context);
     }
 
-    protected static String dbTime2GCTime(String dbTime) throws ParseException {
+    @NonNull
+    protected static String dbTime2GCTime(@NonNull String dbTime) throws ParseException {
         return msdfToGC.format(msdfFromDb.parse(dbTime));
     }
 
+    @NonNull
     @Override
-    protected ExportResult doExport(ExportInfo exportInfo)
+    protected ExportResult doExport(@NonNull ExportInfo exportInfo)
             throws IOException, IllegalArgumentException, JSONException, ParseException {
         if (DEBUG) Log.d(TAG, "exportWorkoutToFile");
 
@@ -216,6 +219,7 @@ public class GCFileExporter extends BaseFileExporter {
 
     }
 
+    @NonNull
     @Override
     protected Action getAction() {
         return Action.EXPORT;

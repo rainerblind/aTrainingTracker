@@ -25,6 +25,8 @@ import android.os.Bundle;
 import android.util.Log;
 import android.widget.ImageView;
 
+import androidx.annotation.NonNull;
+
 import com.atrainingtracker.R;
 import com.atrainingtracker.trainingtracker.onlinecommunities.BaseGetAccessTokenActivity;
 
@@ -51,7 +53,7 @@ public class RunkeeperTestActivity extends Activity {
     }
 
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+    protected void onActivityResult(int requestCode, int resultCode, @NonNull Intent data) {
         if (DEBUG) Log.d(TAG, "onActivityResult: " + requestCode + " " + resultCode);
 
         switch (requestCode) {

@@ -18,6 +18,9 @@
 
 package com.atrainingtracker.trainingtracker.activities;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.atrainingtracker.banalservice.ActivityType;
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
@@ -33,11 +36,13 @@ public class ConfigTrackingViewsActivity
     private static final boolean DEBUG = TrainingApplication.getDebug(true);
 
 
+    @NonNull
     @Override
     public ActivityType getActivityType(long viewId) {
         return TrackingViewsDatabaseManager.getActivityType(viewId);
     }
 
+    @NonNull
     @Override
     public ConfigViewsFragment getNewConfigViewsFragment(ActivityType activityType, long viewId) {
         return ConfigTrackingViewsFragment.newInstance(activityType, viewId);
@@ -45,6 +50,7 @@ public class ConfigTrackingViewsActivity
 
 
     // just dummy methods to implement the interfaces but without any functionality
+    @Nullable
     @Override
     public BANALService.BANALServiceComm getBanalServiceComm() {
         return null;

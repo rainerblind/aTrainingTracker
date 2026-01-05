@@ -21,8 +21,13 @@ package com.atrainingtracker.trainingtracker.exporter;
 import android.content.Context;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
+import com.atrainingtracker.BuildConfig;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.dropbox.core.DbxException;
+import com.dropbox.core.DbxRequestConfig;
+import com.dropbox.core.android.Auth;
 import com.dropbox.core.v2.DbxClientV2;
 import com.dropbox.core.v2.files.WriteMode;
 
@@ -35,12 +40,13 @@ public class DropboxUploader extends BaseExporter {
     private static final String TAG = "DropboxUploader";
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
-    public DropboxUploader(Context context) {
+    public DropboxUploader(@NonNull Context context) {
         super(context);
     }
 
+    @NonNull
     @Override
-    protected ExportResult doExport(ExportInfo exportInfo) throws IOException, IllegalArgumentException {
+    protected ExportResult doExport(@NonNull ExportInfo exportInfo) throws IOException, IllegalArgumentException {
         String filename = exportInfo.getShortPath();
         File file = new File(getBaseDirFile(mContext), filename);
         if (!file.exists()) {
@@ -49,15 +55,8 @@ public class DropboxUploader extends BaseExporter {
 
         InputStream inputStream = new FileInputStream(file);
         try {
-            String dropboxToken = TrainingApplication.getDropboxToken();                            // TODO: provoke this error.  Unfortunately, the errors will not appear in the app.  Currently, only the string something_strange_happened appears...
-            if (dropboxToken == null) {
-                Log.e(TAG, "WTF: shall upload to dropbox but there is no token...");
-                return new ExportResult(false, "No valid Dropbox token.");
-            }
-            DropboxClientFactory.init(dropboxToken);
-            DbxClientV2 dbxClient = DropboxClientFactory.getClient();
-
-            dbxClient.files().uploadBuilder("/" + filename)
+            DbxClientV2 dbxClientV2 = new DbxClientV2(new DbxRequestConfig(BuildConfig.DROPBOX_APP_KEY), TrainingApplication.readDropboxCredential());
+            dbxClientV2.files().uploadBuilder("/" + filename)
                     .withMode(WriteMode.OVERWRITE)
                     .uploadAndFinish(inputStream);
         } catch (DbxException e) {
@@ -68,7 +67,7 @@ public class DropboxUploader extends BaseExporter {
             return new ExportResult(false, "IOException: " + e.getMessage());
 
         } finally {
-            if (inputStream != null) inputStream.close();
+            inputStream.close();
         }
 
 
@@ -76,6 +75,7 @@ public class DropboxUploader extends BaseExporter {
         return new ExportResult(true, "successfully uploaded " + filename + " to Dropbox");
     }
 
+    @NonNull
     @Override
     protected Action getAction() {
         return Action.UPLOAD;

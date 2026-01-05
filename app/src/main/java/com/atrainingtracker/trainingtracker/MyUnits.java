@@ -18,6 +18,8 @@
 
 package com.atrainingtracker.trainingtracker;
 
+import androidx.annotation.NonNull;
+
 import com.atrainingtracker.R;
 
 public enum MyUnits {
@@ -34,6 +36,7 @@ public enum MyUnits {
         return nameId;
     }
 
+    @NonNull
     @Override
     public String toString() {
         return TrainingApplication.getAppContext().getString(nameId);

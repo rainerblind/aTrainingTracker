@@ -22,6 +22,7 @@ import android.app.Dialog;
 import android.content.DialogInterface;
 import android.os.Bundle;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.DialogFragment;
 import android.text.InputType;
@@ -40,6 +41,7 @@ import java.util.List;
 public class DeleteOldWorkoutsDialog extends DialogFragment {
     public static final String TAG = DeleteOldWorkoutsDialog.class.getName();
 
+    @NonNull
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(getContext());

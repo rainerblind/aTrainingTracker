@@ -18,10 +18,6 @@
 
 package com.atrainingtracker.trainingtracker.onlinecommunities.strava;
 
-/**
- * Created by rainer on 30.08.16.
- */
-
 import android.content.Context;
 import android.content.Intent;
 import android.util.Log;

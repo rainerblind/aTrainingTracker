@@ -27,6 +27,9 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.BaseColumns;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
 
 public class StravaUploadDbHelper extends SQLiteOpenHelper {
@@ -54,7 +57,7 @@ public class StravaUploadDbHelper extends SQLiteOpenHelper {
     }
 
     @Override
-    public void onCreate(SQLiteDatabase db) {
+    public void onCreate(@NonNull SQLiteDatabase db) {
         db.execSQL(CREATE_TABLE);
 
         if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_TABLE);
@@ -62,7 +65,7 @@ public class StravaUploadDbHelper extends SQLiteOpenHelper {
     }
 
     @Override
-    public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+    public void onUpgrade(@NonNull SQLiteDatabase db, int oldVersion, int newVersion) {
         // TODO: alter table instead of deleting!
 
         db.execSQL("drop table if exists " + TABLE);  // drops the old database
@@ -133,6 +136,7 @@ public class StravaUploadDbHelper extends SQLiteOpenHelper {
         updateOrInsert(fileBaseName, values);
     }
 
+    @Nullable
     public String getActivityId(String fileBaseName) {
         if (DEBUG) Log.d(TAG, "getActivityId: " + fileBaseName);
 

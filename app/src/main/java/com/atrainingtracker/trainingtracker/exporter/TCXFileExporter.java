@@ -23,6 +23,8 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
@@ -44,20 +46,22 @@ public class TCXFileExporter extends BaseFileExporter {
     private static final String TAG = "TCXFileExporter";
     private static final boolean DEBUG = false;
     // DateFormats to convert from Db style dates to XML style dates
-    protected static SimpleDateFormat msdfFromDb = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
-    protected static SimpleDateFormat msdfToXML = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US);
+    protected static final SimpleDateFormat msdfFromDb = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
+    protected static final SimpleDateFormat msdfToXML = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US);
 
-    public TCXFileExporter(Context context) {
+    public TCXFileExporter(@NonNull Context context) {
         super(context);
     }
 
     // convert from "2012-03-29 16:23:05" to "2012-03-29T16:23:05Z"
-    protected static String dbTime2XMLTime(String dbTime) throws ParseException {
+    @NonNull
+    protected static String dbTime2XMLTime(@NonNull String dbTime) throws ParseException {
         return msdfToXML.format(msdfFromDb.parse(dbTime)) + "Z";
     }
 
+    @NonNull
     @Override
-    protected ExportResult doExport(ExportInfo exportInfo)
+    protected ExportResult doExport(@NonNull ExportInfo exportInfo)
             throws IOException, ParseException {
         if (DEBUG) Log.d(TAG, "exportToFile");
 
@@ -269,6 +273,7 @@ public class TCXFileExporter extends BaseFileExporter {
         return new ExportResult(true, getPositiveAnswer(exportInfo));
     }
 
+    @NonNull
     @Override
     protected Action getAction() {
         return Action.EXPORT;

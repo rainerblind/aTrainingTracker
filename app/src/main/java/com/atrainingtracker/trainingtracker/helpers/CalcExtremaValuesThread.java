@@ -28,6 +28,8 @@ import android.os.Looper;
 import android.util.Log;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
+
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
@@ -301,7 +303,7 @@ public class CalcExtremaValuesThread extends Thread {
                 .setPackage(mContext.getPackageName()));
     }
 
-    protected void calcAndSaveExtremaValues(long workoutId, String baseFileName, Iterable<SensorType> sensorTypeList, Iterable<ExtremaType> extremaTypeList) {
+    protected void calcAndSaveExtremaValues(long workoutId, String baseFileName, @NonNull Iterable<SensorType> sensorTypeList, @NonNull Iterable<ExtremaType> extremaTypeList) {
         if (DEBUG) Log.i(TAG, "calcAndSaveExtremaValues(" + workoutId + "...)");
 
         // WorkoutSamplesDbHelper workoutSamplesDbHelper = new WorkoutSamplesDbHelper(mContext);

@@ -26,6 +26,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.DialogFragment;
 import android.util.Log;
@@ -59,6 +60,7 @@ public class EditFancyWorkoutNameDialog extends DialogFragment {
 
     private long mFancyNameId = -1;
 
+    @NonNull
     public static EditFancyWorkoutNameDialog newInstance(long fancyNameId) {
         if (DEBUG) Log.i(TAG, "newInstance");
 
@@ -83,6 +85,7 @@ public class EditFancyWorkoutNameDialog extends DialogFragment {
     }
 
 
+    @NonNull
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         long sportTypeId;
@@ -134,17 +137,17 @@ public class EditFancyWorkoutNameDialog extends DialogFragment {
         final CheckBox cbAddVia = view.findViewById(R.id.checkBoxAddVia);
 
         // configure the main view
-        spinnerSport.setAdapter(new ArrayAdapter(getContext(), android.R.layout.simple_list_item_1, sportTypesList));
+        spinnerSport.setAdapter(new ArrayAdapter<>(getContext(), android.R.layout.simple_list_item_1, sportTypesList));
         if (sportTypeName != null) {
             spinnerSport.setSelection(sportTypesList.indexOf(sportTypeName));
         }
 
-        spinnerStartName.setAdapter(new ArrayAdapter(getContext(), android.R.layout.simple_list_item_1, myLocationNameList));
+        spinnerStartName.setAdapter(new ArrayAdapter<>(getContext(), android.R.layout.simple_list_item_1, myLocationNameList));
         if (startLocationName != null) {
             spinnerStartName.setSelection(myLocationNameList.indexOf(startLocationName));
         }
 
-        spinnerEndName.setAdapter(new ArrayAdapter(getContext(), android.R.layout.simple_list_item_1, myLocationNameList));
+        spinnerEndName.setAdapter(new ArrayAdapter<>(getContext(), android.R.layout.simple_list_item_1, myLocationNameList));
         if (endLocationName != null) {
             spinnerEndName.setSelection(myLocationNameList.indexOf(endLocationName));
         }
@@ -202,7 +205,7 @@ public class EditFancyWorkoutNameDialog extends DialogFragment {
         builder.setView(view);
         builder.setPositiveButton(R.string.OK,
                 new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int whichButton) {
+                    public void onClick(@NonNull DialogInterface dialog, int whichButton) {
                         Log.i(TAG, "OK clicked");
 
                         // save everything
@@ -235,7 +238,7 @@ public class EditFancyWorkoutNameDialog extends DialogFragment {
                 });
         builder.setNegativeButton(R.string.Cancel,
                 new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int whichButton) {
+                    public void onClick(@NonNull DialogInterface dialog, int whichButton) {
                         Log.i(TAG, "Cancel clicked");
 
                         WorkoutSummariesDatabaseManager.getInstance().closeDatabase();

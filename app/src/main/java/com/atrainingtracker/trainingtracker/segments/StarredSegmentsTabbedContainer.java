@@ -19,6 +19,9 @@
 package com.atrainingtracker.trainingtracker.segments;
 
 import android.os.Bundle;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentPagerAdapter;
@@ -60,7 +63,7 @@ public class StarredSegmentsTabbedContainer extends Fragment {
     SectionsPagerAdapter mSectionsPagerAdapter;
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         super.onCreateView(inflater, container, savedInstanceState);
         if (DEBUG) Log.i(TAG, "onCreateView(), savedInstanceState=" + savedInstanceState);
 
@@ -76,7 +79,7 @@ public class StarredSegmentsTabbedContainer extends Fragment {
     }
 
     @Override
-    public void onActivityCreated(Bundle savedInstanceState) {
+    public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
 
         if (DEBUG) Log.i(TAG, "onActivityCreated, savedInstanceState=" + savedInstanceState);
@@ -98,7 +101,7 @@ public class StarredSegmentsTabbedContainer extends Fragment {
     }
 
     @Override
-    public void onSaveInstanceState(Bundle outState) {
+    public void onSaveInstanceState(@NonNull Bundle outState) {
         outState.putInt(SELECTED_ITEM, mViewPager.getCurrentItem());
         if (DEBUG)
             Log.i(TAG, "onSaveInstanceState: saved selected item:" + mViewPager.getCurrentItem());
@@ -113,25 +116,23 @@ public class StarredSegmentsTabbedContainer extends Fragment {
      */
     public class SectionsPagerAdapter extends FragmentPagerAdapter {
 
-        public SectionsPagerAdapter(FragmentManager fm) {
+        public SectionsPagerAdapter(@NonNull FragmentManager fm) {
             super(fm);
         }
 
+        @NonNull
         @Override
         public Fragment getItem(int position) {
             // getItem is called to instantiate the fragment for the given page.
             if (DEBUG) Log.i(TAG, "SectionsPagerAdapter.getItem(" + position + ")");
 
-            switch (position) {
-                case 0:
-                    return StarredSegmentsListFragment.newInstance(SportTypeDatabaseManager.getSportTypeId(BSportType.BIKE));
-
-                case 1:
-                    return StarredSegmentsListFragment.newInstance(SportTypeDatabaseManager.getSportTypeId(BSportType.RUN));
-
-                default:
-                    return new Fragment();
-            }
+            return switch (position) {
+                case 0 ->
+                        StarredSegmentsListFragment.newInstance(SportTypeDatabaseManager.getSportTypeId(BSportType.BIKE));
+                case 1 ->
+                        StarredSegmentsListFragment.newInstance(SportTypeDatabaseManager.getSportTypeId(BSportType.RUN));
+                default -> new Fragment();
+            };
 
         }
 
@@ -142,16 +143,12 @@ public class StarredSegmentsTabbedContainer extends Fragment {
 
         @Override
         public CharSequence getPageTitle(int position) {
-            switch (position) {
-                case 0:
-                    return getString(R.string.starred_bike_segments);
+            return switch (position) {
+                case 0 -> getString(R.string.starred_bike_segments);
+                case 1 -> getString(R.string.starred_run_segments);
+                default -> null;
+            };
 
-                case 1:
-                    return getString(R.string.starred_run_segments);
-
-            }
-
-            return null;
         }
     }
 }
