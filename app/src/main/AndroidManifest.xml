@@ -101,8 +101,7 @@
             android:launchMode="singleTask">
             <intent-filter>
 
-                <!-- Change this to be db- followed by your app key -->
-                <data android:scheme="db-iknmdmr31sf64r0" />
+                <data android:scheme="db-${dropboxKey}" />
 
                 <action android:name="android.intent.action.VIEW" />
 
