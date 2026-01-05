@@ -28,6 +28,15 @@ android {
         multiDexEnabled = true
         versionName = "4.9.1"
         versionCode = 225
+
+        Properties secretProperties = getSecretProperties()
+        String dropboxKey = secretProperties['DROPBOX_APP_KEY']
+        if (dropboxKey == null) {
+            logger.warn("No value provided for DROPBOX_APP_KEY.  Specify a value in a examples/android/local.properties file. You can register for one at https://developers.dropbox.com/")
+            dropboxKey = "PUT_YOUR_APP_KEY_HERE"
+        }
+        buildConfigField "String", "DROPBOX_APP_KEY", "\"${dropboxKey}\""
+        manifestPlaceholders = [dropboxKey: dropboxKey]
     }
 
     signingConfigs {
@@ -137,4 +146,12 @@ if (rootProject.file("release.properties").exists()) {
 } else {
     project.logger.info('INFO: Set the values storeFile, storePassword, keyAlias, and keyPassword in release.properties to sign the release.')
     android.buildTypes.release.signingConfig = null
+}
+
+def getSecretProperties() {
+    Properties props = new Properties()
+    if (file('secret.properties').exists()) {
+        props.load(new FileInputStream(file('secret.properties')))
+    }
+    return props
 }
