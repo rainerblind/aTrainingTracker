@@ -87,6 +87,7 @@ public class DeviceManager
     protected ClockDevice mClockDevice;
     protected MyDevice mSpeedAndLocationDevice_GPS, mSpeedAndLocationDevice_GoogleFused, mSpeedAndLocationDevice_Network;
     protected AltitudeFromPressureDevice mAltitudeFromPressureDevice;
+    protected VerticalSpeedAndSlopeDevice mVerticalSpeedAndSlopeDevice;
     protected boolean mHavePressureSensor = false;
     protected IntentFilter mPairingChangedFilter = new IntentFilter(BANALService.PAIRING_CHANGED);
     // protected IntentFilter mRemoveDeviceFilter            = new IntentFilter(BANALService.REMOVE_DEVICE);
@@ -286,6 +287,8 @@ public class DeviceManager
             if (DEBUG) Log.i(TAG, "creating network location device");
             mSpeedAndLocationDevice_Network = new SpeedAndLocationDevice_Network(mContext, mSensorManager);
         }
+
+        mVerticalSpeedAndSlopeDevice = new VerticalSpeedAndSlopeDevice(mContext, mSensorManager);
 
         // also create paired remote devices and start searching for them
         if (TrainingApplication.startSearchWhenAppStarts()) {
