@@ -145,6 +145,7 @@
     <string name="units_speed_basic" translatable="false">m/s</string>
     <string name="units_speed_metric" translatable="false">km/h</string>
     <string name="units_speed_imperial" translatable="false">mile/h</string>
+    <string name="units_vertical_speed_basic" translatable="false">m/h</string>
     <string name="units_speed_unknown" translatable="false">n/a</string>
     <string name="units_speed_short_metric" translatable="false">km/h</string>
     <string name="units_speed_short_imperial" translatable="false">mi/h</string>
@@ -241,6 +242,8 @@
     <string name="accumulated_sensors_short">acc. sensors</string>
     <string name="accuracy">accuracy</string>
     <string name="accuracy_short">acc.</string>
+    <string name="ascent">ascent</string>
+    <string name="ascent_short">ascent</string>
     <string name="bearing">bearing</string>
     <string name="bearing_short">bearing</string>
     <string name="altitude">altitude</string>
@@ -253,6 +256,8 @@
     <string name="cadence_bike_short">cad.</string>
     <string name="calories">calories</string>
     <string name="calories_short">cal.</string>
+    <string name="descent">descent</string>
+    <string name="descent_short">descent</string>
     <string name="distance">distance</string>
     <string name="distance_short">dist.</string>
     <string name="distance_lap">distance lap</string>
@@ -305,6 +310,10 @@
     <string name="torque_effectiveness_l_short">effective l</string>
     <string name="torque_effectiveness_r">torque effectiveness right</string>
     <string name="torque_effectiveness_r_short">effective r</string>
+    <string name="slope">slope</string>
+    <string name="slope_short">slope</string>
+    <string name="vertical_speed">vertical speed (VAM)</string>
+    <string name="vertical_speed_short">VAM</string>
 
     <string name="sport_type_walk">walk</string>
     <string name="sport_type_run">run</string>

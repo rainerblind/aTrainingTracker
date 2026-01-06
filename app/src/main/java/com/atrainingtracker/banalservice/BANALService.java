@@ -205,11 +205,11 @@ public class BANALService
     }
 
     /* filtered stuff */
-    protected static void createFilter(FilterData filterData) {
+    public static void createFilter(FilterData filterData) {
         cFilterManager.createFilter(filterData);
     }
 
-    protected static FilteredSensorData getFilteredSensorData(FilterData filterData) {
+    public static FilteredSensorData getFilteredSensorData(FilterData filterData) {
         return cFilterManager.getFilteredSensorData(filterData);
     }
 
@@ -485,8 +485,8 @@ public class BANALService
         if (DEBUG) Log.d(TAG, "onCreate");
 
         cSensorManager = new MySensorManager(this);
-        cDeviceManager = new DeviceManager(this, cSensorManager);
         cFilterManager = new FilterManager(this, cDeviceManager, cSensorManager);
+        cDeviceManager = new DeviceManager(this, cSensorManager);
 
         ContextCompat.registerReceiver(this, mStartSearchForPairedDevices, new IntentFilter(REQUEST_START_SEARCH_FOR_PAIRED_DEVICES), ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mNewLapReceiver, new IntentFilter(REQUEST_NEW_LAP), ContextCompat.RECEIVER_NOT_EXPORTED);
