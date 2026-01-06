@@ -186,6 +186,8 @@
     <string name="accumulated_sensors_short">Akkum. Sensoren</string>
     <string name="accuracy">Genauigkeit</string>
     <string name="accuracy_short">acc.</string>
+    <string name="ascent">Anstieg</string>
+    <string name="ascent_short">Hoch</string>
     <string name="bearing">Richtung</string>
     <string name="bearing_short">Richtung</string>
     <string name="altitude">Höhe</string>
@@ -198,6 +200,8 @@
     <string name="cadence_bike_short">Trittfreq.</string>
     <string name="calories">Kalorien</string>
     <string name="calories_short">cal.</string>
+    <string name="descent">Abstieg/Abfahrt</string>
+    <string name="descent_short">Runter</string>
     <string name="distance">Distanz</string>
     <string name="distance_short">Dist.</string>
     <string name="distance_lap">Distanz Lap</string>
@@ -283,6 +287,11 @@
     <string name="pedalPowerBalanceCorrection">Korrektur für Power Balance</string>
     <string name="doublePowerBalanceValues">Verdopple die gemessenen Werte</string>
     <string name="invertPowerBalanceValues">Invertiere die gemessenen Werte.  D.h., vertausche rechts und links</string>
+
+    <string name="slope">Steigung</string>
+    <string name="slope_short">Steigung</string>
+    <string name="vertical_speed">Vertikale Geschwindigkeit (VAM)</string>"
+    <string name="vertical_speed_short">VAM</string>
 
     <string name="PrefsActivityLabel">Einstellungen</string>
     <string name="UpdateWorkoutActivityLabel">Trainingseinheit hochladen</string>
