@@ -31,7 +31,6 @@ import com.atrainingtracker.banalservice.sensor.formater.MyFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.PaceFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter;
-import com.atrainingtracker.banalservice.sensor.formater.VerticalSpeedFormatter;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 
 public enum SensorType
@@ -90,7 +89,7 @@ public enum SensorType
     TORQUE(R.string.torque, R.string.torque_short, R.string.units_torque, SensorValueType.DOUBLE, new DefaultNumberFormatter(), true),
     TORQUE_EFFECTIVENESS_L(R.string.torque_effectiveness_l, R.string.torque_effectiveness_l_short, R.string.units_percent, SensorValueType.INTEGER, new IntegerFormatter(), true),
     TORQUE_EFFECTIVENESS_R(R.string.torque_effectiveness_r, R.string.torque_effectiveness_r_short, R.string.units_percent, SensorValueType.INTEGER, new IntegerFormatter(), true),
-    VERTICAL_SPEED(R.string.vertical_speed, R.string.vertical_speed_short, R.string.units_speed_basic, SensorValueType.DOUBLE, new VerticalSpeedFormatter(), true);
+    VERTICAL_SPEED(R.string.vertical_speed, R.string.vertical_speed_short, R.string.units_vertical_speed_basic, SensorValueType.DOUBLE, new DefaultNumberFormatter(), true);
 
     // max bit = 118
 

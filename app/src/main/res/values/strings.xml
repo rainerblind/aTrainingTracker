@@ -145,6 +145,7 @@
     <string name="units_speed_basic" translatable="false">m/s</string>
     <string name="units_speed_metric" translatable="false">km/h</string>
     <string name="units_speed_imperial" translatable="false">mile/h</string>
+    <string name="units_vertical_speed_basic" translatable="false">m/h</string>
     <string name="units_speed_unknown" translatable="false">n/a</string>
     <string name="units_speed_short_metric" translatable="false">km/h</string>
     <string name="units_speed_short_imperial" translatable="false">mi/h</string>
