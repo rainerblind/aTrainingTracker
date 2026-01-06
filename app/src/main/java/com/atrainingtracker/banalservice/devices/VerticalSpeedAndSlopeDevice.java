@@ -89,8 +89,8 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
         // ok, now, we are ready to do all the calculations
 
         // first, calculate the vertical speed
-        double deltaAltitude = altitudeFilteredSensorData.getValue() - mLastAltitude;
-        mVerticalSpeedSensor.newValue(deltaAltitude);
+        double deltaAltitude_mps = altitudeFilteredSensorData.getValue() - mLastAltitude;
+        mVerticalSpeedSensor.newValue(deltaAltitude_mps * 60 * 60 /* convert m/s to m/h*/);
 
         // and store the current altitude for the next time
         mLastAltitude = altitudeFilteredSensorData.getValue();
@@ -98,7 +98,7 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
         // next, calculate the slope
         double speed = speedFilteredSensorData.getValue();
         if (abs(speed) > MIN_SPEED) {
-            mSlopeSensor.newValue(deltaAltitude/speed);  // TODO: make this mathematically more correct by using arctan
+            mSlopeSensor.newValue(deltaAltitude_mps/speed);  // TODO: make this mathematically more correct by using arctan
         }
     }
 }
