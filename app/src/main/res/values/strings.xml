@@ -242,6 +242,8 @@
     <string name="accumulated_sensors_short">acc. sensors</string>
     <string name="accuracy">accuracy</string>
     <string name="accuracy_short">acc.</string>
+    <string name="ascent">ascent</string>
+    <string name="ascent_short">ascent</string>
     <string name="bearing">bearing</string>
     <string name="bearing_short">bearing</string>
     <string name="altitude">altitude</string>
@@ -254,6 +256,8 @@
     <string name="cadence_bike_short">cad.</string>
     <string name="calories">calories</string>
     <string name="calories_short">cal.</string>
+    <string name="descent">descent</string>
+    <string name="descent_short">descent</string>
     <string name="distance">distance</string>
     <string name="distance_short">dist.</string>
     <string name="distance_lap">distance lap</string>

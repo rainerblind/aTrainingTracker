@@ -26,11 +26,15 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
 
     private MySensor<Double> mVerticalSpeedSensor;
     private MySensor<Double> mSlopeSensor;
+    private MySensor<Double> mAscentSensor;
+    private MySensor<Double> mDescentSensor;
 
     private Double mLastAltitude;
+    private Double mLastAltitudeSuperFiltered;
 
     // Tuning parameters
     private static final FilterData cAltitudeFilter = new FilterData(null, SensorType.ALTITUDE, FilterType.MOVING_AVERAGE_TIME, 30);
+    private static final FilterData cAltitudeSuperFilter = new FilterData(null, SensorType.ALTITUDE, FilterType.MOVING_AVERAGE_TIME, 5*60);
     private static final FilterData cSpeedFilter = new FilterData(null, SensorType.SPEED_mps, FilterType.MOVING_AVERAGE_TIME, 30);
     private static final double MIN_SPEED = 0.01;  // min speed to calculate slope
 
@@ -38,6 +42,7 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
         super(context, mySensorManager, DeviceType.VERTICAL_SPEED_AND_SLOPE);
 
         BANALService.createFilter(cAltitudeFilter);
+        BANALService.createFilter(cAltitudeSuperFilter);
         BANALService.createFilter(cSpeedFilter);
 
         registerSensors();
@@ -64,9 +69,13 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
 
         mVerticalSpeedSensor = new MySensor<>(this, SensorType.VERTICAL_SPEED);
         mSlopeSensor = new MySensor<>(this, SensorType.SLOPE);
+        mAscentSensor = new MySensor<>(this, SensorType.ASCENT);
+        mDescentSensor = new MySensor<>(this, SensorType.DESCENT);
 
         addSensor(mVerticalSpeedSensor);
         addSensor(mSlopeSensor);
+        addSensor(mAscentSensor);
+        addSensor(mDescentSensor);
     }
 
     private void calculateMetrics() {
@@ -88,17 +97,36 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
 
         // ok, now, we are ready to do all the calculations
 
-        // first, calculate the vertical speed
+        // first, get the difference in altitude
         double deltaAltitude_mps = altitudeFilteredSensorData.getValue() - mLastAltitude;
-        mVerticalSpeedSensor.newValue(deltaAltitude_mps * 60 * 60 /* convert m/s to m/h*/);
-
         // and store the current altitude for the next time
         mLastAltitude = altitudeFilteredSensorData.getValue();
 
-        // next, calculate the slope
+        // now, convert m/s to m/h for the vertical speed
+        mVerticalSpeedSensor.newValue(deltaAltitude_mps * 60 * 60 );
+
+        // finally, calculate the slope
         double speed = speedFilteredSensorData.getValue();
         if (abs(speed) > MIN_SPEED) {
             mSlopeSensor.newValue(deltaAltitude_mps/speed);  // TODO: make this mathematically more correct by using arctan
+        }
+
+        // similar procedure for the ascent and descent but with the more filtered values
+        altitudeFilteredSensorData = BANALService.getFilteredSensorData(cAltitudeSuperFilter);
+        if (mLastAltitudeSuperFiltered == null) {
+            mLastAltitudeSuperFiltered = altitudeFilteredSensorData.getValue();
+            return;
+        }
+
+        // calc the difference in altitude
+        deltaAltitude_mps = altitudeFilteredSensorData.getValue() - mLastAltitudeSuperFiltered;
+        mLastAltitudeSuperFiltered = altitudeFilteredSensorData.getValue();
+
+        // next, we can increment the ascent or descent
+        if (deltaAltitude_mps > 0) {
+            mAscentSensor.newValue(mAscentSensor.getValue() + deltaAltitude_mps);
+        } else {
+            mDescentSensor.newValue(mDescentSensor.getValue() - deltaAltitude_mps);
         }
     }
 }
