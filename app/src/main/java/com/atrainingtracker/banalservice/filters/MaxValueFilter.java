@@ -21,6 +21,7 @@ package com.atrainingtracker.banalservice.filters;
 import android.util.Log;
 
 import com.atrainingtracker.banalservice.sensor.SensorType;
+import com.atrainingtracker.trainingtracker.TrainingApplication;
 
 public class MaxValueFilter extends MyFilter<Number> {
     private static final String TAG = MaxValueFilter.class.getCanonicalName();
@@ -46,8 +47,10 @@ public class MaxValueFilter extends MyFilter<Number> {
     public synchronized void newValue(Number value) {
         if (DEBUG) Log.i(TAG, "newValue: value=" + value + ", maxValue=" + mMaxValue);
 
-        if (value != null && value.doubleValue() > mMaxValue.doubleValue()) {
-            mMaxValue = value;
+        if (!TrainingApplication.isPaused()) {
+            if (value != null && value.doubleValue() > mMaxValue.doubleValue()) {
+                mMaxValue = value;
+            }
         }
     }
 

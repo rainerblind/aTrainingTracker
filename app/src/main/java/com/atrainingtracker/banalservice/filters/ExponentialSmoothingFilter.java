@@ -21,6 +21,7 @@ package com.atrainingtracker.banalservice.filters;
 
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.sensor.SensorType;
+import com.atrainingtracker.trainingtracker.TrainingApplication;
 
 // simple filter for y[k+1] = \alpha m[k] + (1-\alpha) y[k]
 public class ExponentialSmoothingFilter
@@ -55,6 +56,8 @@ public class ExponentialSmoothingFilter
 
     @Override
     public synchronized void newValue(Number value) {
-        mFilteredValue = mAlpha * value.doubleValue() + (1 - mAlpha) * mFilteredValue;
+        if (!TrainingApplication.isPaused()) {
+            mFilteredValue = mAlpha * value.doubleValue() + (1 - mAlpha) * mFilteredValue;
+        }
     }
 }
