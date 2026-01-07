@@ -89,9 +89,9 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
         mAltitudeSensor = new MySensor<Double>(this, SensorType.ALTITUDE);
         mSpeedSensor = new MySensor<Double>(this, SensorType.SPEED_mps);
         mPaceSensor = new MySensor<Double>(this, SensorType.PACE_spm);
-        mLineDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.LINE_DISTANCE_m);
-        mDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m);
-        mLapDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m_LAP);
+        mLineDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.LINE_DISTANCE_m, false);
+        mDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m, true);
+        mLapDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m_LAP, true);
 
         addSensor(mLongitudeSensor);
         addSensor(mLatitudeSensor);
@@ -141,11 +141,10 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
                 mPaceSensor.newValue(1 / mSpeed);
 
                 if (mPrevLocation != null) {
-                    float delta_distance = mPrevLocation.distanceTo(location);
-                    mDistance += delta_distance;
+                    double delta_distance = mPrevLocation.distanceTo(location);
 
-                    mDistanceSensor.newValue(mDistance);
-                    mLapDistanceSensor.newValue(mDistance);
+                    mDistanceSensor.increment(delta_distance);
+                    mLapDistanceSensor.increment(delta_distance);
                 }
 
                 // finally, save the location

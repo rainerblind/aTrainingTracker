@@ -27,6 +27,7 @@ import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.filters.FilterData;
 import com.atrainingtracker.banalservice.filters.FilterType;
 import com.atrainingtracker.banalservice.filters.FilteredSensorData;
+import com.atrainingtracker.banalservice.sensor.MyDoubleAccumulatorSensor;
 import com.atrainingtracker.banalservice.sensor.MySensor;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.banalservice.sensor.SensorType;
@@ -48,8 +49,8 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
 
     private MySensor<Double> mVerticalSpeedSensor;
     private MySensor<Double> mSlopeSensor;
-    private MySensor<Double> mAscentSensor;
-    private MySensor<Double> mDescentSensor;
+    private MyDoubleAccumulatorSensor mAscentSensor;
+    private MyDoubleAccumulatorSensor mDescentSensor;
 
     private Double mLastAltitude;
     private Double mLastAltitudeSuperFiltered;
@@ -93,8 +94,8 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
 
         mVerticalSpeedSensor = new MySensor<>(this, SensorType.VERTICAL_SPEED);
         mSlopeSensor = new MySensor<>(this, SensorType.SLOPE);
-        mAscentSensor = new MySensor<>(this, SensorType.ASCENT);
-        mDescentSensor = new MySensor<>(this, SensorType.DESCENT);
+        mAscentSensor = new MyDoubleAccumulatorSensor(this, SensorType.ASCENT, true);
+        mDescentSensor = new MyDoubleAccumulatorSensor(this, SensorType.DESCENT, true);
 
         addSensor(mVerticalSpeedSensor);
         addSensor(mSlopeSensor);
@@ -159,9 +160,9 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
 
         // next, we can increment the ascent or descent
         if (deltaAltitude_mps > 0) {
-            mAscentSensor.newValue(mAscentSensor.getValue() == null ? deltaAltitude_mps : mAscentSensor.getValue() + deltaAltitude_mps);
+            mAscentSensor.increment(deltaAltitude_mps);
         } else if (deltaAltitude_mps < 0) {
-            mDescentSensor.newValue(mDescentSensor.getValue() == null ? - deltaAltitude_mps : mDescentSensor.getValue() - deltaAltitude_mps);
+            mDescentSensor.increment(-deltaAltitude_mps);
         }
     }
 }
