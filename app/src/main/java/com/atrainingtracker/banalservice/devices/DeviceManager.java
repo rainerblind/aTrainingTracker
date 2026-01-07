@@ -576,6 +576,7 @@ public class DeviceManager
         if (mAltitudeFromPressureDevice != null) {
             myDeviceList.add(mAltitudeFromPressureDevice);
         }
+        myDeviceList.add(mVerticalSpeedAndSlopeDevice);
         myDeviceList.addAll(getRemoteDeviceList());
 
         return myDeviceList;
