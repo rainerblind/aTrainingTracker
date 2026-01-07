@@ -67,10 +67,10 @@ public class ANTRunSpeedDevice extends MyANTDevice {
         mCadenceSensor = new MySensor<BigDecimal>(this, SensorType.CADENCE);
         mSpeedSensor = new MySensor<Double>(this, SensorType.SPEED_mps);
         mPaceSensor = new MySensor<Double>(this, SensorType.PACE_spm);
-        mDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m);
-        mLapDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m_LAP);
-        mStridesSensor = new MyIntegerAccumulatorSensor(this, SensorType.STRIDES);
-        mCaloriesSensor = new MyIntegerAccumulatorSensor(this, SensorType.CALORIES);
+        mDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m, false);
+        mLapDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m_LAP, false);
+        mStridesSensor = new MyIntegerAccumulatorSensor(this, SensorType.STRIDES, false);
+        mCaloriesSensor = new MyIntegerAccumulatorSensor(this, SensorType.CALORIES, false);
 
         addSensor(mCadenceSensor);
         addSensor(mSpeedSensor);
