@@ -29,8 +29,8 @@ public class MyIntegerAccumulatorSensor extends MyAccumulatorSensor<Integer> {
 
     private Integer mZeroValue = 0;
 
-    public MyIntegerAccumulatorSensor(MyDevice myDevice, SensorType sensorType) {
-        super(myDevice, sensorType);
+    public MyIntegerAccumulatorSensor(MyDevice myDevice, SensorType sensorType, Boolean respectPause) {
+        super(myDevice, sensorType, respectPause);
         mValue = mZeroValue;
 
         Object initialValue = BANALService.getInitialValue(sensorType);
@@ -39,8 +39,8 @@ public class MyIntegerAccumulatorSensor extends MyAccumulatorSensor<Integer> {
         reset();
     }
 
-    public MyIntegerAccumulatorSensor(MyDevice myDevice, SensorType sensorType, Integer zeroValue) {
-        this(myDevice, sensorType);
+    public MyIntegerAccumulatorSensor(MyDevice myDevice, SensorType sensorType, Boolean respectPause, Integer zeroValue) {
+        this(myDevice, sensorType, respectPause);
 
         if (DEBUG) Log.d(TAG, "MyIntegerAccumulatorSensor: setting mValue to " + zeroValue);
 
@@ -51,22 +51,11 @@ public class MyIntegerAccumulatorSensor extends MyAccumulatorSensor<Integer> {
     }
 
     @Override
-    public Integer getValue() {
-        if (DEBUG)
-            Log.d(TAG, "getValue for " + mSensorType + ": mValue=" + mValue + ", mInitialValue=" + mInitialValue);
-        if (mActivated) {
-            if (mValue == null) {
-                Log.d(TAG, "mValue==null!");
-            }
-            if (mInitialValue == null) {
-                Log.d(TAG, "mInitialValue==null!");
-            }
-
-            return mValue == null ? mInitialValue : mValue + mInitialValue;
-        } else {
-            return null;
-        }
+    // doing the most obvious stuff...
+    protected Integer add(Integer a, Integer b) {
+        return a + b;
     }
+
 
     @Override
     public void reset() {

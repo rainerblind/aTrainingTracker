@@ -27,8 +27,8 @@ public class MyDoubleAccumulatorSensor extends MyAccumulatorSensor<Double> {
 
     private double mZeroValue = 0.0;
 
-    public MyDoubleAccumulatorSensor(MyDevice myDevice, SensorType sensorType) {
-        super(myDevice, sensorType);
+    public MyDoubleAccumulatorSensor(MyDevice myDevice, SensorType sensorType, Boolean respectPause) {
+        super(myDevice, sensorType, respectPause);
         mValue = mZeroValue;
 
         Double initialValue = (Double) BANALService.getInitialValue(sensorType);
@@ -37,8 +37,8 @@ public class MyDoubleAccumulatorSensor extends MyAccumulatorSensor<Double> {
         reset();
     }
 
-    public MyDoubleAccumulatorSensor(MyDevice myDevice, SensorType sensorType, Double zeroValue) {
-        this(myDevice, sensorType);
+    public MyDoubleAccumulatorSensor(MyDevice myDevice, SensorType sensorType, Boolean respectPause, Double zeroValue) {
+        this(myDevice, sensorType, respectPause);
 
         mZeroValue = zeroValue;
         mValue = mZeroValue;
@@ -47,13 +47,9 @@ public class MyDoubleAccumulatorSensor extends MyAccumulatorSensor<Double> {
     }
 
     @Override
-    public Double getValue() {
-        // Log.d(TAG, "getValue");
-        if (mActivated) {
-            return mValue == null ? mInitialValue : mValue + mInitialValue;
-        } else {
-            return null;
-        }
+    // doing the most obvious stuff...
+    protected Double add(Double a, Double b) {
+        return a + b;
     }
 
     @Override
