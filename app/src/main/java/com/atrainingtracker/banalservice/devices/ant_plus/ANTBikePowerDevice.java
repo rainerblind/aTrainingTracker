@@ -154,8 +154,8 @@ public class ANTBikePowerDevice extends MyANTDevice {
         DevicesDatabaseManager.putBikePowerSensorFlags(getDeviceId(), sensorFlags);
 
         // then, create, add and register the distance sensors
-        mDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m);
-        mLapDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m_LAP);
+        mDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m, false);
+        mLapDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m_LAP, false);
 
         addAndRegisterSensor(mDistanceSensor);
         addAndRegisterSensor(mLapDistanceSensor);
