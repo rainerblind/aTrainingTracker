@@ -21,6 +21,7 @@ package com.atrainingtracker.banalservice.devices;
 import static java.lang.Math.abs;
 
 import android.content.Context;
+import android.util.Log;
 
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.filters.FilterData;
@@ -61,6 +62,7 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
 
     public VerticalSpeedAndSlopeDevice(Context context, MySensorManager mySensorManager) {
         super(context, mySensorManager, DeviceType.VERTICAL_SPEED_AND_SLOPE);
+        if (DEBUG) Log.i(TAG, "VerticalSpeedAndSlopeDevice");
 
         BANALService.createFilter(cAltitudeFilter);
         BANALService.createFilter(cAltitudeSuperFilter);
@@ -87,6 +89,7 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
 
     @Override
     protected void addSensors() {
+        if (DEBUG) Log.i(TAG, "addSensors()");
 
         mVerticalSpeedSensor = new MySensor<>(this, SensorType.VERTICAL_SPEED);
         mSlopeSensor = new MySensor<>(this, SensorType.SLOPE);
@@ -100,13 +103,14 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
     }
 
     private void calculateMetrics() {
+        if (DEBUG) Log.i(TAG, "calculateMetrics()");
+
         // get current values
         FilteredSensorData<Double> altitudeFilteredSensorData = BANALService.getFilteredSensorData(cAltitudeFilter);
         FilteredSensorData<Double> speedFilteredSensorData = BANALService.getFilteredSensorData(cSpeedFilter);
 
-        // check if we have all values
-        if (altitudeFilteredSensorData == null || altitudeFilteredSensorData.getValue() == null
-                || speedFilteredSensorData == null || speedFilteredSensorData.getValue() == null) {
+        // check if we have filtered altitude values
+        if (altitudeFilteredSensorData == null || altitudeFilteredSensorData.getValue() == null) {
             return;
         }
 
@@ -124,16 +128,26 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
         mLastAltitude = altitudeFilteredSensorData.getValue();
 
         // now, convert m/s to m/h for the vertical speed
-        mVerticalSpeedSensor.newValue(deltaAltitude_mps * 60 * 60 );
+        mVerticalSpeedSensor.newValue(deltaAltitude_mps * 60 * 60);
 
-        // finally, calculate the slope
-        double speed = speedFilteredSensorData.getValue();
-        if (abs(speed) > MIN_SPEED) {
-            mSlopeSensor.newValue(deltaAltitude_mps/speed);  // TODO: make this mathematically more correct by using arctan
+        // calculate the slope
+        // check if we have the filtered speed
+        if (speedFilteredSensorData == null || speedFilteredSensorData.getValue() == null) {
+            // do nothing
+        } else {
+            double speed = speedFilteredSensorData.getValue();
+            if (abs(speed) > MIN_SPEED) {
+                mSlopeSensor.newValue(deltaAltitude_mps / speed);  // TODO: make this mathematically more correct by using arctan
+            }
         }
 
         // similar procedure for the ascent and descent but with the more filtered values
         altitudeFilteredSensorData = BANALService.getFilteredSensorData(cAltitudeSuperFilter);
+        if (altitudeFilteredSensorData == null || altitudeFilteredSensorData.getValue() == null) {
+            return;
+        }
+
+        // check if we already had a value for the filtered altitude
         if (mLastAltitudeSuperFiltered == null) {
             mLastAltitudeSuperFiltered = altitudeFilteredSensorData.getValue();
             return;
@@ -145,9 +159,9 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
 
         // next, we can increment the ascent or descent
         if (deltaAltitude_mps > 0) {
-            mAscentSensor.newValue(mAscentSensor.getValue() + deltaAltitude_mps);
-        } else {
-            mDescentSensor.newValue(mDescentSensor.getValue() - deltaAltitude_mps);
+            mAscentSensor.newValue(mAscentSensor.getValue() == null ? deltaAltitude_mps : mAscentSensor.getValue() + deltaAltitude_mps);
+        } else if (deltaAltitude_mps < 0) {
+            mDescentSensor.newValue(mDescentSensor.getValue() == null ? - deltaAltitude_mps : mDescentSensor.getValue() - deltaAltitude_mps);
         }
     }
 }
