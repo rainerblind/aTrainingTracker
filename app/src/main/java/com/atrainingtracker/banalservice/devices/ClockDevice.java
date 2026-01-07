@@ -83,10 +83,10 @@ public class ClockDevice extends MyDevice {
 
     @Override
     protected void addSensors() {
-        mLapSensor = new MyIntegerAccumulatorSensor(this, SensorType.LAP_NR, BANALService.INIT_LAP_NR);
-        mActiveTimeSensor_s = new MyIntegerAccumulatorSensor(this, SensorType.TIME_ACTIVE);
-        mTotalTimeSensor_s = new MyIntegerAccumulatorSensor(this, SensorType.TIME_TOTAL);
-        mLapTimeSensor_s = new MyIntegerAccumulatorSensor(this, SensorType.TIME_LAP);
+        mLapSensor = new MyIntegerAccumulatorSensor(this, SensorType.LAP_NR, false, BANALService.INIT_LAP_NR); // respectPause is set to false due to the idea that the user is always right.  When the app is paused but the user presses the pause button, we increase the number ob laps.
+        mActiveTimeSensor_s = new MyIntegerAccumulatorSensor(this, SensorType.TIME_ACTIVE, true);
+        mLapTimeSensor_s = new MyIntegerAccumulatorSensor(this, SensorType.TIME_LAP, true);
+        mTotalTimeSensor_s = new MyIntegerAccumulatorSensor(this, SensorType.TIME_TOTAL, false);  // obviously, the total time increments even when the app is paused.
         mTimeOfDaySensor = new MySensor(this, SensorType.TIME_OF_DAY);
 
         addSensor(mLapSensor);
@@ -148,9 +148,7 @@ public class ClockDevice extends MyDevice {
     public void newLap() {
         if (DEBUG) Log.i(TAG, "newLap: increment " + mLaps + " to " + (mLaps + 1));
 
-        mLaps++;
-
-        mLapSensor.newValue(mLaps);
+        mLapSensor.increment(1);
 
         mLapTimeSensor_s.reset();
     }
@@ -158,23 +156,9 @@ public class ClockDevice extends MyDevice {
     private class ClockTimeTask extends TimerTask {
         @Override
         public void run() {
-            mTotalTime++;
-            mTotalTimeSensor_s.newValue(mTotalTime);
-            // mLapSensor.newValue(mLapNr);
-
-            if (DEBUG) Log.i(TAG, "in TimerTask: mLaps=" + mLaps);
-
-            if (!TrainingApplication.isPaused()) {
-                // Log.d(TAG, "run started");
-                mActiveTime++;
-                mActiveTimeSensor_s.newValue(mActiveTime);
-
-                mLapTime++;
-                mLapTimeSensor_s.newValue(mLapTime);
-            } else {
-                if (DEBUG) Log.i(TAG, "paused");
-                // Log.d(TAG, "run not started");
-            }
+            mTotalTimeSensor_s.increment(1);
+            mActiveTimeSensor_s.increment(1);
+            mLapTimeSensor_s.increment(1);
 
             mTimeOfDaySensor.newValue(df.format(Calendar.getInstance().getTime()));
 
