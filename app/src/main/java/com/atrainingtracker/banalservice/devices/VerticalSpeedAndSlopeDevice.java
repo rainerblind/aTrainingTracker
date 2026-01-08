@@ -136,9 +136,14 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
         if (speedFilteredSensorData == null || speedFilteredSensorData.getValue() == null) {
             // do nothing
         } else {
-            double speed = speedFilteredSensorData.getValue();
-            if (abs(speed) > MIN_SPEED) {
-                mSlopeSensor.newValue(deltaAltitude_mps / speed);  // TODO: make this mathematically more correct by using arctan
+            double speed_mps = speedFilteredSensorData.getValue();
+            if (abs(speed_mps) > MIN_SPEED) {
+                mSlopeSensor.newValue(deltaAltitude_mps / speed_mps * 100);
+                // Note that we keep this calculation simple.
+                // When going into details, this calculation might become much more difficult.
+                // When the speed comes from a GPS device, it is probably the horizontal speed and this formula is not correct.
+                // When the speed is calculated by the number of wheel rotations, it is not the horizontal speed but the total speed.  As a consequence thereof, we would have to use sqrt(speed² - deltaAltitude²) instead of speed and thereby make sure that this is well defined.
+                // Since the resulting error is small (e.g. 20% instead of 20.36%) and speed and deltaAltitude are relatively noisy, we ignore this detail.
             }
         }
 
