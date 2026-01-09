@@ -280,7 +280,7 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
                 Segments.ACTIVITY_TYPE + "=?",               // selection
                 new String[]{SportTypeDatabaseManager.getStravaName(mSportTypeId)},  // selectionArgs
                 null, null,                                  // groupBy, having
-                Segments.OWN_RANK + " ASC");                 // orderBy  TODO: what if you never rode/run this segment? => they are at the very top
+                null);                                              // orderBy
 
         if (DEBUG)
             Log.i(TAG, "got new cursor with " + mStarredSegmentsCursor.getCount() + " entries");
