@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.fragments.mapFragments;
 
+import android.Manifest;
 import android.content.Context;
 import android.location.Criteria;
 import android.location.Location;
@@ -39,8 +40,8 @@ import com.google.android.gms.maps.model.LatLng;
 
 public class TrackOnMapTrackingAndFollowingFragment
         extends TrackOnMapTrackingFragment {
-    public static final String TAG = TrackOnMapTrackingAndFollowingFragment.class.getName();
-    private static final boolean DEBUG = TrainingApplication.getDebug(false);
+    public static final String TAG = "TrackOnMapTrackingAndFollowingFragment";
+    private static final boolean DEBUG = TrainingApplication.getDebug(true);
 
     private static final float ZOOM_SUPER_CLOSE_THRESHOLD = 10f / 3.6f;
     private static final float ZOOM_CLOSE_THRESHOLD = 20f / 3.6f;
@@ -77,15 +78,6 @@ public class TrackOnMapTrackingAndFollowingFragment
         if (DEBUG) Log.i(TAG, "onCreate");
 
         mFollowMeLocationSource = new FollowMeLocationSource();
-
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        if (DEBUG) Log.i(TAG, "onResume()");
-
-        mFollowMeLocationSource.getBestAvailableProvider();
 
     }
 
@@ -130,7 +122,6 @@ public class TrackOnMapTrackingAndFollowingFragment
         private OnLocationChangedListener mListener;
         private final LocationManager locationManager;
         @Nullable
-        private String bestAvailableProvider;
         // private double mLatitudeFiltered, mLongitudeFiltered;
         // private float mBearingFiltered, mSpeedFiltered;
         private final CameraPosition.Builder mCameraPositionBuilder = new CameraPosition.Builder();
@@ -148,30 +139,25 @@ public class TrackOnMapTrackingAndFollowingFragment
             criteria.setCostAllowed(true);
         }
 
-        private void getBestAvailableProvider() {
-            /* The preferred way of specifying the location provider (e.g. GPS, NETWORK) to use
-             * is to ask the Location Manager for the one that best satisfies our criteria.
-             * By passing the 'true' boolean we ask for the best available (enabled) provider. */
-            bestAvailableProvider = locationManager.getBestProvider(criteria, true);
-            if (bestAvailableProvider == null) {
-                bestAvailableProvider = LocationManager.GPS_PROVIDER;
-            }
-        }
 
         /* Activates this provider. This provider will notify the supplied listener
          * periodically, until you call deactivate().
          * This method is automatically invoked by enabling my-location layer. */
         @Override
         public void activate(OnLocationChangedListener listener) {
+            if (DEBUG) Log.i(TAG, "activate()");
             // We need to keep a reference to my-location layer's listener so we can push forward
             // location updates to it when we receive them from Location Manager.
             mListener = listener;
 
+            // get the best location provider
+            String bestAvailableProvider = locationManager.getBestProvider(criteria, true);
+            if (bestAvailableProvider == null) {
+                bestAvailableProvider = LocationManager.GPS_PROVIDER;
+            }
             // Request location updates from Location Manager
-            if (bestAvailableProvider != null) {
+            if (TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION) ) {
                 locationManager.requestLocationUpdates(bestAvailableProvider, minTime, minDistance, this);
-            } else {
-                // (Display a message/dialog) No Location Providers currently available.
             }
         }
 
@@ -189,6 +175,8 @@ public class TrackOnMapTrackingAndFollowingFragment
         public void onLocationChanged(@NonNull Location location) {
             /* Push location updates to the registered listener..
              * (this ensures that my-location layer will set the blue dot at the new/received location) */
+            if (DEBUG) Log.i(TAG, "onLocationChanged: lat=" + location.getLatitude() + ", lng=" + location.getLongitude() + ", bearing=" + location.getBearing() + ", speed=" + location.getSpeed() + ", accuracy=" + location.getAccuracy());
+
             if (mListener != null) {
                 mListener.onLocationChanged(location);
             }
