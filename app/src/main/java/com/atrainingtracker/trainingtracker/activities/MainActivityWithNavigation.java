@@ -45,6 +45,7 @@ import android.os.IBinder;
 
 import com.atrainingtracker.trainingtracker.exporter.ExportWorkoutWorker;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
+import com.atrainingtracker.trainingtracker.segments.StarredSegmentsTabbedContainer;
 import com.google.android.material.navigation.NavigationView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -625,13 +626,11 @@ public class MainActivityWithNavigation
                 tag = TrackOnMapTrackingFragment.TAG;
                 break;
 
-                /* Segments no longer supported for 3rd parties
             case R.id.drawer_segments:
                 titleId = R.string.segments;
                 mFragment = new StarredSegmentsTabbedContainer();
                 tag = StarredSegmentsTabbedContainer.TAG;
                 break;
-                */
 
             case R.id.drawer_workouts:
                 titleId = R.string.tab_workouts;
