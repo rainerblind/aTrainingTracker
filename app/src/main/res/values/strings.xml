@@ -746,8 +746,7 @@
     <string name="workout_name_schemes">Workout Name Schemes</string>
     <string name="starred_run_segments">Run</string>
     <string name="starred_bike_segments">Bike</string>
-    <string name="segments">Segments</string>
-    <string name="segment_leaderboard">Leaderboard</string>
+    <string name="segments">Strava Segments (Stared)</string>
 
     <string name="vertical_ellipsis" translatable="false">&#8942;</string>
     <string name="TODO">prove it!</string>

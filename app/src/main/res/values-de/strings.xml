@@ -652,8 +652,7 @@
     <string name="workout_name_schemes">Benennung der Einheiten</string>
     <string name="starred_run_segments">Laufen</string>
     <string name="starred_bike_segments">Radeln</string>
-    <string name="segments">Segmente</string>
-    <string name="segment_leaderboard">Bestenliste</string>
+    <string name="segments">Strava Segmente (favorisierte)</string>
 
     <string name="TODO">Beweise es!</string>
     <string name="tomorrow">morgen?</string>
