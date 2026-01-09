@@ -28,11 +28,11 @@
         <item
             android:id="@+id/drawer_map"
             android:title="@string/tab_map" />
-<!-- Segments no longer supported for 3rd parties
+
         <item
             android:id="@+id/drawer_segments"
             android:title="@string/segments" />
--->
+
         <item
             android:id="@+id/drawer_my_locations"
             android:title="@string/my_locations" />

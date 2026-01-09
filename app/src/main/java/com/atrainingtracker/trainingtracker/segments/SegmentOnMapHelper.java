@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.segments;
 
 import android.content.Context;
+import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
@@ -32,6 +33,7 @@ import android.view.View;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
+import com.atrainingtracker.trainingtracker.activities.SegmentDetailsActivity;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.MyMapViewHolder;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.Roughness;
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager.Segments;
@@ -39,6 +41,7 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 
 import java.util.EnumMap;
@@ -70,7 +73,7 @@ public class SegmentOnMapHelper {
         }
 
         if (segmentData != null) {
-            plotSegmentOnMap(myMapViewHolder, segmentId, roughness_tmp, zoomToMap, animateZoom);
+            plotSegmentOnMap(context, myMapViewHolder, segmentId, roughness_tmp, zoomToMap, animateZoom);
         }
 
         if (calcSegmentData) {
@@ -78,7 +81,7 @@ public class SegmentOnMapHelper {
         }
     }
 
-    private void plotSegmentOnMap(@NonNull final MyMapViewHolder myMapViewHolder, long segmentId, @NonNull Roughness roughness, boolean zoomToMap, final boolean animateZoom) {
+    private void plotSegmentOnMap(@NonNull final Context context, @NonNull final MyMapViewHolder myMapViewHolder, long segmentId, @NonNull Roughness roughness, boolean zoomToMap, final boolean animateZoom) {
         if (DEBUG)
             Log.i(TAG, "plotSegmentOnMap for segmentId=" + segmentId + ", roughness=" + roughness.name());
 
@@ -93,7 +96,28 @@ public class SegmentOnMapHelper {
             return;
         }
 
-        myMapViewHolder.map.addPolyline(segmentData.polylineOptions);
+
+        segmentData.polylineOptions.clickable(true);
+
+        Polyline polyline = myMapViewHolder.map.addPolyline(segmentData.polylineOptions);
+
+        polyline.setTag(segmentId);
+
+        myMapViewHolder.map.setOnPolylineClickListener(clickedPolyline -> {
+            // Retrieve the segment ID from the clicked polyline's tag
+            Object tag = clickedPolyline.getTag();
+            if (tag instanceof Long) {
+                long clickedSegmentId = (Long) tag;
+                if (DEBUG) Log.i(TAG, "Clicked on segment with ID: " + clickedSegmentId);
+
+                // Create an Intent to start SegmentDetailsActivity
+                Intent intent = new Intent(context, SegmentDetailsActivity.class);
+                intent.putExtra(SegmentsDatabaseManager.Segments.SEGMENT_ID, clickedSegmentId);
+
+                // Start the activity
+                context.startActivity(intent);
+            }
+        });
 
         if (zoomToMap) {
             myMapViewHolder.map.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
@@ -213,7 +237,7 @@ public class SegmentOnMapHelper {
             new Handler(Looper.getMainLooper()).post(() -> {
                 if (DEBUG) Log.i(TAG, "onPostExecute segmentId=" + segmentId);
 
-                plotSegmentOnMap(myMapViewHolder, segmentId, roughness, zoomToMap, animateZoom);
+                plotSegmentOnMap(context, myMapViewHolder, segmentId, roughness, zoomToMap, animateZoom);
             });
         }
     }

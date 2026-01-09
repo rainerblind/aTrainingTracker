@@ -218,7 +218,6 @@ public class TrainingApplication extends Application {
     public TrackOnMapHelper trackOnMapHelper;
     public SegmentOnMapHelper segmentOnMapHelper;
     private final HashMap<Long, Boolean> mSegmentListUpdating = new HashMap<>();
-    private final HashMap<Long, Boolean> mLeaderboardUpdating = new HashMap<>();
     private long mWorkoutID = -1;
     protected final BroadcastReceiver mTrackingStartedReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, @NonNull Intent intent) {
@@ -1088,14 +1087,6 @@ public class TrainingApplication extends Application {
             if (DEBUG) Log.i(TAG, "isSegmentListUpdating(" + sportTypeId + "):  no key exists");
             return false;
         }
-    }
-
-    public void setIsLeaderboardUpdating(Long segmentId, boolean isUpdating) {
-        mLeaderboardUpdating.put(segmentId, isUpdating);
-    }
-
-    public boolean isLeaderboardUpdating(Long segmentId) {
-        return mLeaderboardUpdating.getOrDefault(segmentId, false);
     }
 
     public long getWorkoutID() {

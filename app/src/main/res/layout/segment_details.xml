@@ -17,17 +17,10 @@
   ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
   -->
 
-<androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/drawer_layout"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
-
-    <!-- The main content view -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical">
+    android:layout_height="match_parent"
+    android:orientation="vertical">
 
         <!-- Toolbar instead of ActionBar so the drawer can slide on top -->
         <!-- <android.support.v7.widget.Toolbar
@@ -45,30 +38,17 @@
             app:layout_scrollFlags="scroll|enterAlways"
             app:popupTheme="@style/ThemeOverlay.AppCompat.Light" /> -->
 
-        <androidx.appcompat.widget.Toolbar
-            android:id="@+id/apps_toolbar"
-            android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            android:background="?attr/colorPrimary"
-            android:theme="@style/Widget.aTrainingTracker.Toolbar.ToolBarStyle"
-            app:layout_scrollFlags="scroll|enterAlways"/>
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/apps_toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="?attr/colorPrimary"
+        android:theme="@style/Widget.aTrainingTracker.Toolbar.ToolBarStyle"/>
 
         <!-- Real content goes here -->
-        <FrameLayout
-            android:id="@+id/content"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1" />
-    </LinearLayout>
-
-    <!-- The navigation drawer -->
-    <com.google.android.material.navigation.NavigationView
-        android:id="@+id/nav_view"
-        android:layout_width="wrap_content"
-        android:layout_height="match_parent"
-        android:layout_gravity="start"
-        android:fitsSystemWindows="true"
-        app:headerLayout="@layout/headerview"
-        app:menu="@menu/segment_details_navigation_drawer" />
-
-</androidx.drawerlayout.widget.DrawerLayout>
+    <FrameLayout
+        android:id="@+id/content"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+</LinearLayout>
