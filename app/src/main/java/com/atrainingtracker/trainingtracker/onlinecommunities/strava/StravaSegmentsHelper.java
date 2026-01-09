@@ -45,11 +45,6 @@ public class StravaSegmentsHelper {
         return ((TrainingApplication) mContext.getApplicationContext()).isSegmentListUpdating(sportTypeId);
     }
 
-    public boolean isLeaderboardUpdating(long segmentId) {
-        return ((TrainingApplication) mContext.getApplicationContext()).isLeaderboardUpdating(segmentId);
-    }
-
-
     public void getStarredStravaSegments(long sportTypeId) {
         if (DEBUG) Log.i(TAG, "getStarredStravaSegments");
 
