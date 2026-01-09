@@ -120,15 +120,12 @@ public abstract class BaseMapFragment
 
         LocationManager locationManager = (LocationManager) getActivity().getSystemService(Context.LOCATION_SERVICE);
 
-        if (TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
+        if (TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION) || TrainingApplication.havePermission(Manifest.permission.ACCESS_COARSE_LOCATION)) {
             locationGPS = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
             if (locationGPS != null) {
                 if (DEBUG) Log.i(TAG, "locationGPS: time=" + locationGPS.getTime());
                 gpsTime = locationGPS.getTime();
             }
-        }
-
-        if (TrainingApplication.havePermission(Manifest.permission.ACCESS_COARSE_LOCATION)) {
             locationNetwork = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
             if (locationNetwork != null) {
                 if (DEBUG) Log.i(TAG, "locationNetwork: time=" + locationNetwork.getTime());
