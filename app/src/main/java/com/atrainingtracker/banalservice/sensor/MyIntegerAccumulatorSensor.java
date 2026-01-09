@@ -27,27 +27,12 @@ public class MyIntegerAccumulatorSensor extends MyAccumulatorSensor<Integer> {
     private static final String TAG = "MyLongAccumulatorSensor";
     private static final boolean DEBUG = BANALService.getDebug(false);
 
-    private Integer mZeroValue = 0;
-
-    public MyIntegerAccumulatorSensor(MyDevice myDevice, SensorType sensorType, Boolean respectPause) {
-        super(myDevice, sensorType, respectPause);
-        mValue = mZeroValue;
-
-        Object initialValue = BANALService.getInitialValue(sensorType);
-        mInitialValue = initialValue == null ? 0 : (Integer) initialValue;
-
-        reset();
+    public MyIntegerAccumulatorSensor(MyDevice myDevice, SensorType sensorType, Boolean respectPause, Integer zeroValue) {
+        super(myDevice, sensorType, respectPause, zeroValue);
     }
 
-    public MyIntegerAccumulatorSensor(MyDevice myDevice, SensorType sensorType, Boolean respectPause, Integer zeroValue) {
-        this(myDevice, sensorType, respectPause);
-
-        if (DEBUG) Log.d(TAG, "MyIntegerAccumulatorSensor: setting mValue to " + zeroValue);
-
-        mZeroValue = zeroValue;
-        mValue = mZeroValue;
-
-        reset();
+    public MyIntegerAccumulatorSensor(MyDevice myDevice, SensorType sensorType, Boolean respectPause) {
+        super(myDevice, sensorType, respectPause, 0);  // when the zeroValue is not explicitly given in the constructor, it will be set to 0.
     }
 
     @Override
@@ -56,12 +41,7 @@ public class MyIntegerAccumulatorSensor extends MyAccumulatorSensor<Integer> {
         return a + b;
     }
 
-
-    @Override
-    public void reset() {
-        if (DEBUG)
-            Log.d(TAG, "reset " + mSensorType + ": mValue=" + mValue + ", mZeroValue=" + mZeroValue);
-
-        setInitialValue(-mValue + mZeroValue);
+    protected Integer sub(Integer a, Integer b) {
+        return a - b;
     }
 }
