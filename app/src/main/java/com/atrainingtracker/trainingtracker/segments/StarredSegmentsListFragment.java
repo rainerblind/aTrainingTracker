@@ -158,7 +158,6 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
         mSegmentUpdateStartedFilter.addAction(StravaSegmentsIntentService.SEGMENT_UPDATE_STARTED_INTENT);
 
         mUpdateSegmentsListFilter.addAction(StravaSegmentsIntentService.NEW_STARRED_SEGMENT_INTENT);
-        mUpdateSegmentsListFilter.addAction(StravaSegmentsIntentService.LEADERBOARD_UPDATE_COMPLETE_INTENT);
 
         mUpdatingSegmentsCompleteFilter.addAction(StravaSegmentsIntentService.SEGMENTS_UPDATE_COMPLETE_INTENT);
 
