@@ -66,7 +66,6 @@ public class StravaSegmentsIntentService extends IntentService {
     public static final String SEGMENTS_UPDATE_COMPLETE_INTENT = StravaSegmentsIntentService.class.getName() + ".SEGMENTS_UPDATE_COMPLETE_INTENT";  // send when all segment are handled
     public static final String RESULT_MESSAGE = StravaSegmentsIntentService.class.getName() + ".RESULT_MESSAGE";
     // protected static final String URL_STRAVA_STARRED_SEGMENTS = "https://www.strava.com/api/v3/segments/starred";
-    // protected static final String URL_STRAVA_SEGMENT_LEADERBOARD = "https://www.strava.com/api/v3/segments/%i/leaderboard";
     protected static final String HTTPS = "https";
     protected static final String AUTHORITY_STRAVA = "www.strava.com";
     protected static final String API = "api";
@@ -140,10 +139,10 @@ public class StravaSegmentsIntentService extends IntentService {
                 .appendPath(STREAMS)
                 .appendPath(streamType.requestStreamTypes)
                 .appendQueryParameter(SERIES_TYPE, TIME);
-        String leaderboardUrl = builder.build().toString();
+        String stravaUrl = builder.build().toString();
 
         HttpClient httpClient = new DefaultHttpClient();
-        HttpGet httpGet = new HttpGet(leaderboardUrl);
+        HttpGet httpGet = new HttpGet(stravaUrl);
         httpGet.addHeader(AUTHORIZATION, BEARER + " " + StravaHelper.getRefreshedAccessToken());
 
         HttpResponse httpResponse;
