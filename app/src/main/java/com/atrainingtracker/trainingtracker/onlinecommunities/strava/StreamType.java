@@ -25,8 +25,7 @@ import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager.Seg
  */
 
 public enum StreamType {
-    SEGMENT(Segments.TABLE_SEGMENT_STREAMS, Segments.SEGMENT_ID, "segments", "latlng, distance, altitude"),
-    SEGMENT_EFFORT(Segments.TABLE_EFFORT_STREAMS, Segments.EFFORT_ID, "segment_efforts", "latlng, distance, heartrate, watts, cadence, velocity_smooth");
+    SEGMENT(Segments.TABLE_SEGMENT_STREAMS, Segments.SEGMENT_ID, "segments", "latlng, distance, altitude");
 
     public final String table;
     public final String idName;

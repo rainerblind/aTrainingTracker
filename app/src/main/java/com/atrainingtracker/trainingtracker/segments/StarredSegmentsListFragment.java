@@ -158,7 +158,6 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
         mSegmentUpdateStartedFilter.addAction(StravaSegmentsIntentService.SEGMENT_UPDATE_STARTED_INTENT);
 
         mUpdateSegmentsListFilter.addAction(StravaSegmentsIntentService.NEW_STARRED_SEGMENT_INTENT);
-        mUpdateSegmentsListFilter.addAction(StravaSegmentsIntentService.LEADERBOARD_UPDATE_COMPLETE_INTENT);
 
         mUpdatingSegmentsCompleteFilter.addAction(StravaSegmentsIntentService.SEGMENTS_UPDATE_COMPLETE_INTENT);
 
@@ -174,12 +173,11 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
 
         mStarredSegmentsCursorAdapter = new StarredSegmentsCursorAdapter(getActivity(), mStarredSegmentsCursor, mStravaSegmentsHelper, new StarredSegmentsCursorAdapter.ShowSegmentDetailsInterface() {
             @Override
-            public void startSegmentDetailsActivity(long segmentId, @NonNull SegmentDetailsActivity.SelectedFragment selectedFragment) {
+            public void startSegmentDetailsActivity(long segmentId) {
                 if (DEBUG) Log.i(TAG, "startSegmentDetailsActivity(" + segmentId + ")");
 
                 Bundle bundle = new Bundle();
                 bundle.putLong(Segments.SEGMENT_ID, segmentId);
-                bundle.putString(SegmentDetailsActivity.SELECTED_FRAGMENT, selectedFragment.name());
                 Intent segmentDetailsIntent = new Intent(getContext(), SegmentDetailsActivity.class);
                 segmentDetailsIntent.putExtras(bundle);
                 startActivity(segmentDetailsIntent);
@@ -270,7 +268,7 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
         int segmentId = mStarredSegmentsCursor.getInt(mStarredSegmentsCursor.getColumnIndex(Segments.SEGMENT_ID));
         if (DEBUG) Log.i(TAG, "segmentId=" + segmentId);
 
-        startSegmentDetailsActivityInterface.startSegmentDetailsActivity(segmentId, SegmentDetailsActivity.SelectedFragment.LEADERBOARD);
+        startSegmentDetailsActivityInterface.startSegmentDetailsActivity(segmentId);
     }
 
     protected void updateCursor() {
@@ -282,7 +280,7 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
                 Segments.ACTIVITY_TYPE + "=?",               // selection
                 new String[]{SportTypeDatabaseManager.getStravaName(mSportTypeId)},  // selectionArgs
                 null, null,                                  // groupBy, having
-                Segments.OWN_RANK + " ASC");                 // orderBy  TODO: what if you never rode/run this segment? => they are at the very top
+                null);                                              // orderBy
 
         if (DEBUG)
             Log.i(TAG, "got new cursor with " + mStarredSegmentsCursor.getCount() + " entries");
@@ -308,6 +306,6 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
     }
 
     public interface StartSegmentDetailsActivityInterface {
-        void startSegmentDetailsActivity(int segmentId, SegmentDetailsActivity.SelectedFragment selectedFragment);
+        void startSegmentDetailsActivity(int segmentId);
     }
 }
