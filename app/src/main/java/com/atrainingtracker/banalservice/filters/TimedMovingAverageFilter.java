@@ -71,7 +71,7 @@ public class TimedMovingAverageFilter
 
         double sum = 0;
         for (TimestampedValue timestampedValue : mTimestampedValues) {
-            sum += timestampedValue.value.doubleValue();
+            sum += timestampedValue.value == null ? 0 : timestampedValue.value.doubleValue();
         }
         return sum / mTimestampedValues.size();
     }
