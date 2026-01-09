@@ -57,8 +57,6 @@ public class SegmentDetailsActivity extends AppCompatActivity {
     private static final String TAG = SegmentDetailsActivity.class.getName();
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
     // the views
-    protected DrawerLayout mDrawerLayout;
-    // protected NavigationView mNavigationView;
     long mSegmentId;
 
     /**
@@ -96,10 +94,6 @@ public class SegmentDetailsActivity extends AppCompatActivity {
         // supportAB.setHomeAsUpIndicator(R.drawable.abc_ic_ab_back_mtrl_am_alpha);
         supportAB.setDisplayHomeAsUpEnabled(true);
 
-        mDrawerLayout = findViewById(R.id.drawer_layout);
-
-        ActionBarDrawerToggle actionBarDrawerToggle = new ActionBarDrawerToggle(this, mDrawerLayout, toolbar, R.string.TrainingTracker, R.string.TrainingTracker);
-        actionBarDrawerToggle.syncState();
 
         Fragment fragment = SimpleSegmentOnMapFragment.newInstance(mSegmentId);
         String tag = SimpleSegmentOnMapFragment.TAG;
@@ -107,40 +101,18 @@ public class SegmentDetailsActivity extends AppCompatActivity {
         FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
         fragmentTransaction.replace(R.id.content, fragment, tag);
         fragmentTransaction.commit();
+    }
 
-
-        ViewCompat.setOnApplyWindowInsetsListener(
-                mDrawerLayout,
-                new OnApplyWindowInsetsListener() {
-                    @NonNull
-                    @Override
-                    public WindowInsetsCompat onApplyWindowInsets(
-                            @NonNull View v, @NonNull WindowInsetsCompat windowInsets) {
-                        Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
-                        v.setPadding(insets.left, 0, insets.right, insets.bottom);
-                        ViewGroup.MarginLayoutParams mlp = (ViewGroup.MarginLayoutParams) v.getLayoutParams();
-                        mlp.topMargin = insets.top;
-                        return WindowInsetsCompat.CONSUMED;
-                    }
-                });
-
-        getOnBackPressedDispatcher().addCallback(this,
-                new OnBackPressedCallback(true) {
-                    @Override
-                    public void handleOnBackPressed() {
-                        if (mDrawerLayout.isDrawerOpen(GravityCompat.START)) {
-                            mDrawerLayout.closeDrawer(GravityCompat.START);
-                        }
-                        // else if (getSupportFragmentManager().getBackStackEntryCount() == 0
-                        //        && mSelectedFragmentId != R.id.drawer_map) {
-                        //     onNavigationItemSelected(mNavigationView.getMenu().findItem(R.id.drawer_map));
-                        // }
-                        else {
-                            finish();
-                        }
-                    }
-                }
-        );
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        // Handle the back arrow (up button) click
+        if (item.getItemId() == android.R.id.home) {
+            // This is the same as pressing the system back button.
+            // It will respect the OnBackPressedCallback you have already defined.
+            getOnBackPressedDispatcher().onBackPressed();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
     }
 
     @Override
