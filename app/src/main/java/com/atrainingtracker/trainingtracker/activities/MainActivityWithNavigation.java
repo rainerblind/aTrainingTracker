@@ -805,12 +805,11 @@ public class MainActivityWithNavigation
     }
 
     @Override
-    public void startSegmentDetailsActivity(int segmentId, @NonNull SegmentDetailsActivity.SelectedFragment selectedFragment) {
+    public void startSegmentDetailsActivity(int segmentId) {
         if (DEBUG) Log.i(TAG, "startSegmentDetailsActivity: segmentId=" + segmentId);
 
         Bundle bundle = new Bundle();
         bundle.putLong(SegmentsDatabaseManager.Segments.SEGMENT_ID, segmentId);
-        bundle.putString(WorkoutDetailsActivity.SELECTED_FRAGMENT, selectedFragment.name());
         Intent segmentDetailsIntent = new Intent(this, SegmentDetailsActivity.class);
         segmentDetailsIntent.putExtras(bundle);
         startActivity(segmentDetailsIntent);

@@ -176,7 +176,7 @@ public class StarredSegmentsCursorAdapter extends CursorAdapter {
         viewHolder.llSegmentsHeader.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                mShowSegmentDetailsListener.startSegmentDetailsActivity(segmentId, SegmentDetailsActivity.SelectedFragment.LEADERBOARD);
+                mShowSegmentDetailsListener.startSegmentDetailsActivity(segmentId);
             }
         });
 
@@ -194,7 +194,7 @@ public class StarredSegmentsCursorAdapter extends CursorAdapter {
 
 
     public interface ShowSegmentDetailsInterface {
-        void startSegmentDetailsActivity(long segmentId, SegmentDetailsActivity.SelectedFragment selectedFragment);
+        void startSegmentDetailsActivity(long segmentId);
     }
 
     public class ViewHolder
@@ -248,7 +248,7 @@ public class StarredSegmentsCursorAdapter extends CursorAdapter {
                 map.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
                     @Override
                     public void onMapClick(LatLng latLng) {
-                        mShowSegmentDetailsListener.startSegmentDetailsActivity(segmentId, SegmentDetailsActivity.SelectedFragment.MAP);
+                        mShowSegmentDetailsListener.startSegmentDetailsActivity(segmentId);
                     }
                 });
 
