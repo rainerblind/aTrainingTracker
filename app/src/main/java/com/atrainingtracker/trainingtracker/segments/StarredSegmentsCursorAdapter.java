@@ -57,7 +57,7 @@ import java.util.Locale;
  */
 
 public class StarredSegmentsCursorAdapter extends CursorAdapter {
-    protected static final String[] FROM = {Segments.SEGMENT_ID, Segments.C_ID, Segments.SEGMENT_NAME, Segments.DISTANCE, Segments.AVERAGE_GRADE, Segments.CLIMB_CATEGORY, Segments.PR_TIME, Segments.OWN_RANK, Segments.PR_DATE, Segments.LAST_UPDATED};
+    protected static final String[] FROM = {Segments.SEGMENT_ID, Segments.C_ID, Segments.SEGMENT_NAME, Segments.DISTANCE, Segments.AVERAGE_GRADE, Segments.CLIMB_CATEGORY};
     private final String TAG = StarredSegmentsCursorAdapter.class.getSimpleName();
     private final boolean DEBUG = TrainingApplication.getDebug(false);
     protected final Activity mActivity;
