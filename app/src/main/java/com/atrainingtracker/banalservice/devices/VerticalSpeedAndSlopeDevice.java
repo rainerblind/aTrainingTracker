@@ -43,7 +43,7 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
 
 
     private static final String TAG = "VerticalSpeedAndSlopeDevice";
-    private static final Boolean DEBUG = true;
+    private static final Boolean DEBUG = BANALService.getDebug(false);
 
     private final ScheduledExecutorService mScheduler = Executors.newSingleThreadScheduledExecutor();
 
