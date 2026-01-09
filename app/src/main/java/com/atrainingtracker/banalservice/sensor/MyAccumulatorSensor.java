@@ -25,7 +25,8 @@ public abstract class MyAccumulatorSensor<N extends Number> extends MySensor<N> 
     private static final String TAG = "MyAccumulatorSensor";
 
     Boolean mRespectPause;
-    protected N mInitialValue;
+    protected N mInitialValue;  // necessary to manipulate the output that we get via getValue()...
+    protected N mZeroValue; // In almost all cases, this will be 0.  In some special cases, like a lap sensor, this will be 1.
 
     @Override
     @Deprecated
@@ -36,18 +37,21 @@ public abstract class MyAccumulatorSensor<N extends Number> extends MySensor<N> 
 
     protected abstract N add(N a, N b);
 
+    protected abstract N sub(N a, N b);
+
+
     public void increment(N incrementBy) {
         if (mRespectPause && TrainingApplication.isPaused()) {
             // do nothing
         } else {
-            newValue(getValue() == null ? add(mInitialValue, incrementBy) : add(getValue(), incrementBy));
+            newValue(add(mValue, incrementBy));
         }
     }
 
     @Override
     public N getValue() {
         if (mActivated) {
-            return mValue == null ? mInitialValue : add(mInitialValue, mValue);
+            return add(mInitialValue, mValue);
         } else {
             return null;
         }
@@ -59,16 +63,19 @@ public abstract class MyAccumulatorSensor<N extends Number> extends MySensor<N> 
      * @param respectPause parameter to specify whether or not the value should be incremented when the app is paused.
      *    Unfortunately, this seems to be difficult for the ANT+ and Bluetooth LE devices.  These devices simply count the wheel revolutions or steps.  Thus, it is difficult to not increment the distance when paused.
      */
-    public MyAccumulatorSensor(MyDevice myDevice, SensorType sensorType, Boolean respectPause) {
+    public MyAccumulatorSensor(MyDevice myDevice, SensorType sensorType, Boolean respectPause, N zeroValue) {
         super(myDevice, sensorType);
         mRespectPause = respectPause;
+        mZeroValue = zeroValue;
+        mInitialValue = zeroValue;
+        newValue(zeroValue);
     }
 
-    public void setInitialValue(N value) {
-        if (value != null) {
-            mInitialValue = value;
-        }
+    public final void setInitialValue(N value) {
+        mInitialValue = value;
     }
 
-    public abstract void reset();
+    public final void reset() {
+        setInitialValue(sub(mZeroValue, mValue));
+    }
 }
