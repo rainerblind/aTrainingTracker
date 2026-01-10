@@ -56,10 +56,10 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
     private Double mLastAltitudeSuperFiltered;
 
     // Tuning parameters
-    private static final FilterData cAltitudeFilter = new FilterData(null, SensorType.ALTITUDE, FilterType.MOVING_AVERAGE_TIME, 30);
+    private static final FilterData cAltitudeFilter = new FilterData(null, SensorType.ALTITUDE, FilterType.MOVING_AVERAGE_TIME, 60);
     private static final FilterData cAltitudeSuperFilter = new FilterData(null, SensorType.ALTITUDE, FilterType.MOVING_AVERAGE_TIME, 5*60);
-    private static final FilterData cSpeedFilter = new FilterData(null, SensorType.SPEED_mps, FilterType.MOVING_AVERAGE_TIME, 30);
-    private static final double MIN_SPEED = 0.01;  // min speed to calculate slope
+    private static final FilterData cSpeedFilter = new FilterData(null, SensorType.SPEED_mps, FilterType.MOVING_AVERAGE_TIME, 60);
+    private static final double MIN_SPEED = 0.5;  // min speed to calculate slope
 
     public VerticalSpeedAndSlopeDevice(Context context, MySensorManager mySensorManager) {
         super(context, mySensorManager, DeviceType.VERTICAL_SPEED_AND_SLOPE);
