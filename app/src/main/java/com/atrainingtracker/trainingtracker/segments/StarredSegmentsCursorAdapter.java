@@ -56,7 +56,7 @@ import java.util.Locale;
  */
 
 public class StarredSegmentsCursorAdapter extends CursorAdapter {
-    protected static final String[] FROM = {Segments.SEGMENT_ID, Segments.C_ID, Segments.SEGMENT_NAME, Segments.CITY, Segments.COUNTRY, Segments.DISTANCE, Segments.AVERAGE_GRADE, Segments.MAXIMUM_GRADE, Segments.ELEVATION_LOW, Segments.ELEVATION_HIGH, Segments.CLIMB_CATEGORY};
+    protected static final String[] FROM = {Segments.SEGMENT_ID, Segments.C_ID, Segments.SEGMENT_NAME, Segments.CITY, Segments.COUNTRY, Segments.DISTANCE, Segments.AVERAGE_GRADE, Segments.MAXIMUM_GRADE, Segments.ELEVATION_LOW, Segments.ELEVATION_HIGH, Segments.CLIMB_CATEGORY, Segments.PR_TIME};
     private final String TAG = StarredSegmentsCursorAdapter.class.getSimpleName();
     private final boolean DEBUG = TrainingApplication.getDebug(false);
     protected final Activity mActivity;
@@ -94,6 +94,8 @@ public class StarredSegmentsCursorAdapter extends CursorAdapter {
 
         // set all the views of the view holder
         viewHolder.tvName = row.findViewById(R.id.textViewSegmentName);
+        viewHolder.layoutPr = row.findViewById(R.id.layout_pr);
+        viewHolder.tvPrTime = row.findViewById(R.id.textViewPrTime);
         viewHolder.tvCity = row.findViewById(R.id.textViewCity);
         viewHolder.tvDistance = row.findViewById(R.id.textViewDistance);
         viewHolder.tvAverageGrade = row.findViewById(R.id.textViewAvgGrade);
@@ -121,6 +123,15 @@ public class StarredSegmentsCursorAdapter extends CursorAdapter {
         viewHolder.segmentId = segmentId;
 
         viewHolder.tvName.setText(cursor.getString(cursor.getColumnIndex(Segments.SEGMENT_NAME)));
+
+        int prTimeInSeconds = cursor.getInt(cursor.getColumnIndex(Segments.PR_TIME));
+        if (prTimeInSeconds > 0) {
+            viewHolder.layoutPr.setVisibility(View.VISIBLE);
+            viewHolder.tvPrTime.setText(timeFormatter.format(prTimeInSeconds)); // Use a formatting helper
+        } else {
+            viewHolder.layoutPr.setVisibility(View.GONE);
+        }
+
         // Set the city text
         String city = cursor.getString(cursor.getColumnIndex(SegmentsDatabaseManager.Segments.CITY));
         if (city != null && !city.isEmpty()) {
@@ -130,6 +141,7 @@ public class StarredSegmentsCursorAdapter extends CursorAdapter {
             // Hide the view if there is no city data to avoid an empty space
            viewHolder.tvCity.setVisibility(View.GONE);
         }
+
         viewHolder.tvDistance.setText(distanceFormatter.format_with_units(cursor.getDouble(cursor.getColumnIndex(Segments.DISTANCE))));
 
         // Prepend the Unicode symbol for average (Ø) to the text.
@@ -171,8 +183,25 @@ public class StarredSegmentsCursorAdapter extends CursorAdapter {
                 mShowSegmentDetailsListener.startSegmentDetailsActivity(segmentId);
             }
         });
-
     }
+
+    /**
+     * Helper method to format seconds into a time string (e.g., HH:MM:SS or MM:SS).
+     * @param totalSeconds The total time in seconds.
+     * @return A formatted string.
+     */
+    private String formatSeconds(int totalSeconds) {
+        int hours = totalSeconds / 3600;
+        int minutes = (totalSeconds % 3600) / 60;
+        int seconds = totalSeconds % 60;
+
+        if (hours > 0) {
+            return String.format(Locale.getDefault(), "%d:%02d:%02d", hours, minutes, seconds);
+        } else {
+            return String.format(Locale.getDefault(), "%d:%02d", minutes, seconds);
+        }
+    }
+
 
     /**
      * Check the device to make sure it has the Google Play Services APK. If
@@ -197,6 +226,8 @@ public class StarredSegmentsCursorAdapter extends CursorAdapter {
         View rowView;
         TextView tvClimbCategory;
         TextView tvName;
+        View layoutPr; // The LinearLayout for the PR
+        TextView tvPrTime;
         TextView tvCity;
         TextView tvDistance;
         TextView tvAverageGrade;

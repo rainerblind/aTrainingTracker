@@ -122,6 +122,7 @@ public class SegmentsDatabaseManager {
         public static final String PRIVATE = "Private";       // private: 	boolean
         public static final String STARRED = "Starred";       // starred: 	boolean
         public static final String HAZARDOUS = "Hazardous";     // hazardous: boolean
+        public static final String PR_TIME = "pr_time";
 
 
         // for TABLE_SEGMENT_STREAMS
@@ -139,8 +140,9 @@ public class SegmentsDatabaseManager {
         public static final String DB_NAME = "Segments.db";
         // public static final int DB_VERSION = 1; // created  3.8.2016
         // public static final int DB_VERSION = 2; // updated 19.8.2016
-        public static final int DB_VERSION = 3; // updated 26.9.2016
-        protected static final String CREATE_TABLE_STARRED_SEGMENTS_V1 = "create table " + Segments.TABLE_STARRED_SEGMENTS + " ("
+        // public static final int DB_VERSION = 3; // updated 26.9.2016
+        public static final int DB_VERSION = 5; // updated 11.01.2026: add PR_TIME
+        protected static final String CREATE_TABLE_STARRED_SEGMENTS_V2 = "create table " + Segments.TABLE_STARRED_SEGMENTS + " ("
                 + Segments.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                 + Segments.SEGMENT_ID + " int, "
                 + Segments.RESOURCE_STATE + " int, "
@@ -161,7 +163,9 @@ public class SegmentsDatabaseManager {
                 + Segments.COUNTRY + " text, "
                 + Segments.PRIVATE + " int, "
                 + Segments.STARRED + " int, "
-                + Segments.HAZARDOUS + " int)";
+                + Segments.HAZARDOUS + " int, "
+                + Segments.PR_TIME + " int)";
+
 
         protected static final String CREATE_TABLE_SEGMENT_STREAMS_V1 = "create table " + Segments.TABLE_SEGMENT_STREAMS + " ("
                 + Segments.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -184,8 +188,8 @@ public class SegmentsDatabaseManager {
         @Override
         public void onCreate(@NonNull SQLiteDatabase db) {
 
-            db.execSQL(CREATE_TABLE_STARRED_SEGMENTS_V1);
-            if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_STARRED_SEGMENTS_V1);
+            db.execSQL(CREATE_TABLE_STARRED_SEGMENTS_V2);
+            if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_STARRED_SEGMENTS_V2);
 
             db.execSQL(CREATE_TABLE_SEGMENT_STREAMS_V1);
             if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_SEGMENT_STREAMS_V1);
@@ -200,13 +204,13 @@ public class SegmentsDatabaseManager {
         @Override
         public void onUpgrade(@NonNull SQLiteDatabase db, int oldVersion, int newVersion) {
 
-            if (newVersion <= 3) {  // simply clear everything
+            // since this database is only a cache for online data, its upgrade policy is
+            // to simply to discard the data and start over
 
-                db.execSQL("drop table if exists " + Segments.TABLE_STARRED_SEGMENTS);
-                db.execSQL("drop table if exists " + Segments.TABLE_SEGMENT_STREAMS);
+            db.execSQL("drop table if exists " + Segments.TABLE_STARRED_SEGMENTS);
+            db.execSQL("drop table if exists " + Segments.TABLE_SEGMENT_STREAMS);
 
-                onCreate(db);  // run onCreate to get new database
-            }
+            onCreate(db);  // run onCreate to get new database
         }
     }
 }

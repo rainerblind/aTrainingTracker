@@ -56,15 +56,46 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
             android:layout_marginTop="8dp"
-            android:layout_marginEnd="16dp"
             android:ellipsize="end"
             android:maxLines="1"
             android:textAppearance="@style/TextAppearance.AppCompat.Subhead"
             android:textStyle="bold"
-            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/layout_pr"
             app:layout_constraintStart_toEndOf="@id/mapViewSegment"
             app:layout_constraintTop_toTopOf="parent"
             tools:text="Epic Mountain Climb"/>
+
+        <!-- START OF NEW CODE: PR Time Layout -->
+        <LinearLayout
+            android:id="@+id/layout_pr"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="@id/textViewSegmentName"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@id/textViewSegmentName"
+            tools:visibility="visible">
+
+        <ImageView
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:src="@drawable/ic_pr_timer"
+            app:tint="?android:attr/textColorSecondary"
+            tools:ignore="ContentDescription"/>
+
+        <TextView
+            android:id="@+id/textViewPrTime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:textAppearance="@style/TextAppearance.AppCompat.Small"
+            android:textStyle="bold"
+            android:textColor="?android:attr/textColorSecondary"
+            tools:text="15:32" />
+    </LinearLayout>
 
         <!-- City Name -->
         <TextView
