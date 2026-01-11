@@ -47,8 +47,8 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
 
     private final ScheduledExecutorService mScheduler = Executors.newSingleThreadScheduledExecutor();
 
-    private MySensor<Double> mVerticalSpeedSensor;
-    private MySensor<Double> mSlopeSensor;
+    private MySensor<Integer> mVerticalSpeedSensor;
+    private MySensor<Integer> mSlopeSensor;
     private MyDoubleAccumulatorSensor mAscentSensor;
     private MyDoubleAccumulatorSensor mDescentSensor;
 
@@ -112,12 +112,14 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
 
         // check if we have filtered altitude values
         if (altitudeFilteredSensorData == null || altitudeFilteredSensorData.getValue() == null) {
+            if (DEBUG) Log.i(TAG, "calculateMetrics(): no filtered altitude -> return");
             return;
         }
 
         // check if we already had a value for the altitude
         if (mLastAltitude == null) {
             mLastAltitude = altitudeFilteredSensorData.getValue();
+            if (DEBUG) Log.i(TAG, "calculateMetrics(): no last altitude -> return");
             return;
         }
 
@@ -129,21 +131,28 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
         mLastAltitude = altitudeFilteredSensorData.getValue();
 
         // now, convert m/s to m/h for the vertical speed
-        mVerticalSpeedSensor.newValue(deltaAltitude_mps * 60 * 60);
+        double vertical_speed = deltaAltitude_mps * 60 * 60;
+        mVerticalSpeedSensor.newValue((int) Math.round(vertical_speed));
 
         // calculate the slope
         // check if we have the filtered speed
         if (speedFilteredSensorData == null || speedFilteredSensorData.getValue() == null) {
             // do nothing
+            Log.i(TAG, "calculateMetrics(): no filtered speed");
         } else {
             double speed_mps = speedFilteredSensorData.getValue();
             if (abs(speed_mps) > MIN_SPEED) {
-                mSlopeSensor.newValue(deltaAltitude_mps / speed_mps * 100);
+                double slopePercentage = deltaAltitude_mps / speed_mps * 100;
+                if (DEBUG) Log.i(TAG, "calculateMetrics(): slopePercentage=" + slopePercentage);
+                mSlopeSensor.newValue((int) Math.round(slopePercentage));
                 // Note that we keep this calculation simple.
                 // When going into details, this calculation might become much more difficult.
                 // When the speed comes from a GPS device, it is probably the horizontal speed and this formula is not correct.
                 // When the speed is calculated by the number of wheel rotations, it is not the horizontal speed but the total speed.  As a consequence thereof, we would have to use sqrt(speed² - deltaAltitude²) instead of speed and thereby make sure that this is well defined.
                 // Since the resulting error is small (e.g. 20% instead of 20.36%) and speed and deltaAltitude are relatively noisy, we ignore this detail.
+            }
+            else {
+                if (DEBUG) Log.i(TAG, "calculateMetrics(): speed is too low");
             }
         }
 
