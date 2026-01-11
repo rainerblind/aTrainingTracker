@@ -355,7 +355,7 @@ public class StravaSegmentsIntentService extends IntentService {
                         long segmentId = segmentJsonObject.getInt(ID);
                         newSegmentIdSet.add(segmentId);
 
-                        if (segmentIdSet.contains(segmentId)) {
+                        if (segmentIdSet.contains(segmentId) && false) {
                             // nothing to do?
                         } else {
 
@@ -385,6 +385,9 @@ public class StravaSegmentsIntentService extends IntentService {
                             contentValues.put(Segments.PRIVATE, segmentJsonObject.getBoolean(PRIVATE) ? 1 : 0);
                             contentValues.put(Segments.STARRED, segmentJsonObject.getBoolean(STARRED) ? 1 : 0);
                             contentValues.put(Segments.HAZARDOUS, segmentJsonObject.getBoolean(HAZARDOUS) ? 1 : 0);
+                            if (segmentJsonObject.has(Segments.PR_TIME)) {
+                                contentValues.put(Segments.PR_TIME, segmentJsonObject.getInt(Segments.PR_TIME));
+                            }
 
                             db.insert(Segments.TABLE_STARRED_SEGMENTS, null, contentValues);
                             if (DEBUG) Log.i(TAG, "inserted segment " + segmentId);
