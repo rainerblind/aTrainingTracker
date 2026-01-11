@@ -29,7 +29,6 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.atrainingtracker.R;
@@ -57,7 +56,7 @@ import java.util.Locale;
  */
 
 public class StarredSegmentsCursorAdapter extends CursorAdapter {
-    protected static final String[] FROM = {Segments.SEGMENT_ID, Segments.C_ID, Segments.SEGMENT_NAME, Segments.DISTANCE, Segments.AVERAGE_GRADE, Segments.CLIMB_CATEGORY};
+    protected static final String[] FROM = {Segments.SEGMENT_ID, Segments.C_ID, Segments.SEGMENT_NAME, Segments.CITY, Segments.COUNTRY, Segments.DISTANCE, Segments.AVERAGE_GRADE, Segments.MAXIMUM_GRADE, Segments.ELEVATION_LOW, Segments.ELEVATION_HIGH, Segments.CLIMB_CATEGORY};
     private final String TAG = StarredSegmentsCursorAdapter.class.getSimpleName();
     private final boolean DEBUG = TrainingApplication.getDebug(false);
     protected final Activity mActivity;
@@ -94,13 +93,18 @@ public class StarredSegmentsCursorAdapter extends CursorAdapter {
         ViewHolder viewHolder = new ViewHolder(null, null);
 
         // set all the views of the view holder
-        viewHolder.tvName = row.findViewById(R.id.tvSegmentName);
-        viewHolder.tvDistance = row.findViewById(R.id.tvSegmentDistance);
-        viewHolder.tvAverageGrade = row.findViewById(R.id.tvSegmentAverageGrade);
-        viewHolder.tvClimbCategory = row.findViewById(R.id.tvSegmentClimbCategory);
-        viewHolder.mapView = row.findViewById(R.id.starred_segments_mapView);
+        viewHolder.tvName = row.findViewById(R.id.textViewSegmentName);
+        viewHolder.tvCity = row.findViewById(R.id.textViewCity);
+        viewHolder.tvDistance = row.findViewById(R.id.textViewDistance);
+        viewHolder.tvAverageGrade = row.findViewById(R.id.textViewAvgGrade);
+        viewHolder.tvClimbCategory = row.findViewById(R.id.textViewCategoryChip);
+        viewHolder.tvElevationGain = row.findViewById(R.id.textViewElevationGain);
+        viewHolder.tvElevationMin = row.findViewById(R.id.textViewElevationMin);
+        viewHolder.tvElevationMax = row.findViewById(R.id.textViewElevationMax);
+        viewHolder.tvMaxGrade = row.findViewById(R.id.textViewMaxGrade);
+        viewHolder.mapView = row.findViewById(R.id.mapViewSegment);
 
-        viewHolder.llSegmentsHeader = row.findViewById(R.id.llSegmentsHeader);
+        viewHolder.rowView = row;
 
         viewHolder.initializeMapView();
 
@@ -117,9 +121,40 @@ public class StarredSegmentsCursorAdapter extends CursorAdapter {
         viewHolder.segmentId = segmentId;
 
         viewHolder.tvName.setText(cursor.getString(cursor.getColumnIndex(Segments.SEGMENT_NAME)));
+        // Set the city text
+        String city = cursor.getString(cursor.getColumnIndex(SegmentsDatabaseManager.Segments.CITY));
+        if (city != null && !city.isEmpty()) {
+            viewHolder.tvCity.setText(city);
+            viewHolder.tvCity.setVisibility(View.VISIBLE);
+        } else {
+            // Hide the view if there is no city data to avoid an empty space
+           viewHolder.tvCity.setVisibility(View.GONE);
+        }
         viewHolder.tvDistance.setText(distanceFormatter.format_with_units(cursor.getDouble(cursor.getColumnIndex(Segments.DISTANCE))));
-        viewHolder.tvAverageGrade.setText(String.format(Locale.getDefault(), "%.1f %%", cursor.getDouble(cursor.getColumnIndex(Segments.AVERAGE_GRADE))));
-        viewHolder.tvClimbCategory.setText(StravaHelper.translateClimbCategory(cursor.getInt(cursor.getColumnIndex(Segments.CLIMB_CATEGORY))));
+
+        // Prepend the Unicode symbol for average (Ø) to the text.
+        String avgGradeText = String.format(Locale.getDefault(), "\u00D8 %.1f%%", cursor.getDouble(cursor.getColumnIndex(Segments.AVERAGE_GRADE)));
+        viewHolder.tvAverageGrade.setText(avgGradeText);
+
+        float maxGrade = cursor.getFloat(cursor.getColumnIndexOrThrow(SegmentsDatabaseManager.Segments.MAXIMUM_GRADE));
+        viewHolder.tvMaxGrade.setText(String.format(Locale.US, "%.1f%% Max", maxGrade));
+
+        int climbCategory = cursor.getInt(cursor.getColumnIndex(Segments.CLIMB_CATEGORY));
+        if (climbCategory > 0) {
+            viewHolder.tvClimbCategory.setText(StravaHelper.translateClimbCategory(climbCategory));
+            viewHolder.tvClimbCategory.setVisibility(View.VISIBLE);
+        } else {
+            // Hide the chip if the category is 0 or less (not available)
+            viewHolder.tvClimbCategory.setVisibility(View.GONE);
+        }
+
+        // Calculate and set Elevation Gain
+        double elevHigh = cursor.getDouble(cursor.getColumnIndex(Segments.ELEVATION_HIGH));
+        double elevLow = cursor.getDouble(cursor.getColumnIndex(Segments.ELEVATION_LOW));
+        long elevationGain = Math.round(elevHigh - elevLow);
+        viewHolder.tvElevationGain.setText(String.format(Locale.getDefault(), "%d m", elevationGain));
+        viewHolder.tvElevationMin.setText(String.format(Locale.getDefault(), "%d m", Math.round(elevLow)));
+        viewHolder.tvElevationMax.setText(String.format(Locale.getDefault(), "%d m", Math.round(elevHigh)));
 
         if (isPlayServiceAvailable) {
             viewHolder.mapView.setVisibility(View.VISIBLE);
@@ -130,7 +165,7 @@ public class StarredSegmentsCursorAdapter extends CursorAdapter {
             viewHolder.mapView.setVisibility(View.GONE);
         }
 
-        viewHolder.llSegmentsHeader.setOnClickListener(new View.OnClickListener() {
+        viewHolder.rowView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 mShowSegmentDetailsListener.startSegmentDetailsActivity(segmentId);
@@ -159,11 +194,17 @@ public class StarredSegmentsCursorAdapter extends CursorAdapter {
             implements OnMapReadyCallback {
 
         long segmentId;
+        View rowView;
+        TextView tvClimbCategory;
         TextView tvName;
+        TextView tvCity;
         TextView tvDistance;
         TextView tvAverageGrade;
-        TextView tvClimbCategory;
-        LinearLayout llSegmentsHeader;
+        TextView tvMaxGrade;
+        TextView tvElevationGain;
+        TextView tvElevationMin;
+        TextView tvElevationMax;
+
 
         public ViewHolder(GoogleMap map, MapView mapView) {
             super(map, mapView);
