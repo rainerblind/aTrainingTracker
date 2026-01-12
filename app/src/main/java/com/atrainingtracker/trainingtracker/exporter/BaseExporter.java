@@ -37,6 +37,12 @@ import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
+import androidx.work.Constraints;
+import androidx.work.Data;
+import androidx.work.NetworkType;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkManager;
+
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Log;
@@ -69,6 +75,37 @@ public abstract class BaseExporter {
     private static NotificationManagerCompat cNotificationManager;
     @NonNull
     protected final Context mContext;
+
+    public static BaseExporter getExporter(@NonNull Context context, @NonNull ExportInfo exportInfo) {
+        switch (exportInfo.getExportType()) {
+            case FILE:
+                return switch (exportInfo.getFileFormat()) {
+                    case CSV -> new CSVFileExporter(context);
+                    case GC -> new GCFileExporter(context);
+                    case TCX -> new TCXFileExporter(context);
+                    case GPX -> new GPXFileExporter(context);
+                    case STRAVA -> new TCXFileExporter(context);
+                    /* case RUNKEEPER:
+                        return  new RunkeeperFileExporter(mContext);
+                    /* case TRAINING_PEAKS:
+                        return new TCXFileExporter(mContext);
+                        return new TrainingPeaksFileExporter(mContext); */
+                };
+            case DROPBOX:
+                return new DropboxUploader(context);
+            case COMMUNITY:
+                switch (exportInfo.getFileFormat()) {
+                    case STRAVA -> new StravaUploader(context);
+                                /* case RUNKEEPER:
+                                    exporter = new RunkeeperUploader(mContext);
+                                    break; */
+                                /* case TRAINING_PEAKS:
+                                    exporter = new TrainingPeaksUploader(mContext);
+                                    break; */
+                }
+        }
+        return null;
+    }
 
     public BaseExporter(@NonNull Context context) {
         mContext = context;
@@ -164,55 +201,69 @@ public abstract class BaseExporter {
         cExportManager.onFinished(TAG);
     }
 
-    public final boolean export(@NonNull ExportInfo exportInfo) {
-        if (DEBUG) Log.d(TAG, "export: " + exportInfo.toString());
-
-        boolean success = false;
-
-        // ExportStatus oldExportStatus = cExportManager.getExportStatus(exportInfo);
-        // String oldAnswer = cExportManager.getExportAnswer(exportInfo);
-
-        cExportManager.exportingStarted(exportInfo);
-
-        try {
-            ExportResult result = doExport(exportInfo);
-            success = result.success();
-            if (!result.success() && !MyHelper.isOnline()) {
-                // cExportManager.exportingFinishedRetry(exportInfo, "network loss while uploading, will retry later");
-                cExportManager.exportingFinished(exportInfo, false, "network loss while uploading");
-            } else {
-                cExportManager.exportingFinished(exportInfo, result.success(), result.answer());
-            }
-
-        } catch (FileNotFoundException e) {
-            Log.e(TAG, "FileNotFoundException: " + e.getMessage(), e);
-            cExportManager.exportingFinished(exportInfo, false, "InterruptedException: " + e.getMessage());
-        } catch (SQLException e) {
-            Log.e(TAG, e.getMessage(), e);
-            cExportManager.exportingFinished(exportInfo, false, "SQLException: " + e.getMessage());
-        } catch (IOException e) {
-            Log.e(TAG, e.getMessage(), e);
-            cExportManager.exportingFinished(exportInfo, false, "SQLException:" + e.getMessage());
-        } catch (JSONException e) {
-            Log.e(TAG, "JSONException: " + e.getMessage(), e);
-            cExportManager.exportingFinished(exportInfo, false, "JSONException: " + e.getMessage());
-        } catch (IllegalArgumentException e) {
-            Log.e(TAG, "IllegalArgumentException: " + e.getMessage(), e);
-            cExportManager.exportingFinished(exportInfo, false, "IllegalArgumentException: " + e.getMessage());
-        } catch (ParseException e) {
-            Log.e(TAG, "ParseException: " + e.getMessage(), e);
-            cExportManager.exportingFinished(exportInfo, false, "ParseException: " + e.getMessage());
-        } catch (InterruptedException e) {
-            Log.e(TAG, "ParseException: " + e.getMessage(), e);
-            cExportManager.exportingFinished(exportInfo, false, "InterruptedException: " + e.getMessage());
-        }
-
-        return success;
-    }
-
+    /* method that must be overridden by the child classes to do the export */
     @Nullable
     abstract protected ExportResult doExport(ExportInfo exportInfo)
             throws IOException, IllegalArgumentException, JSONException, ParseException, InterruptedException;
+
+
+    /** method to be called by the ExportManager to start the export */
+    public final void export(@NonNull ExportInfo exportInfo) {
+        if (DEBUG) Log.d(TAG, "export: " + exportInfo.toString());
+
+        if (exportInfo.getExportType() == ExportType.FILE) {
+            doImmediateExport(exportInfo);
+        } else {
+            scheduleUpload(exportInfo);
+        }
+    }
+
+    /** method do to the immediate export to a file */
+    private void doImmediateExport(@NonNull ExportInfo exportInfo) {
+        cExportManager.exportingStarted(exportInfo);
+        try {
+            ExportResult result = doExport(exportInfo);
+            cExportManager.exportingFinished(exportInfo, result.success(), result.answer());
+        } catch (Exception e) {
+            // Your existing comprehensive catch blocks
+            Log.e(TAG, "Exception during immediate export: " + e.getMessage(), e);
+            cExportManager.exportingFinished(exportInfo, false, "Exception: " + e.getMessage());
+        }
+    }
+
+    /* method to do a scheduled export for uploading to the cloud */
+    private void scheduleUpload(@NonNull ExportInfo exportInfo) {
+        Log.d(TAG, "Scheduling upload for: " + exportInfo.toString());
+
+        Data inputData;
+        try {
+            // Create a Data object with the parameters
+            inputData = new Data.Builder()
+                    .putString("EXPORT_INFO_JSON", exportInfo.toJson())
+                    .build();
+        } catch (JSONException e) {
+            Log.e(TAG, "JSONException: " + e.getMessage(), e);
+            cExportManager.exportingFinished(exportInfo, false, "Exception: " + e.getMessage());
+            return;
+        }
+
+        // Define constraints (must have network)
+        Constraints constraints = new Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build();
+
+        // Build the request
+        OneTimeWorkRequest uploadWorkRequest = new OneTimeWorkRequest.Builder(UploadWorker.class)
+                .setConstraints(constraints)
+                .setInputData(inputData)
+                .build();
+
+        // Enqueue the work
+        WorkManager.getInstance(mContext).enqueue(uploadWorkRequest);
+
+        cExportManager.exportingStarted(exportInfo);
+    }
+
 
     /**
      * helper method to check whether there is some data
