@@ -42,7 +42,7 @@ public class UploadWorker extends Worker {
 
             try {
 
-                BaseExporter exporter = BaseExporter.getExporter(getApplicationContext(), exportInfo);
+                BaseExporter exporter = ExportManager.getExporter(getApplicationContext(), exportInfo);
                 ExportManager exportManager = new ExportManager(getApplicationContext(), TAG);
 
                 // 4. Execute the actual export logic

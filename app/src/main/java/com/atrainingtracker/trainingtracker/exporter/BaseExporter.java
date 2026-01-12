@@ -181,15 +181,6 @@ public abstract class BaseExporter {
     public final void export(@NonNull ExportInfo exportInfo) {
         if (DEBUG) Log.d(TAG, "export: " + exportInfo.toString());
 
-        if (exportInfo.getExportType() == ExportType.FILE) {
-            doImmediateExport(exportInfo);
-        } else {
-            scheduleUpload(exportInfo);
-        }
-    }
-
-    /** method do to the immediate export to a file */
-    private void doImmediateExport(@NonNull ExportInfo exportInfo) {
         cExportManager.exportingStarted(exportInfo);
         try {
             ExportResult result = doExport(exportInfo);
@@ -199,39 +190,6 @@ public abstract class BaseExporter {
             Log.e(TAG, "Exception during immediate export: " + e.getMessage(), e);
             cExportManager.exportingFinished(exportInfo, false, "Exception: " + e.getMessage());
         }
-    }
-
-    /* method to do a scheduled export for uploading to the cloud */
-    private void scheduleUpload(@NonNull ExportInfo exportInfo) {
-        Log.d(TAG, "Scheduling upload for: " + exportInfo.toString());
-
-        Data inputData;
-        try {
-            // Create a Data object with the parameters
-            inputData = new Data.Builder()
-                    .putString("EXPORT_INFO_JSON", exportInfo.toJson())
-                    .build();
-        } catch (JSONException e) {
-            Log.e(TAG, "JSONException: " + e.getMessage(), e);
-            cExportManager.exportingFinished(exportInfo, false, "Exception: " + e.getMessage());
-            return;
-        }
-
-        // Define constraints (must have network)
-        Constraints constraints = new Constraints.Builder()
-                .setRequiredNetworkType(NetworkType.CONNECTED)
-                .build();
-
-        // Build the request
-        OneTimeWorkRequest uploadWorkRequest = new OneTimeWorkRequest.Builder(UploadWorker.class)
-                .setConstraints(constraints)
-                .setInputData(inputData)
-                .build();
-
-        // Enqueue the work
-        WorkManager.getInstance(mContext).enqueue(uploadWorkRequest);
-
-        cExportManager.exportingStarted(exportInfo);
     }
 
 
