@@ -74,7 +74,10 @@ public class ExportManager {
         }
     }
 
-    // called from the tracker
+    /** Method to inform the ExportManager that a new workout has been started.
+     *
+     * @param fileBaseName
+     */
     public synchronized void newWorkout(String fileBaseName) {
         if (DEBUG) Log.d(TAG, "newWorkout: " + fileBaseName);
 
@@ -102,24 +105,11 @@ public class ExportManager {
     }
 
 
-    private void updateExportStatusDb(ContentValues contentValues, String fileBaseName, ExportType exportType, FileFormat fileFormat) {
-        cExportStatusDb.update(ExportStatusDbHelper.TABLE,
-                contentValues,
-                WorkoutSummaries.FILE_BASE_NAME + "=? AND " + ExportStatusDbHelper.TYPE + "=? AND " + ExportStatusDbHelper.FORMAT + "=?",
-                new String[]{fileBaseName, exportType.name(), fileFormat.name()});
-    }
-
-    private void updateExportStatusDb(ContentValues contentValues, ExportInfo exportInfo) {
-        cExportStatusDb.update(ExportStatusDbHelper.TABLE,
-                contentValues,
-                WorkoutSummaries.FILE_BASE_NAME + "=? AND " + ExportStatusDbHelper.TYPE + "=? AND " + ExportStatusDbHelper.FORMAT + "=?",
-                new String[]{exportInfo.getFileBaseName(), exportInfo.getExportType().name(), exportInfo.getFileFormat().name()});
-    }
-
-
-
-    // called from the tracker
-    // TODO: better name: we just update the DB here.
+    /** Method to inform the ExportManager that a workout has been finished.
+     * Note that this does not trigger exports and uploads.
+     *
+     * @param fileBaseName
+     */
     public synchronized void workoutFinished(String fileBaseName) {
         if (DEBUG) Log.d(TAG, "workoutFinished: " + fileBaseName);
 
@@ -162,34 +152,10 @@ public class ExportManager {
         broadcastExportStatusChanged();
     }
 
-
-    /** simple helper method to start an export */
-    private void startExport(String fileBaseName, FileFormat fileFormat, ExportType exportType) {
-
-        // calc and set the number of retries
-        int retries = switch (exportType) {
-            case FILE -> DEFAULT_RETRIES_FILE;
-            case DROPBOX -> DEFAULT_RETRIES_DROPBOX;
-            case COMMUNITY -> DEFAULT_RETRIES_COMMUNITY;
-        };
-        ContentValues values = new ContentValues();
-        values.put(ExportStatusDbHelper.RETRIES, retries);
-        updateExportStatusDb(values, fileBaseName, exportType, fileFormat);
-
-        // now, really start teh export
-        ExportInfo exportInfo = new ExportInfo(fileBaseName, fileFormat, exportType);
-        BaseExporter exporter = BaseExporter.getExporter(mContext, exportInfo);
-        exporter.export(exportInfo);
-    }
-
-    /** simple helper method to start a file export */
-    private void startFileExport(String fileBaseName, FileFormat fileFormat) {
-        startExport(fileBaseName, fileFormat, ExportType.FILE);
-    }
-
-
-
-    // called from the UI
+    /** method to trigger the ExportManager to export a Workout to the various file formats and upload it to the cloud later on.
+     *
+     * @param fileBaseName
+     */
     public synchronized void exportWorkout(String fileBaseName) {
         if (DEBUG) Log.d(TAG, "exportWorkout: " + fileBaseName);
 
@@ -203,7 +169,11 @@ public class ExportManager {
         }
     }
 
-    // called from the UI to explicitly export a workout to a given file
+    /** method to trigger the ExportManager to export a specific workout and FileFormat
+     *
+     * @param workoutId: The workout ID
+     * @param fileFormat: The specific FileFormat
+     */
     public synchronized void exportWorkoutTo(long workoutId, @NonNull FileFormat fileFormat) {
         if (DEBUG) Log.d(TAG, "exportWorkoutTo " + workoutId + ", " + fileFormat.name());
 
@@ -238,28 +208,11 @@ public class ExportManager {
         broadcastExportStatusChanged();
     }
 
-    /** simple helper method to get the baseFileName from a given workoutId */
-    private String getFileBaseName(long workoutId) {
-        SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
 
-        Cursor cursor = db.query(WorkoutSummaries.TABLE,
-                new String[]{WorkoutSummaries.FILE_BASE_NAME},
-                WorkoutSummaries.C_ID + "=?",
-                new String[]{Long.toString(workoutId)},
-                null,
-                null,
-                null);
-
-        cursor.moveToFirst();
-        String fileBaseName = cursor.getString(0);
-        cursor.close();
-        WorkoutSummariesDatabaseManager.getInstance().closeDatabase(); // db.close();
-
-        return fileBaseName;
-    }
-
-
-
+    /** method to inform the ExportManager that an export has started
+     *
+     * @param exportInfo
+     */
     public synchronized void exportingStarted(@NonNull ExportInfo exportInfo) {
         if (DEBUG) Log.d(TAG, "exportingStarted: " + exportInfo);
 
@@ -271,7 +224,12 @@ public class ExportManager {
         broadcastExportStatusChanged();
     }
 
-
+    /** method to inform the ExportManager that an export has been finished
+     *
+     * @param exportInfo
+     * @param success: weather or not the export/upload was successfully.
+     * @param answer: the text to be forwarded via a notification to the user.
+     */
     public synchronized void exportingFinished(@NonNull ExportInfo exportInfo, boolean success, String answer) {
         if (DEBUG) Log.d(TAG, "exportingFinished: " + exportInfo + ": " + answer);
 
@@ -303,17 +261,62 @@ public class ExportManager {
 
         // note to ourself, that we have to continue with the upload to the cloud.
         if (exportInfo.getExportType() == ExportType.FILE && success) {
-            exportingToFileFinished(exportInfo);
+            exportingToFileFinishedStartCloudUploads(exportInfo);
         }
 
         broadcastExportStatusChanged();
     }
 
+    /***********************************************************************************************
+     * non-public stuff
+     **********************************************************************************************/
+
+
+    private void updateExportStatusDb(ContentValues contentValues, String fileBaseName, ExportType exportType, FileFormat fileFormat) {
+        cExportStatusDb.update(ExportStatusDbHelper.TABLE,
+                contentValues,
+                WorkoutSummaries.FILE_BASE_NAME + "=? AND " + ExportStatusDbHelper.TYPE + "=? AND " + ExportStatusDbHelper.FORMAT + "=?",
+                new String[]{fileBaseName, exportType.name(), fileFormat.name()});
+    }
+
+    private void updateExportStatusDb(ContentValues contentValues, ExportInfo exportInfo) {
+        cExportStatusDb.update(ExportStatusDbHelper.TABLE,
+                contentValues,
+                WorkoutSummaries.FILE_BASE_NAME + "=? AND " + ExportStatusDbHelper.TYPE + "=? AND " + ExportStatusDbHelper.FORMAT + "=?",
+                new String[]{exportInfo.getFileBaseName(), exportInfo.getExportType().name(), exportInfo.getFileFormat().name()});
+    }
+
+    /** simple helper method to start an export */
+    private void startExport(String fileBaseName, FileFormat fileFormat, ExportType exportType) {
+
+        // calc and set the number of retries
+        int retries = switch (exportType) {
+            case FILE -> DEFAULT_RETRIES_FILE;
+            case DROPBOX -> DEFAULT_RETRIES_DROPBOX;
+            case COMMUNITY -> DEFAULT_RETRIES_COMMUNITY;
+        };
+        ContentValues values = new ContentValues();
+        values.put(ExportStatusDbHelper.RETRIES, retries);
+        updateExportStatusDb(values, fileBaseName, exportType, fileFormat);
+
+        // now, really start teh export
+        ExportInfo exportInfo = new ExportInfo(fileBaseName, fileFormat, exportType);
+        BaseExporter exporter = BaseExporter.getExporter(mContext, exportInfo);
+        exporter.export(exportInfo);
+    }
+
+    /** simple helper method to start a file export */
+    private void startFileExport(String fileBaseName, FileFormat fileFormat) {
+        startExport(fileBaseName, fileFormat, ExportType.FILE);
+    }
+
+
+
 
     /** Inform the manager that the exporting to file finished.
      *  The manager will start the cloud uploads.
      */
-    protected synchronized void exportingToFileFinished(@NonNull ExportInfo exportInfo) {
+    protected synchronized void exportingToFileFinishedStartCloudUploads(@NonNull ExportInfo exportInfo) {
         if (DEBUG) Log.d(TAG, "exportingToFileFinished: " + exportInfo.toString());
 
         FileFormat fileFormat = exportInfo.getFileFormat();
@@ -342,6 +345,42 @@ public class ExportManager {
         }
     }
 
+
+    /***********************************************************************************************
+     * simple helper to send a broadcast
+     **********************************************************************************************/
+
+    private void broadcastExportStatusChanged() {
+        if (DEBUG) Log.d(TAG, "exportStatusChanged");
+        mContext.sendBroadcast(new Intent(EXPORT_STATUS_CHANGED_INTENT)
+                .setPackage(mContext.getPackageName()));
+    }
+
+
+    /***********************************************************************************************
+     * helpers to deal with the database
+     **********************************************************************************************/
+
+
+    /** simple helper method to get the baseFileName from a given workoutId */
+    private String getFileBaseName(long workoutId) {
+        SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
+
+        Cursor cursor = db.query(WorkoutSummaries.TABLE,
+                new String[]{WorkoutSummaries.FILE_BASE_NAME},
+                WorkoutSummaries.C_ID + "=?",
+                new String[]{Long.toString(workoutId)},
+                null,
+                null,
+                null);
+
+        cursor.moveToFirst();
+        String fileBaseName = cursor.getString(0);
+        cursor.close();
+        WorkoutSummariesDatabaseManager.getInstance().closeDatabase(); // db.close();
+
+        return fileBaseName;
+    }
 
 
     /** simple helper method to get the number of retries from the DB */
@@ -444,12 +483,6 @@ public class ExportManager {
     }
 
 
-
-    protected void broadcastExportStatusChanged() {
-        if (DEBUG) Log.d(TAG, "exportStatusChanged");
-        mContext.sendBroadcast(new Intent(EXPORT_STATUS_CHANGED_INTENT)
-                .setPackage(mContext.getPackageName()));
-    }
 
     public void deleteWorkout(String baseFileName) {
         cExportStatusDb.delete(ExportStatusDbHelper.TABLE, WorkoutSummaries.FILE_BASE_NAME + "=?", new String[]{baseFileName});
