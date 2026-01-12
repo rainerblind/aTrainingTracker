@@ -28,12 +28,20 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.BaseColumns;
 import android.util.Log;
 
+import androidx.work.Constraints;
+import androidx.work.Data;
+import androidx.work.NetworkType;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkManager;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
+
+import org.json.JSONException;
 
 import java.util.EnumMap;
 
@@ -72,6 +80,37 @@ public class ExportManager {
             cExportStatusDb.close();
             cExportStatusDb = null;
         }
+    }
+
+    public static BaseExporter getExporter(@NonNull Context context, @NonNull ExportInfo exportInfo) {
+        switch (exportInfo.getExportType()) {
+            case FILE:
+                return switch (exportInfo.getFileFormat()) {
+                    case CSV -> new CSVFileExporter(context);
+                    case GC -> new GCFileExporter(context);
+                    case TCX -> new TCXFileExporter(context);
+                    case GPX -> new GPXFileExporter(context);
+                    case STRAVA -> new TCXFileExporter(context);
+                    /* case RUNKEEPER:
+                        return  new RunkeeperFileExporter(mContext);
+                    /* case TRAINING_PEAKS:
+                        return new TCXFileExporter(mContext);
+                        return new TrainingPeaksFileExporter(mContext); */
+                };
+            case DROPBOX:
+                return new DropboxUploader(context);
+            case COMMUNITY:
+                switch (exportInfo.getFileFormat()) {
+                    case STRAVA -> new StravaUploader(context);
+                                /* case RUNKEEPER:
+                                    exporter = new RunkeeperUploader(mContext);
+                                    break; */
+                                /* case TRAINING_PEAKS:
+                                    exporter = new TrainingPeaksUploader(mContext);
+                                    break; */
+                }
+        }
+        return null;
     }
 
     /** Method to inform the ExportManager that a new workout has been started.
@@ -286,6 +325,12 @@ public class ExportManager {
                 new String[]{exportInfo.getFileBaseName(), exportInfo.getExportType().name(), exportInfo.getFileFormat().name()});
     }
 
+    /** simple helper method to start a file export */
+    private void startFileExport(String fileBaseName, FileFormat fileFormat) {
+        startExport(fileBaseName, fileFormat, ExportType.FILE);
+    }
+
+
     /** simple helper method to start an export */
     private void startExport(String fileBaseName, FileFormat fileFormat, ExportType exportType) {
 
@@ -301,8 +346,13 @@ public class ExportManager {
 
         // now, really start teh export
         ExportInfo exportInfo = new ExportInfo(fileBaseName, fileFormat, exportType);
-        BaseExporter exporter = BaseExporter.getExporter(mContext, exportInfo);
-        exporter.export(exportInfo);
+        BaseExporter exporter = getExporter(mContext, exportInfo);
+
+        if (exportType == ExportType.FILE) {
+            exporter.export(exportInfo);  // when exporting to a file, we can immediately start.
+        } else {
+            scheduleUpload(exportInfo);   // when uploading to the cloud, we use a scheduled upload.
+        }
     }
 
 
@@ -338,7 +388,6 @@ public class ExportManager {
 
         exportingStarted(exportInfo);
     }
-
 
 
 
