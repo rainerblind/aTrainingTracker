@@ -305,9 +305,38 @@ public class ExportManager {
         exporter.export(exportInfo);
     }
 
-    /** simple helper method to start a file export */
-    private void startFileExport(String fileBaseName, FileFormat fileFormat) {
-        startExport(fileBaseName, fileFormat, ExportType.FILE);
+
+    /* method to do a scheduled export for uploading to the cloud */
+    private void scheduleUpload(@NonNull ExportInfo exportInfo) {
+        Log.d(TAG, "Scheduling upload for: " + exportInfo.toString());
+
+        Data inputData;
+        try {
+            // Create a Data object with the parameters
+            inputData = new Data.Builder()
+                    .putString("EXPORT_INFO_JSON", exportInfo.toJson())
+                    .build();
+        } catch (JSONException e) {
+            Log.e(TAG, "JSONException: " + e.getMessage(), e);
+            exportingFinished(exportInfo, false, "Exception: " + e.getMessage());
+            return;
+        }
+
+        // Define constraints (must have network)
+        Constraints constraints = new Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build();
+
+        // Build the request
+        OneTimeWorkRequest uploadWorkRequest = new OneTimeWorkRequest.Builder(UploadWorker.class)
+                .setConstraints(constraints)
+                .setInputData(inputData)
+                .build();
+
+        // Enqueue the work
+        WorkManager.getInstance(mContext).enqueue(uploadWorkRequest);
+
+        exportingStarted(exportInfo);
     }
 
 

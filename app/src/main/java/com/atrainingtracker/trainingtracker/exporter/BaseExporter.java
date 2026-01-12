@@ -76,36 +76,6 @@ public abstract class BaseExporter {
     @NonNull
     protected final Context mContext;
 
-    public static BaseExporter getExporter(@NonNull Context context, @NonNull ExportInfo exportInfo) {
-        switch (exportInfo.getExportType()) {
-            case FILE:
-                return switch (exportInfo.getFileFormat()) {
-                    case CSV -> new CSVFileExporter(context);
-                    case GC -> new GCFileExporter(context);
-                    case TCX -> new TCXFileExporter(context);
-                    case GPX -> new GPXFileExporter(context);
-                    case STRAVA -> new TCXFileExporter(context);
-                    /* case RUNKEEPER:
-                        return  new RunkeeperFileExporter(mContext);
-                    /* case TRAINING_PEAKS:
-                        return new TCXFileExporter(mContext);
-                        return new TrainingPeaksFileExporter(mContext); */
-                };
-            case DROPBOX:
-                return new DropboxUploader(context);
-            case COMMUNITY:
-                switch (exportInfo.getFileFormat()) {
-                    case STRAVA -> new StravaUploader(context);
-                                /* case RUNKEEPER:
-                                    exporter = new RunkeeperUploader(mContext);
-                                    break; */
-                                /* case TRAINING_PEAKS:
-                                    exporter = new TrainingPeaksUploader(mContext);
-                                    break; */
-                }
-        }
-        return null;
-    }
 
     public BaseExporter(@NonNull Context context) {
         mContext = context;
