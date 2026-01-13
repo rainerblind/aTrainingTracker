@@ -205,10 +205,7 @@ public class EditWorkoutFragment extends Fragment {
         public void onReceive(Context context, @NonNull Intent intent) {
             SensorType sensorType = SensorType.valueOf(intent.getExtras().getString(CalcExtremaValuesThread.SENSOR_TYPE));
 
-            WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance();
-            SQLiteDatabase db = databaseManager.getOpenDatabase();
-            fillTrExtrema(db, sensorType);
-            databaseManager.closeDatabase();
+            fillTrExtrema(sensorType);
         }
     };
 
@@ -610,7 +607,7 @@ public class EditWorkoutFragment extends Fragment {
         ((TextView) getActivity().findViewById(R.id.tvDistance)).setText(getString(R.string.value_unit_string_string, distance, unit));
 
         // max line distance
-        fillTvExtrema(db, SensorType.LINE_DISTANCE_m, ExtremaType.MAX, R.id.tvMaxLineDistance);
+        fillTvExtrema(SensorType.LINE_DISTANCE_m, ExtremaType.MAX, R.id.tvMaxLineDistance);
         TextView tvMaxLineDistance = getActivity().findViewById(R.id.tvMaxLineDistance);
         CharSequence maxLineDistance = tvMaxLineDistance.getText();
         tvMaxLineDistance.setText(getString(R.string.value_unit_string_string, maxLineDistance, unit));
@@ -626,7 +623,7 @@ public class EditWorkoutFragment extends Fragment {
         }
 
         // mean, max, and min values
-        fillExtremaValuesFromDb(db);
+        fillExtremaValuesFromDb();
 
         // finally, the sport type.  This must be done last in order to set the pace field depending on the sport type
         // This also triggers to update the equipment and tvEquipment
@@ -637,20 +634,20 @@ public class EditWorkoutFragment extends Fragment {
         databaseManager.closeDatabase(); // db.close();
     }
 
-    protected void fillExtremaValuesFromDb(@NonNull SQLiteDatabase db) {
+    protected void fillExtremaValuesFromDb() {
         // simply fill with all the values
-        fillTrExtrema(db, SensorType.HR);
-        fillTrExtrema(db, SensorType.SPEED_mps);
-        fillTrExtrema(db, SensorType.PACE_spm);
-        fillTrExtrema(db, SensorType.CADENCE);
-        fillTrExtrema(db, SensorType.POWER);
-        fillTrExtrema(db, SensorType.TORQUE);
-        fillTrExtrema(db, SensorType.PEDAL_POWER_BALANCE);
-        fillTrExtrema(db, SensorType.PEDAL_SMOOTHNESS_L);
-        fillTrExtrema(db, SensorType.PEDAL_SMOOTHNESS);
-        fillTrExtrema(db, SensorType.PEDAL_SMOOTHNESS_R);
-        fillTrExtrema(db, SensorType.ALTITUDE);
-        fillTrExtrema(db, SensorType.TEMPERATURE);
+        fillTrExtrema(SensorType.HR);
+        fillTrExtrema(SensorType.SPEED_mps);
+        fillTrExtrema(SensorType.PACE_spm);
+        fillTrExtrema(SensorType.CADENCE);
+        fillTrExtrema(SensorType.POWER);
+        fillTrExtrema(SensorType.TORQUE);
+        fillTrExtrema(SensorType.PEDAL_POWER_BALANCE);
+        fillTrExtrema(SensorType.PEDAL_SMOOTHNESS_L);
+        fillTrExtrema(SensorType.PEDAL_SMOOTHNESS);
+        fillTrExtrema(SensorType.PEDAL_SMOOTHNESS_R);
+        fillTrExtrema(SensorType.ALTITUDE);
+        fillTrExtrema(SensorType.TEMPERATURE);
 
     }
 
@@ -679,55 +676,56 @@ public class EditWorkoutFragment extends Fragment {
         }
     }
 
-    protected void fillTrExtrema(@NonNull SQLiteDatabase db, @NonNull SensorType sensorType) {
+    protected void fillTrExtrema(@NonNull SensorType sensorType) {
         switch (sensorType) {
             case HR:
-                fillTrExtrema(db, SensorType.HR, R.id.trHR, R.id.tvHRMean, R.id.tvHRMax, R.id.tvHRMin);
+                fillTrExtrema(SensorType.HR, R.id.trHR, R.id.tvHRMean, R.id.tvHRMax, R.id.tvHRMin);
                 break;
             case SPEED_mps:
-                fillTrExtrema(db, SensorType.SPEED_mps, R.id.trSpeed, R.id.tvSpeedMean, R.id.tvSpeedMax, R.id.tvSpeedMin);
+                fillTrExtrema(SensorType.SPEED_mps, R.id.trSpeed, R.id.tvSpeedMean, R.id.tvSpeedMax, R.id.tvSpeedMin);
                 break;
             case PACE_spm:
-                fillTrExtrema(db, SensorType.PACE_spm, R.id.trPace, R.id.tvPaceMean, R.id.tvPaceMax, R.id.tvPaceMin);
+                fillTrExtrema(SensorType.PACE_spm, R.id.trPace, R.id.tvPaceMean, R.id.tvPaceMax, R.id.tvPaceMin);
                 showOrHideTrPace();
                 break;
             case CADENCE:
-                fillTrExtrema(db, SensorType.CADENCE, R.id.trCadence, R.id.tvCadenceMean, R.id.tvCadenceMax, R.id.tvCadenceMin);
+                fillTrExtrema(SensorType.CADENCE, R.id.trCadence, R.id.tvCadenceMean, R.id.tvCadenceMax, R.id.tvCadenceMin);
                 break;
             case POWER:
-                fillTrExtrema(db, SensorType.POWER, R.id.trPower, R.id.tvPowerMean, R.id.tvPowerMax, R.id.tvPowerMin);
+                fillTrExtrema(SensorType.POWER, R.id.trPower, R.id.tvPowerMean, R.id.tvPowerMax, R.id.tvPowerMin);
                 break;
             case TORQUE:
-                fillTrExtrema(db, SensorType.TORQUE, R.id.trTorque, R.id.tvTorqueMean, R.id.tvTorqueMax, R.id.tvTorqueMin);
+                fillTrExtrema(SensorType.TORQUE, R.id.trTorque, R.id.tvTorqueMean, R.id.tvTorqueMax, R.id.tvTorqueMin);
                 break;
             case PEDAL_POWER_BALANCE:
-                fillTrExtrema(db, SensorType.PEDAL_POWER_BALANCE, R.id.trPedalPowerBalance, R.id.tvPedalPowerBalanceMean, R.id.tvPedalPowerBalanceMax, R.id.tvPedalPowerBalanceMin);
+                fillTrExtrema(SensorType.PEDAL_POWER_BALANCE, R.id.trPedalPowerBalance, R.id.tvPedalPowerBalanceMean, R.id.tvPedalPowerBalanceMax, R.id.tvPedalPowerBalanceMin);
                 break;
             case PEDAL_SMOOTHNESS_L:
-                fillTrExtrema(db, SensorType.PEDAL_SMOOTHNESS_L, R.id.trPedalSmoothnessLeft, R.id.tvPedalSmoothnessLeftMean, R.id.tvPedalSmoothnessLeftMax, R.id.tvPedalSmoothnessLeftMin);
+                fillTrExtrema(SensorType.PEDAL_SMOOTHNESS_L, R.id.trPedalSmoothnessLeft, R.id.tvPedalSmoothnessLeftMean, R.id.tvPedalSmoothnessLeftMax, R.id.tvPedalSmoothnessLeftMin);
                 break;
             case PEDAL_SMOOTHNESS:
-                fillTrExtrema(db, SensorType.PEDAL_SMOOTHNESS, R.id.trPedalSmoothness, R.id.tvPedalSmoothnessMean, R.id.tvPedalSmoothnessMax, R.id.tvPedalSmoothnessMin);
+                fillTrExtrema(SensorType.PEDAL_SMOOTHNESS, R.id.trPedalSmoothness, R.id.tvPedalSmoothnessMean, R.id.tvPedalSmoothnessMax, R.id.tvPedalSmoothnessMin);
                 break;
             case PEDAL_SMOOTHNESS_R:
-                fillTrExtrema(db, SensorType.PEDAL_SMOOTHNESS_R, R.id.trPedalSmoothnessRight, R.id.tvPedalSmoothnessRightMean, R.id.tvPedalSmoothnessRightMax, R.id.tvPedalSmoothnessRightMin);
+                fillTrExtrema(SensorType.PEDAL_SMOOTHNESS_R, R.id.trPedalSmoothnessRight, R.id.tvPedalSmoothnessRightMean, R.id.tvPedalSmoothnessRightMax, R.id.tvPedalSmoothnessRightMin);
                 break;
             case ALTITUDE:
-                fillTrExtrema(db, SensorType.ALTITUDE, R.id.trAltitude, R.id.tvAltitudeMean, R.id.tvAltitudeMax, R.id.tvAltitudeMin);
+                fillTrExtrema(SensorType.ALTITUDE, R.id.trAltitude, R.id.tvAltitudeMean, R.id.tvAltitudeMax, R.id.tvAltitudeMin);
                 break;
             case TEMPERATURE:
-                fillTrExtrema(db, SensorType.TEMPERATURE, R.id.trTemperature, R.id.tvTemperatureMean, R.id.tvTemperatureMax, R.id.tvTemperatureMin);
+                fillTrExtrema(SensorType.TEMPERATURE, R.id.trTemperature, R.id.tvTemperatureMean, R.id.tvTemperatureMax, R.id.tvTemperatureMin);
                 break;
         }
     }
 
-    protected void fillTrExtrema(@NonNull SQLiteDatabase db, @NonNull SensorType sensorType, int trId, int tvMeanId, int tvMaxId, int tvMinId) {
+    protected void fillTrExtrema(@NonNull SensorType sensorType, int trId, int tvMeanId, int tvMaxId, int tvMinId) {
         if (DEBUG) Log.i(TAG, "fillTrExtrema for sensor: " + sensorType.name());
 
         // if one of the extrema values contains valid data (not 0), we want to show the complete row
-        boolean dataAvailable = fillTvExtrema(db, sensorType, ExtremaType.AVG, tvMeanId)
-                || fillTvExtrema(db, sensorType, ExtremaType.MAX, tvMaxId)
-                || fillTvExtrema(db, sensorType, ExtremaType.MIN, tvMinId);
+        boolean dataAvailable =     // NOTE THAT WE MUST NOT USE THE SHORT-CIRCUIT || HERE!  When using || instead of |, we only update the mean/avg.
+                fillTvExtrema(sensorType, ExtremaType.AVG, tvMeanId)
+                | fillTvExtrema(sensorType, ExtremaType.MAX, tvMaxId)
+                | fillTvExtrema(sensorType, ExtremaType.MIN, tvMinId);
 
         if (dataAvailable) {  // there seems to be valid data, show it
             getActivity().findViewById(trId).setVisibility(View.VISIBLE);
@@ -742,31 +740,17 @@ public class EditWorkoutFragment extends Fragment {
 
     }
 
-    protected boolean fillTvExtrema(@NonNull SQLiteDatabase db, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType, int tvId) {
-        boolean validData = false;
-        ((TextView) getActivity().findViewById(tvId)).setText(R.string.NoData);
+    protected boolean fillTvExtrema(@NonNull SensorType sensorType, @NonNull ExtremaType extremaType, int tvId) {
 
-        Cursor cursor = db.query(WorkoutSummaries.TABLE_EXTREMA_VALUES,
-                null,
-                WorkoutSummaries.WORKOUT_ID + "=? AND " + WorkoutSummaries.SENSOR_TYPE + "=? AND " + WorkoutSummaries.EXTREMA_TYPE + "=?",
-                new String[]{Long.toString(mWorkoutID), sensorType.name(), extremaType.name()},
-                null, null, null);
-        if (cursor.moveToFirst()) {
-            Double value = cursor.getDouble(cursor.getColumnIndex(WorkoutSummaries.VALUE));
-            if (DEBUG)
-                Log.i(TAG, "got " + value + " for " + extremaType.name() + " " + sensorType.name() + " of workout " + mWorkoutID);
-            ((TextView) getActivity().findViewById(tvId)).setText(sensorType.getMyFormatter().format(value));
-            if (value != 0) {
-                validData = true;
-            }
+        Double extremaValue = WorkoutSummariesDatabaseManager.getExtremaValue(mWorkoutID, sensorType, extremaType);
+        Log.d(TAG, sensorType.name() + " " + extremaType.name() + " extremaValue=" + extremaValue);
+        if (extremaValue != null) {
+            TextView tv = getActivity().findViewById(tvId) ;
+            tv.setText(sensorType.getMyFormatter().format(extremaValue));
+            return true;
         } else {
-            if (DEBUG)
-                Log.d(TAG, "no value for " + extremaType.name() + " " + sensorType.name() + " of workout " + mWorkoutID);
+            return false;
         }
-
-        cursor.close();
-
-        return validData;
     }
 
     // TODO: somewhere, we have to store all these values!
