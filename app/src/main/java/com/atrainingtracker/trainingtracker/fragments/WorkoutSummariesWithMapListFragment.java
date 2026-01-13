@@ -354,19 +354,6 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
                             context.getString(R.string.uploading_to_community_failed_for_several, failed, wanted);
                 };
 
-            } else if (exportStatusCounter.get(ExportStatus.FINISHED_RETRY) > 0) {
-
-                ivStatus.setImageResource(R.drawable.export_error);
-                int failed = exportStatusCounter.get(ExportStatus.FINISHED_RETRY);
-                text = switch (exportType) {
-                    case FILE ->
-                            context.getString(R.string.exporting_to_file_failed_for_several, failed, wanted);
-                    case DROPBOX ->
-                            context.getString(R.string.uploading_to_dropbox_failed_for_several, failed, wanted);
-                    case COMMUNITY ->
-                            context.getString(R.string.uploading_to_community_failed_for_several, failed, wanted);
-                };
-
             } else if (exportStatusCounter.get(ExportStatus.FINISHED_SUCCESS) == wanted) {
 
                 ivStatus.setImageResource(R.drawable.export_success);

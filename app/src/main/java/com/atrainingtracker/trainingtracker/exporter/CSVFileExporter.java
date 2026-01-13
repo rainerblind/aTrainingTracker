@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.exporter;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.os.Build;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -47,6 +48,14 @@ public class CSVFileExporter extends BaseExporter {
 
     public CSVFileExporter(@NonNull Context context) {
         super(context);
+    }
+
+
+    @Override
+    protected void onFinished(@NonNull ExportInfo exportInfo) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            copyFileToDownloads(exportInfo);
+        }
     }
 
     @NonNull
@@ -106,7 +115,7 @@ public class CSVFileExporter extends BaseExporter {
 
         // now, we are ready to write to CSV
 
-        CSVWriter csvWrite = new CSVWriter(getWriter(mContext, exportInfo.getShortPath(), "application/gpx+xml"));
+        CSVWriter csvWrite = new CSVWriter(getBufferedWriter(exportInfo.getShortPath()));
 
         // first of all: header with column names
         csvWrite.writeNext(sortedNames.toArray(new String[sortedNames.size()]));
@@ -154,7 +163,9 @@ public class CSVFileExporter extends BaseExporter {
         databaseManager.closeDatabase(); // db.close();
 
 
-        return new ExportResult(true, getPositiveAnswer(exportInfo));
+
+
+        return new ExportResult(true, false, getPositiveAnswer(exportInfo));
     }
 
     @NonNull

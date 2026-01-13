@@ -18,13 +18,20 @@
 
 package com.atrainingtracker.trainingtracker.exporter;
 
+import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.CursorIndexOutOfBoundsException;
 import android.database.sqlite.SQLiteDatabase;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 
 import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
@@ -33,7 +40,14 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseMan
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
 
 import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 
 public abstract class BaseFileExporter extends BaseExporter {
     protected static final int MIN_DATA_POINTS_FOR_UPLOAD = 10;
@@ -46,6 +60,16 @@ public abstract class BaseFileExporter extends BaseExporter {
     public BaseFileExporter(@NonNull Context context) {
         super(context);
     }
+
+    @Override
+    protected void onFinished(@NonNull ExportInfo exportInfo) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            copyFileToDownloads(exportInfo);
+        }
+    }
+
+
+
 
     protected void getHeaderData(@NonNull ExportInfo exportInfo) {
         WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance();
@@ -112,12 +136,6 @@ public abstract class BaseFileExporter extends BaseExporter {
         BSportType bSportType = SportTypeDatabaseManager.getBSportType(sportTypeId);
         haveBikeCadence = haveCadence & bSportType == BSportType.BIKE;
         haveRunCadence = haveCadence & bSportType == BSportType.RUN;
-    }
-
-    @NonNull
-    protected BufferedWriter getBufferedWriter(@NonNull ExportInfo exportInfo) throws IOException {
-        // set mime type to guess storage
-        return getWriter(mContext, exportInfo.getShortPath(), "application/gpx+xml");
     }
 
     protected String myGet(@NonNull Cursor cursor, String name, String defaultValue) {

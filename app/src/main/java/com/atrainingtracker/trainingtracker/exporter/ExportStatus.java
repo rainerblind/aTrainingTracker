@@ -23,7 +23,6 @@ public enum ExportStatus {
     TRACKING,
     WAITING,
     PROCESSING,
-    FINISHED_RETRY,
     FINISHED_SUCCESS,
     FINISHED_FAILED
 }

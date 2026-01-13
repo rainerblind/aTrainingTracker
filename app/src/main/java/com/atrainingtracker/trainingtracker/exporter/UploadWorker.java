@@ -1,7 +1,4 @@
-// In a new file: UploadWorker.java
 package com.atrainingtracker.trainingtracker.exporter;
-
-import static com.atrainingtracker.trainingtracker.exporter.BaseExporter.cExportManager;
 
 import android.content.Context;
 import android.util.Log;
@@ -12,9 +9,6 @@ import androidx.work.Worker;
 import androidx.work.WorkerParameters;
 
 import org.json.JSONException;
-
-import java.io.IOException;
-import java.text.ParseException;
 
 public class UploadWorker extends Worker {
     private static final String TAG = "UploadWorker";
@@ -27,7 +21,7 @@ public class UploadWorker extends Worker {
     @NonNull
     @Override
     public Result doWork() {
-        // 1. Retrieve the parameters passed to the worker
+        // Retrieve the parameters passed to the worker
         Data inputData = getInputData();
         String exportInfoJson = inputData.getString("EXPORT_INFO_JSON");
 
@@ -36,24 +30,27 @@ public class UploadWorker extends Worker {
             return Result.failure(); // A non-retriable failure
         }
 
+        ExportInfo exportInfo;
         try {
-            ExportInfo exportInfo = ExportInfo.fromJson(exportInfoJson);
+            exportInfo = ExportInfo.fromJson(exportInfoJson);
             Log.d(TAG, "Starting export for: " + exportInfo.toString());
+        } catch (JSONException e) {
+            return Result.failure();
+        }
 
-            BaseExporter exporter = ExportManager.getExporter(getApplicationContext(), exportInfo);
-            BaseExporter.ExportResult result = exporter.doExport(exportInfo);
+        BaseExporter exporter = ExportManager.getExporter(getApplicationContext(), exportInfo);
+        BaseExporter.ExportResult result = exporter.export(exportInfo);
 
-            if (result.success()) {
-                if (DEBUG) Log.i(TAG, "Export successful: " + result.answer());
-                return Result.success();
-            } else {
-                if (DEBUG) Log.w(TAG, "Export failed, will retry later. Reason: " + result.answer());
+        if (result.success()) {
+            if (DEBUG) Log.i(TAG, "Export successful: " + result.answer());
+            return Result.success();
+        } else {
+            if (DEBUG) Log.w(TAG, "Export failed. Reason: " + result.answer());
+            if (result.shallRetry()) {
                 return Result.retry(); // WorkManager will retry based on backoff policy
+            } else {
+                return Result.failure(); // A non-retriable failure
             }
-
-        } catch (JSONException | IOException | ParseException | InterruptedException | IllegalArgumentException e) {
-            Log.e(TAG, "An exception occurred during export. Retrying.", e);
-            return Result.retry(); // WorkManager will retry based on backoff policy
         }
     }
 }

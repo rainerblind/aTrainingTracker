@@ -57,7 +57,7 @@ public class RunkeeperUploader extends BaseExporter {
 
         File file = new File(getBaseDirFile(mContext), exportInfo.getShortPath());
         if (!file.exists()) {
-            return new ExportResult(false, "Runkeeper file does not exist: " + file);
+            return new ExportResult(false, false, "Runkeeper file does not exist: " + file);
         }
 
         HttpClient httpClient = new DefaultHttpClient();
@@ -76,13 +76,15 @@ public class RunkeeperUploader extends BaseExporter {
         HttpResponse httpResponse = httpClient.execute(httpPost);
         String response = EntityUtils.toString(httpResponse.getEntity());
         if (DEBUG) Log.d(TAG, "uploadToRunkeeper response: " + response);
+
+        // TODO: This logic seems to be not 100% correct.
         if (response == null) {
-            return new ExportResult(false, "no response");
+            return new ExportResult(false, false,"no response");
         } else if (response.isEmpty()) {
-            return new ExportResult(true, "successfully uploaded " + exportInfo.getFileBaseName() + " to RunKeeper");
+            return new ExportResult(true, false, "successfully uploaded " + exportInfo.getFileBaseName() + " to RunKeeper");
         }
 
-        return new ExportResult(true, response);
+        return new ExportResult(true, false, response);
     }
 
     @NonNull

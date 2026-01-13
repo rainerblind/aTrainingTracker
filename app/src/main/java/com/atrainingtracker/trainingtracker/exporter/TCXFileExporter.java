@@ -67,7 +67,7 @@ public class TCXFileExporter extends BaseFileExporter {
 
         getHeaderData(exportInfo);
 
-        BufferedWriter bufferedWriter = getBufferedWriter(exportInfo);
+        BufferedWriter bufferedWriter = getBufferedWriter(exportInfo.getShortPath());
 
         // write the header data to the file
         bufferedWriter.write("<?xml version=\"1.0\"?>\n");
@@ -270,7 +270,7 @@ public class TCXFileExporter extends BaseFileExporter {
         cursor.close();
         databaseManager.closeDatabase(); // db.close();
 
-        return new ExportResult(true, getPositiveAnswer(exportInfo));
+        return new ExportResult(true, false, getPositiveAnswer(exportInfo));
     }
 
     @NonNull
