@@ -25,13 +25,16 @@ import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.os.Build;
 import android.provider.BaseColumns;
 import android.util.Log;
 
+import androidx.lifecycle.Observer;
 import androidx.work.Constraints;
 import androidx.work.Data;
 import androidx.work.NetworkType;
 import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkInfo;
 import androidx.work.WorkManager;
 
 import androidx.annotation.NonNull;
@@ -44,6 +47,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseMan
 import org.json.JSONException;
 
 import java.util.EnumMap;
+import java.util.List;
 
 public class ExportManager {
     public static final String EXPORT_STATUS_CHANGED_INTENT = "de.rainerblind.trainingtracker.EXPORT_STATUS_CHANGED_INTENT";
@@ -242,11 +246,16 @@ public class ExportManager {
     }
 
 
+    /***********************************************************************************************
+     * non-public stuff
+     **********************************************************************************************/
+
+
     /** method to inform the ExportManager that an export has started
      *
      * @param exportInfo
      */
-    public synchronized void exportingStarted(@NonNull ExportInfo exportInfo) {
+    private synchronized void exportingStarted(@NonNull ExportInfo exportInfo) {
         if (DEBUG) Log.d(TAG, "exportingStarted: " + exportInfo);
 
         ContentValues values = new ContentValues();
@@ -263,7 +272,7 @@ public class ExportManager {
      * @param success: weather or not the export/upload was successfully.
      * @param answer: the text to be forwarded via a notification to the user.
      */
-    public synchronized void exportingFinished(@NonNull ExportInfo exportInfo, boolean success, String answer) {
+    private synchronized void exportingFinished(@NonNull ExportInfo exportInfo, boolean success, String answer) {
         if (DEBUG) Log.d(TAG, "exportingFinished: " + exportInfo + ": " + answer);
 
         // ' calculate' the remaining number of retries and the ExportStatus
@@ -273,8 +282,7 @@ public class ExportManager {
         if (success) {
             exportStatus = ExportStatus.FINISHED_SUCCESS;
         } else {
-            exportStatus = ExportStatus.FINISHED_FAILED;  // TODO: How can we fix this???
-            exportStatus = ExportStatus.FINISHED_RETRY;
+            exportStatus = ExportStatus.FINISHED_FAILED;
         }
 
         // now, update the DB accordingly
@@ -293,9 +301,6 @@ public class ExportManager {
         broadcastExportStatusChanged();
     }
 
-    /***********************************************************************************************
-     * non-public stuff
-     **********************************************************************************************/
 
 
     private void updateExportStatusDb(ContentValues contentValues, String fileBaseName, ExportType exportType, FileFormat fileFormat) {
@@ -322,10 +327,13 @@ public class ExportManager {
     private void startExport(String fileBaseName, FileFormat fileFormat, ExportType exportType) {
 
         ExportInfo exportInfo = new ExportInfo(fileBaseName, fileFormat, exportType);
+        exportingStarted(exportInfo);
+
         BaseExporter exporter = getExporter(mContext, exportInfo);
 
         if (exportType == ExportType.FILE) {
-            exporter.export(exportInfo);  // when exporting to a file, we can immediately start.
+            BaseExporter.ExportResult exportResult = exporter.export(exportInfo);  // when exporting to a file, we can immediately start.
+            exportingFinished(exportInfo, exportResult.success(), exportResult.answer());
         } else {
             scheduleUpload(exportInfo);   // when uploading to the cloud, we use a scheduled upload.
         }
@@ -353,16 +361,66 @@ public class ExportManager {
                 .setRequiredNetworkType(NetworkType.CONNECTED)
                 .build();
 
+        String workTag = exportInfo.toString(); // e.g., "COMMUNITY: TCX: 2024-01-12-10-00-00"
+        workTag = workTag + "@" + System.currentTimeMillis();  // add a time-stamp
+
         // Build the request
         OneTimeWorkRequest uploadWorkRequest = new OneTimeWorkRequest.Builder(UploadWorker.class)
                 .setConstraints(constraints)
                 .setInputData(inputData)
+                .addTag(workTag)
                 .build();
 
         // Enqueue the work
         WorkManager.getInstance(mContext).enqueue(uploadWorkRequest);
 
+        observeWorker(workTag, exportInfo);
+
         exportingStarted(exportInfo);
+    }
+
+    private void observeWorker(String workTag, ExportInfo exportInfo) {
+        WorkManager.getInstance(mContext)
+                .getWorkInfosByTagLiveData(workTag)
+                .observeForever(new Observer<List<WorkInfo>>() {
+                    @Override
+                    public void onChanged(List<WorkInfo> workInfos) {
+                        if (workInfos == null || workInfos.isEmpty()) {
+                            return;
+                        }
+
+                        // We are interested in the state of the first WorkInfo object
+                        WorkInfo workInfo = workInfos.get(0);
+                        Log.d(TAG, "Work status changed for " + exportInfo + ": " + workInfo.getState());
+
+                        if (workInfo.getState().isFinished()) {
+                            // The job is finished, now we can update our state
+                            handleWorkerFinished(workInfo, exportInfo);
+
+                            // Remove the observer to prevent memory leaks
+                            WorkManager.getInstance(mContext).getWorkInfosByTagLiveData(workTag).removeObserver(this);
+                        }
+                    }
+                });
+    }
+
+
+    private void handleWorkerFinished(WorkInfo workInfo, ExportInfo exportInfo) {
+        if (workInfo.getState() == WorkInfo.State.SUCCEEDED) {
+            // The worker reported success!
+            Log.i(TAG, "WorkManager reported SUCCESS for: " + exportInfo);
+            exportingFinished(exportInfo, true, "Upload successful.");
+
+        } else if (workInfo.getState() == WorkInfo.State.FAILED) {
+            // The worker reported a permanent failure.
+            Log.w(TAG, "WorkManager reported FAILED for: " + exportInfo);
+            exportingFinished(exportInfo, false, "Upload failed. No more retries.");
+
+        } else if (workInfo.getState() == WorkInfo.State.CANCELLED) {
+            // Handle cancellation if needed
+            Log.w(TAG, "WorkManager reported CANCELLED for: " + exportInfo);
+            exportingFinished(exportInfo, false, "Upload cancelled.");
+        }
     }
 
 

@@ -94,7 +94,7 @@ public class GCFileExporter extends BaseFileExporter {
 
         getHeaderData(exportInfo);
 
-        BufferedWriter bufferedWriter = getBufferedWriter(exportInfo);
+        BufferedWriter bufferedWriter = getBufferedWriter(exportInfo.getShortPath());
 
         //TODO: use constants and String.format()
         // write the header data to the file
@@ -215,7 +215,7 @@ public class GCFileExporter extends BaseFileExporter {
         cursor.close();
         databaseManager.closeDatabase();
 
-        return new ExportResult(true, getPositiveAnswer(exportInfo));
+        return new ExportResult(true, false, getPositiveAnswer(exportInfo));
 
     }
 

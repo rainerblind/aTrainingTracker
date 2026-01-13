@@ -89,7 +89,7 @@ public class RunkeeperFileExporter extends BaseFileExporter {
 
         getHeaderData(exportInfo);
 
-        BufferedWriter bufferedWriter = getBufferedWriter(exportInfo);
+        BufferedWriter bufferedWriter = getBufferedWriter(exportInfo.getShortPath());
 
         // if (!haveGeo) {
         // return new ExportResult(false, "No GPS Data");
@@ -208,7 +208,7 @@ public class RunkeeperFileExporter extends BaseFileExporter {
         cursor.close();
         databaseManager.closeDatabase(); // db.close();
 
-        return new ExportResult(true, getPositiveAnswer(exportInfo));
+        return new ExportResult(true, false, getPositiveAnswer(exportInfo));
 
         // int dataPoints = (dataPointsHR > dataPointsPos) ? dataPointsHR : dataPointsPos;
         //

@@ -166,9 +166,6 @@ public class ExportStatusDialogFragment extends DialogFragment {
                     case PROCESSING:
                         iv.setImageResource(R.drawable.ic_cached_black_24dp);
                         break;
-                    case FINISHED_RETRY:
-                        iv.setImageResource(R.drawable.export_error);
-                        break;
                     case FINISHED_SUCCESS:
                         iv.setImageResource(R.drawable.export_success);
                         break;

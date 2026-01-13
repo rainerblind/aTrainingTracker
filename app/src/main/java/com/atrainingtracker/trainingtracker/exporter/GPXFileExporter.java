@@ -66,7 +66,7 @@ public class GPXFileExporter extends BaseFileExporter {
 
         getHeaderData(exportInfo);
 
-        BufferedWriter bufferedWriter = getBufferedWriter(exportInfo);
+        BufferedWriter bufferedWriter = getBufferedWriter(exportInfo.getShortPath());
 
 
         // write the header data to the file
@@ -183,7 +183,7 @@ public class GPXFileExporter extends BaseFileExporter {
         cursor.close();
         databaseManager.closeDatabase(); // db.close();
 
-        return new ExportResult(true, getPositiveAnswer(exportInfo));
+        return new ExportResult(true, false, getPositiveAnswer(exportInfo));
     }
 
     @NonNull

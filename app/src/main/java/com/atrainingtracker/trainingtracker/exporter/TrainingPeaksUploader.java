@@ -45,6 +45,7 @@ import org.json.JSONObject;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -70,8 +71,7 @@ public class TrainingPeaksUploader extends BaseExporter {
 
     @NonNull
     @Override
-    protected ExportResult doExport(@NonNull ExportInfo exportInfo)
-            throws IOException, JSONException {
+    protected ExportResult doExport(@NonNull ExportInfo exportInfo) throws IOException, JSONException {
         if (DEBUG) Log.d(TAG, "doExport: " + exportInfo.getFileBaseName());
 
         TrainingpeaksGetAccessTokenActivity trainingPeaksGetAccessTokenActivity = new TrainingpeaksGetAccessTokenActivity();
@@ -80,7 +80,7 @@ public class TrainingPeaksUploader extends BaseExporter {
 
         if (accessToken == null) {
             // TODO: do some error handling?
-            return new ExportResult(false, "Could not get an up to date access token");
+            return new ExportResult(false, false,  "Could not get an up to date access token");
         }
 
 
@@ -151,13 +151,15 @@ public class TrainingPeaksUploader extends BaseExporter {
         String response = EntityUtils.toString(httpResponse.getEntity());
         if (DEBUG) Log.d(TAG, "status: " + httpResponse.getStatusLine());
         if (DEBUG) Log.d(TAG, "uploadToTrainingPeaks response: " + response);
-        if (response == null) {
-            return new ExportResult(false, "no response");
-        } else if (response.isEmpty()) {
-            return new ExportResult(true, "successfully uploaded " + exportInfo.getFileBaseName() + " to TrainingPeaks");
-        }
 
-        return new ExportResult(true, response);
+        // TODO: the following lines seems to be not 100% correct
+
+        if (response == null) {
+            return new ExportResult(false, false, "no response");
+        } else if (response.isEmpty()) {
+            return new ExportResult(true, false, "successfully uploaded " + exportInfo.getFileBaseName() + " to TrainingPeaks");
+        }
+        return new ExportResult(true, false, response);
     }
 
     @NonNull
