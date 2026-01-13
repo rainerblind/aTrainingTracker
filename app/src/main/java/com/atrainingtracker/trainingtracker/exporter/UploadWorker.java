@@ -40,51 +40,20 @@ public class UploadWorker extends Worker {
             ExportInfo exportInfo = ExportInfo.fromJson(exportInfoJson);
             Log.d(TAG, "Starting export for: " + exportInfo.toString());
 
-            try {
+            BaseExporter exporter = ExportManager.getExporter(getApplicationContext(), exportInfo);
+            BaseExporter.ExportResult result = exporter.doExport(exportInfo);
 
-                BaseExporter exporter = ExportManager.getExporter(getApplicationContext(), exportInfo);
-                ExportManager exportManager = new ExportManager(getApplicationContext(), TAG);
-
-                // 4. Execute the actual export logic
-                exportManager.exportingStarted(exportInfo);                                        // inform the manager
-                BaseExporter.ExportResult result = exporter.doExport(exportInfo);
-
-                if (result.success()) {
-                    if (DEBUG) Log.i(TAG, "Export successful: " + result.answer());
-
-                    exportManager.exportingFinished(exportInfo, true, result.answer());  // inform the manager
-                    exportManager.onFinished(TAG);
-
-                    return Result.success();
-                } else {
-                    if (DEBUG) Log.w(TAG, "Export failed, will retry later. Reason: " + result.answer());
-
-                    exportManager.exportingFinished(exportInfo, false, result.answer());  // inform the manager
-                    if (exportManager.getRetries(exportInfo) > 0) {                               // and aks him for one more chane
-                        exportManager.onFinished(TAG);
-                        return Result.retry(); // WorkManager will retry based on backoff policy
-                    } else {
-                        exportManager.onFinished(TAG);
-                        return Result.failure(); // OK, we finally give up.
-                    }
-                }
-
-            } catch (IOException | ParseException | InterruptedException | IllegalArgumentException e) {
-                Log.e(TAG, "An exception occurred during export. Retrying.", e);
-
-                ExportManager exportManager = new ExportManager(getApplicationContext(), TAG);
-                exportManager.exportingFinished(exportInfo, false, e.getMessage());  // inform the manager
-                if (exportManager.getRetries(exportInfo) > 0) {                              // and ask him for one more chance
-                    exportManager.onFinished(TAG);
-                    return Result.retry(); // WorkManager will retry based on backoff policy
-                }
-                else {
-                    exportManager.onFinished(TAG);
-                    return Result.failure(); // OK, we finally give up.
-                }
+            if (result.success()) {
+                if (DEBUG) Log.i(TAG, "Export successful: " + result.answer());
+                return Result.success();
+            } else {
+                if (DEBUG) Log.w(TAG, "Export failed, will retry later. Reason: " + result.answer());
+                return Result.retry(); // WorkManager will retry based on backoff policy
             }
-        } catch (JSONException e) {
-            return Result.failure();
+
+        } catch (JSONException | IOException | ParseException | InterruptedException | IllegalArgumentException e) {
+            Log.e(TAG, "An exception occurred during export. Retrying.", e);
+            return Result.retry(); // WorkManager will retry based on backoff policy
         }
     }
 }
