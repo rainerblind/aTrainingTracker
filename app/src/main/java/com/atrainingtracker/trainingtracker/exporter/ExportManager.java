@@ -52,9 +52,6 @@ public class ExportManager {
     @Nullable
     protected static SQLiteDatabase cExportStatusDb;
     protected static int cInstances = 0;
-    private static final int DEFAULT_RETRIES_FILE = 1;
-    private static final int DEFAULT_RETRIES_DROPBOX = 10;
-    private static final int DEFAULT_RETRIES_COMMUNITY = 1;
     protected final Context mContext;
     // protected static HashMap<String, EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>>> cCash = new HashMap<String, EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>>>();
 
@@ -129,7 +126,6 @@ public class ExportManager {
                 exportProgressValues.put(ExportStatusDbHelper.FORMAT, fileFormat.name());
                 exportProgressValues.put(ExportStatusDbHelper.TYPE, exportType.name());
                 exportProgressValues.put(ExportStatusDbHelper.EXPORT_STATUS, ExportStatus.TRACKING.name());
-                exportProgressValues.put(ExportStatusDbHelper.RETRIES, 0);        //  we do not want to export while tracking
                 // exportProgressValues.put(ExportStatusDbHelper.ANSWER, "");
 
                 try {
@@ -197,8 +193,6 @@ public class ExportManager {
      */
     public synchronized void exportWorkout(String fileBaseName) {
         if (DEBUG) Log.d(TAG, "exportWorkout: " + fileBaseName);
-
-        ContentValues values = new ContentValues();
 
         for (FileFormat fileFormat : FileFormat.values()) {
             if (TrainingApplication.exportToFile(fileFormat) || TrainingApplication.exportViaEmail(fileFormat)) {
@@ -277,22 +271,15 @@ public class ExportManager {
         ExportStatus exportStatus = ExportStatus.FINISHED_FAILED;
 
         if (success) {
-            retries = 0;
             exportStatus = ExportStatus.FINISHED_SUCCESS;
         } else {
-            retries = getRetries(exportInfo);
-            retries--;
-            if (retries == 0) {
-                exportStatus = ExportStatus.FINISHED_FAILED;
-            } else {
-                exportStatus = ExportStatus.FINISHED_RETRY;
-            }
+            exportStatus = ExportStatus.FINISHED_FAILED;  // TODO: How can we fix this???
+            exportStatus = ExportStatus.FINISHED_RETRY;
         }
 
         // now, update the DB accordingly
         ContentValues values = new ContentValues();
 
-        values.put(ExportStatusDbHelper.RETRIES, retries);
         values.put(ExportStatusDbHelper.EXPORT_STATUS, exportStatus.name());
         values.put(ExportStatusDbHelper.ANSWER, answer);
 
@@ -334,17 +321,6 @@ public class ExportManager {
     /** simple helper method to start an export */
     private void startExport(String fileBaseName, FileFormat fileFormat, ExportType exportType) {
 
-        // calc and set the number of retries
-        int retries = switch (exportType) {
-            case FILE -> DEFAULT_RETRIES_FILE;
-            case DROPBOX -> DEFAULT_RETRIES_DROPBOX;
-            case COMMUNITY -> DEFAULT_RETRIES_COMMUNITY;
-        };
-        ContentValues values = new ContentValues();
-        values.put(ExportStatusDbHelper.RETRIES, retries);
-        updateExportStatusDb(values, fileBaseName, exportType, fileFormat);
-
-        // now, really start teh export
         ExportInfo exportInfo = new ExportInfo(fileBaseName, fileFormat, exportType);
         BaseExporter exporter = getExporter(mContext, exportInfo);
 
@@ -458,26 +434,6 @@ public class ExportManager {
         WorkoutSummariesDatabaseManager.getInstance().closeDatabase(); // db.close();
 
         return fileBaseName;
-    }
-
-
-    /** simple helper method to get the number of retries from the DB */
-    public synchronized long getRetries(ExportInfo exportInfo) {
-        long retries = 0;
-        Cursor cursor = cExportStatusDb.query(ExportStatusDbHelper.TABLE,
-                new String[]{ExportStatusDbHelper.RETRIES},
-                WorkoutSummaries.FILE_BASE_NAME + "=? AND " + ExportStatusDbHelper.TYPE + "=? AND " + ExportStatusDbHelper.FORMAT + "=?",
-                new String[]{exportInfo.getFileBaseName(), exportInfo.getExportType().name(), exportInfo.getFileFormat().name()},
-                null,
-                null,
-                null);
-        if (cursor.getCount() > 0) {
-            cursor.moveToFirst();
-            retries = cursor.getLong(cursor.getColumnIndex(ExportStatusDbHelper.RETRIES));
-        }
-        cursor.close();
-
-        return retries;
     }
 
 
