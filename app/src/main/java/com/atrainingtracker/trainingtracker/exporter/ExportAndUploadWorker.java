@@ -3,6 +3,7 @@ package com.atrainingtracker.trainingtracker.exporter;
 import android.Manifest;
 import android.app.Notification;
 import android.app.PendingIntent;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -25,9 +26,12 @@ import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigatio
 
 import org.json.JSONException;
 
-public class ExportWorker extends Worker implements IExportProgressListener {
+public class ExportAndUploadWorker extends Worker implements IExportProgressListener {
     private static final String TAG = "UploadWorker";
     private static final boolean DEBUG = com.atrainingtracker.trainingtracker.TrainingApplication.getDebug(true);
+
+    public static final String KEY_EXPORT_INFO = "export-info";
+    public static final String KEY_NOTIFICATION_TEXT = "notification-text";
 
 
     private NotificationManagerCompat mNotificationManager;
@@ -36,7 +40,7 @@ public class ExportWorker extends Worker implements IExportProgressListener {
     private Context mContext;
     private BaseExporter mExporter;
 
-    public ExportWorker(@NonNull Context context, @NonNull WorkerParameters workerParams) {
+    public ExportAndUploadWorker(@NonNull Context context, @NonNull WorkerParameters workerParams) {
         super(context, workerParams);
         mNotificationManager = NotificationManagerCompat.from(context);
         mContext = context;
@@ -47,7 +51,7 @@ public class ExportWorker extends Worker implements IExportProgressListener {
     public Result doWork() {
         // Retrieve the parameters passed to the worker
         Data inputData = getInputData();
-        String exportInfoJson = inputData.getString("EXPORT_INFO_JSON");
+        String exportInfoJson = inputData.getString(KEY_EXPORT_INFO);
 
         if (exportInfoJson == null) {
             Log.e(TAG, "Cannot perform export: ExportInfo was not provided.");
@@ -66,25 +70,28 @@ public class ExportWorker extends Worker implements IExportProgressListener {
         // now we can get the Exporter
         mExporter = ExportManager.getExporter(getApplicationContext(), mExportInfo);
 
-        // inform the user that the export is started
+        // inform the user that the export is started and update the DB.
         showInitialNotification();
+        updateStatus(ExportStatus.PROCESSING, "Export is being prepared...");  // TODO: Text?
 
         // and start the export
         BaseExporter.ExportResult result = mExporter.export(mExportInfo, this);
 
+        String answer = result.answer();
         if (result.success()) {
-            if (DEBUG) Log.i(TAG, "Export successful: " + result.answer());
-            showFinalNotification(getExportTitle(mExportInfo), getPositiveAnswer(mExportInfo));// TODO: Notification
+            if (DEBUG) Log.i(TAG, "Export successful: " + answer);
+
+            updateStatus(ExportStatus.FINISHED_SUCCESS, answer);
+            showFinalNotification(getExportTitle(mExportInfo), answer);
+
             return Result.success();
         } else {
-            if (DEBUG) Log.w(TAG, "Export failed. Reason: " + result.answer());
-            if (result.shallRetry()) {
-                showFinalNotification(getExportTitle(mExportInfo), result.answer());// TODO: Notification
-                return Result.retry(); // WorkManager will retry based on backoff policy
-            } else {
-                showFinalNotification(getExportTitle(mExportInfo), result.answer());// TODO: Notification
-                return Result.failure(); // A non-retriable failure
-            }
+            if (DEBUG) Log.w(TAG, "Export failed. Reason: " + answer);
+
+            updateStatus(ExportStatus.FINISHED_FAILED, answer);
+            showFinalNotification(getExportTitle(mExportInfo), answer);
+
+            return result.shallRetry() ? Result.retry() : Result.failure();
         }
     }
 
@@ -94,6 +101,33 @@ public class ExportWorker extends Worker implements IExportProgressListener {
         if ((current % (10 * 60)) == 0) {
             updateNotification(getExportMessage(mExportInfo), true, false, max, current);
         }
+    }
+
+
+    /**
+     * Updates the status of the current export job in the database and notifies the UI.
+     * This method is the single point of truth for state changes of this worker.
+     *
+     * @param status The new status of the export (e.g., PROCESSING, FINISHED_SUCCESS).
+     * @param answer A descriptive message about the result (e.g., "Upload successful" or an error message). Can be null.
+     */
+    private void updateStatus(ExportStatus status, @Nullable String answer) {
+        // First, get an instance of the ExportStatusRepository.
+        ExportStatusRepository repository = ExportStatusRepository.getInstance(getApplicationContext());
+
+        // create a ContentValues object to hold the new data.
+        ContentValues values = new ContentValues();
+        values.put(ExportStatusRepository.ExportStatusDbHelper.EXPORT_STATUS, status.name());
+
+        if (answer != null) {
+            values.put(ExportStatusRepository.ExportStatusDbHelper.ANSWER, answer);
+        }
+
+        // delegate the database update to the repository.
+        repository.updateExportStatus(values, mExportInfo);
+
+        // Finally, send a broadcast to inform the UI that it needs to refresh.
+        ExportStatusChangedBroadcaster.broadcastExportStatusChanged(getApplicationContext());
     }
 
 

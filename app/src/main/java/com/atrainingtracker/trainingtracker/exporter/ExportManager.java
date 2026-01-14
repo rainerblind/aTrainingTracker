@@ -18,14 +18,12 @@
 
 package com.atrainingtracker.trainingtracker.exporter;
 
+import static com.atrainingtracker.trainingtracker.exporter.ExportStatusChangedBroadcaster.broadcastExportStatusChanged;
+
 import android.content.ContentValues;
 import android.content.Context;
-import android.content.Intent;
 import android.database.Cursor;
-import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
-import android.database.sqlite.SQLiteOpenHelper;
-import android.provider.BaseColumns;
 import android.util.Log;
 
 import androidx.lifecycle.Observer;
@@ -46,11 +44,10 @@ import com.atrainingtracker.trainingtracker.exporter.ExportStatusRepository.Expo
 
 import org.json.JSONException;
 
-import java.util.EnumMap;
+import java.util.ArrayList;
 import java.util.List;
 
 public class ExportManager {
-    public static final String EXPORT_STATUS_CHANGED_INTENT = "de.rainerblind.trainingtracker.EXPORT_STATUS_CHANGED_INTENT";
     private static final String TAG = "ExportManager";
     private static final boolean DEBUG = true;
     @Nullable
@@ -117,7 +114,7 @@ public class ExportManager {
             }
         }
 
-        broadcastExportStatusChanged();
+        broadcastExportStatusChanged(mContext);
     }
 
 
@@ -165,7 +162,7 @@ public class ExportManager {
             }
         }
 
-        broadcastExportStatusChanged();
+        broadcastExportStatusChanged(mContext);
     }
 
     /** method to trigger the ExportManager to export a Workout to the various file formats and upload it to the cloud later on.
@@ -177,8 +174,7 @@ public class ExportManager {
 
         for (FileFormat fileFormat : FileFormat.values()) {
             if (TrainingApplication.exportToFile(fileFormat) || TrainingApplication.exportViaEmail(fileFormat)) {
-                // simply, trigger the export
-                startFileExport(fileBaseName, fileFormat);
+                startFullExportProcess(fileBaseName, fileFormat);
             }
         }
     }
@@ -209,8 +205,9 @@ public class ExportManager {
         mRepository.updateExportStatus(values, fileBaseName, ExportType.FILE, fileFormat);
 
         // trigger the export
-        startFileExport(fileBaseName, fileFormat);
+        startFullExportProcess(fileBaseName, fileFormat);
 
+        // TODO: Rethink from here on.
         // dropbox: either waiting or unwanted (retries are not yet set)
         if (TrainingApplication.uploadToDropbox()) {
             values.put(ExportStatusDbHelper.EXPORT_STATUS, ExportStatus.WAITING.name());
@@ -219,221 +216,101 @@ public class ExportManager {
         }
         mRepository.updateExportStatus(values, fileBaseName, ExportType.DROPBOX, fileFormat);
 
-        broadcastExportStatusChanged();
+        broadcastExportStatusChanged(mContext);
     }
-
 
     /***********************************************************************************************
      * non-public stuff
      **********************************************************************************************/
 
+    private synchronized void startFullExportProcess(String fileBaseName, FileFormat fileFormat) {
+        if (DEBUG) Log.d(TAG, "startFullExportProcess for " + fileBaseName + ", format: " + fileFormat);
 
-    /** method to inform the ExportManager that an export has started
-     *
-     * @param exportInfo
-     */
-    private synchronized void exportingStarted(@NonNull ExportInfo exportInfo) {
-        if (DEBUG) Log.d(TAG, "exportingStarted: " + exportInfo);
+        // work request for exporting to file
+        ExportInfo fileExportInfo = new ExportInfo(fileBaseName, fileFormat, ExportType.FILE);
+        OneTimeWorkRequest fileCreationWork = createWorkRequest(fileExportInfo, "Erstelle Datei...");  // TODO: Text
 
-        ContentValues values = new ContentValues();
-        values.put(ExportStatusDbHelper.EXPORT_STATUS, ExportStatus.PROCESSING.name());
+        // update the export status
+        updateStatus(fileExportInfo, ExportStatus.PROCESSING, null);
 
-        mRepository.updateExportStatus(values, exportInfo);
+        // create a empty list for the upload requests
+        List<OneTimeWorkRequest> uploadWorks = new ArrayList<>();
 
-        broadcastExportStatusChanged();
-    }
-
-    /** method to inform the ExportManager that an export has been finished
-     *
-     * @param exportInfo
-     * @param success: weather or not the export/upload was successfully.
-     * @param answer: the text to be forwarded via a notification to the user.
-     */
-    private synchronized void exportingFinished(@NonNull ExportInfo exportInfo, boolean success, String answer) {
-        if (DEBUG) Log.d(TAG, "exportingFinished: " + exportInfo + ": " + answer);
-
-        // ' calculate' the remaining number of retries and the ExportStatus
-        long retries = 0;
-        ExportStatus exportStatus = ExportStatus.FINISHED_FAILED;
-
-        if (success) {
-            exportStatus = ExportStatus.FINISHED_SUCCESS;
-        } else {
-            exportStatus = ExportStatus.FINISHED_FAILED;
+        // Dropbox-Upload (when requested)
+        if (TrainingApplication.uploadToDropbox()) {
+            ExportInfo dropboxExportInfo = new ExportInfo(fileBaseName, fileFormat, ExportType.DROPBOX);
+            uploadWorks.add(createWorkRequest(dropboxExportInfo, "Lade zu Dropbox hoch..."));  // TODO: Text
+            updateStatus(dropboxExportInfo, ExportStatus.WAITING, null); // set state ot WAITING
         }
 
-        // now, update the DB accordingly
+        // Community-Upload, (when requested)
+        if (TrainingApplication.uploadToCommunity(fileFormat)) {
+            ExportInfo communityExportInfo = new ExportInfo(fileBaseName, fileFormat, ExportType.COMMUNITY);
+            uploadWorks.add(createWorkRequest(communityExportInfo, "Lade zur Community hoch..."));  // TODO: Text
+            updateStatus(communityExportInfo, ExportStatus.WAITING, null); // set state ot WAITING
+        }
+
+        // create the queue and start.
+        if (uploadWorks.isEmpty()) {
+            // OK, no uploads just export to file
+            WorkManager.getInstance(mContext).enqueue(fileCreationWork);
+        } else {
+            // first: export to file, then the uploads.
+            WorkManager.getInstance(mContext)
+                    .beginWith(fileCreationWork)
+                    .then(uploadWorks)
+                    .enqueue();
+        }
+
+        // now, that everything is scheduled, we send an broadcast.
+        broadcastExportStatusChanged(mContext);
+    }
+
+    private void updateStatus(ExportInfo info, ExportStatus status, String answer) {
+        ContentValues values = new ContentValues();
+        values.put(ExportStatusDbHelper.EXPORT_STATUS, status.name());
+        if (answer != null) {
+            values.put(ExportStatusDbHelper.ANSWER, answer);
+        }
+        mRepository.updateExportStatus(values, info);
+    }
+
+    private OneTimeWorkRequest createWorkRequest(ExportInfo exportInfo, String notificationText) {
+        Data inputData;
+        try {
+            inputData = new Data.Builder()
+                .putString(ExportAndUploadWorker.KEY_EXPORT_INFO, exportInfo.toJson())
+                .putString(ExportAndUploadWorker.KEY_NOTIFICATION_TEXT, notificationText)
+                .build();
+        } catch (JSONException e) {
+            Log.e(TAG, "JSONException: " + e.getMessage(), e);
+            exportingFailed(exportInfo, "Exception: " + e.getMessage());
+            return null;
+        }
+
+
+        Constraints constraints = new Constraints.Builder()
+                .setRequiredNetworkType(exportInfo.getExportType() == ExportType.FILE ? NetworkType.NOT_REQUIRED : NetworkType.CONNECTED)
+                .build();
+
+        return new OneTimeWorkRequest.Builder(ExportAndUploadWorker.class)
+                .setInputData(inputData)
+                .setConstraints(constraints)
+                .addTag(exportInfo.toString())
+                .build();
+    }
+
+    private synchronized void exportingFailed(@NonNull ExportInfo exportInfo, String answer) {
+        //  update the DB accordingly
         ContentValues values = new ContentValues();
 
-        values.put(ExportStatusDbHelper.EXPORT_STATUS, exportStatus.name());
+        values.put(ExportStatusDbHelper.EXPORT_STATUS, ExportStatus.FINISHED_FAILED.name());
         values.put(ExportStatusDbHelper.ANSWER, answer);
 
         mRepository.updateExportStatus(values, exportInfo);
 
-        // note to ourself, that we have to continue with the upload to the cloud.
-        if (exportInfo.getExportType() == ExportType.FILE && success) {
-            exportingToFileFinishedStartCloudUploads(exportInfo);
-        }
-
-        broadcastExportStatusChanged();
+        broadcastExportStatusChanged(mContext);
     }
-
-
-    /** simple helper method to start a file export */
-    private void startFileExport(String fileBaseName, FileFormat fileFormat) {
-        startExport(fileBaseName, fileFormat, ExportType.FILE);
-    }
-
-
-    /** helper method to start an export
-     * the export will be done by a worker in the background.
-     *
-     * @param fileBaseName
-     * @param fileFormat
-     * @param exportType
-     */
-    private void startExport(String fileBaseName, FileFormat fileFormat, ExportType exportType) {
-
-        ExportInfo exportInfo = new ExportInfo(fileBaseName, fileFormat, exportType);
-        exportingStarted(exportInfo);
-
-        Data inputData;
-        try {
-            // Create a Data object with the parameters
-            inputData = new Data.Builder()
-                    .putString("EXPORT_INFO_JSON", exportInfo.toJson())
-                    .build();
-        } catch (JSONException e) {
-            Log.e(TAG, "JSONException: " + e.getMessage(), e);
-            exportingFinished(exportInfo, false, "Exception: " + e.getMessage());
-            return;
-        }
-
-        // define constraints (when exporting to a file, we do not need a network connection; otherwise, we need one).
-        Constraints.Builder constraintsBuilder = new Constraints.Builder();
-        if (exportInfo.getExportType() != ExportType.FILE) {
-            constraintsBuilder.setRequiredNetworkType(NetworkType.CONNECTED);
-        }
-        Constraints constraints = constraintsBuilder.build();
-
-        String workTag = exportInfo.toString(); // e.g., "COMMUNITY: TCX: 2024-01-12-10-00-00"
-        workTag = workTag + "@" + System.currentTimeMillis();  // add a time-stamp
-
-        // Build the request
-        OneTimeWorkRequest uploadWorkRequest = new OneTimeWorkRequest.Builder(ExportWorker.class)
-                .setConstraints(constraints)
-                .setInputData(inputData)
-                .addTag(workTag)
-                .build();
-
-        // Enqueue the work
-        WorkManager.getInstance(mContext).enqueue(uploadWorkRequest);
-
-        // observe the work
-        observeWorker(workTag, exportInfo);
-    }
-
-
-    /* method to do a scheduled export for uploading to the cloud */
-    private void scheduleUpload(@NonNull ExportInfo exportInfo) {
-        Log.d(TAG, "Scheduling upload for: " + exportInfo.toString());
-
-    }
-
-    private void observeWorker(String workTag, ExportInfo exportInfo) {
-        WorkManager.getInstance(mContext)
-                .getWorkInfosByTagLiveData(workTag)
-                .observeForever(new Observer<List<WorkInfo>>() {
-                    @Override
-                    public void onChanged(List<WorkInfo> workInfos) {
-                        if (workInfos == null || workInfos.isEmpty()) {
-                            return;
-                        }
-
-                        // We are interested in the state of the first WorkInfo object
-                        WorkInfo workInfo = workInfos.get(0);
-                        Log.d(TAG, "Work status changed for " + exportInfo + ": " + workInfo.getState());
-                        // TODO: we get more detailed information about the state.  Use this to update the db and notify the user.
-
-                        if (workInfo.getState().isFinished()) {
-                            // The job is finished, now we can update our state
-                            handleWorkerFinished(workInfo, exportInfo);
-
-                            // Remove the observer to prevent memory leaks
-                            WorkManager.getInstance(mContext).getWorkInfosByTagLiveData(workTag).removeObserver(this);
-                        }
-                    }
-                });
-    }
-
-
-    private void handleWorkerFinished(WorkInfo workInfo, ExportInfo exportInfo) {
-        if (workInfo.getState() == WorkInfo.State.SUCCEEDED) {
-            // The worker reported success!
-            Log.i(TAG, "WorkManager reported SUCCESS for: " + exportInfo);
-            exportingFinished(exportInfo, true, "Upload successful.");
-
-        } else if (workInfo.getState() == WorkInfo.State.FAILED) {
-            // The worker reported a permanent failure.
-            Log.w(TAG, "WorkManager reported FAILED for: " + exportInfo);
-            exportingFinished(exportInfo, false, "Upload failed. No more retries.");
-
-        } else if (workInfo.getState() == WorkInfo.State.CANCELLED) {
-            // Handle cancellation if needed
-            Log.w(TAG, "WorkManager reported CANCELLED for: " + exportInfo);
-            exportingFinished(exportInfo, false, "Upload cancelled.");
-        }
-    }
-
-
-
-    /** Inform the manager that the exporting to file finished.
-     *  The manager will start the cloud uploads.
-     */
-    protected synchronized void exportingToFileFinishedStartCloudUploads(@NonNull ExportInfo exportInfo) {
-        if (DEBUG) Log.d(TAG, "exportingToFileFinished: " + exportInfo.toString());
-
-        FileFormat fileFormat = exportInfo.getFileFormat();
-        String fileBaseName = exportInfo.getFileBaseName();
-
-        ContentValues values = new ContentValues();
-
-        // TODO: switch fileFormat?  But this does not allow to do multiple actions, e.g. uploading to Dropbox and Strava!
-
-        if (fileFormat == FileFormat.GC || fileFormat == FileFormat.TCX || fileFormat == FileFormat.GPX || fileFormat == FileFormat.CSV
-            // || fileFormat == FileFormat.STRAVA            // only for debugging
-            // || fileFormat == FileFormat.RUNKEEPER         // only for debugging
-            // || fileFormat == FileFormat.TRAINING_PEAKS    // only for debugging
-        ) {
-
-            if (TrainingApplication.uploadToDropbox()) {
-                startExport(fileBaseName, fileFormat, ExportType.DROPBOX);
-            }
-
-            // TODO: check for e-Mail.
-            // when all wanted file exports are finished, we could start to trigger the e-Mail sending...
-        }
-
-        if (TrainingApplication.uploadToCommunity(fileFormat)) {
-            startExport(fileBaseName, fileFormat, ExportType.COMMUNITY);
-        }
-    }
-
-
-    /***********************************************************************************************
-     * simple helper to send a broadcast
-     **********************************************************************************************/
-
-    private void broadcastExportStatusChanged() {
-        if (DEBUG) Log.d(TAG, "exportStatusChanged");
-        mContext.sendBroadcast(new Intent(EXPORT_STATUS_CHANGED_INTENT)
-                .setPackage(mContext.getPackageName()));
-    }
-
-
-    /***********************************************************************************************
-     * helpers to deal with the database
-     **********************************************************************************************/
 
 
     /** simple helper method to get the baseFileName from a given workoutId */
