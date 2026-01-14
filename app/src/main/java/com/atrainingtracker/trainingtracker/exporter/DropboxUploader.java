@@ -45,7 +45,7 @@ public class DropboxUploader extends BaseExporter {
 
     @NonNull
     @Override
-    protected ExportResult doExport(@NonNull ExportInfo exportInfo) throws IOException, IllegalArgumentException {
+    protected ExportResult doExport(@NonNull ExportInfo exportInfo, @NonNull IExportProgressListener progressListener) throws IOException, IllegalArgumentException {
         String filename = exportInfo.getShortPath();
         File file = new File(getBaseDirFile(mContext), filename);
         if (!file.exists()) {

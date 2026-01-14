@@ -61,7 +61,7 @@ public class TCXFileExporter extends BaseFileExporter {
 
     @NonNull
     @Override
-    protected ExportResult doExport(@NonNull ExportInfo exportInfo)
+    protected ExportResult doExport(@NonNull ExportInfo exportInfo, @NonNull IExportProgressListener progressListener)
             throws IOException, ParseException {
         if (DEBUG) Log.d(TAG, "exportToFile");
 
@@ -225,7 +225,7 @@ public class TCXFileExporter extends BaseFileExporter {
             }
             bufferedWriter.write("          </Trackpoint>\n");
 
-            notifyProgress(lines, count++);
+            progressListener.onProgress(lines, count++);
         }
 
         // now the tail
@@ -270,7 +270,7 @@ public class TCXFileExporter extends BaseFileExporter {
         cursor.close();
         databaseManager.closeDatabase(); // db.close();
 
-        return new ExportResult(true, false, getPositiveAnswer(exportInfo));
+        return new ExportResult(true, false, "Successfully exported to TCX File");
     }
 
     @NonNull

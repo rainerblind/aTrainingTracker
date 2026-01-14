@@ -25,7 +25,6 @@ import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
-import android.os.Build;
 import android.provider.BaseColumns;
 import android.util.Log;
 
@@ -43,6 +42,7 @@ import androidx.annotation.Nullable;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
+import com.atrainingtracker.trainingtracker.exporter.ExportStatusRepository.ExportStatusDbHelper;
 
 import org.json.JSONException;
 
@@ -52,36 +52,17 @@ import java.util.List;
 public class ExportManager {
     public static final String EXPORT_STATUS_CHANGED_INTENT = "de.rainerblind.trainingtracker.EXPORT_STATUS_CHANGED_INTENT";
     private static final String TAG = "ExportManager";
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = true;
     @Nullable
-    protected static SQLiteDatabase cExportStatusDb;
-    protected static int cInstances = 0;
     protected final Context mContext;
     // protected static HashMap<String, EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>>> cCash = new HashMap<String, EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>>>();
+    private final ExportStatusRepository mRepository;
 
-    public ExportManager(Context context, String caller) {
-        cInstances++;
-
-        if (DEBUG)
-            Log.d(TAG, "constructor called by " + caller + ": now, we have " + cInstances + " instances");
-
+    public ExportManager(Context context) {
         mContext = context;
-        if (cExportStatusDb == null) {
-            cExportStatusDb = (new ExportStatusDbHelper(context)).getWritableDatabase();
-        }
+        mRepository = ExportStatusRepository.getInstance(context);
     }
 
-    public void onFinished(String caller) {
-        cInstances--;
-
-        if (DEBUG)
-            Log.d(TAG, "onFinished called by " + caller + ": now, we have " + cInstances + " instances");
-
-        if (cInstances == 0) {
-            cExportStatusDb.close();
-            cExportStatusDb = null;
-        }
-    }
 
     public static BaseExporter getExporter(@NonNull Context context, @NonNull ExportInfo exportInfo) {
         switch (exportInfo.getExportType()) {
@@ -132,11 +113,7 @@ public class ExportManager {
                 exportProgressValues.put(ExportStatusDbHelper.EXPORT_STATUS, ExportStatus.TRACKING.name());
                 // exportProgressValues.put(ExportStatusDbHelper.ANSWER, "");
 
-                try {
-                    cExportStatusDb.insert(ExportStatusDbHelper.TABLE, null, exportProgressValues);
-                } catch (SQLException e) {
-                    Log.e(TAG, "Error while writing" + e + "to ExportStatusDbHelper.TABLE");
-                }
+                mRepository.addExportStatus(exportProgressValues);
             }
         }
 
@@ -162,9 +139,9 @@ public class ExportManager {
         // FILE
         for (FileFormat fileFormat : ExportType.FILE.getExportToFileFormats()) {
             if (TrainingApplication.exportToFile(fileFormat) || TrainingApplication.exportViaEmail(fileFormat)) {
-                updateExportStatusDb(WAITING, fileBaseName, ExportType.FILE, fileFormat);
+                mRepository.updateExportStatus(WAITING, fileBaseName, ExportType.FILE, fileFormat);
             } else {
-                updateExportStatusDb(UNWANTED, fileBaseName, ExportType.FILE, fileFormat);
+                mRepository.updateExportStatus(UNWANTED, fileBaseName, ExportType.FILE, fileFormat);
             }
         }
 
@@ -172,9 +149,9 @@ public class ExportManager {
         if (TrainingApplication.uploadToDropbox()) {
             for (FileFormat fileFormat : ExportType.DROPBOX.getExportToFileFormats()) {
                 if (TrainingApplication.exportToFile(fileFormat)) {
-                    updateExportStatusDb(WAITING, fileBaseName, ExportType.DROPBOX, fileFormat);
+                    mRepository.updateExportStatus(WAITING, fileBaseName, ExportType.DROPBOX, fileFormat);
                 } else {
-                    updateExportStatusDb(UNWANTED, fileBaseName, ExportType.DROPBOX, fileFormat);
+                    mRepository.updateExportStatus(UNWANTED, fileBaseName, ExportType.DROPBOX, fileFormat);
                 }
             }
         }
@@ -182,9 +159,9 @@ public class ExportManager {
         // communities
         for (FileFormat fileFormat : ExportType.COMMUNITY.getExportToFileFormats()) {
             if (TrainingApplication.uploadToCommunity(fileFormat)) {
-                updateExportStatusDb(WAITING, fileBaseName, ExportType.COMMUNITY, fileFormat);
+                mRepository.updateExportStatus(WAITING, fileBaseName, ExportType.COMMUNITY, fileFormat);
             } else {
-                updateExportStatusDb(UNWANTED, fileBaseName, ExportType.COMMUNITY, fileFormat);
+                mRepository.updateExportStatus(UNWANTED, fileBaseName, ExportType.COMMUNITY, fileFormat);
             }
         }
 
@@ -229,7 +206,7 @@ public class ExportManager {
         // user explicitly wants this.  So, we do not check whether we normally do this.  I.e. no if (TrainingApplication.exportToFile(fileFormat))
         values.put(ExportStatusDbHelper.EXPORT_STATUS, ExportStatus.WAITING.name());
         values.put(ExportStatusDbHelper.ANSWER, "");
-        updateExportStatusDb(values, fileBaseName, ExportType.FILE, fileFormat);
+        mRepository.updateExportStatus(values, fileBaseName, ExportType.FILE, fileFormat);
 
         // trigger the export
         startFileExport(fileBaseName, fileFormat);
@@ -240,7 +217,7 @@ public class ExportManager {
         } else {
             values.put(ExportStatusDbHelper.EXPORT_STATUS, ExportStatus.UNWANTED.name());
         }
-        updateExportStatusDb(values, fileBaseName, ExportType.DROPBOX, fileFormat);
+        mRepository.updateExportStatus(values, fileBaseName, ExportType.DROPBOX, fileFormat);
 
         broadcastExportStatusChanged();
     }
@@ -261,7 +238,7 @@ public class ExportManager {
         ContentValues values = new ContentValues();
         values.put(ExportStatusDbHelper.EXPORT_STATUS, ExportStatus.PROCESSING.name());
 
-        updateExportStatusDb(values, exportInfo);
+        mRepository.updateExportStatus(values, exportInfo);
 
         broadcastExportStatusChanged();
     }
@@ -291,7 +268,7 @@ public class ExportManager {
         values.put(ExportStatusDbHelper.EXPORT_STATUS, exportStatus.name());
         values.put(ExportStatusDbHelper.ANSWER, answer);
 
-        updateExportStatusDb(values, exportInfo);
+        mRepository.updateExportStatus(values, exportInfo);
 
         // note to ourself, that we have to continue with the upload to the cloud.
         if (exportInfo.getExportType() == ExportType.FILE && success) {
@@ -302,47 +279,23 @@ public class ExportManager {
     }
 
 
-
-    private void updateExportStatusDb(ContentValues contentValues, String fileBaseName, ExportType exportType, FileFormat fileFormat) {
-        cExportStatusDb.update(ExportStatusDbHelper.TABLE,
-                contentValues,
-                WorkoutSummaries.FILE_BASE_NAME + "=? AND " + ExportStatusDbHelper.TYPE + "=? AND " + ExportStatusDbHelper.FORMAT + "=?",
-                new String[]{fileBaseName, exportType.name(), fileFormat.name()});
-    }
-
-    private void updateExportStatusDb(ContentValues contentValues, ExportInfo exportInfo) {
-        cExportStatusDb.update(ExportStatusDbHelper.TABLE,
-                contentValues,
-                WorkoutSummaries.FILE_BASE_NAME + "=? AND " + ExportStatusDbHelper.TYPE + "=? AND " + ExportStatusDbHelper.FORMAT + "=?",
-                new String[]{exportInfo.getFileBaseName(), exportInfo.getExportType().name(), exportInfo.getFileFormat().name()});
-    }
-
     /** simple helper method to start a file export */
     private void startFileExport(String fileBaseName, FileFormat fileFormat) {
         startExport(fileBaseName, fileFormat, ExportType.FILE);
     }
 
 
-    /** simple helper method to start an export */
+    /** helper method to start an export
+     * the export will be done by a worker in the background.
+     *
+     * @param fileBaseName
+     * @param fileFormat
+     * @param exportType
+     */
     private void startExport(String fileBaseName, FileFormat fileFormat, ExportType exportType) {
 
         ExportInfo exportInfo = new ExportInfo(fileBaseName, fileFormat, exportType);
         exportingStarted(exportInfo);
-
-        BaseExporter exporter = getExporter(mContext, exportInfo);
-
-        if (exportType == ExportType.FILE) {
-            BaseExporter.ExportResult exportResult = exporter.export(exportInfo);  // when exporting to a file, we can immediately start.
-            exportingFinished(exportInfo, exportResult.success(), exportResult.answer());
-        } else {
-            scheduleUpload(exportInfo);   // when uploading to the cloud, we use a scheduled upload.
-        }
-    }
-
-
-    /* method to do a scheduled export for uploading to the cloud */
-    private void scheduleUpload(@NonNull ExportInfo exportInfo) {
-        Log.d(TAG, "Scheduling upload for: " + exportInfo.toString());
 
         Data inputData;
         try {
@@ -356,16 +309,18 @@ public class ExportManager {
             return;
         }
 
-        // Define constraints (must have network)
-        Constraints constraints = new Constraints.Builder()
-                .setRequiredNetworkType(NetworkType.CONNECTED)
-                .build();
+        // define constraints (when exporting to a file, we do not need a network connection; otherwise, we need one).
+        Constraints.Builder constraintsBuilder = new Constraints.Builder();
+        if (exportInfo.getExportType() != ExportType.FILE) {
+            constraintsBuilder.setRequiredNetworkType(NetworkType.CONNECTED);
+        }
+        Constraints constraints = constraintsBuilder.build();
 
         String workTag = exportInfo.toString(); // e.g., "COMMUNITY: TCX: 2024-01-12-10-00-00"
         workTag = workTag + "@" + System.currentTimeMillis();  // add a time-stamp
 
         // Build the request
-        OneTimeWorkRequest uploadWorkRequest = new OneTimeWorkRequest.Builder(UploadWorker.class)
+        OneTimeWorkRequest uploadWorkRequest = new OneTimeWorkRequest.Builder(ExportWorker.class)
                 .setConstraints(constraints)
                 .setInputData(inputData)
                 .addTag(workTag)
@@ -374,9 +329,15 @@ public class ExportManager {
         // Enqueue the work
         WorkManager.getInstance(mContext).enqueue(uploadWorkRequest);
 
+        // observe the work
         observeWorker(workTag, exportInfo);
+    }
 
-        exportingStarted(exportInfo);
+
+    /* method to do a scheduled export for uploading to the cloud */
+    private void scheduleUpload(@NonNull ExportInfo exportInfo) {
+        Log.d(TAG, "Scheduling upload for: " + exportInfo.toString());
+
     }
 
     private void observeWorker(String workTag, ExportInfo exportInfo) {
@@ -392,6 +353,7 @@ public class ExportManager {
                         // We are interested in the state of the first WorkInfo object
                         WorkInfo workInfo = workInfos.get(0);
                         Log.d(TAG, "Work status changed for " + exportInfo + ": " + workInfo.getState());
+                        // TODO: we get more detailed information about the state.  Use this to update the db and notify the user.
 
                         if (workInfo.getState().isFinished()) {
                             // The job is finished, now we can update our state
@@ -493,140 +455,4 @@ public class ExportManager {
 
         return fileBaseName;
     }
-
-
-    @NonNull
-    public synchronized EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>> getExportStatus(String fileBaseName) {
-        if (DEBUG) Log.d(TAG, "getExportStatus");
-
-        EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>> result = new EnumMap<>(ExportType.class);
-
-        Cursor cursor;
-
-        for (ExportType exportType : ExportType.values()) {
-
-            EnumMap<FileFormat, ExportStatus> enumMap = new EnumMap<>(FileFormat.class);
-            for (FileFormat fileFormat : FileFormat.values()) {
-                cursor = cExportStatusDb.query(ExportStatusDbHelper.TABLE,
-                        new String[]{ExportStatusDbHelper.EXPORT_STATUS},
-                        WorkoutSummaries.FILE_BASE_NAME + "=? AND " + ExportStatusDbHelper.TYPE + "=? AND " + ExportStatusDbHelper.FORMAT + "=?",
-                        new String[]{fileBaseName, exportType.name(), fileFormat.name()},
-                        null,
-                        null,
-                        null);
-                if (cursor.getCount() > 0) {
-                    cursor.moveToFirst();
-                    enumMap.put(fileFormat, ExportStatus.valueOf(cursor.getString(cursor.getColumnIndex(ExportStatusDbHelper.EXPORT_STATUS))));
-                }
-                cursor.close();
-            }
-            result.put(exportType, enumMap);
-        }
-
-        if (DEBUG) Log.d(TAG, "getExportStatus finished");
-
-        return result;
-    }
-
-
-    @Nullable
-    public synchronized String getExportAnswer(@NonNull ExportInfo exportInfo) {
-        if (DEBUG) Log.d(TAG, "getExportAnswer");
-
-        String exportAnswer = null;
-
-        Cursor cursor = cExportStatusDb.query(ExportStatusDbHelper.TABLE,
-                new String[]{ExportStatusDbHelper.ANSWER},
-                WorkoutSummaries.FILE_BASE_NAME + "=? AND " + ExportStatusDbHelper.TYPE + "=? AND " + ExportStatusDbHelper.FORMAT + "=?",
-                new String[]{exportInfo.getFileBaseName(), exportInfo.getExportType().name(), exportInfo.getFileFormat().name()},
-                null,
-                null,
-                null);
-        if (cursor.getCount() > 0) {
-            cursor.moveToFirst();
-            exportAnswer = cursor.getString(cursor.getColumnIndex(ExportStatusDbHelper.ANSWER));
-        }
-        cursor.close();
-
-        return exportAnswer;
-    }
-
-
-    @Nullable
-    public synchronized ExportStatus getExportStatus(@NonNull ExportInfo exportInfo) {
-        if (DEBUG) Log.d(TAG, "getExportStatus");
-
-        ExportStatus exportStatus = null;
-
-        Cursor cursor = cExportStatusDb.query(ExportStatusDbHelper.TABLE,
-                new String[]{ExportStatusDbHelper.EXPORT_STATUS},
-                WorkoutSummaries.FILE_BASE_NAME + "=? AND " + ExportStatusDbHelper.TYPE + "=? AND " + ExportStatusDbHelper.FORMAT + "=?",
-                new String[]{exportInfo.getFileBaseName(), exportInfo.getExportType().name(), exportInfo.getFileFormat().name()},
-                null,
-                null,
-                null);
-        if (cursor.getCount() > 0) {
-            cursor.moveToFirst();
-            exportStatus = ExportStatus.valueOf(cursor.getString(cursor.getColumnIndex(ExportStatusDbHelper.EXPORT_STATUS)));
-        }
-        cursor.close();
-
-        return exportStatus;
-    }
-
-
-
-    public void deleteWorkout(String baseFileName) {
-        cExportStatusDb.delete(ExportStatusDbHelper.TABLE, WorkoutSummaries.FILE_BASE_NAME + "=?", new String[]{baseFileName});
-    }
-
-
-    protected static class ExportStatusDbHelper extends SQLiteOpenHelper {
-        public static final String DB_NAME = "ExportStatus.db";
-        public static final int DB_VERSION = 1;
-        static final String TAG = "ExportStatusDbHelper";
-        static final String TABLE = "ExportManager";
-        static final String C_ID = BaseColumns._ID;
-        static final String FORMAT = "Format";
-        static final String TYPE = "Type";
-        static final String EXPORT_STATUS = "Progress"; // TODO: rename to ExportStatus
-        static final String RETRIES = "Retries";
-        static final String ANSWER = "Answer";
-        protected static final String CREATE_TABLE = "create table " + TABLE + " ("
-                + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
-
-                + WorkoutSummaries.FILE_BASE_NAME + " text, "
-                + FORMAT + " text, "  // CSV, GPX, TCX, GC, Strava, RunKeeper, TrainingPeaks
-                + TYPE + " text, "  // File, Dropbox, Community
-
-                + EXPORT_STATUS + " text, "
-                + RETRIES + " int, "
-                + ANSWER + " text)";
-
-        // Constructor
-        public ExportStatusDbHelper(Context context) {
-            super(context, DB_NAME, null, DB_VERSION);
-        }
-
-        // Called only once, first time the DB is created
-        @Override
-        public void onCreate(@NonNull SQLiteDatabase db) {
-
-            db.execSQL(CREATE_TABLE);
-
-            if (DEBUG) Log.d(TAG, "onCreated sql: " + TABLE);
-        }
-
-        //Called whenever newVersion != oldVersion
-        @Override
-        public void onUpgrade(@NonNull SQLiteDatabase db, int oldVersion, int newVersion) {
-            // TODO: alter table instead of deleting!
-
-            db.execSQL("drop table if exists " + TABLE);
-            if (DEBUG) Log.d(TAG, "onUpgraded");
-            onCreate(db);  // run onCreate to get new database
-        }
-
-    }
-
 }

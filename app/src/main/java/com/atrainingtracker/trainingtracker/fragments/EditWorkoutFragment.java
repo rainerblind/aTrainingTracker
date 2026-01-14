@@ -363,9 +363,8 @@ public class EditWorkoutFragment extends Fragment {
                 resultIntent.putExtra(WorkoutSummaries.WORKOUT_ID, mWorkoutID);
 
                 if (mBaseFileName != null) {
-                    ExportManager exportManager = new ExportManager(getActivity().getApplicationContext(), TAG);
+                    ExportManager exportManager = new ExportManager(getActivity().getApplicationContext());
                     exportManager.exportWorkout(mBaseFileName);
-                    exportManager.onFinished(TAG);
 
                     getActivity().setResult(Activity.RESULT_OK, resultIntent);
                 } else {

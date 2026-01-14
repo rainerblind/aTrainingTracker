@@ -54,6 +54,7 @@ import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.activities.WorkoutDetailsActivity;
 import com.atrainingtracker.trainingtracker.exporter.ExportManager;
 import com.atrainingtracker.trainingtracker.exporter.ExportStatus;
+import com.atrainingtracker.trainingtracker.exporter.ExportStatusRepository;
 import com.atrainingtracker.trainingtracker.exporter.ExportType;
 import com.atrainingtracker.trainingtracker.exporter.FileFormat;
 import com.atrainingtracker.trainingtracker.MyHelper;
@@ -178,7 +179,7 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
         isPlayServiceAvailable = checkPlayServices();
 
         mDb = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
-        mExportManager = new ExportManager(getActivity(), TAG);
+        mExportManager = new ExportManager(getActivity());
         updateCursor();
 
         ContextCompat.registerReceiver(getActivity(), mExportStatusChangedReceiver, mExportStatusChangedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
@@ -204,7 +205,6 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
         //    // mCursor.close();
         //    mCursor = null;
         //}
-        mExportManager.onFinished(TAG);
     }
 
     // TODO: rename
@@ -293,7 +293,8 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
     private void setStatusInfo(@NonNull ViewHolder viewHolder, @NonNull final Context context, final String fileBaseName) {
         if (DEBUG) Log.d(TAG, "setStatusInfo: " + fileBaseName);
 
-        EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>> exportStatuses = mExportManager.getExportStatus(fileBaseName);
+        ExportStatusRepository repository = ExportStatusRepository.getInstance(context);
+        EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>> exportStatuses = repository.getExportStatusMap(fileBaseName);
         if (DEBUG && exportStatuses == null) Log.d(TAG, "WTF: exportStatuses == null");
 
         for (ExportType exportType : ExportType.values()) {

@@ -73,17 +73,15 @@ public abstract class BaseExporter {
     protected static final String PREFIX_FIRST = "\n    ";
     private static final String TAG = "BaseExporter";
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
-    private static NotificationCompat.Builder mNotificationBuilder;
-    private static NotificationManagerCompat cNotificationManager;
     @NonNull
     protected final Context mContext;
 
 
     /** method to be called by the ExportManager to start the export */
-    public final ExportResult export(@NonNull ExportInfo exportInfo) {
+    public final ExportResult export(@NonNull ExportInfo exportInfo, IExportProgressListener progressListener) {
         if (DEBUG) Log.d(TAG, "export: " + exportInfo.toString());
         try {
-            ExportResult exportResult = doExport(exportInfo);
+            ExportResult exportResult = doExport(exportInfo, progressListener);
             onFinished(exportInfo);
             return exportResult;
 
@@ -94,33 +92,15 @@ public abstract class BaseExporter {
 
     /* method that must be overridden by the child classes to do the export */
     @Nullable
-    abstract protected ExportResult doExport(ExportInfo exportInfo) throws IOException, JSONException, ParseException;
+    abstract protected ExportResult doExport(ExportInfo exportInfo, IExportProgressListener progressListener) throws IOException, JSONException, ParseException;
+
+    abstract Action getAction();
 
     protected void onFinished(@NonNull ExportInfo exportInfo) {}
 
 
     public BaseExporter(@NonNull Context context) {
         mContext = context;
-
-        cNotificationManager = NotificationManagerCompat.from(context);
-
-        // TODO: make method for this
-        // configure the intent
-        Bundle bundle = new Bundle();
-        bundle.putString(MainActivityWithNavigation.SELECTED_FRAGMENT, MainActivityWithNavigation.SelectedFragment.WORKOUT_LIST.name());
-        Intent newIntent = new Intent(mContext, MainActivityWithNavigation.class);
-        newIntent.putExtras(bundle);
-        newIntent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-        PendingIntent pendingIntent = PendingIntent.getActivity(mContext, 0, newIntent, PendingIntent.FLAG_IMMUTABLE);
-
-        // configure the notification
-        mNotificationBuilder = new NotificationCompat.Builder(mContext, TrainingApplication.NOTIFICATION_CHANNEL__EXPORT)
-                .setSmallIcon(R.drawable.logo)
-                .setLargeIcon(BitmapFactory.decodeResource(mContext.getResources(), R.drawable.ic_save_black_48dp))
-                .setContentTitle(mContext.getString(R.string.TrainingTracker))
-                .setContentText(mContext.getString(R.string.exporting))
-                .setContentIntent(pendingIntent)
-                .setOngoing(true);
     }
 
     /**
@@ -131,6 +111,15 @@ public abstract class BaseExporter {
     @NonNull
     public static File getBaseDirFile(@NonNull Context context) {
         return context.getFilesDir();
+    }
+
+    /**
+     * Get the relative "base path" to identify the file for >=Q
+     * @return the path
+     */
+    @NonNull
+    private static String getRelativePath() {
+        return Environment.DIRECTORY_DOCUMENTS + File.separator + "aTrainingTracker";
     }
 
 
@@ -233,14 +222,6 @@ public abstract class BaseExporter {
 
 
 
-    /**
-     * Get the relative "base path" to identify the file for >=Q
-     * @return the path
-     */
-    @NonNull
-    private static String getRelativePath() {
-        return Environment.DIRECTORY_DOCUMENTS + File.separator + "aTrainingTracker";
-    }
 
     @NonNull
     private static ContentValues getContentValues(@NonNull String shortPath, String mimeType) {
@@ -273,73 +254,7 @@ public abstract class BaseExporter {
         return true;
     }
 
-    /**
-     * create a notification that informs the user about the progress
-     **/
-    @NonNull
-    public Notification getExportProgressNotification(@NonNull ExportInfo exportInfo) {
-        mNotificationBuilder.setProgress(0, 0, false)
-                .setContentText(getExportMessage(exportInfo));
 
-        return mNotificationBuilder.build();
-    }
-
-    public void notifyExportFinished(String message) {
-        mNotificationBuilder.setProgress(0, 0, false)
-                .setContentText(message);
-    }
-
-    @NonNull
-    protected String getExportTitle(@NonNull ExportInfo exportInfo) {
-        return mContext.getString(R.string.notification_title,
-                mContext.getString(getAction().getIngId()),
-                mContext.getString(exportInfo.getExportType().getUiId()));
-    }
-
-    @NonNull
-    protected String getExportMessage(@NonNull ExportInfo exportInfo) {
-        String workoutName = exportInfo.getFileBaseName();
-        FileFormat format = exportInfo.getFileFormat();
-        ExportType type = exportInfo.getExportType();
-        int notification_format_id = switch (type) {
-            case FILE -> R.string.notification_export_file;
-            case DROPBOX -> R.string.notification_export_dropbox;
-            case COMMUNITY -> R.string.notification_export_community;
-        };
-
-        return mContext.getString(notification_format_id,
-                mContext.getString(getAction().getIngId()),
-                mContext.getString(format.getUiNameId()),
-                workoutName);
-    }
-
-    // copied code from getExportMessage
-    @NonNull
-    protected String getPositiveAnswer(@NonNull ExportInfo exportInfo) {
-        String workoutName = exportInfo.getFileBaseName();
-        FileFormat format = exportInfo.getFileFormat();
-        ExportType type = exportInfo.getExportType();
-        int notification_format_id = switch (type) {
-            case FILE -> R.string.notification_finished_file;
-            case DROPBOX -> R.string.notification_finished_dropbox;
-            case COMMUNITY -> R.string.notification_finished_community;
-        };
-
-        return mContext.getString(notification_format_id,
-                mContext.getString(getAction().getPastId()),
-                mContext.getString(format.getUiNameId()),
-                workoutName);
-    }
-
-    protected abstract Action getAction();
-
-    protected void notifyProgress(int max, int count) {
-        if ((count % (10 * 60)) == 0  // TODO take sampling time into account?
-                && cNotificationManager.areNotificationsEnabled()) {
-            mNotificationBuilder.setProgress(max, count, false);
-            cNotificationManager.notify(TrainingApplication.EXPORT_PROGRESS_NOTIFICATION_ID, mNotificationBuilder.build());
-        }
-    }
 
     @NonNull
     protected String getSamplePrefix(boolean isFirst) {
