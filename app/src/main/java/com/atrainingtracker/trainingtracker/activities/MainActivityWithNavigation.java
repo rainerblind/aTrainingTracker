@@ -817,9 +817,8 @@ public class MainActivityWithNavigation
     public void exportWorkout(long id, @NonNull FileFormat fileFormat) {
         if (DEBUG) Log.i(TAG, "exportWorkout");
 
-        ExportManager exportManager = new ExportManager(this, TAG);
+        ExportManager exportManager = new ExportManager(this);
         exportManager.exportWorkoutTo(id, fileFormat);
-        exportManager.onFinished(TAG);
     }
 
     @Override

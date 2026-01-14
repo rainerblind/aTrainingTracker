@@ -60,7 +60,7 @@ public class GPXFileExporter extends BaseFileExporter {
 
     @NonNull
     @Override
-    protected ExportResult doExport(@NonNull ExportInfo exportInfo)
+    protected ExportResult doExport(@NonNull ExportInfo exportInfo, @NonNull IExportProgressListener progressListener)
             throws IOException, ParseException {
         if (DEBUG) Log.d(TAG, "exportToFile");
 
@@ -169,7 +169,7 @@ public class GPXFileExporter extends BaseFileExporter {
                 }
             }
 
-            notifyProgress(lines, count++);
+            progressListener.onProgress(lines, count++);
         }
 
         // now the tail
@@ -183,7 +183,7 @@ public class GPXFileExporter extends BaseFileExporter {
         cursor.close();
         databaseManager.closeDatabase(); // db.close();
 
-        return new ExportResult(true, false, getPositiveAnswer(exportInfo));
+        return new ExportResult(true, false, "Successfully exported to GPX File");
     }
 
     @NonNull

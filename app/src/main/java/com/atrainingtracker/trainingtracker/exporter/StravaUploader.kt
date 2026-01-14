@@ -73,7 +73,7 @@ class StravaUploader(context: Context) : BaseExporter(context) {
     }
 
 
-    override fun doExport(exportInfo: ExportInfo): ExportResult {
+    override fun doExport(exportInfo: ExportInfo, progressListener: IExportProgressListener?): ExportResult {
         if (DEBUG) Log.d(TAG, "doExport: ${exportInfo.fileBaseName}")
 
         val file = File(getBaseDirFile(mContext), exportInfo.shortPath)
@@ -122,7 +122,6 @@ class StravaUploader(context: Context) : BaseExporter(context) {
 
         // 4. Handle Success (Initial Upload)
         if (DEBUG) Log.d(TAG, "Successfully uploaded to STRAVA, checking result")
-        notifyExportFinished(mContext.getString(R.string.strava_success_but_must_check))
 
         val uploadResponseJson = JSONObject(responseBody)
 
@@ -134,7 +133,6 @@ class StravaUploader(context: Context) : BaseExporter(context) {
 
             stravaUploadDbHelper.updateUploadId(exportInfo.fileBaseName, uploadId)
             stravaUploadDbHelper.updateStatus(exportInfo.fileBaseName, "Uploaded to STRAVA, checking result")
-            notifyExportFinished(mContext.getString(R.string.strava_success_but_must_check))
 
             // 5. Poll for processing status
             var exportResult: ExportResult? = null
@@ -181,7 +179,7 @@ class StravaUploader(context: Context) : BaseExporter(context) {
                                 exportResult = doUpdate(exportInfo)
                             } else {
                                 if (DEBUG) Log.e(TAG, "Status ready but no activity_id?")
-                                exportResult = ExportResult(true, false, getPositiveAnswer(exportInfo))  // success -> no need for retry
+                                exportResult = ExportResult(true, false, "Status ready but no activity_id?")  // success -> no need for retry
                             }
                         }
                     }
@@ -231,7 +229,7 @@ class StravaUploader(context: Context) : BaseExporter(context) {
 
         val activityId = StravaUploadDbHelper(mContext).getActivityId(exportInfo.fileBaseName)
         if (activityId.isNullOrEmpty()) {
-            return ExportResult(true, false, "${getPositiveAnswer(exportInfo)} (Update skipped: No Activity ID)")  // no retry
+            return ExportResult(true, false, "Update skipped: No Activity ID")  // no retry
         }
 
         // Get Summary from DB

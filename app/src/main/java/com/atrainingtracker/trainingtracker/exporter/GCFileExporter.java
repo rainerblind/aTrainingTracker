@@ -24,6 +24,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
@@ -58,7 +59,7 @@ public class GCFileExporter extends BaseFileExporter {
 
     @NonNull
     @Override
-    protected ExportResult doExport(@NonNull ExportInfo exportInfo)
+    protected ExportResult doExport(@NonNull ExportInfo exportInfo, @NonNull IExportProgressListener progressListener)
             throws IOException, IllegalArgumentException, JSONException, ParseException {
         if (DEBUG) Log.d(TAG, "exportWorkoutToFile");
 
@@ -203,7 +204,7 @@ public class GCFileExporter extends BaseFileExporter {
                 isFirst = false;
             }
 
-            notifyProgress(lines, count++);
+            progressListener.onProgress(lines, count++);
         }
 
         bufferedWriter.write("\n        ]\n");
@@ -215,7 +216,7 @@ public class GCFileExporter extends BaseFileExporter {
         cursor.close();
         databaseManager.closeDatabase();
 
-        return new ExportResult(true, false, getPositiveAnswer(exportInfo));
+        return new ExportResult(true, false, "Successfully exported to GC File");
 
     }
 

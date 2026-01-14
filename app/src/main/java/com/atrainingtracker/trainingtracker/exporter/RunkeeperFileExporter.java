@@ -24,6 +24,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
@@ -60,7 +61,7 @@ public class RunkeeperFileExporter extends BaseFileExporter {
 
     @NonNull
     @Override
-    protected ExportResult doExport(@NonNull ExportInfo exportInfo) throws IOException, IllegalArgumentException, ParseException, JSONException {
+    protected ExportResult doExport(@NonNull ExportInfo exportInfo, @Nullable IExportProgressListener progressListener) throws IOException, IllegalArgumentException, ParseException, JSONException {
         if (DEBUG) Log.d(TAG, "exportToFile");
 
         final String FORMAT_qq = "  \"%s\":\"%s\",\n";
@@ -139,7 +140,7 @@ public class RunkeeperFileExporter extends BaseFileExporter {
                     isFirst = false;
                 }
 
-                notifyProgress(2 * lines, count++);
+                progressListener.onProgress(2 * lines, count++);
             }
             bufferedWriter.write("\n  ],\n");
         }
@@ -195,7 +196,7 @@ public class RunkeeperFileExporter extends BaseFileExporter {
                     }
                 }
 
-                notifyProgress(2 * lines, lines + count++);
+                progressListener.onProgress(2 * lines, lines + count++);
             }
 
             bufferedWriter.write("\n  ]\n");
@@ -208,7 +209,7 @@ public class RunkeeperFileExporter extends BaseFileExporter {
         cursor.close();
         databaseManager.closeDatabase(); // db.close();
 
-        return new ExportResult(true, false, getPositiveAnswer(exportInfo));
+        return new ExportResult(true, false, "successfully exported a Runkeeper file");
 
         // int dataPoints = (dataPointsHR > dataPointsPos) ? dataPointsHR : dataPointsPos;
         //

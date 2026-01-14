@@ -30,7 +30,7 @@ public class NotYetImplementedExporter extends BaseExporter {
 
     @NonNull
     @Override
-    protected ExportResult doExport(ExportInfo exportInfo) {
+    protected ExportResult doExport(ExportInfo exportInfo, @NonNull IExportProgressListener progressListener) {
         return new ExportResult(false, false, "not yet implemented");
     }
 
