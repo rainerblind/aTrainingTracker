@@ -70,20 +70,25 @@ public class ExportNotificationManager {
         String groupKey = generateGroupKey(exportInfo);
         int notificationId = generateNotificationId(exportInfo);
         int summaryNotificationId = generateSummaryNotificationId(exportInfo);
+
         Set<Integer> notificationIdsInGroup = mActiveNotifications.get(groupKey);
         if (notificationIdsInGroup == null) {
             notificationIdsInGroup = new HashSet<>();
             mActiveNotifications.put(groupKey, notificationIdsInGroup);
         }
-        // Füge die neue ID hinzu
+
+        String title = exportInfo.getExportTitle(mContext, exporter);
+        String text = exportInfo.getExportMessage(mContext, exporter);
+        String summaryText = "Exporte für " + exportInfo.getExportType();  // TODO: better...
+
         notificationIdsInGroup.add(notificationId);
 
         // configure the notification
         NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(mContext, TrainingApplication.NOTIFICATION_CHANNEL__EXPORT)
                 .setSmallIcon(R.drawable.logo)
                 .setLargeIcon(BitmapFactory.decodeResource(mContext.getResources(), R.drawable.ic_save_black_48dp))
-                .setContentTitle(exportInfo.getExportTitle(mContext, exporter))
-                .setContentText(exportInfo.getExportMessage(mContext, exporter))
+                .setContentTitle(title)
+                .setContentText(text)
                 .setContentIntent(mPendingIntentStartWorkoutListActivity)
                 .setOngoing(true)
                 .setGroup(groupKey);
@@ -92,9 +97,9 @@ public class ExportNotificationManager {
         Notification summaryNotification = new NotificationCompat.Builder(mContext, TrainingApplication.NOTIFICATION_CHANNEL__EXPORT)
                 .setSmallIcon(R.drawable.logo)
                 .setContentTitle(exportInfo.getExportTitle(mContext, exporter))
-                .setContentText("Mehrere Exporte laufen...") // Allgemeiner Text
-                .setStyle(new NotificationCompat.InboxStyle() // InboxStyle ist ideal für Zusammenfassungen
-                        .setSummaryText("Exporte für " + exportInfo.getFileBaseName())) // z.B. "Exporte für 2024-01-15..."
+                .setContentText(summaryText)
+//                .setStyle(new NotificationCompat.InboxStyle() // InboxStyle ist ideal für Zusammenfassungen
+//                        .setSummaryText("Exporte für " + exportInfo.getFileBaseName())) // z.B. "Exporte für 2024-01-15..."
                 .setGroup(groupKey)
                 .setGroupSummary(true)
                 .setOngoing(true)
@@ -134,23 +139,23 @@ public class ExportNotificationManager {
         String groupKey = generateGroupKey(exportInfo);
         int notificationId = generateNotificationId(exportInfo);
         int summaryNotificationId = generateSummaryNotificationId(exportInfo);
-        // TODO: do something with these IDs -> cancel notifications and create a summary...
+
+        String title = exportInfo.getExportTitle(mContext, exporter);
 
         Set<Integer> notificationIdsInGroup = mActiveNotifications.get(groupKey);
         if (notificationIdsInGroup != null) {
             notificationIdsInGroup.remove(notificationId);
 
-            if (notificationIdsInGroup.isEmpty()) {  // this was the last ID in the group
-                mActiveNotifications.remove(groupKey);  // remove the group from the map
+            if (notificationIdsInGroup.isEmpty()) {                  // this was the last ID in the group
+                mActiveNotifications.remove(groupKey);               // remove the group from the map
                 mNotificationManager.cancel(summaryNotificationId);  // remove the summary notification
-                // ...und zeige eine finale, wegwischbare Benachrichtigung an.
-                showFinalSummary(exportInfo, "Exporte abgeschlossen", "Alle Exporte nach " + exportInfo.getExportType() + " sind fertig.");
-                return; // Wir sind hier fertig
+                showFinalSummary(exportInfo, exporter);              // and show the final notification
+                return;                                              // that's all folks
             }
         }
         Notification finalNotification = new NotificationCompat.Builder(mContext, TrainingApplication.NOTIFICATION_CHANNEL__EXPORT)
                 .setSmallIcon(R.drawable.logo)
-                .setContentTitle(exportInfo.getExportTitle(mContext, exporter))
+                .setContentTitle(title)
                 .setContentText(text)
                 .setContentIntent(mPendingIntentStartWorkoutListActivity)
                 .setGroup(groupKey)
@@ -161,11 +166,15 @@ public class ExportNotificationManager {
     }
 
     @RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
-    private void showFinalSummary(ExportInfo exportInfo, String title, String text) {
+    private void showFinalSummary(ExportInfo exportInfo, BaseExporter exporter) {
         if (isMissingPermission()) return;
 
-        // Hier könnte eine neue, eindeutige ID verwendet werden oder die summaryId recycelt werden.
         int finalSummaryId = generateSummaryNotificationId(exportInfo);
+
+        String title = "export finished";  // TODO
+
+        exportInfo.getExportTitle(mContext, exporter);
+        String text = exportInfo.getExportMessage(mContext, exporter);
 
         Notification finalSummaryNotification = new NotificationCompat.Builder(mContext, TrainingApplication.NOTIFICATION_CHANNEL__EXPORT)
                 .setSmallIcon(R.drawable.logo)
