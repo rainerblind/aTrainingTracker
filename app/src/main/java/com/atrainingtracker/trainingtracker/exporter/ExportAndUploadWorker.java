@@ -94,7 +94,6 @@ public class ExportAndUploadWorker extends Worker implements IExportProgressList
             updateStatus(ExportStatus.FINISHED_FAILED, answer);
             mExportNotificationManager.showFinalNotification(mExportInfo, mExporter, answer);
 
-
             return result.shallRetry() ? Result.retry() : Result.failure();
         }
     }
