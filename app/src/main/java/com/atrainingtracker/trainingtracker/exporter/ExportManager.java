@@ -226,44 +226,54 @@ public class ExportManager {
     private synchronized void startFullExportProcess(String fileBaseName, FileFormat fileFormat) {
         if (DEBUG) Log.d(TAG, "startFullExportProcess for " + fileBaseName + ", format: " + fileFormat);
 
-        // work request for exporting to file
-        ExportInfo fileExportInfo = new ExportInfo(fileBaseName, fileFormat, ExportType.FILE);
-        OneTimeWorkRequest fileCreationWork = createWorkRequest(fileExportInfo, "Erstelle Datei...");  // TODO: Text
+        try {
+            // work request for exporting to file
+            ExportInfo fileExportInfo = new ExportInfo(fileBaseName, fileFormat, ExportType.FILE);
+            OneTimeWorkRequest fileCreationWork = createWorkRequest(fileExportInfo, "Erstelle Datei...");  // TODO: Text
 
-        // update the export status
-        updateStatus(fileExportInfo, ExportStatus.PROCESSING, null);
+            // update the export status
+            updateStatus(fileExportInfo, ExportStatus.PROCESSING, null);
 
-        // create a empty list for the upload requests
-        List<OneTimeWorkRequest> uploadWorks = new ArrayList<>();
+            // create a empty list for the upload requests
+            List<OneTimeWorkRequest> uploadWorks = new ArrayList<>();
 
-        // Dropbox-Upload (when requested)
-        if (TrainingApplication.uploadToDropbox()) {
-            ExportInfo dropboxExportInfo = new ExportInfo(fileBaseName, fileFormat, ExportType.DROPBOX);
-            uploadWorks.add(createWorkRequest(dropboxExportInfo, "Lade zu Dropbox hoch..."));  // TODO: Text
-            updateStatus(dropboxExportInfo, ExportStatus.WAITING, null); // set state ot WAITING
+            // Dropbox-Upload (when requested)
+            if (TrainingApplication.uploadToDropbox()) {
+                ExportInfo dropboxExportInfo = new ExportInfo(fileBaseName, fileFormat, ExportType.DROPBOX);
+                uploadWorks.add(createWorkRequest(dropboxExportInfo, "Lade zu Dropbox hoch..."));  // TODO: Text
+                updateStatus(dropboxExportInfo, ExportStatus.WAITING, null); // set state ot WAITING
+            }
+
+            // Community-Upload, (when requested)
+            if (TrainingApplication.uploadToCommunity(fileFormat)) {
+                ExportInfo communityExportInfo = new ExportInfo(fileBaseName, fileFormat, ExportType.COMMUNITY);
+                uploadWorks.add(createWorkRequest(communityExportInfo, "Lade zur Community hoch..."));  // TODO: Text
+                updateStatus(communityExportInfo, ExportStatus.WAITING, null); // set state ot WAITING
+            }
+
+            // create the queue and start.
+            if (uploadWorks.isEmpty()) {
+                // OK, no uploads just export to file
+                WorkManager.getInstance(mContext).enqueue(fileCreationWork);
+            } else {
+                // first: export to file, then the uploads.
+                WorkManager.getInstance(mContext)
+                        .beginWith(fileCreationWork)
+                        .then(uploadWorks)
+                        .enqueue();
+            }
+
+            // now, that everything is scheduled, we send an broadcast.
+            broadcastExportStatusChanged(mContext);
+        } catch (JSONException e) {
+            Log.e(TAG, "Could not create WorkRequest due to JSONException", e);
+
+            ContentValues values = new ContentValues();
+            values.put(ExportStatusDbHelper.EXPORT_STATUS, ExportStatus.FINISHED_FAILED.name());
+            values.put(ExportStatusDbHelper.ANSWER, "Interner Fehler bei Job-Erstellung");  // TODO: Text
+            mRepository.updateExportStatus(values, fileBaseName, null, fileFormat);   // note that exportType is set to null to update all.
+            broadcastExportStatusChanged(mContext);
         }
-
-        // Community-Upload, (when requested)
-        if (TrainingApplication.uploadToCommunity(fileFormat)) {
-            ExportInfo communityExportInfo = new ExportInfo(fileBaseName, fileFormat, ExportType.COMMUNITY);
-            uploadWorks.add(createWorkRequest(communityExportInfo, "Lade zur Community hoch..."));  // TODO: Text
-            updateStatus(communityExportInfo, ExportStatus.WAITING, null); // set state ot WAITING
-        }
-
-        // create the queue and start.
-        if (uploadWorks.isEmpty()) {
-            // OK, no uploads just export to file
-            WorkManager.getInstance(mContext).enqueue(fileCreationWork);
-        } else {
-            // first: export to file, then the uploads.
-            WorkManager.getInstance(mContext)
-                    .beginWith(fileCreationWork)
-                    .then(uploadWorks)
-                    .enqueue();
-        }
-
-        // now, that everything is scheduled, we send an broadcast.
-        broadcastExportStatusChanged(mContext);
     }
 
     private void updateStatus(ExportInfo info, ExportStatus status, String answer) {
@@ -275,18 +285,11 @@ public class ExportManager {
         mRepository.updateExportStatus(values, info);
     }
 
-    private OneTimeWorkRequest createWorkRequest(ExportInfo exportInfo, String notificationText) {
-        Data inputData;
-        try {
-            inputData = new Data.Builder()
+    private OneTimeWorkRequest createWorkRequest(ExportInfo exportInfo, String notificationText) throws JSONException {
+        Data inputData = new Data.Builder()
                 .putString(ExportAndUploadWorker.KEY_EXPORT_INFO, exportInfo.toJson())
                 .putString(ExportAndUploadWorker.KEY_NOTIFICATION_TEXT, notificationText)
                 .build();
-        } catch (JSONException e) {
-            Log.e(TAG, "JSONException: " + e.getMessage(), e);
-            exportingFailed(exportInfo, "Exception: " + e.getMessage());
-            return null;
-        }
 
 
         Constraints constraints = new Constraints.Builder()
