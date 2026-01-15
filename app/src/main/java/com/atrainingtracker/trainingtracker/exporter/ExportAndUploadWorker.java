@@ -1,6 +1,7 @@
 package com.atrainingtracker.trainingtracker.exporter;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.PendingIntent;
 import android.content.ContentValues;
@@ -31,21 +32,20 @@ public class ExportAndUploadWorker extends Worker implements IExportProgressList
     private static final boolean DEBUG = com.atrainingtracker.trainingtracker.TrainingApplication.getDebug(true);
 
     public static final String KEY_EXPORT_INFO = "export-info";
-    private NotificationManagerCompat mNotificationManager;
-    private NotificationCompat.Builder mNotificationBuilder;
     private ExportInfo mExportInfo;
-    private int mNotificationId;
-    private int mSummaryNotificationId;
-    private String mGroupKey;
-    private Context mContext;
     private BaseExporter mExporter;
+
+    private final ExportNotificationManager mExportNotificationManager;
+    private final ExportStatusRepository repository = ExportStatusRepository.getInstance(getApplicationContext());
+    private final Context mContext;
 
     public ExportAndUploadWorker(@NonNull Context context, @NonNull WorkerParameters workerParams) {
         super(context, workerParams);
-        mNotificationManager = NotificationManagerCompat.from(context);
         mContext = context;
+        mExportNotificationManager = ExportNotificationManager.getInstance(context);
     }
 
+    @SuppressLint("MissingPermission")
     @NonNull
     @Override
     public Result doWork() {
@@ -66,15 +66,11 @@ public class ExportAndUploadWorker extends Worker implements IExportProgressList
             return Result.failure();
         }
 
-        mNotificationId = generateNotificationId(mExportInfo);
-        mSummaryNotificationId = generateSummaryNotificationId(mExportInfo);
-        mGroupKey = generateGroupKey(mExportInfo);
-
         // now we can get the Exporter
         mExporter = ExportManager.getExporter(getApplicationContext(), mExportInfo);
 
         // inform the user that the export is started and update the DB.
-        showInitialNotification();
+        mExportNotificationManager.showInitialNotification(mExportInfo, mExporter);
         updateStatus(ExportStatus.PROCESSING, "Export is being prepared...");  // TODO: Text?
 
         // and start the export
@@ -85,9 +81,9 @@ public class ExportAndUploadWorker extends Worker implements IExportProgressList
             if (DEBUG) Log.i(TAG, "Export successful: " + result.answer());
 
             // for the user, we use the standard positive answer
-            String answer = getPositiveAnswer(mExportInfo);
+            String answer = mExportInfo.getPositiveAnswer(mContext, mExporter);
             updateStatus(ExportStatus.FINISHED_SUCCESS, answer);
-            showFinalNotification(answer);
+            mExportNotificationManager.showFinalNotification(mExportInfo, mExporter, answer);
 
             return Result.success();
         } else {
@@ -96,17 +92,19 @@ public class ExportAndUploadWorker extends Worker implements IExportProgressList
             if (DEBUG) Log.w(TAG, "Export failed. Reason: " + answer);
 
             updateStatus(ExportStatus.FINISHED_FAILED, answer);
-            showFinalNotification(answer);
+            mExportNotificationManager.showFinalNotification(mExportInfo, mExporter, answer);
+
 
             return result.shallRetry() ? Result.retry() : Result.failure();
         }
     }
 
     // Implementation of the callback
+    @SuppressLint("MissingPermission")
     @Override
     public void onProgress(int max, int current) {
         if ((current % (10 * 60)) == 0) {
-            updateNotification(getExportMessage(mExportInfo), true, false, max, current);
+            mExportNotificationManager.updateNotification(mExportInfo, mExporter, true, max, current);
         }
     }
 
@@ -119,8 +117,6 @@ public class ExportAndUploadWorker extends Worker implements IExportProgressList
      * @param answer A descriptive message about the result (e.g., "Upload successful" or an error message). Can be null.
      */
     private void updateStatus(ExportStatus status, @Nullable String answer) {
-        // First, get an instance of the ExportStatusRepository.
-        ExportStatusRepository repository = ExportStatusRepository.getInstance(getApplicationContext());
 
         // create a ContentValues object to hold the new data.
         ContentValues values = new ContentValues();
@@ -135,135 +131,6 @@ public class ExportAndUploadWorker extends Worker implements IExportProgressList
 
         // Finally, send a broadcast to inform the UI that it needs to refresh.
         ExportStatusChangedBroadcaster.broadcastExportStatusChanged(getApplicationContext());
-    }
-
-
-    // helpers for the notifications
-
-    PendingIntent getMainActivityPendingIntent() {
-        Bundle bundle = new Bundle();
-        bundle.putString(MainActivityWithNavigation.SELECTED_FRAGMENT, MainActivityWithNavigation.SelectedFragment.WORKOUT_LIST.name());
-        Intent newIntent = new Intent(mContext, MainActivityWithNavigation.class);
-        newIntent.putExtras(bundle);
-        newIntent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-        return PendingIntent.getActivity(mContext, 0, newIntent, PendingIntent.FLAG_IMMUTABLE);
-    }
-
-    @Nullable
-    private void showInitialNotification() {
-        if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            return;
-        }
-
-        // configure the notification
-        mNotificationBuilder = new NotificationCompat.Builder(mContext, TrainingApplication.NOTIFICATION_CHANNEL__EXPORT)
-                .setSmallIcon(R.drawable.logo)
-                .setLargeIcon(BitmapFactory.decodeResource(mContext.getResources(), R.drawable.ic_save_black_48dp))
-                .setContentTitle(getExportTitle(mExportInfo))
-                .setContentText(getExportMessage(mExportInfo))
-                .setContentIntent(getMainActivityPendingIntent())
-                .setOngoing(true)
-                .setGroup(mGroupKey);
-
-        Notification summaryNotification = new NotificationCompat.Builder(mContext, TrainingApplication.NOTIFICATION_CHANNEL__EXPORT)
-                .setSmallIcon(R.drawable.logo)
-                .setContentTitle(getExportTitle(mExportInfo))
-                .setContentText("Mehrere Exporte laufen...") // Allgemeiner Text
-                .setStyle(new NotificationCompat.InboxStyle() // InboxStyle ist ideal für Zusammenfassungen
-                        .setSummaryText("Exporte für " + mExportInfo.getFileBaseName())) // z.B. "Exporte für 2024-01-15..."
-                .setGroup(mGroupKey) // Muss denselben Key haben
-                .setGroupSummary(true) // <-- Das ist der entscheidende Schalter!
-                .setOngoing(true)
-                .build();
-
-        mNotificationManager.notify(mNotificationId, mNotificationBuilder.build());
-        mNotificationManager.notify(mSummaryNotificationId, summaryNotification);
-    }
-
-    private String generateGroupKey(ExportInfo info) {
-        return info.getFileBaseName() + "::" + info.getExportType().name();     // group by ExportType
-        // return info.getFileBaseName() + "::" + info.getFileFormat().name();     // group by FileFormat
-    }
-    private int generateNotificationId(ExportInfo info) {
-        String uniqueString = info.getFileBaseName() + info.getExportType().name() + info.getFileFormat().name();
-        return uniqueString.hashCode();
-    }
-    private int generateSummaryNotificationId(ExportInfo info) {
-        return generateGroupKey(info).hashCode();
-    }
-
-
-    private void updateNotification(String text, boolean ongoing, boolean indeterminate, int max, int current) {
-        if (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            return;
-        }
-
-        mNotificationBuilder.setContentText(text)
-                .setOngoing(ongoing)
-                .setProgress(max, current, indeterminate);
-        mNotificationManager.notify(mNotificationId, mNotificationBuilder.build());
-    }
-
-    private void updateNotification(String text, boolean ongoing, boolean indeterminate) {
-        updateNotification(text, ongoing, indeterminate, 0, 0);
-    }
-
-    private void showFinalNotification(String text) {
-        if (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            return;
-        }
-        Notification finalNotification = new NotificationCompat.Builder(getApplicationContext(), TrainingApplication.NOTIFICATION_CHANNEL__EXPORT)
-                .setSmallIcon(R.drawable.logo)
-                .setContentTitle(getExportTitle(mExportInfo))
-                .setContentText(text)
-                .setContentIntent(getMainActivityPendingIntent())
-                .setGroup(mGroupKey) // Wichtig: Auch die finale Benachrichtigung gehört zur Gruppe
-                .setAutoCancel(true)
-                .setOngoing(false)
-                .build();
-        mNotificationManager.notify(mNotificationId, finalNotification);
-    }
-
-    @NonNull
-    protected String getExportTitle(@NonNull ExportInfo exportInfo) {
-        return mContext.getString(R.string.notification_title,
-                mContext.getString(mExporter.getAction().getIngId()),
-                mContext.getString(exportInfo.getExportType().getUiId()));
-    }
-
-    @NonNull
-    protected String getExportMessage(@NonNull ExportInfo exportInfo) {
-        String workoutName = exportInfo.getFileBaseName();
-        FileFormat format = exportInfo.getFileFormat();
-        ExportType type = exportInfo.getExportType();
-        int notification_format_id = switch (type) {
-            case FILE -> R.string.notification_export_file;
-            case DROPBOX -> R.string.notification_export_dropbox;
-            case COMMUNITY -> R.string.notification_export_community;
-        };
-
-        return mContext.getString(notification_format_id,
-                mContext.getString(mExporter.getAction().getIngId()),
-                mContext.getString(format.getUiNameId()),
-                workoutName);
-    }
-
-    // copied code from getExportMessage
-    @NonNull
-    protected String getPositiveAnswer(@NonNull ExportInfo exportInfo) {
-        String workoutName = exportInfo.getFileBaseName();
-        FileFormat format = exportInfo.getFileFormat();
-        ExportType type = exportInfo.getExportType();
-        int notification_format_id = switch (type) {
-            case FILE -> R.string.notification_finished_file;
-            case DROPBOX -> R.string.notification_finished_dropbox;
-            case COMMUNITY -> R.string.notification_finished_community;
-        };
-
-        return mContext.getString(notification_format_id,
-                mContext.getString(mExporter.getAction().getPastId()),
-                mContext.getString(format.getUiNameId()),
-                workoutName);
     }
 
 }
