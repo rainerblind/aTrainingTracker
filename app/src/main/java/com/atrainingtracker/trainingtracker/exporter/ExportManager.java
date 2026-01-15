@@ -229,7 +229,7 @@ public class ExportManager {
         try {
             // work request for exporting to file
             ExportInfo fileExportInfo = new ExportInfo(fileBaseName, fileFormat, ExportType.FILE);
-            OneTimeWorkRequest fileCreationWork = createWorkRequest(fileExportInfo, "Erstelle Datei...");  // TODO: Text
+            OneTimeWorkRequest fileCreationWork = createWorkRequest(fileExportInfo);
 
             // update the export status
             updateStatus(fileExportInfo, ExportStatus.PROCESSING, null);
@@ -240,14 +240,14 @@ public class ExportManager {
             // Dropbox-Upload (when requested)
             if (TrainingApplication.uploadToDropbox()) {
                 ExportInfo dropboxExportInfo = new ExportInfo(fileBaseName, fileFormat, ExportType.DROPBOX);
-                uploadWorks.add(createWorkRequest(dropboxExportInfo, "Lade zu Dropbox hoch..."));  // TODO: Text
+                uploadWorks.add(createWorkRequest(dropboxExportInfo));
                 updateStatus(dropboxExportInfo, ExportStatus.WAITING, null); // set state ot WAITING
             }
 
             // Community-Upload, (when requested)
             if (TrainingApplication.uploadToCommunity(fileFormat)) {
                 ExportInfo communityExportInfo = new ExportInfo(fileBaseName, fileFormat, ExportType.COMMUNITY);
-                uploadWorks.add(createWorkRequest(communityExportInfo, "Lade zur Community hoch..."));  // TODO: Text
+                uploadWorks.add(createWorkRequest(communityExportInfo));
                 updateStatus(communityExportInfo, ExportStatus.WAITING, null); // set state ot WAITING
             }
 
@@ -285,10 +285,10 @@ public class ExportManager {
         mRepository.updateExportStatus(values, info);
     }
 
-    private OneTimeWorkRequest createWorkRequest(ExportInfo exportInfo, String notificationText) throws JSONException {
+    private OneTimeWorkRequest createWorkRequest(ExportInfo exportInfo) throws JSONException {
+
         Data inputData = new Data.Builder()
                 .putString(ExportAndUploadWorker.KEY_EXPORT_INFO, exportInfo.toJson())
-                .putString(ExportAndUploadWorker.KEY_NOTIFICATION_TEXT, notificationText)
                 .build();
 
 
@@ -302,6 +302,7 @@ public class ExportManager {
                 .addTag(exportInfo.toString())
                 .build();
     }
+
 
     private synchronized void exportingFailed(@NonNull ExportInfo exportInfo, String answer) {
         //  update the DB accordingly
