@@ -79,7 +79,7 @@
     <string name="start_or_resume_dialog_message">The previous workout was not finished properly.\n Do you want to start a new workout or resume the previous one?</string>
     <string name="start_new_workout">Start new</string>
     <string name="resume_workout">Resume prev.</string>
-    <string name="SD_card">SD-card</string>
+    <string name="SD_card">SD-card</string>  <!-- TODO: replace -->
     <string name="File">File</string>
     <string name="Community">Community</string>
     <string name="Dropbox" translatable="false">Dropbox</string>
@@ -620,26 +620,26 @@
     <string name="exported">exported</string>
 
     <string name="something_strange_happened">something strange happened</string>
-    <string name="exporting_to_file_not_wanted">exporting to SD-card not wanted</string>
+    <string name="exporting_to_file_not_wanted">exporting to file not wanted</string>
     <string name="uploading_to_dropbox_not_wanted">uploading to Dropbox not wanted</string>
     <string name="uploading_to_community_not_wanted">uploading to an online community not wanted</string>
 
-    <string name="exporting_to_file_failed_for_one">exporting to SD-card failed for 1/%1$d files</string>
+    <string name="exporting_to_file_failed_for_one">exporting to file failed for 1/%1$d files</string>
     <string name="uploading_to_dropbox_failed_for_one">uploading to Dropbox failed for 1/%1$d files</string>
     <string name="uploading_to_community_failed_for_one">uploading to 1/%1$d online communities failed</string>
     <!--  which one??? -->
-    <string name="exporting_to_file_failed_for_several">exporting to SD-card failed for %1$d/%2$d files</string>
+    <string name="exporting_to_file_failed_for_several">exporting to file failed for %1$d/%2$d files</string>
     <string name="uploading_to_dropbox_failed_for_several">uploading to Dropbox failed for %1$d/%2$d files</string>
     <string name="uploading_to_community_failed_for_several">uploading to %1$d/%2$d online communities failed</string>
     <!--  which one??? -->
-    <string name="successfully_exported_to_file">successfully exported %1$d/%2$d files to SD-card</string>
+    <string name="successfully_exported_to_file">successfully exported %1$d/%2$d files to file</string>
     <string name="successfully_uploaded_to_dropbox">successfully uploaded %1$d/%2$d files to Dropbox</string>
     <string name="successfully_uploaded_to_community">successfully uploaded to %1$d/%2$d online communities</string>
-    <string name="exporting_to_file">exporting to SD-card: %1$s (%2$d/%3$d)</string>
+    <string name="exporting_to_file">exporting to file: %1$s (%2$d/%3$d)</string>
     <string name="uploading_to_dropbox">uploading to Dropbox: %1$s (%2$d/%3$d)</string>
     <string name="uploading_to_community">uploading to online community: %1$s (%2$d/%3$d)</string>
     <string name="tracking">tracking</string>
-    <string name="waiting_to_export_to_file">waiting to export %1$d/%2$d files to SD-card</string>
+    <string name="waiting_to_export_to_file">waiting to export %1$d/%2$d files to file</string>
     <string name="waiting_to_upload_to_dropbox">waiting to upload %1$d/%2$d files to Dropbox</string>
     <string name="waiting_to_upload_to_community">waiting to upload %1$d/%2$d online communities</string>
 
@@ -653,7 +653,7 @@
     <!-- exporting to file -->
     <string name="notification_export_unknown">%1$s %2$s file to ???\n%3$s</string>
     <!-- exporting TCX file to ??? <workoutName> -->
-    <string name="notification_export_file">%1$s %2$s file to SD-card\n%3$s</string>
+    <string name="notification_export_file">%1$s %2$s file to filesystem\n%3$s</string>
     <!-- exporting TCX file to SD-card <workoutName> -->
     <string name="notification_export_dropbox">%1$s %2$s file to Dropbox\n%3$s</string>
     <!-- uploading TCX file to Dropbox <workoutName> -->
@@ -661,7 +661,7 @@
     <!-- uploading to Strava <workoutName> -->
     <string name="notification_finished_unknown">successfully %1$s %2$s file to ???\n%3$s</string>
     <!-- successfully exported TCX file to ???<workoutName> -->
-    <string name="notification_finished_file">successfully %1$s %2$s file to SD-card\n%3$s</string>
+    <string name="notification_finished_file">successfully %1$s %2$s file to filesystem\n%3$s</string>
     <!-- successfully exported TCX file to SD-card <workoutName> -->
     <string name="notification_finished_dropbox">successfully %1$s %2$s file to Dropbox\n%3$s</string>
     <!-- successfully uploaded TCX file to Dropbox <workoutName> -->

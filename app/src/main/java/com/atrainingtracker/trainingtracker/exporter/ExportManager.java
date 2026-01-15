@@ -254,9 +254,11 @@ public class ExportManager {
             // create the queue and start.
             if (uploadWorks.isEmpty()) {
                 // OK, no uploads just export to file
-                WorkManager.getInstance(mContext).enqueue(fileCreationWork);
+                WorkManager.getInstance(mContext)
+                        .beginWith(fileCreationWork)
+                        .enqueue();
             } else {
-                // first: export to file, then the uploads.
+                // first: export to file, then do the uploads
                 WorkManager.getInstance(mContext)
                         .beginWith(fileCreationWork)
                         .then(uploadWorks)
@@ -265,6 +267,7 @@ public class ExportManager {
 
             // now, that everything is scheduled, we send an broadcast.
             broadcastExportStatusChanged(mContext);
+
         } catch (JSONException e) {
             Log.e(TAG, "Could not create WorkRequest due to JSONException", e);
 
@@ -302,7 +305,6 @@ public class ExportManager {
                 .addTag(exportInfo.toString())
                 .build();
     }
-
 
     private synchronized void exportingFailed(@NonNull ExportInfo exportInfo, String answer) {
         //  update the DB accordingly

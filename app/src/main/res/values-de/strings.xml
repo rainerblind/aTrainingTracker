@@ -526,7 +526,7 @@
     <string name="equipment_type_shoe">Schuh</string>
 
     <!-- dialogs -->
-    <string name="SD_card_not_available">Entschuldigung, die SD Karte ist nicht verfügbar.</string>
+    <string name="SD_card_not_available">Entschuldigung, die SD Karte ist nicht verfügbar.</string>  <!-- TODO: umbenennen? -->
 
     <!-- actions -->
     <string name="uploading">hochladen</string>
@@ -535,26 +535,30 @@
     <string name="exported">geschrieben</string>
 
     <string name="something_strange_happened">Unbekannter Fehler</string>
-    <string name="exporting_to_file_not_wanted">Kein schreiben auf SD-Karte gewünscht</string>
+
+    <string name="exporting_to_file_not_wanted">Kein Dateiexport gewünscht</string>
     <string name="uploading_to_dropbox_not_wanted">Kein hochladen zu Dropbox gewünscht</string>
     <string name="uploading_to_community_not_wanted">Hochladen zu einer online community nicht gewünscht</string>
 
-    <string name="exporting_to_file_failed_for_one">Schreiben auf SD-Karte für 1/%1$d Datei gescheitert</string>
+    <string name="exporting_to_file_failed_for_one">Dateiexport für 1/%1$d Datei gescheitert</string>
     <string name="uploading_to_dropbox_failed_for_one">Hochladen zur Dropbox für 1/%1$d Datei gescheitert</string>
     <string name="uploading_to_community_failed_for_one">Hochladen zu online community bei 1/%1$d gescheitert</string>
     <!--  which one??? -->
-    <string name="exporting_to_file_failed_for_several">Schreiben auf SD-Karte für %1$d/%2$d Dateien gescheitert</string>
+    <string name="exporting_to_file_failed_for_several">Dateiexport für %1$d/%2$d Dateien gescheitert</string>
     <string name="uploading_to_dropbox_failed_for_several">Hochladen zur Dropbox für %1$d/%2$d Dateien gescheitert</string>
     <string name="uploading_to_community_failed_for_several">Hochladen zu online communities bei %1$d/%2$d gescheitert</string>
     <!--  which one??? -->
-    <string name="successfully_exported_to_file">Erfolgreich %1$d/%2$d Dateien auf die SD-Karte geschrieben</string>
+    <string name="successfully_exported_to_file">Erfolgreich %1$d/%2$d Dateien exportiert</string>
     <string name="successfully_uploaded_to_dropbox">Erfolgreich %1$d/%2$d Dateien zur Dropbox hochgeladen</string>
     <string name="successfully_uploaded_to_community">Erfolgreich zu %1$d/%2$d online communities hochgeladen</string>
-    <string name="exporting_to_file">Schreibe auf SD-Karte: %1$s (%2$d/%3$d)</string>
+
+    <string name="exporting_to_file">Exportiere Datei: %1$s (%2$d/%3$d)</string>
     <string name="uploading_to_dropbox">Hochladen zur Dropbox: %1$s (%2$d/%3$d)</string>
     <string name="uploading_to_community">Hochladen zu online community: %1$s (%2$d/%3$d)</string>
+
     <string name="tracking">Aufzeichnung</string>
-    <string name="waiting_to_export_to_file">Warte darauf %1$d/%2$d Dateien auf die SD-Karte zu schreiben</string>
+
+    <string name="waiting_to_export_to_file">Warte darauf %1$d/%2$d Dateien zu exportieren</string>
     <string name="waiting_to_upload_to_dropbox">Warte darauf %1$d/%2$d Dateien zur Dropbox hochzuladen</string>
     <string name="waiting_to_upload_to_community">Warte darauf bei %1$d/%2$d online communities hochzuladen</string>
 
