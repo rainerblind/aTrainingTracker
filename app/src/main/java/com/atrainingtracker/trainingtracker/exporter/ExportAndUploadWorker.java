@@ -28,7 +28,7 @@ import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigatio
 import org.json.JSONException;
 
 public class ExportAndUploadWorker extends Worker implements IExportProgressListener {
-    private static final String TAG = "UploadWorker";
+    private static final String TAG = "ExportAndUploadWorker";
     private static final boolean DEBUG = com.atrainingtracker.trainingtracker.TrainingApplication.getDebug(true);
 
     public static final String KEY_EXPORT_INFO = "export-info";
@@ -61,7 +61,6 @@ public class ExportAndUploadWorker extends Worker implements IExportProgressList
         // the ExportInfo
         try {
             mExportInfo = ExportInfo.fromJson(exportInfoJson);
-            Log.d(TAG, "Starting export for: " + mExportInfo.toString());
         } catch (JSONException e) {
             return Result.failure();
         }
@@ -69,43 +68,56 @@ public class ExportAndUploadWorker extends Worker implements IExportProgressList
         // now we can get the Exporter
         mExporter = ExportManager.getExporter(getApplicationContext(), mExportInfo);
 
-        // inform the user that the export is started and update the DB.
-        mExportNotificationManager.showInitialNotification(mExportInfo, mExporter);
-        updateStatus(ExportStatus.PROCESSING, "Export is being prepared...");  // TODO: Text?
+        // inform others (to trigger notifications and update the export DB)
+        informOthersStarted();
 
         // and start the export
         BaseExporter.ExportResult result = mExporter.export(mExportInfo, this);
 
+        // done :)
         if (result.success()) {
-            // for the logging, we use the answer from the result
-            if (DEBUG) Log.i(TAG, "Export successful: " + result.answer());
-
-            // for the user, we use the standard positive answer
-            String answer = mExportInfo.getPositiveAnswer(mContext, mExporter);
-            updateStatus(ExportStatus.FINISHED_SUCCESS, answer);
-            mExportNotificationManager.showFinalNotification(mExportInfo, mExporter, answer);
-
+            informOthersSuccess(result.answer());
             return Result.success();
         } else {
-            String answer = result.answer();
-
-            if (DEBUG) Log.w(TAG, "Export failed. Reason: " + answer);
-
-            updateStatus(ExportStatus.FINISHED_FAILED, answer);
-            mExportNotificationManager.showFinalNotification(mExportInfo, mExporter, answer);
-
+            informOthersFailed(result.answer());
             return result.shallRetry() ? Result.retry() : Result.failure();
         }
     }
 
     // Implementation of the callback
-    @SuppressLint("MissingPermission")
     @Override
     public void onProgress(int max, int current) {
+        informOthersProgress(max, current);
+    }
+
+
+    // some helpers to inform the ExportNotificationManager and the ExportStatusRepository
+    private void informOthersStarted() {
+        if (DEBUG) Log.i(TAG, "Export started: " + mExportInfo.toString());
+
+        mExportNotificationManager.showInitialNotification(mExportInfo, mExporter);
+        updateStatus(ExportStatus.PROCESSING, "Export is being prepared...");  // TODO: Text?
+    }
+    private void informOthersProgress(int max, int current){
         if ((current % (10 * 60)) == 0) {
             mExportNotificationManager.updateNotification(mExportInfo, mExporter, true, max, current);
         }
+        // no need to update the Database
     }
+    private void informOthersSuccess(String answer) {
+        if (DEBUG) Log.i(TAG, "Export successful: " + mExportInfo.toString() + " Answer: " + answer);
+
+        updateStatus(ExportStatus.FINISHED_SUCCESS, answer);
+        mExportNotificationManager.showFinalNotification(mExportInfo, mExporter, answer, true);
+    }
+
+    private void informOthersFailed(String answer) {
+        if (DEBUG) Log.i(TAG, "Export failed: " + mExportInfo.toString() + " Answer: " + answer);
+
+        updateStatus(ExportStatus.FINISHED_FAILED, answer);
+        mExportNotificationManager.showFinalNotification(mExportInfo, mExporter, answer, false);
+    }
+
 
 
     /**
