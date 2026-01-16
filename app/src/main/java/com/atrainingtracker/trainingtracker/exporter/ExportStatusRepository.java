@@ -165,6 +165,45 @@ public class ExportStatusRepository {
         return exportAnswer;
     }
 
+    public synchronized ExportGroupStats getStatsForExportGroup(String fileBaseName, ExportType exportType) {
+        if (DEBUG) Log.d(TAG, "getStats");
+
+        SQLiteDatabase db = mDbHelper.getWritableDatabase();
+        if (db == null) {
+            Log.e(TAG, "Database is null, will return null");
+            return null;
+        }
+
+        int successCount = 0;
+        int failureCount = 0;
+
+        Cursor cursor = db.query(ExportStatusDbHelper.TABLE,
+                new String[]{ExportStatusDbHelper.ANSWER},
+                WorkoutSummaries.FILE_BASE_NAME + "=? AND " + ExportStatusDbHelper.TYPE + "=? AND " + ExportStatusDbHelper.EXPORT_STATUS + "=?",
+                new String[]{fileBaseName, exportType.name(), ExportStatus.FINISHED_SUCCESS.name()},
+                null,
+                null,
+                null);
+        if (cursor.getCount() > 0) {
+            cursor.moveToFirst();
+            successCount = cursor.getCount();
+        }
+
+        cursor = db.query(ExportStatusDbHelper.TABLE,
+                new String[]{ExportStatusDbHelper.ANSWER},
+                WorkoutSummaries.FILE_BASE_NAME + "=? AND " + ExportStatusDbHelper.TYPE + "=? AND " + ExportStatusDbHelper.EXPORT_STATUS + "=?",
+                new String[]{fileBaseName, exportType.name(), ExportStatus.FINISHED_FAILED.name()},
+                null,
+                null,
+                null);
+        if (cursor.getCount() > 0) {
+            cursor.moveToFirst();
+            failureCount = cursor.getCount();
+        }
+        cursor.close();
+
+        return new ExportGroupStats(successCount, failureCount);
+    }
 
     public synchronized void deleteWorkout(String baseFileName) {
         SQLiteDatabase db = mDbHelper.getWritableDatabase();
