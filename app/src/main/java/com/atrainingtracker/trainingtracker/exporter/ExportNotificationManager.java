@@ -11,7 +11,6 @@ import android.graphics.BitmapFactory;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.RequiresPermission;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
@@ -21,7 +20,6 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation;
 
 
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -37,6 +35,7 @@ public class ExportNotificationManager {
     private final Context mContext;
     private final NotificationManagerCompat mNotificationManager;
     private final PendingIntent mPendingIntentStartWorkoutListActivity;
+    private final boolean mShowOnlySummary = true;
 
 
     private final Map<String, GroupState> mGroupStates = new ConcurrentHashMap<>();
@@ -63,6 +62,10 @@ public class ExportNotificationManager {
         public synchronized boolean isFinished() {
             return jobsStarted > 0 && jobsSucceeded >= jobsStarted;
         }
+
+        public synchronized int getJobsRunning() {
+            return jobsStarted - jobsFinished;
+        }
     }
 
 
@@ -70,13 +73,7 @@ public class ExportNotificationManager {
         this.mContext = context.getApplicationContext();
         this.mNotificationManager = NotificationManagerCompat.from(mContext);
 
-        // create the mPendingIntentStartWorkoutListActivity
-        Bundle bundle = new Bundle();
-        bundle.putString(MainActivityWithNavigation.SELECTED_FRAGMENT, MainActivityWithNavigation.SelectedFragment.WORKOUT_LIST.name());
-        Intent newIntent = new Intent(mContext, MainActivityWithNavigation.class);
-        newIntent.putExtras(bundle);
-        newIntent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-        mPendingIntentStartWorkoutListActivity = PendingIntent.getActivity(mContext, 0, newIntent, PendingIntent.FLAG_IMMUTABLE);
+        mPendingIntentStartWorkoutListActivity = createPendingIntentStartWorkoutListActivity();
     }
 
     public static synchronized ExportNotificationManager getInstance(@NonNull Context context) {
@@ -102,34 +99,22 @@ public class ExportNotificationManager {
             state.logJobStarted();
         }
 
-        String title = exportInfo.getExportTitle(mContext, exporter);
-        String text = exportInfo.getExportMessage(mContext, exporter);
-        String summaryText = "Exporte für " + exportInfo.getExportType();  // TODO: better...
-
-
-        // configure the notification
-        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(mContext, TrainingApplication.NOTIFICATION_CHANNEL__EXPORT)
-                .setSmallIcon(R.drawable.logo)
-                .setLargeIcon(BitmapFactory.decodeResource(mContext.getResources(), R.drawable.ic_save_black_48dp))
-                .setContentTitle(title)
-                .setContentText(text)
-                .setContentIntent(mPendingIntentStartWorkoutListActivity)
-                .setOngoing(true)
-                .setGroup(groupKey);
+        if (!mShowOnlySummary) {
+            // configure the notification
+            NotificationCompat.Builder notificationBuilder = getDefaultNotifictioBuilder(exportInfo, exporter)
+                    .setLargeIcon(BitmapFactory.decodeResource(mContext.getResources(), R.drawable.ic_save_black_48dp))
+                    .setOngoing(true)
+                    .setGroup(groupKey)
+                    .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY);
+            mNotificationManager.notify(notificationId, notificationBuilder.build());
+        }
 
         // configure the summary notification
-        Notification summaryNotification = new NotificationCompat.Builder(mContext, TrainingApplication.NOTIFICATION_CHANNEL__EXPORT)
-                .setSmallIcon(R.drawable.logo)
-                .setContentTitle(exportInfo.getExportTitle(mContext, exporter))
-                .setContentText(summaryText)
-//                .setStyle(new NotificationCompat.InboxStyle() // InboxStyle ist ideal für Zusammenfassungen
-//                        .setSummaryText("Exporte für " + exportInfo.getFileBaseName())) // z.B. "Exporte für 2024-01-15..."
+        Notification summaryNotification = getDefaultSummaryNotifictioBuilder(exportInfo, exporter)
                 .setGroup(groupKey)
                 .setGroupSummary(true)
                 .setOngoing(true)
                 .build();
-
-        mNotificationManager.notify(notificationId, notificationBuilder.build());
         mNotificationManager.notify(summaryNotificationId, summaryNotification);
     }
 
@@ -138,17 +123,14 @@ public class ExportNotificationManager {
     @SuppressLint("MissingPermission")
     public synchronized void updateNotification(ExportInfo exportInfo, BaseExporter exporter, boolean indeterminate, int max, int current) {
         if (isMissingPermission()) return;
+        if (mShowOnlySummary) return;
 
         String groupID = generateGroupKey(exportInfo);
         int notificationId = generateNotificationId(exportInfo);
 
         // configure the notification
-        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(mContext, TrainingApplication.NOTIFICATION_CHANNEL__EXPORT)
-                .setSmallIcon(R.drawable.logo)
+        NotificationCompat.Builder notificationBuilder = getDefaultNotifictioBuilder(exportInfo, exporter)
                 .setLargeIcon(BitmapFactory.decodeResource(mContext.getResources(), R.drawable.ic_save_black_48dp))
-                .setContentTitle(exportInfo.getExportTitle(mContext, exporter))
-                .setContentText(exportInfo.getExportMessage(mContext, exporter))
-                .setContentIntent(mPendingIntentStartWorkoutListActivity)
                 .setOngoing(true)
                 .setGroup(groupID)
                 .setProgress(max, current, indeterminate);
@@ -175,20 +157,17 @@ public class ExportNotificationManager {
         state.logJobFinished(success);
 
         if (state.isFinished()) {
+            // remove what has to be removed
             mGroupStates.remove(groupKey);
             mActiveNotifications.remove(groupKey);
             mNotificationManager.cancel(summaryNotificationId);
 
-            showFinalSummary(exportInfo, exporter, state);
+            // show final summary notification
+            showFinalSummary(exportInfo, exporter);
 
         } else {
-            String summaryTitle = "Exporting/Uploading finished";  // TODO
-            String summaryText = String.format("%d/%d fertig", state.jobsSucceeded, state.jobsStarted);
-
-            Notification summaryNotification = new NotificationCompat.Builder(mContext, TrainingApplication.NOTIFICATION_CHANNEL__EXPORT)
-                    .setSmallIcon(R.drawable.logo)
-                    .setContentTitle(summaryTitle)
-                    .setContentText(summaryText)
+            // other exports/uploads are still running -> update summaryNotification
+            Notification summaryNotification = getDefaultSummaryNotifictioBuilder(exportInfo, exporter)
                     .setGroup(groupKey)
                     .setGroupSummary(true)
                     .setOngoing(true)
@@ -198,31 +177,44 @@ public class ExportNotificationManager {
     }
 
     @SuppressLint("MissingPermission")
-    private void showFinalSummary(ExportInfo exportInfo, BaseExporter exporter, GroupState finalState) {
+    private void showFinalSummary(ExportInfo exportInfo, BaseExporter exporter) {
         if (isMissingPermission()) return;
+
+        // get the number of successes and failures from the repository
+        ExportStatusRepository repository = ExportStatusRepository.getInstance(mContext);
+        ExportGroupStats stats = repository.getStatsForExportGroup(exportInfo.getFileBaseName(), exportInfo.getExportType());
+        int successCount = stats.successCount;
+        int failedCount = stats.failureCount;
+        int totalCount = stats.getTotalCount();
 
         int finalSummaryId = generateSummaryNotificationId(exportInfo);
         String title = exportInfo.getExportTitle(mContext, exporter);
 
         String action = mContext.getString(exporter.getAction().getIngId());
         String type = mContext.getString(exportInfo.getExportType().getUiId());
-        int export_string_id = (finalState.jobsSucceeded == finalState.jobsStarted)
-                ? R.plurals.exporting_success
-                : R.plurals.exporting_failed;
 
-        String text = mContext.getResources().getQuantityString(
-                export_string_id,
-                finalState.jobsSucceeded,
-                action,
-                type,
-                finalState.jobsSucceeded,
-                finalState.jobsSucceeded);
+        String text;
+        if (successCount == totalCount) {
+            int export_string_id = R.plurals.exporting_success;
+            text = mContext.getResources().getQuantityString(
+                    export_string_id,
+                    totalCount,
+                    action,
+                    type,
+                    successCount,
+                    totalCount);
+        } else {
+            int export_string_id = R.plurals.exporting_failed;
+            text = mContext.getResources().getQuantityString(
+                    export_string_id,
+                    totalCount,
+                    action,
+                    type,
+                    failedCount,
+                    totalCount);
+        }
 
-        Notification finalSummaryNotification = new NotificationCompat.Builder(mContext, TrainingApplication.NOTIFICATION_CHANNEL__EXPORT)
-                .setSmallIcon(R.drawable.logo)
-                .setContentTitle(title)
-                .setContentText(text)
-                .setContentIntent(mPendingIntentStartWorkoutListActivity)
+        Notification finalSummaryNotification = getDefaultNotifictioBuilder(title, text)
                 .setAutoCancel(true)
                 .setOngoing(false)
                 .build();
@@ -234,6 +226,63 @@ public class ExportNotificationManager {
     /**********************************************************************************************/
     /* private helpers
     /**********************************************************************************************/
+
+    private PendingIntent createPendingIntentStartWorkoutListActivity() {
+        Bundle bundle = new Bundle();
+        bundle.putString(MainActivityWithNavigation.SELECTED_FRAGMENT, MainActivityWithNavigation.SelectedFragment.WORKOUT_LIST.name());
+        Intent newIntent = new Intent(mContext, MainActivityWithNavigation.class);
+        newIntent.putExtras(bundle);
+        newIntent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+        return PendingIntent.getActivity(mContext, 0, newIntent, PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    private NotificationCompat.Builder getDefaultNotifictioBuilder(ExportInfo exportInfo, BaseExporter exporter) {
+        String text = getDefaultText(exportInfo, exporter);
+        String title = getDefaultTitle(exportInfo, exporter);
+
+        return getDefaultNotifictioBuilder(title, text);
+    }
+
+    private NotificationCompat.Builder getDefaultSummaryNotifictioBuilder(ExportInfo exportInfo, BaseExporter exporter) {
+        String summaryText = getDefaultSummaryText(exportInfo, exporter);
+        String summaryTitle = getDefaultSummaryTitle(exportInfo, exporter);
+
+        return getDefaultNotifictioBuilder(summaryTitle, summaryText);
+    }
+
+
+    private String getDefaultText(ExportInfo exportInfo, BaseExporter exporter) {
+        return exportInfo.getExportMessage(mContext, exporter);
+    }
+
+    private String getDefaultTitle(ExportInfo exportInfo, BaseExporter exporter) {
+        return exportInfo.getExportTitle(mContext, exporter);
+    }
+
+    private String getDefaultSummaryText(ExportInfo exportInfo, BaseExporter exporter) {
+        String action = mContext.getString(exporter.getAction().getIngId());
+        String type = mContext.getString(exportInfo.getExportType().getUiId());
+        int running = mGroupStates.get(generateGroupKey(exportInfo)).getJobsRunning();  // better pass the groupKey?
+
+        return mContext.getResources().getQuantityString(
+                R.plurals.notification_exporting,
+                running,
+                action,
+                type,
+                running);
+    }
+
+    private String getDefaultSummaryTitle(ExportInfo exportInfo, BaseExporter exporter) {
+        return exportInfo.getExportTitle(mContext, exporter);
+    }
+
+    private NotificationCompat.Builder getDefaultNotifictioBuilder(String title, String text) {
+        return new NotificationCompat.Builder(mContext, TrainingApplication.NOTIFICATION_CHANNEL__EXPORT)
+                .setSmallIcon(R.drawable.logo)
+                .setContentTitle(title)
+                .setContentText(text)
+                .setContentIntent(mPendingIntentStartWorkoutListActivity);
+    }
 
     private boolean isMissingPermission() {
         return ActivityCompat.checkSelfPermission(mContext, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED;

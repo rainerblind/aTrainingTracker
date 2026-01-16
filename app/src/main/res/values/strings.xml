@@ -648,6 +648,20 @@
         <item quantity="other">successfully %1$s %3$d/%4$d files to %2$s</item>
     </plurals>
 
+    <!-- exporting -->
+    <!-- 1: action
+         2: type
+         3: running -->
+    <plurals name="notification_exporting">
+        <item quantity="one">%1$s one workout to %2$s</item>
+        <item quantity="other">%1$s %3$d workouts to %2$s</item>
+    </plurals>
+
+    <string name="exporting_to_file">exporting to file: %1$s (%2$d/%3$d)</string>
+    <string name="uploading_to_dropbox">uploading to Dropbox: %1$s (%2$d/%3$d)</string>
+    <string name="uploading_to_community">uploading to online community: %1$s (%2$d/%3$d)</string>
+
+
     <!-- TODO: remove them and use the plurals instead. -->
     <string name="exporting_to_file_failed_for_one">exporting to file failed for 1/%1$d files</string>
     <string name="uploading_to_dropbox_failed_for_one">uploading to Dropbox failed for 1/%1$d files</string>
@@ -660,9 +674,7 @@
     <string name="successfully_exported_to_file">successfully exported %1$d/%2$d files to file</string>
     <string name="successfully_uploaded_to_dropbox">successfully uploaded %1$d/%2$d files to Dropbox</string>
     <string name="successfully_uploaded_to_community">successfully uploaded to %1$d/%2$d online communities</string>
-    <string name="exporting_to_file">exporting to file: %1$s (%2$d/%3$d)</string>
-    <string name="uploading_to_dropbox">uploading to Dropbox: %1$s (%2$d/%3$d)</string>
-    <string name="uploading_to_community">uploading to online community: %1$s (%2$d/%3$d)</string>
+
     <string name="tracking">tracking</string>
     <string name="waiting_to_export_to_file">waiting to export %1$d/%2$d files to file</string>
     <string name="waiting_to_upload_to_dropbox">waiting to upload %1$d/%2$d files to Dropbox</string>
