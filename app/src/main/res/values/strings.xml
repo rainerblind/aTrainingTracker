@@ -624,6 +624,31 @@
     <string name="uploading_to_dropbox_not_wanted">uploading to Dropbox not wanted</string>
     <string name="uploading_to_community_not_wanted">uploading to an online community not wanted</string>
 
+    <!-- note that the fourth argument is the one that determines the quantity -->
+    <!-- 1: action
+         2: type
+         3: failed
+         4: total -->
+    <!--          1            2                  3 4 -->
+    <!-- result: "uploading to Dropbox failed for 1/3 files" -->
+    <plurals name="exporting_failed">
+        <item quantity="one">%1$s to %2f$s failed</item>
+        <item quantity="other">%1$s to %2$s failed for %3$d/%4$d files</item>
+    </plurals>
+
+    <!-- note that the fourth argument is the one that determines the quantity -->
+    <!-- 1: action
+         2: type
+         3: success
+         4: total -->
+    <!--                       1        3 4          2 -->
+    <!-- result: "successfully uploaded 4/4 files to Dropbox" -->
+    <plurals name="exporting_success">
+        <item quantity="one">successfully %1$s to %2$s</item>
+        <item quantity="other">successfully %1$s %3$d/%4$d files to %2$s</item>
+    </plurals>
+
+    <!-- TODO: remove them and use the plurals instead. -->
     <string name="exporting_to_file_failed_for_one">exporting to file failed for 1/%1$d files</string>
     <string name="uploading_to_dropbox_failed_for_one">uploading to Dropbox failed for 1/%1$d files</string>
     <string name="uploading_to_community_failed_for_one">uploading to 1/%1$d online communities failed</string>
