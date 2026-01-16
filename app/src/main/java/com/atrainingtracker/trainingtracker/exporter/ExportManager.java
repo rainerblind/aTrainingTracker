@@ -79,7 +79,7 @@ public class ExportManager {
             case DROPBOX:
                 return new DropboxUploader(context);
             case COMMUNITY:
-                switch (exportInfo.getFileFormat()) {
+                return switch (exportInfo.getFileFormat()) {
                     case STRAVA -> new StravaUploader(context);
                                 /* case RUNKEEPER:
                                     exporter = new RunkeeperUploader(mContext);
@@ -87,7 +87,9 @@ public class ExportManager {
                                 /* case TRAINING_PEAKS:
                                     exporter = new TrainingPeaksUploader(mContext);
                                     break; */
-                }
+                    default ->
+                            throw new IllegalStateException("Unexpected value: " + exportInfo.getFileFormat());
+                };
         }
         return null;
     }
