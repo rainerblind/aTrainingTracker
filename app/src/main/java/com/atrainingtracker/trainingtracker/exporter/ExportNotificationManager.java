@@ -58,8 +58,9 @@ public class ExportNotificationManager {
     /* public API: just one simple method to update the notification
     /**********************************************************************************************/
 
-    public void updateNotification(ExportInfo exportInfo, Boolean isFinished) {
-        if (DEBUG) Log.i(TAG, "updateNotification: " + exportInfo.toString());
+    public synchronized void updateNotification(ExportInfo exportInfo, Boolean isFinished) {
+        if (DEBUG) Log.i(TAG, "\n-------------------------------------------------------------");
+        if (DEBUG) Log.i(TAG, "updateNotification: " + exportInfo.toString() + " isFinished=" + isFinished);
 
         updateExportStatus(exportInfo, isFinished);
         showNotification(exportInfo);
@@ -72,7 +73,8 @@ public class ExportNotificationManager {
 
 
     public synchronized void updateExportStatus(ExportInfo exportInfo, boolean isFinished) {
-        if (DEBUG) Log.i(TAG, "updateExportStatus: " + exportInfo.toString() + " isFinished=" + isFinished);
+        // if (DEBUG) Log.i(TAG, "updateExportStatus: " + exportInfo.toString() + " isFinished=" + isFinished);
+        if (DEBUG) logActiveExports(exportInfo.getFileBaseName());
 
         String fileBaseName = exportInfo.getFileBaseName();
         ExportType exportType = exportInfo.getExportType();
@@ -84,13 +86,16 @@ public class ExportNotificationManager {
 
         // remove or add
         if (isFinished) {
+            Log.i(TAG, "updateExportStatus: removing fileFormat " + fileFormat);
             fileFormatSet.remove(fileFormat);
-            if (fileFormatSet.isEmpty()) {          // then the set is empty, it was the last entry for this type
-                exportTypeMap.remove(exportType);   // -> also remove the type
-            }
+            // note that we must not remove the exportType when it is empty.
+            // we keep this empty set to know that we did something for this export type.
         } else {
             fileFormatSet.add(fileFormat);
         }
+
+        if (DEBUG) Log.i(TAG, ":");
+        logActiveExports(fileBaseName);
     }
 
     @SuppressLint("MissingPermission")
@@ -98,20 +103,25 @@ public class ExportNotificationManager {
         if (isMissingPermission()) return;
 
         String fileBaseName = exportInfo.getFileBaseName();
-        String title = mContext.getString(R.string.export_notification_title, fileBaseName);
+        String title = mContext.getString(R.string.export_notification__title, fileBaseName);
+        String contentText = getContentText(fileBaseName);
+        if (DEBUG) Log.i(TAG, "showNotification: " + title + " " + contentText);
 
         NotificationCompat.InboxStyle inboxStyle = new NotificationCompat.InboxStyle();
         inboxStyle.setBigContentTitle(title);
 
         // add a line for each export type
-        for (ExportType exportType : ExportType.values()) {
-            inboxStyle.addLine(getLineText(fileBaseName, exportType));  // gives us "Exporting ... to ..." or "Succesfully uploaded ..." or "Failed to upload ..."
+        Map<ExportType, Set<FileFormat>> exportTypeMap = mActiveExports.get(fileBaseName);
+        if (exportTypeMap != null) {
+            for (ExportType exportType : exportTypeMap.keySet()) {
+                inboxStyle.addLine(getLineText(fileBaseName, exportType));
+            }
         }
 
         Notification notification = new NotificationCompat.Builder(mContext, TrainingApplication.NOTIFICATION_CHANNEL__EXPORT)
                 .setSmallIcon(R.drawable.logo)
                 .setContentTitle(title)
-                .setContentText("TODO: short summary") // TODO: better text
+                .setContentText(contentText)
                 .setStyle(inboxStyle)
                 .setOngoing(true)
                 .setAutoCancel(false)
@@ -121,22 +131,52 @@ public class ExportNotificationManager {
         mNotificationManager.notify(generateNotificationId(exportInfo), notification);
     }
 
+    private String getContentText(String fileBaseName) {
+        if (DEBUG) Log.i(TAG, "getContentText: " + fileBaseName);
+
+        if (mActiveExports.isEmpty()) {  // map is empty.  Should not happen but when in case of start
+            return mContext.getString(R.string.export_notification__summary__started);
+        } else {
+            Map<ExportType, Set<FileFormat>> exportTypeMap = mActiveExports.get(fileBaseName);
+
+            if (exportTypeMap != null && !exportTypeMap.isEmpty()) {
+                String activeExportsList = exportTypeMap.entrySet().stream()
+                        .filter(entry -> !entry.getValue().isEmpty())
+                        .map(entry -> mContext.getString(entry.getKey().getUiId()))
+                        .collect(Collectors.joining(", "));
+
+                if (activeExportsList.isEmpty()) {
+                    return mContext.getString(R.string.export_notification__summary__finished);
+                } else {
+                    return mContext.getString(R.string.export_notification__summary__in_progress_to, activeExportsList);
+                }
+            } else {
+                return mContext.getString(R.string.export_notification__summary__started);
+            }
+        }
+    }
+
     // returns a line for the notification
     private String getLineText(String fileBaseName, ExportType exportType) {
+        if (DEBUG) Log.i(TAG, "getLineText: " + fileBaseName + " " + exportType);
 
-        Map<ExportType, Set<FileFormat>> exportTypeMap = mActiveExports.computeIfAbsent(fileBaseName, k -> new ConcurrentHashMap<>());
-        Set<FileFormat> fileFormatSet = exportTypeMap.computeIfAbsent(exportType, k -> new HashSet<>());
+        Map<ExportType, Set<FileFormat>> exportTypeMap = mActiveExports.get(fileBaseName);
+        Set<FileFormat> fileFormatSet = exportTypeMap.get(exportType);
 
         if (fileFormatSet.isEmpty()) {  // set is empty -> no running jobs -> get the final answer from the db...
+
             return getResultLine(fileBaseName, exportType);
         }
         else {
-            return getRunningLine(exportType, fileFormatSet);
+
+            return getRunningLine(exportType, fileFormatSet, fileBaseName);
         }
     }
 
     // return list of running jobs as string
-    private String getRunningLine(ExportType exportType, @NonNull Set<FileFormat> runningJobs) {
+    private String getRunningLine(ExportType exportType, @NonNull Set<FileFormat> runningJobs, String fileBaseName) {
+        if (DEBUG) Log.i(TAG, "getRunningLine: " + fileBaseName + " " + exportType);
+
         String action = mContext.getString(exportType.getAction().getIngId());
         String type = mContext.getString(exportType.getUiId());
 
@@ -160,6 +200,8 @@ public class ExportNotificationManager {
 
     // return the number of successes and failures from the repository as string
     private String getResultLine(String fileBaseName, ExportType exportType) {
+        if (DEBUG) Log.i(TAG, "getResultLine: " + fileBaseName + " " + exportType);
+
         ExportStatusRepository repository = ExportStatusRepository.getInstance(mContext);
         ExportGroupStats stats = repository.getStatsForExportGroup(fileBaseName, exportType);
         int successCount = stats.successCount;
@@ -213,5 +255,33 @@ public class ExportNotificationManager {
 
     private int generateNotificationId(ExportInfo exportInfo) {
         return exportInfo.getFileBaseName().hashCode();
+    }
+
+    private void logActiveExports(String fileBaseName){
+        Map<ExportType, Set<FileFormat>> exportTypeMap = mActiveExports.computeIfAbsent(fileBaseName, k -> new ConcurrentHashMap<>());
+
+        Log.d(TAG, "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv");
+        Log.d(TAG, "Current state of mActiveExports:");
+        if (mActiveExports.isEmpty()) {
+            Log.d(TAG, "  -> Map is empty");
+        } else {
+            // Iteriere durch jeden Dateinamen (den äußeren Map-Key)
+            for (Map.Entry<String, Map<ExportType, Set<FileFormat>>> fileEntry : mActiveExports.entrySet()) {
+                Log.d(TAG, "  File: " + fileEntry.getKey());
+                Map<ExportType, Set<FileFormat>> exportTypeMap2 = fileEntry.getValue();
+                if (exportTypeMap.isEmpty()) {
+                    Log.d(TAG, "    -> No active export types.");
+                } else {
+                    // Iteriere durch jeden Export-Typ (den inneren Map-Key)
+                    for (Map.Entry<ExportType, Set<FileFormat>> typeEntry : exportTypeMap2.entrySet()) {
+                        String formats = typeEntry.getValue().stream()
+                                .map(FileFormat::name)
+                                .collect(Collectors.joining(", "));
+                        Log.d(TAG, "    - " + typeEntry.getKey().name() + ": [" + formats + "]");
+                    }
+                }
+            }
+        }
+        Log.d(TAG, "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^");
     }
 }
