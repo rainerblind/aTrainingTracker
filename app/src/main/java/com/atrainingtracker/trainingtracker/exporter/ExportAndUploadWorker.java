@@ -1,29 +1,17 @@
 package com.atrainingtracker.trainingtracker.exporter;
 
-import android.Manifest;
-import android.annotation.SuppressLint;
-import android.app.Notification;
-import android.app.PendingIntent;
+
 import android.content.ContentValues;
 import android.content.Context;
-import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.graphics.BitmapFactory;
-import android.os.Bundle;
 import android.util.Log;
+
+import android.annotation.SuppressLint;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.app.ActivityCompat;
-import androidx.core.app.NotificationCompat;
-import androidx.core.app.NotificationManagerCompat;
 import androidx.work.Data;
 import androidx.work.Worker;
 import androidx.work.WorkerParameters;
-
-import com.atrainingtracker.R;
-import com.atrainingtracker.trainingtracker.TrainingApplication;
-import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation;
 
 import org.json.JSONException;
 
