@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
 
 
 public class ExportNotificationManager {
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private static final String TAG = "ExportNotificationManager";
     private static ExportNotificationManager sInstance;
 
@@ -107,24 +107,37 @@ public class ExportNotificationManager {
         String contentText = getContentText(fileBaseName);
         if (DEBUG) Log.i(TAG, "showNotification: " + title + " " + contentText);
 
-        NotificationCompat.InboxStyle inboxStyle = new NotificationCompat.InboxStyle();
-        inboxStyle.setBigContentTitle(title);
-
-        // add a line for each export type
         Map<ExportType, Set<FileFormat>> exportTypeMap = mActiveExports.get(fileBaseName);
+
+        boolean isStillRunning = false;
         if (exportTypeMap != null) {
+            // check whether any export is still running
+            isStillRunning = exportTypeMap.values().stream().anyMatch(set -> !set.isEmpty());
+        }
+
+        StringBuilder bigTextContent = new StringBuilder();
+        if (exportTypeMap != null) {
+            boolean firstLine = true;
             for (ExportType exportType : exportTypeMap.keySet()) {
-                inboxStyle.addLine(getLineText(fileBaseName, exportType));
+                if (!firstLine) {
+                    bigTextContent.append("\n");
+                }
+                bigTextContent.append(getLineText(fileBaseName, exportType));
+                firstLine = false;
             }
         }
+
+        NotificationCompat.BigTextStyle bigTextStyle = new NotificationCompat.BigTextStyle();
+        bigTextStyle.setBigContentTitle(title);
+        bigTextStyle.bigText(bigTextContent.toString());
 
         Notification notification = new NotificationCompat.Builder(mContext, TrainingApplication.NOTIFICATION_CHANNEL__EXPORT)
                 .setSmallIcon(R.drawable.logo)
                 .setContentTitle(title)
                 .setContentText(contentText)
-                .setStyle(inboxStyle)
-                .setOngoing(true)
-                .setAutoCancel(false)
+                .setStyle(bigTextStyle)
+                .setOngoing(isStillRunning)
+                .setAutoCancel(!isStillRunning)
                 .setContentIntent(mPendingIntentStartWorkoutListActivity)
                 .build();
 
