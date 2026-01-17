@@ -34,10 +34,4 @@ public class NotYetImplementedExporter extends BaseExporter {
         return new ExportResult(false, false, "not yet implemented");
     }
 
-    @NonNull
-    @Override
-    protected Action getAction() {
-        return Action.EXPORT;
-    }
-
 }

@@ -70,10 +70,4 @@ public class DropboxUploader extends BaseExporter {
         return new ExportResult(true, false, "successfully uploaded " + filename + " to Dropbox");
     }
 
-    @NonNull
-    @Override
-    protected Action getAction() {
-        return Action.UPLOAD;
-    }
-
 }

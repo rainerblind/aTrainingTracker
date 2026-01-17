@@ -68,10 +68,6 @@ class StravaUploader(context: Context) : BaseExporter(context) {
 
     private val client = OkHttpClient()
 
-    override fun getAction(): Action {
-        return Action.UPLOAD
-    }
-
 
     override fun doExport(exportInfo: ExportInfo): ExportResult {
         if (DEBUG) Log.d(TAG, "doExport: ${exportInfo.fileBaseName}")

@@ -45,53 +45,6 @@ data class ExportInfo(
         return "$exportType: $fileFormat: $fileBaseName"
     }
 
-   /* some methods to help with notifications */
-
-    // method to get the title for the notification
-    // returns something like "exporting to filesystem"  // TODO: check
-    fun getExportTitle(context: Context, exporter: BaseExporter): String {
-        return context.getString(
-            R.string.notification_title,
-            context.getString(exporter.getAction().getIngId()),
-            context.getString(exportType.getUiId())
-        )
-    }
-
-    // method ot get a message for exporting
-    // returns something like "exporting TCX file to filesystem  // TODO: check
-    fun getExportMessage(context: Context, exporter: BaseExporter): String {
-        val notification_format_id: Int = when (exportType) {
-            ExportType.FILE -> R.string.notification_export_file
-            ExportType.DROPBOX -> R.string.notification_export_dropbox
-            ExportType.COMMUNITY -> R.string.notification_export_community
-        }
-
-        return context.getString(
-            notification_format_id,
-            context.getString(exporter.getAction().getIngId()),
-            context.getString(fileFormat.getUiNameId()),
-            fileBaseName
-        )
-    }
-
-    // method to get a positive answer for the user
-    // returns something like "successfully uploaded TCX file"  // TODO: check
-    fun getPositiveAnswer(context: Context, exporter: BaseExporter): String {
-        val notification_format_id: Int = when (exportType) {
-            ExportType.FILE -> R.string.notification_finished_file
-            ExportType.DROPBOX -> R.string.notification_finished_dropbox
-            ExportType.COMMUNITY -> R.string.notification_finished_community
-        }
-
-        return context.getString(
-            notification_format_id,
-            context.getString(exporter.getAction().getPastId()),
-            context.getString(fileFormat.getUiNameId()),
-            fileBaseName
-        )
-    }
-    /**********************************************************************************************/
-
     /**
      * Serializes the ExportInfo object to a JSON string.
      * @return A JSON representation of the object.

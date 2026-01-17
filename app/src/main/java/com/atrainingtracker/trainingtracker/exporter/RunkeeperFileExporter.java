@@ -217,10 +217,4 @@ public class RunkeeperFileExporter extends BaseFileExporter {
         // }
     }
 
-    @NonNull
-    @Override
-    protected Action getAction() {
-        return Action.EXPORT;
-    }
-
 }

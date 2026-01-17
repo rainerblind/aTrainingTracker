@@ -62,12 +62,12 @@ public class ExportNotificationManager {
 
     public void showInitialNotification(ExportInfo exportInfo, BaseExporter exporter) {
         updateExportStatus(exportInfo, false);
-        showNotification(exportInfo, exporter);
+        showNotification(exportInfo);
     }
 
     public void showFinalNotification(ExportInfo exportInfo, BaseExporter exporter, String text, boolean success) {
         updateExportStatus(exportInfo, true);
-        showNotification(exportInfo, exporter);
+        showNotification(exportInfo);
     }
 
 
@@ -93,7 +93,7 @@ public class ExportNotificationManager {
     }
 
     @SuppressLint("MissingPermission")
-    private void showNotification(ExportInfo exportInfo, BaseExporter exporter) {
+    private void showNotification(ExportInfo exportInfo) {
         if (isMissingPermission()) return;
 
         String fileBaseName = exportInfo.getFileBaseName();
@@ -104,7 +104,7 @@ public class ExportNotificationManager {
 
         // add a line for each export type
         for (ExportType exportType : ExportType.values()) {
-            inboxStyle.addLine(getLineText(fileBaseName, exportType, exporter));  // gives us "Exporting ... to ..." or "Succesfully uploaded ..." or "Failed to upload ..."
+            inboxStyle.addLine(getLineText(fileBaseName, exportType));  // gives us "Exporting ... to ..." or "Succesfully uploaded ..." or "Failed to upload ..."
         }
 
         Notification notification = new NotificationCompat.Builder(mContext, TrainingApplication.NOTIFICATION_CHANNEL__EXPORT)
@@ -121,22 +121,22 @@ public class ExportNotificationManager {
     }
 
     // returns a line for the notification
-    private String getLineText(String fileBaseName, ExportType exportType, BaseExporter exporter) {
+    private String getLineText(String fileBaseName, ExportType exportType) {
 
         Map<ExportType, Set<FileFormat>> exportTypeMap = mActiveExports.computeIfAbsent(fileBaseName, k -> new ConcurrentHashMap<>());
         Set<FileFormat> fileFormatSet = exportTypeMap.computeIfAbsent(exportType, k -> new HashSet<>());
 
         if (fileFormatSet.isEmpty()) {  // set is empty -> no running jobs -> get the final answer from the db...
-            return getResultLine(fileBaseName, exportType, exporter);
+            return getResultLine(fileBaseName, exportType);
         }
         else {
-            return getRunningLine(exportType, exporter, fileFormatSet);
+            return getRunningLine(exportType, fileFormatSet);
         }
     }
 
     // return list of running jobs as string
-    private String getRunningLine(ExportType exportType, BaseExporter exporter, @NonNull Set<FileFormat> runningJobs) {
-        String action = mContext.getString(exporter.getAction().getIngId());
+    private String getRunningLine(ExportType exportType, @NonNull Set<FileFormat> runningJobs) {
+        String action = mContext.getString(exportType.getAction().getIngId());
         String type = mContext.getString(exportType.getUiId());
 
         String formatList;
@@ -158,14 +158,14 @@ public class ExportNotificationManager {
     }
 
     // return the number of successes and failures from the repository as string
-    private String getResultLine(String fileBaseName, ExportType exportType, BaseExporter exporter) {
+    private String getResultLine(String fileBaseName, ExportType exportType) {
         ExportStatusRepository repository = ExportStatusRepository.getInstance(mContext);
         ExportGroupStats stats = repository.getStatsForExportGroup(fileBaseName, exportType);
         int successCount = stats.successCount;
         int failedCount = stats.failureCount;
         int totalCount = stats.getTotalCount();
 
-        String action = mContext.getString(exporter.getAction().getIngId());
+        String action = mContext.getString(exportType.getAction().getIngId());
         String type = mContext.getString(exportType.getUiId());
 
         String resultLine;

@@ -218,10 +218,4 @@ public class GCFileExporter extends BaseFileExporter {
 
     }
 
-    @NonNull
-    @Override
-    protected Action getAction() {
-        return Action.EXPORT;
-    }
-
 }

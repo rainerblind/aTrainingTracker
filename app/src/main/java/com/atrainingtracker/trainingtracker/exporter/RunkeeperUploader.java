@@ -87,10 +87,4 @@ public class RunkeeperUploader extends BaseExporter {
         return new ExportResult(true, false, response);
     }
 
-    @NonNull
-    @Override
-    protected Action getAction() {
-        return Action.UPLOAD;
-    }
-
 }

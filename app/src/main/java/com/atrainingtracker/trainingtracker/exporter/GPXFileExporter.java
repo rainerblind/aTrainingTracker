@@ -184,10 +184,4 @@ public class GPXFileExporter extends BaseFileExporter {
         return new ExportResult(true, false, "Successfully exported to GPX File");
     }
 
-    @NonNull
-    @Override
-    protected Action getAction() {
-        return Action.EXPORT;
-    }
-
 }

@@ -531,8 +531,8 @@
     <!-- actions -->
     <string name="uploading">hochladen</string>
     <string name="uploaded">hochgeladen</string>
-    <string name="exporting">schreiben</string>
-    <string name="exported">geschrieben</string>
+    <string name="writing">schreib</string>
+    <string name="wrote">geschrieben</string>
 
     <string name="something_strange_happened">Unbekannter Fehler</string>
 

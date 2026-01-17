@@ -163,10 +163,4 @@ public class CSVFileExporter extends BaseExporter {
         return new ExportResult(true, false, "Successfully exported to CSV");
     }
 
-    @NonNull
-    @Override
-    protected Action getAction() {
-        return Action.EXPORT;
-    }
-
 }
