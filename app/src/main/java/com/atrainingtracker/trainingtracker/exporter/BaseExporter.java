@@ -78,10 +78,10 @@ public abstract class BaseExporter {
 
 
     /** method to be called by the ExportManager to start the export */
-    public final ExportResult export(@NonNull ExportInfo exportInfo, IExportProgressListener progressListener) {
+    public final ExportResult export(@NonNull ExportInfo exportInfo) {
         if (DEBUG) Log.d(TAG, "export: " + exportInfo.toString());
         try {
-            ExportResult exportResult = doExport(exportInfo, progressListener);
+            ExportResult exportResult = doExport(exportInfo);
             onFinished(exportInfo);
             return exportResult;
 
@@ -92,7 +92,7 @@ public abstract class BaseExporter {
 
     /* method that must be overridden by the child classes to do the export */
     @Nullable
-    abstract protected ExportResult doExport(ExportInfo exportInfo, IExportProgressListener progressListener) throws IOException, JSONException, ParseException;
+    abstract protected ExportResult doExport(ExportInfo exportInfo) throws IOException, JSONException, ParseException;
 
     abstract Action getAction();
 

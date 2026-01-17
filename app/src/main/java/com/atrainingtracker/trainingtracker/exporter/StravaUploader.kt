@@ -73,7 +73,7 @@ class StravaUploader(context: Context) : BaseExporter(context) {
     }
 
 
-    override fun doExport(exportInfo: ExportInfo, progressListener: IExportProgressListener?): ExportResult {
+    override fun doExport(exportInfo: ExportInfo): ExportResult {
         if (DEBUG) Log.d(TAG, "doExport: ${exportInfo.fileBaseName}")
 
         val file = File(getBaseDirFile(mContext), exportInfo.shortPath)

@@ -61,7 +61,7 @@ public class RunkeeperFileExporter extends BaseFileExporter {
 
     @NonNull
     @Override
-    protected ExportResult doExport(@NonNull ExportInfo exportInfo, @Nullable IExportProgressListener progressListener) throws IOException, IllegalArgumentException, ParseException, JSONException {
+    protected ExportResult doExport(@NonNull ExportInfo exportInfo) throws IOException, IllegalArgumentException, ParseException, JSONException {
         if (DEBUG) Log.d(TAG, "exportToFile");
 
         final String FORMAT_qq = "  \"%s\":\"%s\",\n";
@@ -139,8 +139,6 @@ public class RunkeeperFileExporter extends BaseFileExporter {
 
                     isFirst = false;
                 }
-
-                progressListener.onProgress(2 * lines, count++);
             }
             bufferedWriter.write("\n  ],\n");
         }
@@ -195,8 +193,6 @@ public class RunkeeperFileExporter extends BaseFileExporter {
                         isFirst = false;
                     }
                 }
-
-                progressListener.onProgress(2 * lines, lines + count++);
             }
 
             bufferedWriter.write("\n  ]\n");

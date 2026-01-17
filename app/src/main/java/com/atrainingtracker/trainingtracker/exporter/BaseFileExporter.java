@@ -69,8 +69,6 @@ public abstract class BaseFileExporter extends BaseExporter {
     }
 
 
-
-
     protected void getHeaderData(@NonNull ExportInfo exportInfo) {
         WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance();
         SQLiteDatabase db = databaseManager.getOpenDatabase();
