@@ -55,20 +55,18 @@ public class ExportNotificationManager {
     }
 
     /**********************************************************************************************/
-    /* Öffentliche API - wird jetzt an die neue Methode delegiert
+    /* public API: just one simple method to update the notification
     /**********************************************************************************************/
 
-    // TODO: simplify the interface...
-
-    public void showInitialNotification(ExportInfo exportInfo, BaseExporter exporter) {
+    public void updateNotification(ExportInfo exportInfo) {
         updateExportStatus(exportInfo, false);
         showNotification(exportInfo);
     }
 
-    public void showFinalNotification(ExportInfo exportInfo, BaseExporter exporter, String text, boolean success) {
-        updateExportStatus(exportInfo, true);
-        showNotification(exportInfo);
-    }
+
+    /***********************************************************************************************
+     * private and protected stuff
+     **********************************************************************************************/
 
 
     public synchronized void updateExportStatus(ExportInfo exportInfo, boolean isFinished) {

@@ -89,22 +89,22 @@ public class ExportAndUploadWorker extends Worker  {
     private void informOthersStarted() {
         if (DEBUG) Log.i(TAG, "Export started: " + mExportInfo.toString());
 
-        mExportNotificationManager.showInitialNotification(mExportInfo, mExporter);
         updateStatus(ExportStatus.PROCESSING, "Export is being prepared...");  // TODO: Text?
+        mExportNotificationManager.updateNotification(mExportInfo);
     }
 
     private void informOthersSuccess(String answer) {
         if (DEBUG) Log.i(TAG, "Export successful: " + mExportInfo.toString() + " Answer: " + answer);
 
         updateStatus(ExportStatus.FINISHED_SUCCESS, answer);
-        mExportNotificationManager.showFinalNotification(mExportInfo, mExporter, answer, true);
+        mExportNotificationManager.updateNotification(mExportInfo);
     }
 
     private void informOthersFailed(String answer) {
         if (DEBUG) Log.i(TAG, "Export failed: " + mExportInfo.toString() + " Answer: " + answer);
 
         updateStatus(ExportStatus.FINISHED_FAILED, answer);
-        mExportNotificationManager.showFinalNotification(mExportInfo, mExporter, answer, false);
+        mExportNotificationManager.updateNotification(mExportInfo);
     }
 
 
