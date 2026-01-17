@@ -91,7 +91,13 @@ public class ExportManager {
                             throw new IllegalStateException("Unexpected value: " + exportInfo.getFileFormat());
                 };
         }
-        return null;
+        // this should never happen
+        if (DEBUG) { // when are in developing mode, we throw an exception
+            Log.e(TAG, "Unexpected value: " + exportInfo.getExportType());
+            throw new IllegalStateException("Unexpected value: " + exportInfo.getFileFormat());
+        } else {  // in production, we return something that does nothing
+            return new NotYetImplementedExporter(context);
+        }
     }
 
     /** Method to inform the ExportManager that a new workout has been started.
