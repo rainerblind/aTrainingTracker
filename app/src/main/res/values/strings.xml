@@ -624,6 +624,9 @@
     <string name="uploading_to_dropbox_not_wanted">uploading to Dropbox not wanted</string>
     <string name="uploading_to_community_not_wanted">uploading to an online community not wanted</string>
 
+    <!-- notifications while exporting -->
+    <string name="export_notification_title">Exporting %1$s</string>   <!-- Exporting 2025-01-10 -->
+
     <!-- note that the fourth argument is the one that determines the quantity -->
     <!-- 1: action
          2: type

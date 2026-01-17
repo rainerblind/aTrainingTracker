@@ -7,8 +7,8 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.BitmapFactory;
 import android.os.Bundle;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
@@ -37,7 +37,8 @@ public class ExportNotificationManager {
     private final NotificationManagerCompat mNotificationManager;
     private final PendingIntent mPendingIntentStartWorkoutListActivity;
 
-    private final Map<String, Set<FileFormat>> mActiveJobs = new ConcurrentHashMap<>(); // groupID -> FileFormat
+    // workoutName -> ExportType -> FileFormat
+    private final Map<String, Map<ExportType, Set<FileFormat>>> mActiveExports = new ConcurrentHashMap<>();
 
     protected ExportNotificationManager(@NonNull Context context) {
         this.mContext = context.getApplicationContext();
@@ -53,91 +54,124 @@ public class ExportNotificationManager {
         return sInstance;
     }
 
+    /**********************************************************************************************/
+    /* Öffentliche API - wird jetzt an die neue Methode delegiert
+    /**********************************************************************************************/
 
-    @SuppressLint("MissingPermission")
-    public synchronized void showInitialNotification(ExportInfo exportInfo, BaseExporter exporter) {  // TODO: rename
-        if (isMissingPermission()) return;
+    // TODO: simplify the interface...
 
-        String groupKey = generateGroupKey(exportInfo);
-        int notificationId = generateNotificationId(exportInfo);
-        int summaryNotificationId = generateSummaryNotificationId(exportInfo);
+    public void showInitialNotification(ExportInfo exportInfo, BaseExporter exporter) {
+        updateExportStatus(exportInfo, false);
+        showNotification(exportInfo, exporter);
+    }
 
-        // add FileFormat to mActiveJobs
-        mActiveJobs.computeIfAbsent(groupKey, k -> new HashSet<>()).add(exportInfo.getFileFormat());
-
-        // configure the summary notification
-        Notification summaryNotification = getDefaultSummaryNotifictioBuilder(exportInfo, exporter)
-                .setGroup(groupKey)
-                .setGroupSummary(true)
-                .setOngoing(true)
-                .build();
-        mNotificationManager.notify(summaryNotificationId, summaryNotification);
+    public void showFinalNotification(ExportInfo exportInfo, BaseExporter exporter, String text, boolean success) {
+        updateExportStatus(exportInfo, true);
+        showNotification(exportInfo, exporter);
     }
 
 
-    @SuppressLint("MissingPermission")
-    public synchronized void showFinalNotification(ExportInfo exportInfo, BaseExporter exporter, String text, boolean success) {
-        if (isMissingPermission()) return;
+    public synchronized void updateExportStatus(ExportInfo exportInfo, boolean isFinished) {
 
-        String groupKey = generateGroupKey(exportInfo);
-        int summaryNotificationId = generateSummaryNotificationId(exportInfo);
+        String fileBaseName = exportInfo.getFileBaseName();
+        ExportType exportType = exportInfo.getExportType();
+        FileFormat fileFormat = exportInfo.getFileFormat();
 
-        // remove FileFormat from mActiveJobs.  When the set is empty, show the final Summary notification.
-        Set<FileFormat> runningJobs = mActiveJobs.get(groupKey);
-        boolean isGroupFinished = false;
+        // create the map and sets if not yet present
+        Map<ExportType, Set<FileFormat>> exportTypeMap = mActiveExports.computeIfAbsent(fileBaseName, k -> new ConcurrentHashMap<>());
+        Set<FileFormat> fileFormatSet = exportTypeMap.computeIfAbsent(exportType, k -> new HashSet<>());
 
-        if (runningJobs != null) {
-            runningJobs.remove(exportInfo.getFileFormat());  // remove the job from the set
-            if (runningJobs.isEmpty()) {                     // when the set is empty, it was the last job of this group, ...
-                isGroupFinished = true;                      // hence, the group is finished.
+        // remove or add
+        if (isFinished) {
+            fileFormatSet.remove(fileFormat);
+            if (fileFormatSet.isEmpty()) {          // then the set is empty, it was the last entry for this type
+                exportTypeMap.remove(exportType);   // -> also remove the type
             }
-        } else {  // should never happen.  But just in case, we assume that the group is finished.
-            isGroupFinished = true;
-        }
-
-        if (isGroupFinished) {
-            // remove what has to be removed
-            mActiveJobs.remove(groupKey);
-
-            // TODO: check if mActiveJobs is empty and do some cleanup on the  notifications...
-
-            mNotificationManager.cancel(summaryNotificationId);
-
-            // show final summary notification
-            showFinalSummary(exportInfo, exporter);
-
         } else {
-            // other exports/uploads are still running -> update summaryNotification
-            Notification summaryNotification = getDefaultSummaryNotifictioBuilder(exportInfo, exporter)
-                    .setGroup(groupKey)
-                    .setGroupSummary(true)
-                    .setOngoing(true)
-                    .build();
-            mNotificationManager.notify(summaryNotificationId, summaryNotification);
+            fileFormatSet.add(fileFormat);
         }
     }
 
     @SuppressLint("MissingPermission")
-    private void showFinalSummary(ExportInfo exportInfo, BaseExporter exporter) {
+    private void showNotification(ExportInfo exportInfo, BaseExporter exporter) {
         if (isMissingPermission()) return;
 
-        // get the number of successes and failures from the repository
+        String fileBaseName = exportInfo.getFileBaseName();
+        String title = mContext.getString(R.string.export_notification_title, fileBaseName);
+
+        NotificationCompat.InboxStyle inboxStyle = new NotificationCompat.InboxStyle();
+        inboxStyle.setBigContentTitle(title);
+
+        // add a line for each export type
+        for (ExportType exportType : ExportType.values()) {
+            inboxStyle.addLine(getLineText(fileBaseName, exportType, exporter));  // gives us "Exporting ... to ..." or "Succesfully uploaded ..." or "Failed to upload ..."
+        }
+
+        Notification notification = new NotificationCompat.Builder(mContext, TrainingApplication.NOTIFICATION_CHANNEL__EXPORT)
+                .setSmallIcon(R.drawable.logo)
+                .setContentTitle(title)
+                .setContentText("TODO: short summary") // TODO: better text
+                .setStyle(inboxStyle)
+                .setOngoing(true)
+                .setAutoCancel(false)
+                .setContentIntent(mPendingIntentStartWorkoutListActivity)
+                .build();
+
+        mNotificationManager.notify(generateNotificationId(exportInfo), notification);
+    }
+
+    // returns a line for the notification
+    private String getLineText(String fileBaseName, ExportType exportType, BaseExporter exporter) {
+
+        Map<ExportType, Set<FileFormat>> exportTypeMap = mActiveExports.computeIfAbsent(fileBaseName, k -> new ConcurrentHashMap<>());
+        Set<FileFormat> fileFormatSet = exportTypeMap.computeIfAbsent(exportType, k -> new HashSet<>());
+
+        if (fileFormatSet.isEmpty()) {  // set is empty -> no running jobs -> get the final answer from the db...
+            return getResultLine(fileBaseName, exportType, exporter);
+        }
+        else {
+            return getRunningLine(exportType, exporter, fileFormatSet);
+        }
+    }
+
+    // return list of running jobs as string
+    private String getRunningLine(ExportType exportType, BaseExporter exporter, @NonNull Set<FileFormat> runningJobs) {
+        String action = mContext.getString(exporter.getAction().getIngId());
+        String type = mContext.getString(exportType.getUiId());
+
+        String formatList;
+        if (!runningJobs.isEmpty()) {
+            formatList = runningJobs.stream()
+                    .map(FileFormat::name)
+                    .collect(Collectors.joining(", "));
+        } else {
+            // should never ever happen, but just in case...
+            if (DEBUG) {
+                Log.e(TAG, "getRunningLine: runningJobs is empty");
+                throw new IllegalStateException("getRunningLine: runningJobs is empty");
+            } else {
+                formatList = "";
+            }
+        }
+
+        return mContext.getString(R.string.notification_exporting, action, formatList, type);
+    }
+
+    // return the number of successes and failures from the repository as string
+    private String getResultLine(String fileBaseName, ExportType exportType, BaseExporter exporter) {
         ExportStatusRepository repository = ExportStatusRepository.getInstance(mContext);
-        ExportGroupStats stats = repository.getStatsForExportGroup(exportInfo.getFileBaseName(), exportInfo.getExportType());
+        ExportGroupStats stats = repository.getStatsForExportGroup(fileBaseName, exportType);
         int successCount = stats.successCount;
         int failedCount = stats.failureCount;
         int totalCount = stats.getTotalCount();
 
-        int finalSummaryId = generateSummaryNotificationId(exportInfo);
-        String title = exportInfo.getExportTitle(mContext, exporter);
-
         String action = mContext.getString(exporter.getAction().getIngId());
-        String type = mContext.getString(exportInfo.getExportType().getUiId());
+        String type = mContext.getString(exportType.getUiId());
 
-        String text;
+        String resultLine;
         if (successCount == totalCount) {
             int export_string_id = R.plurals.exporting_success;
-            text = mContext.getResources().getQuantityString(
+            resultLine = mContext.getResources().getQuantityString(
                     export_string_id,
                     totalCount,
                     action,
@@ -146,7 +180,7 @@ public class ExportNotificationManager {
                     totalCount);
         } else {
             int export_string_id = R.plurals.exporting_failed;
-            text = mContext.getResources().getQuantityString(
+            resultLine = mContext.getResources().getQuantityString(
                     export_string_id,
                     totalCount,
                     action,
@@ -155,12 +189,7 @@ public class ExportNotificationManager {
                     totalCount);
         }
 
-        Notification finalSummaryNotification = getDefaultNotifictioBuilder(title, text)
-                .setAutoCancel(true)
-                .setOngoing(false)
-                .build();
-
-        mNotificationManager.notify(finalSummaryId, finalSummaryNotification);
+        return resultLine;
     }
 
 
@@ -177,61 +206,11 @@ public class ExportNotificationManager {
         return PendingIntent.getActivity(mContext, 0, newIntent, PendingIntent.FLAG_IMMUTABLE);
     }
 
-
-    private NotificationCompat.Builder getDefaultSummaryNotifictioBuilder(ExportInfo exportInfo, BaseExporter exporter) {
-        String summaryText = getDefaultSummaryText(exportInfo, exporter);
-        String summaryTitle = getDefaultSummaryTitle(exportInfo, exporter);
-
-        return getDefaultNotifictioBuilder(summaryTitle, summaryText);
-    }
-
-    private String getDefaultSummaryText(ExportInfo exportInfo, BaseExporter exporter) {
-        String action = mContext.getString(exporter.getAction().getIngId());
-        String type = mContext.getString(exportInfo.getExportType().getUiId());
-
-        // get the number of running jobs
-        String groupKey = generateGroupKey(exportInfo);
-        Set<FileFormat> runningJobs = mActiveJobs.get(groupKey);
-        int runningCount = (runningJobs != null) ? runningJobs.size() : 0;
-
-        String formatList;
-        if (runningJobs != null && !runningJobs.isEmpty()) {
-            formatList = runningJobs.stream()
-                    .map(FileFormat::name)
-                    .collect(Collectors.joining(", "));
-        } else {
-            formatList = "";
-        }
-
-        return mContext.getString(R.string.notification_exporting, action, formatList, type);
-    }
-
-    private String getDefaultSummaryTitle(ExportInfo exportInfo, BaseExporter exporter) {
-        return exportInfo.getExportTitle(mContext, exporter);
-    }
-
-    private NotificationCompat.Builder getDefaultNotifictioBuilder(String title, String text) {
-        return new NotificationCompat.Builder(mContext, TrainingApplication.NOTIFICATION_CHANNEL__EXPORT)
-                .setSmallIcon(R.drawable.logo)
-                .setContentTitle(title)
-                .setContentText(text)
-                .setContentIntent(mPendingIntentStartWorkoutListActivity);
-    }
-
     private boolean isMissingPermission() {
         return ActivityCompat.checkSelfPermission(mContext, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED;
     }
 
-    private String generateGroupKey(ExportInfo info) {
-        return info.getFileBaseName() + "::" + info.getExportType().name();     // group by ExportType
-        // return info.getFileBaseName() + "::" + info.getFileFormat().name();     // group by FileFormat
+    private int generateNotificationId(ExportInfo exportInfo) {
+        return exportInfo.getFileBaseName().hashCode();
     }
-    private int generateNotificationId(ExportInfo info) {
-        String uniqueString = info.getFileBaseName() + info.getExportType().name() + info.getFileFormat().name();
-        return uniqueString.hashCode();
-    }
-    private int generateSummaryNotificationId(ExportInfo info) {
-        return generateGroupKey(info).hashCode();
-    }
-
 }
