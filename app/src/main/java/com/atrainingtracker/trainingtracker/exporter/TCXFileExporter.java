@@ -271,10 +271,4 @@ public class TCXFileExporter extends BaseFileExporter {
         return new ExportResult(true, false, "Successfully exported to TCX File");
     }
 
-    @NonNull
-    @Override
-    protected Action getAction() {
-        return Action.EXPORT;
-    }
-
 }

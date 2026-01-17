@@ -94,7 +94,6 @@ public abstract class BaseExporter {
     @Nullable
     abstract protected ExportResult doExport(ExportInfo exportInfo) throws IOException, JSONException, ParseException;
 
-    abstract Action getAction();
 
     protected void onFinished(@NonNull ExportInfo exportInfo) {}
 
@@ -298,26 +297,7 @@ public abstract class BaseExporter {
         }
     }
 
-    protected enum Action {
-        UPLOAD(R.string.uploading, R.string.uploaded),
-        EXPORT(R.string.exporting, R.string.exported);
 
-        private final int mIngId;
-        private final int mPastId;
-
-        Action(int ingId, int pastId) {
-            mIngId = ingId;
-            mPastId = pastId;
-        }
-
-        public int getIngId() {
-            return mIngId;
-        }
-
-        public int getPastId() {
-            return mPastId;
-        }
-    }
 
     protected static class ExportResult {
         private final boolean mSuccess;

@@ -616,8 +616,8 @@
     <!-- actions -->
     <string name="uploading">uploading</string>
     <string name="uploaded">uploaded</string>
-    <string name="exporting">exporting</string>
-    <string name="exported">exported</string>
+    <string name="writing">writing</string>
+    <string name="wrote">wrote</string>
 
     <string name="something_strange_happened">something strange happened</string>
     <string name="exporting_to_file_not_wanted">exporting to file not wanted</string>
