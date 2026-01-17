@@ -51,7 +51,7 @@ public class RunkeeperUploader extends BaseExporter {
 
     @NonNull
     @Override
-    protected ExportResult doExport(@NonNull ExportInfo exportInfo, @NonNull IExportProgressListener progressListener)
+    protected ExportResult doExport(@NonNull ExportInfo exportInfo)
             throws IOException, JSONException {
         if (DEBUG) Log.d(TAG, "doExport: " + exportInfo.getFileBaseName());
 

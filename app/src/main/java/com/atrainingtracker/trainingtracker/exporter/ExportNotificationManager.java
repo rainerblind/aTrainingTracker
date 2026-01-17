@@ -36,7 +36,6 @@ public class ExportNotificationManager {
     private final Context mContext;
     private final NotificationManagerCompat mNotificationManager;
     private final PendingIntent mPendingIntentStartWorkoutListActivity;
-    private final boolean mShowOnlySummary = true;
 
     private final Map<String, Set<FileFormat>> mActiveJobs = new ConcurrentHashMap<>(); // groupID -> FileFormat
 
@@ -66,16 +65,6 @@ public class ExportNotificationManager {
         // add FileFormat to mActiveJobs
         mActiveJobs.computeIfAbsent(groupKey, k -> new HashSet<>()).add(exportInfo.getFileFormat());
 
-        if (!mShowOnlySummary) {
-            // configure the notification
-            NotificationCompat.Builder notificationBuilder = getDefaultNotifictioBuilder(exportInfo, exporter)
-                    .setLargeIcon(BitmapFactory.decodeResource(mContext.getResources(), R.drawable.ic_save_black_48dp))
-                    .setOngoing(true)
-                    .setGroup(groupKey)
-                    .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY);
-            mNotificationManager.notify(notificationId, notificationBuilder.build());
-        }
-
         // configure the summary notification
         Notification summaryNotification = getDefaultSummaryNotifictioBuilder(exportInfo, exporter)
                 .setGroup(groupKey)
@@ -86,35 +75,12 @@ public class ExportNotificationManager {
     }
 
 
-
-    @SuppressLint("MissingPermission")
-    public synchronized void updateNotification(ExportInfo exportInfo, BaseExporter exporter, boolean indeterminate, int max, int current) {
-        if (isMissingPermission()) return;
-        if (mShowOnlySummary) return;
-
-        String groupID = generateGroupKey(exportInfo);
-        int notificationId = generateNotificationId(exportInfo);
-
-        // configure the notification
-        NotificationCompat.Builder notificationBuilder = getDefaultNotifictioBuilder(exportInfo, exporter)
-                .setLargeIcon(BitmapFactory.decodeResource(mContext.getResources(), R.drawable.ic_save_black_48dp))
-                .setOngoing(true)
-                .setGroup(groupID)
-                .setProgress(max, current, indeterminate);
-        mNotificationManager.notify(notificationId, notificationBuilder.build());
-    }
-
-
     @SuppressLint("MissingPermission")
     public synchronized void showFinalNotification(ExportInfo exportInfo, BaseExporter exporter, String text, boolean success) {
         if (isMissingPermission()) return;
 
         String groupKey = generateGroupKey(exportInfo);
-        int notificationId = generateNotificationId(exportInfo);
         int summaryNotificationId = generateSummaryNotificationId(exportInfo);
-
-        // simply cancel the notification since it is no longer necessary.
-        mNotificationManager.cancel(notificationId);
 
         // remove FileFormat from mActiveJobs.  When the set is empty, show the final Summary notification.
         Set<FileFormat> runningJobs = mActiveJobs.get(groupKey);
@@ -211,27 +177,12 @@ public class ExportNotificationManager {
         return PendingIntent.getActivity(mContext, 0, newIntent, PendingIntent.FLAG_IMMUTABLE);
     }
 
-    private NotificationCompat.Builder getDefaultNotifictioBuilder(ExportInfo exportInfo, BaseExporter exporter) {
-        String text = getDefaultText(exportInfo, exporter);
-        String title = getDefaultTitle(exportInfo, exporter);
-
-        return getDefaultNotifictioBuilder(title, text);
-    }
 
     private NotificationCompat.Builder getDefaultSummaryNotifictioBuilder(ExportInfo exportInfo, BaseExporter exporter) {
         String summaryText = getDefaultSummaryText(exportInfo, exporter);
         String summaryTitle = getDefaultSummaryTitle(exportInfo, exporter);
 
         return getDefaultNotifictioBuilder(summaryTitle, summaryText);
-    }
-
-
-    private String getDefaultText(ExportInfo exportInfo, BaseExporter exporter) {
-        return exportInfo.getExportMessage(mContext, exporter);
-    }
-
-    private String getDefaultTitle(ExportInfo exportInfo, BaseExporter exporter) {
-        return exportInfo.getExportTitle(mContext, exporter);
     }
 
     private String getDefaultSummaryText(ExportInfo exportInfo, BaseExporter exporter) {

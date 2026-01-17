@@ -60,7 +60,7 @@ public class CSVFileExporter extends BaseExporter {
 
     @NonNull
     @Override
-    public ExportResult doExport(@NonNull ExportInfo exportInfo, @NonNull IExportProgressListener progressListener)
+    public ExportResult doExport(@NonNull ExportInfo exportInfo)
             throws IOException {
         if (DEBUG) Log.d(TAG, "exportToFile: " + exportInfo.getFileBaseName());
 
@@ -155,8 +155,6 @@ public class CSVFileExporter extends BaseExporter {
                 csvIndex++;
             }
             csvWrite.writeNext(columnString);
-
-            progressListener.onProgress(lines, count++);
         }
         csvWrite.close();
         cursor.close();

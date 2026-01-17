@@ -27,7 +27,7 @@ import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigatio
 
 import org.json.JSONException;
 
-public class ExportAndUploadWorker extends Worker implements IExportProgressListener {
+public class ExportAndUploadWorker extends Worker  {
     private static final String TAG = "ExportAndUploadWorker";
     private static final boolean DEBUG = com.atrainingtracker.trainingtracker.TrainingApplication.getDebug(true);
 
@@ -72,7 +72,7 @@ public class ExportAndUploadWorker extends Worker implements IExportProgressList
         informOthersStarted();
 
         // and start the export
-        BaseExporter.ExportResult result = mExporter.export(mExportInfo, this);
+        BaseExporter.ExportResult result = mExporter.export(mExportInfo);
 
         // done :)
         if (result.success()) {
@@ -84,12 +84,6 @@ public class ExportAndUploadWorker extends Worker implements IExportProgressList
         }
     }
 
-    // Implementation of the callback
-    @Override
-    public void onProgress(int max, int current) {
-        informOthersProgress(max, current);
-    }
-
 
     // some helpers to inform the ExportNotificationManager and the ExportStatusRepository
     private void informOthersStarted() {
@@ -98,12 +92,7 @@ public class ExportAndUploadWorker extends Worker implements IExportProgressList
         mExportNotificationManager.showInitialNotification(mExportInfo, mExporter);
         updateStatus(ExportStatus.PROCESSING, "Export is being prepared...");  // TODO: Text?
     }
-    private void informOthersProgress(int max, int current){
-        if ((current % (10 * 60)) == 0) {
-            mExportNotificationManager.updateNotification(mExportInfo, mExporter, true, max, current);
-        }
-        // no need to update the Database
-    }
+
     private void informOthersSuccess(String answer) {
         if (DEBUG) Log.i(TAG, "Export successful: " + mExportInfo.toString() + " Answer: " + answer);
 

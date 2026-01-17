@@ -72,7 +72,7 @@ public class TrainingPeaksUploader extends BaseExporter {
 
     @NonNull
     @Override
-    protected ExportResult doExport(@NonNull ExportInfo exportInfo, @Nullable IExportProgressListener progressListener) throws IOException, JSONException {
+    protected ExportResult doExport(@NonNull ExportInfo exportInfo) throws IOException, JSONException {
         if (DEBUG) Log.d(TAG, "doExport: " + exportInfo.getFileBaseName());
 
         TrainingpeaksGetAccessTokenActivity trainingPeaksGetAccessTokenActivity = new TrainingpeaksGetAccessTokenActivity();

@@ -59,7 +59,7 @@ public class GCFileExporter extends BaseFileExporter {
 
     @NonNull
     @Override
-    protected ExportResult doExport(@NonNull ExportInfo exportInfo, @NonNull IExportProgressListener progressListener)
+    protected ExportResult doExport(@NonNull ExportInfo exportInfo)
             throws IOException, IllegalArgumentException, JSONException, ParseException {
         if (DEBUG) Log.d(TAG, "exportWorkoutToFile");
 
@@ -203,8 +203,6 @@ public class GCFileExporter extends BaseFileExporter {
                 bufferedWriter.write(getSamplePrefix(isFirst) + sample);
                 isFirst = false;
             }
-
-            progressListener.onProgress(lines, count++);
         }
 
         bufferedWriter.write("\n        ]\n");
