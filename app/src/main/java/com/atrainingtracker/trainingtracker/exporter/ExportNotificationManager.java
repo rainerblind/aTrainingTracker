@@ -58,8 +58,10 @@ public class ExportNotificationManager {
     /* public API: just one simple method to update the notification
     /**********************************************************************************************/
 
-    public void updateNotification(ExportInfo exportInfo) {
-        updateExportStatus(exportInfo, false);
+    public void updateNotification(ExportInfo exportInfo, Boolean isFinished) {
+        if (DEBUG) Log.i(TAG, "updateNotification: " + exportInfo.toString());
+
+        updateExportStatus(exportInfo, isFinished);
         showNotification(exportInfo);
     }
 
@@ -70,6 +72,7 @@ public class ExportNotificationManager {
 
 
     public synchronized void updateExportStatus(ExportInfo exportInfo, boolean isFinished) {
+        if (DEBUG) Log.i(TAG, "updateExportStatus: " + exportInfo.toString() + " isFinished=" + isFinished);
 
         String fileBaseName = exportInfo.getFileBaseName();
         ExportType exportType = exportInfo.getExportType();
