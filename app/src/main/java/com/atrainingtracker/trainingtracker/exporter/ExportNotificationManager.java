@@ -105,9 +105,8 @@ public class ExportNotificationManager {
         String fileBaseName = exportInfo.getFileBaseName();
         String title = mContext.getString(R.string.export_notification__title, fileBaseName);
         String contentText = getContentText(fileBaseName);
-        if (DEBUG) Log.i(TAG, "showNotification: " + title + " " + contentText);
-
         Map<ExportType, Set<FileFormat>> exportTypeMap = mActiveExports.get(fileBaseName);
+        String bigText = getBigText(fileBaseName, exportTypeMap);
 
         boolean isStillRunning = false;
         if (exportTypeMap != null) {
@@ -115,21 +114,9 @@ public class ExportNotificationManager {
             isStillRunning = exportTypeMap.values().stream().anyMatch(set -> !set.isEmpty());
         }
 
-        StringBuilder bigTextContent = new StringBuilder();
-        if (exportTypeMap != null) {
-            boolean firstLine = true;
-            for (ExportType exportType : exportTypeMap.keySet()) {
-                if (!firstLine) {
-                    bigTextContent.append("\n");
-                }
-                bigTextContent.append(getLineText(fileBaseName, exportType));
-                firstLine = false;
-            }
-        }
-
         NotificationCompat.BigTextStyle bigTextStyle = new NotificationCompat.BigTextStyle();
         bigTextStyle.setBigContentTitle(title);
-        bigTextStyle.bigText(bigTextContent.toString());
+        bigTextStyle.bigText(bigText);
 
         Notification notification = new NotificationCompat.Builder(mContext, TrainingApplication.NOTIFICATION_CHANNEL__EXPORT)
                 .setSmallIcon(R.drawable.logo)
@@ -144,6 +131,25 @@ public class ExportNotificationManager {
         mNotificationManager.notify(generateNotificationId(exportInfo), notification);
     }
 
+    // creates the summary text when the notification is extended
+    private String getBigText(String fileBaseName, Map<ExportType, Set<FileFormat>> exportTypeMap) {
+        StringBuilder bigTextContent = new StringBuilder();
+        if (exportTypeMap != null) {
+            boolean firstLine = true;
+            for (ExportType exportType : exportTypeMap.keySet()) {
+                if (!firstLine) {
+                    bigTextContent.append("\n");
+                }
+                bigTextContent.append(getLineText(fileBaseName, exportType));
+                firstLine = false;
+            }
+        }
+
+        return bigTextContent.toString();
+    }
+
+
+    // creates the summary text when the notification is not extended
     private String getContentText(String fileBaseName) {
         if (DEBUG) Log.i(TAG, "getContentText: " + fileBaseName);
 
