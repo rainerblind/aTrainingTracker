@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Set;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 
 public class ExportNotificationManager {
@@ -37,37 +38,7 @@ public class ExportNotificationManager {
     private final PendingIntent mPendingIntentStartWorkoutListActivity;
     private final boolean mShowOnlySummary = true;
 
-
-    private final Map<String, GroupState> mGroupStates = new ConcurrentHashMap<>();
-    private final Map<String, Set<Integer>> mActiveNotifications = new ConcurrentHashMap<>();
-
-    private static class GroupState {
-        int jobsStarted = 0;
-        int jobsFinished = 0;
-        int jobsSucceeded = 0;
-
-        public GroupState() {}
-
-        public synchronized void logJobStarted() {
-            jobsStarted++;
-        }
-
-        public synchronized void logJobFinished(boolean success) {
-            jobsFinished++;
-            if (success) {
-                jobsSucceeded++;
-            }
-        }
-
-        public synchronized boolean isFinished() {
-            return jobsStarted > 0 && jobsSucceeded >= jobsStarted;
-        }
-
-        public synchronized int getJobsRunning() {
-            return jobsStarted - jobsFinished;
-        }
-    }
-
+    private final Map<String, Set<FileFormat>> mActiveJobs = new ConcurrentHashMap<>(); // groupID -> FileFormat
 
     protected ExportNotificationManager(@NonNull Context context) {
         this.mContext = context.getApplicationContext();
@@ -92,12 +63,8 @@ public class ExportNotificationManager {
         int notificationId = generateNotificationId(exportInfo);
         int summaryNotificationId = generateSummaryNotificationId(exportInfo);
 
-        Set<Integer> activeIds = mActiveNotifications.computeIfAbsent(groupKey, k -> new HashSet<>());
-        if (!activeIds.contains(notificationId)) {
-            activeIds.add(notificationId);
-            GroupState state = mGroupStates.computeIfAbsent(groupKey, k -> new GroupState());
-            state.logJobStarted();
-        }
+        // add FileFormat to mActiveJobs
+        mActiveJobs.computeIfAbsent(groupKey, k -> new HashSet<>()).add(exportInfo.getFileFormat());
 
         if (!mShowOnlySummary) {
             // configure the notification
@@ -149,17 +116,25 @@ public class ExportNotificationManager {
         // simply cancel the notification since it is no longer necessary.
         mNotificationManager.cancel(notificationId);
 
-        GroupState state = mGroupStates.get(groupKey);
-        if (state == null) {
-            return;
+        // remove FileFormat from mActiveJobs.  When the set is empty, show the final Summary notification.
+        Set<FileFormat> runningJobs = mActiveJobs.get(groupKey);
+        boolean isGroupFinished = false;
+
+        if (runningJobs != null) {
+            runningJobs.remove(exportInfo.getFileFormat());  // remove the job from the set
+            if (runningJobs.isEmpty()) {                     // when the set is empty, it was the last job of this group, ...
+                isGroupFinished = true;                      // hence, the group is finished.
+            }
+        } else {  // should never happen.  But just in case, we assume that the group is finished.
+            isGroupFinished = true;
         }
 
-        state.logJobFinished(success);
-
-        if (state.isFinished()) {
+        if (isGroupFinished) {
             // remove what has to be removed
-            mGroupStates.remove(groupKey);
-            mActiveNotifications.remove(groupKey);
+            mActiveJobs.remove(groupKey);
+
+            // TODO: check if mActiveJobs is empty and do some cleanup on the  notifications...
+
             mNotificationManager.cancel(summaryNotificationId);
 
             // show final summary notification
@@ -262,14 +237,22 @@ public class ExportNotificationManager {
     private String getDefaultSummaryText(ExportInfo exportInfo, BaseExporter exporter) {
         String action = mContext.getString(exporter.getAction().getIngId());
         String type = mContext.getString(exportInfo.getExportType().getUiId());
-        int running = mGroupStates.get(generateGroupKey(exportInfo)).getJobsRunning();  // better pass the groupKey?
 
-        return mContext.getResources().getQuantityString(
-                R.plurals.notification_exporting,
-                running,
-                action,
-                type,
-                running);
+        // get the number of running jobs
+        String groupKey = generateGroupKey(exportInfo);
+        Set<FileFormat> runningJobs = mActiveJobs.get(groupKey);
+        int runningCount = (runningJobs != null) ? runningJobs.size() : 0;
+
+        String formatList;
+        if (runningJobs != null && !runningJobs.isEmpty()) {
+            formatList = runningJobs.stream()
+                    .map(FileFormat::name)
+                    .collect(Collectors.joining(", "));
+        } else {
+            formatList = "";
+        }
+
+        return mContext.getString(R.string.notification_exporting, action, formatList, type);
     }
 
     private String getDefaultSummaryTitle(ExportInfo exportInfo, BaseExporter exporter) {

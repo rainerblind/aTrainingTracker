@@ -649,13 +649,10 @@
     </plurals>
 
     <!-- exporting -->
-    <!-- 1: action
-         2: type
-         3: running -->
-    <plurals name="notification_exporting">
-        <item quantity="one">%1$s one workout to %2$s</item>
-        <item quantity="other">%1$s %3$d workouts to %2$s</item>
-    </plurals>
+    <!-- 1: action       (e.g. uploading)
+         2: formatList   (e.g. TCX, CSV)
+         3: type         (e.g. Dropbox)    -->
+    <string name="notification_exporting">%1$s %2$s to %3$s</string>
 
     <string name="exporting_to_file">exporting to file: %1$s (%2$d/%3$d)</string>
     <string name="uploading_to_dropbox">uploading to Dropbox: %1$s (%2$d/%3$d)</string>
