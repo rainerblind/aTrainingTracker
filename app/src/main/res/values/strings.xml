@@ -948,8 +948,8 @@
         (0: #ongoing for quantity)
         1: string representing the ongoing file formats -->
     <plurals name="export_notification__detail__File_ongoing">
-        <item quantity="one">✍️ Writing the %1$s file.</item>     <!-- Writing the TCX file. -->
-        <item quantity="other">✍️ Writing the %1$s files.</item>  <!-- Writing the TCX and CSV files. -->
+        <item quantity="one">💾 Writing the %1$s file.</item>     <!-- Writing the TCX file. -->
+        <item quantity="other">💾 Writing the %1$s files.</item>  <!-- Writing the TCX and CSV files. -->
     </plurals>
 
     <!-- uploading to Dropbox ongoing

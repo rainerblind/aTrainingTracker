@@ -9,6 +9,8 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
+import android.widget.RemoteViews;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
@@ -21,6 +23,7 @@ import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigatio
 import com.atrainingtracker.trainingtracker.helpers.StringUtilsKt;
 
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -73,7 +76,6 @@ public class ExportNotificationManager {
      * private and protected stuff
      **********************************************************************************************/
 
-
     public synchronized void updateExportStatus(ExportInfo exportInfo, boolean isFinished) {
         // if (DEBUG) Log.i(TAG, "updateExportStatus: " + exportInfo.toString() + " isFinished=" + isFinished);
         if (DEBUG) logActiveExports(exportInfo.getFileBaseName());
@@ -100,31 +102,44 @@ public class ExportNotificationManager {
         logActiveExports(fileBaseName);
     }
 
+    /***********************************************************************************************
+     * Notification stuff
+     **********************************************************************************************/
+
     @SuppressLint("MissingPermission")
-    private void showNotification(ExportInfo exportInfo) {
+    public void showNotification(ExportInfo exportInfo) {
         if (isMissingPermission()) return;
 
         String fileBaseName = exportInfo.getFileBaseName();
         String title = mContext.getString(R.string.export_notification__title, fileBaseName);
-        String contentText = getContentText(fileBaseName);
-        Map<ExportType, Set<FileFormat>> exportTypeMap = mActiveExports.get(fileBaseName);
-        String bigText = getBigText(fileBaseName, exportTypeMap);
 
         boolean isStillRunning = false;
+        Map<ExportType, Set<FileFormat>> exportTypeMap = mActiveExports.get(fileBaseName);
         if (exportTypeMap != null) {
             // check whether any export is still running
             isStillRunning = exportTypeMap.values().stream().anyMatch(set -> !set.isEmpty());
         }
 
-        NotificationCompat.BigTextStyle bigTextStyle = new NotificationCompat.BigTextStyle();
-        bigTextStyle.setBigContentTitle(title);
-        bigTextStyle.bigText(bigText);
+        RemoteViews expandedView = new RemoteViews(mContext.getPackageName(), R.layout.export_notification__expanded);
+
+        List<ExportType> orderedTypes = List.of(ExportType.FILE, ExportType.DROPBOX, ExportType.COMMUNITY);
+        for (ExportType type : orderedTypes) {
+            RemoteViews groupView = createGroupViewForExportType(fileBaseName, type);
+            if (groupView != null) {
+                expandedView.addView(R.id.notification_main_container, groupView);
+            }
+        }
+
+        String contentText = getContentText(fileBaseName);
 
         Notification notification = new NotificationCompat.Builder(mContext, TrainingApplication.NOTIFICATION_CHANNEL__EXPORT)
                 .setSmallIcon(R.drawable.logo)
-                .setContentTitle(title)
-                .setContentText(contentText)
-                .setStyle(bigTextStyle)
+                .setContentTitle(title)       // Fallback für Wear OS etc.
+                .setContentText(contentText)  // Fallback für Wear OS etc.
+                // WICHTIG: Dieser Style sorgt dafür, dass Android den Standard-Header (App-Icon, Name, Zeit)
+                // um unser Custom Layout herumzeichnet.
+                .setStyle(new NotificationCompat.DecoratedCustomViewStyle())
+                .setCustomBigContentView(expandedView)
                 .setOngoing(isStillRunning)
                 .setAutoCancel(!isStillRunning)
                 .setContentIntent(mPendingIntentStartWorkoutListActivity)
@@ -133,17 +148,148 @@ public class ExportNotificationManager {
         mNotificationManager.notify(generateNotificationId(exportInfo), notification);
     }
 
-    // creates the summary text when the notification is extended
-    private String getBigText(String fileBaseName, Map<ExportType, Set<FileFormat>> exportTypeMap) {
-        if (exportTypeMap == null) {
-            return "";
+    /***********************************************************************************************
+     * method to create one group
+     **********************************************************************************************/
+
+    private RemoteViews createGroupViewForExportType(String fileBaseName, ExportType exportType) {
+
+        Set<FileFormat> runningJobs = getRunningJobs(fileBaseName, exportType);
+        Map<FileFormat, ExportStatus> finishedJobs = getFinishedJobs(fileBaseName, exportType);
+
+        List<String> succeededJobsList = getSucceededJobsList(finishedJobs);
+        List<String> failedJobsList = getFailedJobsList(finishedJobs);
+
+        // when there are no running or finished jobs, return null
+        if (runningJobs.isEmpty() && succeededJobsList.isEmpty() && failedJobsList.isEmpty()) {
+            return null;
         }
 
-        // for each ExportType within the map, we create a new line with the getLineText() method and join them with newlines.
-        return exportTypeMap.keySet().stream()
-                .map(exportType -> getLineText(fileBaseName, exportType))
-                .collect(Collectors.joining("\n"));
+        // load the layout for the group
+        RemoteViews groupView = new RemoteViews(mContext.getPackageName(), R.layout.export_notification__group);
+        groupView.setTextViewText(R.id.group_title, mContext.getString(exportType.getUiId()));
+
+        // calculate the plurals depending on the exportType
+        int pluralsRunningId;
+        int pluralsSuccessID;
+        int pluralsFailedID = switch (exportType) {
+            case FILE -> {
+                pluralsRunningId = R.plurals.export_notification__detail__File_ongoing;
+                pluralsSuccessID = R.plurals.export_notification__detail__File_success;
+                yield R.plurals.export_notification__detail__File_failed;
+            }
+            case DROPBOX -> {
+                pluralsRunningId = R.plurals.export_notification__detail__Dropbox_ongoing;
+                pluralsSuccessID = R.plurals.export_notification__detail__Dropbox_success;
+                yield R.plurals.export_notification__detail__Dropbox_failed;
+            }
+            case COMMUNITY -> {
+                pluralsRunningId = R.plurals.export_notification__detail__Community_ongoing;
+                pluralsSuccessID = R.plurals.export_notification__detail__Community_success;
+                yield R.plurals.export_notification__detail__Community_failed;
+            }
+            default -> throw new IllegalStateException("Unexpected value: " + exportType);
+        };
+
+        // text for running jobs (or hide)
+        if (!runningJobs.isEmpty()) {
+            String line = getRunningLine(runningJobs, pluralsRunningId);
+            groupView.setTextViewText(R.id.line_running, line);
+            groupView.setViewVisibility(R.id.line_running, View.VISIBLE);
+        } else {
+            groupView.setViewVisibility(R.id.line_running, View.GONE);
+        }
+
+        // text for succeeded jobs (or hide)
+        if (!succeededJobsList.isEmpty()) {
+            String line = getResultLine(succeededJobsList, pluralsSuccessID);
+            groupView.setTextViewText(R.id.line_succeeded, line);
+            groupView.setViewVisibility(R.id.line_succeeded, View.VISIBLE);
+        } else {
+            groupView.setViewVisibility(R.id.line_succeeded, View.GONE);
+        }
+
+        // text for failed jobs (or hide)
+        if (!failedJobsList.isEmpty()) {
+            String line = getResultLine(failedJobsList, pluralsFailedID);
+            groupView.setTextViewText(R.id.line_failed, line);
+            groupView.setViewVisibility(R.id.line_failed, View.VISIBLE);
+        } else {
+            groupView.setViewVisibility(R.id.line_failed, View.GONE);
+        }
+
+        return groupView;
     }
+
+
+    /***********************************************************************************************
+     * get the set of jobs
+     **********************************************************************************************/
+
+    private Set<FileFormat> getRunningJobs(String fileBaseName, ExportType exportType) {
+        Map<ExportType, Set<FileFormat>> exportTypeMap = mActiveExports.get(fileBaseName);
+        if (exportTypeMap != null) {
+            Set<FileFormat> runningJobs = exportTypeMap.get(exportType);
+            if (runningJobs != null) {
+
+                // return a copy of the set
+                return new HashSet<>(runningJobs);
+            }
+        }
+        // when nothing is found, an empty set is returned
+        return Collections.emptySet();
+    }
+
+    private Map<FileFormat, ExportStatus> getFinishedJobs(String fileBaseName, ExportType exportType) {
+
+        ExportStatusRepository repository = ExportStatusRepository.getInstance(mContext);
+        return repository.getExportStatusMap(fileBaseName, exportType);
+    }
+
+    /***********************************************************************************************
+     * methods to create a String representation of the running / finished jobs
+     **********************************************************************************************/
+
+    // return String with nice representation of the running jobs
+    private String getRunningLine(@NonNull Set<FileFormat> runningJobs, int pluralsId) {
+        List<String> runningJobNames = runningJobs.stream()
+                .map(FileFormat::name)
+                .collect(Collectors.toList());
+        String formattedFileFormats = StringUtilsKt.formatListAsString(mContext, runningJobNames);
+        int runningCount = runningJobs.size();
+
+        return mContext.getResources().getQuantityString(
+                pluralsId,
+                runningCount,
+                formattedFileFormats
+        );
+    }
+
+    private String getResultLine(List<String> filteredJobList, int pluralResId) {
+        String formattedJobs = StringUtilsKt.formatListAsString(mContext, filteredJobList);
+        return mContext.getResources().getQuantityString(pluralResId, filteredJobList.size(), formattedJobs);
+    }
+
+    private List<String> getSucceededJobsList(Map<FileFormat, ExportStatus> finishedJobs) {
+        return finishedJobs.entrySet().stream()
+                .filter(entry -> entry.getValue() == ExportStatus.FINISHED_SUCCESS)
+                .map(entry -> mContext.getString(entry.getKey().getUiNameId()))
+                .collect(Collectors.toList());
+    }
+
+    private List<String> getFailedJobsList(Map<FileFormat, ExportStatus> finishedJobs) {
+        return finishedJobs.entrySet().stream()
+                .filter(entry -> entry.getValue() == ExportStatus.FINISHED_FAILED)
+                .map(entry -> mContext.getString(entry.getKey().getUiNameId()))
+                .collect(Collectors.toList());
+    }
+
+
+
+
+    /**********************************************************************************************
+    * short summary of the active Exports
+     *********************************************************************************************/ 
 
     // creates the summary text when the notification is not extended
     private String getContentText(String fileBaseName) {
@@ -171,116 +317,9 @@ public class ExportNotificationManager {
         }
     }
 
-    // returns a line for the notification
-    private String getLineText(String fileBaseName, ExportType exportType) {
-        if (DEBUG) Log.i(TAG, "getLineText: " + fileBaseName + " " + exportType);
-
-        Map<ExportType, Set<FileFormat>> exportTypeMap = mActiveExports.get(fileBaseName);
-        Set<FileFormat> fileFormatSet = exportTypeMap.get(exportType);
-
-        if (fileFormatSet.isEmpty()) {  // set is empty -> no running jobs -> get the final answer from the db...
-
-            return getResultLine(fileBaseName, exportType);
-        }
-        else {
-
-            return getRunningLine(exportType, fileFormatSet, fileBaseName);
-        }
-    }
-
-    // return String with nice representation of the running jobs
-    private String getRunningLine(ExportType exportType, @NonNull Set<FileFormat> runningJobs, String fileBaseName) {
-        if (DEBUG) Log.i(TAG, "getRunningLine: " + fileBaseName + " " + exportType);
-
-        List<String> runningJobNames = runningJobs.stream()
-                .map(FileFormat::name)
-                .collect(Collectors.toList());
-        String formattedFileFormats = StringUtilsKt.formatListAsString(mContext, runningJobNames);
-        int runningCount = runningJobs.size();
-
-        int pluralsId = switch (exportType) {
-            case FILE -> R.plurals.export_notification__detail__File_ongoing;
-            case DROPBOX -> R.plurals.export_notification__detail__Dropbox_ongoing;
-            case COMMUNITY -> R.plurals.export_notification__detail__Community_ongoing;
-            default -> throw new IllegalStateException("Unexpected value: " + exportType);
-        };
-
-        return mContext.getResources().getQuantityString(
-                pluralsId,
-                runningCount,
-                formattedFileFormats
-        );
-    }
-
-    // return a nice string representation of the export result
-    private String getResultLine(String fileBaseName, ExportType exportType) {
-        if (DEBUG) Log.i(TAG, "getResultLine: " + fileBaseName + " " + exportType);
-
-        ExportStatusRepository repository = ExportStatusRepository.getInstance(mContext);
-        Map<FileFormat, ExportStatus> exportResult = repository.getExportStatusMap(fileBaseName, exportType);
-
-        // get a list of succeeded and failed jobs
-        List<String> succeededJobs = exportResult.entrySet().stream()
-                .filter(entry -> entry.getValue() == ExportStatus.FINISHED_SUCCESS)
-                .map(entry -> mContext.getString(entry.getKey().getUiNameId()))
-                .collect(Collectors.toList());
-
-        List<String> failedJobs = exportResult.entrySet().stream()
-                .filter(entry -> entry.getValue() == ExportStatus.FINISHED_FAILED)
-                .map(entry -> mContext.getString(entry.getKey().getUiNameId()))
-                .collect(Collectors.toList());
-
-        // format the lists
-        String formattedSucceededJobs = StringUtilsKt.formatListAsString(mContext, succeededJobs);
-        String formattedFailedJobs = StringUtilsKt.formatListAsString(mContext, failedJobs);
-
-        // get the correct plurals based on the export type
-        int pluralsSuccessID;
-        int pluralsFailedID = switch (exportType) {
-            case FILE -> {
-                pluralsSuccessID = R.plurals.export_notification__detail__File_success;
-                yield R.plurals.export_notification__detail__File_failed;
-            }
-            case DROPBOX -> {
-                pluralsSuccessID = R.plurals.export_notification__detail__Dropbox_success;
-                yield R.plurals.export_notification__detail__Dropbox_failed;
-            }
-            case COMMUNITY -> {
-                pluralsSuccessID = R.plurals.export_notification__detail__Community_success;
-                yield R.plurals.export_notification__detail__Community_failed;
-            }
-            default -> throw new IllegalStateException("Unexpected value: " + exportType);
-        };
-
-
-        // Now, create the final result
-        String resultLine;
-
-        if (!succeededJobs.isEmpty() && !failedJobs.isEmpty()) {
-            // succeeded and failed jobs
-            String successPart = mContext.getResources().getQuantityString(pluralsSuccessID, succeededJobs.size(), formattedSucceededJobs);
-            String failedPart = mContext.getResources().getQuantityString(pluralsFailedID, failedJobs.size(), formattedFailedJobs);
-            resultLine = successPart + "\n" + failedPart; // concatenate them by a newline.
-
-        } else if (!succeededJobs.isEmpty()) {
-            // only succeeded jobs
-            resultLine = mContext.getResources().getQuantityString(pluralsSuccessID, succeededJobs.size(), formattedSucceededJobs);
-
-        } else if (!failedJobs.isEmpty()) {
-            // only failed jobs
-            resultLine = mContext.getResources().getQuantityString(pluralsFailedID, failedJobs.size(), formattedFailedJobs);
-
-        } else {
-            // neither succeeded nor failed jobs.  Should never ever happen.
-            resultLine = mContext.getString(R.string.export_notification__detail__no_results);
-        }
-
-        return resultLine;
-    }
-
 
     /**********************************************************************************************/
-    /* private helpers
+    /* some more simple helpers
     /**********************************************************************************************/
 
     private PendingIntent createPendingIntentStartWorkoutListActivity() {
