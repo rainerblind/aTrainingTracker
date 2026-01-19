@@ -253,7 +253,7 @@ public class ExportNotificationManager {
     // return String with nice representation of the running jobs
     private String getRunningLine(@NonNull Set<FileFormat> runningJobs, int pluralsId) {
         List<String> runningJobNames = runningJobs.stream()
-                .map(FileFormat::name)
+                .map(entry -> mContext.getString(entry.getUiNameId()))
                 .collect(Collectors.toList());
         String formattedFileFormats = StringUtilsKt.formatListAsString(mContext, runningJobNames);
         int runningCount = runningJobs.size();
