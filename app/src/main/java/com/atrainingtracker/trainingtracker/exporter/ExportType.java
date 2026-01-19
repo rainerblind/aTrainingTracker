@@ -53,10 +53,12 @@ public enum ExportType {
         return exportToFileFormats;
     }
 
+    @Deprecated
     public Action getAction() {
         return action;
     }
 
+    @Deprecated
     public enum Action {
 
         UPLOAD(R.string.uploading, R.string.uploaded),
