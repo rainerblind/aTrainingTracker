@@ -15,7 +15,7 @@ import androidx.work.WorkerParameters;
 
 import org.json.JSONException;
 
-public class ExportAndUploadWorker extends Worker  {
+public class ExportWorker extends Worker  {
     private static final String TAG = "ExportAndUploadWorker";
     private static final boolean DEBUG = com.atrainingtracker.trainingtracker.TrainingApplication.getDebug(true);
 
@@ -27,7 +27,7 @@ public class ExportAndUploadWorker extends Worker  {
     private final ExportStatusRepository repository = ExportStatusRepository.getInstance(getApplicationContext());
     private final Context mContext;
 
-    public ExportAndUploadWorker(@NonNull Context context, @NonNull WorkerParameters workerParams) {
+    public ExportWorker(@NonNull Context context, @NonNull WorkerParameters workerParams) {
         super(context, workerParams);
         mContext = context;
         mExportNotificationManager = ExportNotificationManager.getInstance(context);

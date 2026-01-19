@@ -26,12 +26,10 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
 
-import androidx.lifecycle.Observer;
 import androidx.work.Constraints;
 import androidx.work.Data;
 import androidx.work.NetworkType;
 import androidx.work.OneTimeWorkRequest;
-import androidx.work.WorkInfo;
 import androidx.work.WorkManager;
 
 import androidx.annotation.NonNull;
@@ -299,7 +297,7 @@ public class ExportManager {
     private OneTimeWorkRequest createWorkRequest(ExportInfo exportInfo) throws JSONException {
 
         Data inputData = new Data.Builder()
-                .putString(ExportAndUploadWorker.KEY_EXPORT_INFO, exportInfo.toJson())
+                .putString(ExportWorker.KEY_EXPORT_INFO, exportInfo.toJson())
                 .build();
 
 
@@ -307,7 +305,7 @@ public class ExportManager {
                 .setRequiredNetworkType(exportInfo.getExportType() == ExportType.FILE ? NetworkType.NOT_REQUIRED : NetworkType.CONNECTED)
                 .build();
 
-        return new OneTimeWorkRequest.Builder(ExportAndUploadWorker.class)
+        return new OneTimeWorkRequest.Builder(ExportWorker.class)
                 .setInputData(inputData)
                 .setConstraints(constraints)
                 .addTag(exportInfo.toString())
