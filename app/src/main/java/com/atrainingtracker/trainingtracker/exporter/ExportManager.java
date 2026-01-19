@@ -205,21 +205,12 @@ public class ExportManager {
         ContentValues values = new ContentValues();
 
         // user explicitly wants this.  So, we do not check whether we normally do this.  I.e. no if (TrainingApplication.exportToFile(fileFormat))
-        values.put(ExportStatusDbHelper.EXPORT_STATUS, ExportStatus.WAITING.name());
+        // -> simply reset the answer and start the full export.
         values.put(ExportStatusDbHelper.ANSWER, "");
         mRepository.updateExportStatus(values, fileBaseName, ExportType.FILE, fileFormat);
 
         // trigger the export
         startFullExportProcess(fileBaseName, fileFormat);
-
-        // TODO: Rethink from here on.
-        // dropbox: either waiting or unwanted (retries are not yet set)
-        if (TrainingApplication.uploadToDropbox()) {
-            values.put(ExportStatusDbHelper.EXPORT_STATUS, ExportStatus.WAITING.name());
-        } else {
-            values.put(ExportStatusDbHelper.EXPORT_STATUS, ExportStatus.UNWANTED.name());
-        }
-        mRepository.updateExportStatus(values, fileBaseName, ExportType.DROPBOX, fileFormat);
 
         broadcastExportStatusChanged(mContext);
     }
