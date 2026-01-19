@@ -18,9 +18,11 @@ import androidx.core.app.NotificationManagerCompat;
 import com.atrainingtracker.R;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation;
+import com.atrainingtracker.trainingtracker.helpers.StringUtilsKt;
 
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -133,21 +135,15 @@ public class ExportNotificationManager {
 
     // creates the summary text when the notification is extended
     private String getBigText(String fileBaseName, Map<ExportType, Set<FileFormat>> exportTypeMap) {
-        StringBuilder bigTextContent = new StringBuilder();
-        if (exportTypeMap != null) {
-            boolean firstLine = true;
-            for (ExportType exportType : exportTypeMap.keySet()) {
-                if (!firstLine) {
-                    bigTextContent.append("\n");
-                }
-                bigTextContent.append(getLineText(fileBaseName, exportType));
-                firstLine = false;
-            }
+        if (exportTypeMap == null) {
+            return "";
         }
 
-        return bigTextContent.toString();
+        // for each ExportType within the map, we create a new line with the getLineText() method and join them with newlines.
+        return exportTypeMap.keySet().stream()
+                .map(exportType -> getLineText(fileBaseName, exportType))
+                .collect(Collectors.joining("\n"));
     }
-
 
     // creates the summary text when the notification is not extended
     private String getContentText(String fileBaseName) {
@@ -192,63 +188,91 @@ public class ExportNotificationManager {
         }
     }
 
-    // return list of running jobs as string
+    // return String with nice representation of the running jobs
     private String getRunningLine(ExportType exportType, @NonNull Set<FileFormat> runningJobs, String fileBaseName) {
         if (DEBUG) Log.i(TAG, "getRunningLine: " + fileBaseName + " " + exportType);
 
-        String action = mContext.getString(exportType.getAction().getIngId());
-        String type = mContext.getString(exportType.getUiId());
+        List<String> runningJobNames = runningJobs.stream()
+                .map(FileFormat::name)
+                .collect(Collectors.toList());
+        String formattedFileFormats = StringUtilsKt.formatListAsString(mContext, runningJobNames);
+        int runningCount = runningJobs.size();
 
-        String formatList;
-        if (!runningJobs.isEmpty()) {
-            formatList = runningJobs.stream()
-                    .map(FileFormat::name)
-                    .collect(Collectors.joining(", "));
-        } else {
-            // should never ever happen, but just in case...
-            if (DEBUG) {
-                Log.e(TAG, "getRunningLine: runningJobs is empty");
-                throw new IllegalStateException("getRunningLine: runningJobs is empty");
-            } else {
-                formatList = "";
-            }
-        }
+        int pluralsId = switch (exportType) {
+            case FILE -> R.plurals.export_notification__detail__File_ongoing;
+            case DROPBOX -> R.plurals.export_notification__detail__Dropbox_ongoing;
+            case COMMUNITY -> R.plurals.export_notification__detail__Community_ongoing;
+            default -> throw new IllegalStateException("Unexpected value: " + exportType);
+        };
 
-        return mContext.getString(R.string.notification_exporting, action, formatList, type);
+        return mContext.getResources().getQuantityString(
+                pluralsId,
+                runningCount,
+                formattedFileFormats
+        );
     }
 
-    // return the number of successes and failures from the repository as string
+    // return a nice string representation of the export result
     private String getResultLine(String fileBaseName, ExportType exportType) {
         if (DEBUG) Log.i(TAG, "getResultLine: " + fileBaseName + " " + exportType);
 
         ExportStatusRepository repository = ExportStatusRepository.getInstance(mContext);
-        ExportGroupStats stats = repository.getStatsForExportGroup(fileBaseName, exportType);
-        int successCount = stats.successCount;
-        int failedCount = stats.failureCount;
-        int totalCount = stats.getTotalCount();
+        Map<FileFormat, ExportStatus> exportResult = repository.getExportStatusMap(fileBaseName, exportType);
 
-        String action = mContext.getString(exportType.getAction().getIngId());
-        String type = mContext.getString(exportType.getUiId());
+        // get a list of succeeded and failed jobs
+        List<String> succeededJobs = exportResult.entrySet().stream()
+                .filter(entry -> entry.getValue() == ExportStatus.FINISHED_SUCCESS)
+                .map(entry -> mContext.getString(entry.getKey().getUiNameId()))
+                .collect(Collectors.toList());
 
+        List<String> failedJobs = exportResult.entrySet().stream()
+                .filter(entry -> entry.getValue() == ExportStatus.FINISHED_FAILED)
+                .map(entry -> mContext.getString(entry.getKey().getUiNameId()))
+                .collect(Collectors.toList());
+
+        // format the lists
+        String formattedSucceededJobs = StringUtilsKt.formatListAsString(mContext, succeededJobs);
+        String formattedFailedJobs = StringUtilsKt.formatListAsString(mContext, failedJobs);
+
+        // get the correct plurals based on the export type
+        int pluralsSuccessID;
+        int pluralsFailedID = switch (exportType) {
+            case FILE -> {
+                pluralsSuccessID = R.plurals.export_notification__detail__File_success;
+                yield R.plurals.export_notification__detail__File_failed;
+            }
+            case DROPBOX -> {
+                pluralsSuccessID = R.plurals.export_notification__detail__Dropbox_success;
+                yield R.plurals.export_notification__detail__Dropbox_failed;
+            }
+            case COMMUNITY -> {
+                pluralsSuccessID = R.plurals.export_notification__detail__Community_success;
+                yield R.plurals.export_notification__detail__Community_failed;
+            }
+            default -> throw new IllegalStateException("Unexpected value: " + exportType);
+        };
+
+
+        // Now, create the final result
         String resultLine;
-        if (successCount == totalCount) {
-            int export_string_id = R.plurals.exporting_success;
-            resultLine = mContext.getResources().getQuantityString(
-                    export_string_id,
-                    totalCount,
-                    action,
-                    type,
-                    successCount,
-                    totalCount);
+
+        if (!succeededJobs.isEmpty() && !failedJobs.isEmpty()) {
+            // succeeded and failed jobs
+            String successPart = mContext.getResources().getQuantityString(pluralsSuccessID, succeededJobs.size(), formattedSucceededJobs);
+            String failedPart = mContext.getResources().getQuantityString(pluralsFailedID, failedJobs.size(), formattedFailedJobs);
+            resultLine = successPart + "\n" + failedPart; // concatenate them by a newline.
+
+        } else if (!succeededJobs.isEmpty()) {
+            // only succeeded jobs
+            resultLine = mContext.getResources().getQuantityString(pluralsSuccessID, succeededJobs.size(), formattedSucceededJobs);
+
+        } else if (!failedJobs.isEmpty()) {
+            // only failed jobs
+            resultLine = mContext.getResources().getQuantityString(pluralsFailedID, failedJobs.size(), formattedFailedJobs);
+
         } else {
-            int export_string_id = R.plurals.exporting_failed;
-            resultLine = mContext.getResources().getQuantityString(
-                    export_string_id,
-                    totalCount,
-                    action,
-                    type,
-                    failedCount,
-                    totalCount);
+            // neither succeeded nor failed jobs.  Should never ever happen.
+            resultLine = mContext.getString(R.string.export_notification__detail__no_results);
         }
 
         return resultLine;

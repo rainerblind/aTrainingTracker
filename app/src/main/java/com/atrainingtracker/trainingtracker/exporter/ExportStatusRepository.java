@@ -109,6 +109,38 @@ public class ExportStatusRepository {
         return result;
     }
 
+    public synchronized EnumMap<FileFormat, ExportStatus> getExportStatusMap(String fileBaseName, ExportType exportType) {
+        if (DEBUG) Log.d(TAG, "getExportStatus " + fileBaseName + " " + exportType);
+
+        SQLiteDatabase db = mDbHelper.getWritableDatabase();
+        if (db == null) {
+            Log.e(TAG, "Database is null, cannot get the export status for " + fileBaseName + " " + exportType + " will return null");
+            return null;
+        }
+
+        EnumMap<FileFormat, ExportStatus> result = new EnumMap<>(FileFormat.class);
+        Cursor cursor;
+
+        for (FileFormat fileFormat : FileFormat.values()) {
+            cursor = db.query(ExportStatusDbHelper.TABLE,
+                    new String[]{ExportStatusDbHelper.EXPORT_STATUS},
+                    WorkoutSummaries.FILE_BASE_NAME + "=? AND " + ExportStatusDbHelper.TYPE + "=? AND " + ExportStatusDbHelper.FORMAT + "=?",
+                    new String[]{fileBaseName, exportType.name(), fileFormat.name()},
+                    null,
+                    null,
+                    null);
+            if (cursor.getCount() > 0) {
+                cursor.moveToFirst();
+                result.put(fileFormat, ExportStatus.valueOf(cursor.getString(cursor.getColumnIndex(ExportStatusDbHelper.EXPORT_STATUS))));
+            }
+            cursor.close();
+        }
+
+        if (DEBUG) Log.d(TAG, "getExportStatus finished");
+
+        return result;
+    }
+
 
     public synchronized ExportStatus getExportStatus(@NonNull ExportInfo exportInfo) {
         if (DEBUG) Log.d(TAG, "getExportStatus");
