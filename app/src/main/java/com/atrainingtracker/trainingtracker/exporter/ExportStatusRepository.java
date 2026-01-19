@@ -45,6 +45,25 @@ public class ExportStatusRepository {
     }
 
 
+    /***********************************************************************************************
+     * Updates the status of all 'TRACKING' exports for a given workout to 'WAITING'.
+     * This is the most efficient way to perform this batch update.
+     *
+     * @param fileBaseName The unique identifier for the finished workout.
+     * @return The number of rows affected.
+     */
+    public int workoutFinished(String fileBaseName) {
+        SQLiteDatabase db = mDbHelper.getWritableDatabase();
+
+        ContentValues values = new ContentValues();
+        values.put(ExportStatusDbHelper.EXPORT_STATUS, ExportStatus.TRACKING_FINISHED.name());
+
+        String whereClause = WorkoutSummaries.FILE_BASE_NAME + " = ? AND " + ExportStatusDbHelper.EXPORT_STATUS + " = ?";
+        String[] whereArgs = { fileBaseName, ExportStatus.TRACKING.name() };
+
+        return db.update(ExportStatusDbHelper.TABLE, values, whereClause, whereArgs);
+    }
+
     public synchronized void updateExportStatus(ContentValues contentValues, String fileBaseName, ExportType exportType, FileFormat fileFormat) {
         SQLiteDatabase db = mDbHelper.getWritableDatabase();
         if (db == null) {

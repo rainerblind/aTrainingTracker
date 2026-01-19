@@ -43,6 +43,7 @@ import com.atrainingtracker.trainingtracker.exporter.ExportStatusRepository.Expo
 import org.json.JSONException;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class ExportManager {
@@ -99,24 +100,52 @@ public class ExportManager {
     }
 
     /** Method to inform the ExportManager that a new workout has been started.
+     * It initializes all possible export options to UNWANTED and only sets the
+     * relevant ones to TRACKING.
      *
-     * @param fileBaseName
+     * @param fileBaseName The unique identifier for the new workout.
      */
     public synchronized void newWorkout(String fileBaseName) {
         if (DEBUG) Log.d(TAG, "newWorkout: " + fileBaseName);
 
-        ContentValues exportProgressValues = new ContentValues();
+        // initialize all with UNWANTED
+        ContentValues values = new ContentValues();
         for (FileFormat fileFormat : FileFormat.values()) {
             for (ExportType exportType : ExportType.values()) {
-                exportProgressValues.clear();
+                values.clear();
+                values.put(WorkoutSummaries.FILE_BASE_NAME, fileBaseName);
+                values.put(ExportStatusDbHelper.FORMAT, fileFormat.name());
+                values.put(ExportStatusDbHelper.TYPE, exportType.name());
+                values.put(ExportStatusDbHelper.EXPORT_STATUS, ExportStatus.UNWANTED.name());
 
-                exportProgressValues.put(WorkoutSummaries.FILE_BASE_NAME, fileBaseName);
-                exportProgressValues.put(ExportStatusDbHelper.FORMAT, fileFormat.name());
-                exportProgressValues.put(ExportStatusDbHelper.TYPE, exportType.name());
-                exportProgressValues.put(ExportStatusDbHelper.EXPORT_STATUS, ExportStatus.TRACKING.name());
-                // exportProgressValues.put(ExportStatusDbHelper.ANSWER, "");
+                mRepository.addExportStatus(values);
+            }
+        }
 
-                mRepository.addExportStatus(exportProgressValues);
+        // create a shortcut ContentValue for TRACKING
+        ContentValues TRACKING = new ContentValues();
+        TRACKING.put(ExportStatusDbHelper.EXPORT_STATUS, ExportStatus.TRACKING.name());
+
+        // 3. now, set all relevant to TRACKING
+
+        for (FileFormat fileFormat : ExportType.FILE.getExportToFileFormats()) {
+            if (TrainingApplication.exportToFile(fileFormat) || TrainingApplication.exportViaEmail(fileFormat)) {
+                mRepository.updateExportStatus(TRACKING, fileBaseName, ExportType.FILE, fileFormat);
+            }
+        }
+
+        if (TrainingApplication.uploadToDropbox()) {
+            for (FileFormat fileFormat : ExportType.DROPBOX.getExportToFileFormats()) {
+                // Ein Upload zu Dropbox macht nur Sinn, wenn das Dateiformat prinzipiell auch generiert wird.
+                if (TrainingApplication.exportToFile(fileFormat)) {
+                    mRepository.updateExportStatus(TRACKING, fileBaseName, ExportType.DROPBOX, fileFormat);
+                }
+            }
+        }
+
+        for (FileFormat fileFormat : ExportType.COMMUNITY.getExportToFileFormats()) {
+            if (TrainingApplication.uploadToCommunity(fileFormat)) {
+                mRepository.updateExportStatus(TRACKING, fileBaseName, ExportType.COMMUNITY, fileFormat);
             }
         }
 
@@ -125,48 +154,18 @@ public class ExportManager {
 
 
     /** Method to inform the ExportManager that a workout has been finished.
-     * Note that this does not trigger exports and uploads.
+     * This method changes the status of all currently 'TRACKING' exports to 'TRACKING_FINISHED'
+     * by calling the corresponding method in the repository.
      *
-     * @param fileBaseName
+     * @param fileBaseName The unique identifier for the finished workout.
      */
     public synchronized void workoutFinished(String fileBaseName) {
         if (DEBUG) Log.d(TAG, "workoutFinished: " + fileBaseName);
 
-        // two 'constants' for waiting and unwanted
-        ContentValues WAITING = new ContentValues();
-        WAITING.put(ExportStatusDbHelper.EXPORT_STATUS, ExportStatus.WAITING.name());
-        ContentValues UNWANTED = new ContentValues();
-        UNWANTED.put(ExportStatusDbHelper.EXPORT_STATUS, ExportStatus.UNWANTED.name());
+        // simply delegate to the repository.
+        int updatedRows = mRepository.workoutFinished(fileBaseName);
 
-
-        // FILE
-        for (FileFormat fileFormat : ExportType.FILE.getExportToFileFormats()) {
-            if (TrainingApplication.exportToFile(fileFormat) || TrainingApplication.exportViaEmail(fileFormat)) {
-                mRepository.updateExportStatus(WAITING, fileBaseName, ExportType.FILE, fileFormat);
-            } else {
-                mRepository.updateExportStatus(UNWANTED, fileBaseName, ExportType.FILE, fileFormat);
-            }
-        }
-
-        // Dropbox
-        if (TrainingApplication.uploadToDropbox()) {
-            for (FileFormat fileFormat : ExportType.DROPBOX.getExportToFileFormats()) {
-                if (TrainingApplication.exportToFile(fileFormat)) {
-                    mRepository.updateExportStatus(WAITING, fileBaseName, ExportType.DROPBOX, fileFormat);
-                } else {
-                    mRepository.updateExportStatus(UNWANTED, fileBaseName, ExportType.DROPBOX, fileFormat);
-                }
-            }
-        }
-
-        // communities
-        for (FileFormat fileFormat : ExportType.COMMUNITY.getExportToFileFormats()) {
-            if (TrainingApplication.uploadToCommunity(fileFormat)) {
-                mRepository.updateExportStatus(WAITING, fileBaseName, ExportType.COMMUNITY, fileFormat);
-            } else {
-                mRepository.updateExportStatus(UNWANTED, fileBaseName, ExportType.COMMUNITY, fileFormat);
-            }
-        }
+        if (DEBUG) Log.d(TAG, "workoutFinished: Updated " + updatedRows + " rows to WAITING status.");
 
         broadcastExportStatusChanged(mContext);
     }
@@ -238,7 +237,7 @@ public class ExportManager {
             OneTimeWorkRequest fileCreationWork = createWorkRequest(fileExportInfo);
 
             // update the export status
-            updateStatus(fileExportInfo, ExportStatus.PROCESSING, null);
+            updateStatus(fileExportInfo, ExportStatus.WAITING, null);
 
             // create a empty list for the upload requests
             List<OneTimeWorkRequest> uploadWorks = new ArrayList<>();
