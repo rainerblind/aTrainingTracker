@@ -819,9 +819,10 @@
 
 <!-- 2026 -->
     <!-- StringUtils -->
-    <string name="list_connector__and"> und </string>
-    <string name="list_connector__and_with_comma"> und </string>
-    <string name="list_connector__comma">, </string>
+    <!-- note that \u0020 is just a space -->
+    <string name="list_connector__and">\u0020und\u0020</string>
+    <string name="list_connector__and_with_comma">\u0020und\u0020</string>
+    <string name="list_connector__comma">,\u0020</string>
 
 
     <!-- notifications -->
