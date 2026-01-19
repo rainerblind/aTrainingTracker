@@ -243,7 +243,7 @@ public class ExportManager {
             List<OneTimeWorkRequest> uploadWorks = new ArrayList<>();
 
             // Dropbox-Upload (when requested)
-            if (TrainingApplication.uploadToDropbox()) {
+            if (TrainingApplication.uploadToDropbox() && Arrays.asList(ExportType.DROPBOX.getExportToFileFormats()).contains(fileFormat)) {
                 ExportInfo dropboxExportInfo = new ExportInfo(fileBaseName, fileFormat, ExportType.DROPBOX);
                 uploadWorks.add(createWorkRequest(dropboxExportInfo));
                 updateStatus(dropboxExportInfo, ExportStatus.WAITING, null); // set state ot WAITING
