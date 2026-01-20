@@ -13,6 +13,7 @@ import android.view.View;
 import android.widget.RemoteViews;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
@@ -21,14 +22,10 @@ import com.atrainingtracker.R;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation;
 import com.atrainingtracker.trainingtracker.exporter.ExportInfo;
-import com.atrainingtracker.trainingtracker.exporter.ExportStatus;
-import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusRepository;
 import com.atrainingtracker.trainingtracker.exporter.ExportType;
 import com.atrainingtracker.trainingtracker.exporter.FileFormat;
-import com.atrainingtracker.trainingtracker.helpers.StringUtilsKt;
 
 
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -50,10 +47,13 @@ public class ExportNotificationManager {
     // workoutName -> ExportType -> FileFormat
     private final Map<String, Map<ExportType, Set<FileFormat>>> mActiveExports = new ConcurrentHashMap<>();
 
+    private final ExportStatusUIDataProvider mUiDataProvider;
+
+    // TODO: Stelle sicher, dass die `getInstance`-Methode thread-safe ist (z.B. mit `volatile` und double-checked locking)
     protected ExportNotificationManager(@NonNull Context context) {
         this.mContext = context.getApplicationContext();
         this.mNotificationManager = NotificationManagerCompat.from(mContext);
-
+        this.mUiDataProvider = new ExportStatusUIDataProvider(mContext);
         mPendingIntentStartWorkoutListActivity = createPendingIntentStartWorkoutListActivity();
     }
 
@@ -65,7 +65,7 @@ public class ExportNotificationManager {
     }
 
     /**********************************************************************************************/
-    /* public API: just one simple method to update the notification
+    /* public API: just one simple method to update the notification and one to get the active exports
     /**********************************************************************************************/
 
     public synchronized void updateNotification(ExportInfo exportInfo, Boolean isFinished) {
@@ -75,6 +75,11 @@ public class ExportNotificationManager {
         updateExportStatus(exportInfo, isFinished);
         showNotification(exportInfo);
     }
+
+    public synchronized Map<String, Map<ExportType, Set<FileFormat>>> getActiveExports() {
+        return mActiveExports;
+    }
+
 
 
     /***********************************************************************************************
@@ -158,139 +163,34 @@ public class ExportNotificationManager {
      **********************************************************************************************/
 
     private RemoteViews createGroupViewForExportType(String fileBaseName, ExportType exportType) {
+        // get the data form the UI provider
+        ExportStatusGroupData data = mUiDataProvider.createGroupData(fileBaseName, exportType);
 
-        Set<FileFormat> runningJobs = getRunningJobs(fileBaseName, exportType);
-        Map<FileFormat, ExportStatus> finishedJobs = getFinishedJobs(fileBaseName, exportType);
-
-        List<String> succeededJobsList = getSucceededJobsList(finishedJobs);
-        List<String> failedJobsList = getFailedJobsList(finishedJobs);
-
-        // when there are no running or finished jobs, return null
-        if (runningJobs.isEmpty() && succeededJobsList.isEmpty() && failedJobsList.isEmpty()) {
+        // when there is no data, we simply return null
+        if (!data.getHasContent()) {
             return null;
         }
 
-        // load the layout for the group
+        // create the RemoteViews and fill it with the data
         RemoteViews groupView = new RemoteViews(mContext.getPackageName(), R.layout.export_notification__group);
-        groupView.setTextViewText(R.id.group_title, mContext.getString(exportType.getUiId()));
+        groupView.setTextViewText(R.id.group_title, data.getGroupTitle());
 
-        // calculate the plurals depending on the exportType
-        int pluralsRunningId;
-        int pluralsSuccessID;
-        int pluralsFailedID = switch (exportType) {
-            case FILE -> {
-                pluralsRunningId = R.plurals.export_notification__detail__File_ongoing;
-                pluralsSuccessID = R.plurals.export_notification__detail__File_success;
-                yield R.plurals.export_notification__detail__File_failed;
-            }
-            case DROPBOX -> {
-                pluralsRunningId = R.plurals.export_notification__detail__Dropbox_ongoing;
-                pluralsSuccessID = R.plurals.export_notification__detail__Dropbox_success;
-                yield R.plurals.export_notification__detail__Dropbox_failed;
-            }
-            case COMMUNITY -> {
-                pluralsRunningId = R.plurals.export_notification__detail__Community_ongoing;
-                pluralsSuccessID = R.plurals.export_notification__detail__Community_success;
-                yield R.plurals.export_notification__detail__Community_failed;
-            }
-            default -> throw new IllegalStateException("Unexpected value: " + exportType);
-        };
-
-        // text for running jobs (or hide)
-        if (!runningJobs.isEmpty()) {
-            String line = getRunningLine(runningJobs, pluralsRunningId);
-            groupView.setTextViewText(R.id.line_running, line);
-            groupView.setViewVisibility(R.id.line_running, View.VISIBLE);
-        } else {
-            groupView.setViewVisibility(R.id.line_running, View.GONE);
-        }
-
-        // text for succeeded jobs (or hide)
-        if (!succeededJobsList.isEmpty()) {
-            String line = getResultLine(succeededJobsList, pluralsSuccessID);
-            groupView.setTextViewText(R.id.line_succeeded, line);
-            groupView.setViewVisibility(R.id.line_succeeded, View.VISIBLE);
-        } else {
-            groupView.setViewVisibility(R.id.line_succeeded, View.GONE);
-        }
-
-        // text for failed jobs (or hide)
-        if (!failedJobsList.isEmpty()) {
-            String line = getResultLine(failedJobsList, pluralsFailedID);
-            groupView.setTextViewText(R.id.line_failed, line);
-            groupView.setViewVisibility(R.id.line_failed, View.VISIBLE);
-        } else {
-            groupView.setViewVisibility(R.id.line_failed, View.GONE);
-        }
+        updateRemoteViewLine(groupView, R.id.line_running, data.getRunningLine());
+        updateRemoteViewLine(groupView, R.id.line_succeeded, data.getSucceededLine());
+        updateRemoteViewLine(groupView, R.id.line_failed, data.getFailedLine());
 
         return groupView;
     }
 
-
-    /***********************************************************************************************
-     * get the set of jobs
-     **********************************************************************************************/
-
-    private Set<FileFormat> getRunningJobs(String fileBaseName, ExportType exportType) {
-        Map<ExportType, Set<FileFormat>> exportTypeMap = mActiveExports.get(fileBaseName);
-        if (exportTypeMap != null) {
-            Set<FileFormat> runningJobs = exportTypeMap.get(exportType);
-            if (runningJobs != null) {
-
-                // return a copy of the set
-                return new HashSet<>(runningJobs);
-            }
+    // simple helper to keep the code clean.
+    private void updateRemoteViewLine(RemoteViews remoteViews, int viewId, @Nullable String text) {
+        if (text != null) {
+            remoteViews.setTextViewText(viewId, text);
+            remoteViews.setViewVisibility(viewId, View.VISIBLE);
+        } else {
+            remoteViews.setViewVisibility(viewId, View.GONE);
         }
-        // when nothing is found, an empty set is returned
-        return Collections.emptySet();
     }
-
-    private Map<FileFormat, ExportStatus> getFinishedJobs(String fileBaseName, ExportType exportType) {
-
-        ExportStatusRepository repository = ExportStatusRepository.getInstance(mContext);
-        return repository.getExportStatusMap(fileBaseName, exportType);
-    }
-
-    /***********************************************************************************************
-     * methods to create a String representation of the running / finished jobs
-     **********************************************************************************************/
-
-    // return String with nice representation of the running jobs
-    private String getRunningLine(@NonNull Set<FileFormat> runningJobs, int pluralsId) {
-        List<String> runningJobNames = runningJobs.stream()
-                .map(entry -> mContext.getString(entry.getUiNameId()))
-                .collect(Collectors.toList());
-        String formattedFileFormats = StringUtilsKt.formatListAsString(mContext, runningJobNames);
-        int runningCount = runningJobs.size();
-
-        return mContext.getResources().getQuantityString(
-                pluralsId,
-                runningCount,
-                formattedFileFormats
-        );
-    }
-
-    private String getResultLine(List<String> filteredJobList, int pluralResId) {
-        String formattedJobs = StringUtilsKt.formatListAsString(mContext, filteredJobList);
-        return mContext.getResources().getQuantityString(pluralResId, filteredJobList.size(), formattedJobs);
-    }
-
-    private List<String> getSucceededJobsList(Map<FileFormat, ExportStatus> finishedJobs) {
-        return finishedJobs.entrySet().stream()
-                .filter(entry -> entry.getValue() == ExportStatus.FINISHED_SUCCESS)
-                .map(entry -> mContext.getString(entry.getKey().getUiNameId()))
-                .collect(Collectors.toList());
-    }
-
-    private List<String> getFailedJobsList(Map<FileFormat, ExportStatus> finishedJobs) {
-        return finishedJobs.entrySet().stream()
-                .filter(entry -> entry.getValue() == ExportStatus.FINISHED_FAILED)
-                .map(entry -> mContext.getString(entry.getKey().getUiNameId()))
-                .collect(Collectors.toList());
-    }
-
-
-
 
     /**********************************************************************************************
     * short summary of the active Exports
