@@ -562,6 +562,7 @@
     <string name="uploading_to_community">Hochladen zu online community: %1$s (%2$d/%3$d)</string>
 
     <string name="tracking">Aufzeichnung</string>
+    <string name="tracking_finished">Gestoppt</string>
 
     <string name="waiting_to_export_to_file">Warte darauf %1$d/%2$d Dateien zu exportieren</string>
     <string name="waiting_to_upload_to_dropbox">Warte darauf %1$d/%2$d Dateien zur Dropbox hochzuladen</string>

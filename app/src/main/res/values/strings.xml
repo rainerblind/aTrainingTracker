@@ -645,6 +645,7 @@
     <string name="successfully_uploaded_to_community">successfully uploaded to %1$d/%2$d online communities</string>
 
     <string name="tracking">tracking</string>
+    <string name="tracking_finished">stopped</string>
     <string name="waiting_to_export_to_file">waiting to export %1$d/%2$d files to file</string>
     <string name="waiting_to_upload_to_dropbox">waiting to upload %1$d/%2$d files to Dropbox</string>
     <string name="waiting_to_upload_to_community">waiting to upload %1$d/%2$d online communities</string>
