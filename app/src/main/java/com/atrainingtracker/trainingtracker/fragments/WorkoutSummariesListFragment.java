@@ -302,15 +302,7 @@ public class WorkoutSummariesListFragment extends ListFragment {
     private void setStatusInfo(ViewHolder viewHolder, Context context, String fileBaseName) {
         if (DEBUG) Log.d(TAG, "setStatusInfo for: " + fileBaseName);
 
-        // Hide the old, simple status views as we are replacing them.
-        viewHolder.ivFile.setVisibility(View.GONE);
-        viewHolder.tvFile.setVisibility(View.GONE);
-        viewHolder.ivDropbox.setVisibility(View.GONE);
-        viewHolder.tvDropbox.setVisibility(View.GONE);
-        viewHolder.ivCommunities.setVisibility(View.GONE);
-        viewHolder.tvCommunities.setVisibility(View.GONE);
-
-        // Create an instance of our new Kotlin ViewHolder and tell it to bind the data.
+        // Create an instance of the ExportStatusViewHolder and tell it to bind the data.
         // It will fetch the data using the provider and build the UI.
         ExportStatusViewHolder statusHolder = new ExportStatusViewHolder(
                 context,
@@ -377,12 +369,6 @@ public class WorkoutSummariesListFragment extends ListFragment {
             viewHolder.tvDistanceTypeAndDuration = row.findViewById(R.id.tv_worktout_summaries_distance_type_and_duration);
             viewHolder.mapView = row.findViewById(R.id.workout_summaries_mapView);
             viewHolder.llExportStatus = row.findViewById(R.id.ll_workout_summaries_export_status);
-            viewHolder.ivFile = row.findViewById(R.id.iv_workout_summaries_export_status_file);
-            viewHolder.tvFile = row.findViewById(R.id.tv_workout_summaries_export_status_file);
-            viewHolder.ivDropbox = row.findViewById(R.id.iv_workout_summaries_export_status_dropbox);
-            viewHolder.tvDropbox = row.findViewById(R.id.tv_workout_summaries_export_status_dropbox);
-            viewHolder.ivCommunities = row.findViewById(R.id.iv_workout_summaries_export_status_communities);
-            viewHolder.tvCommunities = row.findViewById(R.id.tv_workout_summaries_export_status_communities);
 
             viewHolder.initializeMapView();
 
@@ -459,12 +445,6 @@ public class WorkoutSummariesListFragment extends ListFragment {
 
         // MapView mapView;
         // GoogleMap map;
-        ImageView ivFile;
-        TextView tvFile;
-        ImageView ivDropbox;
-        TextView tvDropbox;
-        ImageView ivCommunities;
-        TextView tvCommunities;
 
         public ViewHolder(GoogleMap map, MapView mapView) {
             super(map, mapView);
