@@ -16,6 +16,7 @@ import com.atrainingtracker.trainingtracker.exporter.ui.ExportStatusUIDataProvid
  */
 class ExportStatusViewHolder(
     private val context: Context,
+    private val headerView: TextView,
     private val container: LinearLayout,
     private val fileBaseName: String
 ) {
@@ -46,7 +47,8 @@ class ExportStatusViewHolder(
             }
         }
 
-        // Only show the container if at least one group has content
+        // Only show the container and header if at least one group has content
+        headerView.isVisible = hasAnyContent
         container.isVisible = hasAnyContent
     }
 

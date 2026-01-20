@@ -306,6 +306,7 @@ public class WorkoutSummariesListFragment extends ListFragment {
         // It will fetch the data using the provider and build the UI.
         ExportStatusViewHolder statusHolder = new ExportStatusViewHolder(
                 context,
+                viewHolder.tvExportStatusHeader,
                 viewHolder.llExportStatus, // The container to add views to
                 fileBaseName
         );
@@ -368,7 +369,8 @@ public class WorkoutSummariesListFragment extends ListFragment {
             viewHolder.tvName = row.findViewById(R.id.tv_workout_summaries_name);
             viewHolder.tvDistanceTypeAndDuration = row.findViewById(R.id.tv_worktout_summaries_distance_type_and_duration);
             viewHolder.mapView = row.findViewById(R.id.workout_summaries_mapView);
-            viewHolder.llExportStatus = row.findViewById(R.id.ll_workout_summaries_export_status);
+            viewHolder.tvExportStatusHeader = row.findViewById(R.id.export_status_header);
+            viewHolder.llExportStatus = row.findViewById(R.id.export_status_container);
 
             viewHolder.initializeMapView();
 
@@ -441,6 +443,7 @@ public class WorkoutSummariesListFragment extends ListFragment {
         TextView tvDateAndTime;
         TextView tvName;
         TextView tvDistanceTypeAndDuration;
+        TextView tvExportStatusHeader;
         LinearLayout llExportStatus;
 
         // MapView mapView;

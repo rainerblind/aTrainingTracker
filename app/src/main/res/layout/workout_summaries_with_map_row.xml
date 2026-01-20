@@ -92,11 +92,22 @@
         map:mapType="none" />
 
 
-    <LinearLayout
-        android:id="@+id/ll_workout_summaries_export_status"
+    <TextView
+        android:id="@+id/export_status_header"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
-    </LinearLayout>
+        android:layout_marginTop="12dp"
+        android:text="@string/export_status__header_title"
+        android:textAppearance="@style/TextAppearance.AppCompat.Subhead"
+        android:visibility="gone"
+        tools:visibility="visible" />
+
+    <LinearLayout
+        android:id="@+id/export_status_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone"
+        tools:visibility="visible"/>
 
 </LinearLayout>

@@ -1054,8 +1054,8 @@
     <string name="export_notification__detail__no_results">❓ No results found.</string>
 
 
+    <string name="export_status__header_title">Export Status</string>
 
-    <!-- TODO remove the ACTION -> String from the code and use proper plurals instead. -->
 
 
 </resources>
