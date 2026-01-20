@@ -5,6 +5,7 @@ package com.atrainingtracker.trainingtracker.exporter.ui
  *
  * @param hasContent true when the group has some content
  * @param groupTitle the title of the group
+ * @param waitingLine formatted text for the waiting exports; Null when there are no waiting jobs.
  * @param runningLine formatted text for the running exports; Null when there are no running jobs.
  * @param succeededLine formatted text for the succeeded exports; Null when there are no succeeded jobs.
  * @param failedLine formatted text for the failed exports; NUll when there are no failed jobs.
@@ -14,6 +15,7 @@ package com.atrainingtracker.trainingtracker.exporter.ui
 data class ExportStatusGroupData(
     val hasContent: Boolean,
     val groupTitle: String? = null,
+    val waitingLine: String? = null,
     val runningLine: String? = null,
     val succeededLine: String? = null,
     val failedLine: String? = null
