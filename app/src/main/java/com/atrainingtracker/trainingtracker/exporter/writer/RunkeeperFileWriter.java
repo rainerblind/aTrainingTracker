@@ -16,7 +16,7 @@
  * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
-package com.atrainingtracker.trainingtracker.exporter;
+package com.atrainingtracker.trainingtracker.exporter.writer;
 
 import android.content.Context;
 import android.database.Cursor;
@@ -29,6 +29,7 @@ import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
+import com.atrainingtracker.trainingtracker.exporter.ExportInfo;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -40,7 +41,7 @@ import java.text.SimpleDateFormat;
 import java.util.Locale;
 
 
-public class RunkeeperFileExporter extends BaseFileExporter {
+public class RunkeeperFileWriter extends BaseFileWriter {
     protected static final boolean WRITE_ONLY_ON_NEW_GEO_DATA = true;
     private static final String TAG = "RunkeeperFileExporter";
     private static final boolean DEBUG = true;
@@ -49,7 +50,7 @@ public class RunkeeperFileExporter extends BaseFileExporter {
     protected static final SimpleDateFormat msdfToRK = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss", Locale.US);
     // Sat, 1 Jan 2011 00:00:00
 
-    public RunkeeperFileExporter(@NonNull Context context) {
+    public RunkeeperFileWriter(@NonNull Context context) {
         super(context);
     }
 
@@ -89,7 +90,7 @@ public class RunkeeperFileExporter extends BaseFileExporter {
 
         getHeaderData(exportInfo);
 
-        BufferedWriter bufferedWriter = getBufferedWriter(exportInfo);
+        BufferedWriter bufferedWriter = getBufferedWriter(exportInfo.getShortPath());
 
         // if (!haveGeo) {
         // return new ExportResult(false, "No GPS Data");
@@ -138,8 +139,6 @@ public class RunkeeperFileExporter extends BaseFileExporter {
 
                     isFirst = false;
                 }
-
-                notifyProgress(2 * lines, count++);
             }
             bufferedWriter.write("\n  ],\n");
         }
@@ -194,8 +193,6 @@ public class RunkeeperFileExporter extends BaseFileExporter {
                         isFirst = false;
                     }
                 }
-
-                notifyProgress(2 * lines, lines + count++);
             }
 
             bufferedWriter.write("\n  ]\n");
@@ -208,7 +205,7 @@ public class RunkeeperFileExporter extends BaseFileExporter {
         cursor.close();
         databaseManager.closeDatabase(); // db.close();
 
-        return new ExportResult(true, getPositiveAnswer(exportInfo));
+        return new ExportResult(true, false, "successfully exported a Runkeeper file");
 
         // int dataPoints = (dataPointsHR > dataPointsPos) ? dataPointsHR : dataPointsPos;
         //
@@ -218,12 +215,6 @@ public class RunkeeperFileExporter extends BaseFileExporter {
         // else {
         //    return new ExportResult(false, "only "+ dataPoints + "data points");
         // }
-    }
-
-    @NonNull
-    @Override
-    protected Action getAction() {
-        return Action.EXPORT;
     }
 
 }

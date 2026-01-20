@@ -16,7 +16,7 @@
  * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
-package com.atrainingtracker.trainingtracker.exporter;
+package com.atrainingtracker.trainingtracker.exporter.writer;
 
 import android.content.Context;
 import android.database.Cursor;
@@ -32,6 +32,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper;
+import com.atrainingtracker.trainingtracker.exporter.ExportInfo;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -40,7 +41,7 @@ import java.text.SimpleDateFormat;
 import java.util.Locale;
 
 
-public class GPXFileExporter extends BaseFileExporter {
+public class GPXFileWriter extends BaseFileWriter {
     protected static final boolean WRITE_ONLY_ON_NEW_GEO_DATA = true;
     private static final String TAG = "GPXFileExporter";
     private static final boolean DEBUG = false;
@@ -48,7 +49,7 @@ public class GPXFileExporter extends BaseFileExporter {
     protected static final SimpleDateFormat msdfFromDb = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
     protected static final SimpleDateFormat msdfToXML = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US);
 
-    public GPXFileExporter(@NonNull Context context) {
+    public GPXFileWriter(@NonNull Context context) {
         super(context);
     }
 
@@ -66,7 +67,7 @@ public class GPXFileExporter extends BaseFileExporter {
 
         getHeaderData(exportInfo);
 
-        BufferedWriter bufferedWriter = getBufferedWriter(exportInfo);
+        BufferedWriter bufferedWriter = getBufferedWriter(exportInfo.getShortPath());
 
 
         // write the header data to the file
@@ -168,8 +169,6 @@ public class GPXFileExporter extends BaseFileExporter {
                     bufferedWriter.write("   </trkpt>\n");
                 }
             }
-
-            notifyProgress(lines, count++);
         }
 
         // now the tail
@@ -183,13 +182,7 @@ public class GPXFileExporter extends BaseFileExporter {
         cursor.close();
         databaseManager.closeDatabase(); // db.close();
 
-        return new ExportResult(true, getPositiveAnswer(exportInfo));
-    }
-
-    @NonNull
-    @Override
-    protected Action getAction() {
-        return Action.EXPORT;
+        return new ExportResult(true, false, "Successfully exported to GPX File");
     }
 
 }

@@ -30,11 +30,11 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 
 import com.atrainingtracker.R;
-import com.atrainingtracker.trainingtracker.exporter.ExportManager;
 import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
+import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusRepository;
 
 
 public class DeleteWorkoutThread extends Thread {
@@ -94,8 +94,8 @@ public class DeleteWorkoutThread extends Thread {
             WorkoutSamplesDatabaseManager.deleteWorkout(baseFileName);
 
             // delete from ExportManager
-            if (DEBUG) Log.d(TAG, "deleting from ExportManager");
-            (new ExportManager(context, TAG)).deleteWorkout(baseFileName);
+            if (DEBUG) Log.d(TAG, "deleting from ExportStatusRepository");
+            ExportStatusRepository.getInstance(context).deleteWorkout(baseFileName);
 
             // delete from Laps
             if (DEBUG) Log.d(TAG, "deleting from Laps");

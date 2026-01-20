@@ -456,9 +456,8 @@ public class TrackerService extends Service {
         //    Log.e(TAG, "Error while writing" + e.toString());
         //}
 
-        ExportManager exportManager = new ExportManager(this, TAG);
+        ExportManager exportManager = new ExportManager(this);
         exportManager.newWorkout(mBaseFileName);
-        exportManager.onFinished(TAG);
 
         return workoutId;
     }
@@ -540,9 +539,8 @@ public class TrackerService extends Service {
                 null);
         databaseManager.closeDatabase(); //    summariesDb.close();
 
-        ExportManager exportManager = new ExportManager(this, TAG);
+        ExportManager exportManager = new ExportManager(this);
         exportManager.workoutFinished(mBaseFileName);
-        exportManager.onFinished(TAG);
 
         sendBroadcast(new Intent(TRACKING_FINISHED_INTENT)
                 .setPackage(getPackageName()));
