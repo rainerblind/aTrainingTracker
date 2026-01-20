@@ -385,6 +385,9 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
             } else if (exportStatusCounter.get(ExportStatus.TRACKING) > 0) {
                 ivStatus.setImageResource(R.drawable.ic_play_circle_outline_black_24dp);
                 text = context.getString(R.string.tracking);
+            } else if (exportStatusCounter.get(ExportStatus.TRACKING_FINISHED) > 0) {
+                ivStatus.setImageResource(R.drawable.ic_stop_circle_outline_black_24dp);
+                text = context.getString(R.string.tracking_finished);
             } else if (exportStatusCounter.get(ExportStatus.WAITING) > 0) {
                 ivStatus.setImageResource(R.drawable.ic_hourglass_empty_black_24dp);
                 int waiting = exportStatusCounter.get(ExportStatus.WAITING);
