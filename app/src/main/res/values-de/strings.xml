@@ -942,4 +942,9 @@
     
     <string name="export_notification__detail__no_results">❓ Keine Ergebnisse gefunden.</string>
 
+
+    <string name="export_status__header_title">Export Status</string>
+
+
+
 </resources>
