@@ -11,7 +11,6 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
-import com.atrainingtracker.trainingtracker.exporter.ExportGroupStats;
 import com.atrainingtracker.trainingtracker.exporter.ExportInfo;
 import com.atrainingtracker.trainingtracker.exporter.ExportStatus;
 import com.atrainingtracker.trainingtracker.exporter.ExportType;
@@ -225,46 +224,6 @@ public class ExportStatusRepository {
         cursor.close();
 
         return exportAnswer;
-    }
-
-    public synchronized ExportGroupStats getStatsForExportGroup(String fileBaseName, ExportType exportType) {
-        if (DEBUG) Log.d(TAG, "getStats");
-
-        SQLiteDatabase db = mDbHelper.getWritableDatabase();
-        if (db == null) {
-            Log.e(TAG, "Database is null, will return null");
-            return null;
-        }
-
-        int successCount = 0;
-        int failureCount = 0;
-
-        Cursor cursor = db.query(ExportStatusDbHelper.TABLE,
-                new String[]{ANSWER},
-                WorkoutSummaries.FILE_BASE_NAME + "=? AND " + TYPE + "=? AND " + EXPORT_STATUS + "=?",
-                new String[]{fileBaseName, exportType.name(), ExportStatus.FINISHED_SUCCESS.name()},
-                null,
-                null,
-                null);
-        if (cursor.getCount() > 0) {
-            cursor.moveToFirst();
-            successCount = cursor.getCount();
-        }
-
-        cursor = db.query(ExportStatusDbHelper.TABLE,
-                new String[]{ANSWER},
-                WorkoutSummaries.FILE_BASE_NAME + "=? AND " + TYPE + "=? AND " + EXPORT_STATUS + "=?",
-                new String[]{fileBaseName, exportType.name(), ExportStatus.FINISHED_FAILED.name()},
-                null,
-                null,
-                null);
-        if (cursor.getCount() > 0) {
-            cursor.moveToFirst();
-            failureCount = cursor.getCount();
-        }
-        cursor.close();
-
-        return new ExportGroupStats(successCount, failureCount);
     }
 
     public synchronized void deleteWorkout(String baseFileName) {
