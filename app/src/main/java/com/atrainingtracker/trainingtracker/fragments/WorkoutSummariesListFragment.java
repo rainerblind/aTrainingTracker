@@ -80,8 +80,8 @@ import java.util.EnumMap;
 
 // import android.view.View.OnClickListener;
 
-public class WorkoutSummariesWithMapListFragment extends ListFragment {
-    public static final String TAG = WorkoutSummariesWithMapListFragment.class.getSimpleName();
+public class WorkoutSummariesListFragment extends ListFragment {
+    public static final String TAG = WorkoutSummariesListFragment.class.getSimpleName();
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private final IntentFilter mExportStatusChangedFilter = new IntentFilter(ExportStatusChangedBroadcaster.EXPORT_STATUS_CHANGED_INTENT);
     private final IntentFilter mFinishedDeletingFilter = new IntentFilter(DeleteWorkoutThread.FINISHED_DELETING);
