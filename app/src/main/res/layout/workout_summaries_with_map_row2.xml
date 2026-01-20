@@ -24,53 +24,56 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
-        <!-- Workout Title moved to the top of the card -->
+        <!-- MapView is the background for the top part of the card -->
+        <com.google.android.gms.maps.MapView
+            android:id="@+id/workout_summaries_mapView"
+            android:layout_width="0dp"
+            android:layout_height="200dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            map:liteMode="true"
+            map:mapType="normal" />
+
+        <!-- Scrim/Gradient overlay at the bottom of the map for text readability -->
+        <View
+            android:id="@+id/scrim"
+            android:layout_width="0dp"
+            android:layout_height="100dp"
+            android:background="@drawable/gradient_scrim"
+            app:layout_constraintTop_toTopOf="@id/workout_summaries_mapView"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <!-- Workout Title on top of the map/scrim -->
         <TextView
             android:id="@+id/tv_workout_summaries_name"
             style="@style/TextAppearance.MaterialComponents.Headline6"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
-            android:layout_marginTop="16dp"
             android:layout_marginEnd="16dp"
-            android:layout_marginBottom="12dp"
+            android:layout_marginBottom="4dp"
+            android:textColor="@android:color/white"
+            android:shadowColor="@android:color/black"
+            android:shadowDy="1"
+            android:shadowRadius="2"
+            app:layout_constraintTop_toTopOf="@id/workout_summaries_mapView"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
             tools:text="Schmellbachtal" />
 
-        <!-- MapView is now constrained below the title -->
-        <com.google.android.gms.maps.MapView
-            android:id="@+id/workout_summaries_mapView"
-            android:layout_width="0dp"
-            android:layout_height="180dp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tv_workout_summaries_name"
-            map:liteMode="true"
-            map:mapType="normal" />
-
-        <!-- Scrim/Gradient overlay to make text more readable -->
-        <View
-            android:id="@+id/scrim"
-            android:layout_width="0dp"
-            android:layout_height="80dp"
-            android:background="@drawable/gradient_scrim"
-            app:layout_constraintBottom_toBottomOf="@id/workout_summaries_mapView"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent" />
-
-        <!-- Date and Duration are now placed on top of the MapView -->
+        <!-- Date and Duration placed on the map/scrim -->
         <TextView
-            android:id="@+id/tv_worktout_summaries_distance_type_and_duration"
+            android:id="@+id/tv_workout_summaries_distance_type_and_duration"
             style="@style/TextAppearance.MaterialComponents.Body2"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
             android:layout_marginEnd="16dp"
             android:layout_marginBottom="12dp"
-            android:textColor="@android:color/white"
-            android:shadowColor="@android:color/black"
+            android:textColor="@android:color/black"
+            android:shadowColor="@android:color/white"
             android:shadowDy="1"
             android:shadowRadius="2"
             app:layout_constraintBottom_toBottomOf="@id/workout_summaries_mapView"
@@ -84,16 +87,15 @@
             android:layout_height="wrap_content"
             android:layout_marginEnd="16dp"
             android:layout_marginBottom="12dp"
-            android:textColor="@android:color/white"
-            android:shadowColor="@android:color/black"
+            android:textColor="@android:color/black"
+            android:shadowColor="@android:color/white"
             android:shadowDy="1"
             android:shadowRadius="2"
             app:layout_constraintBottom_toBottomOf="@id/workout_summaries_mapView"
             app:layout_constraintEnd_toEndOf="parent"
             tools:text="1.9.2012 at 10:10" />
 
-
-        <!-- Separator Line -->
+        <!-- Separator Line - This is now optional but helps create a clean break -->
         <View
             android:id="@+id/separator"
             android:layout_width="0dp"
