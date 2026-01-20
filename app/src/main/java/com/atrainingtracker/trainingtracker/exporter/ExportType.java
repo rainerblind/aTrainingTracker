@@ -24,19 +24,17 @@ import com.atrainingtracker.R;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 
 public enum ExportType {
-    FILE(R.string.SD_card, FileFormat.values(), Action.WRITE),
-    DROPBOX(R.string.Dropbox, new FileFormat[]{FileFormat.CSV, FileFormat.GC, FileFormat.GPX, FileFormat.TCX}, Action.UPLOAD),
-    COMMUNITY(R.string.Community, new FileFormat[]{FileFormat.STRAVA, /* FileFormat.RUNKEEPER, FileFormat.TRAINING_PEAKS */}, Action.UPLOAD);
+    FILE(R.string.SD_card, FileFormat.values()),
+    DROPBOX(R.string.Dropbox, new FileFormat[]{FileFormat.CSV, FileFormat.GC, FileFormat.GPX, FileFormat.TCX}),
+    COMMUNITY(R.string.Community, new FileFormat[]{FileFormat.STRAVA, /* FileFormat.RUNKEEPER, FileFormat.TRAINING_PEAKS */});
 
     private final int uiId;
     private final FileFormat[] exportToFileFormats;
-    private final Action action;
 
 
-    ExportType(int uiId, FileFormat[] exportToFileFormats, Action action) {
+    ExportType(int uiId, FileFormat[] exportToFileFormats) {
         this.uiId = uiId;
         this.exportToFileFormats = exportToFileFormats;
-        this.action = action;
     }
 
     @NonNull
@@ -53,31 +51,4 @@ public enum ExportType {
         return exportToFileFormats;
     }
 
-    @Deprecated
-    public Action getAction() {
-        return action;
-    }
-
-    @Deprecated
-    public enum Action {
-
-        UPLOAD(R.string.uploading, R.string.uploaded),
-        WRITE(R.string.writing, R.string.wrote);
-
-        private final int mIngId;
-        private final int mPastId;
-
-        Action(int ingId, int pastId) {
-            mIngId = ingId;
-            mPastId = pastId;
-        }
-
-        public int getIngId() {
-            return mIngId;
-        }
-
-        public int getPastId() {
-            return mPastId;
-        }
-    }
 }
