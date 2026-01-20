@@ -62,8 +62,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceScreen;
 import androidx.appcompat.widget.Toolbar;
-import androidx.work.OneTimeWorkRequest;
-import androidx.work.WorkManager;
 
 import android.provider.Settings;
 import android.util.Log;
@@ -99,7 +97,7 @@ import com.atrainingtracker.trainingtracker.dialogs.ReallyDeleteWorkoutDialog;
 import com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialog;
 import com.atrainingtracker.trainingtracker.fragments.ExportStatusDialogFragment;
 import com.atrainingtracker.trainingtracker.fragments.StartAndTrackingFragmentTabbedContainer;
-import com.atrainingtracker.trainingtracker.fragments.WorkoutSummariesWithMapListFragment;
+import com.atrainingtracker.trainingtracker.fragments.WorkoutSummariesListFragment;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.MyLocationsFragment;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapTrackingFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.AltitudeCorrectionFragment;
@@ -632,8 +630,8 @@ public class MainActivityWithNavigation
 
             case R.id.drawer_workouts:
                 titleId = R.string.tab_workouts;
-                mFragment = new WorkoutSummariesWithMapListFragment();
-                tag = WorkoutSummariesWithMapListFragment.TAG;
+                mFragment = new WorkoutSummariesListFragment();
+                tag = WorkoutSummariesListFragment.TAG;
                 break;
 
             case R.id.drawer_pairing_ant:
