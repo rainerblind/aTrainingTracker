@@ -14,6 +14,16 @@
         android:layout_height="wrap_content"
         tools:text="Dropbox" />
 
+    <!-- waiting jobs -->
+    <TextView
+        android:id="@+id/line_waiting"
+        style="@style/TextAppearance.Compat.Notification.Line2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        tools:visibility="visible"
+        tools:text="⏳ waiting: TCX, GPX..." />
+
     <!-- running jobs -->
     <TextView
         android:id="@+id/line_running"
