@@ -16,7 +16,7 @@
  * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
-package com.atrainingtracker.trainingtracker.exporter;
+package com.atrainingtracker.trainingtracker.exporter.uploader;
 
 import android.content.Context;
 import android.util.Log;
@@ -25,9 +25,10 @@ import androidx.annotation.NonNull;
 
 import com.atrainingtracker.BuildConfig;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
+import com.atrainingtracker.trainingtracker.exporter.BaseExporter;
+import com.atrainingtracker.trainingtracker.exporter.ExportInfo;
 import com.dropbox.core.DbxException;
 import com.dropbox.core.DbxRequestConfig;
-import com.dropbox.core.android.Auth;
 import com.dropbox.core.v2.DbxClientV2;
 import com.dropbox.core.v2.files.WriteMode;
 
@@ -38,7 +39,7 @@ import java.io.InputStream;
 
 public class DropboxUploader extends BaseExporter {
     private static final String TAG = "DropboxUploader";
-    private static final boolean DEBUG = TrainingApplication.getDebug(false);
+    private static final boolean DEBUG = TrainingApplication.getDebug(true);
 
     public DropboxUploader(@NonNull Context context) {
         super(context);
@@ -50,35 +51,25 @@ public class DropboxUploader extends BaseExporter {
         String filename = exportInfo.getShortPath();
         File file = new File(getBaseDirFile(mContext), filename);
         if (!file.exists()) {
-            return new ExportResult(false, "Dropbox file does not exist: " + file);
+            return new ExportResult(false, false,"Dropbox file does not exist: " + file);
         }
 
-        InputStream inputStream = new FileInputStream(file);
-        try {
+        try (InputStream inputStream = new FileInputStream(file)) {
             DbxClientV2 dbxClientV2 = new DbxClientV2(new DbxRequestConfig(BuildConfig.DROPBOX_APP_KEY), TrainingApplication.readDropboxCredential());
             dbxClientV2.files().uploadBuilder("/" + filename)
                     .withMode(WriteMode.OVERWRITE)
                     .uploadAndFinish(inputStream);
         } catch (DbxException e) {
             Log.e(TAG, "DropboxException: " + e.getMessage(), e);
-            return new ExportResult(false, "DropboxException: " + e.getMessage());
+            return new ExportResult(false, false, "DropboxException: " + e.getMessage());
         } catch (IOException e) {
             Log.e(TAG, "IOException: " + e.getMessage(), e);
-            return new ExportResult(false, "IOException: " + e.getMessage());
-
-        } finally {
-            inputStream.close();
+            return new ExportResult(false, false, "IOException: " + e.getMessage());
         }
 
 
         if (DEBUG) Log.i(TAG, "successfully uploaded " + filename + " to Dropbox");
-        return new ExportResult(true, "successfully uploaded " + filename + " to Dropbox");
-    }
-
-    @NonNull
-    @Override
-    protected Action getAction() {
-        return Action.UPLOAD;
+        return new ExportResult(true, false, "successfully uploaded " + filename + " to Dropbox");
     }
 
 }

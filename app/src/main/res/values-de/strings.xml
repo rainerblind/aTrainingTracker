@@ -526,35 +526,44 @@
     <string name="equipment_type_shoe">Schuh</string>
 
     <!-- dialogs -->
-    <string name="SD_card_not_available">Entschuldigung, die SD Karte ist nicht verfügbar.</string>
+    <string name="SD_card_not_available">Entschuldigung, die SD Karte ist nicht verfügbar.</string>  <!-- TODO: umbenennen? -->
 
     <!-- actions -->
     <string name="uploading">hochladen</string>
     <string name="uploaded">hochgeladen</string>
-    <string name="exporting">schreiben</string>
-    <string name="exported">geschrieben</string>
+    <string name="writing">schreib</string>
+    <string name="wrote">geschrieben</string>
 
     <string name="something_strange_happened">Unbekannter Fehler</string>
-    <string name="exporting_to_file_not_wanted">Kein schreiben auf SD-Karte gewünscht</string>
+
+    <string name="exporting_to_file_not_wanted">Kein Dateiexport gewünscht</string>
     <string name="uploading_to_dropbox_not_wanted">Kein hochladen zu Dropbox gewünscht</string>
     <string name="uploading_to_community_not_wanted">Hochladen zu einer online community nicht gewünscht</string>
 
-    <string name="exporting_to_file_failed_for_one">Schreiben auf SD-Karte für 1/%1$d Datei gescheitert</string>
+
+
+
+
+
+    <string name="exporting_to_file_failed_for_one">Dateiexport für 1/%1$d Datei gescheitert</string>
     <string name="uploading_to_dropbox_failed_for_one">Hochladen zur Dropbox für 1/%1$d Datei gescheitert</string>
     <string name="uploading_to_community_failed_for_one">Hochladen zu online community bei 1/%1$d gescheitert</string>
     <!--  which one??? -->
-    <string name="exporting_to_file_failed_for_several">Schreiben auf SD-Karte für %1$d/%2$d Dateien gescheitert</string>
+    <string name="exporting_to_file_failed_for_several">Dateiexport für %1$d/%2$d Dateien gescheitert</string>
     <string name="uploading_to_dropbox_failed_for_several">Hochladen zur Dropbox für %1$d/%2$d Dateien gescheitert</string>
     <string name="uploading_to_community_failed_for_several">Hochladen zu online communities bei %1$d/%2$d gescheitert</string>
     <!--  which one??? -->
-    <string name="successfully_exported_to_file">Erfolgreich %1$d/%2$d Dateien auf die SD-Karte geschrieben</string>
+    <string name="successfully_exported_to_file">Erfolgreich %1$d/%2$d Dateien exportiert</string>
     <string name="successfully_uploaded_to_dropbox">Erfolgreich %1$d/%2$d Dateien zur Dropbox hochgeladen</string>
     <string name="successfully_uploaded_to_community">Erfolgreich zu %1$d/%2$d online communities hochgeladen</string>
-    <string name="exporting_to_file">Schreibe auf SD-Karte: %1$s (%2$d/%3$d)</string>
+
+    <string name="exporting_to_file">Exportiere Datei: %1$s (%2$d/%3$d)</string>
     <string name="uploading_to_dropbox">Hochladen zur Dropbox: %1$s (%2$d/%3$d)</string>
     <string name="uploading_to_community">Hochladen zu online community: %1$s (%2$d/%3$d)</string>
+
     <string name="tracking">Aufzeichnung</string>
-    <string name="waiting_to_export_to_file">Warte darauf %1$d/%2$d Dateien auf die SD-Karte zu schreiben</string>
+
+    <string name="waiting_to_export_to_file">Warte darauf %1$d/%2$d Dateien zu exportieren</string>
     <string name="waiting_to_upload_to_dropbox">Warte darauf %1$d/%2$d Dateien zur Dropbox hochzuladen</string>
     <string name="waiting_to_upload_to_community">Warte darauf bei %1$d/%2$d online communities hochzuladen</string>
 
@@ -806,4 +815,104 @@
     <string name="label_min">Min</string>
     <string name="label_max">Max</string>
     <string name="prefEmailExport">e-Mail</string>
+
+
+<!-- 2026 -->
+    <!-- StringUtils -->
+    <!-- note that \u0020 is just a space -->
+    <string name="list_connector__and">\u0020und\u0020</string>
+    <string name="list_connector__and_with_comma">\u0020und\u0020</string>
+    <string name="list_connector__comma">,\u0020</string>
+
+
+    <!-- notifications -->
+    <!-- notifications while exporting -->
+    <string name="export_notification__title">Exportiere %1$s</string>   <!-- Exportiere 2025-01-10 -->
+    <string name="export_notification__summary__started">Export gestartet.</string>
+    <string name="export_notification__summary__in_progress_to">Exportiere nach %1$s.</string>
+    <string name="export_notification__summary__finished">Export abgeschlossen.</string>
+
+    <!-- details -->
+
+    <!-- ongoing -->
+
+    <!-- writing to file ongoing
+        (0: #ongoing for quantity)
+        1: string representing the ongoing file formats -->
+    <plurals name="export_notification__detail__File_ongoing">
+        <item quantity="one">💾 Schreibe die %1$s Datei.</item>     <!-- Writing the TCX file. -->
+        <item quantity="other">💾 Schreibe die %1$s Dateien.</item>  <!-- Writing the TCX and CSV files. -->
+    </plurals>
+
+    <!-- uploading to Dropbox ongoing
+        (0: #ongoing for quantity)
+        1: string representing the ongoing file formats -->
+    <plurals name="export_notification__detail__Dropbox_ongoing">
+        <item quantity="one">📤 Lade die %1$s Datei zur Dropbox hoch.</item>     <!-- Uploading the TCX file to Dropbox. -->
+        <item quantity="other">📤 Lade die %1$s Dateien zur Dropbox hoch.</item>  <!-- Uploading the TCX and CSV files to Dropbox. -->
+    </plurals>
+
+    <!-- uploading to Cummunity ongoing
+        (0: #ongoing for quantity)
+        1: string representing the ongoing file formats -->
+    <plurals name="export_notification__detail__Community_ongoing">
+        <item quantity="one">📤 Lade die Einheit bei %1$s hoch.</item>    <!-- Uploading to Strava. -->
+        <item quantity="other">📤 Lade die Einheit bei %1$s hoch.</item>  <!-- Uploading to Strava and Runkeeper. -->
+    </plurals>
+
+    <!-- success -->
+
+    <!-- writing to file success
+        (0: #successes for quantity)
+        1: string representing the succeeded file formats -->
+    <plurals name="export_notification__detail__File_success">
+        <item quantity="one">✅ Die %1$s Datei wurde geschrieben.</item>     <!-- Successfully wrote the TCX file. -->
+        <item quantity="other">✅ Die %1$s Dateien wurden geschrieben.</item>  <!-- Successfully wrote the TCX and CSV files. -->
+    </plurals>
+
+    <!-- uploading to Dropbox success
+        (0: #successes for quantity)
+        1: string representing the succeeded file formats -->
+    <plurals name="export_notification__detail__Dropbox_success">
+        <item quantity="one">✅ Die %1$s Datei wurde zur Dropbox hochgeladen.</item>     <!-- Successfully uploaded the TCX file to Dropbox. -->
+        <item quantity="other">✅ Die %1$s Dateien wurden zur Dropbox hochgeladen.</item>  <!-- Successfully uploaded the TCX and CSV files to Dropbox. -->
+    </plurals>
+
+    <!-- uploading to Cummunity success
+        (0: #successes for quantity)
+        1: string representing the succeeded file formats -->
+    <plurals name="export_notification__detail__Community_success">
+        <item quantity="one">✅ Die Einheit wurde bei %1$s hochgeladen.</item>    <!-- Successfully uploaded to Strava. -->
+        <item quantity="other">✅ Die Einheit wurde bei %1$s hochgeladen.</item>  <!-- Successfully uploaded to Strava and Runkeeper. -->
+    </plurals>
+
+
+    <!-- failed -->
+
+    <!-- writing to file failed
+        (0: #fails for quantity
+        1: string representing the failed file formats-->
+    <plurals name="export_notification__detail__File_failed">
+        <item quantity="one">❌ Die %1$s Datei konnte nicht geschrieben werden.</item>    <!-- Writing the TCX file failed. -->
+        <item quantity="other">❌ Die %1$s Dateien konnten nicht geschrieben werden.</item> <!-- Writing the TCX and CSV files failed. -->
+    </plurals>
+
+    <!-- writing to Dropbox failed
+        (0: #fails for quantity)
+        1: string representing the failed file formats-->
+    <plurals name="export_notification__detail__Dropbox_failed">
+        <item quantity="one">❌ Die %1$s Datei konnte nicht zur Dropbox hochgeladen werden.</item>     <!-- Uploading the TCX file to Dropbox failed. -->
+        <item quantity="other">❌ Die %1$s Dateien konnten nicht zur Dropbox hochgeladen werden.</item>  <!-- Uploading the TCX and CSV files to Dropbox failed. -->
+    </plurals>
+
+    <!-- writing to Community failed
+        (0: #fails for quantity)
+        1: string representing the failed file formats-->
+    <plurals name="export_notification__detail__Community_failed">
+        <item quantity="one">❌ Die Einheit konnte nicht bei %1$s hochgeladen werden.</item>    <!-- Uploading to Strava failed. -->
+        <item quantity="other">❌ Die Einheit konnte nicht bei %1$s hochgeladen werden.</item>  <!-- Uploading the Strava and Runnkeeper failed. -->
+    </plurals>
+    
+    <string name="export_notification__detail__no_results">❓ Keine Ergebnisse gefunden.</string>
+
 </resources>

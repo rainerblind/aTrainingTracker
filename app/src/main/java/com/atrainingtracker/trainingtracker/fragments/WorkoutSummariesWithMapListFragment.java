@@ -54,6 +54,8 @@ import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.activities.WorkoutDetailsActivity;
 import com.atrainingtracker.trainingtracker.exporter.ExportManager;
 import com.atrainingtracker.trainingtracker.exporter.ExportStatus;
+import com.atrainingtracker.trainingtracker.exporter.ExportStatusChangedBroadcaster;
+import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusRepository;
 import com.atrainingtracker.trainingtracker.exporter.ExportType;
 import com.atrainingtracker.trainingtracker.exporter.FileFormat;
 import com.atrainingtracker.trainingtracker.MyHelper;
@@ -81,7 +83,7 @@ import java.util.EnumMap;
 public class WorkoutSummariesWithMapListFragment extends ListFragment {
     public static final String TAG = WorkoutSummariesWithMapListFragment.class.getSimpleName();
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
-    private final IntentFilter mExportStatusChangedFilter = new IntentFilter(ExportManager.EXPORT_STATUS_CHANGED_INTENT);
+    private final IntentFilter mExportStatusChangedFilter = new IntentFilter(ExportStatusChangedBroadcaster.EXPORT_STATUS_CHANGED_INTENT);
     private final IntentFilter mFinishedDeletingFilter = new IntentFilter(DeleteWorkoutThread.FINISHED_DELETING);
     protected SQLiteDatabase mDb;
     protected ExportManager mExportManager;
@@ -178,7 +180,7 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
         isPlayServiceAvailable = checkPlayServices();
 
         mDb = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
-        mExportManager = new ExportManager(getActivity(), TAG);
+        mExportManager = new ExportManager(getActivity());
         updateCursor();
 
         ContextCompat.registerReceiver(getActivity(), mExportStatusChangedReceiver, mExportStatusChangedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
@@ -204,7 +206,6 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
         //    // mCursor.close();
         //    mCursor = null;
         //}
-        mExportManager.onFinished(TAG);
     }
 
     // TODO: rename
@@ -293,7 +294,8 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
     private void setStatusInfo(@NonNull ViewHolder viewHolder, @NonNull final Context context, final String fileBaseName) {
         if (DEBUG) Log.d(TAG, "setStatusInfo: " + fileBaseName);
 
-        EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>> exportStatuses = mExportManager.getExportStatus(fileBaseName);
+        ExportStatusRepository repository = ExportStatusRepository.getInstance(context);
+        EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>> exportStatuses = repository.getExportStatusMap(fileBaseName);
         if (DEBUG && exportStatuses == null) Log.d(TAG, "WTF: exportStatuses == null");
 
         for (ExportType exportType : ExportType.values()) {
@@ -345,19 +347,6 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
 
                 ivStatus.setImageResource(R.drawable.export_failed);
                 int failed = exportStatusCounter.get(ExportStatus.FINISHED_FAILED);
-                text = switch (exportType) {
-                    case FILE ->
-                            context.getString(R.string.exporting_to_file_failed_for_several, failed, wanted);
-                    case DROPBOX ->
-                            context.getString(R.string.uploading_to_dropbox_failed_for_several, failed, wanted);
-                    case COMMUNITY ->
-                            context.getString(R.string.uploading_to_community_failed_for_several, failed, wanted);
-                };
-
-            } else if (exportStatusCounter.get(ExportStatus.FINISHED_RETRY) > 0) {
-
-                ivStatus.setImageResource(R.drawable.export_error);
-                int failed = exportStatusCounter.get(ExportStatus.FINISHED_RETRY);
                 text = switch (exportType) {
                     case FILE ->
                             context.getString(R.string.exporting_to_file_failed_for_several, failed, wanted);

@@ -1,30 +1,23 @@
-/*
- * aTrainingTracker (ANT+ BTLE)
- * Copyright (C) 2011 - 2025
- * Rainer Blind <rainer.blind@gmail.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- */
-
-package com.atrainingtracker.trainingtracker.exporter
+package com.atrainingtracker.trainingtracker.exporter.uploader
 
 import android.content.Context
 import android.database.Cursor
 import android.util.Log
-import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
-import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
+import com.atrainingtracker.trainingtracker.exporter.BaseExporter
+import com.atrainingtracker.trainingtracker.exporter.ExportInfo
+import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
-import okhttp3.*
+import okhttp3.FormBody
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.asRequestBody
-import org.json.JSONException
 import org.json.JSONObject
 import java.io.File
 import java.io.IOException
@@ -68,11 +61,7 @@ class StravaUploader(context: Context) : BaseExporter(context) {
 
     private val client = OkHttpClient()
 
-    override fun getAction(): Action {
-        return Action.UPLOAD
-    }
 
-    @Throws(IOException::class, JSONException::class, InterruptedException::class)
     override fun doExport(exportInfo: ExportInfo): ExportResult {
         if (DEBUG) Log.d(TAG, "doExport: ${exportInfo.fileBaseName}")
 
@@ -83,7 +72,7 @@ class StravaUploader(context: Context) : BaseExporter(context) {
 
         // 1. Build Multipart Request
         val requestBody = MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
+            .setType(MultipartBody.Companion.FORM)
             .addFormDataPart(DATA_TYPE, TCX)
             .addFormDataPart(
                 FILE,
@@ -104,37 +93,35 @@ class StravaUploader(context: Context) : BaseExporter(context) {
                 Pair(response.body?.string() ?: "", response.code)
             }
         } catch (e: IOException) {
-            return ExportResult(false, "Network error: ${e.message}")
+            return ExportResult(false, true, "Network error: ${e.message}")  // a network error -> retry
         }
 
         if (DEBUG) Log.d(TAG, "uploadToStrava response: $responseBody")
 
         if (responseBody.isEmpty()) {
-            return ExportResult(false, "no response from Strava")
+            return ExportResult(false, false, "no response from Strava")  // probably something strange -> do not retry
         }
 
         // 3. Handle Errors
         if (responseCode != 201 && responseCode != 200) {
             if (DEBUG) Log.d(TAG, "bad response code: $responseCode")
 
-            return ExportResult(false, "API Error: $responseBody")
+            return ExportResult(false, false, "API Error: $responseBody")  // probably something strange -> do not retry
         }
 
         // 4. Handle Success (Initial Upload)
         if (DEBUG) Log.d(TAG, "Successfully uploaded to STRAVA, checking result")
-        notifyExportFinished(mContext.getString(R.string.strava_success_but_must_check))
 
         val uploadResponseJson = JSONObject(responseBody)
 
         if (uploadResponseJson.has(ERROR) && !uploadResponseJson.isNull(ERROR) && uploadResponseJson.getString(ERROR) != "null") {
-            return ExportResult(false, uploadResponseJson.getString(ERROR))
+            return ExportResult(false, false, uploadResponseJson.getString(ERROR))  // probably something strange -> do not retry
         } else if (uploadResponseJson.has(ID)) {
             val uploadId = uploadResponseJson.getString(ID)
             val stravaUploadDbHelper = StravaUploadDbHelper(mContext)
 
             stravaUploadDbHelper.updateUploadId(exportInfo.fileBaseName, uploadId)
             stravaUploadDbHelper.updateStatus(exportInfo.fileBaseName, "Uploaded to STRAVA, checking result")
-            notifyExportFinished(mContext.getString(R.string.strava_success_but_must_check))
 
             // 5. Poll for processing status
             var exportResult: ExportResult? = null
@@ -147,7 +134,7 @@ class StravaUploader(context: Context) : BaseExporter(context) {
 
                 val uploadStatusJsonAnswer = getStravaUploadStatus(uploadId)
                 if (uploadStatusJsonAnswer == null) {
-                    exportResult = ExportResult(false, "no correct response from Strava")
+                    exportResult = ExportResult(false, false,"no correct response from Strava") // do not retry
                     continue
                 }
 
@@ -156,7 +143,7 @@ class StravaUploader(context: Context) : BaseExporter(context) {
                     exportResult = checkAndUpdateDuplicate(exportInfo, uploadStatusJsonAnswer)
                     if (exportResult != null) break
 
-                    exportResult = ExportResult(false, uploadStatusJsonAnswer.getString(ERROR))
+                    exportResult = ExportResult(false, false, uploadStatusJsonAnswer.getString(ERROR)) // do not retry
                 } else if (uploadStatusJsonAnswer.has(STATUS)) {
                     val status = uploadStatusJsonAnswer.getString(STATUS)
                     if (DEBUG) Log.d(TAG, "strava response status: $status")
@@ -166,31 +153,30 @@ class StravaUploader(context: Context) : BaseExporter(context) {
 
                     when (status) {
                         STATUS_PROCESSING -> { /* continue waiting */ }
-                        STATUS_DELETED -> exportResult = ExportResult(false, STATUS_DELETED)
+                        STATUS_DELETED -> exportResult = ExportResult(false, false,STATUS_DELETED) // do not retry
                         STATUS_ERROR -> {
                             // maybe, the error is due to a duplicate.
                             exportResult = checkAndUpdateDuplicate(exportInfo, uploadStatusJsonAnswer)
                             if (exportResult != null) break
 
-                            exportResult = ExportResult(false, uploadStatusJsonAnswer.optString(ERROR, "Unknown Error"))
+                            exportResult = ExportResult(false, false, uploadStatusJsonAnswer.optString(ERROR, "Unknown Error")) // do not retry
                         }
                         STATUS_READY -> {
-                            cExportManager.exportingFinished(exportInfo, true, getPositiveAnswer(exportInfo))
                             val activityId = uploadStatusJsonAnswer.optString(ACTIVITY_ID)
                             if (!activityId.isNullOrEmpty()) {
                                 stravaUploadDbHelper.updateActivityId(exportInfo.fileBaseName, activityId)
                                 exportResult = doUpdate(exportInfo)
                             } else {
                                 if (DEBUG) Log.e(TAG, "Status ready but no activity_id?")
-                                exportResult = ExportResult(true, getPositiveAnswer(exportInfo))
+                                exportResult = ExportResult(true, false, "Status ready but no activity_id?")  // success -> no need for retry
                             }
                         }
                     }
                 }
             }
-            return exportResult ?: ExportResult(false, "Timeout waiting for Strava processing")
+            return exportResult ?: ExportResult(false, true,"Timeout waiting for Strava processing")  // timeout -> retry
         }
-        return ExportResult(false, "Unknown response format from Strava")
+        return ExportResult(false, false, "Unknown response format from Strava")  // do not retry
     }
 
     private fun checkAndUpdateDuplicate(exportInfo: ExportInfo, stravaJson: JSONObject): ExportResult? {
@@ -219,11 +205,6 @@ class StravaUploader(context: Context) : BaseExporter(context) {
                     activityId,
                     error
                 )
-                cExportManager.exportingFinished(
-                    exportInfo,
-                    true,
-                    getPositiveAnswer(exportInfo)
-                )
 
                 return doUpdate(exportInfo)
             }
@@ -232,38 +213,37 @@ class StravaUploader(context: Context) : BaseExporter(context) {
         return null
     }
 
-    @Throws(IOException::class, JSONException::class)
     protected fun doUpdate(exportInfo: ExportInfo): ExportResult {
         if (DEBUG) Log.d(TAG, "doUpdate: ${exportInfo.fileBaseName}")
 
         val activityId = StravaUploadDbHelper(mContext).getActivityId(exportInfo.fileBaseName)
         if (activityId.isNullOrEmpty()) {
-            return ExportResult(true, "${getPositiveAnswer(exportInfo)} (Update skipped: No Activity ID)")
+            return ExportResult(true, false, "Update skipped: No Activity ID")  // no retry
         }
 
         // Get Summary from DB
         val dbManager = WorkoutSummariesDatabaseManager.getInstance()
         val db = dbManager.openDatabase
         val cursor = db.query(
-            WorkoutSummaries.TABLE, null,
-            "${WorkoutSummaries.FILE_BASE_NAME}=?",
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE, null,
+            "${WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME}=?",
             arrayOf(exportInfo.fileBaseName), null, null, null
         )
 
         if (!cursor.moveToFirst()) {
             cursor.close()
             dbManager.closeDatabase()
-            return ExportResult(false, "Could not find workout summary")
+            return ExportResult(false, false, "Could not find workout summary")  // not retry
         }
 
-        val sportId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPORT_ID))
+        val sportId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.SPORT_ID))
         val sportName = SportTypeDatabaseManager.getStravaName(sportId)
-        val name = myGetStringFromCursor(cursor, WorkoutSummaries.WORKOUT_NAME)
-        val description = myGetStringFromCursor(cursor, WorkoutSummaries.DESCRIPTION)
-        val trainer = myGetBooleanFromCursor(cursor, WorkoutSummaries.TRAINER)
-        val commute = myGetBooleanFromCursor(cursor, WorkoutSummaries.COMMUTE)
+        val name = myGetStringFromCursor(cursor, WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_NAME)
+        val description = myGetStringFromCursor(cursor, WorkoutSummariesDatabaseManager.WorkoutSummaries.DESCRIPTION)
+        val trainer = myGetBooleanFromCursor(cursor, WorkoutSummariesDatabaseManager.WorkoutSummaries.TRAINER)
+        val commute = myGetBooleanFromCursor(cursor, WorkoutSummariesDatabaseManager.WorkoutSummaries.COMMUTE)
 
-        val eqIndex = cursor.getColumnIndex(WorkoutSummaries.EQUIPMENT_ID)
+        val eqIndex = cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.EQUIPMENT_ID)
         val gearId: String? = if (!cursor.isNull(eqIndex)) {
             EquipmentDbHelper(mContext).getStravaIdFromId(cursor.getInt(eqIndex))
         } else null
@@ -275,7 +255,7 @@ class StravaUploader(context: Context) : BaseExporter(context) {
         // First of all, we have to update the sport type.  Thereby, query Strava several times to make sure that the sport type is correct.
         // In the past, we had problems when updating the sport type and the gear in one step.
         updateStravaActivity(activityId, FormBody.Builder().add(TYPE, sportName).build())
-        var activityJSON: JSONObject? = getStravaActivity(activityId) ?: return ExportResult(false, "updating Strava failed (get)")
+        var activityJSON: JSONObject? = getStravaActivity(activityId) ?: return ExportResult(false, false,"updating Strava failed (get)")  // no retry
 
         var waitingTime = INITIAL_WAITING_TIME
         for (attempt in 1..MAX_REQUESTS) {
@@ -308,38 +288,13 @@ class StravaUploader(context: Context) : BaseExporter(context) {
 
         // update the activity
         activityJSON = updateStravaActivity(activityId, formBuilder.build())
-            ?: return ExportResult(false, "Update request failed")
+            ?: return ExportResult(false, false,"Update request failed") // no retry
 
         if (DEBUG) Log.i(TAG, "Update Result: $activityJSON")
 
-        return ExportResult(true, "successfully updated")
+        return ExportResult(true, false, "successfully updated")  // success -> no retry necessary
 
-        // Verify
-        // TODO: do we really need this?
-        val errors = StringBuilder("errors:")
-        var correctUpdate = true
-
-        fun check(key: String, expected: String?) {
-            if (expected != null) {
-                val actual = activityJSON?.optString(key) ?: ""
-                // Strava might return null for empty gear
-                if (expected.isEmpty() && actual == "null") return
-
-                if (expected != actual) {
-                    errors.append(" $key")
-                    correctUpdate = false
-                }
-            }
-        }
-
-        check(NAME, name)
-        check(GEAR_ID, gearId)
-        check(DESCRIPTION, description)
-        check(TRAINER, trainer.toString())
-        check(COMMUTE, commute.toString())
-
-        return if (correctUpdate) ExportResult(true, "successfully updated")
-        else ExportResult(false, errors.toString())
+        // TODO: Verify???
     }
 
     private fun updateStravaActivity(stravaActivityId: String, requestBody: RequestBody): JSONObject? {

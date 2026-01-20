@@ -33,8 +33,8 @@ import android.widget.TableRow;
 import android.widget.TextView;
 
 import com.atrainingtracker.R;
-import com.atrainingtracker.trainingtracker.exporter.ExportManager;
 import com.atrainingtracker.trainingtracker.exporter.ExportStatus;
+import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusRepository;
 import com.atrainingtracker.trainingtracker.exporter.ExportType;
 import com.atrainingtracker.trainingtracker.exporter.FileFormat;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
@@ -120,9 +120,9 @@ public class ExportStatusDialogFragment extends DialogFragment {
 
         String workoutName = WorkoutSummariesDatabaseManager.getBaseFileName(mWorkoutId);
 
-        ExportManager exportManager = new ExportManager(getContext(), TAG);
+        ExportStatusRepository repository = ExportStatusRepository.getInstance(getContext());
+        EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>> exportStatusTable = repository.getExportStatusMap(workoutName);
 
-        EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>> exportStatusTable = exportManager.getExportStatus(workoutName);
         // TODO: set style
         TableLayout tableLayout = new TableLayout(getContext());
         tableLayout.setPadding(padding_scaled, padding_scaled, padding_scaled, padding_scaled);
@@ -165,9 +165,6 @@ public class ExportStatusDialogFragment extends DialogFragment {
                         break;
                     case PROCESSING:
                         iv.setImageResource(R.drawable.ic_cached_black_24dp);
-                        break;
-                    case FINISHED_RETRY:
-                        iv.setImageResource(R.drawable.export_error);
                         break;
                     case FINISHED_SUCCESS:
                         iv.setImageResource(R.drawable.export_success);

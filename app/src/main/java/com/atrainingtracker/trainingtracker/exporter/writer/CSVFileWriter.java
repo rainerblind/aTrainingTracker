@@ -16,11 +16,12 @@
  * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
-package com.atrainingtracker.trainingtracker.exporter;
+package com.atrainingtracker.trainingtracker.exporter.writer;
 
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.os.Build;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -29,6 +30,8 @@ import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.sensor.SensorValueType;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager;
+import com.atrainingtracker.trainingtracker.exporter.BaseExporter;
+import com.atrainingtracker.trainingtracker.exporter.ExportInfo;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -41,12 +44,20 @@ import java.util.regex.Pattern;
 
 import au.com.bytecode.opencsv.CSVWriter;
 
-public class CSVFileExporter extends BaseExporter {
+public class CSVFileWriter extends BaseExporter {
     private static final String TAG = "CSVFileExporter";
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
-    public CSVFileExporter(@NonNull Context context) {
+    public CSVFileWriter(@NonNull Context context) {
         super(context);
+    }
+
+
+    @Override
+    protected void onFinished(@NonNull ExportInfo exportInfo) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            copyFileToDownloads(exportInfo);
+        }
     }
 
     @NonNull
@@ -106,7 +117,7 @@ public class CSVFileExporter extends BaseExporter {
 
         // now, we are ready to write to CSV
 
-        CSVWriter csvWrite = new CSVWriter(getWriter(mContext, exportInfo.getShortPath(), "application/gpx+xml"));
+        CSVWriter csvWrite = new CSVWriter(getBufferedWriter(exportInfo.getShortPath()));
 
         // first of all: header with column names
         csvWrite.writeNext(sortedNames.toArray(new String[sortedNames.size()]));
@@ -146,21 +157,12 @@ public class CSVFileExporter extends BaseExporter {
                 csvIndex++;
             }
             csvWrite.writeNext(columnString);
-
-            notifyProgress(lines, count++);
         }
         csvWrite.close();
         cursor.close();
         databaseManager.closeDatabase(); // db.close();
 
-
-        return new ExportResult(true, getPositiveAnswer(exportInfo));
-    }
-
-    @NonNull
-    @Override
-    protected Action getAction() {
-        return Action.EXPORT;
+        return new ExportResult(true, false, "Successfully exported to CSV");
     }
 
 }

@@ -43,7 +43,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 
-import com.atrainingtracker.trainingtracker.exporter.ExportWorkoutWorker;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
 import com.atrainingtracker.trainingtracker.segments.StarredSegmentsTabbedContainer;
 import com.google.android.material.navigation.NavigationView;
@@ -124,7 +123,6 @@ import com.atrainingtracker.trainingtracker.interfaces.ShowWorkoutDetailsInterfa
 import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface;
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager;
 import com.atrainingtracker.trainingtracker.segments.StarredSegmentsListFragment;
-import com.dropbox.core.android.Auth;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 
@@ -819,13 +817,8 @@ public class MainActivityWithNavigation
     public void exportWorkout(long id, @NonNull FileFormat fileFormat) {
         if (DEBUG) Log.i(TAG, "exportWorkout");
 
-        ExportManager exportManager = new ExportManager(this, TAG);
+        ExportManager exportManager = new ExportManager(this);
         exportManager.exportWorkoutTo(id, fileFormat);
-        exportManager.onFinished(TAG);
-
-        OneTimeWorkRequest workRequest = new OneTimeWorkRequest.Builder(ExportWorkoutWorker.class)
-                .build();
-        WorkManager.getInstance(this).enqueue(workRequest);
     }
 
     @Override
