@@ -368,7 +368,7 @@ public class WorkoutSummariesListFragment extends ListFragment {
             // viewHolder.llSummary = row.findViewById(R.id.ll_workout_summaries_summary);
             viewHolder.tvDateAndTime = row.findViewById(R.id.tv_workout_summaries_date_and_time);
             viewHolder.tvName = row.findViewById(R.id.tv_workout_summaries_name);
-            viewHolder.tvDistanceTypeAndDuration = row.findViewById(R.id.tv_worktout_summaries_distance_type_and_duration);
+            viewHolder.tvDistanceTypeAndDuration = row.findViewById(R.id.tv_workout_summaries_distance_type_and_duration);
             viewHolder.mapView = row.findViewById(R.id.workout_summaries_mapView);
             viewHolder.separator = row.findViewById(R.id.separator);
             viewHolder.tvExportStatusHeader = row.findViewById(R.id.export_status_header);
