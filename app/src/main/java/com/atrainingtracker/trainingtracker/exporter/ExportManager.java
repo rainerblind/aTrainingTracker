@@ -38,7 +38,13 @@ import androidx.annotation.Nullable;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
-import com.atrainingtracker.trainingtracker.exporter.ExportStatusRepository.ExportStatusDbHelper;
+import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusRepository;
+import com.atrainingtracker.trainingtracker.exporter.uploader.DropboxUploader;
+import com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploader;
+import com.atrainingtracker.trainingtracker.exporter.writer.CSVFileWriter;
+import com.atrainingtracker.trainingtracker.exporter.writer.GCFileWriter;
+import com.atrainingtracker.trainingtracker.exporter.writer.GPXFileWriter;
+import com.atrainingtracker.trainingtracker.exporter.writer.TCXFileWriter;
 
 import org.json.JSONException;
 
@@ -64,11 +70,11 @@ public class ExportManager {
         switch (exportInfo.getExportType()) {
             case FILE:
                 return switch (exportInfo.getFileFormat()) {
-                    case CSV -> new CSVFileExporter(context);
-                    case GC -> new GCFileExporter(context);
-                    case TCX -> new TCXFileExporter(context);
-                    case GPX -> new GPXFileExporter(context);
-                    case STRAVA -> new TCXFileExporter(context);
+                    case CSV -> new CSVFileWriter(context);
+                    case GC -> new GCFileWriter(context);
+                    case TCX -> new TCXFileWriter(context);
+                    case GPX -> new GPXFileWriter(context);
+                    case STRAVA -> new TCXFileWriter(context);
                     /* case RUNKEEPER:
                         return  new RunkeeperFileExporter(mContext);
                     /* case TRAINING_PEAKS:
@@ -114,9 +120,9 @@ public class ExportManager {
             for (ExportType exportType : ExportType.values()) {
                 values.clear();
                 values.put(WorkoutSummaries.FILE_BASE_NAME, fileBaseName);
-                values.put(ExportStatusDbHelper.FORMAT, fileFormat.name());
-                values.put(ExportStatusDbHelper.TYPE, exportType.name());
-                values.put(ExportStatusDbHelper.EXPORT_STATUS, ExportStatus.UNWANTED.name());
+                values.put(ExportStatusRepository.FORMAT, fileFormat.name());
+                values.put(ExportStatusRepository.TYPE, exportType.name());
+                values.put(ExportStatusRepository.EXPORT_STATUS, ExportStatus.UNWANTED.name());
 
                 mRepository.addExportStatus(values);
             }
@@ -124,7 +130,7 @@ public class ExportManager {
 
         // create a shortcut ContentValue for TRACKING
         ContentValues TRACKING = new ContentValues();
-        TRACKING.put(ExportStatusDbHelper.EXPORT_STATUS, ExportStatus.TRACKING.name());
+        TRACKING.put(ExportStatusRepository.EXPORT_STATUS, ExportStatus.TRACKING.name());
 
         // 3. now, set all relevant to TRACKING
 
@@ -206,7 +212,7 @@ public class ExportManager {
 
         // user explicitly wants this.  So, we do not check whether we normally do this.  I.e. no if (TrainingApplication.exportToFile(fileFormat))
         // -> simply reset the answer and start the full export.
-        values.put(ExportStatusDbHelper.ANSWER, "");
+        values.put(ExportStatusRepository.ANSWER, "");
         mRepository.updateExportStatus(values, fileBaseName, ExportType.FILE, fileFormat);
 
         // trigger the export
@@ -268,8 +274,8 @@ public class ExportManager {
             Log.e(TAG, "Could not create WorkRequest due to JSONException", e);
 
             ContentValues values = new ContentValues();
-            values.put(ExportStatusDbHelper.EXPORT_STATUS, ExportStatus.FINISHED_FAILED.name());
-            values.put(ExportStatusDbHelper.ANSWER, "Interner Fehler bei Job-Erstellung");  // TODO: Text
+            values.put(ExportStatusRepository.EXPORT_STATUS, ExportStatus.FINISHED_FAILED.name());
+            values.put(ExportStatusRepository.ANSWER, "Interner Fehler bei Job-Erstellung");  // TODO: Text
             mRepository.updateExportStatus(values, fileBaseName, null, fileFormat);   // note that exportType is set to null to update all.
             broadcastExportStatusChanged(mContext);
         }
@@ -277,9 +283,9 @@ public class ExportManager {
 
     private void updateStatus(ExportInfo info, ExportStatus status, String answer) {
         ContentValues values = new ContentValues();
-        values.put(ExportStatusDbHelper.EXPORT_STATUS, status.name());
+        values.put(ExportStatusRepository.EXPORT_STATUS, status.name());
         if (answer != null) {
-            values.put(ExportStatusDbHelper.ANSWER, answer);
+            values.put(ExportStatusRepository.ANSWER, answer);
         }
         mRepository.updateExportStatus(values, info);
     }
@@ -306,8 +312,8 @@ public class ExportManager {
         //  update the DB accordingly
         ContentValues values = new ContentValues();
 
-        values.put(ExportStatusDbHelper.EXPORT_STATUS, ExportStatus.FINISHED_FAILED.name());
-        values.put(ExportStatusDbHelper.ANSWER, answer);
+        values.put(ExportStatusRepository.EXPORT_STATUS, ExportStatus.FINISHED_FAILED.name());
+        values.put(ExportStatusRepository.ANSWER, answer);
 
         mRepository.updateExportStatus(values, exportInfo);
 

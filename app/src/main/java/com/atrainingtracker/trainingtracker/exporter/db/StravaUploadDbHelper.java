@@ -16,7 +16,7 @@
  * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
-package com.atrainingtracker.trainingtracker.exporter;
+package com.atrainingtracker.trainingtracker.exporter.db;
 
 import android.content.ContentValues;
 import android.content.Context;
@@ -52,6 +52,7 @@ public class StravaUploadDbHelper extends SQLiteOpenHelper {
             + STATUS + " text)";
 
     // Constructor
+    // TODO: do we really need this??
     public StravaUploadDbHelper(Context context) {
         super(context, DB_NAME, null, DB_VERSION);
     }

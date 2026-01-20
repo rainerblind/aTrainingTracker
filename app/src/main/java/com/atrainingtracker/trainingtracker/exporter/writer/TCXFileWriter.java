@@ -16,7 +16,7 @@
  * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
-package com.atrainingtracker.trainingtracker.exporter;
+package com.atrainingtracker.trainingtracker.exporter.writer;
 
 import android.content.Context;
 import android.database.Cursor;
@@ -33,6 +33,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper;
+import com.atrainingtracker.trainingtracker.exporter.ExportInfo;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -41,7 +42,7 @@ import java.text.SimpleDateFormat;
 import java.util.Locale;
 
 
-public class TCXFileExporter extends BaseFileExporter {
+public class TCXFileWriter extends BaseFileWriter {
     protected static final boolean WRITE_ONLY_ON_NEW_GEO_DATA = true;
     private static final String TAG = "TCXFileExporter";
     private static final boolean DEBUG = false;
@@ -49,7 +50,7 @@ public class TCXFileExporter extends BaseFileExporter {
     protected static final SimpleDateFormat msdfFromDb = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
     protected static final SimpleDateFormat msdfToXML = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US);
 
-    public TCXFileExporter(@NonNull Context context) {
+    public TCXFileWriter(@NonNull Context context) {
         super(context);
     }
 
