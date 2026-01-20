@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingTop="8dp">
+
+    <!-- title (File, Dropbox, or Community) -->
+    <TextView
+        android:id="@+id/group_title"
+        style="@style/TextAppearance.AppCompat.Title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        tools:text="Dropbox" />
+
+    <!-- waiting jobs -->
+    <TextView
+        android:id="@+id/line_waiting"
+        style="@style/TextAppearance.AppCompat.Body2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        tools:visibility="visible"
+        tools:text="⏳ waiting: TCX, GPX..." />
+
+    <!-- running jobs -->
+    <TextView
+        android:id="@+id/line_running"
+        style="@style/TextAppearance.AppCompat.Body2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        tools:visibility="visible"
+        tools:text="📤 Uploading: TCX, GPX..." />
+
+    <!-- succeeded jobs -->
+    <TextView
+        android:id="@+id/line_succeeded"
+        style="@style/TextAppearance.AppCompat.Body2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        tools:visibility="visible"
+        tools:text="✅ Succeeded: CSV" />
+
+    <!-- failed jobs -->
+    <TextView
+        android:id="@+id/line_failed"
+        style="@style/TextAppearance.AppCompat.Body2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        tools:visibility="visible"
+        tools:text="❌ Failed: KML" />
+
+</LinearLayout>

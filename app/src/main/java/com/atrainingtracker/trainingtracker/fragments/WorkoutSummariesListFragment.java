@@ -291,131 +291,33 @@ public class WorkoutSummariesListFragment extends ListFragment {
         }
     }
 
-    private void setStatusInfo(@NonNull ViewHolder viewHolder, @NonNull final Context context, final String fileBaseName) {
-        if (DEBUG) Log.d(TAG, "setStatusInfo: " + fileBaseName);
+    /**
+     * Sets the detailed export status information for a list item.
+     * This method now delegates the complex UI logic to the ExportStatusViewHolder.
+     *
+     * @param viewHolder   The ViewHolder for the current list item.
+     * @param context      The context.
+     * @param fileBaseName The unique identifier for the workout.
+     */
+    private void setStatusInfo(ViewHolder viewHolder, Context context, String fileBaseName) {
+        if (DEBUG) Log.d(TAG, "setStatusInfo for: " + fileBaseName);
 
-        ExportStatusRepository repository = ExportStatusRepository.getInstance(context);
-        EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>> exportStatuses = repository.getExportStatusMap(fileBaseName);
-        if (DEBUG && exportStatuses == null) Log.d(TAG, "WTF: exportStatuses == null");
+        // Hide the old, simple status views as we are replacing them.
+        viewHolder.ivFile.setVisibility(View.GONE);
+        viewHolder.tvFile.setVisibility(View.GONE);
+        viewHolder.ivDropbox.setVisibility(View.GONE);
+        viewHolder.tvDropbox.setVisibility(View.GONE);
+        viewHolder.ivCommunities.setVisibility(View.GONE);
+        viewHolder.tvCommunities.setVisibility(View.GONE);
 
-        for (ExportType exportType : ExportType.values()) {
-            if (DEBUG) Log.d(TAG, "looking for " + exportType);
-
-            String text = context.getString(R.string.something_strange_happened);
-            FileFormat processingFileFormat = FileFormat.CSV;
-
-            new ImageView(context);
-            ImageView ivStatus = switch (exportType) {
-                case FILE -> viewHolder.ivFile;
-                case DROPBOX -> viewHolder.ivDropbox;
-                case COMMUNITY -> viewHolder.ivCommunities;
-            };
-
-            EnumMap<ExportStatus, Integer> exportStatusCounter = new EnumMap<>(ExportStatus.class);
-            // initialize with 0
-            for (ExportStatus exportStatus : ExportStatus.values()) {
-                exportStatusCounter.put(exportStatus, 0);
-            }
-
-            EnumMap<FileFormat, ExportStatus> bar = exportStatuses.get(exportType);
-            for (FileFormat fileFormat : FileFormat.values()) {
-                ExportStatus exportStatus = bar.get(fileFormat);
-                // avoid a NullPointer Exception when there is a workout in the summaries DB but not in the exportStatus DB
-                if (exportStatus != null && exportStatusCounter.get(exportStatus) != null) {
-                    exportStatusCounter.put(exportStatus, exportStatusCounter.get(exportStatus) + 1);
-                    if (exportStatus == ExportStatus.PROCESSING) {
-                        processingFileFormat = fileFormat;
-                    }
-                }
-            }
-
-            int numberOfFileFormats = FileFormat.values().length;
-            int unwanted = exportStatusCounter.get(ExportStatus.UNWANTED);
-            int wanted = numberOfFileFormats - unwanted;
-
-            if (unwanted == numberOfFileFormats) {
-
-                ivStatus.setImageResource(R.drawable.ic_not_interested_black_24dp);
-
-                text = switch (exportType) {
-                    case FILE -> context.getString(R.string.exporting_to_file_not_wanted);
-                    case DROPBOX -> context.getString(R.string.uploading_to_dropbox_not_wanted);
-                    case COMMUNITY -> context.getString(R.string.uploading_to_community_not_wanted);
-                };
-
-            } else if (exportStatusCounter.get(ExportStatus.FINISHED_FAILED) > 0) {
-
-                ivStatus.setImageResource(R.drawable.export_failed);
-                int failed = exportStatusCounter.get(ExportStatus.FINISHED_FAILED);
-                text = switch (exportType) {
-                    case FILE ->
-                            context.getString(R.string.exporting_to_file_failed_for_several, failed, wanted);
-                    case DROPBOX ->
-                            context.getString(R.string.uploading_to_dropbox_failed_for_several, failed, wanted);
-                    case COMMUNITY ->
-                            context.getString(R.string.uploading_to_community_failed_for_several, failed, wanted);
-                };
-
-            } else if (exportStatusCounter.get(ExportStatus.FINISHED_SUCCESS) == wanted) {
-
-                ivStatus.setImageResource(R.drawable.export_success);
-
-                text = switch (exportType) {
-                    case FILE ->
-                            context.getString(R.string.successfully_exported_to_file, wanted, wanted);
-                    case DROPBOX ->
-                            context.getString(R.string.successfully_uploaded_to_dropbox, wanted, wanted);
-                    case COMMUNITY ->
-                            context.getString(R.string.successfully_uploaded_to_community, wanted, wanted);
-                };
-
-            } else if (exportStatusCounter.get(ExportStatus.PROCESSING) > 0) {
-                ivStatus.setImageResource(R.drawable.ic_cached_black_24dp);
-                String fileFormat = processingFileFormat.toString();
-                int finished = exportStatusCounter.get(ExportStatus.FINISHED_SUCCESS) + 1;
-                text = switch (exportType) {
-                    case FILE ->
-                            context.getString(R.string.exporting_to_file, fileFormat, finished, wanted);
-                    case DROPBOX ->
-                            context.getString(R.string.uploading_to_dropbox, fileFormat, finished, wanted);
-                    case COMMUNITY ->
-                            context.getString(R.string.uploading_to_community, fileFormat, finished, wanted);
-                };
-
-            } else if (exportStatusCounter.get(ExportStatus.TRACKING) > 0) {
-                ivStatus.setImageResource(R.drawable.ic_play_circle_outline_black_24dp);
-                text = context.getString(R.string.tracking);
-            } else if (exportStatusCounter.get(ExportStatus.TRACKING_FINISHED) > 0) {
-                ivStatus.setImageResource(R.drawable.ic_stop_circle_outline_black_24dp);
-                text = context.getString(R.string.tracking_finished);
-            } else if (exportStatusCounter.get(ExportStatus.WAITING) > 0) {
-                ivStatus.setImageResource(R.drawable.ic_hourglass_empty_black_24dp);
-                int waiting = exportStatusCounter.get(ExportStatus.WAITING);
-                text = switch (exportType) {
-                    case FILE ->
-                            context.getString(R.string.waiting_to_export_to_file, waiting, wanted);
-                    case DROPBOX ->
-                            context.getString(R.string.waiting_to_upload_to_dropbox, waiting, wanted);
-                    case COMMUNITY ->
-                            context.getString(R.string.waiting_to_upload_to_community, waiting, wanted);
-                };
-
-            } else {
-                if (DEBUG) Log.d(TAG, "case not handled");
-                ivStatus.setImageResource(R.drawable.export_error);
-            }
-
-            if (DEBUG) Log.d(TAG, text);
-
-            new TextView(context);
-            TextView textView = switch (exportType) {
-                case FILE -> viewHolder.tvFile;
-                case DROPBOX -> viewHolder.tvDropbox;
-                case COMMUNITY -> viewHolder.tvCommunities;
-            };
-            textView.setText(text);
-        }
-
+        // Create an instance of our new Kotlin ViewHolder and tell it to bind the data.
+        // It will fetch the data using the provider and build the UI.
+        ExportStatusViewHolder statusHolder = new ExportStatusViewHolder(
+                context,
+                viewHolder.llExportStatus, // The container to add views to
+                fileBaseName
+        );
+        statusHolder.bind();
     }
 
     /**
@@ -460,7 +362,7 @@ public class WorkoutSummariesListFragment extends ListFragment {
         public View newView(Context context, Cursor cursor, ViewGroup parent) {
             if (DEBUG) Log.i(TAG, "newView");
 
-            View row = LayoutInflater.from(context).inflate(R.layout.workout_summaries_with_map_row, null);
+            View row = LayoutInflater.from(context).inflate(R.layout.workout_summaries_with_map_row, parent, false);
 
             // ??? LinearLayout llRow = (LinearLayout) row.findViewById(R.id.ll_workout_summaries_row);
 
