@@ -16,7 +16,7 @@
  * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
-package com.atrainingtracker.trainingtracker.exporter;
+package com.atrainingtracker.trainingtracker.exporter.uploader;
 
 import android.content.Context;
 import android.util.Log;
@@ -24,6 +24,8 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 
 import com.atrainingtracker.trainingtracker.TrainingApplication;
+import com.atrainingtracker.trainingtracker.exporter.BaseExporter;
+import com.atrainingtracker.trainingtracker.exporter.ExportInfo;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;

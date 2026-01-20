@@ -1,30 +1,23 @@
-/*
- * aTrainingTracker (ANT+ BTLE)
- * Copyright (C) 2011 - 2025
- * Rainer Blind <rainer.blind@gmail.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- */
-
-package com.atrainingtracker.trainingtracker.exporter
+package com.atrainingtracker.trainingtracker.exporter.uploader
 
 import android.content.Context
 import android.database.Cursor
 import android.util.Log
-import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
-import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
+import com.atrainingtracker.trainingtracker.exporter.BaseExporter
+import com.atrainingtracker.trainingtracker.exporter.ExportInfo
+import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
-import okhttp3.*
+import okhttp3.FormBody
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.asRequestBody
-import org.json.JSONException
 import org.json.JSONObject
 import java.io.File
 import java.io.IOException
@@ -79,7 +72,7 @@ class StravaUploader(context: Context) : BaseExporter(context) {
 
         // 1. Build Multipart Request
         val requestBody = MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
+            .setType(MultipartBody.Companion.FORM)
             .addFormDataPart(DATA_TYPE, TCX)
             .addFormDataPart(
                 FILE,
@@ -232,8 +225,8 @@ class StravaUploader(context: Context) : BaseExporter(context) {
         val dbManager = WorkoutSummariesDatabaseManager.getInstance()
         val db = dbManager.openDatabase
         val cursor = db.query(
-            WorkoutSummaries.TABLE, null,
-            "${WorkoutSummaries.FILE_BASE_NAME}=?",
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE, null,
+            "${WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME}=?",
             arrayOf(exportInfo.fileBaseName), null, null, null
         )
 
@@ -243,14 +236,14 @@ class StravaUploader(context: Context) : BaseExporter(context) {
             return ExportResult(false, false, "Could not find workout summary")  // not retry
         }
 
-        val sportId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPORT_ID))
+        val sportId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.SPORT_ID))
         val sportName = SportTypeDatabaseManager.getStravaName(sportId)
-        val name = myGetStringFromCursor(cursor, WorkoutSummaries.WORKOUT_NAME)
-        val description = myGetStringFromCursor(cursor, WorkoutSummaries.DESCRIPTION)
-        val trainer = myGetBooleanFromCursor(cursor, WorkoutSummaries.TRAINER)
-        val commute = myGetBooleanFromCursor(cursor, WorkoutSummaries.COMMUTE)
+        val name = myGetStringFromCursor(cursor, WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_NAME)
+        val description = myGetStringFromCursor(cursor, WorkoutSummariesDatabaseManager.WorkoutSummaries.DESCRIPTION)
+        val trainer = myGetBooleanFromCursor(cursor, WorkoutSummariesDatabaseManager.WorkoutSummaries.TRAINER)
+        val commute = myGetBooleanFromCursor(cursor, WorkoutSummariesDatabaseManager.WorkoutSummaries.COMMUTE)
 
-        val eqIndex = cursor.getColumnIndex(WorkoutSummaries.EQUIPMENT_ID)
+        val eqIndex = cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.EQUIPMENT_ID)
         val gearId: String? = if (!cursor.isNull(eqIndex)) {
             EquipmentDbHelper(mContext).getStravaIdFromId(cursor.getInt(eqIndex))
         } else null

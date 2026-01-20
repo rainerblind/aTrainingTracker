@@ -16,7 +16,7 @@
  * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
-package com.atrainingtracker.trainingtracker.exporter;
+package com.atrainingtracker.trainingtracker.exporter.uploader;
 
 import android.content.Context;
 import android.database.Cursor;
@@ -26,12 +26,13 @@ import android.util.Base64OutputStream;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
+import com.atrainingtracker.trainingtracker.exporter.BaseExporter;
+import com.atrainingtracker.trainingtracker.exporter.ExportInfo;
 import com.atrainingtracker.trainingtracker.onlinecommunities.trainingpeaks.TrainingpeaksGetAccessTokenActivity;
 
 import org.apache.http.HttpResponse;
@@ -46,7 +47,6 @@ import org.json.JSONObject;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 

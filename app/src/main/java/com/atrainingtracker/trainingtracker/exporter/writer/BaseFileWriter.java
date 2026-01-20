@@ -16,40 +16,28 @@
  * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
-package com.atrainingtracker.trainingtracker.exporter;
+package com.atrainingtracker.trainingtracker.exporter.writer;
 
-import android.content.ContentResolver;
-import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.CursorIndexOutOfBoundsException;
 import android.database.sqlite.SQLiteDatabase;
-import android.net.Uri;
 import android.os.Build;
-import android.os.Environment;
-import android.provider.MediaStore;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
 
 import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
+import com.atrainingtracker.trainingtracker.exporter.BaseExporter;
+import com.atrainingtracker.trainingtracker.exporter.ExportInfo;
+import com.atrainingtracker.trainingtracker.exporter.ExportType;
+import com.atrainingtracker.trainingtracker.exporter.FileFormat;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.nio.charset.StandardCharsets;
-
-public abstract class BaseFileExporter extends BaseExporter {
+public abstract class BaseFileWriter extends BaseExporter {
     protected static final int MIN_DATA_POINTS_FOR_UPLOAD = 10;
     private static final String TAG = "BaseFileExporter";
     private static final boolean DEBUG = false;
@@ -57,7 +45,7 @@ public abstract class BaseFileExporter extends BaseExporter {
     boolean indoorTrainerSession, haveDistance, haveSpeed, havePower, haveHR, haveCadence, haveRunCadence, haveBikeCadence, haveTorque, haveAltitude, haveGeo;
     long workoutID, sportTypeId;
 
-    public BaseFileExporter(@NonNull Context context) {
+    public BaseFileWriter(@NonNull Context context) {
         super(context);
     }
 

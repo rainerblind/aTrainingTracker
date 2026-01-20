@@ -1,4 +1,4 @@
-package com.atrainingtracker.trainingtracker.exporter;
+package com.atrainingtracker.trainingtracker.exporter.ui;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
@@ -20,6 +20,11 @@ import androidx.core.app.NotificationManagerCompat;
 import com.atrainingtracker.R;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation;
+import com.atrainingtracker.trainingtracker.exporter.ExportInfo;
+import com.atrainingtracker.trainingtracker.exporter.ExportStatus;
+import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusRepository;
+import com.atrainingtracker.trainingtracker.exporter.ExportType;
+import com.atrainingtracker.trainingtracker.exporter.FileFormat;
 import com.atrainingtracker.trainingtracker.helpers.StringUtilsKt;
 
 
