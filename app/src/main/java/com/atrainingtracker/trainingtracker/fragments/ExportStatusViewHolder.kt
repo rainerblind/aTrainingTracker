@@ -4,7 +4,6 @@ import android.content.Context
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.core.view.isVisible
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.exporter.ExportType
 import com.atrainingtracker.trainingtracker.exporter.ui.ExportStatusGroupData
@@ -16,6 +15,7 @@ import com.atrainingtracker.trainingtracker.exporter.ui.ExportStatusUIDataProvid
  */
 class ExportStatusViewHolder(
     private val context: Context,
+    private val separatorView: View,
     private val headerView: TextView,
     private val container: LinearLayout,
     private val fileBaseName: String
@@ -29,7 +29,7 @@ class ExportStatusViewHolder(
     fun bind() {
         // Clear previous views and hide the container initially
         container.removeAllViews()
-        container.isVisible = false
+        container.visibility = View.GONE
 
         // Define the order of export types to display
         val orderedTypes = listOf(ExportType.FILE, ExportType.DROPBOX, ExportType.COMMUNITY)
@@ -47,9 +47,10 @@ class ExportStatusViewHolder(
             }
         }
 
-        // Only show the container and header if at least one group has content
-        headerView.isVisible = hasAnyContent
-        container.isVisible = hasAnyContent
+        // Only show the separator, header and container if at least one group has content
+        separatorView.visibility = if (hasAnyContent) View.VISIBLE else View.GONE
+        headerView.visibility = if (hasAnyContent) View.VISIBLE else View.GONE
+        container.visibility = if (hasAnyContent) View.VISIBLE else View.GONE
     }
 
     /**
@@ -83,9 +84,9 @@ class ExportStatusViewHolder(
     private fun updateLine(textView: TextView, text: String?) {
         if (text != null) {
             textView.text = text
-            textView.isVisible = true
+            textView.visibility = View.VISIBLE
         } else {
-            textView.isVisible = false
+            textView.visibility = View.GONE
         }
     }
 }

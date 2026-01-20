@@ -306,6 +306,7 @@ public class WorkoutSummariesListFragment extends ListFragment {
         // It will fetch the data using the provider and build the UI.
         ExportStatusViewHolder statusHolder = new ExportStatusViewHolder(
                 context,
+                viewHolder.separator,
                 viewHolder.tvExportStatusHeader,
                 viewHolder.llExportStatus, // The container to add views to
                 fileBaseName
@@ -355,7 +356,7 @@ public class WorkoutSummariesListFragment extends ListFragment {
         public View newView(Context context, Cursor cursor, ViewGroup parent) {
             if (DEBUG) Log.i(TAG, "newView");
 
-            View row = LayoutInflater.from(context).inflate(R.layout.workout_summaries_with_map_row, parent, false);
+            View row = LayoutInflater.from(context).inflate(R.layout.workout_summaries_with_map_row2, parent, false);
 
             // ??? LinearLayout llRow = (LinearLayout) row.findViewById(R.id.ll_workout_summaries_row);
 
@@ -364,11 +365,12 @@ public class WorkoutSummariesListFragment extends ListFragment {
             // GoogleMap is set during initialization
             // MapView   is set in a few seconds
 
-            viewHolder.llSummary = row.findViewById(R.id.ll_workout_summaries_summary);
+            // viewHolder.llSummary = row.findViewById(R.id.ll_workout_summaries_summary);
             viewHolder.tvDateAndTime = row.findViewById(R.id.tv_workout_summaries_date_and_time);
             viewHolder.tvName = row.findViewById(R.id.tv_workout_summaries_name);
             viewHolder.tvDistanceTypeAndDuration = row.findViewById(R.id.tv_worktout_summaries_distance_type_and_duration);
             viewHolder.mapView = row.findViewById(R.id.workout_summaries_mapView);
+            viewHolder.separator = row.findViewById(R.id.separator);
             viewHolder.tvExportStatusHeader = row.findViewById(R.id.export_status_header);
             viewHolder.llExportStatus = row.findViewById(R.id.export_status_container);
 
@@ -398,6 +400,7 @@ public class WorkoutSummariesListFragment extends ListFragment {
             ViewHolder viewHolder = (ViewHolder) view.getTag();
             viewHolder.workoutId = workoutId;
 
+            /* TODO: get this feature working again
             // first, configure the different OnClickListeners
             viewHolder.llSummary.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -405,6 +408,7 @@ public class WorkoutSummariesListFragment extends ListFragment {
                     TrainingApplication.startWorkoutDetailsActivity(workoutId, WorkoutDetailsActivity.SelectedFragment.EDIT_DETAILS);
                 }
             });
+             */
 
             viewHolder.llExportStatus.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -443,6 +447,7 @@ public class WorkoutSummariesListFragment extends ListFragment {
         TextView tvDateAndTime;
         TextView tvName;
         TextView tvDistanceTypeAndDuration;
+        View separator;
         TextView tvExportStatusHeader;
         LinearLayout llExportStatus;
 
