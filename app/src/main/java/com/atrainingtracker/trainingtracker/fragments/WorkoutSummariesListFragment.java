@@ -44,9 +44,11 @@ import android.widget.AbsListView;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.TableLayout;
 import android.widget.TextView;
 
 import com.atrainingtracker.R;
+import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
@@ -286,6 +288,33 @@ public class WorkoutSummariesListFragment extends ListFragment {
     }
 
     /**
+     * Sets the detailed sensor extrema information for a list item by delegating
+     * the complex UI logic to the ExtremaValuesViewHolder.
+     ** @param viewHolder   The ViewHolder for the current list item.
+     * @param context      The context.
+     * @param workoutId    The ID of the workout.
+     */
+    private void setExtremaInfo(ViewHolder viewHolder, Context context, long workoutId, BSportType bSportType) {
+        if (DEBUG) Log.d(TAG, "setExtremaInfo for workoutId: " + workoutId);
+
+        if (viewHolder.tlExtremaValues != null) {
+            // Instantiate your ViewHolder with the correct container
+            // (@NonNull Context context, @NonNull TableLayout container, long workoutId, int sportTypeId
+            ExtremaValuesViewHolder extremaHolder = new ExtremaValuesViewHolder(
+                    context,
+                    viewHolder.tlExtremaValues, // Pass the TableLayout from the ViewHolder
+                    workoutId,
+                    bSportType
+            );
+
+            // Bind the data, which will handle visibility and population
+            extremaHolder.bind();
+        } else {
+            Log.e(TAG, "Extrema values container (tlExtremaValues) not found in the layout!");
+        }
+    }
+
+    /**
      * Sets the detailed export status information for a list item.
      * This method now delegates the complex UI logic to the ExportStatusViewHolder.
      *
@@ -367,6 +396,7 @@ public class WorkoutSummariesListFragment extends ListFragment {
             viewHolder.separator = row.findViewById(R.id.separator_export_status);
             viewHolder.tvExportStatusHeader = row.findViewById(R.id.export_status_header);
             viewHolder.llExportStatus = row.findViewById(R.id.export_status_container);
+            viewHolder.tlExtremaValues = row.findViewById(R.id.extrema_values_container);
 
             viewHolder.initializeMapView();
 
@@ -383,7 +413,9 @@ public class WorkoutSummariesListFragment extends ListFragment {
 
             // Text for distance_type_and_duration
             double distance_m = cursor.getDouble(cursor.getColumnIndex(WorkoutSummaries.DISTANCE_TOTAL_m));
-            String sport = SportTypeDatabaseManager.getUIName(cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPORT_ID)));
+            long sportId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPORT_ID));
+            String sport = SportTypeDatabaseManager.getUIName(sportId);
+            BSportType bSportType = SportTypeDatabaseManager.getBSportType(sportId);
             double time_s = cursor.getDouble(cursor.getColumnIndex(WorkoutSummaries.TIME_TOTAL_s));
             String distanceTypeAndDuration = context.getString(R.string.distance_distanceUnit_sport_time_format,
                     (new DistanceFormatter()).format(distance_m),
@@ -415,7 +447,6 @@ public class WorkoutSummariesListFragment extends ListFragment {
             // viewHolder.tvDateAndTime.setText(cursor.getString(cursor.getColumnIndex(WorkoutSummaries.TIME_START)));
             viewHolder.tvDateAndTime.setText(WorkoutSummariesDatabaseManager.getStartTime(workoutId, "localtime"));
 
-
             viewHolder.tvName.setText(cursor.getString(cursor.getColumnIndex(WorkoutSummaries.WORKOUT_NAME)));
             viewHolder.tvDistanceTypeAndDuration.setText(distanceTypeAndDuration);
 
@@ -427,6 +458,8 @@ public class WorkoutSummariesListFragment extends ListFragment {
             } else {
                 viewHolder.mapView.setVisibility(View.GONE);
             }
+
+            setExtremaInfo(viewHolder, context, workoutId, bSportType);
 
             setStatusInfo(viewHolder, context, fileBaseName);
         }
@@ -444,6 +477,7 @@ public class WorkoutSummariesListFragment extends ListFragment {
         View separator;
         TextView tvExportStatusHeader;
         LinearLayout llExportStatus;
+        TableLayout tlExtremaValues;
 
         // MapView mapView;
         // GoogleMap map;

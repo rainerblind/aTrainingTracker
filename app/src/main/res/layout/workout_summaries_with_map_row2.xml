@@ -24,19 +24,17 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
-        <!-- Scrim is now a header area for the workout details -->
+        <!-- Scrim is the header area for the workout details -->
         <View
             android:id="@+id/scrim"
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:background="?attr/colorPrimary"
-            app:layout_constraintTop_toTopOf="parent"
+            android:paddingBottom="16dp"
+            app:layout_constraintBottom_toTopOf="@+id/extrema_values_container"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintBottom_toBottomOf="@id/tv_workout_summaries_date_and_time"
-            app:layout_constraintBottom_toTopOf="@+id/workout_summaries_mapView"
-            android:paddingBottom="16dp"
-            />
+            app:layout_constraintTop_toTopOf="parent" />
 
         <!-- Workout Title -->
         <TextView
@@ -48,9 +46,9 @@
             android:layout_marginTop="16dp"
             android:layout_marginEnd="16dp"
             android:textColor="?attr/colorOnPrimary"
-            app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
             tools:text="Schmellbachtal" />
 
         <!-- Workout Summaries -->
@@ -64,9 +62,9 @@
             android:layout_marginEnd="16dp"
             android:layout_marginBottom="16dp"
             android:textColor="?attr/colorOnPrimary"
-            app:layout_constraintTop_toBottomOf="@id/tv_workout_summaries_name"
-            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintBottom_toBottomOf="@id/scrim"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tv_workout_summaries_name"
             tools:text="5 km run in 0:40:00" />
 
         <TextView
@@ -76,18 +74,33 @@
             android:layout_height="wrap_content"
             android:layout_marginEnd="16dp"
             android:textColor="?attr/colorOnPrimary"
-            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintBaseline_toBaselineOf="@id/tv_workout_summaries_distance_type_and_duration"
+            app:layout_constraintEnd_toEndOf="parent"
             tools:text="1.9.2012 at 10:10" />
 
-        <!-- MapView is cleanly positioned below the header section -->
+        <!-- Container for Extrema Values, placed below the header -->
+        <TableLayout
+            android:id="@+id/extrema_values_container"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/scrim"
+            tools:visibility="visible" />
+
+        <!-- MapView is now positioned below the new extrema container -->
         <com.google.android.gms.maps.MapView
             android:id="@+id/workout_summaries_mapView"
             android:layout_width="0dp"
             android:layout_height="180dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/scrim"
+            app:layout_constraintTop_toBottomOf="@id/extrema_values_container"
             map:liteMode="true"
             map:mapType="normal" />
 
@@ -97,12 +110,11 @@
             android:layout_width="0dp"
             android:layout_height="1dp"
             android:background="?android:attr/listDivider"
-            app:layout_constraintTop_toBottomOf="@id/workout_summaries_mapView"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
             android:visibility="gone"
-            tools:visibility="visible"
-            />
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/workout_summaries_mapView"
+            tools:visibility="visible" />
 
         <!-- Export Status Section Below the Map -->
         <TextView
