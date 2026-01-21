@@ -42,7 +42,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AbsListView;
 import android.widget.AdapterView.AdapterContextMenuInfo;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -53,10 +52,7 @@ import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.activities.WorkoutDetailsActivity;
 import com.atrainingtracker.trainingtracker.exporter.ExportManager;
-import com.atrainingtracker.trainingtracker.exporter.ExportStatus;
 import com.atrainingtracker.trainingtracker.exporter.ExportStatusChangedBroadcaster;
-import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusRepository;
-import com.atrainingtracker.trainingtracker.exporter.ExportType;
 import com.atrainingtracker.trainingtracker.exporter.FileFormat;
 import com.atrainingtracker.trainingtracker.MyHelper;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
@@ -75,8 +71,6 @@ import com.google.android.gms.maps.MapView;
 import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.LatLng;
-
-import java.util.EnumMap;
 
 // import android.view.View.OnClickListener;
 
@@ -370,7 +364,7 @@ public class WorkoutSummariesListFragment extends ListFragment {
             viewHolder.tvName = row.findViewById(R.id.tv_workout_summaries_name);
             viewHolder.tvDistanceTypeAndDuration = row.findViewById(R.id.tv_workout_summaries_distance_type_and_duration);
             viewHolder.mapView = row.findViewById(R.id.workout_summaries_mapView);
-            viewHolder.separator = row.findViewById(R.id.separator);
+            viewHolder.separator = row.findViewById(R.id.separator_export_status);
             viewHolder.tvExportStatusHeader = row.findViewById(R.id.export_status_header);
             viewHolder.llExportStatus = row.findViewById(R.id.export_status_container);
 
