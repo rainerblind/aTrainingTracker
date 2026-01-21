@@ -407,7 +407,6 @@ public class WorkoutSummariesListFragment extends ListFragment {
             viewHolder.tvDateAndTime = row.findViewById(R.id.tv_workout_summaries_date_and_time);
             viewHolder.tvName = row.findViewById(R.id.tv_workout_summaries_name);
             viewHolder.tvSport = row.findViewById(R.id.tv_workout_summaries_sport);
-            // viewHolder.llWorkoutDetails = row.findViewById(R.id.workout_details_container);
             viewHolder.mapView = row.findViewById(R.id.workout_summaries_mapView);
             viewHolder.separator = row.findViewById(R.id.separator_export_status);
             viewHolder.tvExportStatusHeader = row.findViewById(R.id.export_status_header);
@@ -494,7 +493,6 @@ public class WorkoutSummariesListFragment extends ListFragment {
         TextView tvDateAndTime;
         TextView tvName;
         TextView tvSport;
-        // LinearLayout llWorkoutDetails;
         View separator;
         TextView tvExportStatusHeader;
         LinearLayout llExportStatus;
