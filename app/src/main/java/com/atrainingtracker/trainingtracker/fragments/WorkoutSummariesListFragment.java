@@ -287,6 +287,21 @@ public class WorkoutSummariesListFragment extends ListFragment {
         }
     }
 
+
+    /**
+     * Sets the workout summary details by delegating to the WorkoutDetailsViewHolder.
+     *
+     * @param viewHolder The ViewHolder for the current list item.
+     * @param cursor     The cursor positioned at the correct row.
+     * @param workoutId  The ID of the workout for fetching extrema data.
+     */
+    private void setWorkoutDetails(ViewHolder viewHolder, Cursor cursor, long workoutId) {
+        if (viewHolder.detailsViewHolder != null) {
+            // Simply call bind() on the existing holder instance.
+            viewHolder.detailsViewHolder.bind(cursor, workoutId);
+        }
+    }
+
     /**
      * Sets the detailed sensor extrema information for a list item by delegating
      * the complex UI logic to the ExtremaValuesViewHolder.
@@ -391,12 +406,18 @@ public class WorkoutSummariesListFragment extends ListFragment {
             // viewHolder.llSummary = row.findViewById(R.id.ll_workout_summaries_summary);
             viewHolder.tvDateAndTime = row.findViewById(R.id.tv_workout_summaries_date_and_time);
             viewHolder.tvName = row.findViewById(R.id.tv_workout_summaries_name);
-            viewHolder.tvDistanceTypeAndDuration = row.findViewById(R.id.tv_workout_summaries_distance_type_and_duration);
+            viewHolder.tvSport = row.findViewById(R.id.tv_workout_summaries_sport);
+            // viewHolder.llWorkoutDetails = row.findViewById(R.id.workout_details_container);
             viewHolder.mapView = row.findViewById(R.id.workout_summaries_mapView);
             viewHolder.separator = row.findViewById(R.id.separator_export_status);
             viewHolder.tvExportStatusHeader = row.findViewById(R.id.export_status_header);
             viewHolder.llExportStatus = row.findViewById(R.id.export_status_container);
             viewHolder.tlExtremaValues = row.findViewById(R.id.extrema_values_container);
+
+            View detailsView = row.findViewById(R.id.workout_details_include);
+            if (detailsView != null) {
+                viewHolder.detailsViewHolder = new WorkoutDetailsViewHolder(detailsView, context);
+            }
 
             viewHolder.initializeMapView();
 
@@ -417,11 +438,6 @@ public class WorkoutSummariesListFragment extends ListFragment {
             String sport = SportTypeDatabaseManager.getUIName(sportId);
             BSportType bSportType = SportTypeDatabaseManager.getBSportType(sportId);
             double time_s = cursor.getDouble(cursor.getColumnIndex(WorkoutSummaries.TIME_TOTAL_s));
-            String distanceTypeAndDuration = context.getString(R.string.distance_distanceUnit_sport_time_format,
-                    (new DistanceFormatter()).format(distance_m),
-                    context.getString(MyHelper.getDistanceUnitNameId()),
-                    sport,
-                    (new TimeFormatter()).format(time_s));
 
             ViewHolder viewHolder = (ViewHolder) view.getTag();
             viewHolder.workoutId = workoutId;
@@ -448,7 +464,7 @@ public class WorkoutSummariesListFragment extends ListFragment {
             viewHolder.tvDateAndTime.setText(WorkoutSummariesDatabaseManager.getStartTime(workoutId, "localtime"));
 
             viewHolder.tvName.setText(cursor.getString(cursor.getColumnIndex(WorkoutSummaries.WORKOUT_NAME)));
-            viewHolder.tvDistanceTypeAndDuration.setText(distanceTypeAndDuration);
+            viewHolder.tvSport.setText(sport);
 
             if (isPlayServiceAvailable) {
                 viewHolder.mapView.setVisibility(View.VISIBLE);
@@ -458,6 +474,8 @@ public class WorkoutSummariesListFragment extends ListFragment {
             } else {
                 viewHolder.mapView.setVisibility(View.GONE);
             }
+
+            setWorkoutDetails(viewHolder, cursor, workoutId);
 
             setExtremaInfo(viewHolder, context, workoutId, bSportType);
 
@@ -469,11 +487,15 @@ public class WorkoutSummariesListFragment extends ListFragment {
             extends MyMapViewHolder
             implements OnMapReadyCallback {
 
+        WorkoutDetailsViewHolder detailsViewHolder;
+
         long workoutId;
         LinearLayout llSummary;
         TextView tvDateAndTime;
         TextView tvName;
-        TextView tvDistanceTypeAndDuration;
+        TextView tvSport;
+        // LinearLayout llWorkoutDetails;
+        MapView mapView;
         View separator;
         TextView tvExportStatusHeader;
         LinearLayout llExportStatus;
