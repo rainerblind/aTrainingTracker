@@ -495,7 +495,6 @@ public class WorkoutSummariesListFragment extends ListFragment {
         TextView tvName;
         TextView tvSport;
         // LinearLayout llWorkoutDetails;
-        MapView mapView;
         View separator;
         TextView tvExportStatusHeader;
         LinearLayout llExportStatus;
