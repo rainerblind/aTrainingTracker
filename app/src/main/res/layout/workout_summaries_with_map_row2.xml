@@ -31,7 +31,7 @@
             android:layout_height="0dp"
             android:background="?attr/colorPrimary"
             android:paddingBottom="16dp"
-            app:layout_constraintBottom_toTopOf="@+id/extrema_values_container"
+            app:layout_constraintBottom_toTopOf="@+id/workout_details_include"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
@@ -53,7 +53,7 @@
 
         <!-- Workout Summaries -->
         <TextView
-            android:id="@+id/tv_workout_summaries_distance_type_and_duration"
+            android:id="@+id/tv_workout_summaries_sport"
             style="@style/TextAppearance.MaterialComponents.Body2"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -69,16 +69,26 @@
 
         <TextView
             android:id="@+id/tv_workout_summaries_date_and_time"
-            style="@style/TextAppearance.MaterialComponents.Caption"
+            style="@style/TextAppearance.MaterialComponents.Body2"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginEnd="16dp"
             android:textColor="?attr/colorOnPrimary"
-            app:layout_constraintBaseline_toBaselineOf="@id/tv_workout_summaries_distance_type_and_duration"
+            app:layout_constraintBaseline_toBaselineOf="@id/tv_workout_summaries_sport"
             app:layout_constraintEnd_toEndOf="parent"
             tools:text="1.9.2012 at 10:10" />
 
-        <!-- Container for Extrema Values, placed below the header -->
+        <!-- Placeholder for Workout Details (Distance, Time, Ascent, etc.) -->
+        <include
+            android:id="@+id/workout_details_include"
+            layout="@layout/workout_summary__details"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/scrim" />
+
+        <!-- Container for Extrema Values -->
         <TableLayout
             android:id="@+id/extrema_values_container"
             android:layout_width="0dp"
@@ -90,7 +100,7 @@
             android:visibility="gone"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/scrim"
+            app:layout_constraintTop_toBottomOf="@id/workout_details_include"
             tools:visibility="visible" />
 
         <!-- MapView is now positioned below the new extrema container -->
@@ -102,7 +112,7 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/extrema_values_container"
             map:liteMode="true"
-            map:mapType="normal" />
+            map:mapType="none" />
 
         <!-- Separator Line -->
         <View

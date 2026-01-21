@@ -56,10 +56,6 @@ public class ExtremaValuesViewHolder {
 
         mContainer.removeAllViews(); // Clear any previous views
 
-        // Inflate the base layout which includes the header row
-        // TableLayout content = (TableLayout) mInflater.inflate(R.layout.workout_summary__extrema, mContainer, false);
-        // View content = mInflater.inflate(R.layout.workout_summary__extrema, mContainer, false);
-
         TableRow header = (TableRow) mInflater.inflate(R.layout.workout_summary__extrema_header, mContainer, false);
         mContainer.addView(header);
 
