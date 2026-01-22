@@ -74,7 +74,7 @@
             android:layout_height="wrap_content"
             android:layout_marginEnd="16dp"
             android:textColor="?attr/colorOnPrimary"
-            app:layout_constraintBaseline_toBaselineOf="@id/tv_workout_summaries_sport"
+            app:layout_constraintBottom_toBottomOf="@id/tv_workout_summaries_sport"
             app:layout_constraintEnd_toEndOf="parent"
             tools:text="1.9.2012 at 10:10" />
 

@@ -74,6 +74,9 @@ import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.LatLng;
 
+import java.util.Date;
+import java.util.Locale;
+
 // import android.view.View.OnClickListener;
 
 public class WorkoutSummariesListFragment extends ListFragment {
@@ -459,8 +462,42 @@ public class WorkoutSummariesListFragment extends ListFragment {
             });
 
             // now, set the values of the views
-            // viewHolder.tvDateAndTime.setText(cursor.getString(cursor.getColumnIndex(WorkoutSummaries.TIME_START)));
-            viewHolder.tvDateAndTime.setText(WorkoutSummariesDatabaseManager.getStartTime(workoutId, "localtime"));
+            // First, get the start time as a String from the database, which is in the format "YYYY-MM-DD HH:MM:SS".
+            String startTimeString = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.TIME_START));
+
+            // Define the format and time-zone that matches how the date is stored in the database.
+            java.text.SimpleDateFormat dbFormat = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ROOT);
+            dbFormat.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+
+            Date startTimeDate = null;
+            try {
+                startTimeDate = dbFormat.parse(startTimeString);
+            } catch (java.text.ParseException e) {
+                // Log the error if parsing fails, and set a fallback text.
+                Log.e(TAG, "Failed to parse date string: " + startTimeString, e);
+                viewHolder.tvDateAndTime.setText(startTimeString); // Show raw string on error
+            }
+
+            // If parsing was successful, format the Date object for the user's locale.
+            if (startTimeDate != null) {
+                // Get a formatter for the DATE part only, using the default locale style.
+                java.text.DateFormat localeDateFormat = java.text.DateFormat.getDateInstance(
+                        java.text.DateFormat.DEFAULT // Or DateFormat.MEDIUM for a format like "Jan 22, 2026"
+                );
+
+                // Get a formatter for the TIME part only, using the short style (e.g., 3:11 PM).
+                java.text.DateFormat localeTimeFormat = java.text.DateFormat.getTimeInstance(
+                        java.text.DateFormat.SHORT
+                );
+
+                // Format both parts separately and combine them with a newline character.
+                String formattedDate = localeDateFormat.format(startTimeDate);
+                String formattedTime = localeTimeFormat.format(startTimeDate);
+                String finalDateTimeString = formattedDate + "\n" + formattedTime;
+
+                // Set the combined text. The TextView will handle the line break.
+                viewHolder.tvDateAndTime.setText(finalDateTimeString);
+            }
 
             viewHolder.tvName.setText(cursor.getString(cursor.getColumnIndex(WorkoutSummaries.WORKOUT_NAME)));
             viewHolder.tvSport.setText(sport);
