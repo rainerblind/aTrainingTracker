@@ -46,9 +46,37 @@
             tools:text="1:45:33" />
     </LinearLayout>
 
-    <!-- Second Row: Altitude Details -->
+    <!-- average speed / pace -->
+    <!-- laps? -->
+    <!-- goal, method, description? -->
+
+    <!--  Row for Average Speed / Pace -->
     <LinearLayout
-        android:id="@+id/workout_details_row2"
+        android:id="@+id/workout_details_rowSpeed"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:orientation="horizontal">
+
+        <!-- Average Speed/Pace -->
+        <TextView
+            android:id="@+id/detail_avg_speed"
+            style="@style/TextAppearance.MaterialComponents.Body1"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:drawableStart="@drawable/ic_speed"
+            android:drawablePadding="4dp"
+            android:gravity="center_vertical|start"
+            tools:text="12.0 km/h" />
+
+        <!-- You could add other items here with layout_weight=1, like max speed -->
+
+    </LinearLayout>
+
+    <!-- Row: Altitude Details -->
+    <LinearLayout
+        android:id="@+id/workout_details_rowAltitude"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
