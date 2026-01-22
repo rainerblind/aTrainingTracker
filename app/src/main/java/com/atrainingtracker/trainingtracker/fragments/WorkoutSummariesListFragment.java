@@ -77,7 +77,8 @@ import java.util.Locale;
 
 // import android.view.View.OnClickListener;
 
-public class WorkoutSummariesListFragment extends ListFragment {
+public class WorkoutSummariesListFragment extends ListFragment
+        implements ChangeSportDialogFragment.OnSportChangedListener {
     public static final String TAG = WorkoutSummariesListFragment.class.getSimpleName();
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private final IntentFilter mExportStatusChangedFilter = new IntentFilter(ExportStatusChangedBroadcaster.EXPORT_STATUS_CHANGED_INTENT);
@@ -408,6 +409,7 @@ public class WorkoutSummariesListFragment extends ListFragment {
             viewHolder.tvName = row.findViewById(R.id.tv_workout_summaries_name);
             viewHolder.tvDateAndTime = row.findViewById(R.id.tv_workout_summaries__date_and_time);
 
+            viewHolder.llSportContainer = row.findViewById(R.id.ll_workout_summaries__sport_container);
             viewHolder.ivSportIcon = row.findViewById(R.id.iv_workout_summaries__sport_icon);
             viewHolder.tvSportName = row.findViewById(R.id.tv_workout_summaries__sport_name);
             viewHolder.mapView = row.findViewById(R.id.workout_summaries_mapView);
@@ -538,8 +540,45 @@ public class WorkoutSummariesListFragment extends ListFragment {
                 }
             });
 
+            // --- Long Click listeners
+            if (viewHolder.llSportContainer != null) {
+                viewHolder.llSportContainer.setOnLongClickListener(new View.OnLongClickListener() {
+                    @Override
+                    public boolean onLongClick(View v) {
+                        if (DEBUG) Log.d(TAG, "Sport view long-clicked for workoutId: " + workoutId);
+                        // Call the interface method to show the dialog
+                        WorkoutSummariesListFragment.this.showChangeSportDialog(workoutId);
+                        // Return true to indicate that the event has been consumed.
+                        // This prevents the regular OnClickListener from also firing.
+                        return true;
+                    }
+                });
+            }
+
         }
     }
+
+
+    public void showChangeSportDialog(long workoutId) {
+
+        ChangeSportDialogFragment dialogFragment = ChangeSportDialogFragment.newInstance(workoutId);
+
+        // --- STEP 2.1: SET THE LISTENER ---
+        // Set this fragment as the listener for the dialog's events.
+        dialogFragment.setOnSportChangedListener(this);
+
+        // Use getChildFragmentManager() for dialogs shown from within a Fragment
+        dialogFragment.show(getChildFragmentManager(), "ChangeSportDialogFragment");
+    }
+
+    // --- STEP 2.2: IMPLEMENT THE REFRESH LOGIC ---
+    @Override
+    public void onSportChanged(long workoutId) {
+        if (DEBUG) Log.d(TAG, "onSportChanged callback received. Restarting loader.");
+        updateCursor();
+        // TODO: upate the correct view
+    }
+
 
     class ViewHolder
             extends MyMapViewHolder
@@ -551,6 +590,7 @@ public class WorkoutSummariesListFragment extends ListFragment {
         View scrim;
         TextView tvName;
         TextView tvDateAndTime;
+        LinearLayout llSportContainer;
         ImageView ivSportIcon;
         TextView tvSportName;
         View separator;

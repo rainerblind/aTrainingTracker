@@ -945,6 +945,9 @@
 
     <string name="export_status__header_title">Export Status</string>
 
-
+    <!-- change Sport Dialog -->
+    <string name="change_sport">Sportart ändern</string>
+    <string name="save">Speichern</string>
+    <string name="cancel">Abbrechen</string>
 
 </resources>
