@@ -440,8 +440,6 @@ public class TrackerService extends Service {
         values.put(WorkoutSummaries.B_SPORT, SportTypeDatabaseManager.getBSportType(sportTypeId).name());
         values.put(WorkoutSummaries.WORKOUT_NAME, mBaseFileName);
         values.put(WorkoutSummaries.FILE_BASE_NAME, mBaseFileName);
-        values.put(WorkoutSummaries.PRIVATE, TrainingApplication.defaultToPrivate());
-
 
         WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance();
         SQLiteDatabase summariesDb = databaseManager.getOpenDatabase();
