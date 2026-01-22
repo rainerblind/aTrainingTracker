@@ -50,10 +50,11 @@ public class ChangeSportDialogFragment extends DialogFragment {
 
     private OnSportChangedListener mListener;
 
-    public static ChangeSportDialogFragment newInstance(long workoutId) {
+    public static ChangeSportDialogFragment newInstance(long workoutId, long currentSportId) {
         ChangeSportDialogFragment fragment = new ChangeSportDialogFragment();
         Bundle args = new Bundle();
         args.putLong(ARG_WORKOUT_ID, workoutId);
+        args.putLong(ARG_CURRENT_SPORT_ID, currentSportId);
         fragment.setArguments(args);
         return fragment;
     }
@@ -63,8 +64,7 @@ public class ChangeSportDialogFragment extends DialogFragment {
         super.onCreate(savedInstanceState);
         if (getArguments() != null) {
             mWorkoutId = getArguments().getLong(ARG_WORKOUT_ID);
-
-            mCurrentSportId = WorkoutSummariesDatabaseManager.getLong(mWorkoutId, WorkoutSummaries.SPORT_ID);
+            mCurrentSportId = getArguments().getLong(ARG_CURRENT_SPORT_ID);
         }
     }
 
