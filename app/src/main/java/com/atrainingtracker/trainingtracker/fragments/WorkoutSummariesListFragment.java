@@ -549,10 +549,7 @@ public class WorkoutSummariesListFragment extends ListFragment
                     @Override
                     public boolean onLongClick(View v) {
                         if (DEBUG) Log.d(TAG, "Sport view long-clicked for workoutId: " + workoutId);
-                        // Call the interface method to show the dialog
-                        WorkoutSummariesListFragment.this.showChangeSportDialog(workoutId);
-                        // Return true to indicate that the event has been consumed.
-                        // This prevents the regular OnClickListener from also firing.
+                        WorkoutSummariesListFragment.this.showChangeSportDialog(workoutId, sportId);
                         return true;
                     }
                 });
@@ -571,11 +568,10 @@ public class WorkoutSummariesListFragment extends ListFragment
     }
 
 
-    public void showChangeSportDialog(long workoutId) {
+    // call and callback for changing the sport tpye
+    public void showChangeSportDialog(long workoutId, long sportTypeId) {
+        ChangeSportDialogFragment dialogFragment = ChangeSportDialogFragment.newInstance(workoutId, sportTypeId);
 
-        ChangeSportDialogFragment dialogFragment = ChangeSportDialogFragment.newInstance(workoutId);
-
-        // --- STEP 2.1: SET THE LISTENER ---
         // Set this fragment as the listener for the dialog's events.
         dialogFragment.setOnSportChangedListener(this);
 
@@ -583,12 +579,11 @@ public class WorkoutSummariesListFragment extends ListFragment
         dialogFragment.show(getChildFragmentManager(), "ChangeSportDialogFragment");
     }
 
-    // --- STEP 2.2: IMPLEMENT THE REFRESH LOGIC ---
     @Override
     public void onSportChanged(long workoutId) {
         if (DEBUG) Log.d(TAG, "onSportChanged callback received. Restarting loader.");
+        // simply update the cursor
         updateCursor();
-        // TODO: upate the correct view
     }
 
     public void showEditWorkoutNameDialog(long workoutId, String workoutName) {
