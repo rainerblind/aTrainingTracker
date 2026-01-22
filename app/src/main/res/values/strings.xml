@@ -944,6 +944,33 @@
 
     <!-- details -->
 
+    <!-- waiting  -->
+
+    <!-- writing to file waiting
+        (0: #waiting for quantity)
+        1: string representing the waiting file formats -->
+    <plurals name="export_notification__detail__File_waiting">
+        <item quantity="one">⏳ Waiting to write the %1$s file.</item>     <!-- Waiting to write TCX file. -->
+        <item quantity="other">⏳ Waiting to write the %1$s files.</item>  <!-- Waiting to write the TCX and CSV files. -->
+    </plurals>
+
+    <!-- uploading to Dropbox waiting
+        (0: #waiting for quantity)
+        1: string representing the waiting file formats -->
+    <plurals name="export_notification__detail__Dropbox_waiting">
+        <item quantity="one">⏳ Waiting to upload the %1$s file to Dropbox.</item>     <!-- Waiting to upload the TCX file to Dropbox. -->
+        <item quantity="other">⏳ Waiting to upload the %1$s files to Dropbox.</item>  <!-- Waiting to upload the TCX and CSV files to Dropbox. -->
+    </plurals>
+
+    <!-- uploading to Cummunity waiting
+        (0: #waiting for quantity)
+        1: string representing the waiting file formats -->
+    <plurals name="export_notification__detail__Community_waiting">
+        <item quantity="one">⏳ Waiting to upload to %1$s.</item>    <!-- Waiting to upload to Strava. -->
+        <item quantity="other">⏳ Waiting to upload to %1$s.</item>  <!-- Waiting to upload to Strava and Runkeeper. -->
+    </plurals>
+
+
     <!-- ongoing -->
 
     <!-- writing to file ongoing
@@ -1027,8 +1054,16 @@
     <string name="export_notification__detail__no_results">❓ No results found.</string>
 
 
+    <string name="export_status__header_title">Export Status</string>
 
-    <!-- TODO remove the ACTION -> String from the code and use proper plurals instead. -->
+    <!-- change Sport Dialog -->
+    <string name="change_sport">Change Sport</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+
+    <!-- Edit workout name -->
+    <string name="hint_workout_name">workout name</string>
+    <string name="edit_workout_name">edit workout name</string>
 
 
 </resources>

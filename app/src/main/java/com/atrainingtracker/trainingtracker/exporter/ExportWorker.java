@@ -33,7 +33,7 @@ public class ExportWorker extends Worker  {
     public ExportWorker(@NonNull Context context, @NonNull WorkerParameters workerParams) {
         super(context, workerParams);
         mContext = context;
-        mExportNotificationManager = ExportNotificationManager.getInstance(context);
+        mExportNotificationManager = ExportNotificationManager.Companion.getInstance(context);
     }
 
     @SuppressLint("MissingPermission")
