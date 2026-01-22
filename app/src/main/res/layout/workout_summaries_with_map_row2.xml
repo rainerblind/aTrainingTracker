@@ -82,6 +82,7 @@
         <include
             android:id="@+id/workout_details_include"
             layout="@layout/workout_summary__details"
+            android:layout_marginTop="-8dp"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             app:layout_constraintEnd_toEndOf="parent"
