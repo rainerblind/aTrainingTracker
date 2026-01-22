@@ -133,7 +133,6 @@ public class TrainingApplication extends Application {
     public static final String SP_UPLOAD_TO_TRAINING_PEAKS = "uploadToTrainingPeaks";
     public static final String SP_TRAINING_PEAKS_ACCESS_TOKEN = "trainingPeaksAccessToken";
     public static final String SP_TRAINING_PEAKS_REFRESH_TOKEN = "trainingPeaksRefreshToken";
-    public static final String SP_ATHLETE_NAME = "athleteName";
     // public static final String SP_DISPLAY_UPDATE_TIME     = "displayUpdateTime";
     public static final String SP_LACTATE_THRESHOLD_POWER = "lactateThresholdPower";
     public static final String SP_LOCATION_SOURCE_GPS = "locationSourceGPS";
@@ -204,7 +203,6 @@ public class TrainingApplication extends Application {
     private static final double DEFAULT_MAX_WALK_SPEED_mps = 2;
     private static final double DEFAULT_MAX_RUN_SPEED_mps = 4;
     private static final double DEFAULT_MAX_MTB_SPEED_mps = 5.5;
-    private static final String DEFAULT_ATHLETE_NAME = "Athlete";
     private static final String APPLICATION_NAME = TAG;
     protected static Context cAppContext;
     @NonNull
@@ -463,11 +461,6 @@ public class TrainingApplication extends Application {
     @NonNull
     public static String getAppName() {
         return cAppContext.getString(R.string.application_name);
-    }
-
-    @NonNull
-    public static String getAthleteName() {
-        return cSharedPreferences.getString(SP_ATHLETE_NAME, DEFAULT_ATHLETE_NAME);
     }
 
     public static double getMinWalkSpeed_UserUnits() {

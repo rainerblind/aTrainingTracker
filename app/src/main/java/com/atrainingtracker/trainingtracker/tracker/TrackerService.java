@@ -438,7 +438,6 @@ public class TrackerService extends Service {
         values.put(WorkoutSummaries.GC_DATA, MySensorManager.EMPTY_GC_DATA);
         values.put(WorkoutSummaries.SPORT_ID, sportTypeId);
         values.put(WorkoutSummaries.B_SPORT, SportTypeDatabaseManager.getBSportType(sportTypeId).name());
-        values.put(WorkoutSummaries.ATHLETE_NAME, TrainingApplication.getAthleteName());
         values.put(WorkoutSummaries.WORKOUT_NAME, mBaseFileName);
         values.put(WorkoutSummaries.FILE_BASE_NAME, mBaseFileName);
         values.put(WorkoutSummaries.PRIVATE, TrainingApplication.defaultToPrivate());

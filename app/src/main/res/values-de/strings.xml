@@ -318,8 +318,6 @@
     <string name="prefsUserTitle">Benutzer</string>
     <string name="prefsBasic">Basic</string>
     <string name="prefsAdvanced">Erweitert</string>
-    <string name="prefsAthleteNameTitle">Benutzername</string>
-    <string name="prefsAthleteNameSummary">Benutzername</string>
 
     <string name="prefsThresholdSpeedsTitle">Geschwindigkeitsschwellwerte</string>
     <string name="prefsThresholdSpeedsSummary">Geschwindigkeitsschwellwerte für die verschiedenen Sportarten festlegen</string>

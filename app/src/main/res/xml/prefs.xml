@@ -21,11 +21,6 @@
     android:key="root">
 
     <PreferenceCategory android:title="@string/prefsBasic">
-        <EditTextPreference
-            android:key="athleteName"
-            android:summary="@string/prefsAthleteNameSummary"
-            android:title="@string/prefsAthleteNameTitle" />
-
         <Preference
             android:key="training_zones_settings"
             android:title="@string/prefs_training_zones"

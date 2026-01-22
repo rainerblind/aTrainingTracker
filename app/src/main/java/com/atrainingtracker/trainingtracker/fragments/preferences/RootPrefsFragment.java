@@ -46,7 +46,7 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
 
 
     @Nullable
-    private EditTextPreference mAthleteNamePref, mSearchRoundsPref;
+    private EditTextPreference mSearchRoundsPref;
     @Nullable
     private ListPreference mUnitPref;
     @Nullable
@@ -66,7 +66,6 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
 
         mUnitPref = getPreferenceScreen().findPreference(TrainingApplication.SP_UNITS);
 
-        mAthleteNamePref = getPreferenceScreen().findPreference(TrainingApplication.SP_ATHLETE_NAME);
         mTrainingZonesPref = getPreferenceScreen().findPreference("training_zones_settings");
         if (mTrainingZonesPref != null) {
             mTrainingZonesPref.setOnPreferenceClickListener(preference -> {
@@ -103,8 +102,6 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
         mPebble.setSummary(pebbleSummary());
         mLocationSources.setSummary(locationSourcesSummary());
 
-
-        mAthleteNamePref.setSummary(TrainingApplication.getAthleteName());
         updateTrainingZonesSummary();
 
         mSearchRoundsPref.setSummary(TrainingApplication.getNumberOfSearchTries() + "");
@@ -142,10 +139,6 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
 
     @Override
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
-        if (TrainingApplication.SP_ATHLETE_NAME.equals(key)) {
-            mAthleteNamePref.setSummary(TrainingApplication.getAthleteName());
-        }
-
         if (TrainingApplication.SP_UNITS.equals(key)) {
             mUnitPref.setSummary(TrainingApplication.getUnit().toString());
         }
