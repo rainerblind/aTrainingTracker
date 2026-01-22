@@ -46,7 +46,7 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
 
 
     @Nullable
-    private EditTextPreference mAthleteNamePref, mSamplingTimePref, mSearchRoundsPref;
+    private EditTextPreference mAthleteNamePref, mSearchRoundsPref;
     @Nullable
     private ListPreference mUnitPref;
     @Nullable
@@ -75,7 +75,6 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
                 return true;
             });
         }
-        mSamplingTimePref = getPreferenceScreen().findPreference(TrainingApplication.SP_SAMPLING_TIME);
         mSearchRoundsPref = getPreferenceScreen().findPreference(TrainingApplication.SP_NUMBER_OF_SEARCH_TRIES);
 
         mExport = this.getPreferenceScreen().findPreference(TrainingApplication.FILE_EXPORT);
@@ -107,9 +106,6 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
 
         mAthleteNamePref.setSummary(TrainingApplication.getAthleteName());
         updateTrainingZonesSummary();
-
-        if (DEBUG) Log.d(TAG, "sampling time: " + TrainingApplication.getSamplingTime());
-        setSamplingTimeSummary();
 
         mSearchRoundsPref.setSummary(TrainingApplication.getNumberOfSearchTries() + "");
 
@@ -183,10 +179,6 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
             Log.i(TAG, "updating cloudUploadSummary to " + cloudUploadSummary);
             mCloudUpload.setSummary(cloudUploadSummary);
             getActivity().onContentChanged();
-        }
-
-        if (TrainingApplication.SP_SAMPLING_TIME.equals(key)) {
-            setSamplingTimeSummary();
         }
 
         if (TrainingApplication.SP_NUMBER_OF_SEARCH_TRIES.equals(key)) {
@@ -299,15 +291,6 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
         }
 
         return locationSources;
-    }
-
-
-    protected void setSamplingTimeSummary() {
-        int samplingTime = TrainingApplication.getSamplingTime();
-        String units = getString(R.string.units_time_basic);
-        if (DEBUG)
-            Log.i(TAG, "setSamplingTimeSummary: samplingTime=" + samplingTime + ", units = " + units);
-        mSamplingTimePref.setSummary(getString(R.string.value_unit_int_string, samplingTime, units));
     }
 
 }

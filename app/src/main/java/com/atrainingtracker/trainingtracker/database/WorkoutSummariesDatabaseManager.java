@@ -736,7 +736,7 @@ public class WorkoutSummariesDatabaseManager {
         public static final String METHOD = "method";
         public static final String EQUIPMENT_ID = "equipmentId";
         public static final String DESCRIPTION = "description";
-        public static final String SAMPLING_TIME = "samplingTime";
+        // public static final String SAMPLING_TIME = "samplingTime"; 2026-01: no longer supported/needed.  Will be always 1.
         public static final String B_SPORT = "Sport";                 // intentionally the same name.  This avoids creating a new column and leaving the old one unused when upgrading
         public static final String SPORT_ID = "sportId";
         // use WorkoutSummariesDatabaseManager.getStartTime to access this field
@@ -806,7 +806,38 @@ public class WorkoutSummariesDatabaseManager {
         // public static final int DB_VERSION = 8; // upgrade to Version 8 at 1. June 2016
         // public static final int DB_VERSION = 9; // upgrade to Version 9 at 7. June 2016
         // public static final int DB_VERSION = 10; // upgrade to Version 10 at 8. June 2016
-        public static final int DB_VERSION = 11; // upgrade to Version 11 at 19. 01. 2017
+        // public static final int DB_VERSION = 11; // upgrade to Version 11 at 19. 01. 2017
+        public static final int DB_VERSION = 11; // upgrade to Version 12 at 22.01.2026
+
+        protected static final String CREATE_TABLE_V12 = "create table " + WorkoutSummaries.TABLE + " ("
+                + WorkoutSummaries.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + WorkoutSummaries.WORKOUT_NAME + " text,"
+                + WorkoutSummaries.FILE_BASE_NAME + " text,"
+                + WorkoutSummaries.ATHLETE_NAME + " text,"
+                + WorkoutSummaries.DESCRIPTION + " text,"
+                + WorkoutSummaries.GOAL + " text,"
+                + WorkoutSummaries.METHOD + " text,"
+                // + WorkoutSummaries.SPORT + " text,"
+                + WorkoutSummaries.B_SPORT + " text,"
+                + WorkoutSummaries.SPORT_ID + " int,"
+                + WorkoutSummaries.EQUIPMENT_ID + " int,"
+                // + WorkoutSummaries.SAMPLING_TIME + " int,"  // removed in version 12.
+                + WorkoutSummaries.TIME_START + " DATETIME DEFAULT CURRENT_TIMESTAMP,"
+                + WorkoutSummaries.TIME_ACTIVE_s + " int,"
+                + WorkoutSummaries.TIME_TOTAL_s + " int,"
+                + WorkoutSummaries.DISTANCE_TOTAL_m + " real,"
+                + WorkoutSummaries.SPEED_AVERAGE_mps + " real,"
+                + WorkoutSummaries.GC_DATA + " text,"
+                + WorkoutSummaries.CALORIES + " int,"
+                + WorkoutSummaries.LAPS + " int,"
+                + WorkoutSummaries.FINISHED + " int," // end of version 3
+                + WorkoutSummaries.PRIVATE + " int,"
+                + WorkoutSummaries.COMMUTE + " int,"
+                + WorkoutSummaries.TRAINER + " int,"
+                + WorkoutSummaries.ASCENDING + " int,"
+                + WorkoutSummaries.DESCENDING + " int," // end of version 4
+                + WorkoutSummaries.EXTREMA_VALUES_CALCULATED + " int)";
+
         protected static final String CREATE_TABLE_V11 = "create table " + WorkoutSummaries.TABLE + " ("
                 + WorkoutSummaries.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                 + WorkoutSummaries.WORKOUT_NAME + " text,"
@@ -819,7 +850,7 @@ public class WorkoutSummariesDatabaseManager {
                 + WorkoutSummaries.B_SPORT + " text,"
                 + WorkoutSummaries.SPORT_ID + " int,"
                 + WorkoutSummaries.EQUIPMENT_ID + " int,"
-                + WorkoutSummaries.SAMPLING_TIME + " int,"
+                // + WorkoutSummaries.SAMPLING_TIME + " int,"  // Note that this was part of version 11.
                 + WorkoutSummaries.TIME_START + " DATETIME DEFAULT CURRENT_TIMESTAMP,"
                 + WorkoutSummaries.TIME_ACTIVE_s + " int,"
                 + WorkoutSummaries.TIME_TOTAL_s + " int,"
@@ -880,7 +911,7 @@ public class WorkoutSummariesDatabaseManager {
         @Override
         public void onCreate(@NonNull SQLiteDatabase db) {
 
-            db.execSQL(CREATE_TABLE_V11);
+            db.execSQL(CREATE_TABLE_V12);
             if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_V11);
 
             // new in version 4:
@@ -994,7 +1025,10 @@ public class WorkoutSummariesDatabaseManager {
                             WorkoutSummaries.C_ID + "=?", new String[]{Long.toString(id)});
                 }
                 cursor.close();
+            }
 
+            if (oldVersion < 12) {
+                // do nothing.  The removed row does not matter.
             }
 
         }

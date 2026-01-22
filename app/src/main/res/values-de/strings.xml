@@ -329,7 +329,6 @@
     <string name="prefsMaxMTBSpeedTitle">max Geschwindigkeit MTB</string>
 
     <string name="prefsTrackingTitle">Aufzeichnung</string>
-    <string name="prefsSamplingTimeTitle">Aufzeichnungsrate</string>
 
     <string name="prefsLocationSourceTitle">Positionsdatenquellen</string>
     <string name="prefsLocationSourceSummary">Wähle die Positionsdatenquellen (GPS, google fused, Netzwerk)</string>
@@ -484,7 +483,6 @@
     <string name="MethodHint">Methode eingeben</string>
     <string name="Description">Beschreibung:</string>
     <string name="DescriptionHint">Beschreibung eingeben</string>
-    <string name="SamplingTime">Aufzeichnungsrate:</string>
     <string name="StartTime">Startzeit:</string>
     <string name="TotalTime">Gesamtzeit:</string>
     <string name="ActiveTime">Aktive Zeit:</string>

@@ -41,7 +41,7 @@ public abstract class BaseFileWriter extends BaseExporter {
     protected static final int MIN_DATA_POINTS_FOR_UPLOAD = 10;
     private static final String TAG = "BaseFileExporter";
     private static final boolean DEBUG = false;
-    String startTime, totalTime, samplingTime, athleteName, data, goal, method, totalDistance, description;
+    String startTime, totalTime, athleteName, data, goal, method, totalDistance, description;
     boolean indoorTrainerSession, haveDistance, haveSpeed, havePower, haveHR, haveCadence, haveRunCadence, haveBikeCadence, haveTorque, haveAltitude, haveGeo;
     long workoutID, sportTypeId;
 
@@ -73,7 +73,6 @@ public abstract class BaseFileWriter extends BaseExporter {
         // get the data for the header
         startTime = myGet(cursor, WorkoutSummaries.TIME_START, "");
         totalTime = myGet(cursor, WorkoutSummaries.TIME_TOTAL_s, "0");
-        samplingTime = myGet(cursor, WorkoutSummaries.SAMPLING_TIME, null);
         athleteName = myGet(cursor, WorkoutSummaries.ATHLETE_NAME, TrainingApplication.getAthleteName()); // TODO: Preferences/myANTPLusApplication
         data = myGet(cursor, WorkoutSummaries.GC_DATA, "--------");
         goal = myGet(cursor, WorkoutSummaries.GOAL, "");

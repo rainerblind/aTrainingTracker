@@ -390,8 +390,6 @@
     <string name="prefsMaxMTBSpeedTitle">max MTB speed</string>
 
     <string name="prefsTrackingTitle">Tracking</string>
-    <string name="prefsSamplingTimeSummary" translatable="false">1 s</string>
-    <string name="prefsSamplingTimeTitle">Sampling Time</string>
 
     <string name="prefsLocationSourceTitle">Location Source</string>
     <string name="prefsLocationSourceSummary">Choose location source (GPS, google fused, network)</string>
@@ -567,8 +565,6 @@
     <string name="MethodHint">edit method</string>
     <string name="Description">Description:</string>
     <string name="DescriptionHint">edit description</string>
-    <string name="SamplingTime">Sampling Time:</string>
-    <string name="SamplingTimeValue" translatable="false">1</string>
     <string name="StartTime">Start Time:</string>
     <string name="NoData" translatable="false">--</string>
     <string name="TotalTime">Total Time:</string>

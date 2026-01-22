@@ -102,7 +102,6 @@ public class TrackerService extends Service {
 
 
     // private long mSportTypeId = SportTypeDatabaseManager.getDefaultSportTypeId();
-    private int mSamplingTime;
     private long mWorkoutID;
     private final BroadcastReceiver mLapSummaryReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, @NonNull Intent intent) {
@@ -270,7 +269,6 @@ public class TrackerService extends Service {
         }
 
         mSamplesTableName = WorkoutSamplesDatabaseManager.getTableName(mBaseFileName);
-        mSamplingTime = TrainingApplication.getSamplingTime();
 
         if (mBanalService != null && !BANALService.isSearching()) {
             onSearchingFinished();
@@ -278,7 +276,7 @@ public class TrackerService extends Service {
 
         // start tracking
         mTrackerHandle = mScheduler.scheduleAtFixedRate(tracker, 0, // initial delay
-                mSamplingTime, // sampling time
+                1, // sampling time
                 TimeUnit.SECONDS);
 
         // notify others
@@ -440,7 +438,6 @@ public class TrackerService extends Service {
         values.put(WorkoutSummaries.GC_DATA, MySensorManager.EMPTY_GC_DATA);
         values.put(WorkoutSummaries.SPORT_ID, sportTypeId);
         values.put(WorkoutSummaries.B_SPORT, SportTypeDatabaseManager.getBSportType(sportTypeId).name());
-        values.put(WorkoutSummaries.SAMPLING_TIME, mSamplingTime);
         values.put(WorkoutSummaries.ATHLETE_NAME, TrainingApplication.getAthleteName());
         values.put(WorkoutSummaries.WORKOUT_NAME, mBaseFileName);
         values.put(WorkoutSummaries.FILE_BASE_NAME, mBaseFileName);

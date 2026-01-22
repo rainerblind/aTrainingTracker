@@ -102,7 +102,7 @@ public class GCFileWriter extends BaseFileWriter {
         bufferedWriter.write("{\n");
         bufferedWriter.write("  \"RIDE\":{\n");
         bufferedWriter.write(String.format(FORMAT_qq, STARTTIME, dbTime2GCTime(startTime) + " UTC"));
-        bufferedWriter.write(String.format(FORMAT_q, RECINTSECS, samplingTime));
+        bufferedWriter.write(String.format(FORMAT_q, RECINTSECS, 1));
         bufferedWriter.write(String.format(FORMAT_qq, DEVICETYPE, TrainingApplication.getAppName()));
         bufferedWriter.write(String.format(FORMAT_qq, IDENTIFIER, ""));
         bufferedWriter.write(String.format(FORMAT_q, TAGS, (new JSONObject())
