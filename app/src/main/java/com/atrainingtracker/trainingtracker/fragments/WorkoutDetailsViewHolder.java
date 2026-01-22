@@ -66,6 +66,11 @@ public class WorkoutDetailsViewHolder {
         mTvMaxAltitude = view.findViewById(R.id.detail_max_altitude);
     }
 
+    public View getView() {
+        return mView;
+    }
+
+
     public void bind(@NonNull Cursor cursor, long workoutId, BSportType bSportType) {
 
         // --- Bind Row 1 (Distance and time) ---
