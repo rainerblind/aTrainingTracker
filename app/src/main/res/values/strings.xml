@@ -379,8 +379,6 @@
     <string name="prefsUserTitle">User</string>
     <string name="prefsBasic">Basic</string>
     <string name="prefsAdvanced">Advanced</string>
-    <string name="prefsAthleteNameTitle">Athlete Name</string>
-    <string name="prefsAthleteNameSummary">Athlete Name</string>
 
     <string name="prefsThresholdSpeedsTitle">Threshold speeds</string>
     <string name="prefsThresholdSpeedsSummary">Configure the threshold speeds of the different sports</string>

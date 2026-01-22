@@ -73,7 +73,6 @@ public class GCFileWriter extends BaseFileWriter {
         final String IDENTIFIER = "IDENTIFIER";
         final String SAMPLES = "SAMPLES";
         final String TAGS = "TAGS";
-        final String ATHLETE = "Athlete";
         final String DATA = "Data";
         final String SPORT = "Sport";
         final String WORKOUT_CODE = "Workout Code";
@@ -106,7 +105,6 @@ public class GCFileWriter extends BaseFileWriter {
         bufferedWriter.write(String.format(FORMAT_qq, DEVICETYPE, TrainingApplication.getAppName()));
         bufferedWriter.write(String.format(FORMAT_qq, IDENTIFIER, ""));
         bufferedWriter.write(String.format(FORMAT_q, TAGS, (new JSONObject())
-                .put(ATHLETE, athleteName)
                 .put(DATA, data)
                 .put(SPORT, SportTypeDatabaseManager.getGcName(sportTypeId))
                 .put(WORKOUT_CODE, goal + " " + method)));

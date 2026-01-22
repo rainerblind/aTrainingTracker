@@ -731,7 +731,7 @@ public class WorkoutSummariesDatabaseManager {
 
         public static final String WORKOUT_NAME = "exportName";
         public static final String FILE_BASE_NAME = "fileBaseName";
-        public static final String ATHLETE_NAME = "athleteName";
+        // public static final String ATHLETE_NAME = "athleteName"; 2026-01: no longer supported/needed
         public static final String GOAL = "goal";
         public static final String METHOD = "method";
         public static final String EQUIPMENT_ID = "equipmentId";
@@ -813,7 +813,7 @@ public class WorkoutSummariesDatabaseManager {
                 + WorkoutSummaries.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                 + WorkoutSummaries.WORKOUT_NAME + " text,"
                 + WorkoutSummaries.FILE_BASE_NAME + " text,"
-                + WorkoutSummaries.ATHLETE_NAME + " text,"
+                // + WorkoutSummaries.ATHLETE_NAME + " text,"  // removed in verison 12
                 + WorkoutSummaries.DESCRIPTION + " text,"
                 + WorkoutSummaries.GOAL + " text,"
                 + WorkoutSummaries.METHOD + " text,"
@@ -842,7 +842,7 @@ public class WorkoutSummariesDatabaseManager {
                 + WorkoutSummaries.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                 + WorkoutSummaries.WORKOUT_NAME + " text,"
                 + WorkoutSummaries.FILE_BASE_NAME + " text,"
-                + WorkoutSummaries.ATHLETE_NAME + " text,"
+                // + WorkoutSummaries.ATHLETE_NAME + " text," Note that this was part of version 11.
                 + WorkoutSummaries.DESCRIPTION + " text,"
                 + WorkoutSummaries.GOAL + " text,"
                 + WorkoutSummaries.METHOD + " text,"
