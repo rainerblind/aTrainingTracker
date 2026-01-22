@@ -10,9 +10,12 @@ import androidx.annotation.NonNull;
 
 import com.atrainingtracker.R;
 
+import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter;
+import com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter;
+import com.atrainingtracker.banalservice.sensor.formater.PaceFormatter;
 import com.atrainingtracker.trainingtracker.MyHelper;
 import com.atrainingtracker.trainingtracker.database.ExtremaType;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
@@ -32,8 +35,12 @@ public class WorkoutDetailsViewHolder {
     private final TextView mTvDistance;
     private final TextView mTvDuration;
 
-    // Row 2
-    private final LinearLayout mRow2;
+    // Speed Row
+    private final LinearLayout mRowSpeed;
+    private final TextView mTvAvgSpeed;
+
+    // Altitude Row
+    private final LinearLayout mRowAltitude;
     private final TextView mTvAscent;
     private final TextView mTvDescent;
     private final TextView mTvMinAltitude;
@@ -47,14 +54,19 @@ public class WorkoutDetailsViewHolder {
         mTvDistance = view.findViewById(R.id.detail_distance);
         mTvDuration = view.findViewById(R.id.detail_duration);
 
-        mRow2 = view.findViewById(R.id.workout_details_row2);
+        // speed row
+        mRowSpeed = view.findViewById(R.id.workout_details_rowSpeed);
+        mTvAvgSpeed = view.findViewById(R.id.detail_avg_speed);
+
+        // altitude row
+        mRowAltitude = view.findViewById(R.id.workout_details_rowAltitude);
         mTvAscent = view.findViewById(R.id.detail_ascent);
         mTvDescent = view.findViewById(R.id.detail_descent);
         mTvMinAltitude = view.findViewById(R.id.detail_min_altitude);
         mTvMaxAltitude = view.findViewById(R.id.detail_max_altitude);
     }
 
-    public void bind(@NonNull Cursor cursor, long workoutId) {
+    public void bind(@NonNull Cursor cursor, long workoutId, BSportType bSportType) {
 
         // --- Bind Row 1 (Distance and time) ---
         // distance
@@ -66,8 +78,21 @@ public class WorkoutDetailsViewHolder {
         int activeTime = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_ACTIVE_s));
         mTvDuration.setText((new TimeFormatter()).format(activeTime));
 
+        // --- Bind Speed/Pace Row ----
+        float avgSpeed_mps = cursor.getFloat(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPEED_AVERAGE_mps));
+        if (bSportType == BSportType.RUN) {  // when running, show pace instead of speed
+            float pace_spm = 1/avgSpeed_mps;
+            String pace_formatted = new PaceFormatter().format(pace_spm);
+            unit = mContext.getString(MyHelper.getPaceUnitNameId());
+            mTvAvgSpeed.setText(mContext.getString(R.string.value_unit_string_string, pace_formatted, unit));
+        } else {
+            String speed_formatted = new SpeedFormatter().format(avgSpeed_mps);
+            unit = mContext.getString(MyHelper.getSpeedUnitNameId());
+            mTvAvgSpeed.setText(mContext.getString(R.string.value_unit_string_string, speed_formatted, unit));
+        }
+        mRowSpeed.setVisibility(View.VISIBLE);
 
-        // --- Bind Row 2 (Ascent, Descent, Min/Max Altitude) ---
+        // --- Bind Altitude Row (Ascent, Descent, Min/Max Altitude) ---
         boolean hasRow2Data = false;
 
         // Ascent
@@ -111,7 +136,7 @@ public class WorkoutDetailsViewHolder {
         }
 
         // Hide the entire second row if no data exists for it
-        mRow2.setVisibility(hasRow2Data ? View.VISIBLE : View.GONE);
+        mRowAltitude.setVisibility(hasRow2Data ? View.VISIBLE : View.GONE);
 
         // TODO: Hide the entire container if no data is bound (optional, but good practice)
         mView.setVisibility(View.VISIBLE);

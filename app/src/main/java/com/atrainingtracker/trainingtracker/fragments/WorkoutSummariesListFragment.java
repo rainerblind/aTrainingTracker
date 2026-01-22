@@ -295,10 +295,10 @@ public class WorkoutSummariesListFragment extends ListFragment {
      * @param cursor     The cursor positioned at the correct row.
      * @param workoutId  The ID of the workout for fetching extrema data.
      */
-    private void setWorkoutDetails(ViewHolder viewHolder, Cursor cursor, long workoutId) {
+    private void setWorkoutDetails(ViewHolder viewHolder, Cursor cursor, long workoutId, BSportType bSportType) {
         if (viewHolder.detailsViewHolder != null) {
             // Simply call bind() on the existing holder instance.
-            viewHolder.detailsViewHolder.bind(cursor, workoutId);
+            viewHolder.detailsViewHolder.bind(cursor, workoutId, bSportType);
         }
     }
 
@@ -474,7 +474,7 @@ public class WorkoutSummariesListFragment extends ListFragment {
                 viewHolder.mapView.setVisibility(View.GONE);
             }
 
-            setWorkoutDetails(viewHolder, cursor, workoutId);
+            setWorkoutDetails(viewHolder, cursor, workoutId, bSportType);
 
             setExtremaInfo(viewHolder, context, workoutId, bSportType);
 
