@@ -1061,5 +1061,9 @@
     <string name="save">Save</string>
     <string name="cancel">Cancel</string>
 
+    <!-- Edit workout name -->
+    <string name="hint_workout_name">workout name</string>
+    <string name="edit_workout_name">edit workout name</string>
+
 
 </resources>
