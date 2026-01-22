@@ -750,7 +750,7 @@ public class WorkoutSummariesDatabaseManager {
         public static final String LAPS = "laps";
         public static final String FINISHED = "finished";
         // new entries in version 4 of the db
-        public static final String PRIVATE = "private";
+        // public static final String PRIVATE = "private";  2026-01 no longer supported / needed.
         public static final String COMMUTE = "commute";
         public static final String TRAINER = "trainer";
         public static final String ASCENDING = "ascending";
@@ -831,7 +831,7 @@ public class WorkoutSummariesDatabaseManager {
                 + WorkoutSummaries.CALORIES + " int,"
                 + WorkoutSummaries.LAPS + " int,"
                 + WorkoutSummaries.FINISHED + " int," // end of version 3
-                + WorkoutSummaries.PRIVATE + " int,"
+                // + WorkoutSummaries.PRIVATE + " int,"  removed in version 12.
                 + WorkoutSummaries.COMMUTE + " int,"
                 + WorkoutSummaries.TRAINER + " int,"
                 + WorkoutSummaries.ASCENDING + " int,"
@@ -860,7 +860,7 @@ public class WorkoutSummariesDatabaseManager {
                 + WorkoutSummaries.CALORIES + " int,"
                 + WorkoutSummaries.LAPS + " int,"
                 + WorkoutSummaries.FINISHED + " int," // end of version 3
-                + WorkoutSummaries.PRIVATE + " int,"
+                // + WorkoutSummaries.PRIVATE + " int,"  Note that this was part of version 11.
                 + WorkoutSummaries.COMMUTE + " int,"
                 + WorkoutSummaries.TRAINER + " int,"
                 + WorkoutSummaries.ASCENDING + " int,"
@@ -949,7 +949,7 @@ public class WorkoutSummariesDatabaseManager {
         public void onUpgrade(@NonNull SQLiteDatabase db, int oldVersion, int newVersion) {
             if (oldVersion < 4) {
                 Log.i(TAG, "upgrading to DB version 4");
-                addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.PRIVATE, "int");
+                // addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.PRIVATE, "int");  // removed in version 12
                 addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.COMMUTE, "int");
                 addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.TRAINER, "int");
                 addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.ASCENDING, "int");
@@ -1028,7 +1028,7 @@ public class WorkoutSummariesDatabaseManager {
             }
 
             if (oldVersion < 12) {
-                // do nothing.  The removed row does not matter.
+                // do nothing.  The removed rows does not matter.
             }
 
         }
