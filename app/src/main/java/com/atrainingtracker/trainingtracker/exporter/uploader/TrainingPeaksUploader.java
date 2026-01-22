@@ -106,7 +106,6 @@ public class TrainingPeaksUploader extends BaseExporter {
 
         name = myGetStringFromCursor(cursor, WorkoutSummaries.WORKOUT_NAME);
         description = myGetStringFromCursor(cursor, WorkoutSummaries.DESCRIPTION);
-        isPrivate = myGetBooleanFromCursor(cursor, WorkoutSummaries.PRIVATE);
 
         cursor.close();
         databaseManager.closeDatabase();// db.close();
@@ -121,7 +120,6 @@ public class TrainingPeaksUploader extends BaseExporter {
         jsonObject.put(UPLOAD_CLIENT, TrainingApplication.getAppName());
         // jsonObject.put(UPLOAD_CLIENT, TrainingpeaksGetAccessTokenActivity.MY_CLIENT_ID);
         jsonObject.put(FILENAME, exportInfo.getFileName());
-        jsonObject.put(SET_WORKOUT_PUBLIC, !isPrivate);
         jsonObject.put(TITLE, name);
         jsonObject.put(COMMENT, description);
         jsonObject.put(TYPE, sportName);
