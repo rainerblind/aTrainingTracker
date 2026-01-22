@@ -45,20 +45,16 @@ import android.widget.AdapterView.AdapterContextMenuInfo;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.TableLayout;
 import android.widget.TextView;
 
 import com.atrainingtracker.R;
-import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter;
-import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter;
+import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.activities.WorkoutDetailsActivity;
 import com.atrainingtracker.trainingtracker.exporter.ExportManager;
-import com.atrainingtracker.trainingtracker.exporter.ExportStatus;
 import com.atrainingtracker.trainingtracker.exporter.ExportStatusChangedBroadcaster;
-import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusRepository;
-import com.atrainingtracker.trainingtracker.exporter.ExportType;
 import com.atrainingtracker.trainingtracker.exporter.FileFormat;
-import com.atrainingtracker.trainingtracker.MyHelper;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
@@ -76,12 +72,16 @@ import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.LatLng;
 
-import java.util.EnumMap;
+import java.util.Date;
+import java.util.Locale;
 
 // import android.view.View.OnClickListener;
 
-public class WorkoutSummariesWithMapListFragment extends ListFragment {
-    public static final String TAG = WorkoutSummariesWithMapListFragment.class.getSimpleName();
+public class WorkoutSummariesListFragment extends ListFragment
+        implements ChangeSportDialogFragment.OnSportChangedListener,
+        EditWorkoutNameDialogFragment.OnWorkoutNameChangedListener {
+
+    public static final String TAG = WorkoutSummariesListFragment.class.getSimpleName();
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private final IntentFilter mExportStatusChangedFilter = new IntentFilter(ExportStatusChangedBroadcaster.EXPORT_STATUS_CHANGED_INTENT);
     private final IntentFilter mFinishedDeletingFilter = new IntentFilter(DeleteWorkoutThread.FINISHED_DELETING);
@@ -291,131 +291,69 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
         }
     }
 
-    private void setStatusInfo(@NonNull ViewHolder viewHolder, @NonNull final Context context, final String fileBaseName) {
-        if (DEBUG) Log.d(TAG, "setStatusInfo: " + fileBaseName);
 
-        ExportStatusRepository repository = ExportStatusRepository.getInstance(context);
-        EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>> exportStatuses = repository.getExportStatusMap(fileBaseName);
-        if (DEBUG && exportStatuses == null) Log.d(TAG, "WTF: exportStatuses == null");
-
-        for (ExportType exportType : ExportType.values()) {
-            if (DEBUG) Log.d(TAG, "looking for " + exportType);
-
-            String text = context.getString(R.string.something_strange_happened);
-            FileFormat processingFileFormat = FileFormat.CSV;
-
-            new ImageView(context);
-            ImageView ivStatus = switch (exportType) {
-                case FILE -> viewHolder.ivFile;
-                case DROPBOX -> viewHolder.ivDropbox;
-                case COMMUNITY -> viewHolder.ivCommunities;
-            };
-
-            EnumMap<ExportStatus, Integer> exportStatusCounter = new EnumMap<>(ExportStatus.class);
-            // initialize with 0
-            for (ExportStatus exportStatus : ExportStatus.values()) {
-                exportStatusCounter.put(exportStatus, 0);
-            }
-
-            EnumMap<FileFormat, ExportStatus> bar = exportStatuses.get(exportType);
-            for (FileFormat fileFormat : FileFormat.values()) {
-                ExportStatus exportStatus = bar.get(fileFormat);
-                // avoid a NullPointer Exception when there is a workout in the summaries DB but not in the exportStatus DB
-                if (exportStatus != null && exportStatusCounter.get(exportStatus) != null) {
-                    exportStatusCounter.put(exportStatus, exportStatusCounter.get(exportStatus) + 1);
-                    if (exportStatus == ExportStatus.PROCESSING) {
-                        processingFileFormat = fileFormat;
-                    }
-                }
-            }
-
-            int numberOfFileFormats = FileFormat.values().length;
-            int unwanted = exportStatusCounter.get(ExportStatus.UNWANTED);
-            int wanted = numberOfFileFormats - unwanted;
-
-            if (unwanted == numberOfFileFormats) {
-
-                ivStatus.setImageResource(R.drawable.ic_not_interested_black_24dp);
-
-                text = switch (exportType) {
-                    case FILE -> context.getString(R.string.exporting_to_file_not_wanted);
-                    case DROPBOX -> context.getString(R.string.uploading_to_dropbox_not_wanted);
-                    case COMMUNITY -> context.getString(R.string.uploading_to_community_not_wanted);
-                };
-
-            } else if (exportStatusCounter.get(ExportStatus.FINISHED_FAILED) > 0) {
-
-                ivStatus.setImageResource(R.drawable.export_failed);
-                int failed = exportStatusCounter.get(ExportStatus.FINISHED_FAILED);
-                text = switch (exportType) {
-                    case FILE ->
-                            context.getString(R.string.exporting_to_file_failed_for_several, failed, wanted);
-                    case DROPBOX ->
-                            context.getString(R.string.uploading_to_dropbox_failed_for_several, failed, wanted);
-                    case COMMUNITY ->
-                            context.getString(R.string.uploading_to_community_failed_for_several, failed, wanted);
-                };
-
-            } else if (exportStatusCounter.get(ExportStatus.FINISHED_SUCCESS) == wanted) {
-
-                ivStatus.setImageResource(R.drawable.export_success);
-
-                text = switch (exportType) {
-                    case FILE ->
-                            context.getString(R.string.successfully_exported_to_file, wanted, wanted);
-                    case DROPBOX ->
-                            context.getString(R.string.successfully_uploaded_to_dropbox, wanted, wanted);
-                    case COMMUNITY ->
-                            context.getString(R.string.successfully_uploaded_to_community, wanted, wanted);
-                };
-
-            } else if (exportStatusCounter.get(ExportStatus.PROCESSING) > 0) {
-                ivStatus.setImageResource(R.drawable.ic_cached_black_24dp);
-                String fileFormat = processingFileFormat.toString();
-                int finished = exportStatusCounter.get(ExportStatus.FINISHED_SUCCESS) + 1;
-                text = switch (exportType) {
-                    case FILE ->
-                            context.getString(R.string.exporting_to_file, fileFormat, finished, wanted);
-                    case DROPBOX ->
-                            context.getString(R.string.uploading_to_dropbox, fileFormat, finished, wanted);
-                    case COMMUNITY ->
-                            context.getString(R.string.uploading_to_community, fileFormat, finished, wanted);
-                };
-
-            } else if (exportStatusCounter.get(ExportStatus.TRACKING) > 0) {
-                ivStatus.setImageResource(R.drawable.ic_play_circle_outline_black_24dp);
-                text = context.getString(R.string.tracking);
-            } else if (exportStatusCounter.get(ExportStatus.TRACKING_FINISHED) > 0) {
-                ivStatus.setImageResource(R.drawable.ic_stop_circle_outline_black_24dp);
-                text = context.getString(R.string.tracking_finished);
-            } else if (exportStatusCounter.get(ExportStatus.WAITING) > 0) {
-                ivStatus.setImageResource(R.drawable.ic_hourglass_empty_black_24dp);
-                int waiting = exportStatusCounter.get(ExportStatus.WAITING);
-                text = switch (exportType) {
-                    case FILE ->
-                            context.getString(R.string.waiting_to_export_to_file, waiting, wanted);
-                    case DROPBOX ->
-                            context.getString(R.string.waiting_to_upload_to_dropbox, waiting, wanted);
-                    case COMMUNITY ->
-                            context.getString(R.string.waiting_to_upload_to_community, waiting, wanted);
-                };
-
-            } else {
-                if (DEBUG) Log.d(TAG, "case not handled");
-                ivStatus.setImageResource(R.drawable.export_error);
-            }
-
-            if (DEBUG) Log.d(TAG, text);
-
-            new TextView(context);
-            TextView textView = switch (exportType) {
-                case FILE -> viewHolder.tvFile;
-                case DROPBOX -> viewHolder.tvDropbox;
-                case COMMUNITY -> viewHolder.tvCommunities;
-            };
-            textView.setText(text);
+    /**
+     * Sets the workout summary details by delegating to the WorkoutDetailsViewHolder.
+     *
+     * @param viewHolder The ViewHolder for the current list item.
+     * @param cursor     The cursor positioned at the correct row.
+     * @param workoutId  The ID of the workout for fetching extrema data.
+     */
+    private void setWorkoutDetails(ViewHolder viewHolder, Cursor cursor, long workoutId, BSportType bSportType) {
+        if (viewHolder.detailsViewHolder != null) {
+            // Simply call bind() on the existing holder instance.
+            viewHolder.detailsViewHolder.bind(cursor, workoutId, bSportType);
         }
+    }
 
+    /**
+     * Sets the detailed sensor extrema information for a list item by delegating
+     * the complex UI logic to the ExtremaValuesViewHolder.
+     ** @param viewHolder   The ViewHolder for the current list item.
+     * @param context      The context.
+     * @param workoutId    The ID of the workout.
+     */
+    private void setExtremaValuesInfo(ViewHolder viewHolder, Context context, long workoutId, BSportType bSportType) {
+        if (DEBUG) Log.d(TAG, "setExtremaInfo for workoutId: " + workoutId);
+
+        if (viewHolder.tlExtremaValues != null) {
+            // Instantiate your ViewHolder with the correct container
+            // (@NonNull Context context, @NonNull TableLayout container, long workoutId, int sportTypeId
+            ExtremaValuesViewHolder extremaHolder = new ExtremaValuesViewHolder(
+                    context,
+                    viewHolder.tlExtremaValues, // Pass the TableLayout from the ViewHolder
+                    workoutId,
+                    bSportType
+            );
+
+            // Bind the data, which will handle visibility and population
+            extremaHolder.bind();
+        } else {
+            Log.e(TAG, "Extrema values container (tlExtremaValues) not found in the layout!");
+        }
+    }
+
+    /**
+     * Sets the detailed export status information for a list item.
+     * This method now delegates the complex UI logic to the ExportStatusViewHolder.
+     *
+     * @param viewHolder   The ViewHolder for the current list item.
+     * @param context      The context.
+     * @param fileBaseName The unique identifier for the workout.
+     */
+    private void setExportStatusInfo(ViewHolder viewHolder, Context context, String fileBaseName) {
+        if (DEBUG) Log.d(TAG, "setStatusInfo for: " + fileBaseName);
+
+        // Create an instance of the ExportStatusViewHolder and tell it to bind the data.
+        // It will fetch the data using the provider and build the UI.
+        ExportStatusViewHolder statusHolder = new ExportStatusViewHolder(
+                context,
+                viewHolder.separator,
+                viewHolder.tvExportStatusHeader,
+                viewHolder.llExportStatus, // The container to add views to
+                fileBaseName
+        );
+        statusHolder.bind();
     }
 
     /**
@@ -460,7 +398,7 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
         public View newView(Context context, Cursor cursor, ViewGroup parent) {
             if (DEBUG) Log.i(TAG, "newView");
 
-            View row = LayoutInflater.from(context).inflate(R.layout.workout_summaries_with_map_row, null);
+            View row = LayoutInflater.from(context).inflate(R.layout.workout_summaries_with_map_row2, parent, false);
 
             // ??? LinearLayout llRow = (LinearLayout) row.findViewById(R.id.ll_workout_summaries_row);
 
@@ -469,18 +407,23 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
             // GoogleMap is set during initialization
             // MapView   is set in a few seconds
 
-            viewHolder.llSummary = row.findViewById(R.id.ll_workout_summaries_summary);
-            viewHolder.tvDateAndTime = row.findViewById(R.id.tv_workout_summaries_date_and_time);
+            viewHolder.scrim = row.findViewById(R.id.scrim);
             viewHolder.tvName = row.findViewById(R.id.tv_workout_summaries_name);
-            viewHolder.tvDistanceTypeAndDuration = row.findViewById(R.id.tv_worktout_summaries_distance_type_and_duration);
+            viewHolder.tvDateAndTime = row.findViewById(R.id.tv_workout_summaries__date_and_time);
+
+            viewHolder.llSportContainer = row.findViewById(R.id.ll_workout_summaries__sport_container);
+            viewHolder.ivSportIcon = row.findViewById(R.id.iv_workout_summaries__sport_icon);
+            viewHolder.tvSportName = row.findViewById(R.id.tv_workout_summaries__sport_name);
             viewHolder.mapView = row.findViewById(R.id.workout_summaries_mapView);
-            viewHolder.llExportStatus = row.findViewById(R.id.ll_workout_summaries_export_status);
-            viewHolder.ivFile = row.findViewById(R.id.iv_workout_summaries_export_status_file);
-            viewHolder.tvFile = row.findViewById(R.id.tv_workout_summaries_export_status_file);
-            viewHolder.ivDropbox = row.findViewById(R.id.iv_workout_summaries_export_status_dropbox);
-            viewHolder.tvDropbox = row.findViewById(R.id.tv_workout_summaries_export_status_dropbox);
-            viewHolder.ivCommunities = row.findViewById(R.id.iv_workout_summaries_export_status_communities);
-            viewHolder.tvCommunities = row.findViewById(R.id.tv_workout_summaries_export_status_communities);
+            viewHolder.separator = row.findViewById(R.id.separator_export_status);
+            viewHolder.tvExportStatusHeader = row.findViewById(R.id.export_status_header);
+            viewHolder.llExportStatus = row.findViewById(R.id.export_status_container);
+            viewHolder.tlExtremaValues = row.findViewById(R.id.extrema_values_container);
+
+            View detailsView = row.findViewById(R.id.workout_details_include);
+            if (detailsView != null) {
+                viewHolder.detailsViewHolder = new WorkoutDetailsViewHolder(detailsView, context);
+            }
 
             viewHolder.initializeMapView();
 
@@ -493,43 +436,72 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
             if (DEBUG) Log.i(TAG, "bindView");
 
             final long workoutId = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.C_ID));
-            String fileBaseName = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.FILE_BASE_NAME));
-
-            // Text for distance_type_and_duration
-            double distance_m = cursor.getDouble(cursor.getColumnIndex(WorkoutSummaries.DISTANCE_TOTAL_m));
-            String sport = SportTypeDatabaseManager.getUIName(cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPORT_ID)));
-            double time_s = cursor.getDouble(cursor.getColumnIndex(WorkoutSummaries.TIME_TOTAL_s));
-            String distanceTypeAndDuration = context.getString(R.string.distance_distanceUnit_sport_time_format,
-                    (new DistanceFormatter()).format(distance_m),
-                    context.getString(MyHelper.getDistanceUnitNameId()),
-                    sport,
-                    (new TimeFormatter()).format(time_s));
 
             ViewHolder viewHolder = (ViewHolder) view.getTag();
             viewHolder.workoutId = workoutId;
 
-            // first, configure the different OnClickListeners
-            viewHolder.llSummary.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    TrainingApplication.startWorkoutDetailsActivity(workoutId, WorkoutDetailsActivity.SelectedFragment.EDIT_DETAILS);
-                }
-            });
+            // --- now, set the values of the views
+            // first, the name
+            String workoutName = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.WORKOUT_NAME));
+            viewHolder.tvName.setText(workoutName);
 
-            viewHolder.llExportStatus.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    mUpdateWorkoutListener.showExportStatusDialog(workoutId);
-                }
-            });
+            // Next, the start date and time.
+            // Therefore, get the start time as a String from the database, which is in the format "YYYY-MM-DD HH:MM:SS".
+            String startTimeString = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.TIME_START));
 
-            // now, set the values of the views
-            // viewHolder.tvDateAndTime.setText(cursor.getString(cursor.getColumnIndex(WorkoutSummaries.TIME_START)));
-            viewHolder.tvDateAndTime.setText(WorkoutSummariesDatabaseManager.getStartTime(workoutId, "localtime"));
+            // Define the format and time-zone that matches how the date is stored in the database.
+            java.text.SimpleDateFormat dbFormat = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ROOT);
+            dbFormat.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+
+            Date startTimeDate = null;
+            try {
+                startTimeDate = dbFormat.parse(startTimeString);
+            } catch (java.text.ParseException e) {
+                // Log the error if parsing fails, and set a fallback text.
+                Log.e(TAG, "Failed to parse date string: " + startTimeString, e);
+                viewHolder.tvDateAndTime.setText(startTimeString); // Show raw string on error
+            }
+
+            // If parsing was successful, format the Date object for the user's locale.
+            if (startTimeDate != null) {
+                // Get a formatter for the DATE part only, using the default locale style.
+                java.text.DateFormat localeDateFormat = java.text.DateFormat.getDateInstance(
+                        java.text.DateFormat.DEFAULT // Or DateFormat.MEDIUM for a format like "Jan 22, 2026"
+                );
+
+                // Get a formatter for the TIME part only, using the short style (e.g., 3:11 PM).
+                java.text.DateFormat localeTimeFormat = java.text.DateFormat.getTimeInstance(
+                        java.text.DateFormat.SHORT
+                );
+
+                // Format both parts separately and combine them with a newline character.
+                String formattedDate = localeDateFormat.format(startTimeDate);
+                String formattedTime = localeTimeFormat.format(startTimeDate);
+                String finalDateTimeString = formattedDate + "\n" + formattedTime;
+
+                // Set the combined text. The TextView will handle the line break.
+                viewHolder.tvDateAndTime.setText(finalDateTimeString);
+            }
+
+            // now, the sport
+            long sportId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPORT_ID));
+            String sportName = SportTypeDatabaseManager.getUIName(sportId);
+            BSportType bSportType = SportTypeDatabaseManager.getBSportType(sportId);
+
+            // get the iconId
+            // note that they are converted to white.
+            int iconResId = switch (bSportType) {
+                case RUN -> R.drawable.bsport_run;
+                case BIKE -> R.drawable.bsport_bike;
+                default -> R.drawable.bsport_other;
+            };
+            viewHolder.ivSportIcon.setImageResource(iconResId);
+            viewHolder.tvSportName.setText(sportName);
 
 
-            viewHolder.tvName.setText(cursor.getString(cursor.getColumnIndex(WorkoutSummaries.WORKOUT_NAME)));
-            viewHolder.tvDistanceTypeAndDuration.setText(distanceTypeAndDuration);
+            setWorkoutDetails(viewHolder, cursor, workoutId, bSportType);
+
+            setExtremaValuesInfo(viewHolder, context, workoutId, bSportType);
 
             if (isPlayServiceAvailable) {
                 viewHolder.mapView.setVisibility(View.VISIBLE);
@@ -540,29 +512,114 @@ public class WorkoutSummariesWithMapListFragment extends ListFragment {
                 viewHolder.mapView.setVisibility(View.GONE);
             }
 
-            setStatusInfo(viewHolder, context, fileBaseName);
+            String fileBaseName = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.FILE_BASE_NAME));
+            setExportStatusInfo(viewHolder, context, fileBaseName);
+
+            // --- Click listeners
+            // first, create a click listener
+            View.OnClickListener detailsClickListener = new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (DEBUG) Log.d(TAG, "Details area clicked for workoutId: " + workoutId);
+                    TrainingApplication.startWorkoutDetailsActivity(workoutId, WorkoutDetailsActivity.SelectedFragment.EDIT_DETAILS);
+                }
+            };
+
+            // and then attach the click listener to the various views
+            if (viewHolder.scrim != null) {
+                viewHolder.scrim.setOnClickListener(detailsClickListener);
+            }
+            if (viewHolder.detailsViewHolder != null && viewHolder.detailsViewHolder.getView() != null) {
+                viewHolder.detailsViewHolder.getView().setOnClickListener(detailsClickListener);
+            }
+            if (viewHolder.tlExtremaValues != null) {
+                viewHolder.tlExtremaValues.setOnClickListener(detailsClickListener);
+            }
+
+            viewHolder.llExportStatus.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    mUpdateWorkoutListener.showExportStatusDialog(workoutId);
+                }
+            });
+
+            // --- Long Click listeners
+            if (viewHolder.llSportContainer != null) {
+                viewHolder.llSportContainer.setOnLongClickListener(new View.OnLongClickListener() {
+                    @Override
+                    public boolean onLongClick(View v) {
+                        if (DEBUG) Log.d(TAG, "Sport view long-clicked for workoutId: " + workoutId);
+                        WorkoutSummariesListFragment.this.showChangeSportDialog(workoutId, sportId);
+                        return true;
+                    }
+                });
+            }
+
+            if (viewHolder.tvName != null) {
+                viewHolder.tvName.setOnLongClickListener(v -> {
+                    // Call the new interface method we just implemented
+                    WorkoutSummariesListFragment.this.showEditWorkoutNameDialog(workoutId, workoutName);
+                    // Return true to consume the event
+                    return true;
+                });
+            }
+
         }
     }
+
+
+    // call and callback for changing the sport tpye
+    public void showChangeSportDialog(long workoutId, long sportTypeId) {
+        ChangeSportDialogFragment dialogFragment = ChangeSportDialogFragment.newInstance(workoutId, sportTypeId);
+
+        // Set this fragment as the listener for the dialog's events.
+        dialogFragment.setOnSportChangedListener(this);
+
+        // Use getChildFragmentManager() for dialogs shown from within a Fragment
+        dialogFragment.show(getChildFragmentManager(), "ChangeSportDialogFragment");
+    }
+
+    @Override
+    public void onSportChanged(long workoutId) {
+        if (DEBUG) Log.d(TAG, "onSportChanged callback received. Restarting loader.");
+        // simply update the cursor
+        updateCursor();
+    }
+
+    public void showEditWorkoutNameDialog(long workoutId, String workoutName) {
+        // Get the current name from the database
+        EditWorkoutNameDialogFragment dialogFragment = EditWorkoutNameDialogFragment.newInstance(workoutId, workoutName);
+        dialogFragment.setOnWorkoutNameChangedListener(this); // Set listener
+        dialogFragment.show(getChildFragmentManager(), "EditWorkoutNameDialogFragment");
+    }
+
+    @Override
+    public void onWorkoutNameChanged() {
+        // simply update the cursor
+        updateCursor();
+    }
+
 
     class ViewHolder
             extends MyMapViewHolder
             implements OnMapReadyCallback {
 
+        WorkoutDetailsViewHolder detailsViewHolder;
+
         long workoutId;
-        LinearLayout llSummary;
-        TextView tvDateAndTime;
+        View scrim;
         TextView tvName;
-        TextView tvDistanceTypeAndDuration;
+        TextView tvDateAndTime;
+        LinearLayout llSportContainer;
+        ImageView ivSportIcon;
+        TextView tvSportName;
+        View separator;
+        TextView tvExportStatusHeader;
         LinearLayout llExportStatus;
+        TableLayout tlExtremaValues;
 
         // MapView mapView;
         // GoogleMap map;
-        ImageView ivFile;
-        TextView tvFile;
-        ImageView ivDropbox;
-        TextView tvDropbox;
-        ImageView ivCommunities;
-        TextView tvCommunities;
 
         public ViewHolder(GoogleMap map, MapView mapView) {
             super(map, mapView);

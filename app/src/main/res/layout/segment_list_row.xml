@@ -82,7 +82,7 @@
         <ImageView
             android:layout_width="16dp"
             android:layout_height="16dp"
-            android:src="@drawable/ic_pr_timer"
+            android:src="@drawable/ic_pr_time"
             app:tint="?android:attr/textColorSecondary"
             tools:ignore="ContentDescription"/>
 
@@ -222,7 +222,7 @@
         <ImageView
             android:layout_width="14dp"
             android:layout_height="14dp"
-            android:src="@drawable/ic_elevation_min"
+            android:src="@drawable/ic_altitude_min"
             app:tint="?android:attr/textColorSecondary"
             tools:ignore="ContentDescription"/>
         <TextView
@@ -245,7 +245,7 @@
         <ImageView
             android:layout_width="14dp"
             android:layout_height="14dp"
-            android:src="@drawable/ic_elevation_max"
+            android:src="@drawable/ic_altitude_max"
             app:tint="?android:attr/textColorSecondary"
             tools:ignore="ContentDescription"/>
         <TextView

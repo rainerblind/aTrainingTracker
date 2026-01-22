@@ -835,6 +835,32 @@
 
     <!-- details -->
 
+    <!-- waiting  -->
+
+    <!-- writing to file waiting
+        (0: #waiting for quantity)
+        1: string representing the waiting file formats -->
+    <plurals name="export_notification__detail__File_waiting">
+        <item quantity="one">⏳ Warte darauf, die %1$s Datei zu schreiben.</item>     <!-- Waiting to write TCX file. -->
+        <item quantity="other">⏳ Warte darauf, die %1$s Datien zu schreiben.</item>  <!-- Waiting to write the TCX and CSV files. -->
+    </plurals>
+
+    <!-- uploading to Dropbox waiting
+        (0: #waiting for quantity)
+        1: string representing the waiting file formats -->
+    <plurals name="export_notification__detail__Dropbox_waiting">
+        <item quantity="one">⏳ Warte darauf, die %1$s Datei zur Dropbox hochzuladen.</item>     <!-- Waiting to upload the TCX file to Dropbox. -->
+        <item quantity="other">⏳ Warte darauf, die %1$s Dateien zur Dropbox hochzuladen.</item>  <!-- Waiting to upload the TCX and CSV files to Dropbox. -->
+    </plurals>
+
+    <!-- uploading to Cummunity waiting
+        (0: #waiting for quantity)
+        1: string representing the waiting file formats -->
+    <plurals name="export_notification__detail__Community_waiting">
+        <item quantity="one">⏳ Warte darauf, die Einheit bei %1$s hochzuladen.</item>    <!-- Waiting to upload to Strava. -->
+        <item quantity="other">⏳ Warte darauf, die Einheit bei %1$s hochzuladen.</item>  <!-- Waiting to upload to Strava and Runkeeper. -->
+    </plurals>
+
     <!-- ongoing -->
 
     <!-- writing to file ongoing
@@ -915,5 +941,17 @@
     </plurals>
     
     <string name="export_notification__detail__no_results">❓ Keine Ergebnisse gefunden.</string>
+
+
+    <string name="export_status__header_title">Export Status</string>
+
+    <!-- change Sport Dialog -->
+    <string name="change_sport">Sportart ändern</string>
+    <string name="save">Speichern</string>
+    <string name="cancel">Abbrechen</string>
+
+    <!-- Edit workout name -->
+    <string name="hint_workout_name">Name der Einheit</string>
+    <string name="edit_workout_name">Name ändern</string>
 
 </resources>
