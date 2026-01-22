@@ -1056,6 +1056,10 @@
 
     <string name="export_status__header_title">Export Status</string>
 
+    <!-- change Sport Dialog -->
+    <string name="change_sport">Change Sport</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
 
 
 </resources>
