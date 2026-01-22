@@ -78,7 +78,9 @@ import java.util.Locale;
 // import android.view.View.OnClickListener;
 
 public class WorkoutSummariesListFragment extends ListFragment
-        implements ChangeSportDialogFragment.OnSportChangedListener {
+        implements ChangeSportDialogFragment.OnSportChangedListener,
+        EditWorkoutNameDialogFragment.OnWorkoutNameChangedListener {
+
     public static final String TAG = WorkoutSummariesListFragment.class.getSimpleName();
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private final IntentFilter mExportStatusChangedFilter = new IntentFilter(ExportStatusChangedBroadcaster.EXPORT_STATUS_CHANGED_INTENT);
@@ -440,7 +442,8 @@ public class WorkoutSummariesListFragment extends ListFragment
 
             // --- now, set the values of the views
             // first, the name
-            viewHolder.tvName.setText(cursor.getString(cursor.getColumnIndex(WorkoutSummaries.WORKOUT_NAME)));
+            String workoutName = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.WORKOUT_NAME));
+            viewHolder.tvName.setText(workoutName);
 
             // Next, the start date and time.
             // Therefore, get the start time as a String from the database, which is in the format "YYYY-MM-DD HH:MM:SS".
@@ -555,6 +558,15 @@ public class WorkoutSummariesListFragment extends ListFragment
                 });
             }
 
+            if (viewHolder.tvName != null) {
+                viewHolder.tvName.setOnLongClickListener(v -> {
+                    // Call the new interface method we just implemented
+                    WorkoutSummariesListFragment.this.showEditWorkoutNameDialog(workoutId, workoutName);
+                    // Return true to consume the event
+                    return true;
+                });
+            }
+
         }
     }
 
@@ -577,6 +589,19 @@ public class WorkoutSummariesListFragment extends ListFragment
         if (DEBUG) Log.d(TAG, "onSportChanged callback received. Restarting loader.");
         updateCursor();
         // TODO: upate the correct view
+    }
+
+    public void showEditWorkoutNameDialog(long workoutId, String workoutName) {
+        // Get the current name from the database
+        EditWorkoutNameDialogFragment dialogFragment = EditWorkoutNameDialogFragment.newInstance(workoutId, workoutName);
+        dialogFragment.setOnWorkoutNameChangedListener(this); // Set listener
+        dialogFragment.show(getChildFragmentManager(), "EditWorkoutNameDialogFragment");
+    }
+
+    @Override
+    public void onWorkoutNameChanged() {
+        // simply update the cursor
+        updateCursor();
     }
 
 

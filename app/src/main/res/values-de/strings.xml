@@ -950,4 +950,8 @@
     <string name="save">Speichern</string>
     <string name="cancel">Abbrechen</string>
 
+    <!-- Edit workout name -->
+    <string name="hint_workout_name">Name der Einheit</string>
+    <string name="edit_workout_name">Name ändern</string>
+
 </resources>
