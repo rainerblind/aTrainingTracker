@@ -404,9 +404,9 @@ public class WorkoutSummariesListFragment extends ListFragment {
             // GoogleMap is set during initialization
             // MapView   is set in a few seconds
 
-            // viewHolder.llSummary = row.findViewById(R.id.ll_workout_summaries_summary);
-            viewHolder.tvDateAndTime = row.findViewById(R.id.tv_workout_summaries__date_and_time);
+            viewHolder.scrim = row.findViewById(R.id.scrim);
             viewHolder.tvName = row.findViewById(R.id.tv_workout_summaries_name);
+            viewHolder.tvDateAndTime = row.findViewById(R.id.tv_workout_summaries__date_and_time);
 
             viewHolder.ivSportIcon = row.findViewById(R.id.iv_workout_summaries__sport_icon);
             viewHolder.tvSportName = row.findViewById(R.id.tv_workout_summaries__sport_name);
@@ -484,6 +484,7 @@ public class WorkoutSummariesListFragment extends ListFragment {
             BSportType bSportType = SportTypeDatabaseManager.getBSportType(sportId);
 
             // get the iconId
+            // note that they are converted to white.
             int iconResId = switch (bSportType) {
                 case RUN -> R.drawable.bsport_run;
                 case BIKE -> R.drawable.bsport_bike;
@@ -509,16 +510,26 @@ public class WorkoutSummariesListFragment extends ListFragment {
             String fileBaseName = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.FILE_BASE_NAME));
             setExportStatusInfo(viewHolder, context, fileBaseName);
 
-
-            /* TODO: get this feature working again
-            // first, configure the different OnClickListeners
-            viewHolder.llSummary.setOnClickListener(new View.OnClickListener() {
+            // --- Click listeners
+            // first, create a click listener
+            View.OnClickListener detailsClickListener = new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
+                    if (DEBUG) Log.d(TAG, "Details area clicked for workoutId: " + workoutId);
                     TrainingApplication.startWorkoutDetailsActivity(workoutId, WorkoutDetailsActivity.SelectedFragment.EDIT_DETAILS);
                 }
-            });
-             */
+            };
+
+            // and then attach the click listener to the various views
+            if (viewHolder.scrim != null) {
+                viewHolder.scrim.setOnClickListener(detailsClickListener);
+            }
+            if (viewHolder.detailsViewHolder != null && viewHolder.detailsViewHolder.getView() != null) {
+                viewHolder.detailsViewHolder.getView().setOnClickListener(detailsClickListener);
+            }
+            if (viewHolder.tlExtremaValues != null) {
+                viewHolder.tlExtremaValues.setOnClickListener(detailsClickListener);
+            }
 
             viewHolder.llExportStatus.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -537,7 +548,7 @@ public class WorkoutSummariesListFragment extends ListFragment {
         WorkoutDetailsViewHolder detailsViewHolder;
 
         long workoutId;
-        LinearLayout llSummary;
+        View scrim;
         TextView tvName;
         TextView tvDateAndTime;
         ImageView ivSportIcon;
