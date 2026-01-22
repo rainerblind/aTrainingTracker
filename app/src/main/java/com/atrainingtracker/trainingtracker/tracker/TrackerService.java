@@ -603,6 +603,7 @@ public class TrackerService extends Service {
                     // if (DEBUG) Log.d(TAG, "neither INTEGER nor DOUBLE for " + sensorType.name() + " => ignoring");
             }
 
+            // for some sensors, we also write the summary values.
             switch (sensorType) {
                 case TIME_TOTAL:
                     summaryValues.put(WorkoutSummaries.TIME_TOTAL_s, sensorData.getValue().intValue());
@@ -620,6 +621,12 @@ public class TrackerService extends Service {
                     break;
                 case LAP_NR:
                     summaryValues.put(WorkoutSummaries.LAPS, sensorData.getValue().intValue());
+                    break;
+                case ASCENT:
+                    summaryValues.put(WorkoutSummaries.ASCENDING, sensorData.getValue().doubleValue());
+                    break;
+                case DESCENT:
+                    summaryValues.put(WorkoutSummaries.DESCENDING, sensorData.getValue().doubleValue());
                     break;
             }
 
