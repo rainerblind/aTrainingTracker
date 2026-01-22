@@ -133,7 +133,6 @@ public class TrainingApplication extends Application {
     public static final String SP_UPLOAD_TO_TRAINING_PEAKS = "uploadToTrainingPeaks";
     public static final String SP_TRAINING_PEAKS_ACCESS_TOKEN = "trainingPeaksAccessToken";
     public static final String SP_TRAINING_PEAKS_REFRESH_TOKEN = "trainingPeaksRefreshToken";
-    public static final String SP_SAMPLING_TIME = "samplingTime";
     public static final String SP_ATHLETE_NAME = "athleteName";
     // public static final String SP_DISPLAY_UPDATE_TIME     = "displayUpdateTime";
     public static final String SP_LACTATE_THRESHOLD_POWER = "lactateThresholdPower";
@@ -161,7 +160,6 @@ public class TrainingApplication extends Application {
     public static final int EXPORT_RESULT_NOTIFICATION_ID = 3;
     public static final int SEND_EMAIL_NOTIFICATION_ID = 4;
 
-    public static final int DEFAULT_SAMPLING_TIME = 1;
     public static final float MIN_DISTANCE_BETWEEN_START_AND_STOP = 100;
     public static final double DISTANCE_TO_MAX_THRESHOLD_FOR_TRAINER = 200;
     public static final double DISTANCE_TO_MAX_RATIO_FOR_COMMUTE = Math.PI / 2; // probably the best value ;-)
@@ -460,19 +458,6 @@ public class TrainingApplication extends Application {
 
     public static boolean showUnits() {
         return cSharedPreferences.getBoolean(SP_SHOW_UNITS, true);
-    }
-
-    public static int getSamplingTime() {
-        String samplingTimePref = cSharedPreferences.getString(SP_SAMPLING_TIME, null);
-        if (samplingTimePref == null || samplingTimePref.isEmpty()) {
-            return DEFAULT_SAMPLING_TIME;
-        } else {
-            try {
-                return Integer.parseInt(samplingTimePref);
-            } catch (Exception e) {
-                return DEFAULT_SAMPLING_TIME;
-            }
-        }
     }
 
     @NonNull

@@ -40,12 +40,6 @@
             android:summary="@string/prefsUnitsSummary"
             android:title="@string/prefsUnitsTitle" />
 
-        <EditTextPreference
-            android:key="samplingTime"
-            android:inputType="number"
-            android:summary="@string/prefsSamplingTimeSummary"
-            android:title="@string/prefsSamplingTimeTitle" />
-
         <PreferenceScreen
             android:key="display"
             android:title="@string/Display">
