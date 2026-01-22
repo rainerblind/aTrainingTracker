@@ -42,6 +42,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AbsListView;
 import android.widget.AdapterView.AdapterContextMenuInfo;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TableLayout;
@@ -49,14 +50,11 @@ import android.widget.TextView;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BSportType;
-import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter;
-import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.activities.WorkoutDetailsActivity;
 import com.atrainingtracker.trainingtracker.exporter.ExportManager;
 import com.atrainingtracker.trainingtracker.exporter.ExportStatusChangedBroadcaster;
 import com.atrainingtracker.trainingtracker.exporter.FileFormat;
-import com.atrainingtracker.trainingtracker.MyHelper;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
@@ -312,7 +310,7 @@ public class WorkoutSummariesListFragment extends ListFragment {
      * @param context      The context.
      * @param workoutId    The ID of the workout.
      */
-    private void setExtremaInfo(ViewHolder viewHolder, Context context, long workoutId, BSportType bSportType) {
+    private void setExtremaValuesInfo(ViewHolder viewHolder, Context context, long workoutId, BSportType bSportType) {
         if (DEBUG) Log.d(TAG, "setExtremaInfo for workoutId: " + workoutId);
 
         if (viewHolder.tlExtremaValues != null) {
@@ -340,7 +338,7 @@ public class WorkoutSummariesListFragment extends ListFragment {
      * @param context      The context.
      * @param fileBaseName The unique identifier for the workout.
      */
-    private void setStatusInfo(ViewHolder viewHolder, Context context, String fileBaseName) {
+    private void setExportStatusInfo(ViewHolder viewHolder, Context context, String fileBaseName) {
         if (DEBUG) Log.d(TAG, "setStatusInfo for: " + fileBaseName);
 
         // Create an instance of the ExportStatusViewHolder and tell it to bind the data.
@@ -407,9 +405,11 @@ public class WorkoutSummariesListFragment extends ListFragment {
             // MapView   is set in a few seconds
 
             // viewHolder.llSummary = row.findViewById(R.id.ll_workout_summaries_summary);
-            viewHolder.tvDateAndTime = row.findViewById(R.id.tv_workout_summaries_date_and_time);
+            viewHolder.tvDateAndTime = row.findViewById(R.id.tv_workout_summaries__date_and_time);
             viewHolder.tvName = row.findViewById(R.id.tv_workout_summaries_name);
-            viewHolder.tvSport = row.findViewById(R.id.tv_workout_summaries_sport);
+
+            viewHolder.ivSportIcon = row.findViewById(R.id.iv_workout_summaries__sport_icon);
+            viewHolder.tvSportName = row.findViewById(R.id.tv_workout_summaries__sport_name);
             viewHolder.mapView = row.findViewById(R.id.workout_summaries_mapView);
             viewHolder.separator = row.findViewById(R.id.separator_export_status);
             viewHolder.tvExportStatusHeader = row.findViewById(R.id.export_status_header);
@@ -432,37 +432,16 @@ public class WorkoutSummariesListFragment extends ListFragment {
             if (DEBUG) Log.i(TAG, "bindView");
 
             final long workoutId = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.C_ID));
-            String fileBaseName = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.FILE_BASE_NAME));
-
-            // Text for distance_type_and_duration
-            double distance_m = cursor.getDouble(cursor.getColumnIndex(WorkoutSummaries.DISTANCE_TOTAL_m));
-            long sportId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPORT_ID));
-            String sport = SportTypeDatabaseManager.getUIName(sportId);
-            BSportType bSportType = SportTypeDatabaseManager.getBSportType(sportId);
-            double time_s = cursor.getDouble(cursor.getColumnIndex(WorkoutSummaries.TIME_TOTAL_s));
 
             ViewHolder viewHolder = (ViewHolder) view.getTag();
             viewHolder.workoutId = workoutId;
 
-            /* TODO: get this feature working again
-            // first, configure the different OnClickListeners
-            viewHolder.llSummary.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    TrainingApplication.startWorkoutDetailsActivity(workoutId, WorkoutDetailsActivity.SelectedFragment.EDIT_DETAILS);
-                }
-            });
-             */
+            // --- now, set the values of the views
+            // first, the name
+            viewHolder.tvName.setText(cursor.getString(cursor.getColumnIndex(WorkoutSummaries.WORKOUT_NAME)));
 
-            viewHolder.llExportStatus.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    mUpdateWorkoutListener.showExportStatusDialog(workoutId);
-                }
-            });
-
-            // now, set the values of the views
-            // First, get the start time as a String from the database, which is in the format "YYYY-MM-DD HH:MM:SS".
+            // Next, the start date and time.
+            // Therefore, get the start time as a String from the database, which is in the format "YYYY-MM-DD HH:MM:SS".
             String startTimeString = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.TIME_START));
 
             // Define the format and time-zone that matches how the date is stored in the database.
@@ -499,8 +478,24 @@ public class WorkoutSummariesListFragment extends ListFragment {
                 viewHolder.tvDateAndTime.setText(finalDateTimeString);
             }
 
-            viewHolder.tvName.setText(cursor.getString(cursor.getColumnIndex(WorkoutSummaries.WORKOUT_NAME)));
-            viewHolder.tvSport.setText(sport);
+            // now, the sport
+            long sportId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPORT_ID));
+            String sportName = SportTypeDatabaseManager.getUIName(sportId);
+            BSportType bSportType = SportTypeDatabaseManager.getBSportType(sportId);
+
+            // get the iconId
+            int iconResId = switch (bSportType) {
+                case RUN -> R.drawable.bsport_run;
+                case BIKE -> R.drawable.bsport_bike;
+                default -> R.drawable.bsport_other;
+            };
+            viewHolder.ivSportIcon.setImageResource(iconResId);
+            viewHolder.tvSportName.setText(sportName);
+
+
+            setWorkoutDetails(viewHolder, cursor, workoutId, bSportType);
+
+            setExtremaValuesInfo(viewHolder, context, workoutId, bSportType);
 
             if (isPlayServiceAvailable) {
                 viewHolder.mapView.setVisibility(View.VISIBLE);
@@ -511,11 +506,27 @@ public class WorkoutSummariesListFragment extends ListFragment {
                 viewHolder.mapView.setVisibility(View.GONE);
             }
 
-            setWorkoutDetails(viewHolder, cursor, workoutId, bSportType);
+            String fileBaseName = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.FILE_BASE_NAME));
+            setExportStatusInfo(viewHolder, context, fileBaseName);
 
-            setExtremaInfo(viewHolder, context, workoutId, bSportType);
 
-            setStatusInfo(viewHolder, context, fileBaseName);
+            /* TODO: get this feature working again
+            // first, configure the different OnClickListeners
+            viewHolder.llSummary.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    TrainingApplication.startWorkoutDetailsActivity(workoutId, WorkoutDetailsActivity.SelectedFragment.EDIT_DETAILS);
+                }
+            });
+             */
+
+            viewHolder.llExportStatus.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    mUpdateWorkoutListener.showExportStatusDialog(workoutId);
+                }
+            });
+
         }
     }
 
@@ -527,9 +538,10 @@ public class WorkoutSummariesListFragment extends ListFragment {
 
         long workoutId;
         LinearLayout llSummary;
-        TextView tvDateAndTime;
         TextView tvName;
-        TextView tvSport;
+        TextView tvDateAndTime;
+        ImageView ivSportIcon;
+        TextView tvSportName;
         View separator;
         TextView tvExportStatusHeader;
         LinearLayout llExportStatus;

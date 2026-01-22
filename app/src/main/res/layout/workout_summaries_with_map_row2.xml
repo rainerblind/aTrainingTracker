@@ -46,14 +46,15 @@
             android:layout_marginTop="16dp"
             android:layout_marginEnd="16dp"
             android:textColor="?attr/colorOnPrimary"
-            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/ll_sport_container"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             tools:text="Schmellbachtal" />
 
         <!-- Workout Summaries -->
+
         <TextView
-            android:id="@+id/tv_workout_summaries_sport"
+            android:id="@+id/tv_workout_summaries__date_and_time"
             style="@style/TextAppearance.MaterialComponents.Body2"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -62,21 +63,40 @@
             android:layout_marginEnd="16dp"
             android:layout_marginBottom="16dp"
             android:textColor="?attr/colorOnPrimary"
+            app:layout_constraintEnd_toStartOf="@+id/ll_sport_container"
             app:layout_constraintBottom_toBottomOf="@id/scrim"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tv_workout_summaries_name"
             tools:text="5 km run in 0:40:00" />
 
-        <TextView
-            android:id="@+id/tv_workout_summaries_date_and_time"
-            style="@style/TextAppearance.MaterialComponents.Body2"
+        <!-- View to visualize the sport -->
+        <LinearLayout
+            android:id="@+id/ll_sport_container"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginEnd="16dp"
-            android:textColor="?attr/colorOnPrimary"
-            app:layout_constraintBottom_toBottomOf="@id/tv_workout_summaries_sport"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
             app:layout_constraintEnd_toEndOf="parent"
-            tools:text="1.9.2012 at 10:10" />
+            app:layout_constraintTop_toTopOf="@id/scrim"
+            app:layout_constraintBottom_toBottomOf="@id/scrim">
+
+            <!-- The ImageView and TextView inside this LinearLayout are fine -->
+            <ImageView
+                android:id="@+id/iv_workout_summaries__sport_icon"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                app:tint="?attr/colorOnPrimary"
+                android:src="@drawable/bsport_run_gray" />
+
+            <TextView
+                android:id="@+id/tv_workout_summaries__sport_name"
+                style="@style/TextAppearance.MaterialComponents.Body2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="?attr/colorOnPrimary"
+                tools:text="@string/sport_type_run" />
+        </LinearLayout>
 
         <!-- Placeholder for Workout Details (Distance, Time, Ascent, etc.) -->
         <include

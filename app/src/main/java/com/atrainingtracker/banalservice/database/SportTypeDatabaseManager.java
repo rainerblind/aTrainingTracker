@@ -29,6 +29,7 @@ import android.graphics.drawable.Drawable;
 import android.provider.BaseColumns;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
 import androidx.core.content.res.ResourcesCompat;
 
 import com.atrainingtracker.R;
@@ -261,6 +262,7 @@ public class SportTypeDatabaseManager {
         return result;
     }
 
+    @NonNull
     public static BSportType getBSportType(long id) {
         if (DEBUG) Log.i(TAG, "getBsportType: id=" + id);
 
