@@ -1062,5 +1062,11 @@
     <!-- workout summary description-->
     <string name="workout_summary__description_header">Description</string>
 
+    <!-- Edit workout description -->
+    <string name="hint_workout_description">description</string>
+    <string name="hint_workout_goal">goal</string>
+    <string name="hint_workout_method">method</string>
+    <string name="title_edit_description">Edit description</string>
+
 
 </resources>
