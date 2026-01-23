@@ -33,7 +33,8 @@ public class WorkoutDetailsViewHolder {
 
     // Row 1
     private final TextView mTvDistance;
-    private final TextView mTvDuration;
+    private final TextView mTvTimeActive;
+    private final TextView mTvTimeTotal;
 
     // Speed Row
     private final LinearLayout mRowSpeed;
@@ -52,7 +53,8 @@ public class WorkoutDetailsViewHolder {
 
         // Find all views from the inflated layout
         mTvDistance = view.findViewById(R.id.detail_distance);
-        mTvDuration = view.findViewById(R.id.detail_duration);
+        mTvTimeActive = view.findViewById(R.id.detail_time_active);
+        mTvTimeTotal = view.findViewById(R.id.detail_time_total);
 
         // speed row
         mRowSpeed = view.findViewById(R.id.workout_details_rowSpeed);
@@ -81,7 +83,12 @@ public class WorkoutDetailsViewHolder {
 
         // active time
         int activeTime = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_ACTIVE_s));
-        mTvDuration.setText((new TimeFormatter()).format(activeTime));
+        mTvTimeActive.setText((new TimeFormatter()).format(activeTime));
+
+        // total time
+        int totalTime = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_TOTAL_s));
+        String totalTimeString = (new TimeFormatter()).format(totalTime);
+        mTvTimeTotal.setText(mContext.getString(R.string.total_time_format, totalTimeString));
 
         // --- Bind Speed/Pace Row ----
         float avgSpeed_mps = cursor.getFloat(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPEED_AVERAGE_mps));

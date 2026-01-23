@@ -959,4 +959,8 @@
     <string name="hint_workout_goal">goal</string>
     <string name="hint_workout_method">method</string>
     <string name="title_edit_description">Beschreibung ändern</string>
+
+
+    <!-- workout details -->
+    <string name="total_time_format">(Insgesamt: %1$s)</string>
 </resources>
