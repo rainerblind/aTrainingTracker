@@ -291,6 +291,12 @@ public class WorkoutSummariesListFragment extends ListFragment
         }
     }
 
+    private void  setWorkoutDescription(ViewHolder viewHolder, Cursor cursor, long workoutId) {
+        if (viewHolder.descriptionViewHolder != null) {
+            viewHolder.descriptionViewHolder.bind(cursor, workoutId);
+        }
+    }
+
 
     /**
      * Sets the workout summary details by delegating to the WorkoutDetailsViewHolder.
@@ -425,6 +431,11 @@ public class WorkoutSummariesListFragment extends ListFragment
                 viewHolder.detailsViewHolder = new WorkoutDetailsViewHolder(detailsView, context);
             }
 
+            View descriptionView = row.findViewById(R.id.workout_description_include);
+            if (descriptionView != null) {
+                viewHolder.descriptionViewHolder = new WorkoutSummaryDescriptionViewHolder(descriptionView, context);
+            }
+
             viewHolder.initializeMapView();
 
             row.setTag(viewHolder);
@@ -498,6 +509,7 @@ public class WorkoutSummariesListFragment extends ListFragment
             viewHolder.ivSportIcon.setImageResource(iconResId);
             viewHolder.tvSportName.setText(sportName);
 
+            setWorkoutDescription(viewHolder, cursor, workoutId);
 
             setWorkoutDetails(viewHolder, cursor, workoutId, bSportType);
 
@@ -605,6 +617,7 @@ public class WorkoutSummariesListFragment extends ListFragment
             implements OnMapReadyCallback {
 
         WorkoutDetailsViewHolder detailsViewHolder;
+        WorkoutSummaryDescriptionViewHolder descriptionViewHolder;
 
         long workoutId;
         View scrim;
