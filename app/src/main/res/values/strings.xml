@@ -1068,5 +1068,8 @@
     <string name="hint_workout_method">method</string>
     <string name="title_edit_description">Edit description</string>
 
+    <!-- workout details -->
+    <string name="total_time_format">(total: %1$s)</string>
+
 
 </resources>

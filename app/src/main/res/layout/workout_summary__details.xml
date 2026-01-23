@@ -36,14 +36,33 @@
             android:layout_weight="1" />
 
         <!-- Duration -->
-        <TextView
-            android:id="@+id/detail_duration"
-            style="@style/TextAppearance.MaterialComponents.Headline6"
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:drawableStart="@drawable/ic_time"
-            android:drawablePadding="4dp"
-            tools:text="1:45:33" />
+            android:gravity="end"
+            android:orientation="vertical">
+
+            <!-- Active Time (Primary Time Metric) -->
+            <TextView
+                android:id="@+id/detail_time_active"
+                style="@style/TextAppearance.MaterialComponents.Headline6"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:drawableStart="@drawable/ic_time_active"
+                android:drawablePadding="4dp"
+                android:gravity="center_vertical"
+                tools:text="1:45:33" />
+
+            <!-- Total Time (Secondary Annotation) -->
+            <TextView
+                android:id="@+id/detail_time_total"
+                style="@style/TextAppearance.MaterialComponents.Caption"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textColor="?android:attr/textColorSecondary"
+                tools:text="(Total: 1:50:10)" />
+        </LinearLayout>
     </LinearLayout>
 
     <!-- average speed / pace -->
