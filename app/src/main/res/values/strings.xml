@@ -1059,5 +1059,8 @@
     <string name="hint_workout_name">workout name</string>
     <string name="edit_workout_name">edit workout name</string>
 
+    <!-- workout summary description-->
+    <string name="workout_summary__description_header">Description</string>
+
 
 </resources>

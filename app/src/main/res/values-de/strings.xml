@@ -950,4 +950,8 @@
     <string name="hint_workout_name">Name der Einheit</string>
     <string name="edit_workout_name">Name ändern</string>
 
+    <!-- workout summary description-->
+    <string name="workout_summary__description_header">Beschreibung</string>
+
+
 </resources>
