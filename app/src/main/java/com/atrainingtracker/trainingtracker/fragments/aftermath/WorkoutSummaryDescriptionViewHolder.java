@@ -10,27 +10,19 @@ import com.atrainingtracker.R;
 
 
 public class WorkoutSummaryDescriptionViewHolder {
-    private final View rootView;
+    public final View rootView;
     private final TextView tvDescription;
     private final TextView tvGoal;
     private final TextView tvMethod;
-    private final Context mContext;
 
-
-    public WorkoutSummaryDescriptionViewHolder(View view, Context context) {
-        mContext = context;
-
+    public WorkoutSummaryDescriptionViewHolder(View view) {
         rootView = view; // The whole included layout
         tvDescription = view.findViewById(R.id.tv_workout_description);
         tvGoal = view.findViewById(R.id.tv_workout_goal);
         tvMethod = view.findViewById(R.id.tv_workout_method);
     }
 
-    public void bind(Cursor cursor, long workoutId) {
-        String description = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.DESCRIPTION));
-        String goal = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.GOAL));
-        String method = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.METHOD));
-
+    public void bind(String description, String goal, String method) {
         boolean hasContent = false;
 
         if (description != null && !description.trim().isEmpty()) {

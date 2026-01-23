@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.fragments.aftermath;
 
 import android.app.Activity;
 import android.content.BroadcastReceiver;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -79,7 +80,8 @@ import java.util.Locale;
 
 public class WorkoutSummariesListFragment extends ListFragment
         implements ChangeSportDialogFragment.OnSportChangedListener,
-        EditWorkoutNameDialogFragment.OnWorkoutNameChangedListener {
+        EditWorkoutNameDialogFragment.OnWorkoutNameChangedListener,
+        EditDescriptionDialogFragment.OnDescriptionChangedListener {
 
     public static final String TAG = WorkoutSummariesListFragment.class.getSimpleName();
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
@@ -291,9 +293,9 @@ public class WorkoutSummariesListFragment extends ListFragment
         }
     }
 
-    private void  setWorkoutDescription(ViewHolder viewHolder, Cursor cursor, long workoutId) {
+    private void  setWorkoutDescription(ViewHolder viewHolder, String description, String goal, String method) {
         if (viewHolder.descriptionViewHolder != null) {
-            viewHolder.descriptionViewHolder.bind(cursor, workoutId);
+            viewHolder.descriptionViewHolder.bind(description, goal, method);
         }
     }
 
@@ -433,7 +435,7 @@ public class WorkoutSummariesListFragment extends ListFragment
 
             View descriptionView = row.findViewById(R.id.workout_description_include);
             if (descriptionView != null) {
-                viewHolder.descriptionViewHolder = new WorkoutSummaryDescriptionViewHolder(descriptionView, context);
+                viewHolder.descriptionViewHolder = new WorkoutSummaryDescriptionViewHolder(descriptionView);
             }
 
             viewHolder.initializeMapView();
@@ -509,7 +511,11 @@ public class WorkoutSummariesListFragment extends ListFragment
             viewHolder.ivSportIcon.setImageResource(iconResId);
             viewHolder.tvSportName.setText(sportName);
 
-            setWorkoutDescription(viewHolder, cursor, workoutId);
+
+            String description = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.DESCRIPTION));
+            String goal = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.GOAL));
+            String method = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.METHOD));
+            setWorkoutDescription(viewHolder, description, goal, method);
 
             setWorkoutDetails(viewHolder, cursor, workoutId, bSportType);
 
@@ -576,6 +582,11 @@ public class WorkoutSummariesListFragment extends ListFragment
                 });
             }
 
+            viewHolder.descriptionViewHolder.rootView.setOnLongClickListener(v -> {
+                WorkoutSummariesListFragment.this.showEditDescriptionDialog(workoutId, description, goal, method);
+                return true; // Consume the long click
+            });
+
         }
     }
 
@@ -611,6 +622,27 @@ public class WorkoutSummariesListFragment extends ListFragment
         updateCursor();
     }
 
+    public void showEditDescriptionDialog(long workoutId, String description, String goal, String method) {
+        EditDescriptionDialogFragment dialogFragment = EditDescriptionDialogFragment.newInstance(workoutId, description, goal, method);
+        dialogFragment.setOnDescriptionChangedListener(this);
+        dialogFragment.show(getChildFragmentManager(), "EditDescriptionDialogFragment");
+    }
+
+    @Override
+    public void onDescriptionChanged(long workoutId, String description, String goal, String method) {
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(WorkoutSummariesDatabaseManager.WorkoutSummaries.DESCRIPTION, description);
+        contentValues.put(WorkoutSummariesDatabaseManager.WorkoutSummaries.GOAL, goal);
+        contentValues.put(WorkoutSummariesDatabaseManager.WorkoutSummaries.METHOD, method);
+
+        WorkoutSummariesDatabaseManager.updateValues(workoutId, contentValues);
+
+        updateCursor();
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // ViewHolder
+    ////////////////////////////////////////////////////////////////////////////////////////////////
 
     class ViewHolder
             extends MyMapViewHolder
