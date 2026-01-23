@@ -16,7 +16,7 @@
  * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
-package com.atrainingtracker.trainingtracker.fragments;
+package com.atrainingtracker.trainingtracker.fragments.mapFragments;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
@@ -25,7 +25,6 @@ import android.util.Log;
 import androidx.core.app.ActivityCompat;
 
 import com.atrainingtracker.trainingtracker.TrainingApplication;
-import com.atrainingtracker.trainingtracker.fragments.mapFragments.BaseMapFragment;
 import com.google.android.gms.maps.GoogleMap;
 
 /**

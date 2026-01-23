@@ -1,8 +1,7 @@
-package com.atrainingtracker.trainingtracker.fragments;
+package com.atrainingtracker.trainingtracker.fragments.aftermath;
 
 import android.app.Dialog;
 import android.content.ContentValues;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;

@@ -1,4 +1,4 @@
-package com.atrainingtracker.trainingtracker.fragments
+package com.atrainingtracker.trainingtracker.fragments.aftermath
 
 import android.content.Context
 import android.view.View

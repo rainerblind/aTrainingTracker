@@ -1,4 +1,4 @@
-package com.atrainingtracker.trainingtracker.fragments;
+package com.atrainingtracker.trainingtracker.fragments.aftermath;
 
 import android.content.Context;
 import android.util.Log;
@@ -10,11 +10,9 @@ import android.widget.TableRow;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.StringRes;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BSportType;
-import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.ExtremaType;
