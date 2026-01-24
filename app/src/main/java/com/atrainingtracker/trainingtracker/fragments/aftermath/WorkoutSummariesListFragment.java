@@ -417,7 +417,8 @@ public class WorkoutSummariesListFragment extends ListFragment
 
             viewHolder.scrim = row.findViewById(R.id.scrim);
             viewHolder.tvName = row.findViewById(R.id.tv_workout_summaries_name);
-            viewHolder.tvDateAndTime = row.findViewById(R.id.tv_workout_summaries__date_and_time);
+            viewHolder.tvDate = row.findViewById(R.id.tv_workout_summaries__date);
+            viewHolder.tvTime = row.findViewById(R.id.tv_workout_summaries__time);
 
             viewHolder.llSportContainer = row.findViewById(R.id.ll_workout_summaries__sport_container);
             viewHolder.ivSportIcon = row.findViewById(R.id.iv_workout_summaries__sport_icon);
@@ -472,7 +473,6 @@ public class WorkoutSummariesListFragment extends ListFragment
             } catch (java.text.ParseException e) {
                 // Log the error if parsing fails, and set a fallback text.
                 Log.e(TAG, "Failed to parse date string: " + startTimeString, e);
-                viewHolder.tvDateAndTime.setText(startTimeString); // Show raw string on error
             }
 
             // If parsing was successful, format the Date object for the user's locale.
@@ -490,10 +490,9 @@ public class WorkoutSummariesListFragment extends ListFragment
                 // Format both parts separately and combine them with a newline character.
                 String formattedDate = localeDateFormat.format(startTimeDate);
                 String formattedTime = localeTimeFormat.format(startTimeDate);
-                String finalDateTimeString = formattedDate + "\n" + formattedTime;
 
-                // Set the combined text. The TextView will handle the line break.
-                viewHolder.tvDateAndTime.setText(finalDateTimeString);
+                viewHolder.tvTime.setText(formattedTime);
+                viewHolder.tvDate.setText(formattedDate);
             }
 
             // now, the sport
@@ -654,7 +653,8 @@ public class WorkoutSummariesListFragment extends ListFragment
         long workoutId;
         View scrim;
         TextView tvName;
-        TextView tvDateAndTime;
+        TextView tvDate;
+        TextView tvTime;
         LinearLayout llSportContainer;
         ImageView ivSportIcon;
         TextView tvSportName;
