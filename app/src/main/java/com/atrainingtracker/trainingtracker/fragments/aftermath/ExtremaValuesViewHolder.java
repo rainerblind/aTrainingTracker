@@ -14,6 +14,7 @@ import androidx.annotation.NonNull;
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.sensor.SensorType;
+import com.atrainingtracker.trainingtracker.MyHelper;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.ExtremaType;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
@@ -109,7 +110,8 @@ public class ExtremaValuesViewHolder {
             }
         }
         // Column 5: Add the unit
-        String unitText = mContext.getString(sensorType.getUnitId());
+        int unitId = MyHelper.getUnitsId(sensorType);
+        String unitText = mContext.getString(unitId);
         row.addView(createTextView(unitText, Gravity.END, (float) 1.5));
 
         if (valuesAvailable) {
