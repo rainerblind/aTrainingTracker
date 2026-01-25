@@ -123,6 +123,16 @@
                 android:layout_height="wrap_content"
                 android:textColor="?attr/colorOnPrimary"
                 tools:text="@string/sport_type_run" />
+
+            <TextView
+                android:id="@+id/tv_workout_summaries__equipment"
+                style="@style/TextAppearance.MaterialComponents.Caption"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="?attr/colorOnPrimary"
+                android:visibility="gone"
+                tools:text="with Hoka Clifton 9"
+                tools:visibility="visible" />
         </LinearLayout>
 
         <!-- Placeholder for Workout Details (Distance, Time, Ascent, etc.) -->

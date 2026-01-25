@@ -53,6 +53,7 @@ import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.activities.WorkoutDetailsActivity;
+import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper;
 import com.atrainingtracker.trainingtracker.exporter.ExportManager;
 import com.atrainingtracker.trainingtracker.exporter.ExportStatusChangedBroadcaster;
 import com.atrainingtracker.trainingtracker.exporter.FileFormat;
@@ -423,6 +424,7 @@ public class WorkoutSummariesListFragment extends ListFragment
             viewHolder.llSportContainer = row.findViewById(R.id.ll_workout_summaries__sport_container);
             viewHolder.ivSportIcon = row.findViewById(R.id.iv_workout_summaries__sport_icon);
             viewHolder.tvSportName = row.findViewById(R.id.tv_workout_summaries__sport_name);
+            viewHolder.tvEquipment = row.findViewById(R.id.tv_workout_summaries__equipment);
             viewHolder.mapView = row.findViewById(R.id.workout_summaries_mapView);
             viewHolder.separator = row.findViewById(R.id.separator_export_status);
             viewHolder.tvExportStatusHeader = row.findViewById(R.id.export_status_header);
@@ -510,7 +512,28 @@ public class WorkoutSummariesListFragment extends ListFragment
             viewHolder.ivSportIcon.setImageResource(iconResId);
             viewHolder.tvSportName.setText(sportName);
 
+            // -- equipment
+            int equipmentId = cursor.getInt(cursor.getColumnIndex(WorkoutSummaries.EQUIPMENT_ID));
+            EquipmentDbHelper equipmentDbHelper = new EquipmentDbHelper(context);
+            String equipmentName = equipmentDbHelper.getEquipmentNameFromId(equipmentId);
+            if (equipmentName != null) {
+                int equipmentFormatId = switch (bSportType) {
+                    case RUN -> R.string.format_with_equipment_run;
+                    case BIKE -> R.string.format_with_equipment_bike;
+                    default -> R.string.format_with_equipment_other;
+                };
 
+                String fullEquipmentName = context.getString(equipmentFormatId, equipmentName);
+
+                viewHolder.tvEquipment.setText(fullEquipmentName);
+                viewHolder.tvEquipment.setVisibility(View.VISIBLE);
+
+            } else {
+                viewHolder.tvEquipment.setVisibility(View.GONE);
+            }
+
+
+            // -- description
             String description = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.DESCRIPTION));
             String goal = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.GOAL));
             String method = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.METHOD));
@@ -658,6 +681,7 @@ public class WorkoutSummariesListFragment extends ListFragment
         LinearLayout llSportContainer;
         ImageView ivSportIcon;
         TextView tvSportName;
+        TextView tvEquipment;
         View separator;
         TextView tvExportStatusHeader;
         LinearLayout llExportStatus;
