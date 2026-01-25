@@ -602,7 +602,7 @@
     <string name="equipment_all_bikes">all bikes</string>
     <string name="equipment_all_shoes">all shoes</string>
     <string name="equipment_type_bike">Bike</string>
-    <string name="equipment_type_shoe">Shoe</string>
+    <string name="equipment_type_shoe">Shoes</string>
 
     <!-- dialogs -->
     <string name="SD_card_not_available">Sorry, the SD Card is not available.</string>
@@ -1058,6 +1058,24 @@
     <!-- Edit workout name -->
     <string name="hint_workout_name">workout name</string>
     <string name="edit_workout_name">edit workout name</string>
+
+    <!-- workout summary description-->
+    <string name="workout_summary__description_header">Description</string>
+
+    <!-- Edit workout description -->
+    <string name="hint_workout_description">description</string>
+    <string name="hint_workout_goal">goal</string>
+    <string name="hint_workout_method">method</string>
+    <string name="title_edit_description">Edit description</string>
+
+    <!-- workout details -->
+    <string name="total_time_format">(total: %1$s)</string>
+    <string name="format_max_displacement">(Max. Air-Line Distance: %1$s)</string>
+
+    <!-- workout summary with equipment -->
+    <string name="format_with_equipment_bike">on %1$s</string>
+    <string name="format_with_equipment_run">with %1$s</string>
+    <string name="format_with_equipment_other">with %1$s</string>
 
 
 </resources>

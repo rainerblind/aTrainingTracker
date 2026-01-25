@@ -561,10 +561,10 @@ public class EditWorkoutFragment extends Fragment {
         // next, the equipment
         if (DEBUG) {
             Log.d(TAG, "equipmentId form db: " + cursor.getInt(cursor.getColumnIndex(WorkoutSummaries.EQUIPMENT_ID)));
-            Log.d(TAG, "equipmentName: " + new EquipmentDbHelper(getActivity()).getEquipmentFromId(cursor.getInt(cursor.getColumnIndex(WorkoutSummaries.EQUIPMENT_ID))));
+            Log.d(TAG, "equipmentName: " + new EquipmentDbHelper(getActivity()).getEquipmentNameFromId(cursor.getInt(cursor.getColumnIndex(WorkoutSummaries.EQUIPMENT_ID))));
         }
         if (!cursor.isNull(cursor.getColumnIndex(WorkoutSummaries.EQUIPMENT_ID))) {
-            mEquipmentName = new EquipmentDbHelper(getActivity()).getEquipmentFromId(cursor.getInt(cursor.getColumnIndex(WorkoutSummaries.EQUIPMENT_ID)));
+            mEquipmentName = new EquipmentDbHelper(getActivity()).getEquipmentNameFromId(cursor.getInt(cursor.getColumnIndex(WorkoutSummaries.EQUIPMENT_ID)));
         }
 
         // now, the remaining interactive views

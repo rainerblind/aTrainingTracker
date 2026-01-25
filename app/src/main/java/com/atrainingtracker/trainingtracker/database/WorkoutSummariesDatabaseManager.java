@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.database;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
+import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.BaseColumns;
@@ -368,6 +369,23 @@ public class WorkoutSummariesDatabaseManager {
         if (DEBUG) Log.i(TAG, "got " + startLocations.size() + " start locations");
 
         return startLocations;
+    }
+
+    public static boolean updateValues(long workoutId, ContentValues contentValues) {
+
+        SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
+
+        try {
+            db.update(WorkoutSummaries.TABLE,
+                    contentValues,
+                    WorkoutSummaries.C_ID + "=" + workoutId,
+                    null);
+        } catch (SQLException e) {
+            Log.e(TAG, "Error while writing" + e);
+            return false;
+        }
+
+        return true;
     }
 
     /**

@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.fragments.aftermath;
 
 import android.app.Activity;
 import android.content.BroadcastReceiver;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -52,6 +53,7 @@ import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.activities.WorkoutDetailsActivity;
+import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper;
 import com.atrainingtracker.trainingtracker.exporter.ExportManager;
 import com.atrainingtracker.trainingtracker.exporter.ExportStatusChangedBroadcaster;
 import com.atrainingtracker.trainingtracker.exporter.FileFormat;
@@ -78,8 +80,9 @@ import java.util.Locale;
 // import android.view.View.OnClickListener;
 
 public class WorkoutSummariesListFragment extends ListFragment
-        implements ChangeSportDialogFragment.OnSportChangedListener,
-        EditWorkoutNameDialogFragment.OnWorkoutNameChangedListener {
+        implements ChangeSportAndEquipmentDialogFragment.OnSportChangedListener,
+        EditWorkoutNameDialogFragment.OnWorkoutNameChangedListener,
+        EditDescriptionDialogFragment.OnDescriptionChangedListener {
 
     public static final String TAG = WorkoutSummariesListFragment.class.getSimpleName();
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
@@ -291,6 +294,12 @@ public class WorkoutSummariesListFragment extends ListFragment
         }
     }
 
+    private void  setWorkoutDescription(ViewHolder viewHolder, String description, String goal, String method) {
+        if (viewHolder.descriptionViewHolder != null) {
+            viewHolder.descriptionViewHolder.bind(description, goal, method);
+        }
+    }
+
 
     /**
      * Sets the workout summary details by delegating to the WorkoutDetailsViewHolder.
@@ -409,11 +418,13 @@ public class WorkoutSummariesListFragment extends ListFragment
 
             viewHolder.scrim = row.findViewById(R.id.scrim);
             viewHolder.tvName = row.findViewById(R.id.tv_workout_summaries_name);
-            viewHolder.tvDateAndTime = row.findViewById(R.id.tv_workout_summaries__date_and_time);
+            viewHolder.tvDate = row.findViewById(R.id.tv_workout_summaries__date);
+            viewHolder.tvTime = row.findViewById(R.id.tv_workout_summaries__time);
 
             viewHolder.llSportContainer = row.findViewById(R.id.ll_workout_summaries__sport_container);
             viewHolder.ivSportIcon = row.findViewById(R.id.iv_workout_summaries__sport_icon);
             viewHolder.tvSportName = row.findViewById(R.id.tv_workout_summaries__sport_name);
+            viewHolder.tvEquipment = row.findViewById(R.id.tv_workout_summaries__equipment);
             viewHolder.mapView = row.findViewById(R.id.workout_summaries_mapView);
             viewHolder.separator = row.findViewById(R.id.separator_export_status);
             viewHolder.tvExportStatusHeader = row.findViewById(R.id.export_status_header);
@@ -423,6 +434,11 @@ public class WorkoutSummariesListFragment extends ListFragment
             View detailsView = row.findViewById(R.id.workout_details_include);
             if (detailsView != null) {
                 viewHolder.detailsViewHolder = new WorkoutDetailsViewHolder(detailsView, context);
+            }
+
+            View descriptionView = row.findViewById(R.id.workout_description_include);
+            if (descriptionView != null) {
+                viewHolder.descriptionViewHolder = new WorkoutSummaryDescriptionViewHolder(descriptionView);
             }
 
             viewHolder.initializeMapView();
@@ -459,7 +475,6 @@ public class WorkoutSummariesListFragment extends ListFragment
             } catch (java.text.ParseException e) {
                 // Log the error if parsing fails, and set a fallback text.
                 Log.e(TAG, "Failed to parse date string: " + startTimeString, e);
-                viewHolder.tvDateAndTime.setText(startTimeString); // Show raw string on error
             }
 
             // If parsing was successful, format the Date object for the user's locale.
@@ -477,10 +492,9 @@ public class WorkoutSummariesListFragment extends ListFragment
                 // Format both parts separately and combine them with a newline character.
                 String formattedDate = localeDateFormat.format(startTimeDate);
                 String formattedTime = localeTimeFormat.format(startTimeDate);
-                String finalDateTimeString = formattedDate + "\n" + formattedTime;
 
-                // Set the combined text. The TextView will handle the line break.
-                viewHolder.tvDateAndTime.setText(finalDateTimeString);
+                viewHolder.tvTime.setText(formattedTime);
+                viewHolder.tvDate.setText(formattedDate);
             }
 
             // now, the sport
@@ -498,6 +512,32 @@ public class WorkoutSummariesListFragment extends ListFragment
             viewHolder.ivSportIcon.setImageResource(iconResId);
             viewHolder.tvSportName.setText(sportName);
 
+            // -- equipment
+            int equipmentId = cursor.getInt(cursor.getColumnIndex(WorkoutSummaries.EQUIPMENT_ID));
+            EquipmentDbHelper equipmentDbHelper = new EquipmentDbHelper(context);
+            String equipmentName = equipmentDbHelper.getEquipmentNameFromId(equipmentId);
+            if (equipmentName != null) {
+                int equipmentFormatId = switch (bSportType) {
+                    case RUN -> R.string.format_with_equipment_run;
+                    case BIKE -> R.string.format_with_equipment_bike;
+                    default -> R.string.format_with_equipment_other;
+                };
+
+                String fullEquipmentName = context.getString(equipmentFormatId, equipmentName);
+
+                viewHolder.tvEquipment.setText(fullEquipmentName);
+                viewHolder.tvEquipment.setVisibility(View.VISIBLE);
+
+            } else {
+                viewHolder.tvEquipment.setVisibility(View.GONE);
+            }
+
+
+            // -- description
+            String description = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.DESCRIPTION));
+            String goal = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.GOAL));
+            String method = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.METHOD));
+            setWorkoutDescription(viewHolder, description, goal, method);
 
             setWorkoutDetails(viewHolder, cursor, workoutId, bSportType);
 
@@ -549,7 +589,7 @@ public class WorkoutSummariesListFragment extends ListFragment
                     @Override
                     public boolean onLongClick(View v) {
                         if (DEBUG) Log.d(TAG, "Sport view long-clicked for workoutId: " + workoutId);
-                        WorkoutSummariesListFragment.this.showChangeSportDialog(workoutId, sportId);
+                        WorkoutSummariesListFragment.this.showChangeSportAndEqipmentDialog(workoutId, sportId, equipmentName);
                         return true;
                     }
                 });
@@ -564,13 +604,18 @@ public class WorkoutSummariesListFragment extends ListFragment
                 });
             }
 
+            viewHolder.descriptionViewHolder.rootView.setOnLongClickListener(v -> {
+                WorkoutSummariesListFragment.this.showEditDescriptionDialog(workoutId, description, goal, method);
+                return true; // Consume the long click
+            });
+
         }
     }
 
 
     // call and callback for changing the sport tpye
-    public void showChangeSportDialog(long workoutId, long sportTypeId) {
-        ChangeSportDialogFragment dialogFragment = ChangeSportDialogFragment.newInstance(workoutId, sportTypeId);
+    public void showChangeSportAndEqipmentDialog(long workoutId, long sportTypeId, String equipmentName) {
+        ChangeSportAndEquipmentDialogFragment dialogFragment = ChangeSportAndEquipmentDialogFragment.newInstance(workoutId, sportTypeId, equipmentName);
 
         // Set this fragment as the listener for the dialog's events.
         dialogFragment.setOnSportChangedListener(this);
@@ -599,20 +644,44 @@ public class WorkoutSummariesListFragment extends ListFragment
         updateCursor();
     }
 
+    public void showEditDescriptionDialog(long workoutId, String description, String goal, String method) {
+        EditDescriptionDialogFragment dialogFragment = EditDescriptionDialogFragment.newInstance(workoutId, description, goal, method);
+        dialogFragment.setOnDescriptionChangedListener(this);
+        dialogFragment.show(getChildFragmentManager(), "EditDescriptionDialogFragment");
+    }
+
+    @Override
+    public void onDescriptionChanged(long workoutId, String description, String goal, String method) {
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(WorkoutSummariesDatabaseManager.WorkoutSummaries.DESCRIPTION, description);
+        contentValues.put(WorkoutSummariesDatabaseManager.WorkoutSummaries.GOAL, goal);
+        contentValues.put(WorkoutSummariesDatabaseManager.WorkoutSummaries.METHOD, method);
+
+        WorkoutSummariesDatabaseManager.updateValues(workoutId, contentValues);
+
+        updateCursor();
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // ViewHolder
+    ////////////////////////////////////////////////////////////////////////////////////////////////
 
     class ViewHolder
             extends MyMapViewHolder
             implements OnMapReadyCallback {
 
         WorkoutDetailsViewHolder detailsViewHolder;
+        WorkoutSummaryDescriptionViewHolder descriptionViewHolder;
 
         long workoutId;
         View scrim;
         TextView tvName;
-        TextView tvDateAndTime;
+        TextView tvDate;
+        TextView tvTime;
         LinearLayout llSportContainer;
         ImageView ivSportIcon;
         TextView tvSportName;
+        TextView tvEquipment;
         View separator;
         TextView tvExportStatusHeader;
         LinearLayout llExportStatus;
