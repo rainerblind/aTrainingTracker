@@ -83,11 +83,18 @@ public class ExtremaValuesViewHolder {
      */
     private boolean addExtremaRow(@NonNull TableLayout table, @NonNull SensorType sensorType) {
 
-        // show the pace only when the sportType is Run
-        if (sensorType == SensorType.PACE_spm &&
-                mBsportType != BSportType.RUN) {
+        // do not show the speed for running activities
+        if (mBsportType == BSportType.RUN
+                && sensorType == SensorType.SPEED_mps) {
             return false;
         }
+
+        // show the pace only for running activities
+        if (mBsportType  != BSportType.RUN
+            && sensorType == SensorType.PACE_spm) {
+            return false;
+        }
+
 
         TableRow row = new TableRow(mContext);
 
