@@ -5,6 +5,7 @@
     android:orientation="vertical"
     android:padding="24dp">
 
+    <!-- Sport Spinner -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -17,5 +18,17 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp" />
+
+    <!-- Equipment Spinner -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/Equipment"
+        style="@style/TextAppearance.MaterialComponents.Caption"/>
+    <Spinner
+        android:id="@+id/spinner_change_equipment"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 
 </LinearLayout>
