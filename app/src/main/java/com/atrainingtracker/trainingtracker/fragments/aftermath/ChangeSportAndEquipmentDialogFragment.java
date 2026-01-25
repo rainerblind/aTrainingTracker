@@ -170,6 +170,11 @@ public class ChangeSportAndEquipmentDialogFragment extends DialogFragment {
         List<String> equipmentNameList = equipmentDbHelper.getEquipment(bSportType);
         mSpinnerEquipment.setAdapter(new ArrayAdapter<>(getActivity(), android.R.layout.simple_spinner_item, equipmentNameList.toArray(new String[0])));
 
+        // when we reselect the original sport, the original equipment should be selected
+        if (currentSportId == mCurrentSportId) {
+            equipmentToSelect = mCurrentEquipmentName;
+        }
+
         if (equipmentToSelect != null) {
             int equipmentSelectionIndex = equipmentNameList.indexOf(equipmentToSelect);
             if (equipmentSelectionIndex != -1) {
