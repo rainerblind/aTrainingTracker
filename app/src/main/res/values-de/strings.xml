@@ -963,9 +963,10 @@
 
     <!-- workout details -->
     <string name="total_time_format">(Insgesamt: %1$s)</string>
+    <string name="format_max_displacement">(Max. Luftlinie: %1$s)</string>
 
 
-    <!-- workout summary with eqipment -->
+    <!-- workout summary with equipment -->
     <string name="format_with_equipment_bike">auf %1$s</string>
     <string name="format_with_equipment_run">mit %1$s</string>
     <string name="format_with_equipment_other">mit %1$s</string>

@@ -33,6 +33,7 @@ public class WorkoutDetailsViewHolder {
 
     // Row 1
     private final TextView mTvDistance;
+    private final TextView mTvMaxDisplacement;
     private final TextView mTvTimeActive;
     private final TextView mTvTimeTotal;
 
@@ -53,6 +54,7 @@ public class WorkoutDetailsViewHolder {
 
         // Find all views from the inflated layout
         mTvDistance = view.findViewById(R.id.detail_distance);
+        mTvMaxDisplacement = view.findViewById(R.id.detail_max_displacement);
         mTvTimeActive = view.findViewById(R.id.detail_time_active);
         mTvTimeTotal = view.findViewById(R.id.detail_time_total);
 
@@ -80,6 +82,19 @@ public class WorkoutDetailsViewHolder {
         String distance = (new DistanceFormatter()).format(cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.DISTANCE_TOTAL_m)));
         String unit = mContext.getString(MyHelper.getDistanceUnitNameId());
         mTvDistance.setText(mContext.getString(R.string.value_unit_string_string, distance, unit));
+
+        // max Displacement / Line Distance
+        Double maxDisplacement = WorkoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX);
+        if (maxDisplacement != null) {
+            String maxDisplacementFormatted = (new DistanceFormatter().format(maxDisplacement));
+            unit = mContext.getString(MyHelper.getDistanceUnitNameId());
+            String maxDisplacementString = mContext.getString(R.string.value_unit_string_string, maxDisplacementFormatted, unit);
+            mTvMaxDisplacement.setText(mContext.getString(R.string.format_max_displacement, maxDisplacementString));
+            mTvMaxDisplacement.setVisibility(View.VISIBLE);
+        } else {
+            mTvMaxDisplacement.setVisibility(View.GONE);
+        }
+
 
         // active time
         int activeTime = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_ACTIVE_s));
