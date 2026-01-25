@@ -602,7 +602,7 @@
     <string name="equipment_all_bikes">all bikes</string>
     <string name="equipment_all_shoes">all shoes</string>
     <string name="equipment_type_bike">Bike</string>
-    <string name="equipment_type_shoe">Shoe</string>
+    <string name="equipment_type_shoe">Shoes</string>
 
     <!-- dialogs -->
     <string name="SD_card_not_available">Sorry, the SD Card is not available.</string>
