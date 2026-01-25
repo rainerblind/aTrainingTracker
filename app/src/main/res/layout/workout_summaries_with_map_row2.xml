@@ -53,21 +53,48 @@
 
         <!-- Workout Summaries -->
 
-        <TextView
-            android:id="@+id/tv_workout_summaries__date_and_time"
-            style="@style/TextAppearance.MaterialComponents.Body2"
+        <LinearLayout
+            android:id="@+id/date_time_container"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
             android:layout_marginTop="8dp"
             android:layout_marginEnd="16dp"
             android:layout_marginBottom="16dp"
-            android:textColor="?attr/colorOnPrimary"
-            app:layout_constraintEnd_toStartOf="@+id/ll_workout_summaries__sport_container"
+            android:orientation="vertical"
+            android:gravity="center_vertical"
             app:layout_constraintBottom_toBottomOf="@id/scrim"
+            app:layout_constraintEnd_toStartOf="@+id/ll_workout_summaries__sport_container"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tv_workout_summaries_name"
-            tools:text="5 km run in 0:40:00" />
+            app:layout_constraintTop_toBottomOf="@id/tv_workout_summaries_name">
+
+            <!-- Date TextView -->
+            <TextView
+                android:id="@+id/tv_workout_summaries__date"
+                style="@style/TextAppearance.MaterialComponents.Body2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:drawableStart="@drawable/ic_date_start_18dp"
+                android:drawablePadding="4dp"
+                android:gravity="center_vertical"
+                android:textColor="?attr/colorOnPrimary"
+                app:drawableTint="?attr/colorOnPrimary"
+                tools:text="Mon, 27. Nov 2023" />
+
+            <!-- Time TextView -->
+            <TextView
+                android:id="@+id/tv_workout_summaries__time"
+                style="@style/TextAppearance.MaterialComponents.Body2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:drawableStart="@drawable/ic_time_start_18dp"
+                android:drawablePadding="4dp"
+                android:gravity="center_vertical"
+                android:textColor="?attr/colorOnPrimary"
+                app:drawableTint="?attr/colorOnPrimary"
+                tools:text="10:30" />
+
+        </LinearLayout>
 
         <!-- View to visualize the sport -->
         <LinearLayout
@@ -96,6 +123,16 @@
                 android:layout_height="wrap_content"
                 android:textColor="?attr/colorOnPrimary"
                 tools:text="@string/sport_type_run" />
+
+            <TextView
+                android:id="@+id/tv_workout_summaries__equipment"
+                style="@style/TextAppearance.MaterialComponents.Caption"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="?attr/colorOnPrimary"
+                android:visibility="gone"
+                tools:text="with Hoka Clifton 9"
+                tools:visibility="visible" />
         </LinearLayout>
 
         <!-- Placeholder for Workout Details (Distance, Time, Ascent, etc.) -->
@@ -124,6 +161,17 @@
             app:layout_constraintTop_toBottomOf="@id/workout_details_include"
             tools:visibility="visible" />
 
+        <include
+            android:id="@+id/workout_description_include"
+            layout="@layout/workout_summary__description"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/extrema_values_container"
+            tools:visibility="visible" />
+
         <!-- MapView is now positioned below the new extrema container -->
         <com.google.android.gms.maps.MapView
             android:id="@+id/workout_summaries_mapView"
@@ -131,10 +179,11 @@
             android:layout_height="180dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/extrema_values_container"
+            app:layout_constraintTop_toBottomOf="@id/workout_description_include"
             map:liteMode="true"
             map:mapType="none" />
 
+        <!-- TODO: remove? -->
         <!-- Separator Line -->
         <View
             android:id="@+id/separator_export_status"

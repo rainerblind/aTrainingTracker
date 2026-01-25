@@ -519,7 +519,7 @@
     <string name="equipment_all_bikes">Alle Räder</string>
     <string name="equipment_all_shoes">Alle Schuhe</string>
     <string name="equipment_type_bike">Rad</string>
-    <string name="equipment_type_shoe">Schuh</string>
+    <string name="equipment_type_shoe">Schuhe</string>
 
     <!-- dialogs -->
     <string name="SD_card_not_available">Entschuldigung, die SD Karte ist nicht verfügbar.</string>  <!-- TODO: umbenennen? -->
@@ -949,5 +949,26 @@
     <!-- Edit workout name -->
     <string name="hint_workout_name">Name der Einheit</string>
     <string name="edit_workout_name">Name ändern</string>
+
+    <!-- workout summary description-->
+    <string name="workout_summary__description_header">Beschreibung</string>
+
+
+    <!-- Edit workout description -->
+    <string name="hint_workout_description">description</string>
+    <string name="hint_workout_goal">goal</string>
+    <string name="hint_workout_method">method</string>
+    <string name="title_edit_description">Beschreibung ändern</string>
+
+
+    <!-- workout details -->
+    <string name="total_time_format">(Insgesamt: %1$s)</string>
+    <string name="format_max_displacement">(Max. Luftlinie: %1$s)</string>
+
+
+    <!-- workout summary with equipment -->
+    <string name="format_with_equipment_bike">auf %1$s</string>
+    <string name="format_with_equipment_run">mit %1$s</string>
+    <string name="format_with_equipment_other">mit %1$s</string>
 
 </resources>
