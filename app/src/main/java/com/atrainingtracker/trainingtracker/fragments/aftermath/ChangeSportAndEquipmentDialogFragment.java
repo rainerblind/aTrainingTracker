@@ -168,17 +168,26 @@ public class ChangeSportAndEquipmentDialogFragment extends DialogFragment {
 
         EquipmentDbHelper equipmentDbHelper = new EquipmentDbHelper(getActivity());
         List<String> equipmentNameList = equipmentDbHelper.getEquipment(bSportType);
-        mSpinnerEquipment.setAdapter(new ArrayAdapter<>(getActivity(), android.R.layout.simple_spinner_item, equipmentNameList.toArray(new String[0])));
 
-        // when we reselect the original sport, the original equipment should be selected
-        if (currentSportId == mCurrentSportId) {
-            equipmentToSelect = mCurrentEquipmentName;
-        }
+        if (equipmentNameList.isEmpty()) {
+            mTvEquipmentLabel.setVisibility(View.GONE);
+            mSpinnerEquipment.setVisibility(View.GONE);
+        } else {
+            mTvEquipmentLabel.setVisibility(View.VISIBLE);
+            mSpinnerEquipment.setVisibility(View.VISIBLE);
 
-        if (equipmentToSelect != null) {
-            int equipmentSelectionIndex = equipmentNameList.indexOf(equipmentToSelect);
-            if (equipmentSelectionIndex != -1) {
-                mSpinnerEquipment.setSelection(equipmentSelectionIndex);
+            mSpinnerEquipment.setAdapter(new ArrayAdapter<>(getActivity(), android.R.layout.simple_spinner_item, equipmentNameList.toArray(new String[0])));
+
+            // when we reselect the original sport, the original equipment should be selected
+            if (currentSportId == mCurrentSportId) {
+                equipmentToSelect = mCurrentEquipmentName;
+            }
+
+            if (equipmentToSelect != null) {
+                int equipmentSelectionIndex = equipmentNameList.indexOf(equipmentToSelect);
+                if (equipmentSelectionIndex != -1) {
+                    mSpinnerEquipment.setSelection(equipmentSelectionIndex);
+                }
             }
         }
     }
