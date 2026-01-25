@@ -80,7 +80,7 @@ import java.util.Locale;
 // import android.view.View.OnClickListener;
 
 public class WorkoutSummariesListFragment extends ListFragment
-        implements ChangeSportDialogFragment.OnSportChangedListener,
+        implements ChangeSportAndEquipmentDialogFragment.OnSportChangedListener,
         EditWorkoutNameDialogFragment.OnWorkoutNameChangedListener,
         EditDescriptionDialogFragment.OnDescriptionChangedListener {
 
@@ -589,7 +589,7 @@ public class WorkoutSummariesListFragment extends ListFragment
                     @Override
                     public boolean onLongClick(View v) {
                         if (DEBUG) Log.d(TAG, "Sport view long-clicked for workoutId: " + workoutId);
-                        WorkoutSummariesListFragment.this.showChangeSportDialog(workoutId, sportId);
+                        WorkoutSummariesListFragment.this.showChangeSportAndEqipmentDialog(workoutId, sportId, equipmentName);
                         return true;
                     }
                 });
@@ -614,8 +614,8 @@ public class WorkoutSummariesListFragment extends ListFragment
 
 
     // call and callback for changing the sport tpye
-    public void showChangeSportDialog(long workoutId, long sportTypeId) {
-        ChangeSportDialogFragment dialogFragment = ChangeSportDialogFragment.newInstance(workoutId, sportTypeId);
+    public void showChangeSportAndEqipmentDialog(long workoutId, long sportTypeId, String equipmentName) {
+        ChangeSportAndEquipmentDialogFragment dialogFragment = ChangeSportAndEquipmentDialogFragment.newInstance(workoutId, sportTypeId, equipmentName);
 
         // Set this fragment as the listener for the dialog's events.
         dialogFragment.setOnSportChangedListener(this);

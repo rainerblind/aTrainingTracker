@@ -9,6 +9,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Spinner;
 
@@ -18,27 +19,33 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.DialogFragment;
 
 import com.atrainingtracker.R;
+import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
+import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
 
 import java.util.List;
 
-public class ChangeSportDialogFragment extends DialogFragment {
+public class ChangeSportAndEquipmentDialogFragment extends DialogFragment {
 
-    private static final String TAG = ChangeSportDialogFragment.class.getName();
+    private static final String TAG = "ChangeSportAndEquipmentDialogFragment";
     private static final boolean DEBUG = true;
 
+    // ARGUMENTS
     private static final String ARG_WORKOUT_ID = "workoutId";
     private static final String ARG_CURRENT_SPORT_ID = "currentSportId";
+    private static final String ARG_CURRENT_EQUIPMENT_NAME = "currentEquipmentName";
 
-    private Spinner spinnerSport;
+    // VIEWS
+    private Spinner mSpinnerSport;
+    private Spinner mSpinnerEquipment;
+
+    // DATA
     private long mWorkoutId;
     private long mCurrentSportId;
-
-    // We can show all sport types in this dialog
-    private List<String> mSportTypeUiNameList;
     private List<Long> mSportTypeIdList;
+    private String mCurrentEquipmentName;
 
     public interface OnSportChangedListener {
         void onSportChanged(long workoutId);
@@ -49,11 +56,12 @@ public class ChangeSportDialogFragment extends DialogFragment {
 
     private OnSportChangedListener mListener;
 
-    public static ChangeSportDialogFragment newInstance(long workoutId, long currentSportId) {
-        ChangeSportDialogFragment fragment = new ChangeSportDialogFragment();
+    public static ChangeSportAndEquipmentDialogFragment newInstance(long workoutId, long currentSportId, String currentEquipmentName) {
+        ChangeSportAndEquipmentDialogFragment fragment = new ChangeSportAndEquipmentDialogFragment();
         Bundle args = new Bundle();
         args.putLong(ARG_WORKOUT_ID, workoutId);
         args.putLong(ARG_CURRENT_SPORT_ID, currentSportId);
+        args.putString(ARG_CURRENT_EQUIPMENT_NAME, currentEquipmentName);
         fragment.setArguments(args);
         return fragment;
     }
@@ -64,6 +72,7 @@ public class ChangeSportDialogFragment extends DialogFragment {
         if (getArguments() != null) {
             mWorkoutId = getArguments().getLong(ARG_WORKOUT_ID);
             mCurrentSportId = getArguments().getLong(ARG_CURRENT_SPORT_ID);
+            mCurrentEquipmentName = getArguments().getString(ARG_CURRENT_EQUIPMENT_NAME);
         }
     }
 
@@ -74,20 +83,23 @@ public class ChangeSportDialogFragment extends DialogFragment {
         LayoutInflater inflater = requireActivity().getLayoutInflater();
         View view = inflater.inflate(R.layout.dialog_change_sport, null);
 
-        spinnerSport = view.findViewById(R.id.spinner_change_sport);
-        setSpinnerSport(); // Reuse the logic here
+        mSpinnerSport = view.findViewById(R.id.spinner_change_sport);
+        mSpinnerEquipment = view.findViewById(R.id.spinner_change_equipment);
+        setupSportSpinnerAdapter();
+        setInitialSportSelection();
+        setupEquipmentSpinner();
 
         builder.setView(view)
                 .setTitle(R.string.change_sport)
                 .setPositiveButton(R.string.save, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int id) {
-                        saveNewSport();
+                        saveNewSportAndEquipment();
                     }
                 })
                 .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
-                        ChangeSportDialogFragment.this.getDialog().cancel();
+                        ChangeSportAndEquipmentDialogFragment.this.getDialog().cancel();
                     }
                 });
         return builder.create();
@@ -97,25 +109,68 @@ public class ChangeSportDialogFragment extends DialogFragment {
      * This is adapted directly from EditWorkoutFragment.
      * We simplify it to always show all sport types.
      */
-    private void setSpinnerSport() {
+    private void setupSportSpinnerAdapter() {
         if (DEBUG) Log.i(TAG, "setSpinnerSport");
 
-        mSportTypeUiNameList = SportTypeDatabaseManager.getSportTypesUiNameList();
+        List<String> sportTypeUiNameList = SportTypeDatabaseManager.getSportTypesUiNameList();
         mSportTypeIdList = SportTypeDatabaseManager.getSportTypesIdList();
 
-        spinnerSport.setAdapter(new ArrayAdapter<>(getActivity(), android.R.layout.simple_spinner_item, mSportTypeUiNameList.toArray(new String[0])));
+        mSpinnerSport.setAdapter(new ArrayAdapter<>(getActivity(), android.R.layout.simple_spinner_item, sportTypeUiNameList.toArray(new String[0])));
+    }
 
+    private void setInitialSportSelection() {
         int selectionIndex = mSportTypeIdList.indexOf(mCurrentSportId);
         if (selectionIndex != -1) {
-            spinnerSport.setSelection(selectionIndex);
+            // Set selection WITHOUT triggering the onItemSelected listener.
+            mSpinnerSport.setSelection(selectionIndex, false);
+        }
+    }
+
+    private void setupEquipmentSpinner() {
+        if (DEBUG) Log.i(TAG, "setSpinnerEquipment");
+
+        updateEquipmentSpinner(mCurrentSportId, mCurrentEquipmentName);
+
+        mSpinnerSport.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                long selectedSportId = mSportTypeIdList.get(position);
+                // Update equipment list for the newly selected sport, with no pre-selected equipment
+                updateEquipmentSpinner(selectedSportId, null);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {}
+        });
+    }
+
+    /**
+     * Updates the equipment spinner's content based on the selected sport.
+     * @param currentSportId The ID of the currently selected sport.
+     * @param equipmentToSelect The name of the equipment to pre-select, or null.
+     */
+    private void updateEquipmentSpinner(long currentSportId, @Nullable String equipmentToSelect) {
+
+        BSportType bSportType = SportTypeDatabaseManager.getInstance().getBSportType(currentSportId);
+
+        EquipmentDbHelper equipmentDbHelper = new EquipmentDbHelper(getActivity());
+        List<String> equipmentNameList = equipmentDbHelper.getEquipment(bSportType);
+        mSpinnerEquipment.setAdapter(new ArrayAdapter<>(getActivity(), android.R.layout.simple_spinner_item, equipmentNameList.toArray(new String[0])));
+
+        if (equipmentToSelect != null) {
+            int equipmentSelectionIndex = equipmentNameList.indexOf(equipmentToSelect);
+            if (equipmentSelectionIndex != -1) {
+                mSpinnerEquipment.setSelection(equipmentSelectionIndex);
+            }
         }
     }
 
     /**
      * Saves the newly selected sport ID to the database for the given workout.
      */
-    private void saveNewSport() {
-        int selectedPosition = spinnerSport.getSelectedItemPosition();
+    private void saveNewSportAndEquipment() {
+        // get selected sport
+        int selectedPosition = mSpinnerSport.getSelectedItemPosition();
         if (selectedPosition < 0 || selectedPosition >= mSportTypeIdList.size()) {
             Log.e(TAG, "Invalid sport selection");
             return;
@@ -124,8 +179,17 @@ public class ChangeSportDialogFragment extends DialogFragment {
         long newSportTypeId = mSportTypeIdList.get(selectedPosition);
         if (DEBUG) Log.d(TAG, "Saving new sportId: " + newSportTypeId + " for workout: " + mWorkoutId);
 
+        // get selected equipment
+        String selectedEquipmentName = mSpinnerEquipment.getSelectedItem().toString();
+        EquipmentDbHelper equipmentDbHelper = new EquipmentDbHelper(getActivity());
+        long newEquipmentId = equipmentDbHelper.getEquipmentId(selectedEquipmentName);
+        if (DEBUG) Log.d(TAG, "Saving new equipment: " + selectedEquipmentName + " (id: " + newEquipmentId + ")");
+
+        // save
         ContentValues values = new ContentValues();
         values.put(WorkoutSummaries.SPORT_ID, newSportTypeId);
+        values.put(WorkoutSummaries.EQUIPMENT_ID, newEquipmentId);
+
         SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
         try {
             db.update(WorkoutSummaries.TABLE,
