@@ -491,7 +491,7 @@
     <string name="mean">mittel</string>
     <string name="max">max</string>
     <string name="SensorTypes">Sensoren:</string>
-    <string name="buttonSaveWorkoutText">Speichern</string>
+    <string name="buttonSaveWorkoutText">Speichern und exportieren</string>
     <string name="buttonDeleteWorkoutText">Löschen</string>
 
     <!-- export_details -->
