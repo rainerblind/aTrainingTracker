@@ -519,7 +519,7 @@
     <string name="equipment_all_bikes">Alle Räder</string>
     <string name="equipment_all_shoes">Alle Schuhe</string>
     <string name="equipment_type_bike">Rad</string>
-    <string name="equipment_type_shoe">Schuh</string>
+    <string name="equipment_type_shoe">Schuhe</string>
 
     <!-- dialogs -->
     <string name="SD_card_not_available">Entschuldigung, die SD Karte ist nicht verfügbar.</string>  <!-- TODO: umbenennen? -->

@@ -12,6 +12,7 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Spinner;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -40,6 +41,8 @@ public class ChangeSportAndEquipmentDialogFragment extends DialogFragment {
     // VIEWS
     private Spinner mSpinnerSport;
     private Spinner mSpinnerEquipment;
+    private TextView mTvEquipmentLabel;
+
 
     // DATA
     private long mWorkoutId;
@@ -85,6 +88,8 @@ public class ChangeSportAndEquipmentDialogFragment extends DialogFragment {
 
         mSpinnerSport = view.findViewById(R.id.spinner_change_sport);
         mSpinnerEquipment = view.findViewById(R.id.spinner_change_equipment);
+        mTvEquipmentLabel = view.findViewById(R.id.tv_equipment_label);
+
         setupSportSpinnerAdapter();
         setInitialSportSelection();
         setupEquipmentSpinner();
@@ -151,7 +156,15 @@ public class ChangeSportAndEquipmentDialogFragment extends DialogFragment {
      */
     private void updateEquipmentSpinner(long currentSportId, @Nullable String equipmentToSelect) {
 
+        // first, get the BSportType
         BSportType bSportType = SportTypeDatabaseManager.getInstance().getBSportType(currentSportId);
+
+        int labelResId = switch (bSportType) {
+            case BIKE -> R.string.equipment_type_bike;
+            case RUN -> R.string.equipment_type_shoe;
+            default -> R.string.Equipment;
+        };
+        mTvEquipmentLabel.setText(labelResId);
 
         EquipmentDbHelper equipmentDbHelper = new EquipmentDbHelper(getActivity());
         List<String> equipmentNameList = equipmentDbHelper.getEquipment(bSportType);
