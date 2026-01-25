@@ -574,7 +574,7 @@
     <string name="mean">mean</string>
     <string name="max">max</string>
     <string name="SensorTypes">Sensors:</string>
-    <string name="buttonSaveWorkoutText">Save</string>
+    <string name="buttonSaveWorkoutText">Save and export</string>
     <string name="buttonDeleteWorkoutText">Delete</string>
 
     <!-- export_details -->
