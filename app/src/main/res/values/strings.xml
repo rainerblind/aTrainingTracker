@@ -1070,8 +1070,9 @@
 
     <!-- workout details -->
     <string name="total_time_format">(total: %1$s)</string>
+    <string name="format_max_displacement">(Max. Air-Line Distance: %1$s)</string>
 
-    <!-- workout summary with eqipment -->
+    <!-- workout summary with equipment -->
     <string name="format_with_equipment_bike">on %1$s</string>
     <string name="format_with_equipment_run">with %1$s</string>
     <string name="format_with_equipment_other">with %1$s</string>
