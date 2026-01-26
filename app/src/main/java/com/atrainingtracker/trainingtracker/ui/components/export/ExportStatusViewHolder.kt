@@ -18,7 +18,7 @@ class ExportStatusViewHolder(val view: View) {
     private val container: LinearLayout = view.findViewById(R.id.export_status_container)
     private val context: Context = view.context
 
-    private val uiDataProvider = ExportStatusDataProvider(context)
+    private val dataProvider = ExportStatusDataProvider(context)
 
     /**
      * Binds the fetched export status data to the views.
@@ -41,7 +41,7 @@ class ExportStatusViewHolder(val view: View) {
 
         for (type in orderedTypes) {
             // Get the structured data from our central provider
-            val groupData = uiDataProvider.createGroupData(fileBaseName, type)
+            val groupData = dataProvider.createGroupData(fileBaseName, type)
 
             if (groupData.hasContent) {
                 // Create a view for this group and add it to the container
