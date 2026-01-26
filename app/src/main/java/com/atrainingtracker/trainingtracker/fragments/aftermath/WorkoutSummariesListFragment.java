@@ -66,6 +66,9 @@ import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapHel
 import com.atrainingtracker.trainingtracker.helpers.DeleteWorkoutThread;
 import com.atrainingtracker.trainingtracker.interfaces.ReallyDeleteDialogInterface;
 import com.atrainingtracker.trainingtracker.interfaces.ShowWorkoutDetailsInterface;
+import com.atrainingtracker.trainingtracker.ui.components.extrema.ExtremaData;
+import com.atrainingtracker.trainingtracker.ui.components.extrema.ExtremaDataProvider;
+import com.atrainingtracker.trainingtracker.ui.components.extrema.ExtremaValuesViewHolder;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.maps.GoogleMap;
@@ -75,9 +78,9 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.LatLng;
 
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
-// import android.view.View.OnClickListener;
 
 public class WorkoutSummariesListFragment extends ListFragment
         implements ChangeSportAndEquipmentDialogFragment.OnSportChangedListener,
@@ -315,32 +318,6 @@ public class WorkoutSummariesListFragment extends ListFragment
         }
     }
 
-    /**
-     * Sets the detailed sensor extrema information for a list item by delegating
-     * the complex UI logic to the ExtremaValuesViewHolder.
-     ** @param viewHolder   The ViewHolder for the current list item.
-     * @param context      The context.
-     * @param workoutId    The ID of the workout.
-     */
-    private void setExtremaValuesInfo(ViewHolder viewHolder, Context context, long workoutId, BSportType bSportType) {
-        if (DEBUG) Log.d(TAG, "setExtremaInfo for workoutId: " + workoutId);
-
-        if (viewHolder.tlExtremaValues != null) {
-            // Instantiate your ViewHolder with the correct container
-            // (@NonNull Context context, @NonNull TableLayout container, long workoutId, int sportTypeId
-            ExtremaValuesViewHolder extremaHolder = new ExtremaValuesViewHolder(
-                    context,
-                    viewHolder.tlExtremaValues, // Pass the TableLayout from the ViewHolder
-                    workoutId,
-                    bSportType
-            );
-
-            // Bind the data, which will handle visibility and population
-            extremaHolder.bind();
-        } else {
-            Log.e(TAG, "Extrema values container (tlExtremaValues) not found in the layout!");
-        }
-    }
 
     /**
      * Sets the detailed export status information for a list item.
@@ -541,7 +518,14 @@ public class WorkoutSummariesListFragment extends ListFragment
 
             setWorkoutDetails(viewHolder, cursor, workoutId, bSportType);
 
-            setExtremaValuesInfo(viewHolder, context, workoutId, bSportType);
+            // -- extrema values
+            ExtremaDataProvider extremaDataProvider = new ExtremaDataProvider(context);
+            List<ExtremaData> extremaList = extremaDataProvider.getExtremaDataList(workoutId, bSportType);
+            if (viewHolder.tlExtremaValues != null) {
+                ExtremaValuesViewHolder extremaHolder = new ExtremaValuesViewHolder(viewHolder.tlExtremaValues);
+                extremaHolder.bind(extremaList);
+            }
+
 
             if (isPlayServiceAvailable) {
                 viewHolder.mapView.setVisibility(View.VISIBLE);
