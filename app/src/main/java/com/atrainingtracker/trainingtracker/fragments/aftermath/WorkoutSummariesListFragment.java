@@ -406,7 +406,6 @@ public class WorkoutSummariesListFragment extends ListFragment
             viewHolder.separator = row.findViewById(R.id.separator_export_status);
             viewHolder.tvExportStatusHeader = row.findViewById(R.id.export_status_header);
             viewHolder.llExportStatus = row.findViewById(R.id.export_status_container);
-            viewHolder.tlExtremaValues = row.findViewById(R.id.extrema_values_container);
 
             View detailsView = row.findViewById(R.id.workout_details_include);
             if (detailsView != null) {
@@ -416,6 +415,12 @@ public class WorkoutSummariesListFragment extends ListFragment
             View descriptionView = row.findViewById(R.id.workout_description_include);
             if (descriptionView != null) {
                 viewHolder.descriptionViewHolder = new WorkoutSummaryDescriptionViewHolder(descriptionView);
+            }
+
+            View extremaValuesView = row.findViewById(R.id.extrema_values_include);
+            if (extremaValuesView != null) {
+                // The ViewHolder now handles finding its own internal views.
+                viewHolder.extremaValuesViewHolder = new ExtremaValuesViewHolder(extremaValuesView);
             }
 
             viewHolder.initializeMapView();
@@ -521,9 +526,8 @@ public class WorkoutSummariesListFragment extends ListFragment
             // -- extrema values
             ExtremaDataProvider extremaDataProvider = new ExtremaDataProvider(context);
             List<ExtremaData> extremaList = extremaDataProvider.getExtremaDataList(workoutId, bSportType);
-            if (viewHolder.tlExtremaValues != null) {
-                ExtremaValuesViewHolder extremaHolder = new ExtremaValuesViewHolder(viewHolder.tlExtremaValues);
-                extremaHolder.bind(extremaList);
+            if (viewHolder.extremaValuesViewHolder != null) {
+                viewHolder.extremaValuesViewHolder.bind(extremaList);
             }
 
 
@@ -556,8 +560,8 @@ public class WorkoutSummariesListFragment extends ListFragment
             if (viewHolder.detailsViewHolder != null && viewHolder.detailsViewHolder.getView() != null) {
                 viewHolder.detailsViewHolder.getView().setOnClickListener(detailsClickListener);
             }
-            if (viewHolder.tlExtremaValues != null) {
-                viewHolder.tlExtremaValues.setOnClickListener(detailsClickListener);
+            if (viewHolder.extremaValuesViewHolder != null && viewHolder.extremaValuesViewHolder.getView() != null) {
+                viewHolder.extremaValuesViewHolder.getView().setOnClickListener(detailsClickListener);
             }
 
             viewHolder.llExportStatus.setOnClickListener(new View.OnClickListener() {
@@ -656,6 +660,7 @@ public class WorkoutSummariesListFragment extends ListFragment
 
         WorkoutDetailsViewHolder detailsViewHolder;
         WorkoutSummaryDescriptionViewHolder descriptionViewHolder;
+        ExtremaValuesViewHolder extremaValuesViewHolder;
 
         long workoutId;
         View scrim;
@@ -669,7 +674,6 @@ public class WorkoutSummariesListFragment extends ListFragment
         View separator;
         TextView tvExportStatusHeader;
         LinearLayout llExportStatus;
-        TableLayout tlExtremaValues;
 
         // MapView mapView;
         // GoogleMap map;

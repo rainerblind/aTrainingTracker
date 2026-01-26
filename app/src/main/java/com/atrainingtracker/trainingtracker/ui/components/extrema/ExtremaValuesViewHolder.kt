@@ -13,30 +13,28 @@ import com.atrainingtracker.R
  * A "dumb" ViewHolder responsible *only* for displaying a pre-processed list of ExtremaData objects.
  * It has no knowledge of the database, business rules, or data sources.
  */
-class ExtremaValuesViewHolder(private val container: TableLayout) {
-
-    private val context: Context = container.context
-    private val inflater: LayoutInflater = LayoutInflater.from(context)
+class ExtremaValuesViewHolder(val view: View) {
+    val tableLayout: TableLayout = view.findViewById(R.id.extrema_values_container)
+    private val context: Context = view.context
 
     /**
      * Binds a list of ExtremaData to the UI by populating the table.
      * If the list is empty, the container's visibility is set to GONE.
      */
     fun bind(extremaList: List<ExtremaData>) {
-        container.removeAllViews() // Clear any previous rows
-
+        // Set visibility of the whole component
+        view.visibility = if (extremaList.isEmpty()) View.GONE else View.VISIBLE
         if (extremaList.isEmpty()) {
-            container.visibility = View.GONE
             return
         }
 
-        container.visibility = View.VISIBLE
+        // Clear all views EXCEPT the first one (the header)
+        val childCount = tableLayout.childCount
+        if (childCount > 1) {
+            tableLayout.removeViews(1, childCount - 1)
+        }
 
-        // Add the static header row
-        val header = inflater.inflate(R.layout.workout_summary__extrema_header, container, false) as TableRow
-        container.addView(header)
-
-        // Loop through the clean data and add a row for each item
+        // Loop through the clean data and add a new row for each item
         extremaList.forEach { data -> addExtremaRow(data) }
     }
 
@@ -56,7 +54,7 @@ class ExtremaValuesViewHolder(private val container: TableLayout) {
             addView(createTextView(data.unitLabel, Gravity.END, 1.5f))
         }
 
-        container.addView(row)
+        tableLayout.addView(row)
     }
 
     /**
