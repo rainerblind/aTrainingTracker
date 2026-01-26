@@ -46,7 +46,6 @@ import android.widget.AdapterView.AdapterContextMenuInfo;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
-import android.widget.TableLayout;
 import android.widget.TextView;
 
 import com.atrainingtracker.R;
@@ -384,7 +383,7 @@ public class WorkoutSummariesListFragment extends ListFragment
         public View newView(Context context, Cursor cursor, ViewGroup parent) {
             if (DEBUG) Log.i(TAG, "newView");
 
-            View row = LayoutInflater.from(context).inflate(R.layout.workout_summaries_with_map_row2, parent, false);
+            View row = LayoutInflater.from(context).inflate(R.layout.workout_summaries_row, parent, false);
 
             // ??? LinearLayout llRow = (LinearLayout) row.findViewById(R.id.ll_workout_summaries_row);
 
