@@ -24,7 +24,7 @@ import java.util.concurrent.ConcurrentHashMap
 class ExportNotificationManager private constructor(private val context: Context) {
 
     private val notificationManager = NotificationManagerCompat.from(context)
-    private val uiDataProvider = ExportStatusUIDataProvider(context)
+    private val uiDataProvider = ExportStatusDataProvider(context)
     private val pendingIntentStartWorkoutListActivity = createPendingIntentStartWorkoutListActivity()
 
     // workoutName -> ExportType -> FileFormat

@@ -6,10 +6,9 @@ import com.atrainingtracker.trainingtracker.exporter.ExportStatus
 import com.atrainingtracker.trainingtracker.exporter.ExportType
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusRepository
-import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusGroupData
 import com.atrainingtracker.trainingtracker.helpers.formatListAsString
 
-class ExportStatusUIDataProvider(private val context: Context) {
+class ExportStatusDataProvider(private val context: Context) {
 
     /**
      * The central class to collect all data for an ExportType and create the corresponding string for the UI.

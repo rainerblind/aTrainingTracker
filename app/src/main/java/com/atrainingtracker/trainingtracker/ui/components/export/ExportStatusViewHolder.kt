@@ -6,8 +6,6 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.exporter.ExportType
-import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusGroupData
-import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusUIDataProvider
 
 /**
  * A ViewHolder responsible for binding the export status to the UI
@@ -20,7 +18,7 @@ class ExportStatusViewHolder(val view: View) {
     private val container: LinearLayout = view.findViewById(R.id.export_status_container)
     private val context: Context = view.context
 
-    private val uiDataProvider = ExportStatusUIDataProvider(context)
+    private val uiDataProvider = ExportStatusDataProvider(context)
 
     /**
      * Binds the fetched export status data to the views.
