@@ -147,19 +147,14 @@
             app:layout_constraintTop_toBottomOf="@id/scrim" />
 
         <!-- Container for Extrema Values -->
-        <TableLayout
-            android:id="@+id/extrema_values_container"
+        <include
+            android:id="@+id/extrema_values_include"
+            layout="@layout/workout_summary__extrema"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:paddingTop="8dp"
-            android:paddingBottom="8dp"
-            android:visibility="gone"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/workout_details_include"
-            tools:visibility="visible" />
+            app:layout_constraintTop_toBottomOf="@id/workout_details_include" />
 
         <include
             android:id="@+id/workout_description_include"
@@ -169,7 +164,7 @@
             android:visibility="gone"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/extrema_values_container"
+            app:layout_constraintTop_toBottomOf="@id/extrema_values_include"
             tools:visibility="visible" />
 
         <!-- MapView is now positioned below the new extrema container -->
