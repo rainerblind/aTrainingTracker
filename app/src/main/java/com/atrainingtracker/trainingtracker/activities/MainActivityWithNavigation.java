@@ -95,7 +95,7 @@ import com.atrainingtracker.trainingtracker.dialogs.EnableBluetoothDialog;
 import com.atrainingtracker.trainingtracker.dialogs.GPSDisabledDialog;
 import com.atrainingtracker.trainingtracker.dialogs.ReallyDeleteWorkoutDialog;
 import com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialog;
-import com.atrainingtracker.trainingtracker.fragments.aftermath.ExportStatusDialogFragment;
+import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusDialogFragment;
 import com.atrainingtracker.trainingtracker.fragments.StartAndTrackingFragmentTabbedContainer;
 import com.atrainingtracker.trainingtracker.fragments.aftermath.WorkoutSummariesListFragment;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.MyLocationsFragment;

@@ -65,6 +65,7 @@ import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapHel
 import com.atrainingtracker.trainingtracker.helpers.DeleteWorkoutThread;
 import com.atrainingtracker.trainingtracker.interfaces.ReallyDeleteDialogInterface;
 import com.atrainingtracker.trainingtracker.interfaces.ShowWorkoutDetailsInterface;
+import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusViewHolder;
 import com.atrainingtracker.trainingtracker.ui.components.extrema.ExtremaData;
 import com.atrainingtracker.trainingtracker.ui.components.extrema.ExtremaDataProvider;
 import com.atrainingtracker.trainingtracker.ui.components.extrema.ExtremaValuesViewHolder;
@@ -319,29 +320,6 @@ public class WorkoutSummariesListFragment extends ListFragment
 
 
     /**
-     * Sets the detailed export status information for a list item.
-     * This method now delegates the complex UI logic to the ExportStatusViewHolder.
-     *
-     * @param viewHolder   The ViewHolder for the current list item.
-     * @param context      The context.
-     * @param fileBaseName The unique identifier for the workout.
-     */
-    private void setExportStatusInfo(ViewHolder viewHolder, Context context, String fileBaseName) {
-        if (DEBUG) Log.d(TAG, "setStatusInfo for: " + fileBaseName);
-
-        // Create an instance of the ExportStatusViewHolder and tell it to bind the data.
-        // It will fetch the data using the provider and build the UI.
-        ExportStatusViewHolder statusHolder = new ExportStatusViewHolder(
-                context,
-                viewHolder.separator,
-                viewHolder.tvExportStatusHeader,
-                viewHolder.llExportStatus, // The container to add views to
-                fileBaseName
-        );
-        statusHolder.bind();
-    }
-
-    /**
      * Check the device to make sure it has the Google Play Services APK. If
      * it doesn't, display a dialog that allows users to download the APK from
      * the Google Play Store or enable it in the device's system settings.
@@ -402,9 +380,6 @@ public class WorkoutSummariesListFragment extends ListFragment
             viewHolder.tvSportName = row.findViewById(R.id.tv_workout_summaries__sport_name);
             viewHolder.tvEquipment = row.findViewById(R.id.tv_workout_summaries__equipment);
             viewHolder.mapView = row.findViewById(R.id.workout_summaries_mapView);
-            viewHolder.separator = row.findViewById(R.id.separator_export_status);
-            viewHolder.tvExportStatusHeader = row.findViewById(R.id.export_status_header);
-            viewHolder.llExportStatus = row.findViewById(R.id.export_status_container);
 
             View detailsView = row.findViewById(R.id.workout_details_include);
             if (detailsView != null) {
@@ -418,8 +393,12 @@ public class WorkoutSummariesListFragment extends ListFragment
 
             View extremaValuesView = row.findViewById(R.id.extrema_values_include);
             if (extremaValuesView != null) {
-                // The ViewHolder now handles finding its own internal views.
                 viewHolder.extremaValuesViewHolder = new ExtremaValuesViewHolder(extremaValuesView);
+            }
+
+            View exportStatusView = row.findViewById(R.id.export_status_include);
+            if (exportStatusView != null) {
+                viewHolder.exportStatusViewHolder = new ExportStatusViewHolder(exportStatusView);
             }
 
             viewHolder.initializeMapView();
@@ -540,7 +519,9 @@ public class WorkoutSummariesListFragment extends ListFragment
             }
 
             String fileBaseName = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.FILE_BASE_NAME));
-            setExportStatusInfo(viewHolder, context, fileBaseName);
+            if (viewHolder.exportStatusViewHolder != null) {
+                viewHolder.exportStatusViewHolder.bind(fileBaseName);
+            }
 
             // --- Click listeners
             // first, create a click listener
@@ -562,13 +543,6 @@ public class WorkoutSummariesListFragment extends ListFragment
             if (viewHolder.extremaValuesViewHolder != null && viewHolder.extremaValuesViewHolder.getView() != null) {
                 viewHolder.extremaValuesViewHolder.getView().setOnClickListener(detailsClickListener);
             }
-
-            viewHolder.llExportStatus.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    mUpdateWorkoutListener.showExportStatusDialog(workoutId);
-                }
-            });
 
             // --- Long Click listeners
             if (viewHolder.llSportContainer != null) {
@@ -660,6 +634,7 @@ public class WorkoutSummariesListFragment extends ListFragment
         WorkoutDetailsViewHolder detailsViewHolder;
         WorkoutSummaryDescriptionViewHolder descriptionViewHolder;
         ExtremaValuesViewHolder extremaValuesViewHolder;
+        ExportStatusViewHolder exportStatusViewHolder;
 
         long workoutId;
         View scrim;
@@ -670,9 +645,6 @@ public class WorkoutSummariesListFragment extends ListFragment
         ImageView ivSportIcon;
         TextView tvSportName;
         TextView tvEquipment;
-        View separator;
-        TextView tvExportStatusHeader;
-        LinearLayout llExportStatus;
 
         // MapView mapView;
         // GoogleMap map;
