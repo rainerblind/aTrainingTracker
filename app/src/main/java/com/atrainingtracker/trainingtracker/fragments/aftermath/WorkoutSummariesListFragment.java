@@ -332,6 +332,8 @@ public class WorkoutSummariesListFragment extends ListFragment
         protected ShowWorkoutDetailsInterface mUpdateWorkoutListener;
 
         private final WorkoutDetailsDataProvider detailsDataProvider;
+        private final ExtremaDataProvider extremaDataProvider;
+
         // TODO: move other DataProviders to here.
 
 
@@ -349,6 +351,7 @@ public class WorkoutSummariesListFragment extends ListFragment
 
             // Instantiate data providers
             detailsDataProvider = new WorkoutDetailsDataProvider();
+            extremaDataProvider = new ExtremaDataProvider(mContext);
         }
 
 
@@ -502,7 +505,6 @@ public class WorkoutSummariesListFragment extends ListFragment
             }
 
             // -- extrema values
-            ExtremaDataProvider extremaDataProvider = new ExtremaDataProvider(context);
             List<ExtremaData> extremaList = extremaDataProvider.getExtremaDataList(workoutId, bSportType);
             if (viewHolder.extremaValuesViewHolder != null) {
                 viewHolder.extremaValuesViewHolder.bind(extremaList);
