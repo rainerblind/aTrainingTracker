@@ -69,6 +69,24 @@ public class WorkoutSummariesDatabaseManager {
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // some high level helper methods
     ////////////////////////////////////////////////////////////////////////////////////////////////
+
+    public static void updateWorkoutName(long workoutId, String newName) {
+        ContentValues values = new ContentValues();
+        values.put(WorkoutSummaries.WORKOUT_NAME, newName);
+        SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
+
+        try {
+            db.update(WorkoutSummaries.TABLE,
+                    values,
+                    WorkoutSummaries.C_ID + "=" + workoutId,
+                    null);
+        } catch (SQLException e) {
+            // TODO: use Toast?
+            Log.e(TAG, "Error while writing" + e);
+        }
+    }
+
+
     @Nullable
     public static String getBaseFileName(long workoutId) {
         if (DEBUG) Log.i(TAG, "getBaseFileName for workoutId: " + workoutId);
