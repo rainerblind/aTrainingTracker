@@ -82,12 +82,15 @@ import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.LatLng;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.util.List;
+
+import kotlin.Unit;
 
 
 public class WorkoutSummariesListFragment extends ListFragment
         implements ChangeSportAndEquipmentDialogFragment.OnSportChangedListener,
-        EditWorkoutNameDialogFragment.OnWorkoutNameChangedListener,
         EditDescriptionDialogFragment.OnDescriptionChangedListener {
 
     public static final String TAG = WorkoutSummariesListFragment.class.getSimpleName();
@@ -534,16 +537,17 @@ public class WorkoutSummariesListFragment extends ListFragment
     }
 
     public void showEditWorkoutNameDialog(long workoutId, String workoutName) {
-        // Get the current name from the database
+        // Use the Kotlin newInstance method
         EditWorkoutNameDialogFragment dialogFragment = EditWorkoutNameDialogFragment.newInstance(workoutId, workoutName);
-        dialogFragment.setOnWorkoutNameChangedListener(this); // Set listener
-        dialogFragment.show(getChildFragmentManager(), "EditWorkoutNameDialogFragment");
-    }
 
-    @Override
-    public void onWorkoutNameChanged() {
-        // simply update the cursor
-        updateCursor();
+        // Set the lambda listener directly inline
+        dialogFragment.setOnWorkoutNameChanged(() -> {
+            if (DEBUG) Log.d(TAG, "onWorkoutNameChanged callback received. Updating cursor.");
+            updateCursor();
+            return null; // Return null to satisfy Kotlin's Unit
+        });
+
+        dialogFragment.show(getChildFragmentManager(), "EditWorkoutNameDialogFragment");
     }
 
     public void showEditDescriptionDialog(long workoutId, String description, String goal, String method) {

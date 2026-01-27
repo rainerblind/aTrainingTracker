@@ -1,96 +1,57 @@
-package com.atrainingtracker.trainingtracker.ui.components.workoutheader;
+package com.atrainingtracker.trainingtracker.ui.components.workoutheader
 
-import android.app.Dialog;
-import android.content.ContentValues;
-import android.database.SQLException;
-import android.database.sqlite.SQLiteDatabase;
-import android.os.Bundle;
-import android.util.Log;
-import android.view.LayoutInflater;
-import android.view.View;
+import android.app.Dialog
+import android.os.Bundle
+import android.widget.EditText
+import androidx.appcompat.app.AlertDialog
+import androidx.compose.ui.semantics.setText
+import androidx.compose.ui.semantics.text
+import androidx.core.os.bundleOf
+import androidx.fragment.app.DialogFragment
+import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.appcompat.app.AlertDialog;
-import androidx.fragment.app.DialogFragment;
+class EditWorkoutNameDialogFragment : DialogFragment() {
 
-import com.atrainingtracker.R;
-import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
-import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
-import com.google.android.material.textfield.TextInputEditText;
+    // A modern, lambda-based listener. Much cleaner than a Java interface.
+    var onWorkoutNameChanged: (() -> Unit)? = null
 
-public class EditWorkoutNameDialogFragment extends DialogFragment {
+    private val workoutId: Long by lazy { requireArguments().getLong(ARG_WORKOUT_ID) }
+    private val workoutName: String by lazy { requireArguments().getString(ARG_WORKOUT_NAME, "") }
 
-    private static final String TAG = "EditWorkoutNameDialogFragment";
-    private static final String ARG_WORKOUT_ID = "workoutId";
-    private static final String ARG_CURRENT_NAME = "currentName";
+    override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
+        val view = requireActivity().layoutInflater.inflate(R.layout.dialog_edit_name, null)
+        val editTextWorkoutName = view.findViewById<EditText>(R.id.edit_text_workout_name)
+        editTextWorkoutName.setText(workoutName)
 
-    private long mWorkoutId;
-
-
-    // Listener to notify the list to refresh
-    public interface OnWorkoutNameChangedListener {
-        void onWorkoutNameChanged();
-    }
-    private OnWorkoutNameChangedListener mListener;
-
-    public static EditWorkoutNameDialogFragment newInstance(long workoutId, String currentName) {
-        EditWorkoutNameDialogFragment fragment = new EditWorkoutNameDialogFragment();
-        Bundle args = new Bundle();
-        args.putLong(ARG_WORKOUT_ID, workoutId);
-        args.putString(ARG_CURRENT_NAME, currentName);
-        fragment.setArguments(args);
-        return fragment;
+        return AlertDialog.Builder(requireContext())
+            .setTitle(R.string.edit_workout_name)
+            .setView(view)
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                val newName = editTextWorkoutName.text.toString()
+                if (newName.isNotBlank() && newName != workoutName) {
+                    WorkoutSummariesDatabaseManager.updateWorkoutName(workoutId, newName)
+                    // Invoke the lambda listener
+                    onWorkoutNameChanged?.invoke()
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .create()
     }
 
-    public void setOnWorkoutNameChangedListener(OnWorkoutNameChangedListener listener) {
-        mListener = listener;
-    }
+    companion object {
+        private const val ARG_WORKOUT_ID = "workoutId"
+        private const val ARG_WORKOUT_NAME = "workoutName"
 
-    @NonNull
-    @Override
-    public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
-        mWorkoutId = getArguments().getLong(ARG_WORKOUT_ID);
-        String currentName = getArguments().getString(ARG_CURRENT_NAME);
-
-        AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
-        LayoutInflater inflater = requireActivity().getLayoutInflater();
-        View view = inflater.inflate(R.layout.dialog_edit_name, null);
-        final TextInputEditText editTextName = view.findViewById(R.id.edit_text_workout_name);
-        editTextName.setText(currentName);
-        editTextName.requestFocus(); // Focus and show keyboard
-
-        builder.setView(view)
-                .setTitle(R.string.edit_workout_name)
-                .setPositiveButton(R.string.save, (dialog, id) -> {
-                    String newName = editTextName.getText().toString().trim();
-                    if (!newName.isEmpty()) {
-                        saveNewWorkoutName(newName);
-                    }
-                })
-                .setNegativeButton(R.string.cancel, (dialog, id) -> dialog.cancel());
-
-        return builder.create();
-    }
-
-    private void saveNewWorkoutName(String newName) {
-        ContentValues values = new ContentValues();
-        values.put(WorkoutSummaries.WORKOUT_NAME, newName);
-        SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
-
-        try {
-            db.update(WorkoutSummaries.TABLE,
-                    values,
-                    WorkoutSummaries.C_ID + "=" + mWorkoutId,
-                    null);
-        } catch (SQLException e) {
-            // TODO: use Toast?
-            Log.e(TAG, "Error while writing" + e);
-        }
-
-
-        if (mListener != null) {
-            mListener.onWorkoutNameChanged();
+        // The 'newInstance' pattern, idiomatic to Kotlin.
+        @JvmStatic
+        fun newInstance(workoutId: Long, workoutName: String): EditWorkoutNameDialogFragment {
+            return EditWorkoutNameDialogFragment().apply {
+                arguments = bundleOf(
+                    ARG_WORKOUT_ID to workoutId,
+                    ARG_WORKOUT_NAME to workoutName
+                )
+            }
         }
     }
 }
