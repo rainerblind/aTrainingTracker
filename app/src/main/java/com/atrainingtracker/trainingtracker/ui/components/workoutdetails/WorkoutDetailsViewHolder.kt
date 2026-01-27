@@ -19,7 +19,7 @@ import com.atrainingtracker.trainingtracker.MyHelper
  * Written in idiomatic Kotlin.
  */
 class WorkoutDetailsViewHolder(
-    private val view: View,
+    val view: View,
     private val context: Context,
 ) {
 

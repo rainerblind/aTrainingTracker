@@ -69,6 +69,9 @@ import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusVie
 import com.atrainingtracker.trainingtracker.ui.components.extrema.ExtremaData;
 import com.atrainingtracker.trainingtracker.ui.components.extrema.ExtremaDataProvider;
 import com.atrainingtracker.trainingtracker.ui.components.extrema.ExtremaValuesViewHolder;
+import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsData;
+import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsDataProvider;
+import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsViewHolder;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.maps.GoogleMap;
@@ -95,6 +98,8 @@ public class WorkoutSummariesListFragment extends ListFragment
     protected ExportManager mExportManager;
     protected Cursor mCursor;
     protected WorkoutSummaryWithMapAdapter mAdapter;
+
+
     private final BroadcastReceiver mExportStatusChangedReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
             updateCursor();
@@ -305,21 +310,6 @@ public class WorkoutSummariesListFragment extends ListFragment
 
 
     /**
-     * Sets the workout summary details by delegating to the WorkoutDetailsViewHolder.
-     *
-     * @param viewHolder The ViewHolder for the current list item.
-     * @param cursor     The cursor positioned at the correct row.
-     * @param workoutId  The ID of the workout for fetching extrema data.
-     */
-    private void setWorkoutDetails(ViewHolder viewHolder, Cursor cursor, long workoutId, BSportType bSportType) {
-        if (viewHolder.detailsViewHolder != null) {
-            // Simply call bind() on the existing holder instance.
-            viewHolder.detailsViewHolder.bind(cursor, workoutId, bSportType);
-        }
-    }
-
-
-    /**
      * Check the device to make sure it has the Google Play Services APK. If
      * it doesn't, display a dialog that allows users to download the APK from
      * the Google Play Store or enable it in the device's system settings.
@@ -341,6 +331,9 @@ public class WorkoutSummariesListFragment extends ListFragment
 
         protected ShowWorkoutDetailsInterface mUpdateWorkoutListener;
 
+        private final WorkoutDetailsDataProvider detailsDataProvider;
+        // TODO: move other DataProviders to here.
+
 
         public WorkoutSummaryWithMapAdapter(Activity activity, Cursor cursor) {
             super(activity, cursor, 0);
@@ -353,6 +346,9 @@ public class WorkoutSummariesListFragment extends ListFragment
             } catch (ClassCastException e) {
                 throw new ClassCastException(activity + " must implement ShowWorkoutDetailsInterface");
             }
+
+            // Instantiate data providers
+            detailsDataProvider = new WorkoutDetailsDataProvider();
         }
 
 
@@ -499,7 +495,11 @@ public class WorkoutSummariesListFragment extends ListFragment
             String method = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.METHOD));
             setWorkoutDescription(viewHolder, description, goal, method);
 
-            setWorkoutDetails(viewHolder, cursor, workoutId, bSportType);
+            // --workout details
+            if (viewHolder.detailsViewHolder != null) {
+                WorkoutDetailsData detailsData = detailsDataProvider.createWorkoutDetailsData(cursor, workoutId);
+                viewHolder.detailsViewHolder.bind(detailsData);
+            }
 
             // -- extrema values
             ExtremaDataProvider extremaDataProvider = new ExtremaDataProvider(context);
