@@ -1,0 +1,58 @@
+package com.atrainingtracker.trainingtracker.ui.components.workoutheader
+
+import android.content.Context
+import android.database.Cursor
+import android.util.Log
+import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
+import com.atrainingtracker.trainingtracker.MyHelper
+import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
+import java.text.ParseException
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
+
+class WorkoutHeaderDataProvider(
+    private val context: Context,
+    private val equipmentDbHelper: com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
+) {
+
+    fun createWorkoutHeaderData(cursor: Cursor): WorkoutHeaderData {
+        val workoutName = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.WORKOUT_NAME))
+        val sportId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPORT_ID))
+        val equipmentId = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.EQUIPMENT_ID))
+
+        val (date, time) = formatDateTime(cursor)
+
+        val sportType = SportTypeDatabaseManager.getBSportType(sportId)
+        val sportName = SportTypeDatabaseManager.getUIName(sportId)
+        val equipmentName = equipmentDbHelper.getEquipmentNameFromId(equipmentId)
+
+        return WorkoutHeaderData(
+            workoutName = workoutName,
+            formattedDate = date,
+            formattedTime = time,
+            sportType = sportType,
+            sportName = sportName,
+            equipmentName = equipmentName
+        )
+    }
+
+    private fun formatDateTime(cursor: Cursor): Pair<String, String> {
+        val startTimeString = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_START))
+        val dbFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ROOT).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
+
+        return try {
+            val startTimeDate: Date = dbFormat.parse(startTimeString) ?: throw ParseException("Parsed date is null", 0)
+            val localeDateFormat = java.text.DateFormat.getDateInstance(java.text.DateFormat.DEFAULT)
+            val localeTimeFormat = java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT)
+            Pair(localeDateFormat.format(startTimeDate), localeTimeFormat.format(startTimeDate))
+        } catch (e: ParseException) {
+            Log.e("WorkoutHeaderProvider", "Failed to parse date string: $startTimeString", e)
+            Pair(context.getString(R.string.invalid_date), "")
+        }
+    }
+}

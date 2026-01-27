@@ -72,6 +72,9 @@ import com.atrainingtracker.trainingtracker.ui.components.extrema.ExtremaValuesV
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsData;
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsDataProvider;
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsViewHolder;
+import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderData;
+import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderDataProvider;
+import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderViewHolder;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.maps.GoogleMap;
@@ -331,6 +334,7 @@ public class WorkoutSummariesListFragment extends ListFragment
 
         protected ShowWorkoutDetailsInterface mUpdateWorkoutListener;
 
+        private final WorkoutHeaderDataProvider headerDataProvider;
         private final WorkoutDetailsDataProvider detailsDataProvider;
         private final ExtremaDataProvider extremaDataProvider;
 
@@ -350,6 +354,7 @@ public class WorkoutSummariesListFragment extends ListFragment
             }
 
             // Instantiate data providers
+            headerDataProvider = new WorkoutHeaderDataProvider(mContext, new EquipmentDbHelper(mContext));
             detailsDataProvider = new WorkoutDetailsDataProvider();
             extremaDataProvider = new ExtremaDataProvider(mContext);
         }
@@ -369,16 +374,12 @@ public class WorkoutSummariesListFragment extends ListFragment
             // GoogleMap is set during initialization
             // MapView   is set in a few seconds
 
-            viewHolder.scrim = row.findViewById(R.id.scrim);
-            viewHolder.tvName = row.findViewById(R.id.tv_workout_summaries_name);
-            viewHolder.tvDate = row.findViewById(R.id.tv_workout_summaries__date);
-            viewHolder.tvTime = row.findViewById(R.id.tv_workout_summaries__time);
-
-            viewHolder.llSportContainer = row.findViewById(R.id.ll_workout_summaries__sport_container);
-            viewHolder.ivSportIcon = row.findViewById(R.id.iv_workout_summaries__sport_icon);
-            viewHolder.tvSportName = row.findViewById(R.id.tv_workout_summaries__sport_name);
-            viewHolder.tvEquipment = row.findViewById(R.id.tv_workout_summaries__equipment);
             viewHolder.mapView = row.findViewById(R.id.workout_summaries_mapView);
+
+            View headerView = row.findViewById(R.id.workout_header_include);
+            if (headerView != null) {
+                viewHolder.headerViewHolder = new WorkoutHeaderViewHolder(headerView);
+            }
 
             View detailsView = row.findViewById(R.id.workout_details_include);
             if (detailsView != null) {
@@ -416,80 +417,22 @@ public class WorkoutSummariesListFragment extends ListFragment
             viewHolder.workoutId = workoutId;
 
             // --- now, set the values of the views
-            // first, the name
+
+            // -- header
+            if (viewHolder.headerViewHolder != null) {
+                WorkoutHeaderData headerData = headerDataProvider.createWorkoutHeaderData(cursor);
+                viewHolder.headerViewHolder.bind(headerData);
+            }
+
+            // still necessary.  TODO: remove them
             String workoutName = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.WORKOUT_NAME));
-            viewHolder.tvName.setText(workoutName);
-
-            // Next, the start date and time.
-            // Therefore, get the start time as a String from the database, which is in the format "YYYY-MM-DD HH:MM:SS".
-            String startTimeString = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.TIME_START));
-
-            // Define the format and time-zone that matches how the date is stored in the database.
-            java.text.SimpleDateFormat dbFormat = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ROOT);
-            dbFormat.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
-
-            Date startTimeDate = null;
-            try {
-                startTimeDate = dbFormat.parse(startTimeString);
-            } catch (java.text.ParseException e) {
-                // Log the error if parsing fails, and set a fallback text.
-                Log.e(TAG, "Failed to parse date string: " + startTimeString, e);
-            }
-
-            // If parsing was successful, format the Date object for the user's locale.
-            if (startTimeDate != null) {
-                // Get a formatter for the DATE part only, using the default locale style.
-                java.text.DateFormat localeDateFormat = java.text.DateFormat.getDateInstance(
-                        java.text.DateFormat.DEFAULT // Or DateFormat.MEDIUM for a format like "Jan 22, 2026"
-                );
-
-                // Get a formatter for the TIME part only, using the short style (e.g., 3:11 PM).
-                java.text.DateFormat localeTimeFormat = java.text.DateFormat.getTimeInstance(
-                        java.text.DateFormat.SHORT
-                );
-
-                // Format both parts separately and combine them with a newline character.
-                String formattedDate = localeDateFormat.format(startTimeDate);
-                String formattedTime = localeTimeFormat.format(startTimeDate);
-
-                viewHolder.tvTime.setText(formattedTime);
-                viewHolder.tvDate.setText(formattedDate);
-            }
-
-            // now, the sport
             long sportId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPORT_ID));
-            String sportName = SportTypeDatabaseManager.getUIName(sportId);
             BSportType bSportType = SportTypeDatabaseManager.getBSportType(sportId);
 
-            // get the iconId
-            // note that they are converted to white.
-            int iconResId = switch (bSportType) {
-                case RUN -> R.drawable.bsport_run;
-                case BIKE -> R.drawable.bsport_bike;
-                default -> R.drawable.bsport_other;
-            };
-            viewHolder.ivSportIcon.setImageResource(iconResId);
-            viewHolder.tvSportName.setText(sportName);
-
-            // -- equipment
             int equipmentId = cursor.getInt(cursor.getColumnIndex(WorkoutSummaries.EQUIPMENT_ID));
             EquipmentDbHelper equipmentDbHelper = new EquipmentDbHelper(context);
             String equipmentName = equipmentDbHelper.getEquipmentNameFromId(equipmentId);
-            if (equipmentName != null) {
-                int equipmentFormatId = switch (bSportType) {
-                    case RUN -> R.string.format_with_equipment_run;
-                    case BIKE -> R.string.format_with_equipment_bike;
-                    default -> R.string.format_with_equipment_other;
-                };
-
-                String fullEquipmentName = context.getString(equipmentFormatId, equipmentName);
-
-                viewHolder.tvEquipment.setText(fullEquipmentName);
-                viewHolder.tvEquipment.setVisibility(View.VISIBLE);
-
-            } else {
-                viewHolder.tvEquipment.setVisibility(View.GONE);
-            }
+            // end of still necessary.
 
 
             // -- description
@@ -535,9 +478,8 @@ public class WorkoutSummariesListFragment extends ListFragment
                 }
             };
 
-            // and then attach the click listener to the various views
-            if (viewHolder.scrim != null) {
-                viewHolder.scrim.setOnClickListener(detailsClickListener);
+            if (viewHolder.headerViewHolder != null && viewHolder.headerViewHolder.getView() != null) {
+                viewHolder.headerViewHolder.getView().setOnClickListener(detailsClickListener);
             }
             if (viewHolder.detailsViewHolder != null && viewHolder.detailsViewHolder.getView() != null) {
                 viewHolder.detailsViewHolder.getView().setOnClickListener(detailsClickListener);
@@ -546,8 +488,9 @@ public class WorkoutSummariesListFragment extends ListFragment
                 viewHolder.extremaValuesViewHolder.getView().setOnClickListener(detailsClickListener);
             }
 
+            // TODO: get the long click listeners to work again
             // --- Long Click listeners
-            if (viewHolder.llSportContainer != null) {
+            /* if (viewHolder.llSportContainer != null) {
                 viewHolder.llSportContainer.setOnLongClickListener(new View.OnLongClickListener() {
                     @Override
                     public boolean onLongClick(View v) {
@@ -556,8 +499,9 @@ public class WorkoutSummariesListFragment extends ListFragment
                         return true;
                     }
                 });
-            }
+            } */
 
+            /*
             if (viewHolder.tvName != null) {
                 viewHolder.tvName.setOnLongClickListener(v -> {
                     // Call the new interface method we just implemented
@@ -565,7 +509,7 @@ public class WorkoutSummariesListFragment extends ListFragment
                     // Return true to consume the event
                     return true;
                 });
-            }
+            } */
 
             viewHolder.descriptionViewHolder.rootView.setOnLongClickListener(v -> {
                 WorkoutSummariesListFragment.this.showEditDescriptionDialog(workoutId, description, goal, method);
@@ -633,20 +577,13 @@ public class WorkoutSummariesListFragment extends ListFragment
             extends MyMapViewHolder
             implements OnMapReadyCallback {
 
+        WorkoutHeaderViewHolder headerViewHolder;
         WorkoutDetailsViewHolder detailsViewHolder;
         WorkoutSummaryDescriptionViewHolder descriptionViewHolder;
         ExtremaValuesViewHolder extremaValuesViewHolder;
         ExportStatusViewHolder exportStatusViewHolder;
 
         long workoutId;
-        View scrim;
-        TextView tvName;
-        TextView tvDate;
-        TextView tvTime;
-        LinearLayout llSportContainer;
-        ImageView ivSportIcon;
-        TextView tvSportName;
-        TextView tvEquipment;
 
         // MapView mapView;
         // GoogleMap map;
