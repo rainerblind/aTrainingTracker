@@ -7,16 +7,16 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.atrainingtracker.R;
-
+import com.atrainingtracker.trainingtracker.MyHelper;
 import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.PaceFormatter;
-import com.atrainingtracker.trainingtracker.MyHelper;
 import com.atrainingtracker.trainingtracker.database.ExtremaType;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
@@ -24,45 +24,39 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseMan
 import java.util.Locale;
 
 /**
- * A ViewHolder that manages the self-contained 'workout_summary_details.xml' layout.
+ * A ViewHolder that manages the self-contained 'workout_summary__details.xml' layout.
  */
 public class WorkoutDetailsViewHolder {
 
     private final View mView;
     private final Context mContext;
 
-    // Row 1
-    private final TextView mTvDistance;
-    private final TextView mTvMaxDisplacement;
-    private final TextView mTvTimeActive;
-    private final TextView mTvTimeTotal;
+    // Formatters
+    private final DistanceFormatter mDistanceFormatter;
+    private final TimeFormatter mTimeFormatter;
+    private final SpeedFormatter mSpeedFormatter;
+    private final PaceFormatter mPaceFormatter;
 
-    // Speed Row
-    private final LinearLayout mRowSpeed;
-    private final TextView mTvAvgSpeed;
-
-    // Altitude Row
-    private final LinearLayout mRowAltitude;
-    private final TextView mTvAscent;
-    private final TextView mTvDescent;
-    private final TextView mTvMinAltitude;
-    private final TextView mTvMaxAltitude;
+    // Views
+    private final TextView mTvDistance, mTvMaxDisplacement, mTvTimeActive, mTvTimeTotal;
+    private final LinearLayout mRowSpeed, mRowAltitude;
+    private final TextView mTvAvgSpeed, mTvAscent, mTvDescent, mTvMinAltitude, mTvMaxAltitude;
 
     public WorkoutDetailsViewHolder(@NonNull View view, Context context) {
         mView = view;
         mContext = context;
 
-        // Find all views from the inflated layout
+        mDistanceFormatter = new DistanceFormatter();
+        mTimeFormatter = new TimeFormatter();
+        mSpeedFormatter = new SpeedFormatter();
+        mPaceFormatter = new PaceFormatter();
+
         mTvDistance = view.findViewById(R.id.detail_distance);
         mTvMaxDisplacement = view.findViewById(R.id.detail_max_displacement);
         mTvTimeActive = view.findViewById(R.id.detail_time_active);
         mTvTimeTotal = view.findViewById(R.id.detail_time_total);
-
-        // speed row
         mRowSpeed = view.findViewById(R.id.workout_details_rowSpeed);
         mTvAvgSpeed = view.findViewById(R.id.detail_avg_speed);
-
-        // altitude row
         mRowAltitude = view.findViewById(R.id.workout_details_rowAltitude);
         mTvAscent = view.findViewById(R.id.detail_ascent);
         mTvDescent = view.findViewById(R.id.detail_descent);
@@ -74,60 +68,82 @@ public class WorkoutDetailsViewHolder {
         return mView;
     }
 
-
+    /**
+     * Main binding method. Coordinates calls to helper methods to populate the view.
+     */
     public void bind(@NonNull Cursor cursor, long workoutId, BSportType bSportType) {
+        bindDistanceAndTime(cursor, workoutId);
+        bindSpeedAndPace(cursor, bSportType);
+        bindAltitude(cursor, workoutId);
 
-        // --- Bind Row 1 (Distance and time) ---
-        // distance
-        String distance = (new DistanceFormatter()).format(cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.DISTANCE_TOTAL_m)));
-        String unit = mContext.getString(MyHelper.getDistanceUnitNameId());
-        mTvDistance.setText(mContext.getString(R.string.value_unit_string_string, distance, unit));
+        // TODO: Hide the entire container if no data is bound (optional, but good practice)
+        mView.setVisibility(View.VISIBLE);
+    }
 
-        // max Displacement / Line Distance
+    /**
+     * Binds data for the first row: Total Distance, Max Displacement, Active Time, Total Time.
+     */
+    private void bindDistanceAndTime(@NonNull Cursor cursor, long workoutId) {
+        // Total Distance
+        double distanceValue = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.DISTANCE_TOTAL_m));
+        String distance = mDistanceFormatter.format(distanceValue);
+        String distanceUnit = mContext.getString(MyHelper.getDistanceUnitNameId());
+        mTvDistance.setText(mContext.getString(R.string.value_unit_string_string, distance, distanceUnit));
+
+        // Max Displacement
         Double maxDisplacement = WorkoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX);
         if (maxDisplacement != null) {
-            String maxDisplacementFormatted = (new DistanceFormatter().format(maxDisplacement));
-            unit = mContext.getString(MyHelper.getDistanceUnitNameId());
-            String maxDisplacementString = mContext.getString(R.string.value_unit_string_string, maxDisplacementFormatted, unit);
+            String maxDisplacementFormatted = mDistanceFormatter.format(maxDisplacement);
+            String maxDisplacementString = mContext.getString(R.string.value_unit_string_string, maxDisplacementFormatted, distanceUnit);
             mTvMaxDisplacement.setText(mContext.getString(R.string.format_max_displacement, maxDisplacementString));
             mTvMaxDisplacement.setVisibility(View.VISIBLE);
         } else {
             mTvMaxDisplacement.setVisibility(View.GONE);
         }
 
-
-        // active time
+        // Active Time
         int activeTime = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_ACTIVE_s));
-        mTvTimeActive.setText((new TimeFormatter()).format(activeTime));
+        mTvTimeActive.setText(mTimeFormatter.format(activeTime));
 
-        // total time
+        // Total Time
         int totalTime = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_TOTAL_s));
-        String totalTimeString = (new TimeFormatter()).format(totalTime);
+        String totalTimeString = mTimeFormatter.format(totalTime);
         mTvTimeTotal.setText(mContext.getString(R.string.total_time_format, totalTimeString));
+    }
 
-        // --- Bind Speed/Pace Row ----
+    /**
+     * Binds data for the speed/pace row, choosing the correct format based on sport type.
+     */
+    private void bindSpeedAndPace(@NonNull Cursor cursor, BSportType bSportType) {
         float avgSpeed_mps = cursor.getFloat(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPEED_AVERAGE_mps));
-        if (bSportType == BSportType.RUN) {  // when running, show pace instead of speed
-            float pace_spm = 1/avgSpeed_mps;
-            String pace_formatted = new PaceFormatter().format(pace_spm);
-            unit = mContext.getString(MyHelper.getPaceUnitNameId());
-            mTvAvgSpeed.setText(mContext.getString(R.string.value_unit_string_string, pace_formatted, unit));
-        } else {
-            String speed_formatted = new SpeedFormatter().format(avgSpeed_mps);
-            unit = mContext.getString(MyHelper.getSpeedUnitNameId());
-            mTvAvgSpeed.setText(mContext.getString(R.string.value_unit_string_string, speed_formatted, unit));
-        }
-        mRowSpeed.setVisibility(View.VISIBLE);
+        String formattedValue;
+        String unit;
 
-        // --- Bind Altitude Row (Ascent, Descent, Min/Max Altitude) ---
-        boolean hasRow2Data = false;
+        if (bSportType == BSportType.RUN) { // Pace for running
+            float pace_spm = (avgSpeed_mps > 0) ? 1 / avgSpeed_mps : 0;
+            formattedValue = mPaceFormatter.format(pace_spm);
+            unit = mContext.getString(MyHelper.getPaceUnitNameId());
+        } else { // Speed for all other sports
+            formattedValue = mSpeedFormatter.format(avgSpeed_mps);
+            unit = mContext.getString(MyHelper.getSpeedUnitNameId());
+        }
+
+        mTvAvgSpeed.setText(mContext.getString(R.string.value_unit_string_string, formattedValue, unit));
+        mRowSpeed.setVisibility(View.VISIBLE);
+    }
+
+    /**
+     * Binds all data for the altitude row: Ascent, Descent, Min/Max Altitude.
+     * Manages the visibility of the entire row.
+     */
+    private void bindAltitude(@NonNull Cursor cursor, long workoutId) {
+        boolean hasAltitudeData = false;
 
         // Ascent
         int ascentM = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.ASCENDING));
         if (ascentM > 0) {
-            mTvAscent.setText(String.format(Locale.getDefault(), "%d %s", ascentM, 'm'));  // TODO: might be simpified?
-            mTvAscent.setVisibility(View.VISIBLE);
-            hasRow2Data = true;
+            setTextViewWithIntValue(mTvAscent, ascentM, "m");
+            hasAltitudeData = true;
         } else {
             mTvAscent.setVisibility(View.GONE);
         }
@@ -135,37 +151,48 @@ public class WorkoutDetailsViewHolder {
         // Descent
         int descentM = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.DESCENDING));
         if (descentM > 0) {
-            mTvDescent.setText(String.format(Locale.getDefault(), "%d %s", descentM, 'm'));
-            mTvDescent.setVisibility(View.VISIBLE);
-            hasRow2Data = true;
+            setTextViewWithIntValue(mTvDescent, descentM, "m");
+            hasAltitudeData = true;
         } else {
             mTvDescent.setVisibility(View.GONE);
         }
 
         // Min Altitude
         Double minAlt = WorkoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.ALTITUDE, ExtremaType.MIN);
-        if (minAlt != null) {
-            mTvMinAltitude.setText(String.format(Locale.getDefault(), "%.0f %s", minAlt, 'm'));
-            mTvMinAltitude.setVisibility(View.VISIBLE);
-            hasRow2Data = true;
-        } else {
-            mTvMinAltitude.setVisibility(View.GONE);
+        if (setTextViewWithDoubleValue(mTvMinAltitude, minAlt, "m")) {
+            hasAltitudeData = true;
         }
 
         // Max Altitude
         Double maxAlt = WorkoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.ALTITUDE, ExtremaType.MAX);
-        if (maxAlt != null) {
-            mTvMaxAltitude.setText(String.format(Locale.getDefault(), "%.0f %s", maxAlt, 'm'));
-            mTvMaxAltitude.setVisibility(View.VISIBLE);
-            hasRow2Data = true;
-        } else {
-            mTvMaxAltitude.setVisibility(View.GONE);
+        if (setTextViewWithDoubleValue(mTvMaxAltitude, maxAlt, "m")) {
+            hasAltitudeData = true;
         }
 
-        // Hide the entire second row if no data exists for it
-        mRowAltitude.setVisibility(hasRow2Data ? View.VISIBLE : View.GONE);
+        mRowAltitude.setVisibility(hasAltitudeData ? View.VISIBLE : View.GONE);
+    }
 
-        // TODO: Hide the entire container if no data is bound (optional, but good practice)
-        mView.setVisibility(View.VISIBLE);
+    /**
+     * Helper to format an integer value with a unit and set it on a TextView.
+     */
+    private void setTextViewWithIntValue(@NonNull TextView textView, int value, @NonNull String unit) {
+        textView.setText(String.format(Locale.getDefault(), "%d %s", value, unit));
+        textView.setVisibility(View.VISIBLE);
+    }
+
+    /**
+     * Helper to format a Double value with a unit and set it on a TextView.
+     * Handles null values by hiding the view.
+     * @return True if the view was made visible, false otherwise.
+     */
+    private boolean setTextViewWithDoubleValue(@NonNull TextView textView, @Nullable Double value, @NonNull String unit) {
+        if (value != null) {
+            textView.setText(String.format(Locale.getDefault(), "%.0f %s", value, unit));
+            textView.setVisibility(View.VISIBLE);
+            return true;
+        } else {
+            textView.setVisibility(View.GONE);
+            return false;
+        }
     }
 }
