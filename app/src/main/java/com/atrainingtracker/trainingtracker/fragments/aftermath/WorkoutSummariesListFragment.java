@@ -493,9 +493,24 @@ public class WorkoutSummariesListFragment extends ListFragment
                 // attach long-click listener for changing the workout name
                 viewHolder.headerViewHolder.getWorkoutNameView().setOnLongClickListener(v -> {
                     if (DEBUG) Log.d(TAG, "Workout name long-clicked for workoutId: " + workoutId);
-                    // We need the workoutName from the headerData object
+
+                    // Get the current workout name from the header data
                     WorkoutHeaderData headerData = headerDataProvider.createWorkoutHeaderData(cursor);
-                    WorkoutSummariesListFragment.this.showEditWorkoutNameDialog(workoutId, headerData.getWorkoutName());
+                    String _workoutName = headerData.getWorkoutName();
+
+                    // Create the dialog instance using the Kotlin newInstance method
+                    EditWorkoutNameDialogFragment dialogFragment = EditWorkoutNameDialogFragment.newInstance(workoutId, _workoutName);
+
+                    // Set the lambda listener directly to update the cursor
+                    dialogFragment.setOnWorkoutNameChanged(() -> {
+                        if (DEBUG) Log.d(TAG, "onWorkoutNameChanged callback received. Updating cursor.");
+                        updateCursor();
+                        return null; // Return null to satisfy Kotlin's Unit
+                    });
+
+                    // Show the dialog
+                    dialogFragment.show(getChildFragmentManager(), "EditWorkoutNameDialogFragment");
+
                     return true; // Consume the event
                 });
 
@@ -534,20 +549,6 @@ public class WorkoutSummariesListFragment extends ListFragment
         if (DEBUG) Log.d(TAG, "onSportChanged callback received. Restarting loader.");
         // simply update the cursor
         updateCursor();
-    }
-
-    public void showEditWorkoutNameDialog(long workoutId, String workoutName) {
-        // Use the Kotlin newInstance method
-        EditWorkoutNameDialogFragment dialogFragment = EditWorkoutNameDialogFragment.newInstance(workoutId, workoutName);
-
-        // Set the lambda listener directly inline
-        dialogFragment.setOnWorkoutNameChanged(() -> {
-            if (DEBUG) Log.d(TAG, "onWorkoutNameChanged callback received. Updating cursor.");
-            updateCursor();
-            return null; // Return null to satisfy Kotlin's Unit
-        });
-
-        dialogFragment.show(getChildFragmentManager(), "EditWorkoutNameDialogFragment");
     }
 
     public void showEditDescriptionDialog(long workoutId, String description, String goal, String method) {
