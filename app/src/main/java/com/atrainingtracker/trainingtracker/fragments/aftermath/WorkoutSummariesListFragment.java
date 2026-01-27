@@ -488,28 +488,26 @@ public class WorkoutSummariesListFragment extends ListFragment
                 viewHolder.extremaValuesViewHolder.getView().setOnClickListener(detailsClickListener);
             }
 
-            // TODO: get the long click listeners to work again
-            // --- Long Click listeners
-            /* if (viewHolder.llSportContainer != null) {
-                viewHolder.llSportContainer.setOnLongClickListener(new View.OnLongClickListener() {
-                    @Override
-                    public boolean onLongClick(View v) {
-                        if (DEBUG) Log.d(TAG, "Sport view long-clicked for workoutId: " + workoutId);
-                        WorkoutSummariesListFragment.this.showChangeSportAndEqipmentDialog(workoutId, sportId, equipmentName);
-                        return true;
-                    }
+            // --- set long click listeners
+            if (viewHolder.headerViewHolder != null) {
+                // attach long-click listener for changing the workout name
+                viewHolder.headerViewHolder.getWorkoutNameView().setOnLongClickListener(v -> {
+                    if (DEBUG) Log.d(TAG, "Workout name long-clicked for workoutId: " + workoutId);
+                    // We need the workoutName from the headerData object
+                    WorkoutHeaderData headerData = headerDataProvider.createWorkoutHeaderData(cursor);
+                    WorkoutSummariesListFragment.this.showEditWorkoutNameDialog(workoutId, headerData.getWorkoutName());
+                    return true; // Consume the event
                 });
-            } */
 
-            /*
-            if (viewHolder.tvName != null) {
-                viewHolder.tvName.setOnLongClickListener(v -> {
-                    // Call the new interface method we just implemented
-                    WorkoutSummariesListFragment.this.showEditWorkoutNameDialog(workoutId, workoutName);
-                    // Return true to consume the event
-                    return true;
+                // attach long-click listener for changing sport and equipment
+                viewHolder.headerViewHolder.getSportContainerView().setOnLongClickListener(v -> {
+                    if (DEBUG) Log.d(TAG, "Sport view long-clicked for workoutId: " + workoutId);
+                    // We need the sportId and equipmentName from the headerData object
+                    WorkoutHeaderData headerData = headerDataProvider.createWorkoutHeaderData(cursor);
+                    WorkoutSummariesListFragment.this.showChangeSportAndEqipmentDialog(workoutId, sportId, headerData.getEquipmentName());
+                    return true; // Consume the event
                 });
-            } */
+            }
 
             viewHolder.descriptionViewHolder.rootView.setOnLongClickListener(v -> {
                 WorkoutSummariesListFragment.this.showEditDescriptionDialog(workoutId, description, goal, method);
