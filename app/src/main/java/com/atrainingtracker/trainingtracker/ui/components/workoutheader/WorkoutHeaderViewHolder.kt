@@ -14,6 +14,10 @@ class WorkoutHeaderViewHolder(val view: View) {
 
     private val context: Context = view.context
 
+    // containers necessary for adding click listeners
+    val workoutNameView: TextView = view.findViewById(R.id.tv_workout_summaries_name)
+    val sportContainerView: View = view.findViewById(R.id.ll_workout_summaries__sport_container)
+
     // Views
     private val tvName: TextView = view.findViewById(R.id.tv_workout_summaries_name)
     private val tvDate: TextView = view.findViewById(R.id.tv_workout_summaries__date)
