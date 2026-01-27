@@ -1,4 +1,4 @@
-package com.atrainingtracker.trainingtracker.fragments.aftermath;
+package com.atrainingtracker.trainingtracker.ui.components.workoutheader;
 
 import android.app.Dialog;
 import android.content.ContentValues;

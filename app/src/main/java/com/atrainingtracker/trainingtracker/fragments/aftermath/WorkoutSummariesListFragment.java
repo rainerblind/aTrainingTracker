@@ -43,10 +43,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AbsListView;
 import android.widget.AdapterView.AdapterContextMenuInfo;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.ListView;
-import android.widget.TextView;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BSportType;
@@ -72,6 +69,8 @@ import com.atrainingtracker.trainingtracker.ui.components.extrema.ExtremaValuesV
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsData;
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsDataProvider;
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsViewHolder;
+import com.atrainingtracker.trainingtracker.ui.components.workoutheader.ChangeSportAndEquipmentDialogFragment;
+import com.atrainingtracker.trainingtracker.ui.components.workoutheader.EditWorkoutNameDialogFragment;
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderData;
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderDataProvider;
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderViewHolder;
@@ -83,9 +82,7 @@ import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.LatLng;
 
-import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 
 
 public class WorkoutSummariesListFragment extends ListFragment
