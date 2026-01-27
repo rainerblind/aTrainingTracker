@@ -496,15 +496,21 @@ public class WorkoutSummariesListFragment extends ListFragment
 
                     // Get the current workout name from the header data
                     WorkoutHeaderData headerData = headerDataProvider.createWorkoutHeaderData(cursor);
-                    String _workoutName = headerData.getWorkoutName();
+                    String currentWorkoutName = headerData.getWorkoutName();
 
-                    // Create the dialog instance using the Kotlin newInstance method
-                    EditWorkoutNameDialogFragment dialogFragment = EditWorkoutNameDialogFragment.newInstance(workoutId, _workoutName);
+                    // Create the dialog instance.
+                    EditWorkoutNameDialogFragment dialogFragment = EditWorkoutNameDialogFragment.newInstance(currentWorkoutName);
 
-                    // Set the lambda listener directly to update the cursor
-                    dialogFragment.setOnWorkoutNameChanged(() -> {
+                    // define the callback action
+                    dialogFragment.setOnWorkoutNameChanged(newName -> {
+                        // When the name is changed:
+                        // First, update the database.
+                        WorkoutSummariesDatabaseManager.updateWorkoutName(workoutId, newName);
+
+                        // Then, update the cursor to refresh the UI.
                         if (DEBUG) Log.d(TAG, "onWorkoutNameChanged callback received. Updating cursor.");
                         updateCursor();
+
                         return null; // Return null to satisfy Kotlin's Unit
                     });
 
