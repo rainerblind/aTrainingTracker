@@ -9,7 +9,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:visibility="gone"
+    android:visibility="visible"
     tools:visibility="visible">
 
     <TableLayout
@@ -20,7 +20,7 @@
         android:paddingEnd="16dp"
         android:paddingTop="8dp"
         android:paddingBottom="8dp"
-        android:visibility="gone"
+        android:visibility="visible"
         tools:visibility="visible">
 
         <TableRow
