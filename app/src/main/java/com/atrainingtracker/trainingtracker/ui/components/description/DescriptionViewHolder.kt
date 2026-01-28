@@ -5,7 +5,7 @@ import android.widget.TextView
 import androidx.core.view.isVisible
 import com.atrainingtracker.R
 
-class WorkoutSummaryDescriptionViewHolder(val rootView: View) {
+class DescriptionViewHolder(val rootView: View) {
 
     private val tvDescription: TextView = rootView.findViewById(R.id.tv_workout_description)
     private val tvGoal: TextView = rootView.findViewById(R.id.tv_workout_goal)

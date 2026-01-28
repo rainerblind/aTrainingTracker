@@ -64,7 +64,7 @@ import com.atrainingtracker.trainingtracker.interfaces.ShowWorkoutDetailsInterfa
 import com.atrainingtracker.trainingtracker.ui.components.description.DescriptionData;
 import com.atrainingtracker.trainingtracker.ui.components.description.DescriptionDataProvider;
 import com.atrainingtracker.trainingtracker.ui.components.description.EditDescriptionDialogFragment;
-import com.atrainingtracker.trainingtracker.ui.components.description.WorkoutSummaryDescriptionViewHolder;
+import com.atrainingtracker.trainingtracker.ui.components.description.DescriptionViewHolder;
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusViewHolder;
 import com.atrainingtracker.trainingtracker.ui.components.extrema.ExtremaData;
 import com.atrainingtracker.trainingtracker.ui.components.extrema.ExtremaDataProvider;
@@ -388,7 +388,7 @@ public class WorkoutSummariesListFragment extends ListFragment
 
             View descriptionView = row.findViewById(R.id.workout_description_include);
             if (descriptionView != null) {
-                viewHolder.descriptionViewHolder = new WorkoutSummaryDescriptionViewHolder(descriptionView);
+                viewHolder.descriptionViewHolder = new DescriptionViewHolder(descriptionView);
             }
 
             View exportStatusView = row.findViewById(R.id.export_status_include);
@@ -580,7 +580,7 @@ public class WorkoutSummariesListFragment extends ListFragment
 
         WorkoutHeaderViewHolder headerViewHolder;
         WorkoutDetailsViewHolder detailsViewHolder;
-        WorkoutSummaryDescriptionViewHolder descriptionViewHolder;
+        DescriptionViewHolder descriptionViewHolder;
         ExtremaValuesViewHolder extremaValuesViewHolder;
         ExportStatusViewHolder exportStatusViewHolder;
 
