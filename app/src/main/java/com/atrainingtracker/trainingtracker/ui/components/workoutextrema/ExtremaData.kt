@@ -1,4 +1,4 @@
-package com.atrainingtracker.trainingtracker.ui.components.extrema
+package com.atrainingtracker.trainingtracker.ui.components.workoutextrema
 
 
 /**
