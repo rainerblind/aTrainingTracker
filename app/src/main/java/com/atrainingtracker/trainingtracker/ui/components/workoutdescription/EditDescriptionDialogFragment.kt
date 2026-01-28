@@ -1,4 +1,4 @@
-package com.atrainingtracker.trainingtracker.ui.components.description
+package com.atrainingtracker.trainingtracker.ui.components.workoutdescription
 
 import android.app.Dialog
 import android.os.Bundle

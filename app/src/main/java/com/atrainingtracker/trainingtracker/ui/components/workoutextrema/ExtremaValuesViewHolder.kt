@@ -1,8 +1,7 @@
-package com.atrainingtracker.trainingtracker.ui.components.extrema
+package com.atrainingtracker.trainingtracker.ui.components.workoutextrema
 
 import android.content.Context
 import android.view.Gravity
-import android.view.LayoutInflater
 import android.view.View
 import android.widget.TableLayout
 import android.widget.TableRow
