@@ -20,7 +20,6 @@ package com.atrainingtracker.trainingtracker.fragments.aftermath;
 
 import android.app.Activity;
 import android.content.BroadcastReceiver;
-import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -62,6 +61,10 @@ import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapHel
 import com.atrainingtracker.trainingtracker.helpers.DeleteWorkoutThread;
 import com.atrainingtracker.trainingtracker.interfaces.ReallyDeleteDialogInterface;
 import com.atrainingtracker.trainingtracker.interfaces.ShowWorkoutDetailsInterface;
+import com.atrainingtracker.trainingtracker.ui.components.description.DescriptionData;
+import com.atrainingtracker.trainingtracker.ui.components.description.DescriptionDataProvider;
+import com.atrainingtracker.trainingtracker.ui.components.description.EditDescriptionDialogFragment;
+import com.atrainingtracker.trainingtracker.ui.components.description.WorkoutSummaryDescriptionViewHolder;
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusViewHolder;
 import com.atrainingtracker.trainingtracker.ui.components.extrema.ExtremaData;
 import com.atrainingtracker.trainingtracker.ui.components.extrema.ExtremaDataProvider;
@@ -82,16 +85,11 @@ import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.LatLng;
 
-import org.jetbrains.annotations.NotNull;
-
 import java.util.List;
-
-import kotlin.Unit;
 
 
 public class WorkoutSummariesListFragment extends ListFragment
-        implements ChangeSportAndEquipmentDialogFragment.OnSportChangedListener,
-        EditDescriptionDialogFragment.OnDescriptionChangedListener {
+        implements ChangeSportAndEquipmentDialogFragment.OnSportChangedListener {
 
     public static final String TAG = WorkoutSummariesListFragment.class.getSimpleName();
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
@@ -305,12 +303,6 @@ public class WorkoutSummariesListFragment extends ListFragment
         }
     }
 
-    private void  setWorkoutDescription(ViewHolder viewHolder, String description, String goal, String method) {
-        if (viewHolder.descriptionViewHolder != null) {
-            viewHolder.descriptionViewHolder.bind(description, goal, method);
-        }
-    }
-
 
     /**
      * Check the device to make sure it has the Google Play Services APK. If
@@ -337,6 +329,8 @@ public class WorkoutSummariesListFragment extends ListFragment
         private final WorkoutHeaderDataProvider headerDataProvider;
         private final WorkoutDetailsDataProvider detailsDataProvider;
         private final ExtremaDataProvider extremaDataProvider;
+        private final DescriptionDataProvider descriptionDataProvider;
+
 
         // TODO: move other DataProviders to here.
 
@@ -357,6 +351,7 @@ public class WorkoutSummariesListFragment extends ListFragment
             headerDataProvider = new WorkoutHeaderDataProvider(mContext, new EquipmentDbHelper(mContext));
             detailsDataProvider = new WorkoutDetailsDataProvider();
             extremaDataProvider = new ExtremaDataProvider(mContext);
+            descriptionDataProvider = new DescriptionDataProvider();
         }
 
 
@@ -386,14 +381,14 @@ public class WorkoutSummariesListFragment extends ListFragment
                 viewHolder.detailsViewHolder = new WorkoutDetailsViewHolder(detailsView, context);
             }
 
-            View descriptionView = row.findViewById(R.id.workout_description_include);
-            if (descriptionView != null) {
-                viewHolder.descriptionViewHolder = new WorkoutSummaryDescriptionViewHolder(descriptionView);
-            }
-
             View extremaValuesView = row.findViewById(R.id.extrema_values_include);
             if (extremaValuesView != null) {
                 viewHolder.extremaValuesViewHolder = new ExtremaValuesViewHolder(extremaValuesView);
+            }
+
+            View descriptionView = row.findViewById(R.id.workout_description_include);
+            if (descriptionView != null) {
+                viewHolder.descriptionViewHolder = new WorkoutSummaryDescriptionViewHolder(descriptionView);
             }
 
             View exportStatusView = row.findViewById(R.id.export_status_include);
@@ -436,10 +431,31 @@ public class WorkoutSummariesListFragment extends ListFragment
 
 
             // -- description
-            String description = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.DESCRIPTION));
-            String goal = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.GOAL));
-            String method = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.METHOD));
-            setWorkoutDescription(viewHolder, description, goal, method);
+            if (viewHolder.descriptionViewHolder != null) {
+                DescriptionData descriptionData = descriptionDataProvider.createDescriptionData(cursor);
+                viewHolder.descriptionViewHolder.bind(descriptionData);
+
+                // --- Set the long click listener for editing ---
+                viewHolder.descriptionViewHolder.getRootView().setOnLongClickListener(v -> {
+                    // Create the "dumb" dialog instance
+                    EditDescriptionDialogFragment dialogFragment = EditDescriptionDialogFragment.newInstance(
+                            descriptionData.getDescription(),
+                            descriptionData.getGoal(),
+                            descriptionData.getMethod()
+                    );
+
+                    // Set the callback -> update the database
+                    dialogFragment.setOnDescriptionChanged((newDescription, newGoal, newMethod) -> {
+                        WorkoutSummariesDatabaseManager.updateDescription(workoutId, newDescription, newGoal, newMethod);
+                        updateCursor();
+                        return null; // for Kotlin Unit
+                    });
+
+                    // show the dialog
+                    dialogFragment.show(getChildFragmentManager(), "EditDescriptionDialog");
+                    return true; // Consume the long click
+                });
+            }
 
             // --workout details
             if (viewHolder.detailsViewHolder != null) {
@@ -530,10 +546,6 @@ public class WorkoutSummariesListFragment extends ListFragment
                 });
             }
 
-            viewHolder.descriptionViewHolder.rootView.setOnLongClickListener(v -> {
-                WorkoutSummariesListFragment.this.showEditDescriptionDialog(workoutId, description, goal, method);
-                return true; // Consume the long click
-            });
 
         }
     }
@@ -557,23 +569,6 @@ public class WorkoutSummariesListFragment extends ListFragment
         updateCursor();
     }
 
-    public void showEditDescriptionDialog(long workoutId, String description, String goal, String method) {
-        EditDescriptionDialogFragment dialogFragment = EditDescriptionDialogFragment.newInstance(workoutId, description, goal, method);
-        dialogFragment.setOnDescriptionChangedListener(this);
-        dialogFragment.show(getChildFragmentManager(), "EditDescriptionDialogFragment");
-    }
-
-    @Override
-    public void onDescriptionChanged(long workoutId, String description, String goal, String method) {
-        ContentValues contentValues = new ContentValues();
-        contentValues.put(WorkoutSummariesDatabaseManager.WorkoutSummaries.DESCRIPTION, description);
-        contentValues.put(WorkoutSummariesDatabaseManager.WorkoutSummaries.GOAL, goal);
-        contentValues.put(WorkoutSummariesDatabaseManager.WorkoutSummaries.METHOD, method);
-
-        WorkoutSummariesDatabaseManager.updateValues(workoutId, contentValues);
-
-        updateCursor();
-    }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // ViewHolder

@@ -36,6 +36,8 @@ import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.google.android.gms.maps.model.LatLng;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -85,6 +87,27 @@ public class WorkoutSummariesDatabaseManager {
             Log.e(TAG, "Error while writing" + e);
         }
     }
+
+
+    public static void updateDescription(long workoutId, @NotNull String newDescription, @NotNull String newGoal, @NotNull String newMethod) {
+        ContentValues values = new ContentValues();
+        values.put(WorkoutSummaries.DESCRIPTION, newDescription);
+        values.put(WorkoutSummaries.GOAL, newGoal);
+        values.put(WorkoutSummaries.METHOD, newMethod);
+
+        SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
+
+        try {
+            db.update(WorkoutSummaries.TABLE,
+                    values,
+                    WorkoutSummaries.C_ID + "=" + workoutId,
+                    null);
+        } catch (SQLException e) {
+            // TODO: use Toast?
+            Log.e(TAG, "Error while writing" + e);
+        }
+    }
+
 
 
     @Nullable
