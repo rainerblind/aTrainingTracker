@@ -454,9 +454,7 @@ public class WorkoutSummariesListFragment extends ListFragment {
             }
 
             // -- extrema values
-            long sportId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPORT_ID));
-            BSportType bSportType = SportTypeDatabaseManager.getBSportType(sportId);
-            List<ExtremaData> extremaList = extremaDataProvider.getExtremaDataList(workoutId, bSportType);
+            List<ExtremaData> extremaList = extremaDataProvider.getExtremaDataList(cursor, workoutId);
             if (viewHolder.extremaValuesViewHolder != null) {
                 viewHolder.extremaValuesViewHolder.bind(extremaList);
             }
