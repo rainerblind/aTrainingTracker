@@ -474,17 +474,6 @@ public class WorkoutSummariesListFragment extends ListFragment {
 
             }
 
-            // still necessary.  TODO: remove them
-            String workoutName = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.WORKOUT_NAME));
-            long sportId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPORT_ID));
-            BSportType bSportType = SportTypeDatabaseManager.getBSportType(sportId);
-
-            int equipmentId = cursor.getInt(cursor.getColumnIndex(WorkoutSummaries.EQUIPMENT_ID));
-            EquipmentDbHelper equipmentDbHelper = new EquipmentDbHelper(context);
-            String equipmentName = equipmentDbHelper.getEquipmentNameFromId(equipmentId);
-            // end of still necessary.
-
-
             // -- description
             if (viewHolder.descriptionViewHolder != null) {
                 DescriptionData descriptionData = descriptionDataProvider.createDescriptionData(cursor);
@@ -519,6 +508,8 @@ public class WorkoutSummariesListFragment extends ListFragment {
             }
 
             // -- extrema values
+            long sportId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPORT_ID));
+            BSportType bSportType = SportTypeDatabaseManager.getBSportType(sportId);
             List<ExtremaData> extremaList = extremaDataProvider.getExtremaDataList(workoutId, bSportType);
             if (viewHolder.extremaValuesViewHolder != null) {
                 viewHolder.extremaValuesViewHolder.bind(extremaList);
