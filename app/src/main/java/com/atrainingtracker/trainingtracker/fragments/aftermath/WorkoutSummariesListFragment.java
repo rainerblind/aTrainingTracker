@@ -143,24 +143,12 @@ public class WorkoutSummariesListFragment extends ListFragment {
         }
     }
 
-    //         @Override
-//    public void onActivityCreated(Bundle savedInstanceState)  // TODO: move code to onResume?
-//    {
-//        super.onActivityCreated(savedInstanceState);
-//        if (DEBUG) Log.d(TAG, "onActivityCreated");
     @Override
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         if (DEBUG) Log.i(TAG, "onViewCreated");
 
         mListView = getListView();
-//        mListView.setOnItemClickListener(new OnItemClickListener() {
-//            public void onItemClick(AdapterView parent, View view, int position, long id) {
-//                if (DEBUG) Log.d(TAG, "on ItemClick: view.getId=" + view.getId() + ", position=" + position + " , id=" + id);
-//                // mShowWorkoutDetailsListener.startWorkoutDetailsActivity(id, WorkoutDetailsActivity.SelectedFragment.EDIT_DETAILS);
-//                // TODO: make the foo here => does not work :-(
-//            }
-//        });
 
         registerForContextMenu(mListView);
 
@@ -209,20 +197,8 @@ public class WorkoutSummariesListFragment extends ListFragment {
         }
 
         WorkoutSummariesDatabaseManager.getInstance().closeDatabase();
-        //if (mCursor != null)  {
-        //    // mCursor.close();
-        //    mCursor = null;
-        //}
     }
 
-    // TODO: rename
-    // public void requeryCursor()
-    // {
-    //    	if (DEBUG) Log.d(TAG, "requeryCursor");
-    //   	if (mCursor != null) {
-    //		mCursor.requery();
-    //	}
-    //}
 
     /**
      * Called first time user clicks on the menu button
