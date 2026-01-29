@@ -106,19 +106,6 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
             }
         }
     };
-    private final AbsListView.RecyclerListener mRecycleListener = new AbsListView.RecyclerListener() {
-
-        @Override
-        public void onMovedToScrapHeap(@NonNull View view) {
-            StarredSegmentsCursorAdapter.ViewHolder holder = (StarredSegmentsCursorAdapter.ViewHolder) view.getTag();
-            if (holder != null && holder.map != null) {
-                // Clear the map and free up resources by changing the map type to none
-                holder.map.clear();
-                holder.map.setMapType(GoogleMap.MAP_TYPE_NONE);
-            }
-
-        }
-    };
 
     @NonNull
     public static StarredSegmentsListFragment newInstance(long sportTypeId) {
@@ -186,7 +173,6 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
         setListAdapter(mStarredSegmentsCursorAdapter);
 
         mListView = getListView();
-        mListView.setRecyclerListener(mRecycleListener);
 
         setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override

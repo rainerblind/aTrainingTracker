@@ -1,10 +1,9 @@
-package com.atrainingtracker.trainingtracker.exporter.ui
+package com.atrainingtracker.trainingtracker.ui.components.export
 
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.Context
-
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.util.Log
@@ -25,11 +24,12 @@ import java.util.concurrent.ConcurrentHashMap
 class ExportNotificationManager private constructor(private val context: Context) {
 
     private val notificationManager = NotificationManagerCompat.from(context)
-    private val uiDataProvider = ExportStatusUIDataProvider(context)
+    private val dataProvider = ExportStatusDataProvider(context)
     private val pendingIntentStartWorkoutListActivity = createPendingIntentStartWorkoutListActivity()
 
     // workoutName -> ExportType -> FileFormat
-    private val activeExports: MutableMap<String, MutableMap<ExportType, MutableSet<FileFormat>>> = ConcurrentHashMap()
+    private val activeExports: MutableMap<String, MutableMap<ExportType, MutableSet<FileFormat>>> =
+        ConcurrentHashMap()
 
     /**********************************************************************************************
      * Public API
@@ -110,7 +110,7 @@ class ExportNotificationManager private constructor(private val context: Context
      **********************************************************************************************/
 
     private fun createGroupViewForExportType(fileBaseName: String, exportType: ExportType): RemoteViews? {
-        val data = uiDataProvider.createGroupData(fileBaseName, exportType)
+        val data = dataProvider.createGroupData(fileBaseName, exportType)
 
         return data.takeIf { it.hasContent }?.let {
             RemoteViews(context.packageName, R.layout.export_notification__group).apply {

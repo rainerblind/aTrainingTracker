@@ -255,10 +255,10 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         if (DEBUG) Log.d(TAG, "inserted");
     }
 
-    private int getEquipmentId(@NonNull SQLiteDatabase db, @NonNull String equipmentName) {
+    private long getEquipmentId(@NonNull SQLiteDatabase db, @NonNull String equipmentName) {
         equipmentName.isEmpty();  // throw an exception when equipmentName is null
 
-        int equipmentId = -1;
+        long equipmentId = -1;
 
         Cursor cursor = db.query(EQUIPMENT, null, NAME + "=?", new String[]{equipmentName}, null, null, null);
         if (cursor.moveToFirst()) {
@@ -271,9 +271,9 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         return equipmentId;
     }
 
-    public int getEquipmentId(@NonNull String equipmentName) {
+    public long getEquipmentId(@NonNull String equipmentName) {
         SQLiteDatabase db = this.getReadableDatabase();
-        int equipmentId = getEquipmentId(db, equipmentName);
+        long equipmentId = getEquipmentId(db, equipmentName);
         db.close();
         return equipmentId;
     }

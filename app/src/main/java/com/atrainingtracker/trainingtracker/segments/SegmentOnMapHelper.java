@@ -34,11 +34,11 @@ import android.view.View;
 import com.atrainingtracker.R;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.activities.SegmentDetailsActivity;
-import com.atrainingtracker.trainingtracker.fragments.mapFragments.MyMapViewHolder;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.Roughness;
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager.Segments;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.MapView;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Polyline;
@@ -56,7 +56,7 @@ public class SegmentOnMapHelper {
     //                                 segmentId
     private final EnumMap<Roughness, HashMap<Long, SegmentData>> mSegmentCache = new EnumMap<>(Roughness.class);
 
-    public void showSegmentOnMap(Context context, @NonNull MyMapViewHolder myMapViewHolder, long segmentId, @NonNull Roughness roughness, boolean zoomToMap, boolean animateZoom) {
+    public void showSegmentOnMap(Context context, @NonNull MapView mapView, GoogleMap map, long segmentId, @NonNull Roughness roughness, boolean zoomToMap, boolean animateZoom) {
         if (DEBUG)
             Log.i(TAG, "showSegmentOnMap for segmentId=" + segmentId + ", roughness=" + roughness.name());
 
@@ -73,23 +73,23 @@ public class SegmentOnMapHelper {
         }
 
         if (segmentData != null) {
-            plotSegmentOnMap(context, myMapViewHolder, segmentId, roughness_tmp, zoomToMap, animateZoom);
+            plotSegmentOnMap(context, mapView, map, segmentId, roughness_tmp, zoomToMap, animateZoom);
         }
 
         if (calcSegmentData) {
-            new SegmentDataThread(context, myMapViewHolder, segmentId, roughness, zoomToMap, animateZoom).start();
+            new SegmentDataThread(context, mapView, map, segmentId, roughness, zoomToMap, animateZoom).start();
         }
     }
 
-    private void plotSegmentOnMap(@NonNull final Context context, @NonNull final MyMapViewHolder myMapViewHolder, long segmentId, @NonNull Roughness roughness, boolean zoomToMap, final boolean animateZoom) {
+    private void plotSegmentOnMap(@NonNull final Context context, @NonNull MapView mapView, GoogleMap map, long segmentId, @NonNull Roughness roughness, boolean zoomToMap, final boolean animateZoom) {
         if (DEBUG)
             Log.i(TAG, "plotSegmentOnMap for segmentId=" + segmentId + ", roughness=" + roughness.name());
 
         final SegmentData segmentData = getCachedSegmentData(segmentId, roughness);
         if (DEBUG) Log.i(TAG, "segmentData=" + segmentData);
         if (segmentData == null                                  // when there is no data
-                & myMapViewHolder.mapView != null) {       // and it is 'only' an embedded MapView
-            myMapViewHolder.mapView.setVisibility(View.GONE);  // we do not show the MapView
+                & mapView != null) {       // and it is 'only' an embedded MapView
+            mapView.setVisibility(View.GONE);  // we do not show the MapView
             return;
         } else if (segmentData == null) {
             // TODO: is this the right solution?
@@ -99,11 +99,11 @@ public class SegmentOnMapHelper {
 
         segmentData.polylineOptions.clickable(true);
 
-        Polyline polyline = myMapViewHolder.map.addPolyline(segmentData.polylineOptions);
+        Polyline polyline = map.addPolyline(segmentData.polylineOptions);
 
         polyline.setTag(segmentId);
 
-        myMapViewHolder.map.setOnPolylineClickListener(clickedPolyline -> {
+        map.setOnPolylineClickListener(clickedPolyline -> {
             // Retrieve the segment ID from the clicked polyline's tag
             Object tag = clickedPolyline.getTag();
             if (tag instanceof Long) {
@@ -120,20 +120,20 @@ public class SegmentOnMapHelper {
         });
 
         if (zoomToMap) {
-            myMapViewHolder.map.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
+            map.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
                 @Override
                 public void onMapLoaded() {
                     if (animateZoom) {
-                        myMapViewHolder.map.animateCamera(CameraUpdateFactory.newLatLngBounds(segmentData.latLngBounds, 50));
+                        map.animateCamera(CameraUpdateFactory.newLatLngBounds(segmentData.latLngBounds, 50));
                     } else {
-                        myMapViewHolder.map.moveCamera(CameraUpdateFactory.newLatLngBounds(segmentData.latLngBounds, 50));
+                        map.moveCamera(CameraUpdateFactory.newLatLngBounds(segmentData.latLngBounds, 50));
                     }
                 }
             });
         }
 
         // TODO: probably, not the right place! But necessary since we set map type to none when removing or recycling the map???
-        myMapViewHolder.map.setMapType(GoogleMap.MAP_TYPE_TERRAIN);
+        map.setMapType(GoogleMap.MAP_TYPE_TERRAIN);
     }
 
     @Nullable
@@ -213,15 +213,17 @@ public class SegmentOnMapHelper {
 
     private class SegmentDataThread extends Thread {
         final Context context;
-        final MyMapViewHolder myMapViewHolder;
+        MapView mapView;
+        GoogleMap map;
         final long segmentId;
         final Roughness roughness;
         final boolean zoomToMap;
         final boolean animateZoom;
 
-        SegmentDataThread(Context context, MyMapViewHolder myMapViewHolder, long segmentId, Roughness roughness, boolean zoomToMap, boolean animateZoom) {
+        SegmentDataThread(Context context, MapView mapView, GoogleMap map, long segmentId, Roughness roughness, boolean zoomToMap, boolean animateZoom) {
             this.context = context;
-            this.myMapViewHolder = myMapViewHolder;
+            this.mapView = mapView;
+            this.map = map;
             this.segmentId = segmentId;
             this.roughness = roughness;
             this.zoomToMap = zoomToMap;
@@ -237,7 +239,7 @@ public class SegmentOnMapHelper {
             new Handler(Looper.getMainLooper()).post(() -> {
                 if (DEBUG) Log.i(TAG, "onPostExecute segmentId=" + segmentId);
 
-                plotSegmentOnMap(context, myMapViewHolder, segmentId, roughness, zoomToMap, animateZoom);
+                plotSegmentOnMap(context, mapView, map, segmentId, roughness, zoomToMap, animateZoom);
             });
         }
     }

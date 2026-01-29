@@ -191,8 +191,7 @@ public class MyLocationsFragment
                         if (mMarker2WorkoutIdMap.containsKey(marker)) {
                             long workoutId = mMarker2WorkoutIdMap.get(marker);
 
-                            MyMapViewHolder myMapViewHolder = new MyMapViewHolder(mMap, mMapView);
-                            ((TrainingApplication) getActivity().getApplication()).trackOnMapHelper.showTrackOnMap(myMapViewHolder, workoutId, Roughness.ALL, TrackOnMapHelper.TrackType.BEST, false, true);
+                            ((TrainingApplication) getActivity().getApplication()).trackOnMapHelper.showTrackOnMap(mMapView, mMap, workoutId, Roughness.ALL, TrackOnMapHelper.TrackType.BEST, false, true);
                             // TODO: keep track but remove on second click?
                             return true;
                         } else if (mMarker2MyLocationsIdMap.containsKey(marker)) {

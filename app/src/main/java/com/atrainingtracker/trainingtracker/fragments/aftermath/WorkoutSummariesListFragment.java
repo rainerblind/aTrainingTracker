@@ -20,7 +20,6 @@ package com.atrainingtracker.trainingtracker.fragments.aftermath;
 
 import android.app.Activity;
 import android.content.BroadcastReceiver;
-import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -43,11 +42,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AbsListView;
 import android.widget.AdapterView.AdapterContextMenuInfo;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.ListView;
-import android.widget.TableLayout;
-import android.widget.TextView;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BSportType;
@@ -60,29 +55,37 @@ import com.atrainingtracker.trainingtracker.exporter.FileFormat;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
-import com.atrainingtracker.trainingtracker.fragments.mapFragments.MyMapViewHolder;
-import com.atrainingtracker.trainingtracker.fragments.mapFragments.Roughness;
-import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapHelper;
 import com.atrainingtracker.trainingtracker.helpers.DeleteWorkoutThread;
 import com.atrainingtracker.trainingtracker.interfaces.ReallyDeleteDialogInterface;
 import com.atrainingtracker.trainingtracker.interfaces.ShowWorkoutDetailsInterface;
+import com.atrainingtracker.trainingtracker.ui.components.map.MapComponent;
+import com.atrainingtracker.trainingtracker.ui.components.map.MapContentType;
+import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.DescriptionData;
+import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.DescriptionDataProvider;
+import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.EditDescriptionDialogFragment;
+import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.DescriptionViewHolder;
+import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusViewHolder;
+import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaData;
+import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaDataProvider;
+import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaValuesViewHolder;
+import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsData;
+import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsDataProvider;
+import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsViewHolder;
+import com.atrainingtracker.trainingtracker.ui.components.workoutheader.ChangeSportAndEquipmentDialogFragment;
+import com.atrainingtracker.trainingtracker.ui.components.workoutheader.EditWorkoutNameDialogFragment;
+import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderData;
+import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderDataProvider;
+import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderViewHolder;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
-import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
-import com.google.android.gms.maps.MapsInitializer;
-import com.google.android.gms.maps.OnMapReadyCallback;
-import com.google.android.gms.maps.model.LatLng;
 
-import java.util.Date;
-import java.util.Locale;
+import java.util.List;
 
-// import android.view.View.OnClickListener;
+import kotlin.Unit;
 
-public class WorkoutSummariesListFragment extends ListFragment
-        implements ChangeSportAndEquipmentDialogFragment.OnSportChangedListener,
-        EditWorkoutNameDialogFragment.OnWorkoutNameChangedListener,
-        EditDescriptionDialogFragment.OnDescriptionChangedListener {
+
+public class WorkoutSummariesListFragment extends ListFragment {
 
     public static final String TAG = WorkoutSummariesListFragment.class.getSimpleName();
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
@@ -92,6 +95,11 @@ public class WorkoutSummariesListFragment extends ListFragment
     protected ExportManager mExportManager;
     protected Cursor mCursor;
     protected WorkoutSummaryWithMapAdapter mAdapter;
+    private WorkoutHeaderDataProvider headerDataProvider;
+    private WorkoutDetailsDataProvider detailsDataProvider;
+    private ExtremaDataProvider extremaDataProvider;
+    private DescriptionDataProvider descriptionDataProvider;
+
     private final BroadcastReceiver mExportStatusChangedReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
             updateCursor();
@@ -108,19 +116,6 @@ public class WorkoutSummariesListFragment extends ListFragment
     private ShowWorkoutDetailsInterface mShowWorkoutDetailsListener;
     private ReallyDeleteDialogInterface mReallyDeleteDialogInterface;
     private boolean isPlayServiceAvailable = true;
-    private final AbsListView.RecyclerListener mRecycleListener = new AbsListView.RecyclerListener() {
-
-        @Override
-        public void onMovedToScrapHeap(@NonNull View view) {
-            ViewHolder holder = (ViewHolder) view.getTag();
-            if (holder != null && holder.map != null) {
-                // Clear the map and free up resources by changing the map type to none
-                holder.map.clear();
-                holder.map.setMapType(GoogleMap.MAP_TYPE_NONE);
-            }
-
-        }
-    };
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -148,29 +143,26 @@ public class WorkoutSummariesListFragment extends ListFragment
         }
     }
 
-    //         @Override
-//    public void onActivityCreated(Bundle savedInstanceState)  // TODO: move code to onResume?
-//    {
-//        super.onActivityCreated(savedInstanceState);
-//        if (DEBUG) Log.d(TAG, "onActivityCreated");
     @Override
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         if (DEBUG) Log.i(TAG, "onViewCreated");
 
         mListView = getListView();
-//        mListView.setOnItemClickListener(new OnItemClickListener() {
-//            public void onItemClick(AdapterView parent, View view, int position, long id) {
-//                if (DEBUG) Log.d(TAG, "on ItemClick: view.getId=" + view.getId() + ", position=" + position + " , id=" + id);
-//                // mShowWorkoutDetailsListener.startWorkoutDetailsActivity(id, WorkoutDetailsActivity.SelectedFragment.EDIT_DETAILS);
-//                // TODO: make the foo here => does not work :-(
-//            }
-//        });
-        mListView.setRecyclerListener(mRecycleListener);
 
         registerForContextMenu(mListView);
 
-        mAdapter = new WorkoutSummaryWithMapAdapter(getActivity(), mCursor);
+        this.headerDataProvider = new WorkoutHeaderDataProvider(getActivity(), new EquipmentDbHelper(getActivity()));
+        this.detailsDataProvider = new WorkoutDetailsDataProvider();
+        this.extremaDataProvider = new ExtremaDataProvider(getActivity());
+        this.descriptionDataProvider = new DescriptionDataProvider();
+
+        mAdapter = new WorkoutSummaryWithMapAdapter(getActivity(),
+                mCursor,
+                headerDataProvider,
+                detailsDataProvider,
+                extremaDataProvider,
+                descriptionDataProvider);
         setListAdapter(mAdapter);
 
     }
@@ -205,20 +197,8 @@ public class WorkoutSummariesListFragment extends ListFragment
         }
 
         WorkoutSummariesDatabaseManager.getInstance().closeDatabase();
-        //if (mCursor != null)  {
-        //    // mCursor.close();
-        //    mCursor = null;
-        //}
     }
 
-    // TODO: rename
-    // public void requeryCursor()
-    // {
-    //    	if (DEBUG) Log.d(TAG, "requeryCursor");
-    //   	if (mCursor != null) {
-    //		mCursor.requery();
-    //	}
-    //}
 
     /**
      * Called first time user clicks on the menu button
@@ -294,76 +274,6 @@ public class WorkoutSummariesListFragment extends ListFragment
         }
     }
 
-    private void  setWorkoutDescription(ViewHolder viewHolder, String description, String goal, String method) {
-        if (viewHolder.descriptionViewHolder != null) {
-            viewHolder.descriptionViewHolder.bind(description, goal, method);
-        }
-    }
-
-
-    /**
-     * Sets the workout summary details by delegating to the WorkoutDetailsViewHolder.
-     *
-     * @param viewHolder The ViewHolder for the current list item.
-     * @param cursor     The cursor positioned at the correct row.
-     * @param workoutId  The ID of the workout for fetching extrema data.
-     */
-    private void setWorkoutDetails(ViewHolder viewHolder, Cursor cursor, long workoutId, BSportType bSportType) {
-        if (viewHolder.detailsViewHolder != null) {
-            // Simply call bind() on the existing holder instance.
-            viewHolder.detailsViewHolder.bind(cursor, workoutId, bSportType);
-        }
-    }
-
-    /**
-     * Sets the detailed sensor extrema information for a list item by delegating
-     * the complex UI logic to the ExtremaValuesViewHolder.
-     ** @param viewHolder   The ViewHolder for the current list item.
-     * @param context      The context.
-     * @param workoutId    The ID of the workout.
-     */
-    private void setExtremaValuesInfo(ViewHolder viewHolder, Context context, long workoutId, BSportType bSportType) {
-        if (DEBUG) Log.d(TAG, "setExtremaInfo for workoutId: " + workoutId);
-
-        if (viewHolder.tlExtremaValues != null) {
-            // Instantiate your ViewHolder with the correct container
-            // (@NonNull Context context, @NonNull TableLayout container, long workoutId, int sportTypeId
-            ExtremaValuesViewHolder extremaHolder = new ExtremaValuesViewHolder(
-                    context,
-                    viewHolder.tlExtremaValues, // Pass the TableLayout from the ViewHolder
-                    workoutId,
-                    bSportType
-            );
-
-            // Bind the data, which will handle visibility and population
-            extremaHolder.bind();
-        } else {
-            Log.e(TAG, "Extrema values container (tlExtremaValues) not found in the layout!");
-        }
-    }
-
-    /**
-     * Sets the detailed export status information for a list item.
-     * This method now delegates the complex UI logic to the ExportStatusViewHolder.
-     *
-     * @param viewHolder   The ViewHolder for the current list item.
-     * @param context      The context.
-     * @param fileBaseName The unique identifier for the workout.
-     */
-    private void setExportStatusInfo(ViewHolder viewHolder, Context context, String fileBaseName) {
-        if (DEBUG) Log.d(TAG, "setStatusInfo for: " + fileBaseName);
-
-        // Create an instance of the ExportStatusViewHolder and tell it to bind the data.
-        // It will fetch the data using the provider and build the UI.
-        ExportStatusViewHolder statusHolder = new ExportStatusViewHolder(
-                context,
-                viewHolder.separator,
-                viewHolder.tvExportStatusHeader,
-                viewHolder.llExportStatus, // The container to add views to
-                fileBaseName
-        );
-        statusHolder.bind();
-    }
 
     /**
      * Check the device to make sure it has the Google Play Services APK. If
@@ -387,12 +297,28 @@ public class WorkoutSummariesListFragment extends ListFragment
 
         protected ShowWorkoutDetailsInterface mUpdateWorkoutListener;
 
+        private final WorkoutHeaderDataProvider headerDataProvider;
+        private final WorkoutDetailsDataProvider detailsDataProvider;
+        private final ExtremaDataProvider extremaDataProvider;
+        private final DescriptionDataProvider descriptionDataProvider;
 
-        public WorkoutSummaryWithMapAdapter(Activity activity, Cursor cursor) {
+
+        public WorkoutSummaryWithMapAdapter(Activity activity,
+                                            Cursor cursor,
+                                            WorkoutHeaderDataProvider headerDataProvider,
+                                            WorkoutDetailsDataProvider detailsDataProvider,
+                                            ExtremaDataProvider extremaDataProvider,
+                                            DescriptionDataProvider descriptionDataProvider) {
             super(activity, cursor, 0);
             if (DEBUG) Log.d(TAG, "WorkoutSummaryWithMapAdapter");
 
             mContext = activity;
+
+            // Store providers
+            this.headerDataProvider = headerDataProvider;
+            this.detailsDataProvider = detailsDataProvider;
+            this.extremaDataProvider = extremaDataProvider;
+            this.descriptionDataProvider = descriptionDataProvider;
 
             try {
                 mUpdateWorkoutListener = (ShowWorkoutDetailsInterface) activity;
@@ -407,41 +333,13 @@ public class WorkoutSummariesListFragment extends ListFragment
         public View newView(Context context, Cursor cursor, ViewGroup parent) {
             if (DEBUG) Log.i(TAG, "newView");
 
-            View row = LayoutInflater.from(context).inflate(R.layout.workout_summaries_with_map_row2, parent, false);
-
-            // ??? LinearLayout llRow = (LinearLayout) row.findViewById(R.id.ll_workout_summaries_row);
-
-            ViewHolder viewHolder = new ViewHolder(null, null);
-            // workoutId is set in bindView()
-            // GoogleMap is set during initialization
-            // MapView   is set in a few seconds
-
-            viewHolder.scrim = row.findViewById(R.id.scrim);
-            viewHolder.tvName = row.findViewById(R.id.tv_workout_summaries_name);
-            viewHolder.tvDate = row.findViewById(R.id.tv_workout_summaries__date);
-            viewHolder.tvTime = row.findViewById(R.id.tv_workout_summaries__time);
-
-            viewHolder.llSportContainer = row.findViewById(R.id.ll_workout_summaries__sport_container);
-            viewHolder.ivSportIcon = row.findViewById(R.id.iv_workout_summaries__sport_icon);
-            viewHolder.tvSportName = row.findViewById(R.id.tv_workout_summaries__sport_name);
-            viewHolder.tvEquipment = row.findViewById(R.id.tv_workout_summaries__equipment);
-            viewHolder.mapView = row.findViewById(R.id.workout_summaries_mapView);
-            viewHolder.separator = row.findViewById(R.id.separator_export_status);
-            viewHolder.tvExportStatusHeader = row.findViewById(R.id.export_status_header);
-            viewHolder.llExportStatus = row.findViewById(R.id.export_status_container);
-            viewHolder.tlExtremaValues = row.findViewById(R.id.extrema_values_container);
-
-            View detailsView = row.findViewById(R.id.workout_details_include);
-            if (detailsView != null) {
-                viewHolder.detailsViewHolder = new WorkoutDetailsViewHolder(detailsView, context);
-            }
-
-            View descriptionView = row.findViewById(R.id.workout_description_include);
-            if (descriptionView != null) {
-                viewHolder.descriptionViewHolder = new WorkoutSummaryDescriptionViewHolder(descriptionView);
-            }
-
-            viewHolder.initializeMapView();
+            View row = LayoutInflater.from(context).inflate(R.layout.workout_summaries_row, parent, false);
+            ViewHolder viewHolder = new ViewHolder(row,
+                    (Activity) mContext,
+                    headerDataProvider,
+                    detailsDataProvider,
+                    extremaDataProvider,
+                    descriptionDataProvider);
 
             row.setTag(viewHolder);
             return row;
@@ -454,108 +352,120 @@ public class WorkoutSummariesListFragment extends ListFragment
             final long workoutId = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.C_ID));
 
             ViewHolder viewHolder = (ViewHolder) view.getTag();
-            viewHolder.workoutId = workoutId;
+            viewHolder.bind(cursor, workoutId);
+        }
+    }
 
-            // --- now, set the values of the views
-            // first, the name
-            String workoutName = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.WORKOUT_NAME));
-            viewHolder.tvName.setText(workoutName);
 
-            // Next, the start date and time.
-            // Therefore, get the start time as a String from the database, which is in the format "YYYY-MM-DD HH:MM:SS".
-            String startTimeString = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.TIME_START));
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // ViewHolder
+    ////////////////////////////////////////////////////////////////////////////////////////////////
 
-            // Define the format and time-zone that matches how the date is stored in the database.
-            java.text.SimpleDateFormat dbFormat = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ROOT);
-            dbFormat.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+    class ViewHolder {
 
-            Date startTimeDate = null;
-            try {
-                startTimeDate = dbFormat.parse(startTimeString);
-            } catch (java.text.ParseException e) {
-                // Log the error if parsing fails, and set a fallback text.
-                Log.e(TAG, "Failed to parse date string: " + startTimeString, e);
+        final WorkoutHeaderViewHolder headerViewHolder;
+        final WorkoutDetailsViewHolder detailsViewHolder;
+        final DescriptionViewHolder descriptionViewHolder;
+        final ExtremaValuesViewHolder extremaValuesViewHolder;
+        final ExportStatusViewHolder exportStatusViewHolder;
+        final MapComponent mapComponent;
+        long workoutId;
+
+        private final WorkoutHeaderDataProvider headerDataProvider;
+        private final WorkoutDetailsDataProvider detailsDataProvider;
+        private final ExtremaDataProvider extremaDataProvider;
+        private final DescriptionDataProvider descriptionDataProvider;
+
+        public ViewHolder(View row,
+                          Activity activity,
+                          WorkoutHeaderDataProvider headerDataProvider,
+                          WorkoutDetailsDataProvider detailsDataProvider,
+                          ExtremaDataProvider extremaDataProvider,
+                          DescriptionDataProvider descriptionDataProvider) {
+
+            // --- Store the injected providers ---
+            this.headerDataProvider = headerDataProvider;
+            this.detailsDataProvider = detailsDataProvider;
+            this.extremaDataProvider = extremaDataProvider;
+            this.descriptionDataProvider = descriptionDataProvider;
+
+            // Find component views
+            View headerView = row.findViewById(R.id.workout_header_include);
+            View detailsView = row.findViewById(R.id.workout_details_include);
+            View extremaValuesView = row.findViewById(R.id.extrema_values_include);
+            View descriptionView = row.findViewById(R.id.workout_description_include);
+            View exportStatusView = row.findViewById(R.id.export_status_include);
+            MapView mapView = row.findViewById(R.id.workout_summaries_mapView);
+
+            // Create component ViewHolders/Components
+            this.headerViewHolder = (headerView != null) ? new WorkoutHeaderViewHolder(headerView) : null;
+            this.detailsViewHolder = (detailsView != null) ? new WorkoutDetailsViewHolder(detailsView, activity) : null;
+            this.extremaValuesViewHolder = (extremaValuesView != null) ? new ExtremaValuesViewHolder(extremaValuesView) : null;
+            this.descriptionViewHolder = (descriptionView != null) ? new DescriptionViewHolder(descriptionView) : null;
+            this.exportStatusViewHolder = (exportStatusView != null) ? new ExportStatusViewHolder(exportStatusView) : null;
+
+            this.mapComponent = new MapComponent(mapView, activity, workoutId -> {
+                // When the map is clicked, start the details activity for that workout, showing the map fragment.
+                TrainingApplication.startWorkoutDetailsActivity(workoutId, WorkoutDetailsActivity.SelectedFragment.MAP);
+                return Unit.INSTANCE;
+            });
+
+            // -- listeners
+            if (headerViewHolder != null ) {
+                headerViewHolder.getWorkoutNameView().setOnLongClickListener(v -> {
+
+                    String currentWorkoutName = headerViewHolder.getWorkoutName();
+                    EditWorkoutNameDialogFragment dialogFragment = EditWorkoutNameDialogFragment.newInstance(currentWorkoutName);
+
+                    dialogFragment.setOnWorkoutNameChanged(newName -> {
+                        WorkoutSummariesDatabaseManager.updateWorkoutName(workoutId, newName);
+                        updateCursor();
+
+                        return Unit.INSTANCE;
+                    });
+
+                    dialogFragment.show(getChildFragmentManager(), "EditWorkoutNameDialogFragment");
+                    return true; // Consume the event
+                });
+
+                // attach long-click listener for changing sport and equipment
+                headerViewHolder.getSportContainerView().setOnLongClickListener(v -> {
+
+                    String currentEquipmentName = headerViewHolder.getEquipmentName();
+                    long currentSportId = headerViewHolder.getSportId();
+                    ChangeSportAndEquipmentDialogFragment dialogFragment = ChangeSportAndEquipmentDialogFragment.newInstance(currentSportId, currentEquipmentName);
+
+                    dialogFragment.setOnSave((newSportId, newEquipmentId) -> {
+                        WorkoutSummariesDatabaseManager.updateSportAndEquipment(workoutId, newSportId, newEquipmentId);
+                        updateCursor();
+                        return Unit.INSTANCE;
+                    });
+
+                    dialogFragment.show(getChildFragmentManager(), "ChangeSportAndEquipmentDialog");
+                    return true; // Consume long click
+                });
             }
 
-            // If parsing was successful, format the Date object for the user's locale.
-            if (startTimeDate != null) {
-                // Get a formatter for the DATE part only, using the default locale style.
-                java.text.DateFormat localeDateFormat = java.text.DateFormat.getDateInstance(
-                        java.text.DateFormat.DEFAULT // Or DateFormat.MEDIUM for a format like "Jan 22, 2026"
-                );
+            if (descriptionViewHolder != null) {
+                descriptionViewHolder.getRootView().setOnLongClickListener(v -> {
+                    EditDescriptionDialogFragment dialogFragment = EditDescriptionDialogFragment.newInstance(
+                            descriptionViewHolder.getDescription(),
+                            descriptionViewHolder.getGoal(),
+                            descriptionViewHolder.getMethod()
+                    );
 
-                // Get a formatter for the TIME part only, using the short style (e.g., 3:11 PM).
-                java.text.DateFormat localeTimeFormat = java.text.DateFormat.getTimeInstance(
-                        java.text.DateFormat.SHORT
-                );
+                    dialogFragment.setOnDescriptionChanged((newDescription, newGoal, newMethod) -> {
+                        WorkoutSummariesDatabaseManager.updateDescription(workoutId, newDescription, newGoal, newMethod);
+                        updateCursor();
+                        return Unit.INSTANCE;
+                    });
 
-                // Format both parts separately and combine them with a newline character.
-                String formattedDate = localeDateFormat.format(startTimeDate);
-                String formattedTime = localeTimeFormat.format(startTimeDate);
-
-                viewHolder.tvTime.setText(formattedTime);
-                viewHolder.tvDate.setText(formattedDate);
+                    dialogFragment.show(getChildFragmentManager(), "EditDescriptionDialog");
+                    return true; // Consume the long click
+                });
             }
 
-            // now, the sport
-            long sportId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPORT_ID));
-            String sportName = SportTypeDatabaseManager.getUIName(sportId);
-            BSportType bSportType = SportTypeDatabaseManager.getBSportType(sportId);
-
-            // get the iconId
-            // note that they are converted to white.
-            int iconResId = switch (bSportType) {
-                case RUN -> R.drawable.bsport_run;
-                case BIKE -> R.drawable.bsport_bike;
-                default -> R.drawable.bsport_other;
-            };
-            viewHolder.ivSportIcon.setImageResource(iconResId);
-            viewHolder.tvSportName.setText(sportName);
-
-            // -- equipment
-            int equipmentId = cursor.getInt(cursor.getColumnIndex(WorkoutSummaries.EQUIPMENT_ID));
-            EquipmentDbHelper equipmentDbHelper = new EquipmentDbHelper(context);
-            String equipmentName = equipmentDbHelper.getEquipmentNameFromId(equipmentId);
-            if (equipmentName != null) {
-                int equipmentFormatId = switch (bSportType) {
-                    case RUN -> R.string.format_with_equipment_run;
-                    case BIKE -> R.string.format_with_equipment_bike;
-                    default -> R.string.format_with_equipment_other;
-                };
-
-                String fullEquipmentName = context.getString(equipmentFormatId, equipmentName);
-
-                viewHolder.tvEquipment.setText(fullEquipmentName);
-                viewHolder.tvEquipment.setVisibility(View.VISIBLE);
-
-            } else {
-                viewHolder.tvEquipment.setVisibility(View.GONE);
-            }
-
-
-            // -- description
-            String description = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.DESCRIPTION));
-            String goal = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.GOAL));
-            String method = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.METHOD));
-            setWorkoutDescription(viewHolder, description, goal, method);
-
-            setWorkoutDetails(viewHolder, cursor, workoutId, bSportType);
-
-            setExtremaValuesInfo(viewHolder, context, workoutId, bSportType);
-
-            if (isPlayServiceAvailable) {
-                viewHolder.mapView.setVisibility(View.VISIBLE);
-                if (viewHolder.map != null) {
-                    viewHolder.showTrackOnMap(workoutId);
-                }
-            } else {
-                viewHolder.mapView.setVisibility(View.GONE);
-            }
-
-            String fileBaseName = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.FILE_BASE_NAME));
-            setExportStatusInfo(viewHolder, context, fileBaseName);
-
-            // --- Click listeners
+            // --- (short) click listener
             // first, create a click listener
             View.OnClickListener detailsClickListener = new View.OnClickListener() {
                 @Override
@@ -565,175 +475,60 @@ public class WorkoutSummariesListFragment extends ListFragment
                 }
             };
 
-            // and then attach the click listener to the various views
-            if (viewHolder.scrim != null) {
-                viewHolder.scrim.setOnClickListener(detailsClickListener);
+            // add the (short) click listener to all the relevant views.
+            if (headerViewHolder != null) {
+                headerViewHolder.getView().setOnClickListener(detailsClickListener);
+                headerViewHolder.getWorkoutNameView().setOnClickListener(detailsClickListener);
+                headerViewHolder.getSportContainerView().setOnClickListener(detailsClickListener);
             }
-            if (viewHolder.detailsViewHolder != null && viewHolder.detailsViewHolder.getView() != null) {
-                viewHolder.detailsViewHolder.getView().setOnClickListener(detailsClickListener);
+            if (detailsViewHolder != null) {
+                detailsViewHolder.getView().setOnClickListener(detailsClickListener);
             }
-            if (viewHolder.tlExtremaValues != null) {
-                viewHolder.tlExtremaValues.setOnClickListener(detailsClickListener);
+            if (extremaValuesViewHolder != null) {
+                extremaValuesViewHolder.getView().setOnClickListener(detailsClickListener);
+            }
+        }
+
+
+        public void bind(Cursor cursor, long workoutId) {
+            this.workoutId = workoutId;
+
+            // -- header
+            if (headerViewHolder != null) {
+                WorkoutHeaderData headerData = headerDataProvider.createWorkoutHeaderData(cursor);
+                headerViewHolder.bind(headerData);
             }
 
-            viewHolder.llExportStatus.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    mUpdateWorkoutListener.showExportStatusDialog(workoutId);
+            // -- description
+            if (descriptionViewHolder != null) {
+                DescriptionData descriptionData = descriptionDataProvider.createDescriptionData(cursor);
+                descriptionViewHolder.bind(descriptionData);
+            }
+
+            // --workout details
+            if (detailsViewHolder != null) {
+                WorkoutDetailsData detailsData = detailsDataProvider.createWorkoutDetailsData(cursor);
+                detailsViewHolder.bind(detailsData);
+            }
+
+            // -- extrema values
+            List<ExtremaData> extremaList = extremaDataProvider.getExtremaDataList(cursor);
+            if (extremaValuesViewHolder != null) {
+                extremaValuesViewHolder.bind(extremaList);
+            }
+
+            // -- map
+            if (mapComponent != null) {
+                if (isPlayServiceAvailable) {
+                    mapComponent.bind(workoutId, MapContentType.WORKOUT_TRACK); // Just call bind!
+                } else {
+                    mapComponent.setVisible(false);
                 }
-            });
-
-            // --- Long Click listeners
-            if (viewHolder.llSportContainer != null) {
-                viewHolder.llSportContainer.setOnLongClickListener(new View.OnLongClickListener() {
-                    @Override
-                    public boolean onLongClick(View v) {
-                        if (DEBUG) Log.d(TAG, "Sport view long-clicked for workoutId: " + workoutId);
-                        WorkoutSummariesListFragment.this.showChangeSportAndEqipmentDialog(workoutId, sportId, equipmentName);
-                        return true;
-                    }
-                });
             }
 
-            if (viewHolder.tvName != null) {
-                viewHolder.tvName.setOnLongClickListener(v -> {
-                    // Call the new interface method we just implemented
-                    WorkoutSummariesListFragment.this.showEditWorkoutNameDialog(workoutId, workoutName);
-                    // Return true to consume the event
-                    return true;
-                });
-            }
-
-            viewHolder.descriptionViewHolder.rootView.setOnLongClickListener(v -> {
-                WorkoutSummariesListFragment.this.showEditDescriptionDialog(workoutId, description, goal, method);
-                return true; // Consume the long click
-            });
-
-        }
-    }
-
-
-    // call and callback for changing the sport tpye
-    public void showChangeSportAndEqipmentDialog(long workoutId, long sportTypeId, String equipmentName) {
-        ChangeSportAndEquipmentDialogFragment dialogFragment = ChangeSportAndEquipmentDialogFragment.newInstance(workoutId, sportTypeId, equipmentName);
-
-        // Set this fragment as the listener for the dialog's events.
-        dialogFragment.setOnSportChangedListener(this);
-
-        // Use getChildFragmentManager() for dialogs shown from within a Fragment
-        dialogFragment.show(getChildFragmentManager(), "ChangeSportDialogFragment");
-    }
-
-    @Override
-    public void onSportChanged(long workoutId) {
-        if (DEBUG) Log.d(TAG, "onSportChanged callback received. Restarting loader.");
-        // simply update the cursor
-        updateCursor();
-    }
-
-    public void showEditWorkoutNameDialog(long workoutId, String workoutName) {
-        // Get the current name from the database
-        EditWorkoutNameDialogFragment dialogFragment = EditWorkoutNameDialogFragment.newInstance(workoutId, workoutName);
-        dialogFragment.setOnWorkoutNameChangedListener(this); // Set listener
-        dialogFragment.show(getChildFragmentManager(), "EditWorkoutNameDialogFragment");
-    }
-
-    @Override
-    public void onWorkoutNameChanged() {
-        // simply update the cursor
-        updateCursor();
-    }
-
-    public void showEditDescriptionDialog(long workoutId, String description, String goal, String method) {
-        EditDescriptionDialogFragment dialogFragment = EditDescriptionDialogFragment.newInstance(workoutId, description, goal, method);
-        dialogFragment.setOnDescriptionChangedListener(this);
-        dialogFragment.show(getChildFragmentManager(), "EditDescriptionDialogFragment");
-    }
-
-    @Override
-    public void onDescriptionChanged(long workoutId, String description, String goal, String method) {
-        ContentValues contentValues = new ContentValues();
-        contentValues.put(WorkoutSummariesDatabaseManager.WorkoutSummaries.DESCRIPTION, description);
-        contentValues.put(WorkoutSummariesDatabaseManager.WorkoutSummaries.GOAL, goal);
-        contentValues.put(WorkoutSummariesDatabaseManager.WorkoutSummaries.METHOD, method);
-
-        WorkoutSummariesDatabaseManager.updateValues(workoutId, contentValues);
-
-        updateCursor();
-    }
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////
-    // ViewHolder
-    ////////////////////////////////////////////////////////////////////////////////////////////////
-
-    class ViewHolder
-            extends MyMapViewHolder
-            implements OnMapReadyCallback {
-
-        WorkoutDetailsViewHolder detailsViewHolder;
-        WorkoutSummaryDescriptionViewHolder descriptionViewHolder;
-
-        long workoutId;
-        View scrim;
-        TextView tvName;
-        TextView tvDate;
-        TextView tvTime;
-        LinearLayout llSportContainer;
-        ImageView ivSportIcon;
-        TextView tvSportName;
-        TextView tvEquipment;
-        View separator;
-        TextView tvExportStatusHeader;
-        LinearLayout llExportStatus;
-        TableLayout tlExtremaValues;
-
-        // MapView mapView;
-        // GoogleMap map;
-
-        public ViewHolder(GoogleMap map, MapView mapView) {
-            super(map, mapView);
-        }
-
-        @Override
-        public void onMapReady(@NonNull GoogleMap googleMap) {
-            MapsInitializer.initialize(getActivity());
-            // -MapsInitializer.initialize(getActivity().getApplicationContext());
-            map = googleMap;
-            showTrackOnMap(workoutId);
-        }
-
-        /**
-         * Initialises the MapView by calling its lifecycle methods.
-         */
-        public void initializeMapView() {
-            if (mapView != null) {
-                // Initialise the MapView
-                mapView.onCreate(null);
-                // Set the map ready callback to receive the GoogleMap object
-                mapView.getMapAsync(this);
-            }
-        }
-
-        public void showTrackOnMap(final long workoutId) {
-            if (DEBUG) Log.i(TAG, "showMainTrackOnMap: workoutId=" + workoutId);
-
-            if (map == null) {
-                mapView.setVisibility(View.GONE);
-            } else {
-                mapView.setVisibility(View.VISIBLE);
-
-                // first, configure the map
-                map.getUiSettings().setMapToolbarEnabled(false);
-                map.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
-                    @Override
-                    public void onMapClick(@NonNull LatLng latLng) {
-                        TrainingApplication.startWorkoutDetailsActivity(workoutId, WorkoutDetailsActivity.SelectedFragment.MAP);
-                    }
-                });
-
-                ((TrainingApplication) getActivity().getApplication()).trackOnMapHelper.showTrackOnMap(this, workoutId, Roughness.MEDIUM, TrackOnMapHelper.TrackType.BEST, true, false);
-
-                if (DEBUG) Log.i(TAG, "end of showTrackOnMap()");
+            String fileBaseName = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.FILE_BASE_NAME));
+            if (exportStatusViewHolder != null) {
+                exportStatusViewHolder.bind(fileBaseName);
             }
         }
     }

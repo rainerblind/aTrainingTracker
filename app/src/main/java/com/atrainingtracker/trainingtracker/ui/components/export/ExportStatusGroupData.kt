@@ -1,4 +1,4 @@
-package com.atrainingtracker.trainingtracker.exporter.ui
+package com.atrainingtracker.trainingtracker.ui.components.export
 
 /**
  * A data class, for the string representations for the export status of an Export Types

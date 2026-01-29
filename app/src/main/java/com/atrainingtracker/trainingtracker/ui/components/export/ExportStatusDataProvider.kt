@@ -1,17 +1,19 @@
-package com.atrainingtracker.trainingtracker.exporter.ui
+package com.atrainingtracker.trainingtracker.ui.components.export
 
 import android.content.Context
 import com.atrainingtracker.R
-import com.atrainingtracker.trainingtracker.exporter.*
+import com.atrainingtracker.trainingtracker.exporter.ExportStatus
+import com.atrainingtracker.trainingtracker.exporter.ExportType
+import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusRepository
 import com.atrainingtracker.trainingtracker.helpers.formatListAsString
 
-class ExportStatusUIDataProvider(private val context: Context) {
+class ExportStatusDataProvider(private val context: Context) {
 
     /**
      * The central class to collect all data for an ExportType and create the corresponding string for the UI.
      */
-    fun createGroupData(fileBaseName: String, exportType: ExportType): `ExportStatusGroupData` {
+    fun createGroupData(fileBaseName: String, exportType: ExportType): ExportStatusGroupData {
         val jobs = getJobs(fileBaseName, exportType)
 
         val waitingJobsList = getWaitingJobsList(jobs)
@@ -21,7 +23,7 @@ class ExportStatusUIDataProvider(private val context: Context) {
 
         val hasContent = waitingJobsList.isNotEmpty() || runningJobsList.isNotEmpty() || succeededJobsList.isNotEmpty() || failedJobsList.isNotEmpty()
         if (!hasContent) {
-            return `ExportStatusGroupData`(hasContent = false)
+            return ExportStatusGroupData(hasContent = false)
         }
 
         // plurals for the corresponding exportType
@@ -33,7 +35,7 @@ class ExportStatusUIDataProvider(private val context: Context) {
         val succeededLine = succeededJobsList.takeIf { it.isNotEmpty() }?.let { getResultLine(it, pluralsSuccessID) }
         val failedLine = failedJobsList.takeIf { it.isNotEmpty() }?.let { getResultLine(it, pluralsFailedID) }
 
-        return `ExportStatusGroupData`(
+        return ExportStatusGroupData(
             hasContent = true,
             groupTitle = context.getString(exportType.uiId),
             waitingLine = waitingLine,

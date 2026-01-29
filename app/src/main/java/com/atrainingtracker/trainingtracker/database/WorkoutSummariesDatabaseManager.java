@@ -36,6 +36,8 @@ import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.google.android.gms.maps.model.LatLng;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -69,6 +71,33 @@ public class WorkoutSummariesDatabaseManager {
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // some high level helper methods
     ////////////////////////////////////////////////////////////////////////////////////////////////
+    public static void updateSportAndEquipment(long workoutId, long sportId, long equipmentId) {
+
+        ContentValues values = new ContentValues();
+        values.put(WorkoutSummaries.SPORT_ID, sportId);
+        values.put(WorkoutSummaries.EQUIPMENT_ID, equipmentId);
+
+        updateValues(workoutId, values);
+    }
+
+    public static void updateWorkoutName(long workoutId, String newName) {
+        ContentValues values = new ContentValues();
+        values.put(WorkoutSummaries.WORKOUT_NAME, newName);
+
+        updateValues(workoutId, values);
+    }
+
+    public static void updateDescription(long workoutId, @NotNull String newDescription, @NotNull String newGoal, @NotNull String newMethod) {
+        ContentValues values = new ContentValues();
+        values.put(WorkoutSummaries.DESCRIPTION, newDescription);
+        values.put(WorkoutSummaries.GOAL, newGoal);
+        values.put(WorkoutSummaries.METHOD, newMethod);
+
+        updateValues(workoutId, values);
+    }
+
+
+
     @Nullable
     public static String getBaseFileName(long workoutId) {
         if (DEBUG) Log.i(TAG, "getBaseFileName for workoutId: " + workoutId);
