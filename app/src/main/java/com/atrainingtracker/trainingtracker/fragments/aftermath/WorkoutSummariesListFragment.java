@@ -88,8 +88,7 @@ import com.google.android.gms.maps.model.LatLng;
 import java.util.List;
 
 
-public class WorkoutSummariesListFragment extends ListFragment
-        implements ChangeSportAndEquipmentDialogFragment.OnSportChangedListener {
+public class WorkoutSummariesListFragment extends ListFragment {
 
     public static final String TAG = WorkoutSummariesListFragment.class.getSimpleName();
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
@@ -417,6 +416,62 @@ public class WorkoutSummariesListFragment extends ListFragment
             if (viewHolder.headerViewHolder != null) {
                 WorkoutHeaderData headerData = headerDataProvider.createWorkoutHeaderData(cursor);
                 viewHolder.headerViewHolder.bind(headerData);
+
+
+                // attach long-click listener for changing the workout name
+                viewHolder.headerViewHolder.getWorkoutNameView().setOnLongClickListener(v -> {
+                    if (DEBUG) Log.d(TAG, "Workout name long-clicked for workoutId: " + workoutId);
+
+                    // Get the current workout name from the header data
+                    String currentWorkoutName = headerData.getWorkoutName();
+
+                    // Create the dialog instance.
+                    EditWorkoutNameDialogFragment dialogFragment = EditWorkoutNameDialogFragment.newInstance(currentWorkoutName);
+
+                    // define the callback action
+                    dialogFragment.setOnWorkoutNameChanged(newName -> {
+                        // When the name is changed:
+                        // First, update the database.
+                        WorkoutSummariesDatabaseManager.updateWorkoutName(workoutId, newName);
+
+                        // Then, update the cursor to refresh the UI.
+                        if (DEBUG) Log.d(TAG, "onWorkoutNameChanged callback received. Updating cursor.");
+                        updateCursor();
+
+                        return null; // Return null to satisfy Kotlin's Unit
+                    });
+
+                    // Show the dialog
+                    dialogFragment.show(getChildFragmentManager(), "EditWorkoutNameDialogFragment");
+
+                    return true; // Consume the event
+                });
+
+                // attach long-click listener for changing sport and equipment
+                viewHolder.headerViewHolder.getSportContainerView().setOnLongClickListener(v -> {
+
+                    String currentEquipmentName = headerData.getEquipmentName();
+                    long currentSportId = headerData.getSportId();
+
+                    // Create the dialog instance
+                    ChangeSportAndEquipmentDialogFragment dialogFragment = ChangeSportAndEquipmentDialogFragment.newInstance(workoutId, currentSportId, currentEquipmentName);
+
+                    // Set the "onSave" lambda.
+                    dialogFragment.setOnSave((newSportId, newEquipmentId) -> {
+                        // update the db
+                        WorkoutSummariesDatabaseManager.updateSportAndEquipment(workoutId, newSportId, newEquipmentId);
+
+                        // Refresh the UI
+                        updateCursor();
+                        return null; // For Kotlin Unit
+                    });
+
+                    // 3. Show the dialog
+                    dialogFragment.show(getChildFragmentManager(), "ChangeSportAndEquipmentDialog");
+
+                    return true; // Consume long click
+                });
+
             }
 
             // still necessary.  TODO: remove them
@@ -494,79 +549,15 @@ public class WorkoutSummariesListFragment extends ListFragment
                 }
             };
 
-            if (viewHolder.headerViewHolder != null && viewHolder.headerViewHolder.getView() != null) {
-                viewHolder.headerViewHolder.getView().setOnClickListener(detailsClickListener);
-            }
-            if (viewHolder.detailsViewHolder != null && viewHolder.detailsViewHolder.getView() != null) {
-                viewHolder.detailsViewHolder.getView().setOnClickListener(detailsClickListener);
-            }
-            if (viewHolder.extremaValuesViewHolder != null && viewHolder.extremaValuesViewHolder.getView() != null) {
-                viewHolder.extremaValuesViewHolder.getView().setOnClickListener(detailsClickListener);
-            }
-
-            // --- set long click listeners
+            // add the (short) click listener to all the relevant views.
             if (viewHolder.headerViewHolder != null) {
-                // attach long-click listener for changing the workout name
-                viewHolder.headerViewHolder.getWorkoutNameView().setOnLongClickListener(v -> {
-                    if (DEBUG) Log.d(TAG, "Workout name long-clicked for workoutId: " + workoutId);
-
-                    // Get the current workout name from the header data
-                    WorkoutHeaderData headerData = headerDataProvider.createWorkoutHeaderData(cursor);
-                    String currentWorkoutName = headerData.getWorkoutName();
-
-                    // Create the dialog instance.
-                    EditWorkoutNameDialogFragment dialogFragment = EditWorkoutNameDialogFragment.newInstance(currentWorkoutName);
-
-                    // define the callback action
-                    dialogFragment.setOnWorkoutNameChanged(newName -> {
-                        // When the name is changed:
-                        // First, update the database.
-                        WorkoutSummariesDatabaseManager.updateWorkoutName(workoutId, newName);
-
-                        // Then, update the cursor to refresh the UI.
-                        if (DEBUG) Log.d(TAG, "onWorkoutNameChanged callback received. Updating cursor.");
-                        updateCursor();
-
-                        return null; // Return null to satisfy Kotlin's Unit
-                    });
-
-                    // Show the dialog
-                    dialogFragment.show(getChildFragmentManager(), "EditWorkoutNameDialogFragment");
-
-                    return true; // Consume the event
-                });
-
-                // attach long-click listener for changing sport and equipment
-                viewHolder.headerViewHolder.getSportContainerView().setOnLongClickListener(v -> {
-                    if (DEBUG) Log.d(TAG, "Sport view long-clicked for workoutId: " + workoutId);
-                    // We need the sportId and equipmentName from the headerData object
-                    WorkoutHeaderData headerData = headerDataProvider.createWorkoutHeaderData(cursor);
-                    WorkoutSummariesListFragment.this.showChangeSportAndEqipmentDialog(workoutId, sportId, headerData.getEquipmentName());
-                    return true; // Consume the event
-                });
+                viewHolder.headerViewHolder.getView().setOnClickListener(detailsClickListener);
+                viewHolder.detailsViewHolder.getView().setOnClickListener(detailsClickListener);
+                viewHolder.extremaValuesViewHolder.getView().setOnClickListener(detailsClickListener);
+                viewHolder.headerViewHolder.getWorkoutNameView().setOnClickListener(detailsClickListener);
+                viewHolder.headerViewHolder.getSportContainerView().setOnClickListener(detailsClickListener);
             }
-
-
         }
-    }
-
-
-    // call and callback for changing the sport tpye
-    public void showChangeSportAndEqipmentDialog(long workoutId, long sportTypeId, String equipmentName) {
-        ChangeSportAndEquipmentDialogFragment dialogFragment = ChangeSportAndEquipmentDialogFragment.newInstance(workoutId, sportTypeId, equipmentName);
-
-        // Set this fragment as the listener for the dialog's events.
-        dialogFragment.setOnSportChangedListener(this);
-
-        // Use getChildFragmentManager() for dialogs shown from within a Fragment
-        dialogFragment.show(getChildFragmentManager(), "ChangeSportDialogFragment");
-    }
-
-    @Override
-    public void onSportChanged(long workoutId) {
-        if (DEBUG) Log.d(TAG, "onSportChanged callback received. Restarting loader.");
-        // simply update the cursor
-        updateCursor();
     }
 
 
