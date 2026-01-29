@@ -54,7 +54,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseMan
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
 import com.atrainingtracker.trainingtracker.dialogs.ReallyDeleteWorkoutDialog;
 import com.atrainingtracker.trainingtracker.fragments.aftermath.EditWorkoutFragment;
-import com.atrainingtracker.trainingtracker.fragments.aftermath.ExportStatusDialogFragment;
+import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusDialogFragment;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapAftermathFragment;
 import com.atrainingtracker.trainingtracker.helpers.CalcExtremaValuesThread;
 import com.atrainingtracker.trainingtracker.helpers.DeleteWorkoutThread;

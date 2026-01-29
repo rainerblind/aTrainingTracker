@@ -108,9 +108,7 @@ public abstract class TrackOnMapBaseFragment
             return;
         }
 
-        MyMapViewHolder myMapViewHolder = new MyMapViewHolder(mMap, null);
-
-        ((TrainingApplication) getActivity().getApplication()).trackOnMapHelper.showTrackOnMap(myMapViewHolder, mWorkoutID, Roughness.ALL, TrackOnMapHelper.TrackType.BEST, zoomToShowTrack, true);
+        ((TrainingApplication) getActivity().getApplication()).trackOnMapHelper.showTrackOnMap(null, mMap, mWorkoutID, Roughness.ALL, TrackOnMapHelper.TrackType.BEST, zoomToShowTrack, true);
         mTrackOnMapLoaded = true;
 
     }
@@ -207,9 +205,7 @@ public abstract class TrackOnMapBaseFragment
             return;
         }
 
-        MyMapViewHolder myMapViewHolder = new MyMapViewHolder(mMap, null);
-
-        ((TrainingApplication) getActivity().getApplication()).segmentOnMapHelper.showSegmentOnMap(getContext(), myMapViewHolder, segmentId, Roughness.ALL, zoomToShowTrack, true);
+        ((TrainingApplication) getActivity().getApplication()).segmentOnMapHelper.showSegmentOnMap(getContext(), null, mMap, segmentId, Roughness.ALL, zoomToShowTrack, true);
         mSegmentLoaded.put(segmentId, true);
 
         addSegmentDirectionMarkers(segmentId, true);

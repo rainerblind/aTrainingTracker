@@ -127,13 +127,11 @@ public class TrackOnMapAftermathFragment
 
         if (TrainingApplication.showAllLocationSourcesOnMap()) {
 
-            MyMapViewHolder myMapViewHolder = new MyMapViewHolder(mMap, null);
-
             TrackOnMapHelper trackOnMapHelper = ((TrainingApplication) getActivity().getApplication()).trackOnMapHelper;
 
-            trackOnMapHelper.showTrackOnMap(myMapViewHolder, mWorkoutID, Roughness.ALL, TrackOnMapHelper.TrackType.GPS, false, false);
-            trackOnMapHelper.showTrackOnMap(myMapViewHolder, mWorkoutID, Roughness.ALL, TrackOnMapHelper.TrackType.NETWORK, false, false);
-            trackOnMapHelper.showTrackOnMap(myMapViewHolder, mWorkoutID, Roughness.ALL, TrackOnMapHelper.TrackType.FUSED, false, false);
+            trackOnMapHelper.showTrackOnMap(null, mMap, mWorkoutID, Roughness.ALL, TrackOnMapHelper.TrackType.GPS, false, false);
+            trackOnMapHelper.showTrackOnMap(null, mMap, mWorkoutID, Roughness.ALL, TrackOnMapHelper.TrackType.NETWORK, false, false);
+            trackOnMapHelper.showTrackOnMap(null, mMap, mWorkoutID, Roughness.ALL, TrackOnMapHelper.TrackType.FUSED, false, false);
         }
 
         // we always show the best track

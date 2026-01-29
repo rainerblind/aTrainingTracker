@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (C) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ... (license header) ...
+-->
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:visibility="visible"
+    tools:visibility="visible">
+
+    <TableLayout
+        android:id="@+id/extrema_values_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:visibility="visible"
+        tools:visibility="visible">
+
+        <TableRow
+            android:id="@+id/tr_extrema_header"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingBottom="4dp">
+
+            <!-- Column 1: Sensor Label -->
+            <TextView
+                style="@style/TextAppearance.MaterialComponents.Caption"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="2.5"
+                android:text="" />
+
+            <!-- Column 2: Min -->
+            <TextView
+                style="@style/TextAppearance.MaterialComponents.Caption"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="2"
+                android:gravity="end"
+                android:text="@string/min" />
+
+            <!-- Column 3: Average -->
+            <TextView
+                style="@style/TextAppearance.MaterialComponents.Caption"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="2"
+                android:gravity="end"
+                android:text="@string/average" />
+
+            <!-- Column 4: Max -->
+            <TextView
+                style="@style/TextAppearance.MaterialComponents.Caption"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="2"
+                android:gravity="end"
+                android:text="@string/max" />
+
+            <!-- Column 5: Unit (smaller) -->
+            <TextView
+                style="@style/TextAppearance.MaterialComponents.Caption"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1.5"
+                android:gravity="end"
+                android:text="" />
+        </TableRow>
+
+        <!-- The dynamic data rows will be added here by the ViewHolder -->
+
+    </TableLayout>
+
+</FrameLayout>

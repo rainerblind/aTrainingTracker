@@ -16,7 +16,7 @@
  * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
-package com.atrainingtracker.trainingtracker.fragments.aftermath;
+package com.atrainingtracker.trainingtracker.ui.components.export;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;

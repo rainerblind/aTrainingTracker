@@ -14,7 +14,7 @@ import androidx.work.Worker;
 import androidx.work.WorkerParameters;
 
 import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusRepository;
-import com.atrainingtracker.trainingtracker.exporter.ui.ExportNotificationManager;
+import com.atrainingtracker.trainingtracker.ui.components.export.ExportNotificationManager;
 
 import org.json.JSONException;
 
