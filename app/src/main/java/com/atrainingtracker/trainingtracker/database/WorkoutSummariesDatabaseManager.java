@@ -80,42 +80,20 @@ public class WorkoutSummariesDatabaseManager {
         updateValues(workoutId, values);
     }
 
-    // TODO: use updateValues()
     public static void updateWorkoutName(long workoutId, String newName) {
         ContentValues values = new ContentValues();
         values.put(WorkoutSummaries.WORKOUT_NAME, newName);
-        SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
 
-        try {
-            db.update(WorkoutSummaries.TABLE,
-                    values,
-                    WorkoutSummaries.C_ID + "=" + workoutId,
-                    null);
-        } catch (SQLException e) {
-            // TODO: use Toast?
-            Log.e(TAG, "Error while writing" + e);
-        }
+        updateValues(workoutId, values);
     }
 
-
-    // TODO: use updateValues()
     public static void updateDescription(long workoutId, @NotNull String newDescription, @NotNull String newGoal, @NotNull String newMethod) {
         ContentValues values = new ContentValues();
         values.put(WorkoutSummaries.DESCRIPTION, newDescription);
         values.put(WorkoutSummaries.GOAL, newGoal);
         values.put(WorkoutSummaries.METHOD, newMethod);
 
-        SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
-
-        try {
-            db.update(WorkoutSummaries.TABLE,
-                    values,
-                    WorkoutSummaries.C_ID + "=" + workoutId,
-                    null);
-        } catch (SQLException e) {
-            // TODO: use Toast?
-            Log.e(TAG, "Error while writing" + e);
-        }
+        updateValues(workoutId, values);
     }
 
 
