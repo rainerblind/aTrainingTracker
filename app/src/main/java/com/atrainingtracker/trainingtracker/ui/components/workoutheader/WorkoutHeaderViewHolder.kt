@@ -12,7 +12,7 @@ import com.atrainingtracker.trainingtracker.MyHelper
 
 class WorkoutHeaderViewHolder(val view: View) {
 
-    private val context: Context = view.context
+    private var currentData: WorkoutHeaderData? = null
 
     // containers necessary for adding click listeners
     val workoutNameView: TextView = view.findViewById(R.id.tv_workout_summaries_name)
@@ -27,6 +27,7 @@ class WorkoutHeaderViewHolder(val view: View) {
     private val tvEquipment: TextView = view.findViewById(R.id.tv_workout_summaries__equipment)
 
     fun bind(data: WorkoutHeaderData) {
+        this.currentData = data
         tvName.text = data.workoutName
         tvDate.text = data.formattedDate
         tvTime.text = data.formattedTime
@@ -43,5 +44,19 @@ class WorkoutHeaderViewHolder(val view: View) {
 
         tvEquipment.isVisible = data.equipmentName != null
         tvEquipment.text = data.equipmentName
+    }
+
+    // some getters
+    fun getWorkoutName(): String? {
+        return currentData?.workoutName
+    }
+
+    fun getEquipmentName(): String? {
+        return currentData?.equipmentName
+    }
+
+    fun getSportId(): Long {
+        // Return a default value like 0L if data is null, or handle it as an error
+        return currentData?.sportId ?: 0L
     }
 }

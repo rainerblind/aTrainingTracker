@@ -7,11 +7,15 @@ import com.atrainingtracker.R
 
 class DescriptionViewHolder(val rootView: View) {
 
+    private var descriptionData: DescriptionData? = null
+
     private val tvDescription: TextView = rootView.findViewById(R.id.tv_workout_description)
     private val tvGoal: TextView = rootView.findViewById(R.id.tv_workout_goal)
     private val tvMethod: TextView = rootView.findViewById(R.id.tv_workout_method)
 
     fun bind(data: DescriptionData) {
+        this.descriptionData = data
+
         bindText(tvDescription, data.description)
         bindText(tvGoal, data.goal)
         bindText(tvMethod, data.method)
@@ -27,5 +31,17 @@ class DescriptionViewHolder(val rootView: View) {
         if (hasText) {
             textView.text = text
         }
+    }
+
+    fun getDescription(): String? {
+        return descriptionData?.description
+    }
+
+    fun getGoal(): String? {
+        return descriptionData?.goal
+    }
+
+    fun getMethod(): String? {
+        return descriptionData?.method
     }
 }

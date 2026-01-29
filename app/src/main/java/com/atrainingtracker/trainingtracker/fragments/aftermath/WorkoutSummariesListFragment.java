@@ -341,7 +341,12 @@ public class WorkoutSummariesListFragment extends ListFragment {
             if (DEBUG) Log.i(TAG, "newView");
 
             View row = LayoutInflater.from(context).inflate(R.layout.workout_summaries_row, parent, false);
-            ViewHolder viewHolder = new ViewHolder(row, (Activity) mContext);
+            ViewHolder viewHolder = new ViewHolder(row,
+                    (Activity) mContext,
+                    headerDataProvider,
+                    detailsDataProvider,
+                    extremaDataProvider,
+                    descriptionDataProvider);
 
             row.setTag(viewHolder);
             return row;
@@ -354,142 +359,7 @@ public class WorkoutSummariesListFragment extends ListFragment {
             final long workoutId = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.C_ID));
 
             ViewHolder viewHolder = (ViewHolder) view.getTag();
-
-            // --- now, set the values of the views
-
-            // -- header
-            if (viewHolder.headerViewHolder != null) {
-                WorkoutHeaderData headerData = headerDataProvider.createWorkoutHeaderData(cursor);
-                viewHolder.headerViewHolder.bind(headerData);
-
-
-                // attach long-click listener for changing the workout name
-                viewHolder.headerViewHolder.getWorkoutNameView().setOnLongClickListener(v -> {
-                    if (DEBUG) Log.d(TAG, "Workout name long-clicked for workoutId: " + workoutId);
-
-                    // Get the current workout name from the header data
-                    String currentWorkoutName = headerData.getWorkoutName();
-
-                    // Create the dialog instance.
-                    EditWorkoutNameDialogFragment dialogFragment = EditWorkoutNameDialogFragment.newInstance(currentWorkoutName);
-
-                    // define the callback action
-                    dialogFragment.setOnWorkoutNameChanged(newName -> {
-                        // When the name is changed:
-                        // First, update the database.
-                        WorkoutSummariesDatabaseManager.updateWorkoutName(workoutId, newName);
-
-                        // Then, update the cursor to refresh the UI.
-                        if (DEBUG) Log.d(TAG, "onWorkoutNameChanged callback received. Updating cursor.");
-                        updateCursor();
-
-                        return null; // Return null to satisfy Kotlin's Unit
-                    });
-
-                    // Show the dialog
-                    dialogFragment.show(getChildFragmentManager(), "EditWorkoutNameDialogFragment");
-
-                    return true; // Consume the event
-                });
-
-                // attach long-click listener for changing sport and equipment
-                viewHolder.headerViewHolder.getSportContainerView().setOnLongClickListener(v -> {
-
-                    String currentEquipmentName = headerData.getEquipmentName();
-                    long currentSportId = headerData.getSportId();
-
-                    // Create the dialog instance
-                    ChangeSportAndEquipmentDialogFragment dialogFragment = ChangeSportAndEquipmentDialogFragment.newInstance(currentSportId, currentEquipmentName);
-
-                    // Set the "onSave" lambda.
-                    dialogFragment.setOnSave((newSportId, newEquipmentId) -> {
-                        // update the db
-                        WorkoutSummariesDatabaseManager.updateSportAndEquipment(workoutId, newSportId, newEquipmentId);
-
-                        // Refresh the UI
-                        updateCursor();
-                        return null; // For Kotlin Unit
-                    });
-
-                    // 3. Show the dialog
-                    dialogFragment.show(getChildFragmentManager(), "ChangeSportAndEquipmentDialog");
-
-                    return true; // Consume long click
-                });
-
-            }
-
-            // -- description
-            if (viewHolder.descriptionViewHolder != null) {
-                DescriptionData descriptionData = descriptionDataProvider.createDescriptionData(cursor);
-                viewHolder.descriptionViewHolder.bind(descriptionData);
-
-                // --- Set the long click listener for editing ---
-                viewHolder.descriptionViewHolder.getRootView().setOnLongClickListener(v -> {
-                    // Create the "dumb" dialog instance
-                    EditDescriptionDialogFragment dialogFragment = EditDescriptionDialogFragment.newInstance(
-                            descriptionData.getDescription(),
-                            descriptionData.getGoal(),
-                            descriptionData.getMethod()
-                    );
-
-                    // Set the callback -> update the database
-                    dialogFragment.setOnDescriptionChanged((newDescription, newGoal, newMethod) -> {
-                        WorkoutSummariesDatabaseManager.updateDescription(workoutId, newDescription, newGoal, newMethod);
-                        updateCursor();
-                        return null; // for Kotlin Unit
-                    });
-
-                    // show the dialog
-                    dialogFragment.show(getChildFragmentManager(), "EditDescriptionDialog");
-                    return true; // Consume the long click
-                });
-            }
-
-            // --workout details
-            if (viewHolder.detailsViewHolder != null) {
-                WorkoutDetailsData detailsData = detailsDataProvider.createWorkoutDetailsData(cursor);
-                viewHolder.detailsViewHolder.bind(detailsData);
-            }
-
-            // -- extrema values
-            List<ExtremaData> extremaList = extremaDataProvider.getExtremaDataList(cursor);
-            if (viewHolder.extremaValuesViewHolder != null) {
-                viewHolder.extremaValuesViewHolder.bind(extremaList);
-            }
-
-            // -- map
-            if (viewHolder.mapComponent != null) {
-                if (isPlayServiceAvailable) {
-                    viewHolder.mapComponent.bind(workoutId, MapContentType.WORKOUT_TRACK); // Just call bind!
-                } else {
-                    viewHolder.mapComponent.setVisible(false);
-                }
-            }
-
-            String fileBaseName = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.FILE_BASE_NAME));
-            if (viewHolder.exportStatusViewHolder != null) {
-                viewHolder.exportStatusViewHolder.bind(fileBaseName);
-            }
-
-            // --- Click listeners
-            // first, create a click listener
-            View.OnClickListener detailsClickListener = new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (DEBUG) Log.d(TAG, "Details area clicked for workoutId: " + workoutId);
-                    TrainingApplication.startWorkoutDetailsActivity(workoutId, WorkoutDetailsActivity.SelectedFragment.EDIT_DETAILS);
-                }
-            };
-
-            // add the (short) click listener to all the relevant views.
-            if (viewHolder.headerViewHolder != null) {
-                viewHolder.headerViewHolder.getView().setOnClickListener(detailsClickListener);
-                viewHolder.detailsViewHolder.getView().setOnClickListener(detailsClickListener);
-                viewHolder.extremaValuesViewHolder.getView().setOnClickListener(detailsClickListener);
-                viewHolder.headerViewHolder.getWorkoutNameView().setOnClickListener(detailsClickListener);
-                viewHolder.headerViewHolder.getSportContainerView().setOnClickListener(detailsClickListener);
-            }
+            viewHolder.bind(cursor, workoutId);
         }
     }
 
@@ -506,8 +376,26 @@ public class WorkoutSummariesListFragment extends ListFragment {
         final ExtremaValuesViewHolder extremaValuesViewHolder;
         final ExportStatusViewHolder exportStatusViewHolder;
         final MapComponent mapComponent;
+        long workoutId;
 
-        public ViewHolder(View row, Activity activity) {
+        private final WorkoutHeaderDataProvider headerDataProvider;
+        private final WorkoutDetailsDataProvider detailsDataProvider;
+        private final ExtremaDataProvider extremaDataProvider;
+        private final DescriptionDataProvider descriptionDataProvider;
+
+        public ViewHolder(View row,
+                          Activity activity,
+                          WorkoutHeaderDataProvider headerDataProvider,
+                          WorkoutDetailsDataProvider detailsDataProvider,
+                          ExtremaDataProvider extremaDataProvider,
+                          DescriptionDataProvider descriptionDataProvider) {
+
+            // --- Store the injected providers ---
+            this.headerDataProvider = headerDataProvider;
+            this.detailsDataProvider = detailsDataProvider;
+            this.extremaDataProvider = extremaDataProvider;
+            this.descriptionDataProvider = descriptionDataProvider;
+
             // Find component views
             View headerView = row.findViewById(R.id.workout_header_include);
             View detailsView = row.findViewById(R.id.workout_details_include);
@@ -528,6 +416,127 @@ public class WorkoutSummariesListFragment extends ListFragment {
                 TrainingApplication.startWorkoutDetailsActivity(workoutId, WorkoutDetailsActivity.SelectedFragment.MAP);
                 return null;
             });
+
+            // -- listeners
+            if (headerViewHolder != null ) {
+                headerViewHolder.getWorkoutNameView().setOnLongClickListener(v -> {
+
+                    String currentWorkoutName = headerViewHolder.getWorkoutName();
+                    EditWorkoutNameDialogFragment dialogFragment = EditWorkoutNameDialogFragment.newInstance(currentWorkoutName);
+
+                    dialogFragment.setOnWorkoutNameChanged(newName -> {
+                        WorkoutSummariesDatabaseManager.updateWorkoutName(workoutId, newName);
+                        updateCursor();
+
+                        return null; // Return null to satisfy Kotlin's Unit
+                    });
+
+                    dialogFragment.show(getChildFragmentManager(), "EditWorkoutNameDialogFragment");
+                    return true; // Consume the event
+                });
+
+                // attach long-click listener for changing sport and equipment
+                headerViewHolder.getSportContainerView().setOnLongClickListener(v -> {
+
+                    String currentEquipmentName = headerViewHolder.getEquipmentName();
+                    long currentSportId = headerViewHolder.getSportId();
+                    ChangeSportAndEquipmentDialogFragment dialogFragment = ChangeSportAndEquipmentDialogFragment.newInstance(currentSportId, currentEquipmentName);
+
+                    dialogFragment.setOnSave((newSportId, newEquipmentId) -> {
+                        WorkoutSummariesDatabaseManager.updateSportAndEquipment(workoutId, newSportId, newEquipmentId);
+                        updateCursor();
+                        return null; // For Kotlin Unit
+                    });
+
+                    dialogFragment.show(getChildFragmentManager(), "ChangeSportAndEquipmentDialog");
+                    return true; // Consume long click
+                });
+            }
+
+            if (descriptionViewHolder != null) {
+                descriptionViewHolder.getRootView().setOnLongClickListener(v -> {
+                    EditDescriptionDialogFragment dialogFragment = EditDescriptionDialogFragment.newInstance(
+                            descriptionViewHolder.getDescription(),
+                            descriptionViewHolder.getGoal(),
+                            descriptionViewHolder.getMethod()
+                    );
+
+                    dialogFragment.setOnDescriptionChanged((newDescription, newGoal, newMethod) -> {
+                        WorkoutSummariesDatabaseManager.updateDescription(workoutId, newDescription, newGoal, newMethod);
+                        updateCursor();
+                        return null; // for Kotlin Unit
+                    });
+
+                    dialogFragment.show(getChildFragmentManager(), "EditDescriptionDialog");
+                    return true; // Consume the long click
+                });
+            }
+
+            // --- (short) click listener
+            // first, create a click listener
+            View.OnClickListener detailsClickListener = new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (DEBUG) Log.d(TAG, "Details area clicked for workoutId: " + workoutId);
+                    TrainingApplication.startWorkoutDetailsActivity(workoutId, WorkoutDetailsActivity.SelectedFragment.EDIT_DETAILS);
+                }
+            };
+
+            // add the (short) click listener to all the relevant views.
+            if (headerViewHolder != null) {
+                headerViewHolder.getView().setOnClickListener(detailsClickListener);
+                headerViewHolder.getWorkoutNameView().setOnClickListener(detailsClickListener);
+                headerViewHolder.getSportContainerView().setOnClickListener(detailsClickListener);
+            }
+            if (detailsViewHolder != null) {
+                detailsViewHolder.getView().setOnClickListener(detailsClickListener);
+            }
+            if (extremaValuesViewHolder != null) {
+                extremaValuesViewHolder.getView().setOnClickListener(detailsClickListener);
+            }
+        }
+
+
+        public void bind(Cursor cursor, long workoutId) {
+            this.workoutId = workoutId;
+
+            // -- header
+            if (headerViewHolder != null) {
+                WorkoutHeaderData headerData = headerDataProvider.createWorkoutHeaderData(cursor);
+                headerViewHolder.bind(headerData);
+            }
+
+            // -- description
+            if (descriptionViewHolder != null) {
+                DescriptionData descriptionData = descriptionDataProvider.createDescriptionData(cursor);
+                descriptionViewHolder.bind(descriptionData);
+            }
+
+            // --workout details
+            if (detailsViewHolder != null) {
+                WorkoutDetailsData detailsData = detailsDataProvider.createWorkoutDetailsData(cursor);
+                detailsViewHolder.bind(detailsData);
+            }
+
+            // -- extrema values
+            List<ExtremaData> extremaList = extremaDataProvider.getExtremaDataList(cursor);
+            if (extremaValuesViewHolder != null) {
+                extremaValuesViewHolder.bind(extremaList);
+            }
+
+            // -- map
+            if (mapComponent != null) {
+                if (isPlayServiceAvailable) {
+                    mapComponent.bind(workoutId, MapContentType.WORKOUT_TRACK); // Just call bind!
+                } else {
+                    mapComponent.setVisible(false);
+                }
+            }
+
+            String fileBaseName = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.FILE_BASE_NAME));
+            if (exportStatusViewHolder != null) {
+                exportStatusViewHolder.bind(fileBaseName);
+            }
         }
     }
 }
