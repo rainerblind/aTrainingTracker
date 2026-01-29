@@ -95,7 +95,10 @@ public class WorkoutSummariesListFragment extends ListFragment {
     protected ExportManager mExportManager;
     protected Cursor mCursor;
     protected WorkoutSummaryWithMapAdapter mAdapter;
-
+    private WorkoutHeaderDataProvider headerDataProvider;
+    private WorkoutDetailsDataProvider detailsDataProvider;
+    private ExtremaDataProvider extremaDataProvider;
+    private DescriptionDataProvider descriptionDataProvider;
 
     private final BroadcastReceiver mExportStatusChangedReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
@@ -161,7 +164,17 @@ public class WorkoutSummariesListFragment extends ListFragment {
 
         registerForContextMenu(mListView);
 
-        mAdapter = new WorkoutSummaryWithMapAdapter(getActivity(), mCursor);
+        this.headerDataProvider = new WorkoutHeaderDataProvider(getActivity(), new EquipmentDbHelper(getActivity()));
+        this.detailsDataProvider = new WorkoutDetailsDataProvider();
+        this.extremaDataProvider = new ExtremaDataProvider(getActivity());
+        this.descriptionDataProvider = new DescriptionDataProvider();
+
+        mAdapter = new WorkoutSummaryWithMapAdapter(getActivity(),
+                mCursor,
+                headerDataProvider,
+                detailsDataProvider,
+                extremaDataProvider,
+                descriptionDataProvider);
         setListAdapter(mAdapter);
 
     }
@@ -314,26 +327,28 @@ public class WorkoutSummariesListFragment extends ListFragment {
         private final DescriptionDataProvider descriptionDataProvider;
 
 
-        // TODO: move other DataProviders to here.
-
-
-        public WorkoutSummaryWithMapAdapter(Activity activity, Cursor cursor) {
+        public WorkoutSummaryWithMapAdapter(Activity activity,
+                                            Cursor cursor,
+                                            WorkoutHeaderDataProvider headerDataProvider,
+                                            WorkoutDetailsDataProvider detailsDataProvider,
+                                            ExtremaDataProvider extremaDataProvider,
+                                            DescriptionDataProvider descriptionDataProvider) {
             super(activity, cursor, 0);
             if (DEBUG) Log.d(TAG, "WorkoutSummaryWithMapAdapter");
 
             mContext = activity;
+
+            // Store providers
+            this.headerDataProvider = headerDataProvider;
+            this.detailsDataProvider = detailsDataProvider;
+            this.extremaDataProvider = extremaDataProvider;
+            this.descriptionDataProvider = descriptionDataProvider;
 
             try {
                 mUpdateWorkoutListener = (ShowWorkoutDetailsInterface) activity;
             } catch (ClassCastException e) {
                 throw new ClassCastException(activity + " must implement ShowWorkoutDetailsInterface");
             }
-
-            // Instantiate data providers
-            headerDataProvider = new WorkoutHeaderDataProvider(mContext, new EquipmentDbHelper(mContext));
-            detailsDataProvider = new WorkoutDetailsDataProvider();
-            extremaDataProvider = new ExtremaDataProvider(mContext);
-            descriptionDataProvider = new DescriptionDataProvider();
         }
 
 
