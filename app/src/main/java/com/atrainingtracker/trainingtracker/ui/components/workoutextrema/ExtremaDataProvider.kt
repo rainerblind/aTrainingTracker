@@ -2,13 +2,17 @@ package com.atrainingtracker.trainingtracker.ui.components.workoutextrema
 
 
 import android.content.Context
+import android.database.Cursor
 import android.util.Log
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
+
 
 /**
  * A reusable data provider responsible for fetching and preparing extrema data for any workout.
@@ -28,7 +32,7 @@ class ExtremaDataProvider(context: Context) {
     /**
      * Fetches and prepares a list of ExtremaData for a given workout.
      */
-    fun getExtremaDataList(workoutId: Long, bSportType: BSportType): List<ExtremaData> {
+    fun getExtremaDataList(cursor: Cursor, workoutId: Long): List<ExtremaData> {
         if (DEBUG) Log.d(TAG, "getExtremaDataList() for workoutId: $workoutId")
 
         // Define all sensors to check
@@ -46,6 +50,10 @@ class ExtremaDataProvider(context: Context) {
             SensorType.ALTITUDE,
             SensorType.TEMPERATURE
         )
+
+        // get the bSportType from the cursor
+        val sportId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPORT_ID))
+        val bSportType = SportTypeDatabaseManager.getBSportType(sportId)
 
         // Use Kotlin's functional style to build the list
         return sensorsToCheck.mapNotNull { sensorType ->
