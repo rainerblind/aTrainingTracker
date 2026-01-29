@@ -82,6 +82,8 @@ import com.google.android.gms.maps.MapView;
 
 import java.util.List;
 
+import kotlin.Unit;
+
 
 public class WorkoutSummariesListFragment extends ListFragment {
 
@@ -414,7 +416,7 @@ public class WorkoutSummariesListFragment extends ListFragment {
             this.mapComponent = new MapComponent(mapView, activity, workoutId -> {
                 // When the map is clicked, start the details activity for that workout, showing the map fragment.
                 TrainingApplication.startWorkoutDetailsActivity(workoutId, WorkoutDetailsActivity.SelectedFragment.MAP);
-                return null;
+                return Unit.INSTANCE;
             });
 
             // -- listeners
@@ -428,7 +430,7 @@ public class WorkoutSummariesListFragment extends ListFragment {
                         WorkoutSummariesDatabaseManager.updateWorkoutName(workoutId, newName);
                         updateCursor();
 
-                        return null; // Return null to satisfy Kotlin's Unit
+                        return Unit.INSTANCE;
                     });
 
                     dialogFragment.show(getChildFragmentManager(), "EditWorkoutNameDialogFragment");
@@ -445,7 +447,7 @@ public class WorkoutSummariesListFragment extends ListFragment {
                     dialogFragment.setOnSave((newSportId, newEquipmentId) -> {
                         WorkoutSummariesDatabaseManager.updateSportAndEquipment(workoutId, newSportId, newEquipmentId);
                         updateCursor();
-                        return null; // For Kotlin Unit
+                        return Unit.INSTANCE;
                     });
 
                     dialogFragment.show(getChildFragmentManager(), "ChangeSportAndEquipmentDialog");
@@ -464,7 +466,7 @@ public class WorkoutSummariesListFragment extends ListFragment {
                     dialogFragment.setOnDescriptionChanged((newDescription, newGoal, newMethod) -> {
                         WorkoutSummariesDatabaseManager.updateDescription(workoutId, newDescription, newGoal, newMethod);
                         updateCursor();
-                        return null; // for Kotlin Unit
+                        return Unit.INSTANCE;
                     });
 
                     dialogFragment.show(getChildFragmentManager(), "EditDescriptionDialog");
