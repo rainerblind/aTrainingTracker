@@ -22,8 +22,9 @@ class WorkoutDetailsDataProvider {
      * @param workoutId The ID of the workout to fetch extra details for.
      * @return A populated WorkoutDetailsData object.
      */
-    fun createWorkoutDetailsData(cursor: Cursor, workoutId: Long): WorkoutDetailsData {
+    fun createWorkoutDetailsData(cursor: Cursor): WorkoutDetailsData {
         // 1. Get data from the main cursor
+        val workoutId = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.C_ID))
         val totalDistance = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.DISTANCE_TOTAL_m))
         val activeTime = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_ACTIVE_s))
         val totalTime = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_TOTAL_s))

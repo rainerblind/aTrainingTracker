@@ -32,8 +32,8 @@ class ExtremaDataProvider(context: Context) {
     /**
      * Fetches and prepares a list of ExtremaData for a given workout.
      */
-    fun getExtremaDataList(cursor: Cursor, workoutId: Long): List<ExtremaData> {
-        if (DEBUG) Log.d(TAG, "getExtremaDataList() for workoutId: $workoutId")
+    fun getExtremaDataList(cursor: Cursor): List<ExtremaData> {
+        if (DEBUG) Log.d(TAG, "getExtremaDataList()")
 
         // Define all sensors to check
         val sensorsToCheck = arrayOf(
@@ -51,7 +51,8 @@ class ExtremaDataProvider(context: Context) {
             SensorType.TEMPERATURE
         )
 
-        // get the bSportType from the cursor
+        // get the workoutId and the bSportType from the cursor
+        val workoutId = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.C_ID))
         val sportId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPORT_ID))
         val bSportType = SportTypeDatabaseManager.getBSportType(sportId)
 
