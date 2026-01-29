@@ -354,7 +354,6 @@ public class WorkoutSummariesListFragment extends ListFragment {
             final long workoutId = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.C_ID));
 
             ViewHolder viewHolder = (ViewHolder) view.getTag();
-            viewHolder.workoutId = workoutId;
 
             // --- now, set the values of the views
 
@@ -449,12 +448,12 @@ public class WorkoutSummariesListFragment extends ListFragment {
 
             // --workout details
             if (viewHolder.detailsViewHolder != null) {
-                WorkoutDetailsData detailsData = detailsDataProvider.createWorkoutDetailsData(cursor, workoutId);
+                WorkoutDetailsData detailsData = detailsDataProvider.createWorkoutDetailsData(cursor);
                 viewHolder.detailsViewHolder.bind(detailsData);
             }
 
             // -- extrema values
-            List<ExtremaData> extremaList = extremaDataProvider.getExtremaDataList(cursor, workoutId);
+            List<ExtremaData> extremaList = extremaDataProvider.getExtremaDataList(cursor);
             if (viewHolder.extremaValuesViewHolder != null) {
                 viewHolder.extremaValuesViewHolder.bind(extremaList);
             }
@@ -507,8 +506,6 @@ public class WorkoutSummariesListFragment extends ListFragment {
         final ExtremaValuesViewHolder extremaValuesViewHolder;
         final ExportStatusViewHolder exportStatusViewHolder;
         final MapComponent mapComponent;
-
-        long workoutId;
 
         public ViewHolder(View row, Activity activity) {
             // Find component views
