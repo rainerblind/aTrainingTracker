@@ -71,7 +71,16 @@ public class WorkoutSummariesDatabaseManager {
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // some high level helper methods
     ////////////////////////////////////////////////////////////////////////////////////////////////
+    public static void updateSportAndEquipment(long workoutId, long sportId, long equipmentId) {
 
+        ContentValues values = new ContentValues();
+        values.put(WorkoutSummaries.SPORT_ID, sportId);
+        values.put(WorkoutSummaries.EQUIPMENT_ID, equipmentId);
+
+        updateValues(workoutId, values);
+    }
+
+    // TODO: use updateValues()
     public static void updateWorkoutName(long workoutId, String newName) {
         ContentValues values = new ContentValues();
         values.put(WorkoutSummaries.WORKOUT_NAME, newName);
@@ -89,6 +98,7 @@ public class WorkoutSummariesDatabaseManager {
     }
 
 
+    // TODO: use updateValues()
     public static void updateDescription(long workoutId, @NotNull String newDescription, @NotNull String newGoal, @NotNull String newMethod) {
         ContentValues values = new ContentValues();
         values.put(WorkoutSummaries.DESCRIPTION, newDescription);

@@ -6,6 +6,7 @@ data class WorkoutHeaderData(
     val workoutName: String,
     val formattedDate: String,
     val formattedTime: String,
+    val sportId: Long,
     val sportType: BSportType,
     val sportName: String,
     val equipmentName: String?

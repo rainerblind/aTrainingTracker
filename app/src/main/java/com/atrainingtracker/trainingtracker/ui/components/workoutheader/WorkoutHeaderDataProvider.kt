@@ -33,6 +33,7 @@ class WorkoutHeaderDataProvider(
             workoutName = workoutName,
             formattedDate = date,
             formattedTime = time,
+            sportId = sportId,
             sportType = sportType,
             sportName = sportName,
             equipmentName = equipmentName
