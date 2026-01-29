@@ -412,6 +412,7 @@ public class WorkoutSummariesListFragment extends ListFragment {
 
             // -- listeners
             if (headerViewHolder != null ) {
+                // attach long-click listener for changing the workout name
                 headerViewHolder.getWorkoutNameView().setOnLongClickListener(v -> {
 
                     String currentWorkoutName = headerViewHolder.getWorkoutName();
@@ -420,7 +421,6 @@ public class WorkoutSummariesListFragment extends ListFragment {
                     dialogFragment.setOnWorkoutNameChanged(newName -> {
                         WorkoutSummariesDatabaseManager.updateWorkoutName(workoutId, newName);
                         updateCursor();
-
                         return Unit.INSTANCE;
                     });
 
@@ -447,6 +447,7 @@ public class WorkoutSummariesListFragment extends ListFragment {
             }
 
             if (descriptionViewHolder != null) {
+                // attach long-click listener for editing the description (incl. the goal and the method)
                 descriptionViewHolder.getRootView().setOnLongClickListener(v -> {
                     EditDescriptionDialogFragment dialogFragment = EditDescriptionDialogFragment.newInstance(
                             descriptionViewHolder.getDescription(),
@@ -465,7 +466,7 @@ public class WorkoutSummariesListFragment extends ListFragment {
                 });
             }
 
-            // --- (short) click listener
+            // --- (short) click listener on everything above the map -> show edit activity
             // first, create a click listener
             View.OnClickListener detailsClickListener = new View.OnClickListener() {
                 @Override
