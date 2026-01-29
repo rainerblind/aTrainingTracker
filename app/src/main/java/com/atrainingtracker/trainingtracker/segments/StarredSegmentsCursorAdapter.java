@@ -35,18 +35,14 @@ import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
-import com.atrainingtracker.trainingtracker.fragments.mapFragments.MyMapViewHolder;
-import com.atrainingtracker.trainingtracker.fragments.mapFragments.Roughness;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaSegmentsHelper;
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager.Segments;
+import com.atrainingtracker.trainingtracker.ui.components.map.MapComponent;
+import com.atrainingtracker.trainingtracker.ui.components.map.MapContentType;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
-import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
-import com.google.android.gms.maps.MapsInitializer;
-import com.google.android.gms.maps.OnMapReadyCallback;
-import com.google.android.gms.maps.model.LatLng;
 
 import java.text.SimpleDateFormat;
 import java.util.Locale;
@@ -90,28 +86,8 @@ public class StarredSegmentsCursorAdapter extends CursorAdapter {
 
         View row = LayoutInflater.from(context).inflate(R.layout.segment_list_row, null);
 
-        ViewHolder viewHolder = new ViewHolder(null, null);
-
-        // set all the views of the view holder
-        viewHolder.tvName = row.findViewById(R.id.textViewSegmentName);
-        viewHolder.layoutPr = row.findViewById(R.id.layout_pr);
-        viewHolder.tvPrTime = row.findViewById(R.id.textViewPrTime);
-        viewHolder.tvCity = row.findViewById(R.id.textViewCity);
-        viewHolder.tvDistance = row.findViewById(R.id.textViewDistance);
-        viewHolder.tvAverageGrade = row.findViewById(R.id.textViewAvgGrade);
-        viewHolder.tvClimbCategory = row.findViewById(R.id.textViewCategoryChip);
-        viewHolder.tvElevationGain = row.findViewById(R.id.textViewElevationGain);
-        viewHolder.tvElevationMin = row.findViewById(R.id.textViewElevationMin);
-        viewHolder.tvElevationMax = row.findViewById(R.id.textViewElevationMax);
-        viewHolder.tvMaxGrade = row.findViewById(R.id.textViewMaxGrade);
-        viewHolder.mapView = row.findViewById(R.id.mapViewSegment);
-
-        viewHolder.rowView = row;
-
-        viewHolder.initializeMapView();
-
+        ViewHolder viewHolder = new ViewHolder(row, mActivity);
         row.setTag(viewHolder);
-
         return row;
     }
 
@@ -169,19 +145,14 @@ public class StarredSegmentsCursorAdapter extends CursorAdapter {
         viewHolder.tvElevationMax.setText(String.format(Locale.getDefault(), "%d m", Math.round(elevHigh)));
 
         if (isPlayServiceAvailable) {
-            viewHolder.mapView.setVisibility(View.VISIBLE);
-            if (viewHolder.map != null) {
-                viewHolder.showSegmentOnMap(segmentId);
-            }
+            // Simply delegate to the universal MapComponent
+            viewHolder.mapComponent.bind(segmentId, MapContentType.SEGMENT_TRACK);
         } else {
-            viewHolder.mapView.setVisibility(View.GONE);
+            viewHolder.mapComponent.setVisible(false);
         }
 
-        viewHolder.rowView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                mShowSegmentDetailsListener.startSegmentDetailsActivity(segmentId);
-            }
+        viewHolder.rowView.setOnClickListener(v -> {
+            mShowSegmentDetailsListener.startSegmentDetailsActivity(segmentId);
         });
     }
 
@@ -218,69 +189,47 @@ public class StarredSegmentsCursorAdapter extends CursorAdapter {
         void startSegmentDetailsActivity(long segmentId);
     }
 
-    public class ViewHolder
-            extends MyMapViewHolder
-            implements OnMapReadyCallback {
+    public class ViewHolder {
 
         long segmentId;
-        View rowView;
-        TextView tvClimbCategory;
-        TextView tvName;
-        View layoutPr; // The LinearLayout for the PR
-        TextView tvPrTime;
-        TextView tvCity;
-        TextView tvDistance;
-        TextView tvAverageGrade;
-        TextView tvMaxGrade;
-        TextView tvElevationGain;
-        TextView tvElevationMin;
-        TextView tvElevationMax;
+        final View rowView;
+        final TextView tvClimbCategory;
+        final TextView tvName;
+        final View layoutPr; // The LinearLayout for the PR
+        final TextView tvPrTime;
+        final TextView tvCity;
+        final TextView tvDistance;
+        final TextView tvAverageGrade;
+        final TextView tvMaxGrade;
+        final TextView tvElevationGain;
+        final TextView tvElevationMin;
+        final TextView tvElevationMax;
+        final MapComponent mapComponent;
 
 
-        public ViewHolder(GoogleMap map, MapView mapView) {
-            super(map, mapView);
+        public ViewHolder(View row, Activity activity) {
+            // Find all views
+            rowView = row;
+            tvClimbCategory = row.findViewById(R.id.textViewCategoryChip);
+            tvName = row.findViewById(R.id.textViewSegmentName);
+            layoutPr = row.findViewById(R.id.layout_pr);
+            tvPrTime = row.findViewById(R.id.textViewPrTime);
+            tvCity = row.findViewById(R.id.textViewCity);
+            tvDistance = row.findViewById(R.id.textViewDistance);
+            tvAverageGrade = row.findViewById(R.id.textViewAvgGrade);
+            tvElevationGain = row.findViewById(R.id.textViewElevationGain);
+            tvElevationMin = row.findViewById(R.id.textViewElevationMin);
+            tvElevationMax = row.findViewById(R.id.textViewElevationMax);
+            tvMaxGrade = row.findViewById(R.id.textViewMaxGrade);
+
+            MapView mapView = row.findViewById(R.id.mapViewSegment);
+
+            // Create the MapComponent, passing the map's click listener logic
+            mapComponent = new MapComponent(mapView, activity, segmentId -> {
+                mShowSegmentDetailsListener.startSegmentDetailsActivity(segmentId);
+                return null;
+            });
         }
 
-        @Override
-        public void onMapReady(GoogleMap googleMap) {
-            MapsInitializer.initialize(mContext);
-            map = googleMap;
-            showSegmentOnMap(segmentId);
-        }
-
-        /**
-         * Initialises the MapView by calling its lifecycle methods.
-         */
-        public void initializeMapView() {
-            if (mapView != null) {
-                // Initialise the MapView
-                mapView.onCreate(null);
-                // Set the map ready callback to receive the GoogleMap object
-                mapView.getMapAsync(this);
-            }
-        }
-
-        public void showSegmentOnMap(final long segmentId) {
-            if (DEBUG) Log.i(TAG, "showSegmentOnMap: segmentId=" + segmentId);
-
-            if (map == null) {
-                mapView.setVisibility(View.GONE);
-            } else {
-                mapView.setVisibility(View.VISIBLE);
-
-                // first, configure the map
-                map.getUiSettings().setMapToolbarEnabled(false);
-                map.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
-                    @Override
-                    public void onMapClick(LatLng latLng) {
-                        mShowSegmentDetailsListener.startSegmentDetailsActivity(segmentId);
-                    }
-                });
-
-                ((TrainingApplication) mActivity.getApplication()).segmentOnMapHelper.showSegmentOnMap(mContext, this, segmentId, Roughness.ALL, true, false);
-
-                if (DEBUG) Log.i(TAG, "end of showSegmentOnMap()");
-            }
-        }
     }
 }

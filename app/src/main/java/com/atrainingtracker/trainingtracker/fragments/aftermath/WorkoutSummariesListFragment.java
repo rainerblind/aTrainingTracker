@@ -55,12 +55,11 @@ import com.atrainingtracker.trainingtracker.exporter.FileFormat;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
-import com.atrainingtracker.trainingtracker.fragments.mapFragments.MyMapViewHolder;
-import com.atrainingtracker.trainingtracker.fragments.mapFragments.Roughness;
-import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapHelper;
 import com.atrainingtracker.trainingtracker.helpers.DeleteWorkoutThread;
 import com.atrainingtracker.trainingtracker.interfaces.ReallyDeleteDialogInterface;
 import com.atrainingtracker.trainingtracker.interfaces.ShowWorkoutDetailsInterface;
+import com.atrainingtracker.trainingtracker.ui.components.map.MapComponent;
+import com.atrainingtracker.trainingtracker.ui.components.map.MapContentType;
 import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.DescriptionData;
 import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.DescriptionDataProvider;
 import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.EditDescriptionDialogFragment;
@@ -79,11 +78,7 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutH
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderViewHolder;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
-import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
-import com.google.android.gms.maps.MapsInitializer;
-import com.google.android.gms.maps.OnMapReadyCallback;
-import com.google.android.gms.maps.model.LatLng;
 
 import java.util.List;
 
@@ -116,19 +111,6 @@ public class WorkoutSummariesListFragment extends ListFragment {
     private ShowWorkoutDetailsInterface mShowWorkoutDetailsListener;
     private ReallyDeleteDialogInterface mReallyDeleteDialogInterface;
     private boolean isPlayServiceAvailable = true;
-    private final AbsListView.RecyclerListener mRecycleListener = new AbsListView.RecyclerListener() {
-
-        @Override
-        public void onMovedToScrapHeap(@NonNull View view) {
-            ViewHolder holder = (ViewHolder) view.getTag();
-            if (holder != null && holder.map != null) {
-                // Clear the map and free up resources by changing the map type to none
-                holder.map.clear();
-                holder.map.setMapType(GoogleMap.MAP_TYPE_NONE);
-            }
-
-        }
-    };
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -174,7 +156,6 @@ public class WorkoutSummariesListFragment extends ListFragment {
 //                // TODO: make the foo here => does not work :-(
 //            }
 //        });
-        mListView.setRecyclerListener(mRecycleListener);
 
         registerForContextMenu(mListView);
 
@@ -360,42 +341,7 @@ public class WorkoutSummariesListFragment extends ListFragment {
             if (DEBUG) Log.i(TAG, "newView");
 
             View row = LayoutInflater.from(context).inflate(R.layout.workout_summaries_row, parent, false);
-
-            // ??? LinearLayout llRow = (LinearLayout) row.findViewById(R.id.ll_workout_summaries_row);
-
-            ViewHolder viewHolder = new ViewHolder(null, null);
-            // workoutId is set in bindView()
-            // GoogleMap is set during initialization
-            // MapView   is set in a few seconds
-
-            viewHolder.mapView = row.findViewById(R.id.workout_summaries_mapView);
-
-            View headerView = row.findViewById(R.id.workout_header_include);
-            if (headerView != null) {
-                viewHolder.headerViewHolder = new WorkoutHeaderViewHolder(headerView);
-            }
-
-            View detailsView = row.findViewById(R.id.workout_details_include);
-            if (detailsView != null) {
-                viewHolder.detailsViewHolder = new WorkoutDetailsViewHolder(detailsView, context);
-            }
-
-            View extremaValuesView = row.findViewById(R.id.extrema_values_include);
-            if (extremaValuesView != null) {
-                viewHolder.extremaValuesViewHolder = new ExtremaValuesViewHolder(extremaValuesView);
-            }
-
-            View descriptionView = row.findViewById(R.id.workout_description_include);
-            if (descriptionView != null) {
-                viewHolder.descriptionViewHolder = new DescriptionViewHolder(descriptionView);
-            }
-
-            View exportStatusView = row.findViewById(R.id.export_status_include);
-            if (exportStatusView != null) {
-                viewHolder.exportStatusViewHolder = new ExportStatusViewHolder(exportStatusView);
-            }
-
-            viewHolder.initializeMapView();
+            ViewHolder viewHolder = new ViewHolder(row, (Activity) mContext);
 
             row.setTag(viewHolder);
             return row;
@@ -515,14 +461,13 @@ public class WorkoutSummariesListFragment extends ListFragment {
                 viewHolder.extremaValuesViewHolder.bind(extremaList);
             }
 
-
-            if (isPlayServiceAvailable) {
-                viewHolder.mapView.setVisibility(View.VISIBLE);
-                if (viewHolder.map != null) {
-                    viewHolder.showTrackOnMap(workoutId);
+            // -- map
+            if (viewHolder.mapComponent != null) {
+                if (isPlayServiceAvailable) {
+                    viewHolder.mapComponent.bind(workoutId, MapContentType.WORKOUT_TRACK); // Just call bind!
+                } else {
+                    viewHolder.mapComponent.setVisible(false);
                 }
-            } else {
-                viewHolder.mapView.setVisibility(View.GONE);
             }
 
             String fileBaseName = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.FILE_BASE_NAME));
@@ -556,66 +501,38 @@ public class WorkoutSummariesListFragment extends ListFragment {
     // ViewHolder
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    class ViewHolder
-            extends MyMapViewHolder
-            implements OnMapReadyCallback {
+    class ViewHolder {
 
-        WorkoutHeaderViewHolder headerViewHolder;
-        WorkoutDetailsViewHolder detailsViewHolder;
-        DescriptionViewHolder descriptionViewHolder;
-        ExtremaValuesViewHolder extremaValuesViewHolder;
-        ExportStatusViewHolder exportStatusViewHolder;
+        final WorkoutHeaderViewHolder headerViewHolder;
+        final WorkoutDetailsViewHolder detailsViewHolder;
+        final DescriptionViewHolder descriptionViewHolder;
+        final ExtremaValuesViewHolder extremaValuesViewHolder;
+        final ExportStatusViewHolder exportStatusViewHolder;
+        final MapComponent mapComponent;
 
         long workoutId;
 
-        // MapView mapView;
-        // GoogleMap map;
+        public ViewHolder(View row, Activity activity) {
+            // Find component views
+            View headerView = row.findViewById(R.id.workout_header_include);
+            View detailsView = row.findViewById(R.id.workout_details_include);
+            View extremaValuesView = row.findViewById(R.id.extrema_values_include);
+            View descriptionView = row.findViewById(R.id.workout_description_include);
+            View exportStatusView = row.findViewById(R.id.export_status_include);
+            MapView mapView = row.findViewById(R.id.workout_summaries_mapView);
 
-        public ViewHolder(GoogleMap map, MapView mapView) {
-            super(map, mapView);
-        }
+            // Create component ViewHolders/Components
+            this.headerViewHolder = (headerView != null) ? new WorkoutHeaderViewHolder(headerView) : null;
+            this.detailsViewHolder = (detailsView != null) ? new WorkoutDetailsViewHolder(detailsView, activity) : null;
+            this.extremaValuesViewHolder = (extremaValuesView != null) ? new ExtremaValuesViewHolder(extremaValuesView) : null;
+            this.descriptionViewHolder = (descriptionView != null) ? new DescriptionViewHolder(descriptionView) : null;
+            this.exportStatusViewHolder = (exportStatusView != null) ? new ExportStatusViewHolder(exportStatusView) : null;
 
-        @Override
-        public void onMapReady(@NonNull GoogleMap googleMap) {
-            MapsInitializer.initialize(getActivity());
-            // -MapsInitializer.initialize(getActivity().getApplicationContext());
-            map = googleMap;
-            showTrackOnMap(workoutId);
-        }
-
-        /**
-         * Initialises the MapView by calling its lifecycle methods.
-         */
-        public void initializeMapView() {
-            if (mapView != null) {
-                // Initialise the MapView
-                mapView.onCreate(null);
-                // Set the map ready callback to receive the GoogleMap object
-                mapView.getMapAsync(this);
-            }
-        }
-
-        public void showTrackOnMap(final long workoutId) {
-            if (DEBUG) Log.i(TAG, "showMainTrackOnMap: workoutId=" + workoutId);
-
-            if (map == null) {
-                mapView.setVisibility(View.GONE);
-            } else {
-                mapView.setVisibility(View.VISIBLE);
-
-                // first, configure the map
-                map.getUiSettings().setMapToolbarEnabled(false);
-                map.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
-                    @Override
-                    public void onMapClick(@NonNull LatLng latLng) {
-                        TrainingApplication.startWorkoutDetailsActivity(workoutId, WorkoutDetailsActivity.SelectedFragment.MAP);
-                    }
-                });
-
-                ((TrainingApplication) getActivity().getApplication()).trackOnMapHelper.showTrackOnMap(this, workoutId, Roughness.MEDIUM, TrackOnMapHelper.TrackType.BEST, true, false);
-
-                if (DEBUG) Log.i(TAG, "end of showTrackOnMap()");
-            }
+            this.mapComponent = new MapComponent(mapView, activity, workoutId -> {
+                // When the map is clicked, start the details activity for that workout, showing the map fragment.
+                TrainingApplication.startWorkoutDetailsActivity(workoutId, WorkoutDetailsActivity.SelectedFragment.MAP);
+                return null;
+            });
         }
     }
 }
