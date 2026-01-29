@@ -454,7 +454,7 @@ public class WorkoutSummariesListFragment extends ListFragment {
                     long currentSportId = headerData.getSportId();
 
                     // Create the dialog instance
-                    ChangeSportAndEquipmentDialogFragment dialogFragment = ChangeSportAndEquipmentDialogFragment.newInstance(workoutId, currentSportId, currentEquipmentName);
+                    ChangeSportAndEquipmentDialogFragment dialogFragment = ChangeSportAndEquipmentDialogFragment.newInstance(currentSportId, currentEquipmentName);
 
                     // Set the "onSave" lambda.
                     dialogFragment.setOnSave((newSportId, newEquipmentId) -> {

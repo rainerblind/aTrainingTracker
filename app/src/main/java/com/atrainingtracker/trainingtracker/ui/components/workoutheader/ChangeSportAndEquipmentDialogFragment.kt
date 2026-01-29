@@ -26,7 +26,6 @@ class ChangeSportAndEquipmentDialogFragment : DialogFragment() {
     var onSave: ((newSportId: Long, newEquipmentId: Long) -> Unit)? = null
 
     // Arguments are loaded safely and lazily.
-    private val workoutId: Long by lazy { requireArguments().getLong(ARG_WORKOUT_ID) }
     private val initialSportId: Long by lazy { requireArguments().getLong(ARG_CURRENT_SPORT_ID) }
     private val initialEquipmentName: String? by lazy { requireArguments().getString(ARG_CURRENT_EQUIPMENT_NAME) }
 
@@ -152,22 +151,20 @@ class ChangeSportAndEquipmentDialogFragment : DialogFragment() {
             0L // Or your designated ID for "no equipment"
         }
 
-        Log.d(TAG, "Saving SportID: $selectedSportId, EquipmentID: $selectedEquipmentId for WorkoutID: $workoutId")
+        Log.d(TAG, "Saving SportID: $selectedSportId, EquipmentID: $selectedEquipmentId")
 
         // Pass the result back to the caller. The dialog is "dumb" and does not save.
         onSave?.invoke(selectedSportId, selectedEquipmentId)
     }
 
     companion object {
-        private const val ARG_WORKOUT_ID = "workoutId"
         private const val ARG_CURRENT_SPORT_ID = "currentSportId"
         private const val ARG_CURRENT_EQUIPMENT_NAME = "currentEquipmentName"
 
         @JvmStatic
-        fun newInstance(workoutId: Long, currentSportId: Long, currentEquipmentName: String?): ChangeSportAndEquipmentDialogFragment {
+        fun newInstance(currentSportId: Long, currentEquipmentName: String?): ChangeSportAndEquipmentDialogFragment {
             return ChangeSportAndEquipmentDialogFragment().apply {
                 arguments = bundleOf(
-                    ARG_WORKOUT_ID to workoutId,
                     ARG_CURRENT_SPORT_ID to currentSportId,
                     ARG_CURRENT_EQUIPMENT_NAME to currentEquipmentName
                 )
