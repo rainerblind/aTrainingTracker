@@ -169,7 +169,6 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         }
 
         cursor.close();
-        db.close();
 
         return equipmentList;
     }
@@ -225,7 +224,6 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         }
 
         linkCursor.close();
-        db.close();
 
         return equipmentList;
     }
@@ -251,7 +249,6 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
             db.insert(LINKS, null, values);
         }
 
-        db.close();
         if (DEBUG) Log.d(TAG, "inserted");
     }
 
@@ -273,9 +270,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
 
     public long getEquipmentId(@NonNull String equipmentName) {
         SQLiteDatabase db = this.getReadableDatabase();
-        long equipmentId = getEquipmentId(db, equipmentName);
-        db.close();
-        return equipmentId;
+        return getEquipmentId(db, equipmentName);
     }
 
     @Nullable
@@ -292,7 +287,6 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         }
 
         cursor.close();
-        db.close();
 
         return equipmentName;
     }
@@ -311,7 +305,6 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         }
 
         cursor.close();
-        db.close();
 
         return stravaId;
     }
