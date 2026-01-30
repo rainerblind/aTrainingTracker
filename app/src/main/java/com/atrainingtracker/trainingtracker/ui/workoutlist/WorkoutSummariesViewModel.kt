@@ -6,9 +6,11 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import com.atrainingtracker.trainingtracker.SingleLiveEvent
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
+import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.DescriptionDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaDataProvider
@@ -27,6 +29,10 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
     private val detailsDataProvider = WorkoutDetailsDataProvider()
     private val extremaDataProvider = ExtremaDataProvider(application)
     private val descriptionDataProvider = DescriptionDataProvider()
+
+
+    val confirmDeleteWorkoutEvent = SingleLiveEvent<Long>()
+    val exportWorkoutEvent = SingleLiveEvent<Pair<Long, FileFormat>>()
 
     fun loadWorkouts() {
         // Use the ViewModel's coroutine scope to launch on a background thread.
@@ -118,6 +124,34 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
             WorkoutSummariesDatabaseManager.getInstance().closeDatabase()
 
             // Reload to show the updated sport icon and equipment name.
+            loadWorkouts()
+        }
+    }
+
+
+    fun onDeleteWorkoutClicked(id: Long) {
+        // Post an event to the LiveData. The fragment will observe this
+        // and show the confirmation dialog.
+        confirmDeleteWorkoutEvent.postValue(id)
+    }
+
+    fun onExportWorkoutClicked(id: Long, format: FileFormat) {
+        // Post an event commanding the fragment/activity to handle the export.
+        exportWorkoutEvent.postValue(Pair(id, format))
+    }
+
+    /**
+     * This method will be called by the Fragment *after* the user confirms the deletion.
+     */
+    fun deleteWorkout(id: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val db = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase()
+            // Using DeleteWorkoutThread is good practice if it does more than just a DB delete.
+            // For a simple delete, this is also fine:
+            db.delete(WorkoutSummaries.TABLE, "${WorkoutSummaries.C_ID} = ?", arrayOf(id.toString()))
+            WorkoutSummariesDatabaseManager.getInstance().closeDatabase()
+
+            // After deleting, reload the data. The UI will update automatically.
             loadWorkouts()
         }
     }
