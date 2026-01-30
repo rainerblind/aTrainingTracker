@@ -1,10 +1,15 @@
 package com.atrainingtracker.trainingtracker.ui.components.export
 
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.exporter.ExportStatusChangedBroadcaster
 import com.atrainingtracker.trainingtracker.exporter.ExportType
 
 /**
@@ -19,12 +24,31 @@ class ExportStatusViewHolder(val view: View) {
     private val context: Context = view.context
 
     private val dataProvider = ExportStatusDataProvider(context)
+    private var currentFileBaseName: String? = null
+
+    // The BroadcastReceiver that will listen for status updates.
+    private val statusUpdateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == ExportStatusChangedBroadcaster.EXPORT_STATUS_CHANGED_INTENT) {
+                // When a status changes, simply re-bind the data for the current file.
+                // This is efficient because it only affects this one ViewHolder.
+                bind(currentFileBaseName)
+            }
+        }
+    }
 
     /**
      * Binds the fetched export status data to the views.
      * It creates a view for each ExportType and adds it to the container.
      */
     fun bind(fileBaseName: String?) {
+        // If the fileBaseName is the same, we might be re-binding due to a broadcast.
+        // If it's different, we need to unregister the old listener first.
+        if (currentFileBaseName != fileBaseName) {
+            cleanup() // Unregister receiver from the previous item
+            this.currentFileBaseName = fileBaseName
+        }
+
         // If fileBaseName is null or empty, hide the entire component
         if (fileBaseName.isNullOrEmpty()) {
             view.visibility = View.GONE
@@ -55,6 +79,38 @@ class ExportStatusViewHolder(val view: View) {
         separator.visibility = if (hasAnyContent) View.VISIBLE else View.GONE
         header.visibility = if (hasAnyContent) View.VISIBLE else View.GONE
         container.visibility = if (hasAnyContent) View.VISIBLE else View.GONE
+
+        // After binding, register the receiver to listen for future changes.
+        registerReceiver()
+    }
+
+    /**
+     * Registers the broadcast receiver if it's not already registered for the current file.
+     */
+    private fun registerReceiver() {
+        if (currentFileBaseName == null) return // Don't register if there's no file
+
+        // The try-catch block handles the case where the receiver is already registered.
+        try {
+            val filter = IntentFilter(ExportStatusChangedBroadcaster.EXPORT_STATUS_CHANGED_INTENT)
+            ContextCompat.registerReceiver(context, statusUpdateReceiver, filter,
+                ContextCompat.RECEIVER_NOT_EXPORTED)
+        } catch (e: IllegalArgumentException) {
+            // Receiver already registered, which is fine.
+        }
+    }
+
+    /**
+     * Unregisters the receiver to prevent memory leaks when the ViewHolder is recycled.
+     * This is a critical method to be called from the adapter's onViewRecycled.
+     */
+    fun cleanup() {
+        // The try-catch block prevents crashes if the receiver was never registered.
+        try {
+            context.unregisterReceiver(statusUpdateReceiver)
+        } catch (e: IllegalArgumentException) {
+            // Receiver wasn't registered, no problem.
+        }
     }
 
     /**
