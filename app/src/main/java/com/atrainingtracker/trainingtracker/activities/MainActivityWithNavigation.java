@@ -97,7 +97,7 @@ import com.atrainingtracker.trainingtracker.dialogs.ReallyDeleteWorkoutDialog;
 import com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialog;
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusDialogFragment;
 import com.atrainingtracker.trainingtracker.fragments.StartAndTrackingFragmentTabbedContainer;
-import com.atrainingtracker.trainingtracker.fragments.aftermath.WorkoutSummariesListFragment;
+import com.atrainingtracker.trainingtracker.ui.workoutlist.WorkoutSummariesListFragment;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.MyLocationsFragment;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapTrackingFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.AltitudeCorrectionFragment;

@@ -77,11 +77,11 @@
         android:id="@+id/ll_workout_summaries__sport_container"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="16dp"
+        android:layout_marginEnd="4dp"
         android:gravity="center_horizontal"
         android:orientation="vertical"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/workout_header_menu_button"
         app:layout_constraintTop_toTopOf="parent">
 
         <ImageView
@@ -109,5 +109,17 @@
             tools:text="with Hoka Clifton 9"
             tools:visibility="visible" />
     </LinearLayout>
+
+    <ImageButton
+        android:id="@+id/workout_header_menu_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:layout_marginEnd="4dp"
+        android:src="@drawable/ic_baseline_more_vert_24"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        app:tint="?attr/colorOnPrimary"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
 </merge>
