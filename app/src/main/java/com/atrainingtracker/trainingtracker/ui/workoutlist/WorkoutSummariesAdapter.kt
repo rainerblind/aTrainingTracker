@@ -157,10 +157,13 @@ class WorkoutSummariesAdapter(
             val detailsClickListener = View.OnClickListener {
                 TrainingApplication.startWorkoutDetailsActivity(workoutSummary.id, WorkoutDetailsActivity.SelectedFragment.EDIT_DETAILS)
             }
-            // Attach the same listener to multiple views
+            // Attach this listener to multiple views
             headerViewHolder?.view?.setOnClickListener(detailsClickListener)
+            headerViewHolder?.sportContainerView?.setOnClickListener(detailsClickListener)
+            headerViewHolder?.workoutNameView?.setOnClickListener(detailsClickListener)
             detailsViewHolder?.view?.setOnClickListener(detailsClickListener)
             extremaValuesViewHolder?.view?.setOnClickListener(detailsClickListener)
+            descriptionViewHolder?.rootView?.setOnClickListener(detailsClickListener)
         }
 
         private fun setupMenuButtonClickListeners(menuButton: View?) {
