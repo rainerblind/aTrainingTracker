@@ -2,18 +2,22 @@ package com.atrainingtracker.trainingtracker.ui.workoutlist
 
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.Menu
+import android.view.MenuInflater
+import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.interfaces.ReallyDeleteDialogInterface
 import com.atrainingtracker.trainingtracker.interfaces.ShowWorkoutDetailsInterface
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
-
-
 
 /**
  * A fragment that displays a list of workout summaries using a modern,
@@ -48,11 +52,27 @@ class WorkoutSummariesListFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        setupMenu()
         setupRecyclerView()
         observeViewModel()
 
         // Trigger the initial data load.
         viewModel.loadWorkouts()
+    }
+
+    private fun setupMenu() {
+        // Add the MenuProvider to the Fragment's Lifecycle
+        requireActivity().addMenuProvider(object : MenuProvider {
+            override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
+                // Inflate the menu resource file
+                menuInflater.inflate(R.menu.workout_summaries_list_menu, menu)
+            }
+            // By returning 'false', we tell the system that we have NOT handled the click,
+            // so it should continue to pass the event to other components (like the Activity).
+            override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
+                return false
+            }
+        }, viewLifecycleOwner, Lifecycle.State.RESUMED)
     }
 
     private fun setupRecyclerView() {
