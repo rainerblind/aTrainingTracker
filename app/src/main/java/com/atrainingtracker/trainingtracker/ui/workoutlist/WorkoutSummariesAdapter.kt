@@ -4,6 +4,7 @@ import android.app.Activity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.appcompat.widget.PopupMenu
 import androidx.fragment.app.FragmentManager
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -11,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.activities.WorkoutDetailsActivity
+import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusViewHolder
 import com.atrainingtracker.trainingtracker.ui.components.map.MapComponent
 import com.atrainingtracker.trainingtracker.ui.components.map.MapContentType
@@ -89,6 +91,11 @@ class WorkoutSummariesAdapter(
             val exportStatusView = row.findViewById<View>(R.id.export_status_include)
             val mapView = row.findViewById<MapView>(R.id.workout_summaries_mapView)
 
+            // Find the menu button inside the header layout
+            val menuButton = headerView?.findViewById<View>(R.id.workout_header_menu_button)
+            // Call the setup method, now passing the menu button
+            setupMenuButtonClickListeners(menuButton)
+
             // --- Create Component ViewHolders ---
             headerViewHolder = headerView?.let { WorkoutHeaderViewHolder(it) }
             detailsViewHolder = detailsView?.let { WorkoutDetailsViewHolder(it, activity) }
@@ -154,6 +161,52 @@ class WorkoutSummariesAdapter(
             headerViewHolder?.view?.setOnClickListener(detailsClickListener)
             detailsViewHolder?.view?.setOnClickListener(detailsClickListener)
             extremaValuesViewHolder?.view?.setOnClickListener(detailsClickListener)
+        }
+
+        private fun setupMenuButtonClickListeners(menuButton: View?) {
+            menuButton?.setOnClickListener { view ->
+                // Create a PopupMenu, anchored to the button that was clicked.
+                val popup = PopupMenu(view.context, view)
+                // Inflate the same menu resource the old fragment used.
+                popup.inflate(R.menu.workout_summaries_context)
+
+                // Set a listener for when a menu item is clicked.
+                popup.setOnMenuItemClickListener { item ->
+                    // Delegate the action to the ViewModel based on the menu item's ID.
+                    // This keeps the adapter clean and dumb.
+                    when (item.itemId) {
+                        R.id.contextDelete -> {
+                            // Let the ViewModel handle the deletion logic.
+                            viewModel.onDeleteWorkoutClicked(workoutSummary.id)
+                            true // Consume the click
+                        }
+                        R.id.tcxWrite -> {
+                            viewModel.onExportWorkoutClicked(workoutSummary.id, FileFormat.TCX)
+                            true
+                        }
+                        R.id.gpxWrite -> {
+                            viewModel.onExportWorkoutClicked(workoutSummary.id, FileFormat.GPX)
+                            true
+                        }
+                        R.id.csvWrite -> {
+                            viewModel.onExportWorkoutClicked(workoutSummary.id, FileFormat.CSV)
+                            true
+                        }
+                        R.id.jsonWrite -> {
+                            viewModel.onExportWorkoutClicked(workoutSummary.id, FileFormat.GC)
+                            true
+                        }
+                        R.id.stravaUpload -> {
+                            viewModel.onExportWorkoutClicked(workoutSummary.id, FileFormat.STRAVA)
+                            true
+                        }
+                        // TODO: runkeeper, trainingPeaks, ...
+                        else -> false // Let the system handle other cases
+                    }
+                }
+                // Show the menu.
+                popup.show()
+            }
         }
 
         /**

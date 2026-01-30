@@ -8,6 +8,8 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.atrainingtracker.trainingtracker.interfaces.ReallyDeleteDialogInterface
+import com.atrainingtracker.trainingtracker.interfaces.ShowWorkoutDetailsInterface
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 
@@ -75,8 +77,15 @@ class WorkoutSummariesListFragment : Fragment() {
             // The ListAdapter will efficiently calculate differences and update the UI.
             workoutAdapter.submitList(workoutSummaries)
 
-            // You could handle an empty view's visibility here.
-            // emptyView.visibility = if (workoutSummaries.isNullOrEmpty()) View.VISIBLE else View.GONE
+            // Observe the delete command
+            viewModel.confirmDeleteWorkoutEvent.observe(viewLifecycleOwner) { workoutId ->
+                (activity as? ReallyDeleteDialogInterface)?.confirmDeleteWorkout(workoutId)
+            }
+
+            // Observe the export command
+            viewModel.exportWorkoutEvent.observe(viewLifecycleOwner) { (workoutId, format) ->
+                (activity as? ShowWorkoutDetailsInterface)?.exportWorkout(workoutId, format)
+            }
         }
     }
 
