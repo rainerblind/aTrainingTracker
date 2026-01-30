@@ -24,7 +24,7 @@ class ExportStatusViewHolder(val view: View) {
      * Binds the fetched export status data to the views.
      * It creates a view for each ExportType and adds it to the container.
      */
-    fun bind(fileBaseName: String) {
+    fun bind(fileBaseName: String?) {
         // If fileBaseName is null or empty, hide the entire component
         if (fileBaseName.isNullOrEmpty()) {
             view.visibility = View.GONE
