@@ -37,6 +37,7 @@
             android:text="@string/edit_auto_name"
             app:layout_constraintBottom_toBottomOf="@+id/layoutWorkoutName"
             app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/layoutWorkoutName"
             app:layout_constraintTop_toTopOf="@+id/layoutWorkoutName"
             tools:ignore="ContentDescription" />
 
