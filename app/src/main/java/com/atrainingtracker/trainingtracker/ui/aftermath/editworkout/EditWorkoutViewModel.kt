@@ -156,6 +156,20 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         _workoutData.value = currentData.copy(isTrainer = isChecked)
     }
 
+
+    // -- fancy / auto name
+    // LiveData to hold the list of fancy names for the dialog
+    val fancyNameList: LiveData<List<String>> by lazy {
+        MutableLiveData(WorkoutSummariesDatabaseManager.getFancyNameList())
+    }
+
+    // This function will be called when the user selects a name from the dialog.
+    fun onFancyNameSelected(baseName: String) {
+        val fullFancyName = WorkoutSummariesDatabaseManager.getFancyNameAndIncrement(baseName)
+
+        updateWorkoutName(fullFancyName)
+    }
+
     /**
      * Saves the current state of the WorkoutData object to the database.
      */
