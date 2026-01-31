@@ -82,7 +82,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     }
 
     @NonNull
-    public List<String> getLinkedEquipment(int workoutId) {
+    public List<String> getLinkedEquipment(long workoutId) {
         if (DEBUG) Log.d(TAG, "getLinkedEquipment, workoutId=" + workoutId);
 
         return getLinkedEquipment(new ActiveDevicesDbHelper(mContext).getDatabaseIdsOfActiveDevices(workoutId));
