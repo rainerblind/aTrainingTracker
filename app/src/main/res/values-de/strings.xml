@@ -708,7 +708,7 @@
     <string name="sport_types">Sportarten</string>
     <string name="configure_sport_types">Sportarten bearbeiten</string>
     <string name="select_sport_type_format">Wähle %1$s Sportarten</string>
-    <string name="edit_auto_name">auto name</string>
+    <string name="edit_auto_name">auto\nname</string>
     <string name="choose_auto_name">Wähle auto name</string>
 
     <string name="uploadAltitude">Höhe</string>
