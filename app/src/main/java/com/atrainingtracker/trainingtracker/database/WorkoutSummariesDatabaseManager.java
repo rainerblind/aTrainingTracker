@@ -96,6 +96,14 @@ public class WorkoutSummariesDatabaseManager {
         updateValues(workoutId, values);
     }
 
+    public static void updateCommuteAndTrainerFlag(long workoutId, boolean commute, boolean trainer) {
+        ContentValues values = new ContentValues();
+        values.put(WorkoutSummaries.COMMUTE, commute);
+        values.put(WorkoutSummaries.TRAINER, trainer);
+
+        updateValues(workoutId, values);
+    }
+
 
 
     @Nullable

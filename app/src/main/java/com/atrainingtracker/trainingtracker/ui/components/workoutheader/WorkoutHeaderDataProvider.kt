@@ -5,7 +5,6 @@ import android.database.Cursor
 import android.util.Log
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
-import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import java.text.ParseException
 import java.text.SimpleDateFormat
@@ -34,7 +33,7 @@ class WorkoutHeaderDataProvider(
             formattedDate = date,
             formattedTime = time,
             sportId = sportId,
-            sportType = sportType,
+            bSportType = sportType,
             sportName = sportName,
             equipmentName = equipmentName
         )

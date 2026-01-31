@@ -80,7 +80,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class EditWorkoutFragment extends Fragment {
+public class EditWorkoutFragmentClassic extends Fragment {
     public static final String TAG = "EditWorkoutFragment";
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
@@ -207,8 +207,8 @@ public class EditWorkoutFragment extends Fragment {
     };
 
     @NonNull
-    public static EditWorkoutFragment newInstance(long workoutId) {
-        EditWorkoutFragment editWorkoutFragment = new EditWorkoutFragment();
+    public static EditWorkoutFragmentClassic newInstance(long workoutId) {
+        EditWorkoutFragmentClassic editWorkoutFragment = new EditWorkoutFragmentClassic();
 
         Bundle args = new Bundle();
         args.putLong(WorkoutSummaries.WORKOUT_ID, workoutId);
