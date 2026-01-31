@@ -28,7 +28,7 @@ class EditWorkoutFragment : Fragment() {
 
     // UI View References
     private lateinit var editWorkoutName: TextInputEditText
-    private lateinit var buttonGenerateName: Button
+    private lateinit var buttonAutoName: Button
     private lateinit var spinnerSportType: Spinner
     private lateinit var spinnerEquipment: Spinner
     private lateinit var checkboxCommute: MaterialCheckBox
@@ -93,7 +93,7 @@ class EditWorkoutFragment : Fragment() {
 
     private fun findViews(view: View) {
         editWorkoutName = view.findViewById(R.id.editWorkoutName)
-        buttonGenerateName = view.findViewById(R.id.buttonGenerateName)
+        buttonAutoName = view.findViewById(R.id.buttonAutoName)
         spinnerSportType = view.findViewById(R.id.spinnerSportType)
         spinnerEquipment = view.findViewById(R.id.spinnerEquipment)
         checkboxCommute = view.findViewById(R.id.checkboxCommute)
@@ -343,7 +343,7 @@ class EditWorkoutFragment : Fragment() {
             parentFragmentManager.popBackStack()
         }
 
-        buttonGenerateName.setOnClickListener {
+        buttonAutoName.setOnClickListener {
             // TODO: Do the same as in the past...
         }
 
