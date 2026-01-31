@@ -1,14 +1,20 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.editworkout
 
+import android.app.AlertDialog
+import android.app.Dialog
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
+import android.widget.AdapterView.OnItemClickListener
+import android.widget.AdapterView.OnItemLongClickListener
 import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.ListView
 import android.widget.Spinner
+import android.widget.Toast
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
@@ -16,7 +22,9 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
+import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
+import com.atrainingtracker.trainingtracker.dialogs.EditFancyWorkoutNameDialog
 import com.google.android.material.checkbox.MaterialCheckBox
 import com.google.android.material.textfield.TextInputEditText
 
@@ -344,7 +352,7 @@ class EditWorkoutFragment : Fragment() {
         }
 
         buttonAutoName.setOnClickListener {
-            // TODO: Do the same as in the past...
+            showFancyWorkoutNameDialog()
         }
 
         checkboxCommute.setOnCheckedChangeListener { _, isChecked ->
@@ -353,6 +361,58 @@ class EditWorkoutFragment : Fragment() {
 
         checkboxTrainer.setOnCheckedChangeListener { _, isChecked ->
             viewModel.updateIsTrainer(isChecked)
+        }
+    }
+
+    private fun showFancyWorkoutNameDialog() {
+        // Observe the list of names from the ViewModel.
+        // We use .observe once here to get the data and build the dialog.
+        viewModel.fancyNameList.observe(viewLifecycleOwner) { nameList ->
+            if (nameList.isNullOrEmpty()) {
+                // Handle case where there are no fancy names
+                Toast.makeText(requireContext(), "No fancy names available.", Toast.LENGTH_SHORT).show()
+                return@observe
+            }
+
+            val dialogBuilder = AlertDialog.Builder(requireContext())
+            dialogBuilder.setTitle(R.string.choose_auto_name)
+
+            // The adapter for the list view inside the dialog
+            val arrayAdapter = ArrayAdapter<String>(
+                requireContext(),
+                android.R.layout.simple_list_item_1,
+                nameList
+            )
+
+            dialogBuilder.setAdapter(arrayAdapter) { dialog, which ->
+                // The 'which' parameter gives us the position of the clicked item.
+                val selectedBaseName = nameList[which]
+
+                // Short Click: Tell the ViewModel which name was selected.
+                viewModel.onFancyNameSelected(selectedBaseName)
+                dialog.dismiss()
+            }
+
+            val dialog = dialogBuilder.create()
+
+            // --- Handling the Long Click ---
+            // We need to access the ListView to set a long click listener.
+            dialog.listView?.let { listView ->
+                listView.onItemLongClickListener = AdapterView.OnItemLongClickListener { _, _, position, _ ->
+                    val selectedBaseName = nameList[position]
+
+                    // Replicate the classic behavior: open the edit dialog.
+                    val fancyNameId = WorkoutSummariesDatabaseManager.getFancyNameId(selectedBaseName)
+                    val editDialog = EditFancyWorkoutNameDialog.newInstance(fancyNameId)
+                    editDialog.show(parentFragmentManager, EditFancyWorkoutNameDialog.TAG)
+
+                    // Dismiss the current dialog and indicate we've handled the long click.
+                    dialog.dismiss()
+                    return@OnItemLongClickListener true
+                }
+            }
+
+            dialog.show()
         }
     }
 
