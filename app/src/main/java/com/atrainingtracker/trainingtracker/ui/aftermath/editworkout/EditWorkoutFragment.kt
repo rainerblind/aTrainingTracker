@@ -12,11 +12,11 @@ import android.widget.Spinner
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
-import com.atrainingtracker.BuildConfig.DEBUG
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
+import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.google.android.material.checkbox.MaterialCheckBox
 import com.google.android.material.textfield.TextInputEditText
 
@@ -51,7 +51,7 @@ class EditWorkoutFragment : Fragment() {
         super.onCreate(savedInstanceState)
         // Retrieve the workoutId from the arguments passed to the fragment
         arguments?.let {
-            workoutId = it.getLong("WORKOUT_ID", -1)
+            workoutId = it.getLong(WorkoutSummaries.WORKOUT_ID, -1)
         }
     }
 
@@ -83,9 +83,9 @@ class EditWorkoutFragment : Fragment() {
         viewModel = ViewModelProvider(this, factory).get(EditWorkoutViewModel::class.java)
 
         // Setup the UI components and listeners
-        setupSpinners()
         setupClickListeners()
         setupTextWatchers()
+        setupSpinnerOnItemSelectedListeners()
 
         // Observe the LiveData from the ViewModel
         observeViewModel()
@@ -133,6 +133,16 @@ class EditWorkoutFragment : Fragment() {
             // Populate Spinners
             setupSpinners()
         }
+    }
+
+    private fun setupSpinnerOnItemSelectedListeners() {
+        setupSportSpinnerOnItemSelected()
+        setupEquipmentSpinnerOnItemSelected()
+    }
+
+    private fun setupSpinners() {
+        setupSportSpinner()
+        setupEquipmentSpinner()
     }
 
 
@@ -207,14 +217,6 @@ class EditWorkoutFragment : Fragment() {
         Log.d("EditWorkoutFragment", "Sport type changed. The ViewModel has been notified.")
     }
 
-    private fun setupSpinners() {
-        setupSportSpinner()
-        setupSportSpinnerOnItemSelected()
-
-        setupEquipmentSpinner()
-        setupEquipmentSpinnerOnItemSelected()
-    }
-
     private fun setupSportSpinner() {
         val currentWorkoutData = viewModel.workoutData.value
         val bSportType = currentWorkoutData?.headerData?.bSportType
@@ -267,7 +269,7 @@ class EditWorkoutFragment : Fragment() {
         if (showAllEquipment) {
             equipmentList = equipmentDbHelper.getEquipment(currentBSportType)
         } else {
-            equipmentList = equipmentDbHelper.getLinkedEquipment(workoutId as Int)
+            equipmentList = equipmentDbHelper.getLinkedEquipment(workoutId)
 
             // when the equipment is not yet known and there is only one entry in the list, this entry will be selected as the current equipment
             if (currentEquipmentName == null && equipmentList.size == 1) {
@@ -316,14 +318,22 @@ class EditWorkoutFragment : Fragment() {
 
 
     private fun setupTextWatchers() {
-        // This is where we'll notify the ViewModel of changes in text fields
         editWorkoutName.doOnTextChanged { text, _, _, _ ->
-            // TODO: Call a viewModel.updateFancyName(text.toString()) method
+            // Notify the ViewModel of the name change
+            viewModel.updateWorkoutName(text.toString())
         }
         editDescription.doOnTextChanged { text, _, _, _ ->
-            // TODO: Call a method on viewModel to update the description
+            // Notify the ViewModel of the description change
+            viewModel.updateDescription(text.toString())
         }
-        // ... Add watchers for editGoal and editMethod ...
+        editGoal.doOnTextChanged { text, _, _, _ ->
+            // Notify the ViewModel of the goal change
+            viewModel.updateGoal(text.toString())
+        }
+        editMethod.doOnTextChanged { text, _, _, _ ->
+            // Notify the ViewModel of the method change
+            viewModel.updateMethod(text.toString())
+        }
     }
 
     private fun setupClickListeners() {
@@ -334,15 +344,29 @@ class EditWorkoutFragment : Fragment() {
         }
 
         buttonGenerateName.setOnClickListener {
-            // TODO: Call a method on the ViewModel to generate a new name
+            // TODO: Do the same as in the past...
         }
 
         checkboxCommute.setOnCheckedChangeListener { _, isChecked ->
-            // TODO: Call a method on viewModel to update the isCommute flag
+            viewModel.updateIsCommute(isChecked)
         }
 
         checkboxTrainer.setOnCheckedChangeListener { _, isChecked ->
-            // TODO: Call a method on viewModel to update the isTrainer flag
+            viewModel.updateIsTrainer(isChecked)
+        }
+    }
+
+    companion object {
+        const val TAG = "EditWorkoutFragment"
+
+        @JvmStatic
+        fun newInstance(workoutId: Long): EditWorkoutFragment {
+            val fragment = EditWorkoutFragment()
+            val args = Bundle().apply {
+                putLong(WorkoutSummaries.WORKOUT_ID, workoutId)
+            }
+            fragment.arguments = args
+            return fragment
         }
     }
 }

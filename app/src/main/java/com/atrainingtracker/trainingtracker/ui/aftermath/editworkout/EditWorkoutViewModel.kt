@@ -1,6 +1,7 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.editworkout
 
 import android.app.Application
+import androidx.compose.animation.core.copy
 import androidx.lifecycle.*
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
@@ -71,6 +72,16 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         }
     }
 
+    fun updateWorkoutName(newName: String) {
+        val currentData = _workoutData.value ?: return
+        // Avoid unnecessary updates if the text hasn't changed
+        if (newName == currentData.headerData.workoutName) return
+
+        _workoutData.value = currentData.copy(
+            headerData = currentData.headerData.copy(workoutName = newName)
+        )
+    }
+
     fun updateSportName(newSportName: String?) {
         if (newSportName == null) return
 
@@ -102,28 +113,47 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         )
     }
 
-    /**
-     * Updates the description data in the current WorkoutData object.
-     * This keeps the state in the ViewModel updated as the user types.
-     */
-    fun updateDescription(newDescription: String, newGoal: String, newMethod: String) {
-        // Get the current state from the LiveData. If it's null, we can't update anything.
+    fun updateDescription(newDescription: String) {
         val currentData = _workoutData.value ?: return
+        if (newDescription == currentData.descriptionData.description) return
 
-        // Create an updated copy of the DescriptionData.
-        val updatedDescriptionData = currentData.descriptionData.copy(
-            description = newDescription,
-            goal = newGoal,
-            method = newMethod
+        _workoutData.value = currentData.copy(
+            descriptionData = currentData.descriptionData.copy(description = newDescription)
         )
+    }
 
-        // Create an updated copy of the entire WorkoutData with the new DescriptionData.
-        val updatedWorkoutData = currentData.copy(
-            descriptionData = updatedDescriptionData
+    fun updateGoal(newGoal: String) {
+        val currentData = _workoutData.value ?: return
+        if (newGoal == currentData.descriptionData.goal) return
+
+        _workoutData.value = currentData.copy(
+            descriptionData = currentData.descriptionData.copy(goal = newGoal)
         )
+    }
 
-        // Post the new state to the LiveData. Any observers (like the Fragment) will be notified.
-        _workoutData.value = updatedWorkoutData
+    fun updateMethod(newMethod: String) {
+        val currentData = _workoutData.value ?: return
+        if (newMethod == currentData.descriptionData.method) return
+
+        _workoutData.value = currentData.copy(
+            descriptionData = currentData.descriptionData.copy(method = newMethod)
+        )
+    }
+
+    fun updateIsCommute(isChecked: Boolean) {
+        val currentData = _workoutData.value ?: return
+        // Avoid unnecessary updates
+        if (isChecked == currentData.isCommute) return
+
+        _workoutData.value = currentData.copy(isCommute = isChecked)
+    }
+
+    fun updateIsTrainer(isChecked: Boolean) {
+        val currentData = _workoutData.value ?: return
+        // Avoid unnecessary updates
+        if (isChecked == currentData.isTrainer) return
+
+        _workoutData.value = currentData.copy(isTrainer = isChecked)
     }
 
     /**
