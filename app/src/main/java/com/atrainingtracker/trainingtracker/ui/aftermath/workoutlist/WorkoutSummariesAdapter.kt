@@ -1,4 +1,4 @@
-package com.atrainingtracker.trainingtracker.ui.workoutlist
+package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 
 import android.app.Activity
 import android.view.LayoutInflater
@@ -13,6 +13,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.activities.WorkoutDetailsActivity
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusViewHolder
 import com.atrainingtracker.trainingtracker.ui.components.map.MapComponent
 import com.atrainingtracker.trainingtracker.ui.components.map.MapContentType
@@ -39,7 +40,7 @@ class WorkoutSummariesAdapter(
     private val fragmentManager: FragmentManager,
     private val isPlayServiceAvailable: Boolean,
     private val viewModel: WorkoutSummariesViewModel
-) : ListAdapter<WorkoutSummary, WorkoutSummariesAdapter.SummaryViewHolder>(WorkoutDiffCallback()) {
+) : ListAdapter<WorkoutData, WorkoutSummariesAdapter.SummaryViewHolder>(WorkoutDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SummaryViewHolder {
         val row = LayoutInflater.from(parent.context)
@@ -80,7 +81,7 @@ class WorkoutSummariesAdapter(
         private val mapComponent: MapComponent?
 
         // The current data for this specific row, set during bind().
-        private lateinit var workoutSummary: WorkoutSummary
+        private lateinit var workoutSummary: WorkoutData
 
         init {
             // --- Find Views ---
@@ -215,7 +216,7 @@ class WorkoutSummariesAdapter(
         /**
          * Binds a pre-composed WorkoutSummary object to the views. This is called for each item.
          */
-        fun bind(summary: WorkoutSummary) {
+        fun bind(summary: WorkoutData) {
             // Store the summary for use in the click listeners.
             this.workoutSummary = summary
 
@@ -235,13 +236,13 @@ class WorkoutSummariesAdapter(
      * A DiffUtil.ItemCallback to help ListAdapter determine which items in the list have changed.
      * This enables efficient updates and animations.
      */
-    class WorkoutDiffCallback : DiffUtil.ItemCallback<WorkoutSummary>() {
-        override fun areItemsTheSame(oldItem: WorkoutSummary, newItem: WorkoutSummary): Boolean {
+    class WorkoutDiffCallback : DiffUtil.ItemCallback<WorkoutData>() {
+        override fun areItemsTheSame(oldItem: WorkoutData, newItem: WorkoutData): Boolean {
             // The ID is the unique identifier for an item.
             return oldItem.id == newItem.id
         }
 
-        override fun areContentsTheSame(oldItem: WorkoutSummary, newItem: WorkoutSummary): Boolean {
+        override fun areContentsTheSame(oldItem: WorkoutData, newItem: WorkoutData): Boolean {
             // The data class's generated `equals` method compares all properties.
             // If any property is different, the content has changed.
             return oldItem == newItem
