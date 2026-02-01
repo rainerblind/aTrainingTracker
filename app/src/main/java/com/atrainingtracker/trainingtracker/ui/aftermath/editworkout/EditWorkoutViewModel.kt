@@ -7,11 +7,13 @@ import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
+import com.atrainingtracker.trainingtracker.exporter.ExportManager
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.DescriptionDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderDataProvider
+import com.atrainingtracker.trainingtracker.util.Event
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -25,6 +27,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     // LiveData to hold the entire WorkoutData object. The UI will observe this.
     private val _workoutData = MutableLiveData<WorkoutData>()
     val workoutData: LiveData<WorkoutData> = _workoutData
+    val saveFinishedEvent = MutableLiveData<Event<Boolean>>()
 
     private val headerDataProvider =
         WorkoutHeaderDataProvider(application, EquipmentDbHelper(application))
@@ -181,6 +184,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         viewModelScope.launch(Dispatchers.IO) {
             val workoutId = dataToSave.id
 
+            // -- update the Database
             // Update Workout Name
             WorkoutSummariesDatabaseManager.updateWorkoutName(
                 workoutId,
@@ -210,6 +214,12 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
                 dataToSave.descriptionData.goal ?: "",
                 dataToSave.descriptionData.method ?: ""
             )
+
+            // -- trigger export
+            val exportManager = ExportManager(application)
+            exportManager.exportWorkout(dataToSave.fileBaseName)
+
+            saveFinishedEvent.postValue(Event(true))
         }
     }
 }
