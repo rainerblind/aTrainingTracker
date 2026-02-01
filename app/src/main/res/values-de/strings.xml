@@ -45,7 +45,7 @@
     <string name="edit_device">Sensor bearbeiten</string>
     <string name="edit_location">Standort bearbeiten</string>
     <string name="Edit_Location">Standort bearbeiten</string>
-    <string name="edit_workout_details">Trainingseinheit überarbeiten</string>
+    <string name="edit_workout">Trainingseinheit überarbeiten</string>
     <string name="Edit_Location_Message">Bearbeite den Namen und die Höhe dieses Standortes</string>
     <string name="edit_wheel_circumference">Radumfang eingeben</string>
     <string name="edit_calibration_factor">Kalibrierungsfaktor eingeben</string>
@@ -708,7 +708,7 @@
     <string name="sport_types">Sportarten</string>
     <string name="configure_sport_types">Sportarten bearbeiten</string>
     <string name="select_sport_type_format">Wähle %1$s Sportarten</string>
-    <string name="edit_auto_name">auto name</string>
+    <string name="edit_auto_name">auto\nname</string>
     <string name="choose_auto_name">Wähle auto name</string>
 
     <string name="uploadAltitude">Höhe</string>

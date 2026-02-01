@@ -7,7 +7,7 @@ data class WorkoutHeaderData(
     val formattedDate: String,
     val formattedTime: String,
     val sportId: Long,
-    val sportType: BSportType,
-    val sportName: String,
-    val equipmentName: String?
+    val bSportType: BSportType,
+    var sportName: String,
+    var equipmentName: String?
 )

@@ -53,14 +53,14 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
 import com.atrainingtracker.trainingtracker.dialogs.ReallyDeleteWorkoutDialog;
-import com.atrainingtracker.trainingtracker.fragments.aftermath.EditWorkoutFragment;
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusDialogFragment;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapAftermathFragment;
 import com.atrainingtracker.trainingtracker.helpers.CalcExtremaValuesThread;
 import com.atrainingtracker.trainingtracker.helpers.DeleteWorkoutThread;
 import com.atrainingtracker.trainingtracker.interfaces.ReallyDeleteDialogInterface;
+// import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutFragment;
 
-
+@Deprecated
 public class WorkoutDetailsActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener,
         ReallyDeleteDialogInterface {
@@ -262,10 +262,10 @@ public class WorkoutDetailsActivity extends AppCompatActivity
     private void setContentFragment(int menuId) {
         Fragment fragment = null;
         String tag = switch (menuId) {
-            case R.id.edit_workout_details -> {
-                fragment = EditWorkoutFragment.newInstance(mWorkoutID);
-                yield EditWorkoutFragment.TAG;
-            }
+            // case R.id.edit_workout_details -> {
+            //    fragment = EditWorkoutFragment.newInstance(mWorkoutID);
+            //    yield EditWorkoutFragment.TAG;
+            // }
             case R.id.drawer_map -> {
                 fragment = TrackOnMapAftermathFragment.newInstance(mWorkoutID);
                 yield TrackOnMapAftermathFragment.TAG;
