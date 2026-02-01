@@ -156,7 +156,7 @@ class WorkoutSummariesAdapter(
 
             // --- Short-Click Listener for Navigation ---
             val detailsClickListener = View.OnClickListener {
-                TrainingApplication.startEditWorkoutActivity(workoutSummary.id)
+                TrainingApplication.startEditWorkoutActivity(workoutSummary.id, false) // only show the editable fields
             }
             // Attach this listener to multiple views
             headerViewHolder?.view?.setOnClickListener(detailsClickListener)
