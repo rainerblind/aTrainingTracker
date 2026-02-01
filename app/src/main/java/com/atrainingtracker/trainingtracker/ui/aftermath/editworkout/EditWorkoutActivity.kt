@@ -38,6 +38,10 @@ class EditWorkoutActivity : AppCompatActivity() {
     private lateinit var viewModel: EditWorkoutViewModel
     private var workoutId: Long = -1
 
+    private var showDetails = false
+    private var showExtrema = false
+    private var showMap = false
+
     // UI View References
     private lateinit var editWorkoutName: TextInputEditText
     private lateinit var buttonAutoName: Button
@@ -66,6 +70,10 @@ class EditWorkoutActivity : AppCompatActivity() {
 
 
     companion object {
+        const val EXTRA_SHOW_DETAILS = "com.atrainingtracker.trainingtracker.SHOW_DETAILS"
+        const val EXTRA_SHOW_EXTREMA = "com.atrainingtracker.trainingtracker.SHOW_EXTREMA"
+        const val EXTRA_SHOW_MAP = "com.atrainingtracker.trainingtracker.SHOW_MAP"
+
         private const val MAX_WORKOUT_TIME_TO_SHOW_DELETE_BUTTON = 5*60 // 5 minutes
     }
 
@@ -75,8 +83,11 @@ class EditWorkoutActivity : AppCompatActivity() {
         // Set the content view
         setContentView(R.layout.edit_workout_modern)
 
-        // Retrieve the workoutId from the Intent's extras
+        // Retrieve the parameters from the Intent's extras
         workoutId = intent.getLongExtra(WorkoutSummaries.WORKOUT_ID, -1)
+        showDetails = intent.getBooleanExtra(EXTRA_SHOW_DETAILS, false)
+        showExtrema = intent.getBooleanExtra(EXTRA_SHOW_EXTREMA, false)
+        showMap = intent.getBooleanExtra(EXTRA_SHOW_MAP, false)
 
         // Ensure we have a valid workoutId before proceeding
         if (workoutId == -1L) {
@@ -117,20 +128,32 @@ class EditWorkoutActivity : AppCompatActivity() {
         editMethod = findViewById(R.id.editMethod)
 
         val detailsView = findViewById<View>(R.id.workout_details_include)
-        detailsViewHolder = detailsView?.let { WorkoutDetailsViewHolder(it, this) }
+        if (showDetails) {
+            detailsViewHolder = detailsView?.let { WorkoutDetailsViewHolder(it, this) }
+        } else {
+            detailsView.visibility = View.GONE
+        }
 
         val extremaView = findViewById<View>(R.id.extrema_values_include)
-        extremaValuesViewHolder = extremaView?.let { ExtremaValuesViewHolder(it) }
+        if (showExtrema) {
+            extremaValuesViewHolder = extremaView?.let { ExtremaValuesViewHolder(it) }
+        } else {
+            extremaView.visibility = View.GONE
+        }
 
-        val isPlayAvailable = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(this) == ConnectionResult.SUCCESS
+
         val mapView = findViewById<MapView>(R.id.mapView_include)
-        mapComponent = if (isPlayAvailable && mapView != null) {
-            MapComponent(mapView, this) { workoutId ->
-                TrainingApplication.startWorkoutDetailsActivity(workoutId, WorkoutDetailsActivity.SelectedFragment.MAP)
+        if (showMap) {
+            val isPlayAvailable = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(this) == ConnectionResult.SUCCESS
+            if (isPlayAvailable) {
+                mapComponent = MapComponent(mapView, this) { workoutId ->
+                    TrainingApplication.startWorkoutDetailsActivity(workoutId, WorkoutDetailsActivity.SelectedFragment.MAP)
+                }
+            } else {
+                mapView.visibility = View.GONE
             }
         } else {
-            mapView?.visibility = View.GONE
-            null
+            mapView.visibility = View.GONE
         }
 
         buttonSave = findViewById(R.id.buttonSave)

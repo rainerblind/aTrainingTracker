@@ -824,12 +824,16 @@ public class TrainingApplication extends Application {
         cAppContext.startActivity(intent);
     }
 
-    // TODO: add flag to show all the details?
-    public static void startEditWorkoutActivity(long workoutId) {
+    public static void startEditWorkoutActivity(long workoutId, boolean showAllDetails) {
         if (DEBUG) Log.i(TAG, "startEditWorkoutActivity(" + workoutId + ")");
 
         Bundle bundle = new Bundle();
         bundle.putLong(WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_ID, workoutId);
+
+        bundle.putBoolean(EditWorkoutActivity.EXTRA_SHOW_DETAILS, showAllDetails);
+        bundle.putBoolean(EditWorkoutActivity.EXTRA_SHOW_EXTREMA, showAllDetails);
+        bundle.putBoolean(EditWorkoutActivity.EXTRA_SHOW_MAP, showAllDetails);
+
         Intent intent = new Intent(cAppContext, EditWorkoutActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.putExtras(bundle);
@@ -1162,7 +1166,7 @@ public class TrainingApplication extends Application {
     protected void trackingStopped() {
         sendBroadcast(new Intent(BANALService.RESET_ACCUMULATORS_INTENT)
                 .setPackage(getPackageName()));
-        startEditWorkoutActivity(mWorkoutID);
+        startEditWorkoutActivity(mWorkoutID, true); // here, the EditWorkoutActivity shall show the details, extrema values and the map.
         mNotificationManager.cancel(TRACKING_NOTIFICATION_ID);
     }
 
