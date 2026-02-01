@@ -1,22 +1,17 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.editworkout
 
-import android.app.AlertDialog
-import android.app.Dialog
+import android.app.Activity
 import android.os.Bundle
 import android.util.Log
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import android.widget.AdapterView
-import android.widget.AdapterView.OnItemClickListener
-import android.widget.AdapterView.OnItemLongClickListener
 import android.widget.ArrayAdapter
 import android.widget.Button
-import android.widget.ListView
 import android.widget.Spinner
 import android.widget.Toast
 import androidx.core.widget.doOnTextChanged
-import androidx.fragment.app.Fragment
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
@@ -28,8 +23,7 @@ import com.atrainingtracker.trainingtracker.dialogs.EditFancyWorkoutNameDialog
 import com.google.android.material.checkbox.MaterialCheckBox
 import com.google.android.material.textfield.TextInputEditText
 
-
-class EditWorkoutFragment : Fragment() {
+class EditWorkoutActivity : AppCompatActivity() {
 
     private lateinit var viewModel: EditWorkoutViewModel
     private var workoutId: Long = -1
@@ -54,41 +48,29 @@ class EditWorkoutFragment : Fragment() {
     private var showAllEquipment = false
     private lateinit var sportTypeNameList: MutableList<String>
 
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Retrieve the workoutId from the arguments passed to the fragment
-        arguments?.let {
-            workoutId = it.getLong(WorkoutSummaries.WORKOUT_ID, -1)
-        }
-    }
 
-    override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
-        // Inflate the new modern layout
-        val view = inflater.inflate(R.layout.edit_workout_modern, container, false)
+        // Set the content view
+        setContentView(R.layout.edit_workout_modern)
 
-        // Find all the views by their IDs
-        findViews(view)
-
-        return view
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
+        // Retrieve the workoutId from the Intent's extras
+        workoutId = intent.getLongExtra(WorkoutSummaries.WORKOUT_ID, -1)
 
         // Ensure we have a valid workoutId before proceeding
         if (workoutId == -1L) {
-            // Handle error: No workout ID provided. Maybe close the fragment.
-            parentFragmentManager.popBackStack()
+            Toast.makeText(this, "Error: Invalid Workout ID.", Toast.LENGTH_SHORT).show()
+            finish() // Close the activity if the ID is missing
             return
         }
 
+        // Find all the views by their IDs
+        findViews()
+
         // Create the ViewModel using our factory to pass the workoutId
-        val factory = EditWorkoutViewModelFactory(requireActivity().application, workoutId)
+        val factory = EditWorkoutViewModelFactory(application, workoutId)
         viewModel = ViewModelProvider(this, factory).get(EditWorkoutViewModel::class.java)
+
 
         // Setup the UI components and listeners
         setupClickListeners()
@@ -99,21 +81,21 @@ class EditWorkoutFragment : Fragment() {
         observeViewModel()
     }
 
-    private fun findViews(view: View) {
-        editWorkoutName = view.findViewById(R.id.editWorkoutName)
-        buttonAutoName = view.findViewById(R.id.buttonAutoName)
-        spinnerSportType = view.findViewById(R.id.spinnerSportType)
-        spinnerEquipment = view.findViewById(R.id.spinnerEquipment)
-        checkboxCommute = view.findViewById(R.id.checkboxCommute)
-        checkboxTrainer = view.findViewById(R.id.checkboxTrainer)
-        editDescription = view.findViewById(R.id.editDescription)
-        editGoal = view.findViewById(R.id.editGoal)
-        editMethod = view.findViewById(R.id.editMethod)
-        buttonSave = view.findViewById(R.id.buttonSave)
+    private fun findViews() {
+        editWorkoutName = findViewById(R.id.editWorkoutName)
+        buttonAutoName = findViewById(R.id.buttonAutoName)
+        spinnerSportType = findViewById(R.id.spinnerSportType)
+        spinnerEquipment = findViewById(R.id.spinnerEquipment)
+        checkboxCommute = findViewById(R.id.checkboxCommute)
+        checkboxTrainer = findViewById(R.id.checkboxTrainer)
+        editDescription = findViewById(R.id.editDescription)
+        editGoal = findViewById(R.id.editGoal)
+        editMethod = findViewById(R.id.editMethod)
+        buttonSave = findViewById(R.id.buttonSave)
     }
 
     private fun observeViewModel() {
-        viewModel.workoutData.observe(viewLifecycleOwner) { workoutData ->
+        viewModel.workoutData.observe(this) { workoutData ->
             // This block is called when the initial data is loaded and on every update
             if (workoutData == null) return@observe
 
@@ -140,6 +122,18 @@ class EditWorkoutFragment : Fragment() {
 
             // Populate Spinners
             setupSpinners()
+        }
+
+        viewModel.saveFinishedEvent.observe(this) { event ->
+            event.getContentIfNotHandled()?.let { success ->
+                if (success) {
+                    // This is the classic, correct pattern you wanted!
+                    setResult(Activity.RESULT_OK) // Signal success to the calling activity
+                    finish() // Close this activity
+                } else {
+                    Toast.makeText(this, "Error saving workout.", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 
@@ -197,8 +191,8 @@ class EditWorkoutFragment : Fragment() {
 
                 // This is the "Show all equipment" item
                 if (selectedEquipment == getString(R.string.equipment_all)
-                            || selectedEquipment == getString(R.string.equipment_all_shoes)
-                            || selectedEquipment == getString(R.string.equipment_all_bikes)) {  // -> user selected 'show all equipment/shoes/bikes'
+                    || selectedEquipment == getString(R.string.equipment_all_shoes)
+                    || selectedEquipment == getString(R.string.equipment_all_bikes)) {  // -> user selected 'show all equipment/shoes/bikes'
                     if (!showAllEquipment) {
                         showAllEquipment = true
                         setupEquipmentSpinner()         // Rebuild the spinner with all items
@@ -255,7 +249,7 @@ class EditWorkoutFragment : Fragment() {
 
         // Create the adapter and assign it to the spinner
         sportTypeAdapter = ArrayAdapter(
-            requireContext(),
+            this,
             android.R.layout.simple_spinner_item,
             sportTypeNameList
         )
@@ -271,7 +265,7 @@ class EditWorkoutFragment : Fragment() {
         val currentBSportType = viewModel.workoutData.value?.headerData?.bSportType ?: BSportType.UNKNOWN
         var currentEquipmentName = viewModel.workoutData.value?.headerData?.equipmentName
 
-        val equipmentDbHelper = EquipmentDbHelper(getActivity())
+        val equipmentDbHelper = EquipmentDbHelper(this)
         var equipmentList: MutableList<String?> = ArrayList<String?>()
 
         if (showAllEquipment) {
@@ -311,7 +305,7 @@ class EditWorkoutFragment : Fragment() {
 
         // Create the adapter and assign it to the spinner
         equipmentAdapter = ArrayAdapter(
-            requireContext(),
+            this,
             android.R.layout.simple_spinner_item,
             equipmentList
         )
@@ -347,8 +341,7 @@ class EditWorkoutFragment : Fragment() {
     private fun setupClickListeners() {
         buttonSave.setOnClickListener {
             viewModel.saveChanges()
-            // Optional: Close the fragment after saving
-            parentFragmentManager.popBackStack()
+
         }
 
         buttonAutoName.setOnClickListener {
@@ -367,19 +360,19 @@ class EditWorkoutFragment : Fragment() {
     private fun showFancyWorkoutNameDialog() {
         // Observe the list of names from the ViewModel.
         // We use .observe once here to get the data and build the dialog.
-        viewModel.fancyNameList.observe(viewLifecycleOwner) { nameList ->
+        viewModel.fancyNameList.observe(this) { nameList ->
             if (nameList.isNullOrEmpty()) {
                 // Handle case where there are no fancy names
-                Toast.makeText(requireContext(), "No fancy names available.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "No fancy names available.", Toast.LENGTH_SHORT).show()
                 return@observe
             }
 
-            val dialogBuilder = AlertDialog.Builder(requireContext())
+            val dialogBuilder = AlertDialog.Builder(this)
             dialogBuilder.setTitle(R.string.choose_auto_name)
 
             // The adapter for the list view inside the dialog
             val arrayAdapter = ArrayAdapter<String>(
-                requireContext(),
+                this,
                 android.R.layout.simple_list_item_1,
                 nameList
             )
@@ -404,7 +397,7 @@ class EditWorkoutFragment : Fragment() {
                     // Replicate the classic behavior: open the edit dialog.
                     val fancyNameId = WorkoutSummariesDatabaseManager.getFancyNameId(selectedBaseName)
                     val editDialog = EditFancyWorkoutNameDialog.newInstance(fancyNameId)
-                    editDialog.show(parentFragmentManager, EditFancyWorkoutNameDialog.TAG)
+                    editDialog.show(supportFragmentManager, EditFancyWorkoutNameDialog.TAG)
 
                     // Dismiss the current dialog and indicate we've handled the long click.
                     dialog.dismiss()
@@ -416,17 +409,4 @@ class EditWorkoutFragment : Fragment() {
         }
     }
 
-    companion object {
-        const val TAG = "EditWorkoutFragment"
-
-        @JvmStatic
-        fun newInstance(workoutId: Long): EditWorkoutFragment {
-            val fragment = EditWorkoutFragment()
-            val args = Bundle().apply {
-                putLong(WorkoutSummaries.WORKOUT_ID, workoutId)
-            }
-            fragment.arguments = args
-            return fragment
-        }
-    }
 }
