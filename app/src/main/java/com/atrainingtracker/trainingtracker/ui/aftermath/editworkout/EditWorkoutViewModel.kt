@@ -18,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class EditWorkoutViewModel(application: Application, private val workoutId: Long) : AndroidViewModel(application) {
+    private val context = application
 
     private val workoutSummariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance()
     private val sportTypeDatabaseManager = SportTypeDatabaseManager.getInstance()
@@ -28,6 +29,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     private val _workoutData = MutableLiveData<WorkoutData>()
     val workoutData: LiveData<WorkoutData> = _workoutData
     val saveFinishedEvent = MutableLiveData<Event<Boolean>>()
+    val deleteFinishedEvent = MutableLiveData<Event<Boolean>>()
 
     private val headerDataProvider =
         WorkoutHeaderDataProvider(application, EquipmentDbHelper(application))
@@ -61,6 +63,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
                     fileBaseName = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.FILE_BASE_NAME)),
                     isCommute = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.COMMUTE)) > 0,
                     isTrainer = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.TRAINER)) > 0,
+                    activeTime = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_ACTIVE_s)),
 
                     headerData = headerData,
                     detailsData = detailsData,
@@ -222,6 +225,14 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
             saveFinishedEvent.postValue(Event(true))
         }
     }
+
+    fun deleteWorkout() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val success = WorkoutSummariesDatabaseManager.deleteWorkout(workoutId, context)
+            deleteFinishedEvent.postValue(Event(success))
+        }
+    }
+
 }
 
 class EditWorkoutViewModelFactory(private val application: Application, private val workoutId: Long) : ViewModelProvider.Factory {

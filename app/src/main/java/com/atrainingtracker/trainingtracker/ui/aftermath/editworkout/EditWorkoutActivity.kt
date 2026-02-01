@@ -16,6 +16,7 @@ import androidx.lifecycle.ViewModelProvider
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
@@ -39,6 +40,8 @@ class EditWorkoutActivity : AppCompatActivity() {
     private lateinit var editGoal: TextInputEditText
     private lateinit var editMethod: TextInputEditText
     private lateinit var buttonSave: Button
+    private lateinit var buttonDelete: Button
+
 
     // Adapters for Spinners
     private lateinit var sportTypeAdapter: ArrayAdapter<String>
@@ -47,6 +50,10 @@ class EditWorkoutActivity : AppCompatActivity() {
     private var showAllSportTypes = false
     private var showAllEquipment = false
     private lateinit var sportTypeNameList: MutableList<String>
+
+    companion object {
+        private const val MAX_WORKOUT_TIME_TO_SHOW_DELETE_BUTTON = 5*60 // 5 minutes
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -92,6 +99,7 @@ class EditWorkoutActivity : AppCompatActivity() {
         editGoal = findViewById(R.id.editGoal)
         editMethod = findViewById(R.id.editMethod)
         buttonSave = findViewById(R.id.buttonSave)
+        buttonDelete = findViewById(R.id.buttonDelete)
     }
 
     private fun observeViewModel() {
@@ -122,6 +130,20 @@ class EditWorkoutActivity : AppCompatActivity() {
 
             // Populate Spinners
             setupSpinners()
+
+            // -- visibility of delete button
+            // By default, the button is visible
+            buttonDelete.visibility = View.VISIBLE
+
+            // when the workout is more than some minutes, the button is not visible
+            if (workoutData.activeTime > MAX_WORKOUT_TIME_TO_SHOW_DELETE_BUTTON) {
+                buttonDelete.visibility = View.GONE
+            }
+
+            // similarly, when tracking, the button is also not visible
+            if (TrainingApplication.isTracking()) {
+                buttonDelete.visibility = View.GONE
+            }
         }
 
         viewModel.saveFinishedEvent.observe(this) { event ->
@@ -132,6 +154,18 @@ class EditWorkoutActivity : AppCompatActivity() {
                     finish() // Close this activity
                 } else {
                     Toast.makeText(this, "Error saving workout.", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
+        viewModel.deleteFinishedEvent.observe(this) { event ->
+            event.getContentIfNotHandled()?.let { success ->
+                if (success) {
+                    Toast.makeText(this, "Workout deleted", Toast.LENGTH_SHORT).show()
+                    setResult(Activity.RESULT_OK)
+                    finish()
+                } else {
+                    Toast.makeText(this, "Error deleting workout", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -339,10 +373,6 @@ class EditWorkoutActivity : AppCompatActivity() {
     }
 
     private fun setupClickListeners() {
-        buttonSave.setOnClickListener {
-            viewModel.saveChanges()
-
-        }
 
         buttonAutoName.setOnClickListener {
             showFancyWorkoutNameDialog()
@@ -355,9 +385,29 @@ class EditWorkoutActivity : AppCompatActivity() {
         checkboxTrainer.setOnCheckedChangeListener { _, isChecked ->
             viewModel.updateIsTrainer(isChecked)
         }
+
+        buttonSave.setOnClickListener {
+            viewModel.saveChanges()
+        }
+
+        buttonDelete.setOnClickListener {
+            showDeleteConfirmationDialog()
+        }
     }
 
-    private fun showFancyWorkoutNameDialog() {
+    private fun showDeleteConfirmationDialog() {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.delete_workout)
+            .setMessage(R.string.really_delete_workout)
+            .setPositiveButton(R.string.delete_workout) { _, _ ->
+                // Tell the ViewModel to delete the workout
+                viewModel.deleteWorkout()
+            }
+            .setNegativeButton(R.string.Cancel, null)
+            .show()
+    }
+
+        private fun showFancyWorkoutNameDialog() {
         // Observe the list of names from the ViewModel.
         // We use .observe once here to get the data and build the dialog.
         viewModel.fancyNameList.observe(this) { nameList ->

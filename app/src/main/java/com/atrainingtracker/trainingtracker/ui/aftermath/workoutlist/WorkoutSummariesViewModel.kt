@@ -61,6 +61,7 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
                                 fileBaseName = c.getString(c.getColumnIndexOrThrow(WorkoutSummaries.FILE_BASE_NAME)),
                                 isCommute = c.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.COMMUTE)) > 0,
                                 isTrainer = c.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.TRAINER)) > 0,
+                                activeTime = c.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_ACTIVE_s)),
 
                                 headerData = headerData,
                                 detailsData = detailsData,
