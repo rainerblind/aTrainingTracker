@@ -45,7 +45,7 @@
     <string name="edit_device">edit device</string>
     <string name="edit_location">edit location</string>
     <string name="Edit_Location">Edit Location</string>
-    <string name="edit_workout_details">edit workout details</string>
+    <string name="edit_workout">edit workout</string>
     <string name="Edit_Location_Message">Edit the name and altitude of this location</string>
     <string name="edit_wheel_circumference">edit wheel circumference</string>
     <string name="edit_calibration_factor">edit calibration factor</string>
@@ -1056,7 +1056,7 @@
     <string name="cancel">Cancel</string>
 
     <!-- Edit workout name -->
-    <string name="hint_workout_name">workout name</string>
+    <string name="hint_workout_name">workout\nname</string>
     <string name="edit_workout_name">edit workout name</string>
 
     <!-- workout summary description-->

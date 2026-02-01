@@ -1,4 +1,4 @@
-package com.atrainingtracker.trainingtracker.ui.workoutlist
+package com.atrainingtracker.trainingtracker.ui.aftermath
 
 import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.DescriptionData
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaData
@@ -9,10 +9,14 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutH
  * A composite data class that represents all data needed for a single row in the workout list.
  * It holds the raw data AND the structured data for each component.
  */
-data class WorkoutSummary(
+data class WorkoutData(
     // --- Raw Data (Primary Key) ---
     val id: Long,
     val fileBaseName: String?,
+    val isCommute: Boolean,
+    val isTrainer: Boolean,
+    val activeTime: Long,
+
 
     // --- Composed Component Data ---
     val headerData: WorkoutHeaderData,

@@ -63,7 +63,7 @@ public class ActiveDevicesDbHelper extends SQLiteOpenHelper {
     }
 
     @NonNull
-    public List<Integer> getDatabaseIdsOfActiveDevices(int workoutId) {
+    public List<Integer> getDatabaseIdsOfActiveDevices(long workoutId) {
         if (DEBUG) Log.d(TAG, "getDatabaseIdsOfActiveDevices workoutId=" + workoutId);
 
         List<Integer> result = new LinkedList<>();

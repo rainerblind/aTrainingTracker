@@ -1,13 +1,11 @@
 package com.atrainingtracker.trainingtracker.ui.components.workoutheader
 
-import android.content.Context
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.view.isVisible
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
-import com.atrainingtracker.trainingtracker.MyHelper
 
 
 class WorkoutHeaderViewHolder(val view: View) {
@@ -33,7 +31,7 @@ class WorkoutHeaderViewHolder(val view: View) {
         tvTime.text = data.formattedTime
 
         // TODO: move to some general helper class
-        val iconResId: Int = when (data.sportType) {
+        val iconResId: Int = when (data.bSportType) {
             BSportType.RUN -> R.drawable.bsport_run
             BSportType.BIKE -> R.drawable.bsport_bike
             else -> R.drawable.bsport_other

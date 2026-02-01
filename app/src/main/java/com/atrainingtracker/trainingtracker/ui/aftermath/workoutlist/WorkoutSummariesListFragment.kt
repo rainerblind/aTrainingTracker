@@ -1,4 +1,4 @@
-package com.atrainingtracker.trainingtracker.ui.workoutlist
+package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 
 import android.os.Bundle
 import android.view.LayoutInflater
