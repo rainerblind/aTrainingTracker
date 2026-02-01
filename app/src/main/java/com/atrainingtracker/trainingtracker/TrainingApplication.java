@@ -42,7 +42,6 @@ import androidx.core.content.ContextCompat;
 import android.util.Log;
 import android.widget.Toast;
 
-import com.atrainingtracker.BuildConfig;
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.BSportType;
@@ -69,6 +68,7 @@ import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleDatabaseMana
 import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleService;
 import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleServiceBuildIn;
 import com.atrainingtracker.trainingtracker.smartwatch.pebble.Watchapp;
+import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutActivity;
 import com.dropbox.core.json.JsonReadException;
 import com.dropbox.core.oauth.DbxCredential;
 
@@ -811,6 +811,7 @@ public class TrainingApplication extends Application {
         cResumeFromCrash = resumeFromCrash;
     }
 
+    @Deprecated
     public static void startWorkoutDetailsActivity(long workoutId, @NonNull WorkoutDetailsActivity.SelectedFragment selectedFragment) {
         if (DEBUG) Log.i(TAG, "startWorkoutDetailsActivity(" + workoutId + ")");
 
@@ -822,6 +823,19 @@ public class TrainingApplication extends Application {
         intent.putExtras(bundle);
         cAppContext.startActivity(intent);
     }
+
+    // TODO: add flag to show all the details?
+    public static void startEditWorkoutActivity(long workoutId) {
+        if (DEBUG) Log.i(TAG, "startEditWorkoutActivity(" + workoutId + ")");
+
+        Bundle bundle = new Bundle();
+        bundle.putLong(WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_ID, workoutId);
+        Intent intent = new Intent(cAppContext, EditWorkoutActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        intent.putExtras(bundle);
+        cAppContext.startActivity(intent);
+    }
+
 
     @Override
     public void onCreate() {
@@ -1148,7 +1162,7 @@ public class TrainingApplication extends Application {
     protected void trackingStopped() {
         sendBroadcast(new Intent(BANALService.RESET_ACCUMULATORS_INTENT)
                 .setPackage(getPackageName()));
-        startWorkoutDetailsActivity(mWorkoutID, WorkoutDetailsActivity.SelectedFragment.EDIT_DETAILS);
+        startEditWorkoutActivity(mWorkoutID);
         mNotificationManager.cancel(TRACKING_NOTIFICATION_ID);
     }
 

@@ -156,7 +156,7 @@ class WorkoutSummariesAdapter(
 
             // --- Short-Click Listener for Navigation ---
             val detailsClickListener = View.OnClickListener {
-                TrainingApplication.startWorkoutDetailsActivity(workoutSummary.id, WorkoutDetailsActivity.SelectedFragment.EDIT_DETAILS)
+                TrainingApplication.startEditWorkoutActivity(workoutSummary.id)
             }
             // Attach this listener to multiple views
             headerViewHolder?.view?.setOnClickListener(detailsClickListener)
