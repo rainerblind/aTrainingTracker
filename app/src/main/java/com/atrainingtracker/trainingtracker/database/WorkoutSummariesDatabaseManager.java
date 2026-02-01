@@ -34,6 +34,7 @@ import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
+import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusRepository;
 import com.google.android.gms.maps.model.LatLng;
 
 import org.jetbrains.annotations.NotNull;
@@ -575,6 +576,52 @@ public class WorkoutSummariesDatabaseManager {
 
         return startTime;
     }
+
+
+    public static boolean deleteWorkout(long workoutId, Context context) {
+        if (DEBUG) Log.i(TAG, "deleteWorkout: workoutId=" + workoutId);
+
+        // open databases
+        SQLiteDatabase dbSummaries = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
+        SQLiteDatabase dbLaps = LapsDatabaseManager.getInstance().getOpenDatabase();
+
+        // get workout name
+        Cursor cursor = dbSummaries.query(WorkoutSummaries.TABLE, null, WorkoutSummaries.C_ID + "=?", new String[]{workoutId + ""}, null, null, null);
+        if (!cursor.moveToFirst()) {
+            return false;
+        }
+        String name = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.WORKOUT_NAME));
+        String baseFileName = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.FILE_BASE_NAME));
+        cursor.close();
+
+        // delete from WorkoutSummaries
+        if (DEBUG) Log.d(TAG, "deleting from WorkoutSummaries");
+        dbSummaries.delete(WorkoutSummaries.TABLE, WorkoutSummaries.C_ID + "=?", new String[]{workoutId + ""});
+        dbSummaries.delete(WorkoutSummaries.TABLE_ACCUMULATED_SENSORS, WorkoutSummaries.WORKOUT_ID + "=?", new String[]{workoutId + ""});
+        dbSummaries.delete(WorkoutSummaries.TABLE_EXTREMA_VALUES, WorkoutSummaries.WORKOUT_ID + "=?", new String[]{workoutId + ""});
+
+        // delete from WorkoutSamples
+        if (DEBUG) Log.d(TAG, "deleting from WorkoutSamples");
+        WorkoutSamplesDatabaseManager.getInstance();
+        WorkoutSamplesDatabaseManager.deleteWorkout(baseFileName);
+
+        // delete from ExportManager
+        if (DEBUG) Log.d(TAG, "deleting from ExportStatusRepository");
+        ExportStatusRepository.getInstance(context).deleteWorkout(baseFileName);
+
+        // delete from Laps
+        if (DEBUG) Log.d(TAG, "deleting from Laps");
+        dbLaps.delete(LapsDatabaseManager.Laps.TABLE, LapsDatabaseManager.Laps.WORKOUT_ID + "=?", new String[]{workoutId + ""});
+
+
+        WorkoutSummariesDatabaseManager.getInstance().closeDatabase();  // dbSummaries.close();
+        LapsDatabaseManager.getInstance().closeDatabase(); // instead of dbLaps.close();
+
+        return true;
+    }
+
+
+    // -- Fancy / Auto Name
 
     @NonNull
     public static List<String> getFancyNameList() {

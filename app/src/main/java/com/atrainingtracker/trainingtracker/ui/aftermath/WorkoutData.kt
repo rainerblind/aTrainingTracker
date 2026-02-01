@@ -15,6 +15,7 @@ data class WorkoutData(
     val fileBaseName: String?,
     val isCommute: Boolean,
     val isTrainer: Boolean,
+    val activeTime: Long,
 
 
     // --- Composed Component Data ---

@@ -68,6 +68,8 @@ public class DeleteWorkoutThread extends Thread {
 
         for (long workoutId : oldWorkouts) {
 
+            // TODO: use WorkoutSummariesDatabaseManger.deleteWorkout instead...
+
             if (DEBUG) Log.d(TAG, "delete workout " + workoutId);
 
             cursor = dbSummaries.query(WorkoutSummaries.TABLE, null, WorkoutSummaries.C_ID + "=?", new String[]{workoutId + ""}, null, null, null);
