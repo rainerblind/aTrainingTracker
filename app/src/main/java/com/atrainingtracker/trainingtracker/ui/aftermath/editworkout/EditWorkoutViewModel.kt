@@ -181,15 +181,13 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         viewModelScope.launch(Dispatchers.IO) {
             val workoutId = dataToSave.id
 
-            // 1. Update Description, Goal (Fancy Name), and Method
-            WorkoutSummariesDatabaseManager.updateDescription(
+            // Update Workout Name
+            WorkoutSummariesDatabaseManager.updateWorkoutName(
                 workoutId,
-                dataToSave.descriptionData.description ?: "",
-                dataToSave.descriptionData.goal ?: "",
-                dataToSave.descriptionData.method ?: ""
+                dataToSave.headerData.workoutName ?: ""
             )
 
-            // 2. Update Sport and Equipment
+            // Update Sport and Equipment
             val equipmentDbHelper = EquipmentDbHelper(getApplication())
             val equipmentId = equipmentDbHelper.getEquipmentId(dataToSave.headerData.equipmentName ?: "")
             WorkoutSummariesDatabaseManager.updateSportAndEquipment(
@@ -198,13 +196,20 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
                 equipmentId
             )
 
-            // 3. Update Commute and Trainer flags
+            // Update Commute and Trainer flags
             WorkoutSummariesDatabaseManager.updateCommuteAndTrainerFlag(
                 workoutId,
                 dataToSave.isCommute,
                 dataToSave.isTrainer
             )
 
+            // Update Description, Goal, and Method
+            WorkoutSummariesDatabaseManager.updateDescription(
+                workoutId,
+                dataToSave.descriptionData.description ?: "",
+                dataToSave.descriptionData.goal ?: "",
+                dataToSave.descriptionData.method ?: ""
+            )
         }
     }
 }
