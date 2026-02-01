@@ -17,10 +17,19 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.activities.WorkoutDetailsActivity
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.atrainingtracker.trainingtracker.dialogs.EditFancyWorkoutNameDialog
+import com.atrainingtracker.trainingtracker.ui.components.map.MapComponent
+import com.atrainingtracker.trainingtracker.ui.components.map.MapContentType
+import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.DescriptionViewHolder
+import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsViewHolder
+import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaValuesViewHolder
+import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.common.GoogleApiAvailability
+import com.google.android.gms.maps.MapView
 import com.google.android.material.checkbox.MaterialCheckBox
 import com.google.android.material.textfield.TextInputEditText
 
@@ -50,6 +59,11 @@ class EditWorkoutActivity : AppCompatActivity() {
     private var showAllSportTypes = false
     private var showAllEquipment = false
     private lateinit var sportTypeNameList: MutableList<String>
+
+    private var detailsViewHolder: WorkoutDetailsViewHolder? = null
+    private var extremaValuesViewHolder: ExtremaValuesViewHolder? = null
+    private var mapComponent: MapComponent? = null
+
 
     companion object {
         private const val MAX_WORKOUT_TIME_TO_SHOW_DELETE_BUTTON = 5*60 // 5 minutes
@@ -91,13 +105,34 @@ class EditWorkoutActivity : AppCompatActivity() {
     private fun findViews() {
         editWorkoutName = findViewById(R.id.editWorkoutName)
         buttonAutoName = findViewById(R.id.buttonAutoName)
+
         spinnerSportType = findViewById(R.id.spinnerSportType)
         spinnerEquipment = findViewById(R.id.spinnerEquipment)
+
         checkboxCommute = findViewById(R.id.checkboxCommute)
         checkboxTrainer = findViewById(R.id.checkboxTrainer)
+
         editDescription = findViewById(R.id.editDescription)
         editGoal = findViewById(R.id.editGoal)
         editMethod = findViewById(R.id.editMethod)
+
+        val detailsView = findViewById<View>(R.id.workout_details_include)
+        detailsViewHolder = detailsView?.let { WorkoutDetailsViewHolder(it, this) }
+
+        val extremaView = findViewById<View>(R.id.extrema_values_include)
+        extremaValuesViewHolder = extremaView?.let { ExtremaValuesViewHolder(it) }
+
+        val isPlayAvailable = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(this) == ConnectionResult.SUCCESS
+        val mapView = findViewById<MapView>(R.id.mapView_include)
+        mapComponent = if (isPlayAvailable && mapView != null) {
+            MapComponent(mapView, this) { workoutId ->
+                TrainingApplication.startWorkoutDetailsActivity(workoutId, WorkoutDetailsActivity.SelectedFragment.MAP)
+            }
+        } else {
+            mapView?.visibility = View.GONE
+            null
+        }
+
         buttonSave = findViewById(R.id.buttonSave)
         buttonDelete = findViewById(R.id.buttonDelete)
     }
@@ -130,6 +165,11 @@ class EditWorkoutActivity : AppCompatActivity() {
 
             // Populate Spinners
             setupSpinners()
+
+            // details, extrema values, and the map.
+            detailsViewHolder?.bind(workoutData.detailsData)
+            extremaValuesViewHolder?.bind(workoutData.extremaData)
+            mapComponent?.bind(workoutData.id, MapContentType.WORKOUT_TRACK)
 
             // -- visibility of delete button
             // By default, the button is visible

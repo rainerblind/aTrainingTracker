@@ -2,6 +2,7 @@
 <androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    xmlns:map="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true">
@@ -94,7 +95,7 @@
             android:hint="@string/hint_workout_description"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/checkboxCommute">
+            app:layout_constraintTop_toBottomOf="@id/checkboxTrainer">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/editDescription"
@@ -143,6 +144,42 @@
                 android:inputType="textCapSentences" />
         </com.google.android.material.textfield.TextInputLayout>
 
+
+        <!-- Placeholder for Workout Details (Distance, Time, Ascent, etc.) -->
+        <include
+            android:id="@+id/workout_details_include"
+            layout="@layout/workout_summary__details"
+            android:layout_marginTop="-8dp"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/layoutMethod" />
+
+
+        <!-- Container for Extrema Values -->
+        <include
+            android:id="@+id/extrema_values_include"
+            layout="@layout/workout_summary__extrema"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/workout_details_include" />
+
+
+        <!-- MapView is now positioned below the new extrema container -->
+        <com.google.android.gms.maps.MapView
+            android:id="@+id/mapView_include"
+            android:layout_width="0dp"
+            android:layout_height="180dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/extrema_values_include"
+            map:liteMode="true"
+            map:mapType="none" />
+
+
         <!-- Save Button -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/buttonSave"
@@ -152,7 +189,7 @@
             android:text="@string/buttonSaveWorkoutText"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/layoutMethod" />
+            app:layout_constraintTop_toBottomOf="@id/mapView_include" />
 
         <!-- Delete Button (will be remove when the workout longer than some minutes -->
         <com.google.android.material.button.MaterialButton
@@ -162,6 +199,7 @@
             android:layout_marginTop="24dp"
             android:text="@string/buttonDeleteWorkoutText"
             android:visibility="gone"
+            tools:visibility="visible"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/buttonSave" />
