@@ -147,7 +147,7 @@ class EditWorkoutActivity : AppCompatActivity() {
             val isPlayAvailable = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(this) == ConnectionResult.SUCCESS
             if (isPlayAvailable) {
                 mapComponent = MapComponent(mapView, this) { workoutId ->
-                    TrainingApplication.startWorkoutDetailsActivity(workoutId, WorkoutDetailsActivity.SelectedFragment.MAP)
+                    TrainingApplication.startTrackOnMapAftermathActivity(this, workoutId);
                 }
             } else {
                 mapView.visibility = View.GONE

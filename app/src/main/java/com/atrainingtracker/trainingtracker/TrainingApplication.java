@@ -69,6 +69,7 @@ import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleService;
 import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleServiceBuildIn;
 import com.atrainingtracker.trainingtracker.smartwatch.pebble.Watchapp;
 import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutActivity;
+import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapAftermathActivity;
 import com.dropbox.core.json.JsonReadException;
 import com.dropbox.core.oauth.DbxCredential;
 
@@ -811,19 +812,13 @@ public class TrainingApplication extends Application {
         cResumeFromCrash = resumeFromCrash;
     }
 
-    @Deprecated
-    public static void startWorkoutDetailsActivity(long workoutId, @NonNull WorkoutDetailsActivity.SelectedFragment selectedFragment) {
-        if (DEBUG) Log.i(TAG, "startWorkoutDetailsActivity(" + workoutId + ")");
+    public static void startTrackOnMapAftermathActivity(Context context, long workoutId) {
+        if (DEBUG) Log.i(TAG, "startTrackOnMapAftermathActivity(" + workoutId + ")");
 
-        Bundle bundle = new Bundle();
-        bundle.putLong(WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_ID, workoutId);
-        bundle.putString(WorkoutDetailsActivity.SELECTED_FRAGMENT, selectedFragment.name());
-        Intent intent = new Intent(cAppContext, WorkoutDetailsActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        intent.putExtras(bundle);
-        cAppContext.startActivity(intent);
+        TrackOnMapAftermathActivity.start(context, workoutId);
     }
 
+    // TODO: remove cAppContext and FLAG_ACTIVITY_NEW_TASK from here
     public static void startEditWorkoutActivity(long workoutId, boolean showAllDetails) {
         if (DEBUG) Log.i(TAG, "startEditWorkoutActivity(" + workoutId + ")");
 
