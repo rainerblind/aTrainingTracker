@@ -222,7 +222,7 @@ public class MyLocationsFragment
                     @Override
                     public void onMarkerDragEnd(@NonNull Marker marker) {
                         // update position in database
-                        KnownLocationsDatabaseManager.updateLocation(mMarker2MyLocationsIdMap.get(marker), marker.getPosition());
+                        KnownLocationsDatabaseManager.updateLocation(getContext(), mMarker2MyLocationsIdMap.get(marker), marker.getPosition());
                     }
                 });
 
@@ -353,7 +353,7 @@ public class MyLocationsFragment
         final TextView tvRadius = view.findViewById(R.id.tvRadius);
         final SeekBar sbRadius = view.findViewById(R.id.sbRadius);
 
-        final MyLocation myLocation = KnownLocationsDatabaseManager.getMyLocation(myLocationId);
+        final MyLocation myLocation = KnownLocationsDatabaseManager.getMyLocation(getContext(), myLocationId);
         etName.setText(myLocation.name);
         etAltitude.setText(Integer.toString(myLocation.altitude));
         tvRadius.setText(getString(R.string.radius_format, getString(R.string.LocationRadius), myLocation.radius, getString(R.string.units_radius)));
@@ -391,7 +391,7 @@ public class MyLocationsFragment
                         }
                         myLocation.radius = sbRadius.getProgress();
 
-                        KnownLocationsDatabaseManager.updateMyLocation(myLocationId, myLocation);
+                        KnownLocationsDatabaseManager.updateMyLocation(getContext(), myLocationId, myLocation);
                     }
                 });
         alertDialogBuilder.setNeutralButton(R.string.Cancel, new DialogInterface.OnClickListener() {
@@ -435,7 +435,7 @@ public class MyLocationsFragment
 
     private void reallyDeleteLocation(@NonNull MyLocation myLocation) {
         // remove from database
-        KnownLocationsDatabaseManager.deleteId(myLocation.id);
+        KnownLocationsDatabaseManager.deleteId(getContext(), myLocation.id);
 
         // remove circle
         mMarkerId2CircleMap.get(myLocation.id).remove();
@@ -665,7 +665,7 @@ public class MyLocationsFragment
                 progressDialog.show();
             });
 
-                SQLiteDatabase db = KnownLocationsDatabaseManager.getInstance().getOpenDatabase();
+                SQLiteDatabase db = KnownLocationsDatabaseManager.getInstance(getContext()).getDatabase();
                 Cursor cursor = db.query(KnownLocationsDbHelper.TABLE,
                         null,
                         null, // KnownLocationsDbHelper.EXTREMA_TYPE + "=?",
@@ -692,7 +692,6 @@ public class MyLocationsFragment
                 }
 
                 cursor.close();
-                KnownLocationsDatabaseManager.getInstance().closeDatabase();
 
             new Handler(Looper.getMainLooper()).post(() -> {
                 if (progressDialog.isShowing()) {
@@ -738,7 +737,7 @@ public class MyLocationsFragment
 
                 Double altitude = WorkoutSamplesDatabaseManager.calcAverageAroundLocation(getContext(), latLng, 100, SensorType.ALTITUDE);
 
-                final KnownLocationsDatabaseManager.MyLocation location = KnownLocationsDatabaseManager.addNewLocation("", altitude.intValue(), KnownLocationsDatabaseManager.DEFAULT_RADIUS, latLng.latitude, latLng.longitude);
+                final KnownLocationsDatabaseManager.MyLocation location = KnownLocationsDatabaseManager.addNewLocation(getContext(), "", altitude.intValue(), KnownLocationsDatabaseManager.DEFAULT_RADIUS, latLng.latitude, latLng.longitude);
 
             new Handler(Looper.getMainLooper()).post(() -> {
                 addMyLocationToMap(location);
