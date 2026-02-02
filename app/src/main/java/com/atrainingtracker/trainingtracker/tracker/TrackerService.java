@@ -393,17 +393,7 @@ public class TrackerService extends Service {
         if (DEBUG)
             Log.i(TAG, "saveLap: lapNr=" + lapNr + ", lapTime=" + lapTime + ", lapDistance=" + lapDistance + ", averageSpeed=" + averageSpeed);
 
-        // create and fill content values
-        ContentValues values = new ContentValues();
-        values.put(LapsDatabaseManager.Laps.WORKOUT_ID, mWorkoutID);
-        values.put(LapsDatabaseManager.Laps.LAP_NR, lapNr);
-        // values.put(Laps.TIME_START, done automatically);
-        values.put(LapsDatabaseManager.Laps.TIME_TOTAL_s, lapTime);
-        values.put(LapsDatabaseManager.Laps.DISTANCE_TOTAL_m, lapDistance);
-        values.put(LapsDatabaseManager.Laps.SPEED_AVERAGE_mps, averageSpeed);
-
-        SQLiteDatabase lapDb = LapsDatabaseManager.getInstance(this).getDatabase();
-        lapDb.insert(LapsDatabaseManager.Laps.TABLE, null, values);
+        LapsDatabaseManager.getInstance(this).saveLap(mWorkoutID, lapNr, lapTime, lapDistance, averageSpeed);
     }
 
     protected long getSportTypeId() {

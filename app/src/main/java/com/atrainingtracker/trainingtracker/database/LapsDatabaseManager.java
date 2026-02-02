@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.database;
 
+import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -79,6 +80,35 @@ public class LapsDatabaseManager {
 
 
     // --- High-level helper methods ---
+
+    /**
+     * Creates and saves a new lap entry in the database.
+     * This is the preferred way to create a new lap.
+     * @param workoutId The ID of the workout this lap belongs to.
+     * @param lapNr The number of the lap.
+     * @param lapTime The total time of the lap in seconds.
+     * @param lapDistance The total distance of the lap in meters.
+     * @param averageSpeed The average speed of the lap in m/s.
+     */
+    public void saveLap(long workoutId, long lapNr, int lapTime, double lapDistance, double averageSpeed) {
+        if (DEBUG)
+            Log.i(TAG, "saveLap: workoutId=" + workoutId + ", lapNr=" + lapNr + ", lapTime=" + lapTime + ", lapDistance=" + lapDistance);
+
+        // Create and fill content values
+        ContentValues values = new ContentValues();
+        values.put(Laps.WORKOUT_ID, workoutId);
+        values.put(Laps.LAP_NR, lapNr);
+        // values.put(Laps.TIME_START, done automatically by DB trigger);
+        values.put(Laps.TIME_TOTAL_s, lapTime);
+        values.put(Laps.DISTANCE_TOTAL_m, lapDistance);
+        values.put(Laps.SPEED_AVERAGE_mps, averageSpeed);
+
+        try {
+            getDatabase().insertOrThrow(Laps.TABLE, null, values);
+        } catch (Exception e) {
+            Log.e(TAG, "Error saving lap for workoutId: " + workoutId, e);
+        }
+    }
 
     /**
      * Deletes all lap data associated with a specific workoutId.
