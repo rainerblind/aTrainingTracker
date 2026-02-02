@@ -293,7 +293,7 @@ public abstract class RemoteDevicesFragment extends Fragment {
                 new String[]{deviceId + ""});
 
         // also 'remove' the device from the TrackingViewsDatabase
-        TrackingViewsDatabaseManager.removeSourceDevice(deviceId);
+        TrackingViewsDatabaseManager.getInstance(getContext()).removeSourceDevice(deviceId);
 
         updateView();
 

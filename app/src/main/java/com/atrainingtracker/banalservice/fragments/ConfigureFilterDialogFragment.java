@@ -387,8 +387,8 @@ public class ConfigureFilterDialogFragment
         values.put(TrackingViewsDbHelper.FILTER_TYPE, mFilterType.name());
         values.put(TrackingViewsDbHelper.FILTER_CONSTANT, mFilterConstant);
 
-        TrackingViewsDatabaseManager databaseManager = TrackingViewsDatabaseManager.getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
+        TrackingViewsDatabaseManager databaseManager = TrackingViewsDatabaseManager.getInstance(getContext());
+        SQLiteDatabase db = databaseManager.getDatabase();
         try {
             db.update(TrackingViewsDbHelper.ROWS_TABLE,
                     values,
@@ -398,8 +398,6 @@ public class ConfigureFilterDialogFragment
             // TODO: use Toast?
             Log.e(TAG, "Error while writing" + e);
         }
-        databaseManager.closeDatabase(); // db.close();
-
         // TODO: inform everyone that the Filters have changed???
     }
 

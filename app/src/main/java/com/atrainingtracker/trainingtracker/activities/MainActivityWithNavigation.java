@@ -210,7 +210,7 @@ public class MainActivityWithNavigation
             mBanalServiceComm = (BANALService.BANALServiceComm) service; // IBANALService.Stub.asInterface(service);
 
             // create all the filters
-            for (FilterData filterData : TrackingViewsDatabaseManager.getAllFilterData()) {
+            for (FilterData filterData : TrackingViewsDatabaseManager.getInstance(getApplicationContext()).getAllFilterData()) {
                 mBanalServiceComm.createFilter(filterData);
             }
 
