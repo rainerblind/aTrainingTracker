@@ -66,8 +66,8 @@ public class TrackOnMapHelper {
                 .color(trackType.color)
                 .zIndex(5);
 
-        WorkoutSamplesDatabaseManager databaseManager = WorkoutSamplesDatabaseManager.getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
+        WorkoutSamplesDatabaseManager databaseManager = WorkoutSamplesDatabaseManager.getInstance(context);
+        SQLiteDatabase db = databaseManager.getDatabase();
         Cursor cursor = db.query(WorkoutSamplesDatabaseManager.getTableName(baseFileName),          // TODO: on some devices, an exception is thrown here
                 null,
                 null,
@@ -88,7 +88,6 @@ public class TrackOnMapHelper {
         }
 
         cursor.close();
-        databaseManager.closeDatabase(); // db.close();
 
         return polylineOptions;
     }
