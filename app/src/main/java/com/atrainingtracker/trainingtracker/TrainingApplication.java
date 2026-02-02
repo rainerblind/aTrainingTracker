@@ -849,7 +849,6 @@ public class TrainingApplication extends Application {
         mNotificationSummary = getString(R.string.searching);
 
         // initialize DatabaseManagers
-        WorkoutSamplesDatabaseManager.initializeInstance(new WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper(this));
         DevicesDatabaseManager.initializeInstance(new DevicesDatabaseManager.DevicesDbHelper(this));
         TrackingViewsDatabaseManager.initializeInstance(new TrackingViewsDatabaseManager.TrackingViewsDbHelper(this));
         PebbleDatabaseManager.initializeInstance(new PebbleDatabaseManager.PebbleDbHelper(this));

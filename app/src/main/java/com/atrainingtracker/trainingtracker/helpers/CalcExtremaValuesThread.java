@@ -206,21 +206,21 @@ public class CalcExtremaValuesThread extends Thread {
         Double startLat = WorkoutSummariesDatabaseManager.getExtremaValue(mContext,workoutId, SensorType.LATITUDE, ExtremaType.START);
         Double startLon = WorkoutSummariesDatabaseManager.getExtremaValue(mContext, workoutId, SensorType.LONGITUDE, ExtremaType.START);
         if (startLat != null && startLon != null) {
-            startLocation = KnownLocationsDatabaseManager.getMyLocation(new LatLng(startLat, startLon));
+            startLocation = KnownLocationsDatabaseManager.getMyLocation(mContext, new LatLng(startLat, startLon));
         }
 
         MyLocation maxLineLocation = null;
         Double maxLineLat = WorkoutSummariesDatabaseManager.getExtremaValue(mContext, workoutId, SensorType.LATITUDE, ExtremaType.MAX_LINE_DISTANCE);
         Double maxLineLon = WorkoutSummariesDatabaseManager.getExtremaValue(mContext, workoutId, SensorType.LONGITUDE, ExtremaType.MAX_LINE_DISTANCE);
         if (maxLineLat != null && maxLineLon != null) {
-            maxLineLocation = KnownLocationsDatabaseManager.getMyLocation(new LatLng(maxLineLat, maxLineLon));
+            maxLineLocation = KnownLocationsDatabaseManager.getMyLocation(mContext, new LatLng(maxLineLat, maxLineLon));
         }
 
         MyLocation endLocation = null;
         Double endLat = WorkoutSummariesDatabaseManager.getExtremaValue(mContext, workoutId, SensorType.LATITUDE, ExtremaType.END);
         Double endLon = WorkoutSummariesDatabaseManager.getExtremaValue(mContext, workoutId, SensorType.LONGITUDE, ExtremaType.END);
         if (endLat != null && endLon != null) {
-            endLocation = KnownLocationsDatabaseManager.getMyLocation(new LatLng(endLat, endLon));
+            endLocation = KnownLocationsDatabaseManager.getMyLocation(mContext, new LatLng(endLat, endLon));
         }
 
         Long sportTypeId = WorkoutSummariesDatabaseManager.getLong(mContext, workoutId, WorkoutSummaries.SPORT_ID);
@@ -309,7 +309,7 @@ public class CalcExtremaValuesThread extends Thread {
             for (ExtremaType extremaType : extremaTypeList) {
                 publishProgress(mContext.getString(R.string.calculating_extrema_value_for, extremaType.name(), mContext.getString(sensorType.getShortNameId())));
 
-                WorkoutSamplesDatabaseManager.getInstance();
+                WorkoutSamplesDatabaseManager.getInstance(mContext);
                 Double value = WorkoutSamplesDatabaseManager.calcExtremaValue(mContext, baseFileName, extremaType, sensorType);
                 if (value != null) {
                     if (DEBUG)

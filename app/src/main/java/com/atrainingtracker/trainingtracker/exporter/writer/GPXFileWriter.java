@@ -86,8 +86,8 @@ public class GPXFileWriter extends BaseFileWriter {
         bufferedWriter.write(" <trk>\n");
         bufferedWriter.write("  <name>" + startTime + "</name>\n");
 
-        WorkoutSamplesDatabaseManager databaseManager = WorkoutSamplesDatabaseManager.getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
+        WorkoutSamplesDatabaseManager databaseManager = WorkoutSamplesDatabaseManager.getInstance(mContext);
+        SQLiteDatabase db = databaseManager.getDatabase();
         Cursor cursor = db.query(WorkoutSamplesDatabaseManager.getTableName(exportInfo.getFileBaseName()),
                 null,
                 null,
@@ -177,9 +177,7 @@ public class GPXFileWriter extends BaseFileWriter {
 
         bufferedWriter.close();
 
-        // TODO: which order ???
         cursor.close();
-        databaseManager.closeDatabase(); // db.close();
 
         return new ExportResult(true, false, "Successfully exported to GPX File");
     }

@@ -129,13 +129,12 @@ public class TrackerService extends Service {
                 Log.i(TAG, "updating all previous altitude measurements by " + altitudeCorrection);
             String operator = altitudeCorrection >= 0 ? " + " : " - ";
 
-            WorkoutSamplesDatabaseManager databaseManager = WorkoutSamplesDatabaseManager.getInstance();
-            SQLiteDatabase samplesDb = databaseManager.getOpenDatabase();
+            WorkoutSamplesDatabaseManager databaseManager = WorkoutSamplesDatabaseManager.getInstance(TrackerService.this);
+            SQLiteDatabase samplesDb = databaseManager.getDatabase();
             samplesDb.execSQL("UPDATE " + mSamplesTableName
                     + " set " + SensorType.ALTITUDE.name() + " = " + SensorType.ALTITUDE.name() + operator + Math.abs(altitudeCorrection));
             // + " where " + Keys.Key_SKU + " = " + SKU + " and " + Keys.Key_STATUS + " = 0");
             // no where statement required because we want to update all previous ones.
-            databaseManager.closeDatabase(); // samplesDb.close();
         }
     };
     // private long   mLapNr           = BANALService.INIT_LAP_NR-1;
@@ -243,7 +242,7 @@ public class TrackerService extends Service {
                 // The workout name is just the date+time
                 mBaseFileName = (new SimpleDateFormat("yyyy-MM-dd_HHmmss", Locale.US)).format(new Date());
                 mWorkoutID = createNewWorkout();
-                WorkoutSamplesDatabaseManager.createNewTable(mBaseFileName, Arrays.asList(SensorType.values()));       // create a new table with a column for each possible sensor
+                WorkoutSamplesDatabaseManager.createNewTable(this, mBaseFileName, Arrays.asList(SensorType.values()));       // create a new table with a column for each possible sensor
                 break;
 
             case RESUME_BY_USER:
@@ -613,8 +612,8 @@ public class TrackerService extends Service {
 
 
         // write the samples to the database
-        WorkoutSamplesDatabaseManager samplesDatabaseManager = WorkoutSamplesDatabaseManager.getInstance();
-        SQLiteDatabase samplesDb = samplesDatabaseManager.getOpenDatabase();
+        WorkoutSamplesDatabaseManager samplesDatabaseManager = WorkoutSamplesDatabaseManager.getInstance(this);
+        SQLiteDatabase samplesDb = samplesDatabaseManager.getDatabase();
 
         try {
             samplesDb.insertOrThrow(mSamplesTableName,
@@ -675,9 +674,6 @@ public class TrackerService extends Service {
                 }
             }
         }
-
-        samplesDatabaseManager.closeDatabase();
-
 
         // Update the summary data
         if (DEBUG) Log.d(TAG, "writing to Summaries db");

@@ -77,8 +77,7 @@ public class TCXFileWriter extends BaseFileWriter {
         bufferedWriter.write("    <Activity Sport=\"" + SportTypeDatabaseManager.getTcxName(sportTypeId) + "\">\n");
         bufferedWriter.write("      <Id>" + dbTime2XMLTime(startTime) + "</Id>\n");
 
-        WorkoutSamplesDatabaseManager databaseManager = WorkoutSamplesDatabaseManager.getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
+        SQLiteDatabase db = WorkoutSamplesDatabaseManager.getInstance(mContext).getDatabase();
         Cursor cursor = db.query(WorkoutSamplesDatabaseManager.getTableName(exportInfo.getFileBaseName()),
                 null,
                 null,
@@ -264,9 +263,7 @@ public class TCXFileWriter extends BaseFileWriter {
 
         bufferedWriter.close();
 
-        // TODO: which order ???
         cursor.close();
-        databaseManager.closeDatabase(); // db.close();
 
         return new ExportResult(true, false, "Successfully exported to TCX File");
     }

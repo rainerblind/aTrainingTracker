@@ -111,8 +111,8 @@ public class GCFileWriter extends BaseFileWriter {
 
         bufferedWriter.write("        \"SAMPLES\":[\n");
 
-        WorkoutSamplesDatabaseManager databaseManager = WorkoutSamplesDatabaseManager.getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
+        WorkoutSamplesDatabaseManager databaseManager = WorkoutSamplesDatabaseManager.getInstance(mContext);
+        SQLiteDatabase db = databaseManager.getDatabase();
         Cursor cursor = db.query(WorkoutSamplesDatabaseManager.getTableName(exportInfo.getFileBaseName()),
                 null,
                 null,
@@ -208,9 +208,7 @@ public class GCFileWriter extends BaseFileWriter {
         bufferedWriter.write("}\n");
         bufferedWriter.close();
 
-        // TODO: which order ???
         cursor.close();
-        databaseManager.closeDatabase();
 
         return new ExportResult(true, false, "Successfully exported to GC File");
 

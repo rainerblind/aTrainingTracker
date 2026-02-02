@@ -38,27 +38,31 @@ import java.util.List;
 
 public class WorkoutSamplesDatabaseManager {
     private static final String TAG = WorkoutSamplesDatabaseManager.class.getName();
-    private static final boolean DEBUG = TrainingApplication.getDebug(false);
-    private static WorkoutSamplesDatabaseManager cInstance;
-    private static WorkoutSamplesDbHelper cWorkoutSamplesDbHelper;
-    private int mOpenCounter;
-    private SQLiteDatabase mDatabase;
+    private static final boolean DEBUG = TrainingApplication.getDebug(true);
+    private static volatile WorkoutSamplesDatabaseManager cInstance;
+    private final WorkoutSamplesDbHelper cDbHelper;
 
-    public static synchronized void initializeInstance(WorkoutSamplesDbHelper workoutSamplesDbHelper) {
-        if (cInstance == null) {
-            cInstance = new WorkoutSamplesDatabaseManager();
-            cWorkoutSamplesDbHelper = workoutSamplesDbHelper;
-        }
+    private WorkoutSamplesDatabaseManager(@NonNull Context context) {
+        this.cDbHelper = new WorkoutSamplesDbHelper(context);
     }
 
     @NonNull
-    public static synchronized WorkoutSamplesDatabaseManager getInstance() {
+    public static WorkoutSamplesDatabaseManager getInstance(@NonNull Context context) {
         if (cInstance == null) {
-            throw new IllegalStateException(WorkoutSamplesDatabaseManager.class.getSimpleName() +
-                    " is not initialized, call initializeInstance(..) method first.");
+            synchronized (WorkoutSamplesDatabaseManager.class) {
+                if (cInstance == null) {
+                    cInstance = new WorkoutSamplesDatabaseManager(context);
+                }
+            }
         }
-
         return cInstance;
+    }
+
+    /**
+     * Returns a writable database instance for the MAIN samples.db, managed by the helper.
+     */
+    public SQLiteDatabase getDatabase() {
+        return cDbHelper.getWritableDatabase();
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -102,7 +106,7 @@ public class WorkoutSamplesDatabaseManager {
         // in all other cases, we let sqlite do the job
         Double extremaValue = null;
         Cursor cursor = null;
-        SQLiteDatabase db = getInstance().getOpenDatabase();
+        SQLiteDatabase db = getInstance(context).getDatabase();
 
         // it might be possible that the corresponding sensor is not a column of the database, so we first check this
         if (existsColumnInTable(db, getTableName(baseFileName), sensorType.name())) {
@@ -160,7 +164,6 @@ public class WorkoutSamplesDatabaseManager {
             }
         }
 
-        getInstance().closeDatabase(); // if (db.isOpen()) { db.close(); }
         if (cursor != null && !cursor.isClosed()) {
             cursor.close();
         }
@@ -204,7 +207,7 @@ public class WorkoutSamplesDatabaseManager {
             String name = summariesCursor.getString(0);
             if (DEBUG) Log.i(TAG, "querying table: " + name);
 
-            SQLiteDatabase samplesDb = getInstance().getOpenDatabase();
+            SQLiteDatabase samplesDb = getInstance(context).getDatabase();
             Cursor samplesCursor = samplesDb.query(getTableName(name), // Table
                     new String[]{SensorType.LATITUDE.name(), SensorType.LONGITUDE.name(), sensorType.name()}, // columns
                     SensorType.LATITUDE.name() + " > ? AND " +
@@ -238,8 +241,6 @@ public class WorkoutSamplesDatabaseManager {
             samplesCursor.close();
         }
         summariesCursor.close();
-
-        getInstance().closeDatabase();
 
         if (counter != 0) {
             average = valueSum / counter;
@@ -305,8 +306,8 @@ public class WorkoutSamplesDatabaseManager {
         // if there is an extrema value, we look for its location
         if (extremaValue != null) {
 
-            WorkoutSamplesDatabaseManager databaseManager = WorkoutSamplesDatabaseManager.getInstance();
-            SQLiteDatabase samplesDb = databaseManager.getOpenDatabase();
+            WorkoutSamplesDatabaseManager databaseManager = WorkoutSamplesDatabaseManager.getInstance(context);
+            SQLiteDatabase samplesDb = databaseManager.getDatabase();
             Cursor cursor = null;
 
             // depending on the extremaType, there are two alternative ways to find the corresponding row
@@ -358,7 +359,6 @@ public class WorkoutSamplesDatabaseManager {
 
             // clean up
             cursor.close();
-            databaseManager.closeDatabase(); // samplesDb.close();
 
         } else {
             if (DEBUG)
@@ -369,10 +369,10 @@ public class WorkoutSamplesDatabaseManager {
         return result;
     }
 
-    public static void createNewTable(String workoutName, @NonNull List<SensorType> sensorTypes) {
+    public static void createNewTable(Context context, String workoutName, @NonNull List<SensorType> sensorTypes) {
         if (DEBUG) Log.d(TAG, "createNewTable: " + WorkoutSamplesDbHelper.DB_NAME);
 
-        SQLiteDatabase db = getInstance().getOpenDatabase();
+        SQLiteDatabase db = getInstance(context).getDatabase();
         String table = getTableName(workoutName);
 
         // first of all, delete an existing db.
@@ -383,13 +383,11 @@ public class WorkoutSamplesDatabaseManager {
         if (DEBUG) Log.d(TAG, "execSQL: " + execSQL);
 
         db.execSQL(execSQL);
-        getInstance().closeDatabase(); // db.close();
     }
 
-    public static void deleteWorkout(String baseFileName) {
-        SQLiteDatabase db = getInstance().getOpenDatabase();// getWritableDatabase();
+    public static void deleteWorkout(Context context, String baseFileName) {
+        SQLiteDatabase db = getInstance(context).getDatabase();// getWritableDatabase();
         db.execSQL("drop table if exists " + getTableName(baseFileName));
-        getInstance().closeDatabase(); // db.close();
     }
 
     // stolen from http://stackoverflow.com/questions/4719594/checking-if-a-column-exists-in-an-application-database-in-android
@@ -454,28 +452,6 @@ public class WorkoutSamplesDatabaseManager {
         return result.toString();
     }
 
-
-    /**
-     * helper method to check whether there is some data
-     */
-
-    public synchronized SQLiteDatabase getOpenDatabase() {
-        mOpenCounter++;
-        if (mOpenCounter == 1) {
-            // Opening new database
-            mDatabase = cWorkoutSamplesDbHelper.getWritableDatabase();
-        }
-        return mDatabase;
-    }
-
-    public synchronized void closeDatabase() {
-        mOpenCounter--;
-        if (mOpenCounter == 0) {
-            // Closing database
-            mDatabase.close();
-
-        }
-    }
 
     public static class LatLngValue {
         public final LatLng latLng;

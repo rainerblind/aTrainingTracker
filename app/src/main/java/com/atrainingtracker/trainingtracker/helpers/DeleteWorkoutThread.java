@@ -92,8 +92,8 @@ public class DeleteWorkoutThread extends Thread {
 
             // delete from WorkoutSamples
             if (DEBUG) Log.d(TAG, "deleting from WorkoutSamples");
-            WorkoutSamplesDatabaseManager.getInstance();
-            WorkoutSamplesDatabaseManager.deleteWorkout(baseFileName);
+            WorkoutSamplesDatabaseManager.getInstance(context);
+            WorkoutSamplesDatabaseManager.deleteWorkout(context, baseFileName);
 
             // delete from ExportManager
             if (DEBUG) Log.d(TAG, "deleting from ExportStatusRepository");
