@@ -45,118 +45,129 @@ import java.util.List;
 import java.util.Set;
 
 public class WorkoutSummariesDatabaseManager {
-    private static final String TAG = WorkoutSummariesDatabaseManager.class.getName();
-    private static final boolean DEBUG = TrainingApplication.getDebug(false);
-    private static WorkoutSummariesDatabaseManager cInstance;
-    private static WorkoutSummariesDbHelper cWorkoutSummariesDbHelper;
-    private int mOpenCounter;
-    private SQLiteDatabase mDatabase;
+    private static final String TAG = "WorkoutSummariesDatabaseManager";
+    private static final boolean DEBUG = TrainingApplication.getDebug(true);
 
-    public static synchronized void initializeInstance(WorkoutSummariesDbHelper workoutSummariesDbHelper) {
-        if (cInstance == null) {
-            cInstance = new WorkoutSummariesDatabaseManager();
-            cWorkoutSummariesDbHelper = workoutSummariesDbHelper;
-        }
+    private static WorkoutSummariesDbHelper cWorkoutSummariesDbHelper;
+    private static volatile WorkoutSummariesDatabaseManager cInstance;
+
+    // Private constructor to prevent direct instantiation
+    private WorkoutSummariesDatabaseManager(Context context) {
+        // The helper is instantiated with the application context, making it safe.
+        cWorkoutSummariesDbHelper = new WorkoutSummariesDbHelper(context);
     }
 
     @NonNull
-    public static synchronized WorkoutSummariesDatabaseManager getInstance() {
+    public static WorkoutSummariesDatabaseManager getInstance(@NonNull Context context) {
+        // Use double-checked locking for thread-safe lazy initialization.
         if (cInstance == null) {
-            throw new IllegalStateException(WorkoutSummariesDatabaseManager.class.getSimpleName() +
-                    " is not initialized, call initializeInstance(..) method first.");
+            synchronized (WorkoutSummariesDatabaseManager.class) {
+                if (cInstance == null) {
+                    // Pass the application context to avoid memory leaks.
+                    cInstance = new WorkoutSummariesDatabaseManager(context.getApplicationContext());
+                }
+            }
         }
-
         return cInstance;
+    }
+
+    // Let the helper manage the database object. This is thread-safe.
+    public SQLiteDatabase getDatabase() {
+        return cWorkoutSummariesDbHelper.getWritableDatabase();
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // some high level helper methods
     ////////////////////////////////////////////////////////////////////////////////////////////////
-    public static void updateSportAndEquipment(long workoutId, long sportId, long equipmentId) {
+    public static void updateSportAndEquipment(Context context, long workoutId, long sportId, long equipmentId) {
 
         ContentValues values = new ContentValues();
         values.put(WorkoutSummaries.SPORT_ID, sportId);
         values.put(WorkoutSummaries.EQUIPMENT_ID, equipmentId);
 
-        updateValues(workoutId, values);
+        updateValues(context, workoutId, values);
     }
 
-    public static void updateWorkoutName(long workoutId, String newName) {
+    public static void updateWorkoutName(Context context, long workoutId, String newName) {
         ContentValues values = new ContentValues();
         values.put(WorkoutSummaries.WORKOUT_NAME, newName);
 
-        updateValues(workoutId, values);
+        updateValues(context, workoutId, values);
     }
 
-    public static void updateDescription(long workoutId, @NotNull String newDescription, @NotNull String newGoal, @NotNull String newMethod) {
+    public static void updateDescription(Context context, long workoutId, @NotNull String newDescription, @NotNull String newGoal, @NotNull String newMethod) {
         ContentValues values = new ContentValues();
         values.put(WorkoutSummaries.DESCRIPTION, newDescription);
         values.put(WorkoutSummaries.GOAL, newGoal);
         values.put(WorkoutSummaries.METHOD, newMethod);
 
-        updateValues(workoutId, values);
+        updateValues(context, workoutId, values);
     }
 
-    public static void updateCommuteAndTrainerFlag(long workoutId, boolean commute, boolean trainer) {
+    public static void updateCommuteAndTrainerFlag(Context context, long workoutId, boolean commute, boolean trainer) {
         ContentValues values = new ContentValues();
         values.put(WorkoutSummaries.COMMUTE, commute);
         values.put(WorkoutSummaries.TRAINER, trainer);
 
-        updateValues(workoutId, values);
+        updateValues(context, workoutId, values);
+    }
+
+    private static void updateValues(Context context, long workoutId, ContentValues contentValues) {
+
+        SQLiteDatabase db = getInstance(context).getDatabase();
+
+        db.update(WorkoutSummaries.TABLE,
+                    contentValues,
+                    WorkoutSummaries.C_ID + "=" + workoutId,
+                    null);
     }
 
 
 
+
     @Nullable
-    public static String getBaseFileName(long workoutId) {
+    public static String getBaseFileName(Context context, long workoutId) {
         if (DEBUG) Log.i(TAG, "getBaseFileName for workoutId: " + workoutId);
 
         String baseFileName = null;
 
-        SQLiteDatabase summariesDb = getInstance().getOpenDatabase();
-
-        Cursor cursor = summariesDb.query(WorkoutSummaries.TABLE,
-                null,
+        try (Cursor cursor = getInstance(context).getDatabase().query(WorkoutSummaries.TABLE,
+                new String[]{WorkoutSummaries.FILE_BASE_NAME},
                 WorkoutSummaries.C_ID + "=?",
                 new String[]{Long.toString(workoutId)},
-                null, null, null);
-        if (cursor.moveToFirst()) {
-            baseFileName = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.FILE_BASE_NAME));
-        }
-        cursor.close();
-        WorkoutSummariesDatabaseManager.getInstance().closeDatabase(); // summariesDb.close();
+                null, null, null)) {
+
+            if (cursor.moveToFirst()) {
+                baseFileName = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.FILE_BASE_NAME));
+            }
+        } // Cursor is closed here, even if an exception occurs.
 
         return baseFileName;
+
     }
 
     @Nullable
-    public static Double getDouble(long workoutId, String key) {
+    public static Double getDouble(Context context, long workoutId, String key) {
         if (DEBUG) Log.i(TAG, "getDouble for workoutId: " + workoutId + ", " + key);
 
         Double value = null;
 
-        SQLiteDatabase summariesDb = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
-
-        Cursor cursor = summariesDb.query(WorkoutSummaries.TABLE,
-                null,
+        try(Cursor cursor = getInstance(context).getDatabase().query(WorkoutSummaries.TABLE,
+                new String[]{key},
                 WorkoutSummaries.C_ID + "=?",
                 new String[]{Long.toString(workoutId)},
-                null, null, null);
-        if (cursor.moveToFirst()) {
-            try {
+                null, null, null)) {
+
+            if (cursor.moveToFirst()) {
                 value = cursor.getDouble(cursor.getColumnIndexOrThrow(key));
-            } catch (Exception e) {
-                Log.d(TAG, "in getDouble(): probably undefined key is used: " + key);
             }
-        }
-        cursor.close();
-        WorkoutSummariesDatabaseManager.getInstance().closeDatabase(); // summariesDb.close();
+        } // Cursor is closed here, even if an exception occurs.
 
         return value;
     }
 
     @Nullable
-    public static Double getDouble(@Nullable String baseFileName, String key) {
+    public static Double getDouble(Context context, @Nullable String baseFileName, String key) {
         if (DEBUG) Log.i(TAG, "getDouble for baseFileName: " + baseFileName + ", " + key);
 
         if (baseFileName == null) {
@@ -166,188 +177,147 @@ public class WorkoutSummariesDatabaseManager {
 
         Double value = null;
 
-        SQLiteDatabase summariesDb = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
-
-        // TODO: use method getCursor(...)
-        Cursor cursor = summariesDb.query(WorkoutSummaries.TABLE,
-                null,
+        try(Cursor cursor = getInstance(context).getDatabase().query(WorkoutSummaries.TABLE,
+                new String[]{key},
                 WorkoutSummaries.FILE_BASE_NAME + "=?",
                 new String[]{baseFileName},
-                null, null, null);
-        if (cursor.moveToFirst()) {
-            try {
+                null, null, null)) {
+
+            if (cursor.moveToFirst()) {
                 value = cursor.getDouble(cursor.getColumnIndexOrThrow(key));
-            } catch (Exception e) {
-                Log.d(TAG, "in getDouble(): probably undefined key is used: " + key);
             }
         }
-        cursor.close();
-        WorkoutSummariesDatabaseManager.getInstance().closeDatabase(); // summariesDb.close();
 
         return value;
     }
 
     @Nullable
-    public static String getString(long workoutId, String key) {
+    public static String getString(Context context, long workoutId, String key) {
         if (DEBUG) Log.i(TAG, "getString(" + workoutId + ", " + key + ")");
 
         String value = null;
 
-        SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
-        Cursor cursor = db.query(WorkoutSummaries.TABLE,
-                null,
+        try (Cursor cursor = getInstance(context).getDatabase().query(WorkoutSummaries.TABLE,
+                new String[]{key},
                 WorkoutSummaries.C_ID + "=?",
                 new String[]{Long.toString(workoutId)},
                 null,
                 null,
-                null);
-        if (cursor.moveToFirst()) {
-            value = cursor.getString(cursor.getColumnIndex(key));
-        }
+                null)) {
 
-        cursor.close();
-        WorkoutSummariesDatabaseManager.getInstance().closeDatabase(); // db.close();
+            if (cursor.moveToFirst()) {
+                value = cursor.getString(cursor.getColumnIndex(key));
+            }
+        }
 
         return value;
     }
 
     @Nullable
-    public static Integer getInt(long workoutId, String key) {
+    public static Integer getInt(Context context, long workoutId, String key) {
         if (DEBUG) Log.i(TAG, "getInt for workoutId: " + workoutId + ", " + key);
 
         Integer value = null;
 
-        SQLiteDatabase summariesDb = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
-
-        Cursor cursor = summariesDb.query(WorkoutSummaries.TABLE,
-                null,
+        try(Cursor cursor = getInstance(context).getDatabase().query(WorkoutSummaries.TABLE,
+                new String[]{key},
                 WorkoutSummaries.C_ID + "=?",
                 new String[]{Long.toString(workoutId)},
-                null, null, null);
-        if (cursor.moveToFirst()) {
-            try {
+                null, null, null)) {
+
+            if (cursor.moveToFirst()) {
                 value = cursor.getInt(cursor.getColumnIndexOrThrow(key));
-            } catch (Exception e) {
-                Log.d(TAG, "in getInt(): probably undefined key is used: " + key);
             }
         }
-        cursor.close();
-        WorkoutSummariesDatabaseManager.getInstance().closeDatabase(); // summariesDb.close();
 
         return value;
     }
 
     @Nullable
-    public static Long getLong(long workoutId, String key) {
-        if (DEBUG) Log.i(TAG, "getLong for workoutId: " + workoutId + ", " + key);
-
-        Long value = null;
-
-        SQLiteDatabase summariesDb = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
-
-        Cursor cursor = summariesDb.query(WorkoutSummaries.TABLE,
-                null,
-                WorkoutSummaries.C_ID + "=?",
-                new String[]{Long.toString(workoutId)},
-                null, null, null);
-        if (cursor.moveToFirst()) {
-            try {
-                value = cursor.getLong(cursor.getColumnIndexOrThrow(key));
-            } catch (Exception e) {
-                Log.d(TAG, "in getLong(): probably undefined key is used: " + key);
-            }
-        }
-        cursor.close();
-        WorkoutSummariesDatabaseManager.getInstance().closeDatabase(); // summariesDb.close();
-
-        return value;
-    }
-
-    @Nullable
-    public static Integer getInt(String baseFileName, String key) {
+    public static Integer getInt(Context context, String baseFileName, String key) {
         if (DEBUG) Log.i(TAG, "getInt for baseFileName: " + baseFileName + ", " + key);
 
         Integer value = null;
 
-        SQLiteDatabase summariesDb = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
-
-        try (Cursor cursor = summariesDb.query(WorkoutSummaries.TABLE,
-                null,
+        try (Cursor cursor = getInstance(context).getDatabase().query(WorkoutSummaries.TABLE,
+                new String[]{key},
                 WorkoutSummaries.FILE_BASE_NAME + "=?",
                 new String[]{baseFileName},
                 null, null, null)) {
+
             if (cursor.moveToFirst()) {
                 value = cursor.getInt(cursor.getColumnIndexOrThrow(key));
             }
-        } catch (Exception e) {
-            Log.d(TAG, "in getInt(): probably undefined key is used: " + key);
         }
-        WorkoutSummariesDatabaseManager.getInstance().closeDatabase(); // summariesDb.close();
 
         return value;
     }
 
-    public static boolean getBoolean(long workoutId, String key) {
+    @Nullable
+    public static Long getLong(Context context, long workoutId, String key) {
+        if (DEBUG) Log.i(TAG, "getLong for workoutId: " + workoutId + ", " + key);
+
+        Long value = null;
+
+        try(Cursor cursor = getInstance(context).getDatabase().query(WorkoutSummaries.TABLE,
+                new String[]{key},
+                WorkoutSummaries.C_ID + "=?",
+                new String[]{Long.toString(workoutId)},
+                null, null, null)) {
+
+            if (cursor.moveToFirst()) {
+                value = cursor.getLong(cursor.getColumnIndexOrThrow(key));
+            }
+        }
+
+        return value;
+    }
+
+
+    public static boolean getBoolean(Context context, long workoutId, String key) {
         if (DEBUG) Log.i(TAG, "getBoolean for workoutId: " + workoutId + ", " + key);
 
         boolean result = false;
 
-        SQLiteDatabase summariesDb = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
-
-        Cursor cursor = summariesDb.query(WorkoutSummaries.TABLE,
-                null,
+        try( Cursor cursor = getInstance(context).getDatabase().query(WorkoutSummaries.TABLE,
+                new String[]{key},
                 WorkoutSummaries.C_ID + "=?",
                 new String[]{Long.toString(workoutId)},
-                null, null, null);
+                null, null, null)) {
 
-        if (DEBUG)
-            Log.i(TAG, "cursor has dimension " + cursor.getColumnCount() + " x " + cursor.getCount() + "entries");
-
-        if (cursor.moveToFirst()) {
-            try {
-                int columnIndex = cursor.getColumnIndexOrThrow(key);
-                if (DEBUG) Log.i(TAG, "columnIndex=" + columnIndex);
-                int value = cursor.getInt(columnIndex);
-                if (DEBUG) Log.i(TAG, "got " + value);
+            if (cursor.moveToFirst()) {
+                int value = cursor.getInt(cursor.getColumnIndexOrThrow(key));
                 result = value > 0;
-            } catch (Exception e) {
-                Log.d(TAG, "in getBoolean(): probably undefined key is used: " + key);
-                // when the key is not defined, we also return false;
             }
         }
-        cursor.close();
-        WorkoutSummariesDatabaseManager.getInstance().closeDatabase(); // summariesDb.close();
-
-        if (DEBUG) Log.i(TAG, "returning " + result);
 
         return result;
     }
 
     @Nullable
-    public static Double getExtremaValue(long workoutId, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType) {
+    public static Double getExtremaValue(Context context, long workoutId, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType) {
         Double extremaValue = null;
 
-        SQLiteDatabase summariesDb = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
-
-        Cursor cursor = summariesDb.query(WorkoutSummaries.TABLE_EXTREMA_VALUES,
-                null,
+        try(Cursor cursor = getInstance(context).getDatabase().query(WorkoutSummaries.TABLE_EXTREMA_VALUES,
+                new String[]{WorkoutSummaries.VALUE},
                 WorkoutSummaries.WORKOUT_ID + "=? AND " + WorkoutSummaries.SENSOR_TYPE + "=? AND " + WorkoutSummaries.EXTREMA_TYPE + "=?",
                 new String[]{Long.toString(workoutId), sensorType.name(), extremaType.name()},
-                null, null, null);
-        if (cursor.moveToFirst()) {
-            extremaValue = cursor.getDouble(cursor.getColumnIndex(WorkoutSummaries.VALUE));
-            if (DEBUG)
-                Log.i(TAG, "got " + extremaValue + " for " + extremaType.name() + " " + sensorType.name() + " of workout " + workoutId);
-        } else {
-            if (DEBUG)
-                Log.d(TAG, "there seems to be no entry for " + extremaType.name() + " " + sensorType.name() + " in workout " + workoutId);
-        }
-        cursor.close();
-        WorkoutSummariesDatabaseManager.getInstance().closeDatabase(); // summariesDb.close();
+                null, null, null)) {
 
+            if (cursor.moveToFirst()) {
+                extremaValue = cursor.getDouble(cursor.getColumnIndex(WorkoutSummaries.VALUE));
+                if (DEBUG)
+                    Log.i(TAG, "got " + extremaValue + " for " + extremaType.name() + " " + sensorType.name() + " of workout " + workoutId);
+            } else {
+                if (DEBUG)
+                    Log.d(TAG, "there seems to be no entry for " + extremaType.name() + " " + sensorType.name() + " in workout " + workoutId);
+            }
+        }
         return extremaValue;
     }
 
+
+    /* currently unused code...
     // TODO: make sport specific?
     @NonNull
     public static List<LatLng> getExtremaTypeLocations(@NonNull ExtremaType extremaType) {
@@ -408,27 +378,9 @@ public class WorkoutSummariesDatabaseManager {
 
         return startLocations;
     }
-
-    public static boolean updateValues(long workoutId, ContentValues contentValues) {
-
-        SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
-
-        try {
-            db.update(WorkoutSummaries.TABLE,
-                    contentValues,
-                    WorkoutSummaries.C_ID + "=" + workoutId,
-                    null);
-        } catch (SQLException e) {
-            Log.e(TAG, "Error while writing" + e);
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * stolen from BaseExporter
      */
+
+
     protected static boolean dataValid(@NonNull Cursor cursor, String string) {
         if (cursor.getColumnIndex(string) == -1) {
             if (DEBUG) Log.d(TAG, "dataValid: no such columnIndex!: " + string);
@@ -441,10 +393,10 @@ public class WorkoutSummariesDatabaseManager {
         return true;
     }
 
-    public static void saveAccumulatedSensorTypes(long workoutId, @NonNull Iterable<SensorType> sensorTypes) {
+    public static void saveAccumulatedSensorTypes(Context context, long workoutId, @NonNull Iterable<SensorType> sensorTypes) {
         if (DEBUG) Log.i(TAG, "saveAccumulatedSensors for workoutId: " + workoutId);
 
-        SQLiteDatabase summariesDb = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
+        SQLiteDatabase summariesDb = getInstance(context).getDatabase();
         ContentValues values = new ContentValues();
         values.put(WorkoutSummaries.WORKOUT_ID, workoutId);
 
@@ -453,31 +405,27 @@ public class WorkoutSummariesDatabaseManager {
             values.put(WorkoutSummaries.SENSOR_TYPE, sensorType.name());
             summariesDb.insert(WorkoutSummaries.TABLE_ACCUMULATED_SENSORS, null, values);
         }
-
-        WorkoutSummariesDatabaseManager.getInstance().closeDatabase(); // summariesDb.close();
-        if (DEBUG) Log.i(TAG, "end of saveAccumulatedSensors");
     }
 
     @NonNull
-    public static Set<SensorType> getAccumulatedSensorTypes(long workoutId) {
+    public static Set<SensorType> getAccumulatedSensorTypes(Context context, long workoutId) {
         if (DEBUG) Log.i(TAG, "getAccumulatedSensorTypes for workoutId: " + workoutId);
 
         Set<SensorType> accumulatedSensorTypesSet = new HashSet<>();
 
-        SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
-        Cursor cursor = db.query(WorkoutSummaries.TABLE_ACCUMULATED_SENSORS,
-                null, // columns
+
+        try(Cursor cursor = getInstance(context).getDatabase().query(WorkoutSummaries.TABLE_ACCUMULATED_SENSORS,
+                new String[]{WorkoutSummaries.SENSOR_TYPE}, // columns
                 WorkoutSummaries.WORKOUT_ID + "=?", // selection
                 new String[]{Long.toString(workoutId)}, //selectionArgs,
-                null, null, null); // groupBy, having, orderBy)
-        while (cursor.moveToNext()) {
-            String sensorTypeName = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.SENSOR_TYPE));
-            if (DEBUG) Log.i(TAG, "got sensor: " + sensorTypeName);
-            accumulatedSensorTypesSet.add(SensorType.valueOf(sensorTypeName));
-        }
+                null, null, null)) { // groupBy, having, orderBy)
 
-        cursor.close();
-        WorkoutSummariesDatabaseManager.getInstance().closeDatabase(); // db.close();
+            while (cursor.moveToNext()) {
+                String sensorTypeName = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.SENSOR_TYPE));
+                if (DEBUG) Log.i(TAG, "got sensor: " + sensorTypeName);
+                accumulatedSensorTypesSet.add(SensorType.valueOf(sensorTypeName));
+            }
+        }
 
         return accumulatedSensorTypesSet;
     }
@@ -488,102 +436,90 @@ public class WorkoutSummariesDatabaseManager {
      */
 
     @NonNull
-    public static List<Long> getWorkoutIds() {
+    public static List<Long> getWorkoutIds(Context context) {
         List<Long> workoutIds = new LinkedList<>();
 
-        SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
-
-        Cursor cursor = db.query(WorkoutSummaries.TABLE,
+        try(Cursor cursor = getInstance(context).getDatabase().query(WorkoutSummaries.TABLE,
+                new String[]{WorkoutSummaries.C_ID}, // columns
                 null, // columns,
                 null, // selection
-                null, null, null, null); // selectionArgs, groupBy, having, orderBy)
-        while (cursor.moveToNext()) {
-            long workoutId = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.C_ID));
-            workoutIds.add(workoutId);
-        }
+                null, null, null, null)) { // selectionArgs, groupBy, having, orderBy)
 
-        cursor.close();
-        WorkoutSummariesDatabaseManager.getInstance().closeDatabase(); // db.close();
+            while (cursor.moveToNext()) {
+                long workoutId = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.C_ID));
+                workoutIds.add(workoutId);
+            }
+        }
 
         return workoutIds;
     }
 
     @NonNull
-    public static List<Long> getOldWorkouts(int days) {
+    public static List<Long> getOldWorkouts(Context context, int days) {
         if (DEBUG) Log.i(TAG, "getOldWorkouts(" + days + ")");
 
         List<Long> oldWorkoutIds = new LinkedList<>();
 
-        SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
-
-        Cursor cursor = db.query(WorkoutSummaries.TABLE,
-                null, // columns,
+        try(Cursor cursor = getInstance(context).getDatabase().query(WorkoutSummaries.TABLE,
+                new String[]{WorkoutSummaries.C_ID}, // columns,
                 WorkoutSummaries.TIME_START + " <= datetime('now', '-" + days + " day')", // selection
-                null, null, null, null); // selectionArgs, groupBy, having, orderBy)
-        while (cursor.moveToNext()) {
-            long workoutId = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.C_ID));
-            if (DEBUG) Log.i(TAG, "adding " + workoutId + " to oldWorkoutId List (name="
-                    + cursor.getString(cursor.getColumnIndex(WorkoutSummaries.WORKOUT_NAME)) + ", startTime="
-                    + cursor.getString(cursor.getColumnIndex(WorkoutSummaries.TIME_START)) + ")");
-            oldWorkoutIds.add(workoutId);
-        }
+                null, null, null, null)) { // selectionArgs, groupBy, having, orderBy)
 
-        cursor.close();
-        WorkoutSummariesDatabaseManager.getInstance().closeDatabase(); // db.close();
+            while (cursor.moveToNext()) {
+                long workoutId = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.C_ID));
+                if (DEBUG) Log.i(TAG, "adding " + workoutId + " to oldWorkoutId List (name="
+                        + cursor.getString(cursor.getColumnIndex(WorkoutSummaries.WORKOUT_NAME)) + ", startTime="
+                        + cursor.getString(cursor.getColumnIndex(WorkoutSummaries.TIME_START)) + ")");
+                oldWorkoutIds.add(workoutId);
+            }
+        }
 
         return oldWorkoutIds;
     }
 
     @Nullable
-    public static String getStartTime(long workoutId, String timeZone) {
+    public static String getStartTime(Context context, long workoutId, String timeZone) {
         if (DEBUG) Log.i(TAG, "getStartTime: workoutId=" + workoutId);
         String startTime = null;
 
-        SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
-
-        Cursor cursor = db.query(WorkoutSummaries.TABLE, // table
+        try(Cursor cursor = getInstance(context).getDatabase().query(WorkoutSummaries.TABLE, // table
                 new String[]{"datetime(" + WorkoutSummaries.TIME_START + ", '" + timeZone + "')"}, // columns
                 WorkoutSummaries.C_ID + "=?",  // selection
                 new String[]{Long.toString(workoutId)}, //selectionArgs,
-                null, null, null); // groupBy, having, orderBy)
-        cursor.moveToFirst();
-        try {
-            startTime = cursor.getString(0);
-        } catch (Exception e) {
-            // startTime remains null
+                null, null, null)) { // groupBy, having, orderBy)
+            if (cursor.moveToFirst()) {
+                startTime = cursor.getString(0);
+            }
         }
-
-        WorkoutSummariesDatabaseManager.getInstance().closeDatabase();
 
         return startTime;
     }
 
-    public static String getStartTime(String fileBaseName, String timeZone) {
+    public static String getStartTime(Context context, String fileBaseName, String timeZone) {
         if (DEBUG) Log.i(TAG, "getStartTime: fileBaseName=" + fileBaseName);
         String startTime = null;
 
-        SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
-
-        Cursor cursor = db.query(WorkoutSummaries.TABLE, // table
+        try(Cursor cursor = getInstance(context).getDatabase().query(WorkoutSummaries.TABLE, // table
                 new String[]{"datetime(" + WorkoutSummaries.TIME_START + ", '" + timeZone + "')"}, // columns
                 WorkoutSummaries.FILE_BASE_NAME + "=?",  // selection
                 new String[]{fileBaseName}, //selectionArgs,
-                null, null, null); // groupBy, having, orderBy)
-        cursor.moveToFirst();
-        startTime = cursor.getString(0);
+                null, null, null)) { // groupBy, having, orderBy)
 
-        WorkoutSummariesDatabaseManager.getInstance().closeDatabase();
+            if (cursor.moveToFirst()) {
+                startTime = cursor.getString(0);
+            }
+        }
 
         return startTime;
     }
 
 
-    public static boolean deleteWorkout(long workoutId, Context context) {
+    public static boolean deleteWorkout(Context context, long workoutId) {
         if (DEBUG) Log.i(TAG, "deleteWorkout: workoutId=" + workoutId);
 
         // open databases
-        SQLiteDatabase dbSummaries = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
-        SQLiteDatabase dbLaps = LapsDatabaseManager.getInstance().getOpenDatabase();
+        SQLiteDatabase dbSummaries = getInstance(context).getDatabase();
+        SQLiteDatabase dbLaps = LapsDatabaseManager.getInstance().getOpenDatabase(); // TODO: do the same for LapsDatabaseManager
 
         // get workout name
         Cursor cursor = dbSummaries.query(WorkoutSummaries.TABLE, null, WorkoutSummaries.C_ID + "=?", new String[]{workoutId + ""}, null, null, null);
@@ -613,8 +549,6 @@ public class WorkoutSummariesDatabaseManager {
         if (DEBUG) Log.d(TAG, "deleting from Laps");
         dbLaps.delete(LapsDatabaseManager.Laps.TABLE, LapsDatabaseManager.Laps.WORKOUT_ID + "=?", new String[]{workoutId + ""});
 
-
-        WorkoutSummariesDatabaseManager.getInstance().closeDatabase();  // dbSummaries.close();
         LapsDatabaseManager.getInstance().closeDatabase(); // instead of dbLaps.close();
 
         return true;
@@ -624,10 +558,10 @@ public class WorkoutSummariesDatabaseManager {
     // -- Fancy / Auto Name
 
     @NonNull
-    public static List<String> getFancyNameList() {
+    public static List<String> getFancyNameList(Context context) {
         List result = new LinkedList();
 
-        SQLiteDatabase db = getInstance().getOpenDatabase();
+        SQLiteDatabase db = getInstance(context).getDatabase();
         Cursor cursor = db.query(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS, // table
                 null, null, null, null, null, null);
 
@@ -635,14 +569,13 @@ public class WorkoutSummariesDatabaseManager {
             result.add(cursor.getString(cursor.getColumnIndex(WorkoutSummaries.FANCY_NAME)));
         }
 
-        getInstance().closeDatabase();
         return result;
     }
 
-    public static long getFancyNameId(String fancyName) {
+    public static long getFancyNameId(Context context, String fancyName) {
         long fancyNameId = -1;
 
-        SQLiteDatabase db = getInstance().getOpenDatabase();
+        SQLiteDatabase db = getInstance(context).getDatabase();
 
         Cursor cursor = db.query(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS,
                 null,
@@ -653,17 +586,15 @@ public class WorkoutSummariesDatabaseManager {
             fancyNameId = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.C_ID));
         }
 
-        getInstance().closeDatabase();
-
         return fancyNameId;
     }
 
     @NonNull
-    public static String getFancyNameAndIncrement(String fancyName) {
+    public static String getFancyNameAndIncrement(Context context, String fancyName) {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append(fancyName);
 
-        SQLiteDatabase db = getInstance().getOpenDatabase();
+        SQLiteDatabase db = getInstance(context).getDatabase();
 
         Cursor cursor = db.query(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS,
                 null,
@@ -685,13 +616,12 @@ public class WorkoutSummariesDatabaseManager {
             }
         }
 
-        getInstance().closeDatabase();
-
         return stringBuilder.toString();
     }
 
     @Nullable
-    public static String getFancyName(long sportTypeId,
+    public static String getFancyName(Context context,
+                                      long sportTypeId,
                                       @Nullable KnownLocationsDatabaseManager.MyLocation startLocation,
                                       @Nullable KnownLocationsDatabaseManager.MyLocation maxLineDistanceLocation,
                                       @Nullable KnownLocationsDatabaseManager.MyLocation endLocation) {
@@ -699,7 +629,7 @@ public class WorkoutSummariesDatabaseManager {
 
             StringBuilder stringBuilder = new StringBuilder();
 
-            SQLiteDatabase db = getInstance().getOpenDatabase();
+            SQLiteDatabase db = getInstance(context).getDatabase();
 
             // get the first part, something like #bike2work, b2w, >> work ...
             Cursor cursor = db.query(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS, // table
@@ -711,7 +641,7 @@ public class WorkoutSummariesDatabaseManager {
             if (cursor.moveToFirst()) {
                 stringBuilder.append(cursor.getString(cursor.getColumnIndex(WorkoutSummaries.FANCY_NAME)));
             } else {
-                stringBuilder.append(createDefaultFancyName(sportTypeId, startLocation, maxLineDistanceLocation, endLocation));
+                stringBuilder.append(createDefaultFancyName(context, sportTypeId, startLocation, maxLineDistanceLocation, endLocation));
                 cursor.requery();
             }
 
@@ -746,7 +676,6 @@ public class WorkoutSummariesDatabaseManager {
 
             // clean up
             cursor.close();
-            getInstance().closeDatabase();
 
             return stringBuilder.toString();
         }
@@ -755,7 +684,8 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     @Nullable
-    protected static String createDefaultFancyName(long sportTypeId,
+    protected static String createDefaultFancyName(Context context,
+                                                   long sportTypeId,
                                                    @Nullable KnownLocationsDatabaseManager.MyLocation startLocation,
                                                    KnownLocationsDatabaseManager.MyLocation maxLineDistanceLocation,
                                                    @Nullable KnownLocationsDatabaseManager.MyLocation endLocation) {
@@ -783,9 +713,8 @@ public class WorkoutSummariesDatabaseManager {
             contentValues.put(WorkoutSummaries.COUNTER, 0);
             contentValues.put(WorkoutSummaries.ADD_VIA, 1);
 
-            SQLiteDatabase db = getInstance().getOpenDatabase();
+            SQLiteDatabase db = getInstance(context).getDatabase();
             db.insert(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS, null, contentValues);
-            getInstance().closeDatabase();
 
             return baseName;
         }
@@ -793,33 +722,15 @@ public class WorkoutSummariesDatabaseManager {
         return null;
     }
 
-    public static void deleteFancyName(long id) {
+    public static void deleteFancyName(Context context, long id) {
         if (DEBUG) Log.i(TAG, "deleteFancyName: id=" + id);
 
-        SQLiteDatabase db = getInstance().getOpenDatabase();
+        SQLiteDatabase db = getInstance(context).getDatabase();
         db.delete(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS,
                 WorkoutSummaries.C_ID + " =? ",
                 new String[]{Long.toString(id)});
-        getInstance().closeDatabase();
     }
 
-    public synchronized SQLiteDatabase getOpenDatabase() {
-        mOpenCounter++;
-        if (mOpenCounter == 1) {
-            // Opening new database
-            mDatabase = cWorkoutSummariesDbHelper.getWritableDatabase();
-        }
-        return mDatabase;
-    }
-
-    public synchronized void closeDatabase() {
-        mOpenCounter--;
-        if (mOpenCounter == 0) {
-            // Closing database
-            mDatabase.close();
-
-        }
-    }
 
     public static final class WorkoutSummaries {
         public static final String TABLE = "WorkoutSummaries";

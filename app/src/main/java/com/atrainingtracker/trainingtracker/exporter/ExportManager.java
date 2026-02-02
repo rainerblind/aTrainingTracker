@@ -323,7 +323,7 @@ public class ExportManager {
 
     /** simple helper method to get the baseFileName from a given workoutId */
     private String getFileBaseName(long workoutId) {
-        SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
+        SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance(mContext).getDatabase();
 
         Cursor cursor = db.query(WorkoutSummaries.TABLE,
                 new String[]{WorkoutSummaries.FILE_BASE_NAME},
@@ -336,7 +336,6 @@ public class ExportManager {
         cursor.moveToFirst();
         String fileBaseName = cursor.getString(0);
         cursor.close();
-        WorkoutSummariesDatabaseManager.getInstance().closeDatabase(); // db.close();
 
         return fileBaseName;
     }

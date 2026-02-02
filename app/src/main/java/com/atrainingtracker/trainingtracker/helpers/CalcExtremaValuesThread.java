@@ -71,16 +71,16 @@ public class CalcExtremaValuesThread extends Thread {
         if (DEBUG) Log.i(TAG, "CalcExtremaValuesTask()");
     }
 
-    public static void calcAndSaveMaxLineDistancePosition(final long workoutId) {
+    public static void calcAndSaveMaxLineDistancePosition(Context context, final long workoutId) {
         if (DEBUG) Log.i(TAG, "calcAndSaveMaxLineDistancePosition: workoutId=" + workoutId);
 
-        WorkoutSamplesDatabaseManager.LatLngValue latLngValue = WorkoutSamplesDatabaseManager.getExtremaPosition(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX);
+        WorkoutSamplesDatabaseManager.LatLngValue latLngValue = WorkoutSamplesDatabaseManager.getExtremaPosition(context, workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX);
         if (latLngValue == null) {
             return;
         }  // TODO: when does this happen and what follows when we have no maxLineDistancePosition???
 
         // save the location in the database
-        SQLiteDatabase summariesDb = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
+        SQLiteDatabase summariesDb = WorkoutSummariesDatabaseManager.getInstance(context).getDatabase();
         ContentValues values = new ContentValues();
 
         // first, the latitude
@@ -132,8 +132,8 @@ public class CalcExtremaValuesThread extends Thread {
 
         if (DEBUG) Log.d(TAG, "calculating extrema values for workout " + workoutId);
 
-        WorkoutSummariesDatabaseManager.getInstance();
-        String baseFileName = WorkoutSummariesDatabaseManager.getBaseFileName(workoutId);
+        WorkoutSummariesDatabaseManager.getInstance(mContext);
+        String baseFileName = WorkoutSummariesDatabaseManager.getBaseFileName(mContext, workoutId);
 
         // find max line distance
         calcAndSaveExtremaValues(workoutId,
@@ -147,7 +147,7 @@ public class CalcExtremaValuesThread extends Thread {
                 Arrays.asList(SensorType.LATITUDE, SensorType.LONGITUDE),
                 Arrays.asList(ExtremaType.START, ExtremaType.END));
 
-        calcAndSaveMaxLineDistancePosition(workoutId);
+        calcAndSaveMaxLineDistancePosition(mContext, workoutId);
 
         calcFancyName(workoutId);
 
@@ -158,8 +158,7 @@ public class CalcExtremaValuesThread extends Thread {
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         // first, we need the accumulated sensors of this workout
-        WorkoutSummariesDatabaseManager.getInstance();
-        Set<SensorType> accumulatedSensorTypes = WorkoutSummariesDatabaseManager.getAccumulatedSensorTypes(workoutId);
+        Set<SensorType> accumulatedSensorTypes = WorkoutSummariesDatabaseManager.getAccumulatedSensorTypes(mContext, workoutId);
 
         // if there are no sensors stored (due to upgrading from DB version 3 to 4, we use all important sensors
         if (accumulatedSensorTypes.isEmpty()) {
@@ -181,12 +180,11 @@ public class CalcExtremaValuesThread extends Thread {
         values.put(WorkoutSummaries.EXTREMA_VALUES_CALCULATED, 1);
 
         if (DEBUG) Log.i(TAG, "updating WorkoutSummaries for workoutId=" + workoutId);
-        SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
+        SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance(mContext).getDatabase();
         db.update(WorkoutSummaries.TABLE,
                 values,
                 WorkoutSummaries.C_ID + "=?",
                 new String[]{Long.toString(workoutId)});
-        WorkoutSummariesDatabaseManager.getInstance().closeDatabase(); // db.close();
 
         new Handler(Looper.getMainLooper()).post(() -> {
             if (DEBUG) Log.d(TAG, "onPostExecute");
@@ -205,31 +203,31 @@ public class CalcExtremaValuesThread extends Thread {
         publishProgress(mContext.getString(R.string.calc_workout_name));
 
         MyLocation startLocation = null;
-        Double startLat = WorkoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.LATITUDE, ExtremaType.START);
-        Double startLon = WorkoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.LONGITUDE, ExtremaType.START);
+        Double startLat = WorkoutSummariesDatabaseManager.getExtremaValue(mContext,workoutId, SensorType.LATITUDE, ExtremaType.START);
+        Double startLon = WorkoutSummariesDatabaseManager.getExtremaValue(mContext, workoutId, SensorType.LONGITUDE, ExtremaType.START);
         if (startLat != null && startLon != null) {
             startLocation = KnownLocationsDatabaseManager.getMyLocation(new LatLng(startLat, startLon));
         }
 
         MyLocation maxLineLocation = null;
-        Double maxLineLat = WorkoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.LATITUDE, ExtremaType.MAX_LINE_DISTANCE);
-        Double maxLineLon = WorkoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.LONGITUDE, ExtremaType.MAX_LINE_DISTANCE);
+        Double maxLineLat = WorkoutSummariesDatabaseManager.getExtremaValue(mContext, workoutId, SensorType.LATITUDE, ExtremaType.MAX_LINE_DISTANCE);
+        Double maxLineLon = WorkoutSummariesDatabaseManager.getExtremaValue(mContext, workoutId, SensorType.LONGITUDE, ExtremaType.MAX_LINE_DISTANCE);
         if (maxLineLat != null && maxLineLon != null) {
             maxLineLocation = KnownLocationsDatabaseManager.getMyLocation(new LatLng(maxLineLat, maxLineLon));
         }
 
         MyLocation endLocation = null;
-        Double endLat = WorkoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.LATITUDE, ExtremaType.END);
-        Double endLon = WorkoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.LONGITUDE, ExtremaType.END);
+        Double endLat = WorkoutSummariesDatabaseManager.getExtremaValue(mContext, workoutId, SensorType.LATITUDE, ExtremaType.END);
+        Double endLon = WorkoutSummariesDatabaseManager.getExtremaValue(mContext, workoutId, SensorType.LONGITUDE, ExtremaType.END);
         if (endLat != null && endLon != null) {
             endLocation = KnownLocationsDatabaseManager.getMyLocation(new LatLng(endLat, endLon));
         }
 
-        Long sportTypeId = WorkoutSummariesDatabaseManager.getLong(workoutId, WorkoutSummaries.SPORT_ID);
+        Long sportTypeId = WorkoutSummariesDatabaseManager.getLong(mContext, workoutId, WorkoutSummaries.SPORT_ID);
         if (sportTypeId == null) {
             sportTypeId = SportTypeDatabaseManager.getDefaultSportTypeId();
         }
-        String fancyName = WorkoutSummariesDatabaseManager.getFancyName(sportTypeId, startLocation, maxLineLocation, endLocation);
+        String fancyName = WorkoutSummariesDatabaseManager.getFancyName(mContext, sportTypeId, startLocation, maxLineLocation, endLocation);
 
         if (fancyName != null) {
             Intent intent = new Intent(FINISHED_CALCULATING_FANCY_NAME)
@@ -240,7 +238,7 @@ public class CalcExtremaValuesThread extends Thread {
             ContentValues contentValues = new ContentValues();
             contentValues.put(WorkoutSummaries.WORKOUT_NAME, fancyName);
 
-            SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
+            SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance(mContext).getDatabase();
             db.update(WorkoutSummaries.TABLE, contentValues, WorkoutSummaries.C_ID + " = ?", new String[]{Long.toString(workoutId)});
         }
     }
@@ -251,12 +249,9 @@ public class CalcExtremaValuesThread extends Thread {
 
         // get max away points and guess commute and trainer
         boolean commute = false, trainer = false;
-        WorkoutSummariesDatabaseManager.getInstance();
-        Double distance = WorkoutSummariesDatabaseManager.getDouble(workoutId, WorkoutSummaries.DISTANCE_TOTAL_m);
-        WorkoutSummariesDatabaseManager.getInstance();
-        Double maxLineDistance = WorkoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX);
-        WorkoutSummariesDatabaseManager.getInstance();
-        Double endLineDistance = WorkoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.END);
+        Double distance = WorkoutSummariesDatabaseManager.getDouble(mContext, workoutId, WorkoutSummaries.DISTANCE_TOTAL_m);
+        Double maxLineDistance = WorkoutSummariesDatabaseManager.getExtremaValue(mContext, workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX);
+        Double endLineDistance = WorkoutSummariesDatabaseManager.getExtremaValue(mContext, workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.END);
         if (DEBUG)
             Log.i(TAG, "distance=" + distance + ", max line distance=" + maxLineDistance + ", end line distance=" + endLineDistance);
 
@@ -291,12 +286,11 @@ public class CalcExtremaValuesThread extends Thread {
             values.put(WorkoutSummaries.TRAINER, trainer);
 
             if (DEBUG) Log.i(TAG, "updating WorkoutSummaries for workoutId=" + workoutId);
-            SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
+            SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance(mContext).getDatabase();
             db.update(WorkoutSummaries.TABLE,
                     values,
                     WorkoutSummaries.C_ID + "=?",
                     new String[]{Long.toString(workoutId)});
-            WorkoutSummariesDatabaseManager.getInstance().closeDatabase(); // db.close();
         }
 
         mContext.sendBroadcast(new Intent(FINISHED_GUESSING_COMMUTE_AND_TRAINER)
@@ -307,7 +301,7 @@ public class CalcExtremaValuesThread extends Thread {
         if (DEBUG) Log.i(TAG, "calcAndSaveExtremaValues(" + workoutId + "...)");
 
         // WorkoutSamplesDbHelper workoutSamplesDbHelper = new WorkoutSamplesDbHelper(mContext);
-        SQLiteDatabase summariesDb = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
+        SQLiteDatabase summariesDb = WorkoutSummariesDatabaseManager.getInstance(mContext).getDatabase();
 
         ContentValues values = new ContentValues();
 
@@ -316,7 +310,7 @@ public class CalcExtremaValuesThread extends Thread {
                 publishProgress(mContext.getString(R.string.calculating_extrema_value_for, extremaType.name(), mContext.getString(sensorType.getShortNameId())));
 
                 WorkoutSamplesDatabaseManager.getInstance();
-                Double value = WorkoutSamplesDatabaseManager.calcExtremaValue(baseFileName, extremaType, sensorType);
+                Double value = WorkoutSamplesDatabaseManager.calcExtremaValue(mContext, baseFileName, extremaType, sensorType);
                 if (value != null) {
                     if (DEBUG)
                         Log.i(TAG, "saving " + extremaType.name() + " of " + sensorType.name() + ": " + value);
@@ -355,7 +349,5 @@ public class CalcExtremaValuesThread extends Thread {
                     .setPackage(mContext.getPackageName());
             mContext.sendBroadcast(intent);
         }
-
-        WorkoutSummariesDatabaseManager.getInstance().closeDatabase(); // summariesDb.close();
     }
 }

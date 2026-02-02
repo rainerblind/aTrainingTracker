@@ -324,7 +324,7 @@ public class TrackerService extends Service {
 
     private void recreateValuesWhenResuming() {
 
-        SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
+        SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance(this).getDatabase();
         Cursor cursor = db.query(WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE, null, null, null, null, null, null);
         cursor.moveToLast();
 
@@ -337,7 +337,6 @@ public class TrackerService extends Service {
         double distance_m = cursor.getDouble(cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.DISTANCE_TOTAL_m));
 
         cursor.close();
-        WorkoutSummariesDatabaseManager.getInstance().closeDatabase(); // instead of db.close();
 
         Log.d(TAG, "resuming with mBaseFileName=" + mBaseFileName
                 + ", mWorkoutId=" + mWorkoutID
@@ -441,10 +440,9 @@ public class TrackerService extends Service {
         values.put(WorkoutSummaries.WORKOUT_NAME, mBaseFileName);
         values.put(WorkoutSummaries.FILE_BASE_NAME, mBaseFileName);
 
-        WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance();
-        SQLiteDatabase summariesDb = databaseManager.getOpenDatabase();
+        WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance(this);
+        SQLiteDatabase summariesDb = databaseManager.getDatabase();
         long workoutId = summariesDb.insert(WorkoutSummaries.TABLE, null, values);
-        databaseManager.closeDatabase(); // summariesDb.close();
         //}
         //catch (SQLException e) {
         //    Log.e(TAG, "Error while writing" + e.toString());
@@ -475,13 +473,12 @@ public class TrackerService extends Service {
         values.put(WorkoutSummaries.B_SPORT, SportTypeDatabaseManager.getBSportType(sportTypeId).name());
         values.put(WorkoutSummaries.GC_DATA, mBanalService.getGCDataString());
 
-        WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance();
-        SQLiteDatabase summariesDb = databaseManager.getOpenDatabase();
+        WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance(this);
+        SQLiteDatabase summariesDb = databaseManager.getDatabase();
         summariesDb.update(WorkoutSummaries.TABLE,
                 values,
                 WorkoutSummaries.C_ID + "=?",
                 new String[]{Long.toString(mWorkoutID)});
-        databaseManager.closeDatabase(); // summariesDb.close();
     }
 
 
@@ -509,7 +506,7 @@ public class TrackerService extends Service {
         activeDevicesDb.close();
 
         // save the accumulated SensorTypes
-        WorkoutSummariesDatabaseManager.saveAccumulatedSensorTypes(mWorkoutID, mBanalService.getAccumulatedSensorTypeSet());
+        WorkoutSummariesDatabaseManager.saveAccumulatedSensorTypes(this, mWorkoutID, mBanalService.getAccumulatedSensorTypeSet());
 
         // update the summaries
         ContentValues summaryValues = new ContentValues();
@@ -525,13 +522,12 @@ public class TrackerService extends Service {
         summaryValues.put(WorkoutSummaries.SPORT_ID, sportTypeId);
         summaryValues.put(WorkoutSummaries.B_SPORT, SportTypeDatabaseManager.getBSportType(sportTypeId).name());
 
-        WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance();
-        SQLiteDatabase summariesDb = databaseManager.getOpenDatabase();
+        WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance(this);
+        SQLiteDatabase summariesDb = databaseManager.getDatabase();
         summariesDb.update(WorkoutSummaries.TABLE,
                 summaryValues,
                 WorkoutSummaries.C_ID + "=" + mWorkoutID,
                 null);
-        databaseManager.closeDatabase(); //    summariesDb.close();
 
         ExportManager exportManager = new ExportManager(this);
         exportManager.workoutFinished(mBaseFileName);
@@ -702,13 +698,12 @@ public class TrackerService extends Service {
             summaryValues.put(WorkoutSummaries.SPEED_AVERAGE_mps, getAverageSpeed());
         }
 
-        WorkoutSummariesDatabaseManager summariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance();
-        SQLiteDatabase summariesDb = summariesDatabaseManager.getOpenDatabase();
+        WorkoutSummariesDatabaseManager summariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(this);
+        SQLiteDatabase summariesDb = summariesDatabaseManager.getDatabase();
         summariesDb.update(WorkoutSummaries.TABLE,
                 summaryValues,
                 WorkoutSummaries.C_ID + "=" + mWorkoutID,
                 null);
-        summariesDatabaseManager.closeDatabase(); // summariesDb.close();
     }
 
     protected boolean averageSpeedCalculateable() {

@@ -129,9 +129,9 @@ public class TrackOnMapAftermathFragment
 
             TrackOnMapHelper trackOnMapHelper = ((TrainingApplication) getActivity().getApplication()).trackOnMapHelper;
 
-            trackOnMapHelper.showTrackOnMap(null, mMap, mWorkoutID, Roughness.ALL, TrackOnMapHelper.TrackType.GPS, false, false);
-            trackOnMapHelper.showTrackOnMap(null, mMap, mWorkoutID, Roughness.ALL, TrackOnMapHelper.TrackType.NETWORK, false, false);
-            trackOnMapHelper.showTrackOnMap(null, mMap, mWorkoutID, Roughness.ALL, TrackOnMapHelper.TrackType.FUSED, false, false);
+            trackOnMapHelper.showTrackOnMap(getContext(), null, mMap, mWorkoutID, Roughness.ALL, TrackOnMapHelper.TrackType.GPS, false, false);
+            trackOnMapHelper.showTrackOnMap(getContext(), null, mMap, mWorkoutID, Roughness.ALL, TrackOnMapHelper.TrackType.NETWORK, false, false);
+            trackOnMapHelper.showTrackOnMap(getContext(), null, mMap, mWorkoutID, Roughness.ALL, TrackOnMapHelper.TrackType.FUSED, false, false);
         }
 
         // we always show the best track
@@ -180,7 +180,7 @@ public class TrackOnMapAftermathFragment
             return;
         }
 
-        WorkoutSamplesDatabaseManager.LatLngValue latLngValue = WorkoutSamplesDatabaseManager.getExtremaPosition(mWorkoutID, sensorType, extremaType);
+        WorkoutSamplesDatabaseManager.LatLngValue latLngValue = WorkoutSamplesDatabaseManager.getExtremaPosition(getContext(), mWorkoutID, sensorType, extremaType);
 
         if (latLngValue != null) {
             MarkerOptions markerOptions = new MarkerOptions()

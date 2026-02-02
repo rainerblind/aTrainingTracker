@@ -21,7 +21,7 @@ class WorkoutHeaderDataProvider(
 
     fun createWorkoutHeaderData(workoutId: Long): WorkoutHeaderData? {
 
-        val summariesDb = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase()
+        val summariesDb = WorkoutSummariesDatabaseManager.getInstance(context).getDatabase()
         val cursor = summariesDb.query(
             WorkoutSummaries.TABLE,
             null,

@@ -85,7 +85,7 @@ class ExtremaDataProvider(context: Context) {
     }
 
     private fun getFormattedValue(workoutId: Long, sensorType: SensorType, extremaType: ExtremaType): String? {
-        val value = WorkoutSummariesDatabaseManager.getExtremaValue(workoutId, sensorType, extremaType)
+        val value = WorkoutSummariesDatabaseManager.getExtremaValue(appContext, workoutId, sensorType, extremaType)
         if (DEBUG) Log.d(TAG, "${sensorType.name} ${extremaType.name} extremaValue=$value")
         // Use Kotlin's scope function 'let' for safe handling of nullable values
         return value?.let { sensorType.myFormatter.format(it) }

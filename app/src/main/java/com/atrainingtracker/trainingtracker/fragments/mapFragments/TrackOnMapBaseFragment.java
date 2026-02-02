@@ -108,7 +108,7 @@ public abstract class TrackOnMapBaseFragment
             return;
         }
 
-        ((TrainingApplication) getActivity().getApplication()).trackOnMapHelper.showTrackOnMap(null, mMap, mWorkoutID, Roughness.ALL, TrackOnMapHelper.TrackType.BEST, zoomToShowTrack, true);
+        ((TrainingApplication) getActivity().getApplication()).trackOnMapHelper.showTrackOnMap(getContext(), null, mMap, mWorkoutID, Roughness.ALL, TrackOnMapHelper.TrackType.BEST, zoomToShowTrack, true);
         mTrackOnMapLoaded = true;
 
     }
@@ -145,15 +145,15 @@ public abstract class TrackOnMapBaseFragment
     // helper method to get START and END position
     @Nullable
     LatLng getExtremaPosition(@NonNull ExtremaType extremaType, boolean calculateWhenNotInDb) {
-        String baseFileName = WorkoutSummariesDatabaseManager.getBaseFileName(mWorkoutID);
+        String baseFileName = WorkoutSummariesDatabaseManager.getBaseFileName(getContext(), mWorkoutID);
 
-        Double lat = WorkoutSummariesDatabaseManager.getExtremaValue(mWorkoutID, SensorType.LATITUDE, extremaType);
+        Double lat = WorkoutSummariesDatabaseManager.getExtremaValue(getContext(), mWorkoutID, SensorType.LATITUDE, extremaType);
         if (lat == null && calculateWhenNotInDb) {
-            lat = WorkoutSamplesDatabaseManager.calcExtremaValue(baseFileName, extremaType, SensorType.LATITUDE);
+            lat = WorkoutSamplesDatabaseManager.calcExtremaValue(getContext(), baseFileName, extremaType, SensorType.LATITUDE);
         }
-        Double lon = WorkoutSummariesDatabaseManager.getExtremaValue(mWorkoutID, SensorType.LONGITUDE, extremaType);
+        Double lon = WorkoutSummariesDatabaseManager.getExtremaValue(getContext(), mWorkoutID, SensorType.LONGITUDE, extremaType);
         if (lon == null && calculateWhenNotInDb) {
-            lon = WorkoutSamplesDatabaseManager.calcExtremaValue(baseFileName, extremaType, SensorType.LONGITUDE);
+            lon = WorkoutSamplesDatabaseManager.calcExtremaValue(getContext(), baseFileName, extremaType, SensorType.LONGITUDE);
         }
 
         return (lat != null & lon != null) ? new LatLng(lat, lon) : null;

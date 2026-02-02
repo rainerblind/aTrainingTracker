@@ -56,7 +56,7 @@ public class DeleteOldWorkoutsDialog extends DialogFragment {
             public void onClick(DialogInterface dialog, int whichButton) {
                 try {
                     int daysToKeep = Integer.parseInt(input.getText().toString());
-                    List<Long> oldWorkoutIds = WorkoutSummariesDatabaseManager.getOldWorkouts(daysToKeep);
+                    List<Long> oldWorkoutIds = WorkoutSummariesDatabaseManager.getOldWorkouts(getContext(), daysToKeep);
                     new DeleteWorkoutThread(getContext(), oldWorkoutIds.toArray(new Long[oldWorkoutIds.size()])).start();
                 } catch (Exception e) {
                 }
