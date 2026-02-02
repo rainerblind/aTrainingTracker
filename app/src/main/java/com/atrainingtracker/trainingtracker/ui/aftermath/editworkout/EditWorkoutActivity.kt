@@ -508,7 +508,7 @@ class EditWorkoutActivity : AppCompatActivity() {
                     val selectedBaseName = nameList[position]
 
                     // Replicate the classic behavior: open the edit dialog.
-                    val fancyNameId = WorkoutSummariesDatabaseManager.getFancyNameId(selectedBaseName)
+                    val fancyNameId = WorkoutSummariesDatabaseManager.getFancyNameId(this, selectedBaseName)
                     val editDialog = EditFancyWorkoutNameDialog.newInstance(fancyNameId)
                     editDialog.show(supportFragmentManager, EditFancyWorkoutNameDialog.TAG)
 

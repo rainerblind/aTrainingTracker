@@ -5,6 +5,7 @@ import android.content.ContentValues
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.application
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.trainingtracker.SingleLiveEvent
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
@@ -27,7 +28,7 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
     val workouts: LiveData<List<WorkoutData>> = _workouts
 
     private val headerDataProvider = WorkoutHeaderDataProvider(application, EquipmentDbHelper(application))
-    private val detailsDataProvider = WorkoutDetailsDataProvider()
+    private val detailsDataProvider = WorkoutDetailsDataProvider(application)
     private val extremaDataProvider = ExtremaDataProvider(application)
     private val descriptionDataProvider = DescriptionDataProvider()
 
@@ -39,7 +40,7 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
         // Use the ViewModel's coroutine scope to launch on a background thread.
         viewModelScope.launch(Dispatchers.IO) {
             val summaryList = mutableListOf<WorkoutData>()
-            val db = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase()
+            val db = WorkoutSummariesDatabaseManager.getInstance(application).getDatabase()
             val cursor = db.query(
                 WorkoutSummaries.TABLE,
                 null, null, null, null, null,
@@ -72,7 +73,6 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
                     } while (c.moveToNext())
                 }
             }
-            WorkoutSummariesDatabaseManager.getInstance().closeDatabase()
 
             // Post the final list to the LiveData. This will update the UI on the main thread.
             _workouts.postValue(summaryList)
@@ -84,7 +84,7 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
      */
     fun updateWorkoutName(id: Long, newName: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            WorkoutSummariesDatabaseManager.updateWorkoutName(id, newName)
+            WorkoutSummariesDatabaseManager.updateWorkoutName(application, id, newName)
 
             // After updating, reload the data to reflect the change.
             loadWorkouts()
@@ -96,7 +96,7 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
      */
     fun updateDescription(id: Long, newDescription: String, newGoal: String, newMethod: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            WorkoutSummariesDatabaseManager.updateDescription(id, newDescription, newGoal, newMethod)
+            WorkoutSummariesDatabaseManager.updateDescription(application,id, newDescription, newGoal, newMethod)
 
             // Reload to show the updated data.
             loadWorkouts()
@@ -108,7 +108,7 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
      */
     fun updateSportAndEquipment(id: Long, newSportId: Long, newEquipmentId: Long) {
         viewModelScope.launch(Dispatchers.IO) {
-            WorkoutSummariesDatabaseManager.updateSportAndEquipment(id, newSportId, newEquipmentId)
+            WorkoutSummariesDatabaseManager.updateSportAndEquipment(application,id, newSportId, newEquipmentId)
 
             // Reload to show the updated sport icon and equipment name.
             loadWorkouts()
@@ -132,11 +132,10 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
      */
     fun deleteWorkout(id: Long) {
         viewModelScope.launch(Dispatchers.IO) {
-            val db = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase()
+            val db = WorkoutSummariesDatabaseManager.getInstance(application).getDatabase()
             // Using DeleteWorkoutThread is good practice if it does more than just a DB delete.
             // For a simple delete, this is also fine:
             db.delete(WorkoutSummaries.TABLE, "${WorkoutSummaries.C_ID} = ?", arrayOf(id.toString()))
-            WorkoutSummariesDatabaseManager.getInstance().closeDatabase()
 
             // After deleting, reload the data. The UI will update automatically.
             loadWorkouts()

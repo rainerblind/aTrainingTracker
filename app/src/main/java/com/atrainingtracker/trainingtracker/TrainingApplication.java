@@ -850,7 +850,6 @@ public class TrainingApplication extends Application {
 
         // initialize DatabaseManagers
         LapsDatabaseManager.initializeInstance(new LapsDatabaseManager.LapsDbHelper(this));
-        WorkoutSummariesDatabaseManager.initializeInstance(new WorkoutSummariesDatabaseManager.WorkoutSummariesDbHelper(this));
         WorkoutSamplesDatabaseManager.initializeInstance(new WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper(this));
         DevicesDatabaseManager.initializeInstance(new DevicesDatabaseManager.DevicesDbHelper(this));
         TrackingViewsDatabaseManager.initializeInstance(new TrackingViewsDatabaseManager.TrackingViewsDbHelper(this));

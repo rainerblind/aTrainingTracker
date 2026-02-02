@@ -65,14 +65,14 @@ public class WorkoutSamplesDatabaseManager {
     // some high level helper methods
     ////////////////////////////////////////////////////////////////////////////////////////////////
     @Nullable
-    public static Double calcExtremaValue(String baseFileName, @NonNull ExtremaType extremaType, @NonNull SensorType sensorType) {
+    public static Double calcExtremaValue(Context context, String baseFileName, @NonNull ExtremaType extremaType, @NonNull SensorType sensorType) {
         if (DEBUG)
             Log.i(TAG, "calcExtremaValue(" + baseFileName + ", " + extremaType.name() + ", " + sensorType.name() + ")");
 
         // first, a special case: when asked to calc the values for the pace,
         // we return the inverse of the corresponding extrema value of the speed.
         if (sensorType == SensorType.PACE_spm) {
-            Double speed = calcExtremaValue(baseFileName, extremaType, SensorType.SPEED_mps);
+            Double speed = calcExtremaValue(context, baseFileName, extremaType, SensorType.SPEED_mps);
             if (speed != null) {
                 return 1 / speed;
             } else {
@@ -85,10 +85,8 @@ public class WorkoutSamplesDatabaseManager {
         if ((extremaType == ExtremaType.AVG) & (sensorType == SensorType.SPEED_mps)) {
             if (DEBUG) Log.i(TAG, "calculating average speed based on distance and active time");
 
-            WorkoutSummariesDatabaseManager.getInstance();
-            Double distance = WorkoutSummariesDatabaseManager.getDouble(baseFileName, WorkoutSummaries.DISTANCE_TOTAL_m);
-            WorkoutSummariesDatabaseManager.getInstance();
-            Integer time = WorkoutSummariesDatabaseManager.getInt(baseFileName, WorkoutSummaries.TIME_ACTIVE_s);
+            Double distance = WorkoutSummariesDatabaseManager.getDouble(context, baseFileName, WorkoutSummaries.DISTANCE_TOTAL_m);
+            Integer time = WorkoutSummariesDatabaseManager.getInt(context, baseFileName, WorkoutSummaries.TIME_ACTIVE_s);
 
             if (distance != null & time != null) {
                 if (DEBUG)
@@ -172,7 +170,7 @@ public class WorkoutSamplesDatabaseManager {
     }
 
     // since this method goes through all? samples, this might take long.
-    public static double calcAverageAroundLocation(@NonNull LatLng center, double radius, @NonNull SensorType sensorType) {
+    public static double calcAverageAroundLocation(Context context, @NonNull LatLng center, double radius, @NonNull SensorType sensorType) {
         // based on http://stackoverflow.com/questions/3695224/sqlite-getting-nearest-locations-with-latitude-and-longitude
 
         Location centerLocation = new Location("center");
@@ -195,7 +193,7 @@ public class WorkoutSamplesDatabaseManager {
         int counter = 0;
         double average = 0.0;
 
-        SQLiteDatabase summariesDb = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
+        SQLiteDatabase summariesDb = WorkoutSummariesDatabaseManager.getInstance(context).getDatabase();
         Cursor summariesCursor = summariesDb.query(WorkoutSummaries.TABLE,
                 new String[]{WorkoutSummaries.FILE_BASE_NAME},
                 null, null,
@@ -242,7 +240,6 @@ public class WorkoutSamplesDatabaseManager {
         summariesCursor.close();
 
         getInstance().closeDatabase();
-        WorkoutSummariesDatabaseManager.getInstance().closeDatabase();
 
         if (counter != 0) {
             average = valueSum / counter;
@@ -290,7 +287,7 @@ public class WorkoutSamplesDatabaseManager {
     }
 
     @Nullable
-    public static LatLngValue getExtremaPosition(long workoutId, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType) {
+    public static LatLngValue getExtremaPosition(Context context, long workoutId, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType) {
         if (DEBUG)
             Log.i(TAG, "getExtremaPosition for " + extremaType.name() + " " + sensorType.name());
 
@@ -299,10 +296,10 @@ public class WorkoutSamplesDatabaseManager {
         LatLngValue result = null;
 
         // WorkoutSummariesDbHelper summariesDbHelper = new WorkoutSummariesDbHelper(mContext);
-        String baseFileName = WorkoutSummariesDatabaseManager.getBaseFileName(workoutId);
+        String baseFileName = WorkoutSummariesDatabaseManager.getBaseFileName(context, workoutId);
 
         // first, get the extrema value
-        Double extremaValue = WorkoutSummariesDatabaseManager.getExtremaValue(workoutId, sensorType, extremaType);
+        Double extremaValue = WorkoutSummariesDatabaseManager.getExtremaValue(context, workoutId, sensorType, extremaType);
         if (DEBUG) Log.i(TAG, "got " + extremaValue);
 
         // if there is an extrema value, we look for its location

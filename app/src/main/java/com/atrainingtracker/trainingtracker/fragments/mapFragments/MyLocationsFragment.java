@@ -191,7 +191,7 @@ public class MyLocationsFragment
                         if (mMarker2WorkoutIdMap.containsKey(marker)) {
                             long workoutId = mMarker2WorkoutIdMap.get(marker);
 
-                            ((TrainingApplication) getActivity().getApplication()).trackOnMapHelper.showTrackOnMap(mMapView, mMap, workoutId, Roughness.ALL, TrackOnMapHelper.TrackType.BEST, false, true);
+                            ((TrainingApplication) getActivity().getApplication()).trackOnMapHelper.showTrackOnMap(getContext(), mMapView, mMap, workoutId, Roughness.ALL, TrackOnMapHelper.TrackType.BEST, false, true);
                             // TODO: keep track but remove on second click?
                             return true;
                         } else if (mMarker2MyLocationsIdMap.containsKey(marker)) {
@@ -559,7 +559,7 @@ public class MyLocationsFragment
             });
 
             // TODO: copied code from WorkoutSummariesDatabaseManager
-            SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
+            SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance(context).getDatabase();
 
             Cursor latCursor = null;
             Cursor lonCursor = null;
@@ -602,7 +602,7 @@ public class MyLocationsFragment
                 } else if (mExtremaType == ExtremaType.MAX_LINE_DISTANCE) {
                     if (DEBUG)
                         Log.i(TAG, "try to calculate the max line distance of workoutId=" + workoutId);
-                    CalcExtremaValuesThread.calcAndSaveMaxLineDistancePosition(workoutId);
+                    CalcExtremaValuesThread.calcAndSaveMaxLineDistancePosition(getContext(), workoutId);
                     cursor.moveToPrevious();
 
                 }
@@ -614,7 +614,6 @@ public class MyLocationsFragment
             }
 
             cursor.close();
-            WorkoutSummariesDatabaseManager.getInstance().closeDatabase();
 
          new Handler(Looper.getMainLooper()).post(() -> {
             // hide progressView
@@ -737,7 +736,7 @@ public class MyLocationsFragment
                 progressDialog.show();
             });
 
-                Double altitude = WorkoutSamplesDatabaseManager.calcAverageAroundLocation(latLng, 100, SensorType.ALTITUDE);
+                Double altitude = WorkoutSamplesDatabaseManager.calcAverageAroundLocation(getContext(), latLng, 100, SensorType.ALTITUDE);
 
                 final KnownLocationsDatabaseManager.MyLocation location = KnownLocationsDatabaseManager.addNewLocation("", altitude.intValue(), KnownLocationsDatabaseManager.DEFAULT_RADIUS, latLng.latitude, latLng.longitude);
 

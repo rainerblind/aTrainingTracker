@@ -87,6 +87,7 @@ class MapComponent(
     private fun showWorkoutTrack(map: GoogleMap) {
         if (DEBUG) Log.i(TAG, "showWorkoutTrack: workoutId=$currentDataId")
         (activity.application as TrainingApplication).trackOnMapHelper.showTrackOnMap(
+            activity,
             mapView,
             map,
             currentDataId,

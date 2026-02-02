@@ -61,7 +61,7 @@ public class DeleteWorkoutThread extends Thread {
             progressDialog.show();
         });
 
-        SQLiteDatabase dbSummaries = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
+        SQLiteDatabase dbSummaries = WorkoutSummariesDatabaseManager.getInstance(context).getDatabase();
         SQLiteDatabase dbLaps = LapsDatabaseManager.getInstance().getOpenDatabase();
 
         Cursor cursor;
@@ -104,7 +104,6 @@ public class DeleteWorkoutThread extends Thread {
             dbLaps.delete(LapsDatabaseManager.Laps.TABLE, LapsDatabaseManager.Laps.WORKOUT_ID + "=?", new String[]{workoutId + ""});
         }
 
-        WorkoutSummariesDatabaseManager.getInstance().closeDatabase();  // dbSummaries.close();
         LapsDatabaseManager.getInstance().closeDatabase(); // instead of dbLaps.close();
 
         new Handler(Looper.getMainLooper()).post(() -> {

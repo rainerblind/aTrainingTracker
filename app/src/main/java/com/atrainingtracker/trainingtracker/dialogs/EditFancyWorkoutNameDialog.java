@@ -101,7 +101,7 @@ public class EditFancyWorkoutNameDialog extends DialogFragment {
         List<String> myLocationNameList = KnownLocationsDatabaseManager.getMyLocationNameList();
         List<String> sportTypesList = SportTypeDatabaseManager.getSportTypesList();
 
-        final SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
+        final SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance(getContext()).getDatabase();
 
         Cursor cursor = db.query(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS,  // String table,
                 null,                                           // String[] columns,
@@ -231,8 +231,6 @@ public class EditFancyWorkoutNameDialog extends DialogFragment {
                         getContext().sendBroadcast(new Intent(FANCY_WORKOUT_NAME_CHANGED_INTENT)
                                 .setPackage(getContext().getPackageName()));
 
-                        WorkoutSummariesDatabaseManager.getInstance().closeDatabase();
-
                         dialog.dismiss();
                     }
                 });
@@ -240,8 +238,6 @@ public class EditFancyWorkoutNameDialog extends DialogFragment {
                 new DialogInterface.OnClickListener() {
                     public void onClick(@NonNull DialogInterface dialog, int whichButton) {
                         Log.i(TAG, "Cancel clicked");
-
-                        WorkoutSummariesDatabaseManager.getInstance().closeDatabase();
 
                         dialog.dismiss();
                     }
