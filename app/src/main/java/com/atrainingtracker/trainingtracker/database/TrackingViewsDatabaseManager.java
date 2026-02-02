@@ -47,57 +47,54 @@ import java.util.TreeMap;
 public class TrackingViewsDatabaseManager {
     private static final String TAG = TrackingViewsDatabaseManager.class.getName();
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
-    private static TrackingViewsDatabaseManager cInstance;
-    private static TrackingViewsDbHelper cTrackingViewsDbHelper;
-    private int mOpenCounter;
-    private SQLiteDatabase mDatabase;
 
-    public static synchronized void initializeInstance(TrackingViewsDbHelper trackingViewsDbHelper) {
-        if (cInstance == null) {
-            cInstance = new TrackingViewsDatabaseManager();
-            cTrackingViewsDbHelper = trackingViewsDbHelper;
-        }
+    // singleton pattern
+    private static volatile TrackingViewsDatabaseManager cInstance;
+    private final TrackingViewsDbHelper cDbHelper;
+
+    private TrackingViewsDatabaseManager(@NonNull Context context) {
+        this.cDbHelper = new TrackingViewsDbHelper(context.getApplicationContext());
     }
 
     @NonNull
-    public static synchronized TrackingViewsDatabaseManager getInstance() {
+    public static TrackingViewsDatabaseManager getInstance(@NonNull Context context) {
         if (cInstance == null) {
-            throw new IllegalStateException(TrackingViewsDatabaseManager.class.getSimpleName() +
-                    " is not initialized, call initializeInstance(..) method first.");
+            synchronized (TrackingViewsDatabaseManager.class) {
+                if (cInstance == null) {
+                    cInstance = new TrackingViewsDatabaseManager(context);
+                }
+            }
         }
-
         return cInstance;
     }
 
-    public static void updateNameOfView(long viewId, String name) {
+    public SQLiteDatabase getDatabase() {
+        return cDbHelper.getWritableDatabase();
+    }
+
+
+
+    public void updateNameOfView(long viewId, String name) {
         ContentValues values = new ContentValues();
         values.put(TrackingViewsDbHelper.NAME, name);
 
-        TrackingViewsDatabaseManager databaseManager = TrackingViewsDatabaseManager.getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
-
-        db.update(TrackingViewsDbHelper.VIEWS_TABLE,
+        getDatabase().update(TrackingViewsDbHelper.VIEWS_TABLE,
                 values,
                 TrackingViewsDbHelper.C_ID + "=?",
                 new String[]{viewId + ""});
 
-        databaseManager.closeDatabase();
     }
 
-    public static void updateSensorTypeOfRow(long rowId, @NonNull SensorType sensorType) {
+    public void updateSensorTypeOfRow(long rowId, @NonNull SensorType sensorType) {
         if (DEBUG) Log.i(TAG, "updateSensorTypeOfRow(" + rowId + ", " + sensorType.name() + ")");
 
         ContentValues values = new ContentValues();
         values.put(TrackingViewsDbHelper.SENSOR_TYPE, sensorType.name());
 
-        TrackingViewsDatabaseManager databaseManager = getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
-
-        db.update(TrackingViewsDbHelper.ROWS_TABLE,
+        getDatabase().update(TrackingViewsDbHelper.ROWS_TABLE,
                 values,
                 TrackingViewsDbHelper.ROW_ID + "=?",
                 new String[]{rowId + ""});
-        databaseManager.closeDatabase();
     }
 
 
@@ -105,95 +102,74 @@ public class TrackingViewsDatabaseManager {
     // some high level methods
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    public static void updateTextSizeOfRow(long rowId, int textSize) {
+    public void updateTextSizeOfRow(long rowId, int textSize) {
         ContentValues values = new ContentValues();
         values.put(TrackingViewsDbHelper.TEXT_SIZE, textSize);
 
-
-        TrackingViewsDatabaseManager databaseManager = getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
-
-        db.update(TrackingViewsDbHelper.ROWS_TABLE,
+        getDatabase().update(TrackingViewsDbHelper.ROWS_TABLE,
                 values,
                 TrackingViewsDbHelper.ROW_ID + "=?",
                 new String[]{rowId + ""});
-        databaseManager.closeDatabase();
     }
 
-    public static void updateSourceDeviceIdOfRow(long rowId, long deviceId) {
+    public void updateSourceDeviceIdOfRow(long rowId, long deviceId) {
         ContentValues values = new ContentValues();
         values.put(TrackingViewsDbHelper.SOURCE_DEVICE_ID, deviceId);
 
-
-        TrackingViewsDatabaseManager databaseManager = getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
-
-        db.update(TrackingViewsDbHelper.ROWS_TABLE,
+        getDatabase().update(TrackingViewsDbHelper.ROWS_TABLE,
                 values,
                 TrackingViewsDbHelper.ROW_ID + "=?",
                 new String[]{rowId + ""});
-        databaseManager.closeDatabase();
     }
 
-    protected static void updateBoolean(long viewId, String ID, boolean value) {
+    protected void updateBoolean(long viewId, String ID, boolean value) {
         ContentValues values = new ContentValues();
         values.put(ID, value ? 1 : 0);
 
-        TrackingViewsDatabaseManager databaseManager = TrackingViewsDatabaseManager.getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
-
-        db.update(TrackingViewsDbHelper.VIEWS_TABLE,
+        getDatabase().update(TrackingViewsDbHelper.VIEWS_TABLE,
                 values,
                 TrackingViewsDbHelper.C_ID + "=?",
                 new String[]{viewId + ""});
-
-        databaseManager.closeDatabase();
     }
 
-    public static void updateSystemSetting(long viewId, boolean value) {
+    public void updateSystemSetting(long viewId, boolean value) {
         updateBoolean(viewId, TrackingViewsDbHelper.SYSTEM_SETTING, value);
     }
 
-    public static void updateDay(long viewId, boolean value) {
+    public void updateDay(long viewId, boolean value) {
         updateBoolean(viewId, TrackingViewsDbHelper.DAY, value);
     }
 
-    public static void updateNight(long viewId, boolean value) {
+    public void updateNight(long viewId, boolean value) {
         updateBoolean(viewId, TrackingViewsDbHelper.NIGHT, value);
     }
 
-    public static void updateFullscreen(long viewId, boolean fullscreen) {
+    public void updateFullscreen(long viewId, boolean fullscreen) {
         updateBoolean(viewId, TrackingViewsDbHelper.FULL_SCREEN, fullscreen);
     }
 
-    public static void updateShowMap(long viewId, boolean showMap) {
+    public void updateShowMap(long viewId, boolean showMap) {
         updateBoolean(viewId, TrackingViewsDbHelper.SHOW_MAP, showMap);
     }
 
-    public static void updateShowLapButton(long viewId, boolean showLapButton) {
+    public void updateShowLapButton(long viewId, boolean showLapButton) {
         updateBoolean(viewId, TrackingViewsDbHelper.SHOW_LAP_BUTTON, showLapButton);
     }
 
-    public static void deleteRow(long rowId) {
+    public void deleteRow(long rowId) {
         if (DEBUG) Log.i(TAG, "deleteRow(" + rowId + ")");
 
-        TrackingViewsDatabaseManager databaseManager = getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
-        db.delete(TrackingViewsDbHelper.ROWS_TABLE,
+        getDatabase().delete(TrackingViewsDbHelper.ROWS_TABLE,
                 TrackingViewsDbHelper.ROW_ID + "=?",
                 new String[]{rowId + ""});
-        databaseManager.closeDatabase();
     }
 
     @Nullable
-    public static String getName(long viewId) {
+    public String getName(long viewId) {
 
         String name = null;
 
-        TrackingViewsDatabaseManager databaseManager = TrackingViewsDatabaseManager.getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
-
-        Cursor cursor = db.query(TrackingViewsDbHelper.VIEWS_TABLE,
+        Cursor cursor = getDatabase().query(TrackingViewsDbHelper.VIEWS_TABLE,
                 null,
                 TrackingViewsDbHelper.C_ID + "=?",
                 new String[]{viewId + ""},
@@ -206,20 +182,16 @@ public class TrackingViewsDatabaseManager {
         }
 
         cursor.close();
-        databaseManager.closeDatabase();
 
         return name;
     }
 
     @NonNull
-    public static ActivityType getActivityType(long viewId) {
+    public ActivityType getActivityType(long viewId) {
 
         ActivityType activityType = ActivityType.getDefaultActivityType();
 
-        TrackingViewsDatabaseManager databaseManager = TrackingViewsDatabaseManager.getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
-
-        Cursor cursor = db.query(TrackingViewsDbHelper.VIEWS_TABLE,
+        Cursor cursor = getDatabase().query(TrackingViewsDbHelper.VIEWS_TABLE,
                 null,
                 TrackingViewsDbHelper.C_ID + "=?",
                 new String[]{viewId + ""},
@@ -232,18 +204,14 @@ public class TrackingViewsDatabaseManager {
         }
 
         cursor.close();
-        databaseManager.closeDatabase();
 
         return activityType;
     }
 
-    public static int getLayoutNr(long viewId) {
+    public int getLayoutNr(long viewId) {
         int layoutNr = -1;
 
-        TrackingViewsDatabaseManager databaseManager = TrackingViewsDatabaseManager.getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
-
-        Cursor cursor = db.query(TrackingViewsDbHelper.VIEWS_TABLE,
+        Cursor cursor = getDatabase().query(TrackingViewsDbHelper.VIEWS_TABLE,
                 null,
                 TrackingViewsDbHelper.C_ID + "=?",
                 new String[]{viewId + ""},
@@ -256,18 +224,14 @@ public class TrackingViewsDatabaseManager {
         }
 
         cursor.close();
-        databaseManager.closeDatabase();
 
         return layoutNr;
     }
 
-    protected static boolean getBoolean(long viewId, String ID) {
+    protected boolean getBoolean(long viewId, String ID) {
         boolean result = false;
 
-        TrackingViewsDatabaseManager databaseManager = getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
-
-        Cursor cursor = db.query(TrackingViewsDbHelper.VIEWS_TABLE,
+        Cursor cursor = getDatabase().query(TrackingViewsDbHelper.VIEWS_TABLE,
                 null,
                 TrackingViewsDbHelper.C_ID + "=?",
                 new String[]{viewId + ""},
@@ -280,43 +244,39 @@ public class TrackingViewsDatabaseManager {
         }
 
         cursor.close();
-        databaseManager.closeDatabase();
 
         return result;
     }
 
-    public static boolean fullscreen(long viewId) {
+    public boolean fullscreen(long viewId) {
         return getBoolean(viewId, TrackingViewsDbHelper.FULL_SCREEN);
     }
 
-    public static boolean systemSettings(long viewId) {
+    public boolean systemSettings(long viewId) {
         return getBoolean(viewId, TrackingViewsDbHelper.SYSTEM_SETTING);
     }
 
-    public static boolean day(long viewId) {
+    public boolean day(long viewId) {
         return getBoolean(viewId, TrackingViewsDbHelper.DAY);
     }
 
-    public static boolean night(long viewId) {
+    public boolean night(long viewId) {
         return getBoolean(viewId, TrackingViewsDbHelper.NIGHT);
     }
 
-    public static boolean showMap(long viewId) {
+    public boolean showMap(long viewId) {
         return getBoolean(viewId, TrackingViewsDbHelper.SHOW_MAP);
     }
 
-    public static boolean showLapButton(long viewId) {
+    public boolean showLapButton(long viewId) {
         return getBoolean(viewId, TrackingViewsDbHelper.SHOW_LAP_BUTTON);
     }
 
     @Nullable
-    public static FilterInfo getFilterInfo(long rowId) {
+    public  FilterInfo getFilterInfo(long rowId) {
         FilterInfo filterInfo = null;
 
-        TrackingViewsDatabaseManager databaseManager = getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
-
-        Cursor cursor = db.query(TrackingViewsDbHelper.ROWS_TABLE,
+        Cursor cursor = getDatabase().query(TrackingViewsDbHelper.ROWS_TABLE,
                 null,
                 TrackingViewsDbHelper.ROW_ID + "=?",
                 new String[]{rowId + ""},
@@ -331,15 +291,13 @@ public class TrackingViewsDatabaseManager {
         }
 
         cursor.close();
-        databaseManager.closeDatabase();
 
         return filterInfo;
     }
 
-    public static void ensureEntryForActivityTypeExists(Context context, @NonNull ActivityType activityType) {
-        TrackingViewsDatabaseManager databaseManager = getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
-        Cursor cursor = db.query(TrackingViewsDbHelper.VIEWS_TABLE,
+    public void ensureEntryForActivityTypeExists(Context context, @NonNull ActivityType activityType) {
+
+        Cursor cursor = getDatabase().query(TrackingViewsDbHelper.VIEWS_TABLE,
                 null,
                 TrackingViewsDbHelper.ACTIVITY_TYPE + "=?",
                 new String[]{activityType.name()},
@@ -348,20 +306,17 @@ public class TrackingViewsDatabaseManager {
                 null);
         if (cursor.getCount() == 0) {
             TrackingViewsDbHelper dbHelper = new TrackingViewsDbHelper(context);
-            dbHelper.addDefaultActivity(db, activityType, 1);
+            dbHelper.addDefaultActivity(getDatabase(), activityType, 1);
         }
 
         cursor.close();
-        databaseManager.closeDatabase();
     }
 
     @NonNull
-    public static LinkedList<String> getTitleList(@NonNull ActivityType activityType) {
+    public LinkedList<String> getTitleList(@NonNull ActivityType activityType) {
         LinkedList<String> titleList = new LinkedList<>();
 
-        TrackingViewsDatabaseManager databaseManager = getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
-        Cursor cursor = db.query(TrackingViewsDbHelper.VIEWS_TABLE,
+        Cursor cursor = getDatabase().query(TrackingViewsDbHelper.VIEWS_TABLE,
                 null,
                 TrackingViewsDbHelper.ACTIVITY_TYPE + "=?",
                 new String[]{activityType.name()},
@@ -374,19 +329,16 @@ public class TrackingViewsDatabaseManager {
             titleList.add(name);
         }
         cursor.close();
-        databaseManager.closeDatabase();
 
         return titleList;
     }
 
     @NonNull
     @Deprecated // use new method ??? instead
-    public static LinkedList<Long> getViewIdList(@NonNull ActivityType activityType) {
+    public LinkedList<Long> getViewIdList(@NonNull ActivityType activityType) {
         LinkedList<Long> viewIdList = new LinkedList<>();
 
-        TrackingViewsDatabaseManager databaseManager = getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
-        Cursor cursor = db.query(TrackingViewsDbHelper.VIEWS_TABLE,
+        Cursor cursor = getDatabase().query(TrackingViewsDbHelper.VIEWS_TABLE,
                 null,
                 TrackingViewsDbHelper.ACTIVITY_TYPE + "=?",
                 new String[]{activityType.name()},
@@ -398,20 +350,16 @@ public class TrackingViewsDatabaseManager {
             viewIdList.add(viewId);
         }
         cursor.close();
-        databaseManager.closeDatabase();
 
         return viewIdList;
     }
 
     @NonNull
-    public static ViewInfo addSensorToLayout(long viewId, @NonNull SensorType sensorType, int textSize) {
+    public ViewInfo addSensorToLayout(long viewId, @NonNull SensorType sensorType, int textSize) {
         if (DEBUG)
             Log.i(TAG, "addSensorToLayout(" + viewId + ", " + sensorType.name() + ", " + textSize + ")");
 
-        TrackingViewsDatabaseManager databaseManager = getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
-
-        Cursor cursor = db.query(TrackingViewsDbHelper.ROWS_TABLE,
+        Cursor cursor = getDatabase().query(TrackingViewsDbHelper.ROWS_TABLE,
                 new String[]{"MAX(" + TrackingViewsDbHelper.ROW_NR + ")"},  // columns,
                 TrackingViewsDbHelper.VIEW_ID + "=?", // selection,
                 new String[]{Long.toString(viewId)}, // selectionArgs,
@@ -428,23 +376,17 @@ public class TrackingViewsDatabaseManager {
         values.put(TrackingViewsDbHelper.FILTER_TYPE, FilterType.INSTANTANEOUS.name());
         values.put(TrackingViewsDbHelper.FILTER_CONSTANT, 1);
 
-        long rowId = db.insert(TrackingViewsDbHelper.ROWS_TABLE, null, values);
-
-        databaseManager.closeDatabase();
+        long rowId = getDatabase().insert(TrackingViewsDbHelper.ROWS_TABLE, null, values);
 
         return new ViewInfo(viewId, rowId, maxRowNr + 1, 1, sensorType, textSize, 0, FilterType.INSTANTANEOUS, 1);
     }
 
     @NonNull
-    public static ViewInfo addSensorToRow(long viewId, int rowNr, @NonNull SensorType sensorType, int textSize) {
+    public ViewInfo addSensorToRow(long viewId, int rowNr, @NonNull SensorType sensorType, int textSize) {
         if (DEBUG)
             Log.i(TAG, "addSensorToRow(" + viewId + ", " + ", rowNr=" + rowNr + sensorType.name() + ", " + textSize + ")");
 
-        TrackingViewsDatabaseManager databaseManager = getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
-
-
-        Cursor cursor = db.query(TrackingViewsDbHelper.ROWS_TABLE,
+        Cursor cursor = getDatabase().query(TrackingViewsDbHelper.ROWS_TABLE,
                 new String[]{"MAX(" + TrackingViewsDbHelper.COL_NR + ")"},  // columns,
                 TrackingViewsDbHelper.VIEW_ID + "=? AND " + TrackingViewsDbHelper.ROW_NR + "=?", // selection,
                 new String[]{Long.toString(viewId), Long.toString(rowNr)}, // selectionArgs,
@@ -461,20 +403,15 @@ public class TrackingViewsDatabaseManager {
         values.put(TrackingViewsDbHelper.FILTER_TYPE, FilterType.INSTANTANEOUS.name());
         values.put(TrackingViewsDbHelper.FILTER_CONSTANT, 1);
 
-        long rowId = db.insert(TrackingViewsDbHelper.ROWS_TABLE, null, values);
-
-        databaseManager.closeDatabase();
+        long rowId = getDatabase().insert(TrackingViewsDbHelper.ROWS_TABLE, null, values);
 
         return new ViewInfo(viewId, rowId, rowNr, maxColNr + 1, sensorType, textSize, 0, FilterType.INSTANTANEOUS, 1);
     }
 
     @NonNull
-    public static ViewInfo addRowAfter(long viewId, int rowNr, @NonNull SensorType sensorType, int textSize) {
+    public ViewInfo addRowAfter(long viewId, int rowNr, @NonNull SensorType sensorType, int textSize) {
         if (DEBUG)
             Log.i(TAG, "addRowAfter(" + viewId + ", " + sensorType.name() + ", " + textSize + ")");
-
-        TrackingViewsDatabaseManager databaseManager = getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
 
         String sql = "UPDATE " + TrackingViewsDbHelper.ROWS_TABLE +
                 " SET " + TrackingViewsDbHelper.ROW_NR + "=" + TrackingViewsDbHelper.ROW_NR + "+1" +
@@ -482,7 +419,7 @@ public class TrackingViewsDatabaseManager {
 
         Log.i(TAG, sql);
 
-        db.execSQL(sql);
+        getDatabase().execSQL(sql);
 
         ContentValues values = new ContentValues();
         values.put(TrackingViewsDbHelper.VIEW_ID, viewId);
@@ -493,31 +430,25 @@ public class TrackingViewsDatabaseManager {
         values.put(TrackingViewsDbHelper.FILTER_TYPE, FilterType.INSTANTANEOUS.name());
         values.put(TrackingViewsDbHelper.FILTER_CONSTANT, 1);
 
-        long rowId = db.insert(TrackingViewsDbHelper.ROWS_TABLE, null, values);
-
-        databaseManager.closeDatabase();
+        long rowId = getDatabase().insert(TrackingViewsDbHelper.ROWS_TABLE, null, values);
 
         return new ViewInfo(viewId, rowId, rowNr, 1, sensorType, textSize, 0, FilterType.INSTANTANEOUS, 1);
     }
 
-    public static void removeSourceDevice(long sourceDeviceId) {
-        SQLiteDatabase db = getInstance().getOpenDatabase();
+    public  void removeSourceDevice(long sourceDeviceId) {
 
         ContentValues contentValues = new ContentValues();
         contentValues.put(TrackingViewsDbHelper.SOURCE_DEVICE_ID, 0);
 
-        db.update(TrackingViewsDbHelper.ROWS_TABLE,
+        getDatabase().update(TrackingViewsDbHelper.ROWS_TABLE,
                 contentValues,
                 TrackingViewsDbHelper.SOURCE_DEVICE_ID + "=?",
                 new String[]{sourceDeviceId + ""});
-
-        getInstance().closeDatabase();
     }
 
-    public static void deleteView(long viewId) {
-        TrackingViewsDatabaseManager databaseManager = getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
+    public void deleteView(long viewId) {
 
+        SQLiteDatabase db = getDatabase();
         int layoutNr = getLayoutNr(viewId);
 
         // delete from both tables
@@ -531,11 +462,9 @@ public class TrackingViewsDatabaseManager {
                 + " where " + TrackingViewsDbHelper.LAYOUT_NR + " > " + layoutNr;
         if (DEBUG) Log.i(TAG, "DeleteView viewId=" + viewId + "code: " + execsql);
         db.execSQL(execsql);
-
-        databaseManager.closeDatabase();
     }
 
-    public static void addEmptyView(long viewId, boolean addAfterLayout) {
+    public void addEmptyView(long viewId, boolean addAfterLayout) {
         int layoutNr = getLayoutNr(viewId);
         ActivityType activityType = getActivityType(viewId);
         int newLayoutNr = layoutNr;
@@ -545,8 +474,7 @@ public class TrackingViewsDatabaseManager {
         if (DEBUG)
             Log.i(TAG, "addEmptyView viewId=" + viewId + ", layoutNr=" + layoutNr + ", addAfterLayout=" + addAfterLayout + ", newLayoutNr=" + newLayoutNr);
 
-        TrackingViewsDatabaseManager databaseManager = getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
+        SQLiteDatabase db = getDatabase();
 
         // first, increment the layoutNr of all views with a larger layoutNr
         String sqlCommand = "UPDATE " + TrackingViewsDbHelper.VIEWS_TABLE
@@ -563,11 +491,9 @@ public class TrackingViewsDatabaseManager {
         values.put(TrackingViewsDbHelper.SHOW_LAP_BUTTON, 1);
 
         db.insert(TrackingViewsDbHelper.VIEWS_TABLE, null, values);
-
-        databaseManager.closeDatabase();
     }
 
-    public static long addDefaultView(Context context, long viewId, @NonNull ActivityType activityType, boolean addAfterLayout) {
+    public long addDefaultView(long viewId, @NonNull ActivityType activityType, boolean addAfterLayout) {
         long newViewId = -1;
 
         int layoutNr = getLayoutNr(viewId);
@@ -578,8 +504,7 @@ public class TrackingViewsDatabaseManager {
         if (DEBUG)
             Log.i(TAG, "addDefaultView viewId=" + viewId + ", layoutNr=" + layoutNr + ", addAfterLayout=" + addAfterLayout + ", newLayoutNr=" + newLayoutNr);
 
-        TrackingViewsDatabaseManager databaseManager = getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
+        SQLiteDatabase db = getDatabase();
 
         // first, increment the layoutNr of all views with a larger layoutNr
         String sqlCommand = "UPDATE " + TrackingViewsDbHelper.VIEWS_TABLE
@@ -590,10 +515,7 @@ public class TrackingViewsDatabaseManager {
         db.execSQL(sqlCommand);
         if (DEBUG) Log.i(TAG, "executed SQL code");
 
-        // TrackingViewsDbHelper dbHelper = new TrackingViewsDbHelper(context);
-        TrackingViewsDbHelper dbHelper = new TrackingViewsDbHelper(context);  // why are the log messages herein not shown???
-        newViewId = dbHelper.addDefaultActivity(db, activityType, newLayoutNr);
-        databaseManager.closeDatabase();
+        newViewId = cDbHelper.addDefaultActivity(db, activityType, newLayoutNr);
         if (DEBUG) Log.i(TAG, "finished adding new view");
 
         return newViewId;
@@ -601,10 +523,10 @@ public class TrackingViewsDatabaseManager {
 
     //                    rowNr            colNr
     @NonNull
-    public static TreeMap<Integer, TreeMap<Integer, ViewInfo>> getViewInfoMap(long viewId) {
+    public TreeMap<Integer, TreeMap<Integer, ViewInfo>> getViewInfoMap(long viewId) {
         TreeMap<Integer, TreeMap<Integer, ViewInfo>> result = new TreeMap<>();
 
-        SQLiteDatabase db = getInstance().getOpenDatabase();
+        SQLiteDatabase db = getDatabase();
         Cursor cursor = db.query(TrackingViewsDbHelper.ROWS_TABLE,
                 null,
                 TrackingViewsDbHelper.VIEW_ID + "=?",
@@ -626,17 +548,16 @@ public class TrackingViewsDatabaseManager {
 
             result.get(rowNr).put(colNr, new ViewInfo(viewId, rowId, rowNr, colNr, sensorType, textSize, sourceDeviceId, filterType, filterConstant));
         }
-
-        getInstance().closeDatabase();
+        cursor.close();
 
         return result;
     }
 
     @NonNull
-    public static List<FilterData> getAllFilterData() {
+    public List<FilterData> getAllFilterData() {
         LinkedList<FilterData> result = new LinkedList<>();
 
-        SQLiteDatabase db = getInstance().getOpenDatabase();
+        SQLiteDatabase db = getDatabase();
         Cursor cursor = db.query(TrackingViewsDbHelper.ROWS_TABLE,  // get cursor with all rows.  This is necessary, because the view and sport type and ... might change
                 null,
                 null,
@@ -651,29 +572,11 @@ public class TrackingViewsDatabaseManager {
 
             result.add(new FilterData(deviceName, sensorType, filterType, filterConstant));
         }
-
-        getInstance().closeDatabase();
+        cursor.close();
 
         return result;
     }
 
-    public synchronized SQLiteDatabase getOpenDatabase() {
-        mOpenCounter++;
-        if (mOpenCounter == 1) {
-            // Opening new database
-            mDatabase = cTrackingViewsDbHelper.getWritableDatabase();
-        }
-        return mDatabase;
-    }
-
-    public synchronized void closeDatabase() {
-        mOpenCounter--;
-        if (mOpenCounter == 0) {
-            // Closing database
-            mDatabase.close();
-
-        }
-    }
 
     public static class FilterInfo {
         public final FilterType filterType;

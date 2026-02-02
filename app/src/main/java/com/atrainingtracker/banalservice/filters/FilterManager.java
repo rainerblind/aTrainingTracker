@@ -66,7 +66,7 @@ public class FilterManager {
     protected BroadcastReceiver mFiltersChangedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            for (FilterData filterData : TrackingViewsDatabaseManager.getAllFilterData()) {
+            for (FilterData filterData : TrackingViewsDatabaseManager.getInstance(context).getAllFilterData()) {
                 createFilter(filterData);
             }
         }

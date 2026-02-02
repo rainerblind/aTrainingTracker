@@ -850,7 +850,6 @@ public class TrainingApplication extends Application {
 
         // initialize DatabaseManagers
         DevicesDatabaseManager.initializeInstance(new DevicesDatabaseManager.DevicesDbHelper(this));
-        TrackingViewsDatabaseManager.initializeInstance(new TrackingViewsDatabaseManager.TrackingViewsDbHelper(this));
         PebbleDatabaseManager.initializeInstance(new PebbleDatabaseManager.PebbleDbHelper(this));
         SegmentsDatabaseManager.initializeInstance(new SegmentsDatabaseManager.SegmentsDbHelper(this));
         SportTypeDatabaseManager.initializeInstance(new SportTypeDatabaseManager.SportTypeDbHelper(this));
