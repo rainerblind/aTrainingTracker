@@ -6,16 +6,20 @@ import android.graphics.drawable.BitmapDrawable
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.res.ResourcesCompat
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.Roughness
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapHelper
+import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderDataProvider
+import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderViewHolder
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.MapView
@@ -27,6 +31,9 @@ import com.google.android.gms.maps.model.MarkerOptions
 import java.util.concurrent.Executors
 
 class TrackOnMapAftermathActivity : AppCompatActivity(), OnMapReadyCallback {
+
+    private lateinit var workoutHeaderViewHolder: WorkoutHeaderViewHolder
+
 
     private lateinit var mapView: MapView
     private var googleMap: GoogleMap? = null
@@ -50,12 +57,34 @@ class TrackOnMapAftermathActivity : AppCompatActivity(), OnMapReadyCallback {
             return
         }
 
-        supportActionBar?.title = "Workout Map"
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
+
+        // create the header
+        val headerView = findViewById<ConstraintLayout>(R.id.workout_header)
+        workoutHeaderViewHolder = WorkoutHeaderViewHolder(headerView)
+        populateHeader()
 
         mapView = findViewById(R.id.map_view)
         mapView.onCreate(savedInstanceState)
         mapView.getMapAsync(this)
+    }
+
+    private fun populateHeader() {
+        // Use a background thread to fetch data to avoid blocking the UI
+        Executors.newSingleThreadExecutor().execute {
+            // Background thread: Fetch the data
+            val workoutHeaderDataProvider = WorkoutHeaderDataProvider(this, EquipmentDbHelper(this))
+            val workoutHeaderData = workoutHeaderDataProvider.createWorkoutHeaderData(workoutId)
+
+            // Switch back to the main thread to update the UI
+            runOnUiThread {
+                if (workoutHeaderData != null) {
+                    workoutHeaderViewHolder.bind(workoutHeaderData)
+                } else {
+                    Log.w(TAG, "Could not load workout data for header population.")
+                }
+            }
+        }
     }
 
     override fun onMapReady(map: GoogleMap) {
