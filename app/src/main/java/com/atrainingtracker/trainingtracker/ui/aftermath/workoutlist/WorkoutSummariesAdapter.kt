@@ -107,7 +107,7 @@ class WorkoutSummariesAdapter(
             // --- Initialize Map Component ---
             mapComponent = if (isPlayServiceAvailable && mapView != null) {
                 MapComponent(mapView, activity) { workoutId ->
-                    TrainingApplication.startWorkoutDetailsActivity(workoutId, WorkoutDetailsActivity.SelectedFragment.MAP)
+                    TrainingApplication.startTrackOnMapAftermathActivity(activity, workoutId)
                 }
             } else {
                 mapView?.visibility = View.GONE
