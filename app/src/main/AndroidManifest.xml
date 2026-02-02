@@ -59,6 +59,11 @@
             android:theme="@style/Theme.aTrainingTracker"
             android:label="@string/edit_workout"/>
 
+        <activity
+            android:name=".trainingtracker.ui.aftermath.TrackOnMapAftermathActivity"
+            android:theme="@style/Theme.aTrainingTracker"
+            android:label="TODO: Map title"/>
+
 
         <activity
             android:name=".trainingtracker.activities.SegmentDetailsActivity"
