@@ -5,6 +5,7 @@ import android.database.Cursor
 import android.util.Log
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
+import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import java.text.ParseException
 import java.text.SimpleDateFormat
@@ -12,10 +13,30 @@ import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 
+
 class WorkoutHeaderDataProvider(
     private val context: Context,
     private val equipmentDbHelper: com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 ) {
+
+    fun createWorkoutHeaderData(workoutId: Long): WorkoutHeaderData? {
+
+        val summariesDb = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase()
+        val cursor = summariesDb.query(
+            WorkoutSummaries.TABLE,
+            null,
+            WorkoutSummaries.C_ID + "=?",
+            arrayOf<String>(workoutId.toString()),
+             null, null, null
+        )
+        if (cursor.moveToFirst()) {
+            return createWorkoutHeaderData(cursor)
+        }
+        // cursor.close()
+        // WorkoutSummariesDatabaseManager.getInstance().closeDatabase()
+
+        return null
+    }
 
     fun createWorkoutHeaderData(cursor: Cursor): WorkoutHeaderData {
         val workoutName = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.WORKOUT_NAME))
