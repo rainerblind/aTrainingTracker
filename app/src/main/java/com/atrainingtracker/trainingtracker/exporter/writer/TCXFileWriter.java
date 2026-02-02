@@ -112,7 +112,7 @@ public class TCXFileWriter extends BaseFileWriter {
                 }
 
                 // get the lap data
-                SQLiteDatabase lapDb = LapsDatabaseManager.getInstance().getOpenDatabase();
+                SQLiteDatabase lapDb = LapsDatabaseManager.getInstance(mContext).getDatabase();
 
                 Cursor lapCursor = lapDb.query(LapsDatabaseManager.Laps.TABLE,
                         null,
@@ -132,7 +132,6 @@ public class TCXFileWriter extends BaseFileWriter {
                 totalDistance = myGet(lapCursor, LapsDatabaseManager.Laps.DISTANCE_TOTAL_m, "0");
 
                 lapCursor.close();
-                LapsDatabaseManager.getInstance().closeDatabase(); // instead of lapDb.close();
 
                 // write the lap data
                 bufferedWriter.write("      <Lap StartTime=\"" + dbTime2XMLTime(cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSamplesDbHelper.TIME))) + "\">\n");

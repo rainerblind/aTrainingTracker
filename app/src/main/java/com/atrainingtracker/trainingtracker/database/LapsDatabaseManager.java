@@ -19,54 +19,82 @@
 package com.atrainingtracker.trainingtracker.database;
 
 import android.content.Context;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.BaseColumns;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import com.atrainingtracker.trainingtracker.TrainingApplication;
 
 public class LapsDatabaseManager {
 
-    private static LapsDatabaseManager cInstance;
-    private static LapsDbHelper cLapsDbHelper;
-    private int mOpenCounter;
-    private SQLiteDatabase mDatabase;
+    private static final String TAG = LapsDatabaseManager.class.getName();
+    private static final boolean DEBUG = TrainingApplication.getDebug(true);
 
-    public static synchronized void initializeInstance(LapsDbHelper lapsDbHelper) {
-        if (cInstance == null) {
-            cInstance = new LapsDatabaseManager();
-            cLapsDbHelper = lapsDbHelper;
-        }
+    // --- Singleton Pattern Implementation ---
+
+    private static LapsDbHelper cLapsDbHelper;
+    private static volatile LapsDatabaseManager cInstance;
+
+    // Private constructor to prevent direct instantiation
+    private LapsDatabaseManager(@NonNull Context context) {
+        // The helper is instantiated with the application context to prevent leaks.
+        cLapsDbHelper = new LapsDbHelper(context.getApplicationContext());
     }
 
+    /**
+     * Gets the single, thread-safe instance of the LapsDatabaseManager.
+     *
+     * @param context Any context, will be converted to application context.
+     * @return The singleton instance.
+     */
     @NonNull
-    public static synchronized LapsDatabaseManager getInstance() {
+    public static LapsDatabaseManager getInstance(@NonNull Context context) {
+        // Use double-checked locking for thread-safe lazy initialization.
         if (cInstance == null) {
-            throw new IllegalStateException(LapsDatabaseManager.class.getSimpleName() +
-                    " is not initialized, call initializeInstance(..) method first.");
+            synchronized (LapsDatabaseManager.class) {
+                if (cInstance == null) {
+                    cInstance = new LapsDatabaseManager(context);
+                }
+            }
         }
-
         return cInstance;
     }
 
-    public synchronized SQLiteDatabase getOpenDatabase() {
-        mOpenCounter++;
-        if (mOpenCounter == 1) {
-            // Opening new database
-            mDatabase = cLapsDbHelper.getWritableDatabase();
-        }
-        return mDatabase;
+    /**
+     * Returns a writable database instance, managed by the helper.
+     * This is the only method that should be used to get a database object.
+     * It's thread-safe.
+     * @return A thread-safe SQLiteDatabase instance.
+     */
+    public SQLiteDatabase getDatabase() {
+        return cLapsDbHelper.getWritableDatabase();
     }
 
-    public synchronized void closeDatabase() {
-        mOpenCounter--;
-        if (mOpenCounter == 0) {
-            // Closing database
-            mDatabase.close();
+    // --- End of Singleton Pattern ---
 
+
+    // --- High-level helper methods ---
+
+    /**
+     * Deletes all lap data associated with a specific workoutId.
+     * This is the preferred way to delete laps, as it encapsulates the logic.
+     * @param workoutId The ID of the workout to delete laps for.
+     */
+    public void deleteWorkout(long workoutId) {
+        SQLiteDatabase db = getDatabase();
+        try {
+            int rowsAffected = db.delete(Laps.TABLE, Laps.WORKOUT_ID + "=?", new String[]{String.valueOf(workoutId)});
+            if (DEBUG) Log.d(TAG, "Deleted " + rowsAffected + " laps for workoutId: " + workoutId);
+        } catch (Exception e) {
+            Log.e(TAG, "Error deleting laps for workoutId: " + workoutId, e);
         }
     }
+
 
     // the columns of the table
     public static final class Laps {
