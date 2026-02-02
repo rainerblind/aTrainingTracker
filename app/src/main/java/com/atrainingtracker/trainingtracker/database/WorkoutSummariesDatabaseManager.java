@@ -519,7 +519,7 @@ public class WorkoutSummariesDatabaseManager {
 
         // open databases
         SQLiteDatabase dbSummaries = getInstance(context).getDatabase();
-        SQLiteDatabase dbLaps = LapsDatabaseManager.getInstance().getOpenDatabase(); // TODO: do the same for LapsDatabaseManager
+        SQLiteDatabase dbLaps = LapsDatabaseManager.getInstance(context).getDatabase();
 
         // get workout name
         Cursor cursor = dbSummaries.query(WorkoutSummaries.TABLE, null, WorkoutSummaries.C_ID + "=?", new String[]{workoutId + ""}, null, null, null);
@@ -548,8 +548,6 @@ public class WorkoutSummariesDatabaseManager {
         // delete from Laps
         if (DEBUG) Log.d(TAG, "deleting from Laps");
         dbLaps.delete(LapsDatabaseManager.Laps.TABLE, LapsDatabaseManager.Laps.WORKOUT_ID + "=?", new String[]{workoutId + ""});
-
-        LapsDatabaseManager.getInstance().closeDatabase(); // instead of dbLaps.close();
 
         return true;
     }

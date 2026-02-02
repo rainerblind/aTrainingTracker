@@ -402,10 +402,8 @@ public class TrackerService extends Service {
         values.put(LapsDatabaseManager.Laps.DISTANCE_TOTAL_m, lapDistance);
         values.put(LapsDatabaseManager.Laps.SPEED_AVERAGE_mps, averageSpeed);
 
-        SQLiteDatabase lapDb = LapsDatabaseManager.getInstance().getOpenDatabase();
+        SQLiteDatabase lapDb = LapsDatabaseManager.getInstance(this).getDatabase();
         lapDb.insert(LapsDatabaseManager.Laps.TABLE, null, values);
-        LapsDatabaseManager.getInstance().closeDatabase(); // instead of lapDb.close();
-
     }
 
     protected long getSportTypeId() {
