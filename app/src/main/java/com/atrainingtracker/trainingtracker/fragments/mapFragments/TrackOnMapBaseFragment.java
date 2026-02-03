@@ -188,7 +188,7 @@ public abstract class TrackOnMapBaseFragment
                 break;
         }
 
-        SQLiteDatabase db = SegmentsDatabaseManager.getInstance().getOpenDatabase();
+        SQLiteDatabase db = SegmentsDatabaseManager.getInstance(requireContext()).getDatabase();
         Cursor cursor = db.query(SegmentsDatabaseManager.Segments.TABLE_STARRED_SEGMENTS, null,
                 selection, selectionArgs,
                 null, null, null);
@@ -199,8 +199,6 @@ public abstract class TrackOnMapBaseFragment
                 Log.i(TAG, "segmentId=" + cursor.getLong(cursor.getColumnIndex(SegmentsDatabaseManager.Segments.SEGMENT_ID)) +
                         ", segment name=" + cursor.getString(cursor.getColumnIndex(SegmentsDatabaseManager.Segments.SEGMENT_NAME)));
         }
-
-        SegmentsDatabaseManager.getInstance().closeDatabase();
     }
 
     public void showSegmentOnMap(long segmentId, boolean zoomToShowTrack) {
@@ -221,7 +219,7 @@ public abstract class TrackOnMapBaseFragment
     @Deprecated
     // use addSegmentDirectionMarkers instead
     protected void addSegmentStartAndFinishMarker(long segmentId, boolean zoomToStart) {
-        SQLiteDatabase db = SegmentsDatabaseManager.getInstance().getOpenDatabase();
+        SQLiteDatabase db = SegmentsDatabaseManager.getInstance(requireContext()).getDatabase();
         Cursor cursor = db.query(SegmentsDatabaseManager.Segments.TABLE_STARRED_SEGMENTS, null,
                 SegmentsDatabaseManager.Segments.SEGMENT_ID + "=?", new String[]{segmentId + ""},
                 null, null, null);
@@ -241,12 +239,10 @@ public abstract class TrackOnMapBaseFragment
             addMarker(latLng, R.drawable.stop_logo_map, getString(R.string.Stop));
 
         }
-
-        SegmentsDatabaseManager.getInstance().closeDatabase();
     }
 
     protected void addSegmentDirectionMarkers(long segmentId, boolean zoomToStart) {
-        SQLiteDatabase db = SegmentsDatabaseManager.getInstance().getOpenDatabase();
+        SQLiteDatabase db = SegmentsDatabaseManager.getInstance(requireContext()).getDatabase();
         Cursor cursor = db.query(SegmentsDatabaseManager.Segments.TABLE_SEGMENT_STREAMS, null,
                 SegmentsDatabaseManager.Segments.SEGMENT_ID + "=?", new String[]{segmentId + ""},
                 null, null, null);
@@ -295,7 +291,7 @@ public abstract class TrackOnMapBaseFragment
     protected void addSegmentStartAndFinishLine(long segmentId) {
         if (DEBUG) Log.i(TAG, "addSegmentStartAndFinishLine");
 
-        SQLiteDatabase db = SegmentsDatabaseManager.getInstance().getOpenDatabase();
+        SQLiteDatabase db = SegmentsDatabaseManager.getInstance(requireContext()).getDatabase();
 
         Cursor cursor = db.query(SegmentsDatabaseManager.Segments.TABLE_SEGMENT_STREAMS, null,
                 SegmentsDatabaseManager.Segments.SEGMENT_ID + "=?", new String[]{segmentId + ""},
@@ -308,9 +304,6 @@ public abstract class TrackOnMapBaseFragment
                 null, null,
                 SegmentsDatabaseManager.Segments.C_ID + " DESC", START_AND_FINISH_LINE_POINTS);   // using DISTANCE does not work :-(
         addOrthogonalLine(cursor);
-
-        SegmentsDatabaseManager.getInstance().closeDatabase();
-
     }
 
     protected void addOrthogonalLine(@NonNull Cursor cursor) {
