@@ -43,39 +43,49 @@ import java.util.List;
 public class SportTypeDatabaseManager {
 
     private static final String TAG = SportTypeDatabaseManager.class.getName();
-    private static final boolean DEBUG = BANALService.getDebug(false);
-    private static SportTypeDatabaseManager cInstance;
-    private static SportTypeDbHelper cSportTypeDbHelper;
-    private int mOpenCounter;
-    private SQLiteDatabase mDatabase;
+    private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
-    public static synchronized void initializeInstance(SportTypeDbHelper sportTypeDbHelper) {
-        if (cInstance == null) {
-            cInstance = new SportTypeDatabaseManager();
-            cSportTypeDbHelper = sportTypeDbHelper;
-        }
+    // --- Modern Singleton Pattern ---
+    private static volatile SportTypeDatabaseManager cInstance;
+    private final SportTypeDbHelper cDbHelper;
+    private final Context mContext; // Store context for operations like getting drawables
+
+    private SportTypeDatabaseManager(@NonNull Context context) {
+        this.mContext = context.getApplicationContext();
+        this.cDbHelper = new SportTypeDbHelper(this.mContext);
     }
 
-    public static synchronized SportTypeDatabaseManager getInstance() {
+    @NonNull
+    public static SportTypeDatabaseManager getInstance(@NonNull Context context) {
         if (cInstance == null) {
-            throw new IllegalStateException(SportTypeDatabaseManager.class.getSimpleName() +
-                    " is not initialized, call initializeInstance(..) method first.");
+            synchronized (SportTypeDatabaseManager.class) {
+                if (cInstance == null) {
+                    cInstance = new SportTypeDatabaseManager(context);
+                }
+            }
         }
-
         return cInstance;
     }
+
+    /**
+     * Returns a writable database instance, managed by the helper.
+     */
+    // TODO: make private
+    public SQLiteDatabase getDatabase() {
+        return cDbHelper.getWritableDatabase();
+    }
+    // --- End of Singleton Pattern ---
 
     public static long getDefaultSportTypeId() {
         return 1;
     }
 
-    public static List<Long> getSportTypesIdList() {
+    public List<Long> getSportTypesIdList() {
         if (DEBUG) Log.i(TAG, "getSportTypesIdList");
 
         LinkedList<Long> result = new LinkedList<>();
 
-        SQLiteDatabase db = getInstance().getOpenDatabase();
-        Cursor cursor = db.query(SportType.TABLE,
+        Cursor cursor = getDatabase().query(SportType.TABLE,
                 null,
                 null, null,
                 null, null, null);
@@ -83,29 +93,23 @@ public class SportTypeDatabaseManager {
             result.add(cursor.getLong(cursor.getColumnIndex(SportType.C_ID)));
         }
         cursor.close();
-        getInstance().closeDatabase();
 
         return result;
     }
 
-    public static int getBSportTypeIconId(long id) {
+    public int getBSportTypeIconId(long id) {
         if (DEBUG) Log.i(TAG, "getBsportTypeIconId, id=" + id);
 
         BSportType bSportType = getBSportType(id);
 
-        switch (bSportType) {
-            case RUN:
-                return R.drawable.bsport_run;
-
-            case BIKE:
-                return R.drawable.bsport_bike;
-
-            default:
-                return R.drawable.bsport_other;
-        }
+        return switch (bSportType) {
+            case RUN -> R.drawable.bsport_run;
+            case BIKE -> R.drawable.bsport_bike;
+            default -> R.drawable.bsport_other;
+        };
     }
 
-    public static Drawable getBSportTypeIcon(Context context, long id, double scale) {
+    public Drawable getBSportTypeIcon(Context context, long id, double scale) {
         if (DEBUG) Log.i(TAG, "getBsportTypeIcon, id=" + id);
 
         int drawableId = getBSportTypeIconId(id);
@@ -116,13 +120,12 @@ public class SportTypeDatabaseManager {
         return new BitmapDrawable(context.getResources(), iconScaled);
     }
 
-    public static List<String> getSportTypesUiNameList() {
+    public List<String> getSportTypesUiNameList() {
         if (DEBUG) Log.i(TAG, "getSportTypesUiNameList");
 
         LinkedList<String> result = new LinkedList<>();
 
-        SQLiteDatabase db = getInstance().getOpenDatabase();
-        Cursor cursor = db.query(SportType.TABLE,
+        Cursor cursor = getDatabase().query(SportType.TABLE,
                 null,
                 null, null,
                 null, null, null);
@@ -130,18 +133,17 @@ public class SportTypeDatabaseManager {
             result.add(cursor.getString(cursor.getColumnIndex(SportType.UI_NAME)));
         }
         cursor.close();
-        getInstance().closeDatabase();
 
         return result;
     }
 
-    public static List<Long> getSportTypesIdList(BSportType bSportType, double avgSpd) {
+    public List<Long> getSportTypesIdList(BSportType bSportType, double avgSpd) {
         if (DEBUG)
             Log.i(TAG, "getSportTypesIdList, bSportType=" + bSportType.name() + ", avgSpd=" + avgSpd);
 
         List<Long> result = new LinkedList<>();
 
-        SQLiteDatabase db = getInstance().getOpenDatabase();
+        SQLiteDatabase db = getDatabase();
         Cursor cursor = db.query(SportType.TABLE,
                 null,
                 SportType.BASE_SPORT_TYPE + "=? AND " + SportType.MIN_AVG_SPEED + "<=? AND " + SportType.MAX_AVG_SPEED + ">?",
@@ -167,18 +169,17 @@ public class SportTypeDatabaseManager {
         }
 
         cursor.close();
-        getInstance().closeDatabase();
 
         return result;
     }
 
-    public static List<String> getSportTypesUiNameList(BSportType bSportType, double avgSpd) {
+    public List<String> getSportTypesUiNameList(BSportType bSportType, double avgSpd) {
         if (DEBUG)
             Log.i(TAG, "getSportTypesUiNameList, bSportType=" + bSportType.name() + ", avgSpd=" + avgSpd);
 
         List<String> result = new LinkedList<>();
 
-        SQLiteDatabase db = getInstance().getOpenDatabase();
+        SQLiteDatabase db = getDatabase();
         Cursor cursor = db.query(SportType.TABLE,
                 null,
                 SportType.BASE_SPORT_TYPE + "=? AND " + SportType.MIN_AVG_SPEED + "<=? AND " + SportType.MAX_AVG_SPEED + ">?",
@@ -203,17 +204,16 @@ public class SportTypeDatabaseManager {
         }
 
         cursor.close();
-        getInstance().closeDatabase();
 
         return result;
     }
 
-    public static List<Long> getSportTypesIdList(BSportType bSportType) {
+    public List<Long> getSportTypesIdList(BSportType bSportType) {
         if (DEBUG) Log.i(TAG, "getSportTypesIdList, bSportType=" + bSportType.name());
 
         List<Long> result = new LinkedList<>();
 
-        SQLiteDatabase db = getInstance().getOpenDatabase();
+        SQLiteDatabase db = getDatabase();
         Cursor cursor = db.query(SportType.TABLE,
                 null,
                 SportType.BASE_SPORT_TYPE + "=?",
@@ -231,18 +231,16 @@ public class SportTypeDatabaseManager {
         }
 
         cursor.close();
-        getInstance().closeDatabase();
 
         return result;
     }
 
-    public static List<String> getSportTypesUiNameList(BSportType bSportType) {
+    public List<String> getSportTypesUiNameList(BSportType bSportType) {
         if (DEBUG) Log.i(TAG, "getSportTypesUiNameList, bSportType=" + bSportType.name());
 
         LinkedList<String> result = new LinkedList<>();
 
-        SQLiteDatabase db = getInstance().getOpenDatabase();
-        Cursor cursor = db.query(SportType.TABLE,
+        Cursor cursor = getDatabase().query(SportType.TABLE,
                 null,
                 SportType.BASE_SPORT_TYPE + "=?",
                 new String[]{bSportType.name()},
@@ -257,13 +255,12 @@ public class SportTypeDatabaseManager {
         }
 
         cursor.close();
-        getInstance().closeDatabase();
 
         return result;
     }
 
     @NonNull
-    public static BSportType getBSportType(long id) {
+    public BSportType getBSportType(long id) {
         if (DEBUG) Log.i(TAG, "getBsportType: id=" + id);
 
         BSportType result = BSportType.UNKNOWN;
@@ -276,45 +273,45 @@ public class SportTypeDatabaseManager {
         return result;
     }
 
-    public static String getUIName(long id) {
+    public String getUIName(long id) {
         return getString(id, SportType.UI_NAME);
     }
 
-    public static String getGcName(long id) {
+    public String getGcName(long id) {
         return getString(id, SportType.GOLDEN_CHEETAH_NAME);
     }
 
-    public static String getStravaName(long id) {
+    public String getStravaName(long id) {
         return getString(id, SportType.STRAVA_NAME);
     }
 
     // public String toString() { TODO  }
     // public int    getUIId()              { return UIId;              }
 
-    public static String getTcxName(long id) {
+    public String getTcxName(long id) {
         return getString(id, SportType.TCX_NAME);
     }
 
-    public static String getRunkeeperName(long id) {
+    public String getRunkeeperName(long id) {
         return getString(id, SportType.RUNKEEPER_NAME);
     }
 
-    public static String getTrainingPeaksName(long id) {
+    public String getTrainingPeaksName(long id) {
         return getString(id, SportType.TRAINING_PEAKS_NAME);
     }
 
-    public static double getMinSpeed(long id) {
+    public double getMinSpeed(long id) {
         return getDouble(id, SportType.MIN_AVG_SPEED);
     }
 
-    public static double getMaxSpeed(long id) {
+    public double getMaxSpeed(long id) {
         return getDouble(id, SportType.MAX_AVG_SPEED);
     }
 
-    public static long getSportTypeIdFromUIName(String UIName) {
+    public long getSportTypeIdFromUIName(String UIName) {
         long result = -1;
-        SQLiteDatabase db = getInstance().getOpenDatabase();
-        Cursor cursor = db.query(SportType.TABLE,
+
+        Cursor cursor = getDatabase().query(SportType.TABLE,
                 null,
                 SportType.UI_NAME + "=?", new String[]{UIName},
                 null, null, null);
@@ -322,14 +319,13 @@ public class SportTypeDatabaseManager {
             result = cursor.getLong(cursor.getColumnIndex(SportType.C_ID));
         }
 
-        getInstance().closeDatabase();
-
         return result;
     }
 
-    private static String getString(long id, String col) {
+    private String getString(long id, String col) {
         String result = null;
-        SQLiteDatabase db = getInstance().getOpenDatabase();
+
+        SQLiteDatabase db = getDatabase();
         Cursor cursor = db.query(SportType.TABLE,
                 null,
                 SportType.C_ID + "=?",
@@ -347,14 +343,14 @@ public class SportTypeDatabaseManager {
                 result = cursor.getString(cursor.getColumnIndex(col));
             }
         }
-        getInstance().closeDatabase();
 
         return result;
     }
 
-    private static double getDouble(long id, String col) {
+    private double getDouble(long id, String col) {
         double result = 0.0;
-        SQLiteDatabase db = getInstance().getOpenDatabase();
+
+        SQLiteDatabase db = getDatabase();
         Cursor cursor = db.query(SportType.TABLE,
                 null,
                 SportType.C_ID + "=?",
@@ -372,24 +368,20 @@ public class SportTypeDatabaseManager {
                 result = cursor.getDouble(cursor.getColumnIndex(col));
             }
         }
-        getInstance().closeDatabase();
 
         return result;
     }
 
-    public static List<String> getSportTypesList() {
+    public List<String> getSportTypesList() {
         List<String> result = new LinkedList<>();
 
-        SQLiteDatabase db = getInstance().getOpenDatabase();
-        Cursor cursor = db.query(SportType.TABLE,
+        Cursor cursor = getDatabase().query(SportType.TABLE,
                 null,
                 null, null,
                 null, null, null);
         while (cursor.moveToNext()) {
             result.add(cursor.getString(cursor.getColumnIndex(SportType.UI_NAME)));
         }
-
-        getInstance().closeDatabase();
 
         return result;
     }
@@ -398,16 +390,14 @@ public class SportTypeDatabaseManager {
         return id < 0 || id > 3;
     }
 
-    public static void delete(long id) {
+    public void delete(long id) {
         if (!canDelete(id)) {
             return;
         }
 
-        SQLiteDatabase db = getInstance().getOpenDatabase();
-        db.delete(SportType.TABLE,
+        getDatabase().delete(SportType.TABLE,
                 SportType.C_ID + "=?",
                 new String[]{Long.toString(id)});
-        getInstance().closeDatabase();
     }
 
     public static BSportType getBSportType(String ttSportTypeName) {
@@ -416,52 +406,26 @@ public class SportTypeDatabaseManager {
     }
 
     public static long getSportTypeId(BSportType bSportType) {
-        switch (bSportType) {
-            case UNKNOWN:
-                return 1;
-            case RUN:
-                return 2;
-            case BIKE:
-                return 3;
-            default:
-                return 1;
-        }
+        return switch (bSportType) {
+            case UNKNOWN -> 1;
+            case RUN -> 2;
+            case BIKE -> 3;
+            default -> 1;
+        };
     }
 
     public static long getSportTypeIdFromTTSportTypeName(String ttSportTypeName) {
         TTSportType ttSportType = TTSportType.valueOf(ttSportTypeName);
-        switch (ttSportType) {
-            case OTHER:
-                return 1;
-            case RUN:
-                return 2;
-            case BIKE:
-                return 3;
-            case WALK:
-                return 4;
-            case MTB:
-                return 5;
-            default:
-                return 1;
-        }
+        return switch (ttSportType) {
+            case OTHER -> 1;
+            case RUN -> 2;
+            case BIKE -> 3;
+            case WALK -> 4;
+            case MTB -> 5;
+            default -> 1;
+        };
     }
 
-    public synchronized SQLiteDatabase getOpenDatabase() {
-        mOpenCounter++;
-        if (mOpenCounter == 1) {
-            // Opening new database
-            mDatabase = cSportTypeDbHelper.getWritableDatabase();
-        }
-        return mDatabase;
-    }
-
-    public synchronized void closeDatabase() {
-        mOpenCounter--;
-        if (mOpenCounter == 0) {
-            // Closing database
-            mDatabase.close();
-        }
-    }
 
     private enum TTSportType {
         // only for the UI we use the R.string, others are hard coded because they should never ever be translated

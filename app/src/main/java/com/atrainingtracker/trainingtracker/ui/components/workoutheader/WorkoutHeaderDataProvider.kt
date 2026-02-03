@@ -45,8 +45,9 @@ class WorkoutHeaderDataProvider(
 
         val (date, time) = formatDateTime(cursor)
 
-        val sportType = SportTypeDatabaseManager.getBSportType(sportId)
-        val sportName = SportTypeDatabaseManager.getUIName(sportId)
+        val sportTypeDatabaseManager = SportTypeDatabaseManager.getInstance(context)
+        val sportType = sportTypeDatabaseManager.getBSportType(sportId)
+        val sportName = sportTypeDatabaseManager.getUIName(sportId)
         val equipmentName = equipmentDbHelper.getEquipmentNameFromId(equipmentId)
 
         return WorkoutHeaderData(

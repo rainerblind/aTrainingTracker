@@ -116,7 +116,7 @@ public abstract class BaseFileWriter extends BaseExporter {
             } */
         }
 
-        BSportType bSportType = SportTypeDatabaseManager.getBSportType(sportTypeId);
+        BSportType bSportType = SportTypeDatabaseManager.getInstance(mContext).getBSportType(sportTypeId);
         haveBikeCadence = haveCadence & bSportType == BSportType.BIKE;
         haveRunCadence = haveCadence & bSportType == BSportType.RUN;
     }

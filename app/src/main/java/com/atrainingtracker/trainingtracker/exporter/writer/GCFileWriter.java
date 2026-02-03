@@ -106,7 +106,7 @@ public class GCFileWriter extends BaseFileWriter {
         bufferedWriter.write(String.format(FORMAT_qq, IDENTIFIER, ""));
         bufferedWriter.write(String.format(FORMAT_q, TAGS, (new JSONObject())
                 .put(DATA, data)
-                .put(SPORT, SportTypeDatabaseManager.getGcName(sportTypeId))
+                .put(SPORT, SportTypeDatabaseManager.getInstance(mContext).getGcName(sportTypeId))
                 .put(WORKOUT_CODE, goal + " " + method)));
 
         bufferedWriter.write("        \"SAMPLES\":[\n");

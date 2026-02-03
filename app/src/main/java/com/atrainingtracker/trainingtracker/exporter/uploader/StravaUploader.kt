@@ -236,7 +236,7 @@ class StravaUploader(context: Context) : BaseExporter(context) {
         }
 
         val sportId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.SPORT_ID))
-        val sportName = SportTypeDatabaseManager.getStravaName(sportId)
+        val sportName = SportTypeDatabaseManager.getInstance(mContext).getStravaName(sportId)
         val name = myGetStringFromCursor(cursor, WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_NAME)
         val description = myGetStringFromCursor(cursor, WorkoutSummariesDatabaseManager.WorkoutSummaries.DESCRIPTION)
         val trainer = myGetBooleanFromCursor(cursor, WorkoutSummariesDatabaseManager.WorkoutSummaries.TRAINER)

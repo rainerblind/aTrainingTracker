@@ -585,8 +585,10 @@ public class WorkoutSummariesDatabaseManager {
         return stringBuilder.toString();
     }
 
+    // TODO: create helper class instead of passing database managers arround...
     @Nullable
-    public String getFancyName(long sportTypeId,
+    public String getFancyName(SportTypeDatabaseManager sportTypeDatabaseManager,
+                               long sportTypeId,
                                @Nullable KnownLocationsDatabaseManager.MyLocation startLocation,
                                @Nullable KnownLocationsDatabaseManager.MyLocation maxLineDistanceLocation,
                                @Nullable KnownLocationsDatabaseManager.MyLocation endLocation) {
@@ -606,7 +608,7 @@ public class WorkoutSummariesDatabaseManager {
             if (cursor.moveToFirst()) {
                 stringBuilder.append(cursor.getString(cursor.getColumnIndex(WorkoutSummaries.FANCY_NAME)));
             } else {
-                stringBuilder.append(createDefaultFancyName(sportTypeId, startLocation, maxLineDistanceLocation, endLocation));
+                stringBuilder.append(createDefaultFancyName(sportTypeDatabaseManager, sportTypeId, startLocation, maxLineDistanceLocation, endLocation));
                 cursor.requery();
             }
 
@@ -648,8 +650,10 @@ public class WorkoutSummariesDatabaseManager {
         return null;
     }
 
+    // TODO: create extra helper instead of passing database managers arround...
     @Nullable
-    protected String createDefaultFancyName(long sportTypeId,
+    protected String createDefaultFancyName(SportTypeDatabaseManager sportTypeDatabaseManager,
+                                            long sportTypeId,
                                             @Nullable KnownLocationsDatabaseManager.MyLocation startLocation,
                                             KnownLocationsDatabaseManager.MyLocation maxLineDistanceLocation,
                                             @Nullable KnownLocationsDatabaseManager.MyLocation endLocation) {
@@ -659,11 +663,11 @@ public class WorkoutSummariesDatabaseManager {
 
             if (startLocation.id != endLocation.id) { // probably a commute
                 stringBuilder.append("#");
-                stringBuilder.append(SportTypeDatabaseManager.getUIName(sportTypeId));
+                stringBuilder.append(sportTypeDatabaseManager.getUIName(sportTypeId));
                 stringBuilder.append("2");
                 stringBuilder.append(endLocation.name);
             } else { // a loop
-                stringBuilder.append(SportTypeDatabaseManager.getUIName(sportTypeId)).append("@").append(startLocation.name);
+                stringBuilder.append(sportTypeDatabaseManager.getUIName(sportTypeId)).append("@").append(startLocation.name);
             }
 
             String baseName = stringBuilder.toString();

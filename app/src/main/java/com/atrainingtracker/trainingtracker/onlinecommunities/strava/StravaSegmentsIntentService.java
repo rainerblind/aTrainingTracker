@@ -270,7 +270,7 @@ public class StravaSegmentsIntentService extends IntentService {
 
         if (REQUEST_UPDATE_STARRED_SEGMENTS.equals(requestType)) {
             mSportTypeId = bundle.getLong(SPORT_TYPE_ID);
-            mStravaSportName = SportTypeDatabaseManager.getStravaName(mSportTypeId);
+            mStravaSportName = SportTypeDatabaseManager.getInstance(this).getStravaName(mSportTypeId);
             getStarredSegments();
             mSportTypeId = -1;
         } else {

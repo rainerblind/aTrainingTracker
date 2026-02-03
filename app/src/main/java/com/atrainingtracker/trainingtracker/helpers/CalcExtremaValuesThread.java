@@ -205,6 +205,7 @@ public class CalcExtremaValuesThread extends Thread {
 
         WorkoutSummariesDatabaseManager workoutSummariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(mContext);
         KnownLocationsDatabaseManager knownLocationsDatabaseManager = KnownLocationsDatabaseManager.getInstance(mContext);
+        SportTypeDatabaseManager sportTypeDatabaseManager = SportTypeDatabaseManager.getInstance(mContext);
         MyLocation startLocation = null;
 
         Double startLat = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.LATITUDE, ExtremaType.START);
@@ -231,7 +232,7 @@ public class CalcExtremaValuesThread extends Thread {
         if (sportTypeId == null) {
             sportTypeId = SportTypeDatabaseManager.getDefaultSportTypeId();
         }
-        String fancyName = workoutSummariesDatabaseManager.getFancyName(sportTypeId, startLocation, maxLineLocation, endLocation);
+        String fancyName = workoutSummariesDatabaseManager.getFancyName(sportTypeDatabaseManager, sportTypeId, startLocation, maxLineLocation, endLocation);
 
         if (fancyName != null) {
             Intent intent = new Intent(FINISHED_CALCULATING_FANCY_NAME)

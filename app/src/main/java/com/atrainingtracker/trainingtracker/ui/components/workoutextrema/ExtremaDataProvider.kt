@@ -54,7 +54,7 @@ class ExtremaDataProvider(context: Context) {
         // get the workoutId and the bSportType from the cursor
         val workoutId = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.C_ID))
         val sportId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPORT_ID))
-        val bSportType = SportTypeDatabaseManager.getBSportType(sportId)
+        val bSportType = SportTypeDatabaseManager.getInstance(appContext).getBSportType(sportId)
 
         // Use Kotlin's functional style to build the list
         return sensorsToCheck.mapNotNull { sensorType ->

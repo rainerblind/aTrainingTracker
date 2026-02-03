@@ -22,7 +22,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     private val context = application
 
     private val workoutSummariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(application)
-    private val sportTypeDatabaseManager = SportTypeDatabaseManager.getInstance()
+    private val sportTypeDatabaseManager = SportTypeDatabaseManager.getInstance(application)
     private val equipmentDbHelper = EquipmentDbHelper(application)
 
 
@@ -94,8 +94,9 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         val currentData = _workoutData.value ?: return
 
         // get the sportId
-        val newSportId = SportTypeDatabaseManager.getSportTypeIdFromUIName(newSportName)
-        val newBSportType = SportTypeDatabaseManager.getBSportType(newSportId)
+        val sportTypeDatabaseManager = SportTypeDatabaseManager.getInstance(context)
+        val newSportId = sportTypeDatabaseManager.getSportTypeIdFromUIName(newSportName)
+        val newBSportType = sportTypeDatabaseManager.getBSportType(newSportId)
 
         // update the LiveData state with all the new information
         _workoutData.value = currentData.copy(

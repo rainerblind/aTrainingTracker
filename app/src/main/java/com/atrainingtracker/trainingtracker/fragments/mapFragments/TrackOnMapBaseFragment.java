@@ -169,16 +169,18 @@ public abstract class TrackOnMapBaseFragment
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     public void showStarredSegmentsOnMap(@NonNull SegmentHelper.SegmentType segmentType) {
+        SportTypeDatabaseManager sportTypeDatabaseManager = SportTypeDatabaseManager.getInstance(requireContext());
+
         String selection = SegmentsDatabaseManager.Segments.ACTIVITY_TYPE + "=?";
         String[] selectionArgs = null;
         switch (segmentType) {
             case NONE:
                 return; // do not search and show any segment
             case BIKE:
-                selectionArgs = new String[]{SportTypeDatabaseManager.getStravaName(SportTypeDatabaseManager.getSportTypeId(BSportType.BIKE))};
+                selectionArgs = new String[]{sportTypeDatabaseManager.getStravaName(SportTypeDatabaseManager.getSportTypeId(BSportType.BIKE))};
                 break;
             case RUN:
-                selectionArgs = new String[]{SportTypeDatabaseManager.getStravaName(SportTypeDatabaseManager.getSportTypeId(BSportType.RUN))};
+                selectionArgs = new String[]{sportTypeDatabaseManager.getStravaName(SportTypeDatabaseManager.getSportTypeId(BSportType.RUN))};
                 break;
             case ALL:
                 // selectionArgs = null;

@@ -657,7 +657,7 @@ public class EditWorkoutFragmentClassic extends Fragment {
     }
 
     protected void showOrHideTrPace() {
-        if (SportTypeDatabaseManager.getBSportType(mSportTypeId) == BSportType.RUN
+        if (SportTypeDatabaseManager.getInstance(requireContext()).getBSportType(mSportTypeId) == BSportType.RUN
                 && mPaceExtremaValuesAvailable) {
             getActivity().findViewById(R.id.trPace).setVisibility(View.VISIBLE);
         } else {
@@ -902,7 +902,7 @@ public class EditWorkoutFragmentClassic extends Fragment {
     protected void onSportTypeChanged() {
         if (DEBUG) Log.d(TAG, "onSportTypeChanged to " + mSportTypeId);
 
-        mBSportType = SportTypeDatabaseManager.getBSportType(mSportTypeId);
+        mBSportType = SportTypeDatabaseManager.getInstance(requireContext()).getBSportType(mSportTypeId);
 
         // first, configure the sport spinner
         setSpinnerSport();
@@ -950,14 +950,16 @@ public class EditWorkoutFragmentClassic extends Fragment {
     private void setSpinnerSport() {
         if (DEBUG) Log.i(TAG, "setSpinnerSport");
 
+        SportTypeDatabaseManager sportTypeDatabaseManager = SportTypeDatabaseManager.getInstance(requireContext());
+
         if (mShowAllSportTypes) {
             if (DEBUG) Log.i(TAG, "show all sport types");
-            mSportTypeUiNameList = SportTypeDatabaseManager.getSportTypesUiNameList();
-            mSportTypeIdList = SportTypeDatabaseManager.getSportTypesIdList();
+            mSportTypeUiNameList = sportTypeDatabaseManager.getSportTypesUiNameList();
+            mSportTypeIdList = sportTypeDatabaseManager.getSportTypesIdList();
         } else {
             if (DEBUG) Log.i(TAG, "do NOT show all sport types");
-            mSportTypeUiNameList = SportTypeDatabaseManager.getSportTypesUiNameList(mBSportType, mAverageSpeed);
-            mSportTypeIdList = SportTypeDatabaseManager.getSportTypesIdList(mBSportType, mAverageSpeed);
+            mSportTypeUiNameList = sportTypeDatabaseManager.getSportTypesUiNameList(mBSportType, mAverageSpeed);
+            mSportTypeIdList = sportTypeDatabaseManager.getSportTypesIdList(mBSportType, mAverageSpeed);
             if (mSportTypeUiNameList.size() <= 1
                     || !mSportTypeIdList.contains(mSportTypeId)) {
                 mShowAllSportTypes = true;
@@ -996,7 +998,7 @@ public class EditWorkoutFragmentClassic extends Fragment {
                 mEquipmentName = equipmentList.get(0);
             }
 
-            equipmentList = equipmentDbHelper.getEquipment(SportTypeDatabaseManager.getBSportType(mSportTypeId));
+            equipmentList = equipmentDbHelper.getEquipment(SportTypeDatabaseManager.getInstance(requireContext()).getBSportType(mSportTypeId));
 
         }
         if (DEBUG) {

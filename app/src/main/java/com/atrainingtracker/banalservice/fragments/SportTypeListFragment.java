@@ -102,7 +102,7 @@ public class SportTypeListFragment
 
         mSpeedUnit = getString(MyHelper.getSpeedUnitNameId());
 
-        SQLiteDatabase db = SportTypeDatabaseManager.getInstance().getOpenDatabase();
+        SQLiteDatabase db = SportTypeDatabaseManager.getInstance(requireContext()).getDatabase();
 
         mCursor = db.query(SportType.TABLE,
                 FROM_WITH_C_ID,
@@ -123,7 +123,7 @@ public class SportTypeListFragment
                     String name = cursor.getString(cursor.getColumnIndex(SportType.UI_NAME));
                     tv.setText(name);
                     long sportTypeId = cursor.getLong(cursor.getColumnIndex(SportType.C_ID));
-                    Drawable icon = SportTypeDatabaseManager.getBSportTypeIcon(getContext(), sportTypeId, 0.75);
+                    Drawable icon = SportTypeDatabaseManager.getInstance(requireContext()).getBSportTypeIcon(getContext(), sportTypeId, 0.75);
                     int h = icon.getIntrinsicHeight();
                     int w = icon.getIntrinsicWidth();
                     icon.setBounds(0, 0, w, h);
@@ -189,7 +189,6 @@ public class SportTypeListFragment
     public void onDestroy() {
         super.onDestroy();
 
-        SportTypeDatabaseManager.getInstance().closeDatabase();
         mCursor.close();
     }
 
@@ -233,7 +232,9 @@ public class SportTypeListFragment
 
     private void showReallyDeleteDialog(final long id) {
         if (DEBUG) Log.i(TAG, "showReallyDeleteDialog, id=" + id);
-        String sportTypeUiName = SportTypeDatabaseManager.getUIName(id);
+        SportTypeDatabaseManager sportTypeDatabaseManager = SportTypeDatabaseManager.getInstance(requireContext());
+
+        String sportTypeUiName = sportTypeDatabaseManager.getUIName(id);
 
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
         builder.setTitle(R.string.delete)
@@ -241,7 +242,7 @@ public class SportTypeListFragment
                 .setIcon(android.R.drawable.ic_menu_delete)
                 .setPositiveButton(R.string.delete, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int whichButton) {
-                        SportTypeDatabaseManager.delete(id);
+                        sportTypeDatabaseManager.delete(id);
                         updateView();
 
                         dialog.dismiss();
