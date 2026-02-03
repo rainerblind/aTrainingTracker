@@ -71,6 +71,7 @@ public class CalcExtremaValuesThread extends Thread {
         if (DEBUG) Log.i(TAG, "CalcExtremaValuesTask()");
     }
 
+    // TODO: make non-static
     public static void calcAndSaveMaxLineDistancePosition(Context context, final long workoutId) {
         if (DEBUG) Log.i(TAG, "calcAndSaveMaxLineDistancePosition: workoutId=" + workoutId);
 
@@ -158,7 +159,7 @@ public class CalcExtremaValuesThread extends Thread {
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         // first, we need the accumulated sensors of this workout
-        Set<SensorType> accumulatedSensorTypes = WorkoutSummariesDatabaseManager.getAccumulatedSensorTypes(mContext, workoutId);
+        Set<SensorType> accumulatedSensorTypes = WorkoutSummariesDatabaseManager.getInstance(mContext).getAccumulatedSensorTypes(workoutId);
 
         // if there are no sensors stored (due to upgrading from DB version 3 to 4, we use all important sensors
         if (accumulatedSensorTypes.isEmpty()) {
@@ -226,7 +227,7 @@ public class CalcExtremaValuesThread extends Thread {
             endLocation = knownLocationsDatabaseManager.getMyLocation(new LatLng(endLat, endLon));
         }
 
-        Long sportTypeId = WorkoutSummariesDatabaseManager.getLong(mContext, workoutId, WorkoutSummaries.SPORT_ID);
+        Long sportTypeId = workoutSummariesDatabaseManager.getLong(workoutId, WorkoutSummaries.SPORT_ID);
         if (sportTypeId == null) {
             sportTypeId = SportTypeDatabaseManager.getDefaultSportTypeId();
         }

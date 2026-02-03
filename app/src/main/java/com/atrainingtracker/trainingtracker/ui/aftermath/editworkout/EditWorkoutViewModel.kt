@@ -5,6 +5,7 @@ import androidx.compose.animation.core.copy
 import androidx.lifecycle.*
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
+import com.atrainingtracker.trainingtracker.database.WorkoutDeletionHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.atrainingtracker.trainingtracker.exporter.ExportManager
@@ -188,8 +189,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
 
             // -- update the Database
             // Update Workout Name
-            WorkoutSummariesDatabaseManager.updateWorkoutName(
-                context,
+            workoutSummariesDatabaseManager.updateWorkoutName(
                 workoutId,
                 dataToSave.headerData.workoutName ?: ""
             )
@@ -197,24 +197,21 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
             // Update Sport and Equipment
             val equipmentDbHelper = EquipmentDbHelper(getApplication())
             val equipmentId = equipmentDbHelper.getEquipmentId(dataToSave.headerData.equipmentName ?: "")
-            WorkoutSummariesDatabaseManager.updateSportAndEquipment(
-                context,
+            workoutSummariesDatabaseManager.updateSportAndEquipment(
                 workoutId,
                 dataToSave.headerData.sportId,
                 equipmentId
             )
 
             // Update Commute and Trainer flags
-            WorkoutSummariesDatabaseManager.updateCommuteAndTrainerFlag(
-                context,
+            workoutSummariesDatabaseManager.updateCommuteAndTrainerFlag(
                 workoutId,
                 dataToSave.isCommute,
                 dataToSave.isTrainer
             )
 
             // Update Description, Goal, and Method
-            WorkoutSummariesDatabaseManager.updateDescription(
-                context,
+            workoutSummariesDatabaseManager.updateDescription(
                 workoutId,
                 dataToSave.descriptionData.description ?: "",
                 dataToSave.descriptionData.goal ?: "",
@@ -231,7 +228,8 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
 
     fun deleteWorkout() {
         viewModelScope.launch(Dispatchers.IO) {
-            val success = WorkoutSummariesDatabaseManager.deleteWorkout(context, workoutId)
+            val workoutDeletionHelper = WorkoutDeletionHelper(context)
+            val success = workoutDeletionHelper.deleteWorkout(workoutId)
             deleteFinishedEvent.postValue(Event(success))
         }
     }

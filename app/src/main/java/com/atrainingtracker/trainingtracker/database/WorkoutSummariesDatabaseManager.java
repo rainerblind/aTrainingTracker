@@ -79,44 +79,42 @@ public class WorkoutSummariesDatabaseManager {
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // some high level helper methods
     ////////////////////////////////////////////////////////////////////////////////////////////////
-    public static void updateSportAndEquipment(Context context, long workoutId, long sportId, long equipmentId) {
+    public void updateSportAndEquipment(long workoutId, long sportId, long equipmentId) {
 
         ContentValues values = new ContentValues();
         values.put(WorkoutSummaries.SPORT_ID, sportId);
         values.put(WorkoutSummaries.EQUIPMENT_ID, equipmentId);
 
-        updateValues(context, workoutId, values);
+        updateValues(workoutId, values);
     }
 
-    public static void updateWorkoutName(Context context, long workoutId, String newName) {
+    public void updateWorkoutName(long workoutId, String newName) {
         ContentValues values = new ContentValues();
         values.put(WorkoutSummaries.WORKOUT_NAME, newName);
 
-        updateValues(context, workoutId, values);
+        updateValues(workoutId, values);
     }
 
-    public static void updateDescription(Context context, long workoutId, @NotNull String newDescription, @NotNull String newGoal, @NotNull String newMethod) {
+    public void updateDescription(long workoutId, @NotNull String newDescription, @NotNull String newGoal, @NotNull String newMethod) {
         ContentValues values = new ContentValues();
         values.put(WorkoutSummaries.DESCRIPTION, newDescription);
         values.put(WorkoutSummaries.GOAL, newGoal);
         values.put(WorkoutSummaries.METHOD, newMethod);
 
-        updateValues(context, workoutId, values);
+        updateValues(workoutId, values);
     }
 
-    public static void updateCommuteAndTrainerFlag(Context context, long workoutId, boolean commute, boolean trainer) {
+    public void updateCommuteAndTrainerFlag(long workoutId, boolean commute, boolean trainer) {
         ContentValues values = new ContentValues();
         values.put(WorkoutSummaries.COMMUTE, commute);
         values.put(WorkoutSummaries.TRAINER, trainer);
 
-        updateValues(context, workoutId, values);
+        updateValues(workoutId, values);
     }
 
-    private static void updateValues(Context context, long workoutId, ContentValues contentValues) {
+    private void updateValues( long workoutId, ContentValues contentValues) {
 
-        SQLiteDatabase db = getInstance(context).getDatabase();
-
-        db.update(WorkoutSummaries.TABLE,
+        getDatabase().update(WorkoutSummaries.TABLE,
                     contentValues,
                     WorkoutSummaries.C_ID + "=" + workoutId,
                     null);
@@ -192,12 +190,12 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     @Nullable
-    public static String getString(Context context, long workoutId, String key) {
+    public String getString(long workoutId, String key) {
         if (DEBUG) Log.i(TAG, "getString(" + workoutId + ", " + key + ")");
 
         String value = null;
 
-        try (Cursor cursor = getInstance(context).getDatabase().query(WorkoutSummaries.TABLE,
+        try (Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE,
                 new String[]{key},
                 WorkoutSummaries.C_ID + "=?",
                 new String[]{Long.toString(workoutId)},
@@ -254,12 +252,12 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     @Nullable
-    public static Long getLong(Context context, long workoutId, String key) {
+    public Long getLong(long workoutId, String key) {
         if (DEBUG) Log.i(TAG, "getLong for workoutId: " + workoutId + ", " + key);
 
         Long value = null;
 
-        try(Cursor cursor = getInstance(context).getDatabase().query(WorkoutSummaries.TABLE,
+        try(Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE,
                 new String[]{key},
                 WorkoutSummaries.C_ID + "=?",
                 new String[]{Long.toString(workoutId)},
@@ -274,12 +272,12 @@ public class WorkoutSummariesDatabaseManager {
     }
 
 
-    public static boolean getBoolean(Context context, long workoutId, String key) {
+    public boolean getBoolean(long workoutId, String key) {
         if (DEBUG) Log.i(TAG, "getBoolean for workoutId: " + workoutId + ", " + key);
 
         boolean result = false;
 
-        try( Cursor cursor = getInstance(context).getDatabase().query(WorkoutSummaries.TABLE,
+        try( Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE,
                 new String[]{key},
                 WorkoutSummaries.C_ID + "=?",
                 new String[]{Long.toString(workoutId)},
@@ -393,10 +391,10 @@ public class WorkoutSummariesDatabaseManager {
         return true;
     }
 
-    public static void saveAccumulatedSensorTypes(Context context, long workoutId, @NonNull Iterable<SensorType> sensorTypes) {
+    public void saveAccumulatedSensorTypes(long workoutId, @NonNull Iterable<SensorType> sensorTypes) {
         if (DEBUG) Log.i(TAG, "saveAccumulatedSensors for workoutId: " + workoutId);
 
-        SQLiteDatabase summariesDb = getInstance(context).getDatabase();
+        SQLiteDatabase summariesDb = getDatabase();
         ContentValues values = new ContentValues();
         values.put(WorkoutSummaries.WORKOUT_ID, workoutId);
 
@@ -408,13 +406,13 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     @NonNull
-    public static Set<SensorType> getAccumulatedSensorTypes(Context context, long workoutId) {
+    public Set<SensorType> getAccumulatedSensorTypes(long workoutId) {
         if (DEBUG) Log.i(TAG, "getAccumulatedSensorTypes for workoutId: " + workoutId);
 
         Set<SensorType> accumulatedSensorTypesSet = new HashSet<>();
 
 
-        try(Cursor cursor = getInstance(context).getDatabase().query(WorkoutSummaries.TABLE_ACCUMULATED_SENSORS,
+        try(Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE_ACCUMULATED_SENSORS,
                 new String[]{WorkoutSummaries.SENSOR_TYPE}, // columns
                 WorkoutSummaries.WORKOUT_ID + "=?", // selection
                 new String[]{Long.toString(workoutId)}, //selectionArgs,
@@ -436,10 +434,10 @@ public class WorkoutSummariesDatabaseManager {
      */
 
     @NonNull
-    public static List<Long> getWorkoutIds(Context context) {
+    public List<Long> getWorkoutIds() {
         List<Long> workoutIds = new LinkedList<>();
 
-        try(Cursor cursor = getInstance(context).getDatabase().query(WorkoutSummaries.TABLE,
+        try(Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE,
                 new String[]{WorkoutSummaries.C_ID}, // columns
                 null, // columns,
                 null, // selection
@@ -455,12 +453,12 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     @NonNull
-    public static List<Long> getOldWorkouts(Context context, int days) {
+    public List<Long> getOldWorkouts(int days) {
         if (DEBUG) Log.i(TAG, "getOldWorkouts(" + days + ")");
 
         List<Long> oldWorkoutIds = new LinkedList<>();
 
-        try(Cursor cursor = getInstance(context).getDatabase().query(WorkoutSummaries.TABLE,
+        try(Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE,
                 new String[]{WorkoutSummaries.C_ID}, // columns,
                 WorkoutSummaries.TIME_START + " <= datetime('now', '-" + days + " day')", // selection
                 null, null, null, null)) { // selectionArgs, groupBy, having, orderBy)
@@ -478,11 +476,11 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     @Nullable
-    public static String getStartTime(Context context, long workoutId, String timeZone) {
+    public String getStartTime(long workoutId, String timeZone) {
         if (DEBUG) Log.i(TAG, "getStartTime: workoutId=" + workoutId);
         String startTime = null;
 
-        try(Cursor cursor = getInstance(context).getDatabase().query(WorkoutSummaries.TABLE, // table
+        try(Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE, // table
                 new String[]{"datetime(" + WorkoutSummaries.TIME_START + ", '" + timeZone + "')"}, // columns
                 WorkoutSummaries.C_ID + "=?",  // selection
                 new String[]{Long.toString(workoutId)}, //selectionArgs,
@@ -495,11 +493,11 @@ public class WorkoutSummariesDatabaseManager {
         return startTime;
     }
 
-    public static String getStartTime(Context context, String fileBaseName, String timeZone) {
+    public String getStartTime(String fileBaseName, String timeZone) {
         if (DEBUG) Log.i(TAG, "getStartTime: fileBaseName=" + fileBaseName);
         String startTime = null;
 
-        try(Cursor cursor = getInstance(context).getDatabase().query(WorkoutSummaries.TABLE, // table
+        try(Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE, // table
                 new String[]{"datetime(" + WorkoutSummaries.TIME_START + ", '" + timeZone + "')"}, // columns
                 WorkoutSummaries.FILE_BASE_NAME + "=?",  // selection
                 new String[]{fileBaseName}, //selectionArgs,
@@ -514,39 +512,14 @@ public class WorkoutSummariesDatabaseManager {
     }
 
 
-    public static boolean deleteWorkout(Context context, long workoutId) {
+    // TODO: here, we only delete the workout from this db.  Use WorkoutDeletionHelper to delete from all DBs.
+    boolean deleteWorkout(long workoutId) {
         if (DEBUG) Log.i(TAG, "deleteWorkout: workoutId=" + workoutId);
 
-        // open databases
-        SQLiteDatabase dbSummaries = getInstance(context).getDatabase();
-        SQLiteDatabase dbLaps = LapsDatabaseManager.getInstance(context).getDatabase();
-
-        // get workout name
-        Cursor cursor = dbSummaries.query(WorkoutSummaries.TABLE, null, WorkoutSummaries.C_ID + "=?", new String[]{workoutId + ""}, null, null, null);
-        if (!cursor.moveToFirst()) {
-            return false;
-        }
-        String name = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.WORKOUT_NAME));
-        String baseFileName = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.FILE_BASE_NAME));
-        cursor.close();
-
-        // delete from WorkoutSummaries
-        if (DEBUG) Log.d(TAG, "deleting from WorkoutSummaries");
+        SQLiteDatabase dbSummaries = getDatabase();
         dbSummaries.delete(WorkoutSummaries.TABLE, WorkoutSummaries.C_ID + "=?", new String[]{workoutId + ""});
         dbSummaries.delete(WorkoutSummaries.TABLE_ACCUMULATED_SENSORS, WorkoutSummaries.WORKOUT_ID + "=?", new String[]{workoutId + ""});
         dbSummaries.delete(WorkoutSummaries.TABLE_EXTREMA_VALUES, WorkoutSummaries.WORKOUT_ID + "=?", new String[]{workoutId + ""});
-
-        // delete from WorkoutSamples
-        if (DEBUG) Log.d(TAG, "deleting from WorkoutSamples");
-        WorkoutSamplesDatabaseManager.getInstance(context).deleteWorkout(baseFileName);
-
-        // delete from ExportManager
-        if (DEBUG) Log.d(TAG, "deleting from ExportStatusRepository");
-        ExportStatusRepository.getInstance(context).deleteWorkout(baseFileName);
-
-        // delete from Laps
-        if (DEBUG) Log.d(TAG, "deleting from Laps");
-        dbLaps.delete(LapsDatabaseManager.Laps.TABLE, LapsDatabaseManager.Laps.WORKOUT_ID + "=?", new String[]{workoutId + ""});
 
         return true;
     }

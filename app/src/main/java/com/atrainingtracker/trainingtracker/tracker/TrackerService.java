@@ -492,8 +492,9 @@ public class TrackerService extends Service {
         }
         activeDevicesDb.close();
 
+        WorkoutSummariesDatabaseManager summariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(this);
         // save the accumulated SensorTypes
-        WorkoutSummariesDatabaseManager.saveAccumulatedSensorTypes(this, mWorkoutID, mBanalService.getAccumulatedSensorTypeSet());
+        summariesDatabaseManager.saveAccumulatedSensorTypes(mWorkoutID, mBanalService.getAccumulatedSensorTypeSet());
 
         // update the summaries
         ContentValues summaryValues = new ContentValues();
@@ -509,8 +510,7 @@ public class TrackerService extends Service {
         summaryValues.put(WorkoutSummaries.SPORT_ID, sportTypeId);
         summaryValues.put(WorkoutSummaries.B_SPORT, SportTypeDatabaseManager.getBSportType(sportTypeId).name());
 
-        WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance(this);
-        SQLiteDatabase summariesDb = databaseManager.getDatabase();
+        SQLiteDatabase summariesDb = summariesDatabaseManager.getDatabase();
         summariesDb.update(WorkoutSummaries.TABLE,
                 summaryValues,
                 WorkoutSummaries.C_ID + "=" + mWorkoutID,

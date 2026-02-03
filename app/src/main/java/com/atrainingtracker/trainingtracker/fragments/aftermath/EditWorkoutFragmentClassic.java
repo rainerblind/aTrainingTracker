@@ -577,7 +577,7 @@ public class EditWorkoutFragmentClassic extends Fragment {
 
         // finally, the remaining views
         // ((TextView) getActivity().findViewById(R.id.tvStartTime)).setText(cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_START)));
-        ((TextView) getActivity().findViewById(R.id.tvStartTime)).setText(WorkoutSummariesDatabaseManager.getStartTime(getContext(), mWorkoutID, "localtime"));
+        ((TextView) getActivity().findViewById(R.id.tvStartTime)).setText(WorkoutSummariesDatabaseManager.getInstance(getContext()).getStartTime(mWorkoutID, "localtime"));
 
         int totalTime = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_TOTAL_s));
         ((TextView) getActivity().findViewById(R.id.tvTotalTime)).setText((new TimeFormatter()).format(totalTime));
