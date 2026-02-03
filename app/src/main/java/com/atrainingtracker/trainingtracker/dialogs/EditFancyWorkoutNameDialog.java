@@ -98,7 +98,7 @@ public class EditFancyWorkoutNameDialog extends DialogFragment {
         boolean addVia = true;
 
         // get all the data
-        List<String> myLocationNameList = KnownLocationsDatabaseManager.getMyLocationNameList(getContext());
+        List<String> myLocationNameList = KnownLocationsDatabaseManager.getInstance(requireContext()).getMyLocationNameList();
         List<String> sportTypesList = SportTypeDatabaseManager.getSportTypesList();
 
         final SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance(getContext()).getDatabase();

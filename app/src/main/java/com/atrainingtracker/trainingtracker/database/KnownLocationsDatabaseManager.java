@@ -72,7 +72,7 @@ public class KnownLocationsDatabaseManager {
     // --- End of Singleton Pattern ---
 
     @Deprecated
-    public static void addStartAltitude(Context context, String name, int altitude, double latitude, double longitude) {
+    public void addStartAltitude(String name, int altitude, double latitude, double longitude) {
         if (DEBUG) Log.d(TAG, "addStartAltitude: " + name + " " + altitude + "m");
 
         ContentValues values = new ContentValues();
@@ -82,9 +82,7 @@ public class KnownLocationsDatabaseManager {
         values.put(KnownLocationsDbHelper.LONGITUDE, longitude);
         values.put(KnownLocationsDbHelper.LATITUDE, latitude);
 
-        // StartLocation2AltitudeDbHelper dbHelper = new StartLocation2AltitudeDbHelper(context);
-        // SQLiteDatabase db = dbHelper.getWritableDatabase();
-        SQLiteDatabase db = getInstance(context).getDatabase();
+        SQLiteDatabase db = getDatabase();
         try {
             db.insert(KnownLocationsDbHelper.TABLE, null, values);
         } catch (SQLException e) {
@@ -93,7 +91,7 @@ public class KnownLocationsDatabaseManager {
     }
 
     @Nullable
-    public static MyLocation addNewLocation(Context context, String name, int altitude, int radius, double latitude, double longitude) {
+    public MyLocation addNewLocation(String name, int altitude, int radius, double latitude, double longitude) {
         if (DEBUG)
             Log.d(TAG, "addNewLocation: " + name + " " + altitude + " m" + ", radius=" + radius);
 
@@ -107,9 +105,8 @@ public class KnownLocationsDatabaseManager {
         values.put(KnownLocationsDbHelper.LONGITUDE, longitude);
         values.put(KnownLocationsDbHelper.LATITUDE, latitude);
 
-        SQLiteDatabase db = getInstance(context).getDatabase();
         try {
-            long id = db.insert(KnownLocationsDbHelper.TABLE, null, values);
+            long id = getDatabase().insert(KnownLocationsDbHelper.TABLE, null, values);
             myLocation = new MyLocation(id, latitude, longitude, name, altitude, radius);
         } catch (SQLException e) {
             Log.e(TAG, "Error while writing" + e);
@@ -120,15 +117,14 @@ public class KnownLocationsDatabaseManager {
 
     // public static Integer getStartAltitude(Context context, double latitude, double longitude)
     @Nullable
-    public static MyLocation getMyLocation(Context context, @NonNull LatLng latLng) {
+    public MyLocation getMyLocation(@NonNull LatLng latLng) {
         MyLocation myLocation = null;
 
         Location currentLocation = new Location("");
         currentLocation.setLatitude(latLng.latitude);
         currentLocation.setLongitude(latLng.longitude);
 
-        SQLiteDatabase db = getInstance(context).getDatabase();
-        Cursor cursor = db.query(KnownLocationsDbHelper.TABLE,
+        Cursor cursor = getDatabase().query(KnownLocationsDbHelper.TABLE,
                 null,
                 null,
                 null,
@@ -165,23 +161,21 @@ public class KnownLocationsDatabaseManager {
         return myLocation;
     }
 
-    public static void deleteId(Context context, long id) {
-        SQLiteDatabase db = getInstance(context).getDatabase();
-
-        db.delete(KnownLocationsDbHelper.TABLE,
+    public void deleteId(long id) {
+        getDatabase().delete(KnownLocationsDbHelper.TABLE,
                 KnownLocationsDbHelper.C_ID + "=?",
                 new String[]{id + ""});
     }
 
-    public static void updateLocation(Context context, long id, @NonNull LatLng latLng) {
+    public void updateLocation(long id, @NonNull LatLng latLng) {
         ContentValues contentValues = new ContentValues();
         contentValues.put(KnownLocationsDbHelper.LATITUDE, latLng.latitude);
         contentValues.put(KnownLocationsDbHelper.LONGITUDE, latLng.longitude);
 
-        updateId(context, id, contentValues);
+        updateId(id, contentValues);
     }
 
-    public static void updateMyLocation(Context context, long id, @NonNull MyLocation myLocation) {
+    public void updateMyLocation(long id, @NonNull MyLocation myLocation) {
         ContentValues contentValues = new ContentValues();
         contentValues.put(KnownLocationsDbHelper.NAME, myLocation.name);
         contentValues.put(KnownLocationsDbHelper.ALTITUDE, myLocation.altitude);
@@ -189,24 +183,21 @@ public class KnownLocationsDatabaseManager {
         contentValues.put(KnownLocationsDbHelper.LONGITUDE, myLocation.latLng.longitude);
         contentValues.put(KnownLocationsDbHelper.RADIUS, myLocation.radius);
 
-        updateId(context, id, contentValues);
+        updateId(id, contentValues);
     }
 
-    private static void updateId(Context context, long id, ContentValues contentValues) {
-        SQLiteDatabase db = getInstance(context).getDatabase();
-
-        db.update(KnownLocationsDbHelper.TABLE,
+    private void updateId(long id, ContentValues contentValues) {
+        getDatabase().update(KnownLocationsDbHelper.TABLE,
                 contentValues,
                 KnownLocationsDbHelper.C_ID + "=?",
                 new String[]{id + ""});
     }
 
     @Nullable
-    public static MyLocation getMyLocation(Context context, long myLocationId) {
+    public MyLocation getMyLocation(long myLocationId) {
         MyLocation myLocation = null;
 
-        SQLiteDatabase db = getInstance(context).getDatabase();
-        Cursor cursor = db.query(KnownLocationsDbHelper.TABLE,
+        Cursor cursor = getDatabase().query(KnownLocationsDbHelper.TABLE,
                 null,
                 KnownLocationsDbHelper.C_ID + "=?",
                 new String[]{Long.toString(myLocationId)},
@@ -231,11 +222,10 @@ public class KnownLocationsDatabaseManager {
     }
 
     @NonNull
-    public static List<String> getMyLocationNameList(Context context) {
+    public List<String> getMyLocationNameList() {
         List<String> result = new LinkedList<>();
 
-        SQLiteDatabase db = getInstance(context).getDatabase();
-        Cursor cursor = db.query(KnownLocationsDbHelper.TABLE,
+        Cursor cursor = getDatabase().query(KnownLocationsDbHelper.TABLE,
                 null,
                 null,
                 null,
@@ -254,11 +244,10 @@ public class KnownLocationsDatabaseManager {
     }
 
     @NonNull
-    public static List<NamedLatLng> getLocationsList(Context context, @NonNull ExtremaType extremaType) {
+    public List<NamedLatLng> getLocationsList(@NonNull ExtremaType extremaType) {
         List<NamedLatLng> startLocations = new LinkedList<>();
 
-        SQLiteDatabase db = getInstance(context).getDatabase();
-        Cursor cursor = db.query(KnownLocationsDbHelper.TABLE,
+        Cursor cursor = getDatabase().query(KnownLocationsDbHelper.TABLE,
                 null,
                 KnownLocationsDbHelper.EXTREMA_TYPE + "=?",
                 new String[]{extremaType.name()},
