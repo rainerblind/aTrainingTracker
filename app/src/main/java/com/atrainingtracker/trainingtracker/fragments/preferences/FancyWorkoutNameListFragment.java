@@ -203,7 +203,7 @@ public class FancyWorkoutNameListFragment
                 .setIcon(android.R.drawable.ic_menu_delete)
                 .setPositiveButton(R.string.delete, new DialogInterface.OnClickListener() {
                     public void onClick(@NonNull DialogInterface dialog, int whichButton) {
-                        WorkoutSummariesDatabaseManager.deleteFancyName(getContext(), id);
+                        WorkoutSummariesDatabaseManager.getInstance(requireContext()).deleteFancyName(id);
                         mCursor.requery();
                         mAdapter.notifyDataSetChanged();
 
