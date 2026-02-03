@@ -1,5 +1,6 @@
 package com.atrainingtracker.trainingtracker.ui.components.workoutdetails
 
+import android.content.Context
 import android.database.Cursor
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.banalservice.sensor.SensorType
@@ -12,7 +13,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseMan
  * It acts as a bridge between the data source (Cursor, DatabaseManager) and the UI component,
  * creating a clean data object (WorkoutDetailsData).
  */
-class WorkoutDetailsDataProvider {
+class WorkoutDetailsDataProvider(private val context: Context) {
 
     /**
      * Gathers all necessary data from a database cursor and the Extrema database,
@@ -32,12 +33,13 @@ class WorkoutDetailsDataProvider {
         val ascent = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.ASCENDING))
         val descent = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.DESCENDING))
         val sportId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPORT_ID))
-        val bSportType = SportTypeDatabaseManager.getBSportType(sportId)
+        val bSportType = SportTypeDatabaseManager.getInstance(context).getBSportType(sportId)
 
         // 2. Fetch the extra data from the database manager
-        val maxDisplacement = WorkoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX)
-        val minAlt = WorkoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.ALTITUDE, ExtremaType.MIN)
-        val maxAlt = WorkoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.ALTITUDE, ExtremaType.MAX)
+        val workoutSummariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(context)
+        val maxDisplacement = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX)
+        val minAlt = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.ALTITUDE, ExtremaType.MIN)
+        val maxAlt = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.ALTITUDE, ExtremaType.MAX)
 
         // 3. Create and return the clean data object
         return WorkoutDetailsData(

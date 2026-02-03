@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.segments;
 
 import android.content.Context;
+import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.BaseColumns;
@@ -33,27 +34,37 @@ import java.io.File;
 public class SegmentsDatabaseManager {
     private static final String TAG = SegmentsDatabaseManager.class.getName();
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
-    private static SegmentsDatabaseManager cInstance;
-    private static SegmentsDbHelper cSegmentsDbHelper;
-    private int mOpenCounter;
-    private SQLiteDatabase mDatabase;
 
-    public static synchronized void initializeInstance(SegmentsDbHelper segmentsDbHelper) {
-        if (cInstance == null) {
-            cInstance = new SegmentsDatabaseManager();
-            cSegmentsDbHelper = segmentsDbHelper;
-        }
+    // --- Modern Singleton Pattern ---
+    private static volatile SegmentsDatabaseManager cInstance;
+    private final SegmentsDbHelper cSegmentsDbHelper;
+    private final Context mContext;
+
+    private SegmentsDatabaseManager(@NonNull Context context) {
+        this.mContext = context.getApplicationContext();
+        this.cSegmentsDbHelper = new SegmentsDbHelper(this.mContext);
     }
 
     @NonNull
-    public static synchronized SegmentsDatabaseManager getInstance() {
+    public static SegmentsDatabaseManager getInstance(@NonNull Context context) {
         if (cInstance == null) {
-            throw new IllegalStateException(SegmentsDatabaseManager.class.getSimpleName() +
-                    " is not initialized, call initializeInstance(..) method first.");
+            synchronized (SegmentsDatabaseManager.class) {
+                if (cInstance == null) {
+                    cInstance = new SegmentsDatabaseManager(context);
+                }
+            }
         }
-
         return cInstance;
     }
+
+    /**
+     * Returns a writable database instance, managed by the helper.
+     */
+    // TODO: make private...
+    public SQLiteDatabase getDatabase() {
+        return cSegmentsDbHelper.getWritableDatabase();
+    }
+    // --- End of Singleton Pattern ---
 
     public static boolean doesDatabaseExist(@NonNull Context context) {
         File dbFile = context.getDatabasePath(SegmentsDbHelper.DB_NAME);
@@ -63,37 +74,30 @@ public class SegmentsDatabaseManager {
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // some high level helper methods
     ////////////////////////////////////////////////////////////////////////////////////////////////
-    public static void deleteAllTables(@NonNull Context context) {
 
-        SQLiteDatabase db = getInstance().getOpenDatabase();
-
-        db.execSQL("drop table if exists " + Segments.TABLE_STARRED_SEGMENTS);
-        db.execSQL("drop table if exists " + Segments.TABLE_SEGMENT_STREAMS);
-
-        (new SegmentsDbHelper(null)).onCreate(db);  // run onCreate to get new database
-
-        getInstance().closeDatabase();
-
-        context.deleteDatabase(SegmentsDbHelper.DB_NAME);
-    }
-
-    public synchronized SQLiteDatabase getOpenDatabase() {
-        mOpenCounter++;
-        if (mOpenCounter == 1) {
-            // Opening new database
-            mDatabase = cSegmentsDbHelper.getWritableDatabase();
-        }
-        return mDatabase;
-    }
-
-    public synchronized void closeDatabase() {
-        mOpenCounter--;
-        if (mOpenCounter == 0) {
-            // Closing database
-            mDatabase.close();
-
+    /**
+     * Deletes all tables and effectively resets the database.
+     * Note: This is a destructive operation.
+     */
+    public void deleteAllTables() {
+        try {
+            SQLiteDatabase db = getDatabase();
+            db.beginTransaction();
+            try {
+                db.execSQL("DROP TABLE IF EXISTS " + Segments.TABLE_STARRED_SEGMENTS);
+                db.execSQL("DROP TABLE IF EXISTS " + Segments.TABLE_SEGMENT_STREAMS);
+                db.setTransactionSuccessful();
+            } finally {
+                db.endTransaction();
+            }
+            // Recreate the tables
+            cSegmentsDbHelper.onCreate(db);
+            if (DEBUG) Log.d(TAG, "All segment tables deleted and recreated.");
+        } catch (SQLException e) {
+            Log.e(TAG, "Error deleting all tables in SegmentsDatabase", e);
         }
     }
+
 
     public static final class Segments {
         public static final String TABLE_STARRED_SEGMENTS = "StarredSegmentsTable";

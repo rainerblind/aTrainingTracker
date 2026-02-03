@@ -72,7 +72,7 @@ public class SegmentDetailsActivity extends AppCompatActivity {
         if (DEBUG) Log.d(TAG, "got segment id: " + mSegmentId);
 
         // set the title
-        SQLiteDatabase db = SegmentsDatabaseManager.getInstance().getOpenDatabase();
+        SQLiteDatabase db = SegmentsDatabaseManager.getInstance(this).getDatabase();
         Cursor cursor = db.query(SegmentsDatabaseManager.Segments.TABLE_STARRED_SEGMENTS,
                 new String[]{SegmentsDatabaseManager.Segments.SEGMENT_NAME},
                 SegmentsDatabaseManager.Segments.SEGMENT_ID + "=?", new String[]{mSegmentId + ""},
@@ -82,8 +82,6 @@ public class SegmentDetailsActivity extends AppCompatActivity {
             setTitle(segmentName);
         }
         cursor.close();
-        SegmentsDatabaseManager.getInstance().closeDatabase();
-
 
         setContentView(R.layout.segment_details);
 

@@ -286,7 +286,7 @@ public class BANALService
     }
 
     public BSportType getUserSelectedBSportType() {
-        return mHaveUserSelectedSportType ? SportTypeDatabaseManager.getBSportType(mUserSelectedSportTypeId) : null;
+        return mHaveUserSelectedSportType ? SportTypeDatabaseManager.getInstance(this).getBSportType(mUserSelectedSportTypeId) : null;
     }
 
     private void setUserSelectedBSportType(BSportType bSportType) {
@@ -295,7 +295,7 @@ public class BANALService
 
     public BSportType getBSportType() {
         if (mHaveUserSelectedSportType) {
-            return SportTypeDatabaseManager.getBSportType(mUserSelectedSportTypeId);
+            return SportTypeDatabaseManager.getInstance(this).getBSportType(mUserSelectedSportTypeId);
         } else {
             return cDeviceManager.getSportType();
         }
@@ -313,7 +313,7 @@ public class BANALService
         if (mHaveUserSelectedSportType) {
             return mUserSelectedSportTypeId;
         } else {
-            List<Long> sportTypeIds = SportTypeDatabaseManager.getSportTypesIdList(cDeviceManager.getSportType(), avgSpd);
+            List<Long> sportTypeIds = SportTypeDatabaseManager.getInstance(this).getSportTypesIdList(cDeviceManager.getSportType(), avgSpd);
             return sportTypeIds.get(0);
         }
     }

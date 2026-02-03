@@ -112,7 +112,7 @@ public class AltitudeFromPressureDevice extends MyDevice
 
             double latitude = ((Number) mMySensorManager.getSensor(SensorType.LATITUDE).getValue()).doubleValue();
             double longitude = ((Number) mMySensorManager.getSensor(SensorType.LONGITUDE).getValue()).doubleValue();
-            KnownLocationsDatabaseManager.MyLocation myLocation = KnownLocationsDatabaseManager.getMyLocation(new LatLng(latitude, longitude));
+            KnownLocationsDatabaseManager.MyLocation myLocation = KnownLocationsDatabaseManager.getInstance(mContext).getMyLocation(new LatLng(latitude, longitude));
 
             if (myLocation != null) {
                 setAltitudeCorrection(myLocation.altitude);

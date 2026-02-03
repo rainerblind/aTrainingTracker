@@ -95,7 +95,7 @@ public class FancyWorkoutNameListFragment
         if (DEBUG) Log.d(TAG, "onCreate");
         super.onCreate(savedInstanceState);
 
-        SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
+        SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance(getContext()).getDatabase();
 
         mCursor = db.query(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS,
                 null,
@@ -154,7 +154,6 @@ public class FancyWorkoutNameListFragment
     public void onDestroy() {
         super.onDestroy();
 
-        WorkoutSummariesDatabaseManager.getInstance().closeDatabase();
         mCursor.close();
     }
 
@@ -188,7 +187,7 @@ public class FancyWorkoutNameListFragment
 
     private void showReallyDeleteDialog(final long id) {
         String fancyName = "";
-        SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
+        SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance(getContext()).getDatabase();
         Cursor cursor = db.query(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS,
                 null,
                 WorkoutSummaries.C_ID + " =? ",
@@ -204,7 +203,7 @@ public class FancyWorkoutNameListFragment
                 .setIcon(android.R.drawable.ic_menu_delete)
                 .setPositiveButton(R.string.delete, new DialogInterface.OnClickListener() {
                     public void onClick(@NonNull DialogInterface dialog, int whichButton) {
-                        WorkoutSummariesDatabaseManager.deleteFancyName(id);
+                        WorkoutSummariesDatabaseManager.getInstance(requireContext()).deleteFancyName(id);
                         mCursor.requery();
                         mAdapter.notifyDataSetChanged();
 

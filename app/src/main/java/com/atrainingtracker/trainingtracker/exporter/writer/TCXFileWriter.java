@@ -74,11 +74,10 @@ public class TCXFileWriter extends BaseFileWriter {
         bufferedWriter.write("<?xml version=\"1.0\"?>\n");
         bufferedWriter.write("<TrainingCenterDatabase xmlns=\"http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://www.garmin.com/xmlschemas/ActivityExtension/v2 http://www.garmin.com/xmlschemas/ActivityExtensionv2.xsd http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2 http://www.garmin.com/xmlschemas/TrainingCenterDatabasev2.xsd\">\n");
         bufferedWriter.write("  <Activities>\n");
-        bufferedWriter.write("    <Activity Sport=\"" + SportTypeDatabaseManager.getTcxName(sportTypeId) + "\">\n");
+        bufferedWriter.write("    <Activity Sport=\"" + SportTypeDatabaseManager.getInstance(mContext).getTcxName(sportTypeId) + "\">\n");
         bufferedWriter.write("      <Id>" + dbTime2XMLTime(startTime) + "</Id>\n");
 
-        WorkoutSamplesDatabaseManager databaseManager = WorkoutSamplesDatabaseManager.getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
+        SQLiteDatabase db = WorkoutSamplesDatabaseManager.getInstance(mContext).getDatabase();
         Cursor cursor = db.query(WorkoutSamplesDatabaseManager.getTableName(exportInfo.getFileBaseName()),
                 null,
                 null,
@@ -112,7 +111,7 @@ public class TCXFileWriter extends BaseFileWriter {
                 }
 
                 // get the lap data
-                SQLiteDatabase lapDb = LapsDatabaseManager.getInstance().getOpenDatabase();
+                SQLiteDatabase lapDb = LapsDatabaseManager.getInstance(mContext).getDatabase();
 
                 Cursor lapCursor = lapDb.query(LapsDatabaseManager.Laps.TABLE,
                         null,
@@ -132,7 +131,6 @@ public class TCXFileWriter extends BaseFileWriter {
                 totalDistance = myGet(lapCursor, LapsDatabaseManager.Laps.DISTANCE_TOTAL_m, "0");
 
                 lapCursor.close();
-                LapsDatabaseManager.getInstance().closeDatabase(); // instead of lapDb.close();
 
                 // write the lap data
                 bufferedWriter.write("      <Lap StartTime=\"" + dbTime2XMLTime(cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSamplesDbHelper.TIME))) + "\">\n");
@@ -265,9 +263,7 @@ public class TCXFileWriter extends BaseFileWriter {
 
         bufferedWriter.close();
 
-        // TODO: which order ???
         cursor.close();
-        databaseManager.closeDatabase(); // db.close();
 
         return new ExportResult(true, false, "Successfully exported to TCX File");
     }

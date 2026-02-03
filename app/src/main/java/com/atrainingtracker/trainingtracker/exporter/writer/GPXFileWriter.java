@@ -86,8 +86,8 @@ public class GPXFileWriter extends BaseFileWriter {
         bufferedWriter.write(" <trk>\n");
         bufferedWriter.write("  <name>" + startTime + "</name>\n");
 
-        WorkoutSamplesDatabaseManager databaseManager = WorkoutSamplesDatabaseManager.getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
+        WorkoutSamplesDatabaseManager databaseManager = WorkoutSamplesDatabaseManager.getInstance(mContext);
+        SQLiteDatabase db = databaseManager.getDatabase();
         Cursor cursor = db.query(WorkoutSamplesDatabaseManager.getTableName(exportInfo.getFileBaseName()),
                 null,
                 null,
@@ -117,7 +117,7 @@ public class GPXFileWriter extends BaseFileWriter {
                 }
 
                 // get the lap data
-                SQLiteDatabase lapDb = LapsDatabaseManager.getInstance().getOpenDatabase();
+                SQLiteDatabase lapDb = LapsDatabaseManager.getInstance(mContext).getDatabase();
 
                 Cursor lapCursor = lapDb.query(LapsDatabaseManager.Laps.TABLE,
                         null,
@@ -137,7 +137,6 @@ public class GPXFileWriter extends BaseFileWriter {
                 totalDistance = myGet(lapCursor, LapsDatabaseManager.Laps.DISTANCE_TOTAL_m, "0");
 
                 lapCursor.close();
-                LapsDatabaseManager.getInstance().closeDatabase(); // instead of lapDb.close();
 
                 bufferedWriter.write("  <trkseg>\n");
 
@@ -178,9 +177,7 @@ public class GPXFileWriter extends BaseFileWriter {
 
         bufferedWriter.close();
 
-        // TODO: which order ???
         cursor.close();
-        databaseManager.closeDatabase(); // db.close();
 
         return new ExportResult(true, false, "Successfully exported to GPX File");
     }

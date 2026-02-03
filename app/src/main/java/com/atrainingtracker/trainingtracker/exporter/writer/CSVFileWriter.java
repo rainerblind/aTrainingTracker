@@ -66,8 +66,8 @@ public class CSVFileWriter extends BaseExporter {
             throws IOException {
         if (DEBUG) Log.d(TAG, "exportToFile: " + exportInfo.getFileBaseName());
 
-        WorkoutSamplesDatabaseManager databaseManager = WorkoutSamplesDatabaseManager.getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
+        WorkoutSamplesDatabaseManager databaseManager = WorkoutSamplesDatabaseManager.getInstance(mContext);
+        SQLiteDatabase db = databaseManager.getDatabase();
         Cursor cursor = db.query(WorkoutSamplesDatabaseManager.getTableName(exportInfo.getFileBaseName()),
                 null,
                 null,
@@ -160,7 +160,6 @@ public class CSVFileWriter extends BaseExporter {
         }
         csvWrite.close();
         cursor.close();
-        databaseManager.closeDatabase(); // db.close();
 
         return new ExportResult(true, false, "Successfully exported to CSV");
     }

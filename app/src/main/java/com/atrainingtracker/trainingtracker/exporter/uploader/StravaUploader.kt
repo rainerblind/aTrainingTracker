@@ -222,8 +222,8 @@ class StravaUploader(context: Context) : BaseExporter(context) {
         }
 
         // Get Summary from DB
-        val dbManager = WorkoutSummariesDatabaseManager.getInstance()
-        val db = dbManager.openDatabase
+        val dbManager = WorkoutSummariesDatabaseManager.getInstance(mContext)
+        val db = dbManager.database
         val cursor = db.query(
             WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE, null,
             "${WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME}=?",
@@ -232,12 +232,11 @@ class StravaUploader(context: Context) : BaseExporter(context) {
 
         if (!cursor.moveToFirst()) {
             cursor.close()
-            dbManager.closeDatabase()
             return ExportResult(false, false, "Could not find workout summary")  // not retry
         }
 
         val sportId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.SPORT_ID))
-        val sportName = SportTypeDatabaseManager.getStravaName(sportId)
+        val sportName = SportTypeDatabaseManager.getInstance(mContext).getStravaName(sportId)
         val name = myGetStringFromCursor(cursor, WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_NAME)
         val description = myGetStringFromCursor(cursor, WorkoutSummariesDatabaseManager.WorkoutSummaries.DESCRIPTION)
         val trainer = myGetBooleanFromCursor(cursor, WorkoutSummariesDatabaseManager.WorkoutSummaries.TRAINER)
@@ -249,7 +248,6 @@ class StravaUploader(context: Context) : BaseExporter(context) {
         } else null
 
         cursor.close()
-        dbManager.closeDatabase()
 
 
         // First of all, we have to update the sport type.  Thereby, query Strava several times to make sure that the sport type is correct.

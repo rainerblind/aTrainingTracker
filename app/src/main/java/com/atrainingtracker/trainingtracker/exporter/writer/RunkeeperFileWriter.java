@@ -97,18 +97,18 @@ public class RunkeeperFileWriter extends BaseFileWriter {
         // }
 
         bufferedWriter.write("{\n");
-        bufferedWriter.write(String.format(FORMAT_qq, TYPE, SportTypeDatabaseManager.getRunkeeperName(sportTypeId)));
+        bufferedWriter.write(String.format(FORMAT_qq, TYPE, SportTypeDatabaseManager.getInstance(mContext).getRunkeeperName(sportTypeId)));
         bufferedWriter.write(String.format(FORMAT_q, HAS_PATH, haveGeo));
 
         // TODO: check before writing!
-        startTime = WorkoutSummariesDatabaseManager.getStartTime(exportInfo.getFileBaseName(), "localtime");
+        startTime = WorkoutSummariesDatabaseManager.getInstance(mContext).getStartTime(exportInfo.getFileBaseName(), "localtime");
         bufferedWriter.write(String.format(FORMAT_qq, START_TIME, dbTime2RunkeeperTime(startTime)));
         bufferedWriter.write(String.format(FORMAT_q, TOTAL_DISTANCE, totalDistance)); // double, in meters
         bufferedWriter.write(String.format(FORMAT_q, DURATION, totalTime)); // double, in seconds
         bufferedWriter.write(String.format(FORMAT_qq, NOTES, description));  // or something else?
 
-        WorkoutSamplesDatabaseManager databaseManager = WorkoutSamplesDatabaseManager.getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
+        WorkoutSamplesDatabaseManager databaseManager = WorkoutSamplesDatabaseManager.getInstance(mContext);
+        SQLiteDatabase db = databaseManager.getDatabase();
         Cursor cursor = db.query(WorkoutSamplesDatabaseManager.getTableName(exportInfo.getFileBaseName()),
                 null,
                 null,
@@ -201,9 +201,7 @@ public class RunkeeperFileWriter extends BaseFileWriter {
         bufferedWriter.write("}\n");
         bufferedWriter.close();
 
-        // TODO: which order ???
         cursor.close();
-        databaseManager.closeDatabase(); // db.close();
 
         return new ExportResult(true, false, "successfully exported a Runkeeper file");
 

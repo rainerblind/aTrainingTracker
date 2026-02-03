@@ -162,7 +162,7 @@ public class TrackingModeFragment extends Fragment {
 
         // now, set title, subtitle and sensorString
         mTVTitle.setText(trackingMode.getTitleId());
-        mTVSubTitle.setText(SportTypeDatabaseManager.getUIName(sportTypeId));
+        mTVSubTitle.setText(SportTypeDatabaseManager.getInstance(requireContext()).getUIName(sportTypeId));
         mTVSensors.setText(sensorString);
 
         // update the list of available sensors

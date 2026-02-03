@@ -73,6 +73,8 @@ public class ANTBikePowerDevice extends MyANTDevice {
     protected MySensor<Integer> mTorqueEffectivenessLeftSensor;
     protected boolean mInvertPowerBalanceValues;
     AntPlusBikePowerPcc bikePowerPcc = null;
+    final DevicesDatabaseManager mDevicesDatabaseManager;
+
     private final String TAG = "ANTBikePowerDevice";
 
     /**
@@ -81,8 +83,10 @@ public class ANTBikePowerDevice extends MyANTDevice {
     public ANTBikePowerDevice(Context context, MySensorManager mySensorManager, long deviceID, int antDeviceNumber) {
         super(context, mySensorManager, DeviceType.BIKE_POWER, deviceID, antDeviceNumber);
 
-        int sensorFlags = DevicesDatabaseManager.getBikePowerSensorFlags(getDeviceId());
+        int sensorFlags = DevicesDatabaseManager.getInstance(mContext).getBikePowerSensorFlags(getDeviceId());
         mInvertPowerBalanceValues = BikePowerSensorsHelper.invertPowerBalanceValues(sensorFlags);
+
+        mDevicesDatabaseManager = DevicesDatabaseManager.getInstance(mContext);
     }
 
     @Override
@@ -114,9 +118,9 @@ public class ANTBikePowerDevice extends MyANTDevice {
 
     private void createCadenceSensor() {
         // first, update the database
-        int sensorFlags = DevicesDatabaseManager.getBikePowerSensorFlags(getDeviceId());
+        int sensorFlags = mDevicesDatabaseManager.getBikePowerSensorFlags(getDeviceId());
         sensorFlags = BikePowerSensorsHelper.addCrankRevolutionDataFlag(sensorFlags);
-        DevicesDatabaseManager.putBikePowerSensorFlags(getDeviceId(), sensorFlags);
+        mDevicesDatabaseManager.putBikePowerSensorFlags(getDeviceId(), sensorFlags);
 
         // then, create, add and register the cadence sensor
         mCadenceSensor = new MySensor<>(ANTBikePowerDevice.this, SensorType.CADENCE);
@@ -125,9 +129,9 @@ public class ANTBikePowerDevice extends MyANTDevice {
 
     private void createTorqueSensor() {
         // first, update the database
-        int sensorFlags = DevicesDatabaseManager.getBikePowerSensorFlags(getDeviceId());
+        int sensorFlags = mDevicesDatabaseManager.getBikePowerSensorFlags(getDeviceId());
         sensorFlags = BikePowerSensorsHelper.addTorqueDataFlag(sensorFlags);
-        DevicesDatabaseManager.putBikePowerSensorFlags(getDeviceId(), sensorFlags);
+        mDevicesDatabaseManager.putBikePowerSensorFlags(getDeviceId(), sensorFlags);
 
         // then, create, add and register the torque sensor
         mTorqueSensor = new ThresholdSensor<>(this, SensorType.TORQUE, TORQUE_THRESHOLD);
@@ -136,9 +140,9 @@ public class ANTBikePowerDevice extends MyANTDevice {
 
     private void createWheelSpeedSensors() {
         // first, update the database
-        int sensorFlags = DevicesDatabaseManager.getBikePowerSensorFlags(getDeviceId());
+        int sensorFlags = mDevicesDatabaseManager.getBikePowerSensorFlags(getDeviceId());
         sensorFlags = BikePowerSensorsHelper.addWheelSpeedDataFlag(sensorFlags);
-        DevicesDatabaseManager.putBikePowerSensorFlags(getDeviceId(), sensorFlags);
+        mDevicesDatabaseManager.putBikePowerSensorFlags(getDeviceId(), sensorFlags);
 
         // then, create, add and register the speed and pace sensor
         mSpeedSensor = new ThresholdSensor<>(this, SensorType.SPEED_mps, SPEED_THRESHOLD);
@@ -149,9 +153,9 @@ public class ANTBikePowerDevice extends MyANTDevice {
 
     private void createWheelDistanceSensors() {
         // first, update the database
-        int sensorFlags = DevicesDatabaseManager.getBikePowerSensorFlags(getDeviceId());
+        int sensorFlags = mDevicesDatabaseManager.getBikePowerSensorFlags(getDeviceId());
         sensorFlags = BikePowerSensorsHelper.addWheelDistanceDataFlag(sensorFlags);
-        DevicesDatabaseManager.putBikePowerSensorFlags(getDeviceId(), sensorFlags);
+        mDevicesDatabaseManager.putBikePowerSensorFlags(getDeviceId(), sensorFlags);
 
         // then, create, add and register the distance sensors
         mDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m, false);
@@ -163,9 +167,9 @@ public class ANTBikePowerDevice extends MyANTDevice {
 
     private void createPowerBalanceSensor() {
         // first, update the database
-        int sensorFlags = DevicesDatabaseManager.getBikePowerSensorFlags(getDeviceId());
+        int sensorFlags = mDevicesDatabaseManager.getBikePowerSensorFlags(getDeviceId());
         sensorFlags = BikePowerSensorsHelper.addPowerBalanceFlag(sensorFlags);
-        DevicesDatabaseManager.putBikePowerSensorFlags(getDeviceId(), sensorFlags);
+        mDevicesDatabaseManager.putBikePowerSensorFlags(getDeviceId(), sensorFlags);
 
         // then, create, add and register the power balance sensor
         mPowerBalanceSensor = new MySensor<>(this, SensorType.PEDAL_POWER_BALANCE);
@@ -174,9 +178,9 @@ public class ANTBikePowerDevice extends MyANTDevice {
 
     private void createSeparatePedalSmoothnessSensors() {
         // first, update the database
-        int sensorFlags = DevicesDatabaseManager.getBikePowerSensorFlags(getDeviceId());
+        int sensorFlags = mDevicesDatabaseManager.getBikePowerSensorFlags(getDeviceId());
         sensorFlags = BikePowerSensorsHelper.addPedalSmoothnessFlag(sensorFlags);
-        DevicesDatabaseManager.putBikePowerSensorFlags(getDeviceId(), sensorFlags);
+        mDevicesDatabaseManager.putBikePowerSensorFlags(getDeviceId(), sensorFlags);
 
         // then, create, add and register the pedal smoothness sensors
         mPedalSmoothnessRightSensor = new MySensor<>(this, SensorType.PEDAL_SMOOTHNESS_R);
@@ -188,9 +192,9 @@ public class ANTBikePowerDevice extends MyANTDevice {
 
     private void createCombinedPedalSmoothnessSensors() {
         // first, update the database
-        int sensorFlags = DevicesDatabaseManager.getBikePowerSensorFlags(getDeviceId());
+        int sensorFlags = mDevicesDatabaseManager.getBikePowerSensorFlags(getDeviceId());
         sensorFlags = BikePowerSensorsHelper.addPedalSmoothnessFlag(sensorFlags);
-        DevicesDatabaseManager.putBikePowerSensorFlags(getDeviceId(), sensorFlags);
+        mDevicesDatabaseManager.putBikePowerSensorFlags(getDeviceId(), sensorFlags);
 
         // then, create, add and register the pedal smoothness sensors
         mPedalSmoothnessSensor = new MySensor<>(this, SensorType.PEDAL_SMOOTHNESS);
@@ -200,9 +204,9 @@ public class ANTBikePowerDevice extends MyANTDevice {
 
     private void createTorqueEffectivenessSensors() {
         // first, update the database
-        int sensorFlags = DevicesDatabaseManager.getBikePowerSensorFlags(getDeviceId());
+        int sensorFlags = mDevicesDatabaseManager.getBikePowerSensorFlags(getDeviceId());
         sensorFlags = BikePowerSensorsHelper.addTorqueEffectivenessFlag(sensorFlags);
-        DevicesDatabaseManager.putBikePowerSensorFlags(getDeviceId(), sensorFlags);
+        mDevicesDatabaseManager.putBikePowerSensorFlags(getDeviceId(), sensorFlags);
 
         // then, create, add and register the torque effectiveness sensors
         mTorqueEffectivenessRightSensor = new MySensor<>(this, SensorType.TORQUE_EFFECTIVENESS_R);

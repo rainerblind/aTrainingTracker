@@ -88,8 +88,9 @@ public class SelectSportTypeDialog extends DialogFragment {
 
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
-        List<String> sportTypeNames = SportTypeDatabaseManager.getSportTypesUiNameList(mBSportType);
-        final List<Long> sportTypeIds = SportTypeDatabaseManager.getSportTypesIdList(mBSportType);
+        SportTypeDatabaseManager sportTypeDatabaseManager = SportTypeDatabaseManager.getInstance(requireContext());
+        List<String> sportTypeNames = sportTypeDatabaseManager.getSportTypesUiNameList(mBSportType);
+        final List<Long> sportTypeIds = sportTypeDatabaseManager.getSportTypesIdList(mBSportType);
 
         String bSportTypeName;
         switch (mBSportType) {

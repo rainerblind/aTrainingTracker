@@ -85,8 +85,8 @@ public class TrainingPeaksUploader extends BaseExporter {
         }
 
 
-        WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
+        WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance(mContext);
+        SQLiteDatabase db = databaseManager.getDatabase();
         Cursor cursor = db.query(WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
                 null,
                 WorkoutSummaries.FILE_BASE_NAME + "=?",
@@ -102,13 +102,12 @@ public class TrainingPeaksUploader extends BaseExporter {
         boolean isPrivate;
 
         sportId = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.SPORT_ID));
-        sportName = SportTypeDatabaseManager.getTrainingPeaksName(sportId);
+        sportName = SportTypeDatabaseManager.getInstance(mContext).getTrainingPeaksName(sportId);
 
         name = myGetStringFromCursor(cursor, WorkoutSummaries.WORKOUT_NAME);
         description = myGetStringFromCursor(cursor, WorkoutSummaries.DESCRIPTION);
 
         cursor.close();
-        databaseManager.closeDatabase();// db.close();
 
 
         HttpClient httpClient = new DefaultHttpClient();

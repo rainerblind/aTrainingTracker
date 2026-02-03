@@ -54,7 +54,7 @@ class ExtremaDataProvider(context: Context) {
         // get the workoutId and the bSportType from the cursor
         val workoutId = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.C_ID))
         val sportId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPORT_ID))
-        val bSportType = SportTypeDatabaseManager.getBSportType(sportId)
+        val bSportType = SportTypeDatabaseManager.getInstance(appContext).getBSportType(sportId)
 
         // Use Kotlin's functional style to build the list
         return sensorsToCheck.mapNotNull { sensorType ->
@@ -85,7 +85,7 @@ class ExtremaDataProvider(context: Context) {
     }
 
     private fun getFormattedValue(workoutId: Long, sensorType: SensorType, extremaType: ExtremaType): String? {
-        val value = WorkoutSummariesDatabaseManager.getExtremaValue(workoutId, sensorType, extremaType)
+        val value = WorkoutSummariesDatabaseManager.getInstance(appContext).getExtremaValue(workoutId, sensorType, extremaType)
         if (DEBUG) Log.d(TAG, "${sensorType.name} ${extremaType.name} extremaValue=$value")
         // Use Kotlin's scope function 'let' for safe handling of nullable values
         return value?.let { sensorType.myFormatter.format(it) }

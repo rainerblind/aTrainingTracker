@@ -80,8 +80,9 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
     @Nullable
     protected String mName = null;
     protected final IntentFilter mViewChangedFilter = new IntentFilter();  // actions will be added later on
+    TrackingViewsDatabaseManager mTrackingViewsDatabaseManager;
     @NonNull
-    TreeMap<Integer, TreeMap<Integer, TrackingViewsDatabaseManager.ViewInfo>> mViewInfoMap = TrackingViewsDatabaseManager.getViewInfoMap(mViewId);
+    TreeMap<Integer, TreeMap<Integer, TrackingViewsDatabaseManager.ViewInfo>> mViewInfoMap;
     final BroadcastReceiver mFilterChangedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -103,12 +104,13 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
     }
 
 
-    // @Override
-    // public void onAttach(Context context) {
-    //     super.onAttach(context);
+    @Override
+    public void onAttach(Context context) {
+        super.onAttach(context);
+        mTrackingViewsDatabaseManager = TrackingViewsDatabaseManager.getInstance(context);
+        mViewInfoMap = mTrackingViewsDatabaseManager.getViewInfoMap(mViewId);
+    }
 
-    //    // check whether activity implements some interfaces
-    // }
 
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -124,12 +126,12 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
         if (DEBUG) Log.d(TAG, "onCreateView, mViewId=" + mViewId);
 
         mLayoutInflater = inflater;
-        mActivityType = TrackingViewsDatabaseManager.getActivityType(mViewId);
+        mActivityType = mTrackingViewsDatabaseManager.getActivityType(mViewId);
 
         View view = inflater.inflate(R.layout.config_tracking_view, container, false);
         mLLSensors = view.findViewById(R.id.linearLayoutSensors);
 
-        mName = TrackingViewsDatabaseManager.getName(mViewId);
+        mName = mTrackingViewsDatabaseManager.getName(mViewId);
         final EditText etName = view.findViewById(R.id.editTextName);
         etName.setText(mName);
 
@@ -154,55 +156,55 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
         });
 
         RadioButton rb = view.findViewById(R.id.rbNightDay_SystemSetting);
-        rb.setChecked(TrackingViewsDatabaseManager.systemSettings(mViewId));
+        rb.setChecked(mTrackingViewsDatabaseManager.systemSettings(mViewId));
         rb.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean isChecked) {
-                TrackingViewsDatabaseManager.updateSystemSetting(mViewId, isChecked);
+                mTrackingViewsDatabaseManager.updateSystemSetting(mViewId, isChecked);
             }
         });
 
         rb = view.findViewById(R.id.rbNightDay_Day);
-        rb.setChecked(TrackingViewsDatabaseManager.day(mViewId));
+        rb.setChecked(mTrackingViewsDatabaseManager.day(mViewId));
         rb.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean isChecked) {
-                TrackingViewsDatabaseManager.updateDay(mViewId, isChecked);
+                mTrackingViewsDatabaseManager.updateDay(mViewId, isChecked);
             }
         });
 
         rb = view.findViewById(R.id.rbNightDay_Night);
-        rb.setChecked(TrackingViewsDatabaseManager.night(mViewId));
+        rb.setChecked(mTrackingViewsDatabaseManager.night(mViewId));
         rb.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean isChecked) {
-                TrackingViewsDatabaseManager.updateNight(mViewId, isChecked);
+                mTrackingViewsDatabaseManager.updateNight(mViewId, isChecked);
             }
         });
         CheckBox checkBox = view.findViewById(R.id.cbFullScreen);
-        checkBox.setChecked(TrackingViewsDatabaseManager.fullscreen(mViewId));
+        checkBox.setChecked(mTrackingViewsDatabaseManager.fullscreen(mViewId));
         checkBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean isChecked) {
-                TrackingViewsDatabaseManager.updateFullscreen(mViewId, isChecked);
+                mTrackingViewsDatabaseManager.updateFullscreen(mViewId, isChecked);
             }
         });
 
         checkBox = view.findViewById(R.id.cbShowMap);
-        checkBox.setChecked(TrackingViewsDatabaseManager.showMap(mViewId));
+        checkBox.setChecked(mTrackingViewsDatabaseManager.showMap(mViewId));
         checkBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                TrackingViewsDatabaseManager.updateShowMap(mViewId, isChecked);
+                mTrackingViewsDatabaseManager.updateShowMap(mViewId, isChecked);
             }
         });
 
         checkBox = view.findViewById(R.id.cbShowLapButton);
-        checkBox.setChecked(TrackingViewsDatabaseManager.showLapButton(mViewId));
+        checkBox.setChecked(mTrackingViewsDatabaseManager.showLapButton(mViewId));
         checkBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                TrackingViewsDatabaseManager.updateShowLapButton(mViewId, isChecked);
+                mTrackingViewsDatabaseManager.updateShowLapButton(mViewId, isChecked);
             }
         });
 
@@ -228,7 +230,7 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
     }
 
     protected void getViewInfoMapAndAddSensorFields() {
-        mViewInfoMap = TrackingViewsDatabaseManager.getViewInfoMap(mViewId);
+        mViewInfoMap = mTrackingViewsDatabaseManager.getViewInfoMap(mViewId);
         addSensorFields();
     }
 
@@ -248,7 +250,7 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
 
     @Override
     protected void updateNameOfView(String name) {
-        TrackingViewsDatabaseManager.updateNameOfView(mViewId, name);
+        mTrackingViewsDatabaseManager.updateNameOfView(mViewId, name);
     }
 
 
@@ -279,7 +281,7 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
             if (viewInfo.sourceDeviceId() <= 0) {
                 tvSource.setText(R.string.bestSensor);
             } else {
-                tvSource.setText(DevicesDatabaseManager.getDeviceName(viewInfo.sourceDeviceId()));
+                tvSource.setText(DevicesDatabaseManager.getInstance(requireContext()).getDeviceName(viewInfo.sourceDeviceId()));
             }
 
             TextView tvFilterTitle = llView.findViewById(R.id.tvConfigureFilterTitle);
@@ -309,7 +311,7 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
             deleteButton.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
                     if (DEBUG) Log.i(TAG, "delete button pressed");
-                    TrackingViewsDatabaseManager.deleteRow(viewInfo.rowId());
+                    mTrackingViewsDatabaseManager.deleteRow(viewInfo.rowId());
 
                     mViewInfoMap.get(viewInfo.rowNr()).remove(viewInfo.colNr());
                     addSensorFields();
@@ -323,7 +325,7 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
                 if (DEBUG) Log.i(TAG, "add view button clicked");
 
                 TrackingViewsDatabaseManager.ViewInfo viewInfo = rowMap.get(rowMap.lastKey());
-                viewInfo = TrackingViewsDatabaseManager.addSensorToRow(viewInfo.viewId(), viewInfo.rowNr(), SENSOR_TYPE_DEFAULT, TEXT_SIZE_DEFAULT);
+                viewInfo = mTrackingViewsDatabaseManager.addSensorToRow(viewInfo.viewId(), viewInfo.rowNr(), SENSOR_TYPE_DEFAULT, TEXT_SIZE_DEFAULT);
 
                 mViewInfoMap.get(viewInfo.rowNr()).put(viewInfo.colNr(), viewInfo);
                 addSensorFields();
@@ -335,7 +337,7 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
             public void onClick(View v) {
                 Log.i(TAG, "buttonAddNewRow clicked");
                 TrackingViewsDatabaseManager.ViewInfo viewInfo = rowMap.get(rowMap.lastKey());
-                viewInfo = TrackingViewsDatabaseManager.addRowAfter(viewInfo.viewId(), viewInfo.rowNr(), SENSOR_TYPE_DEFAULT, TEXT_SIZE_DEFAULT);
+                viewInfo = mTrackingViewsDatabaseManager.addRowAfter(viewInfo.viewId(), viewInfo.rowNr(), SENSOR_TYPE_DEFAULT, TEXT_SIZE_DEFAULT);
 
                 getViewInfoMapAndAddSensorFields();
 

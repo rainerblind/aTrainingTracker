@@ -34,6 +34,9 @@ class TrackOnMapAftermathActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private lateinit var workoutHeaderViewHolder: WorkoutHeaderViewHolder
 
+    private lateinit var workoutSummariesDatabaseManager: WorkoutSummariesDatabaseManager
+    private lateinit var workoutSamplesDatabaseManager: WorkoutSamplesDatabaseManager
+
 
     private lateinit var mapView: MapView
     private var googleMap: GoogleMap? = null
@@ -56,6 +59,12 @@ class TrackOnMapAftermathActivity : AppCompatActivity(), OnMapReadyCallback {
             finish()
             return
         }
+
+        workoutSummariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(this)
+        workoutSamplesDatabaseManager = WorkoutSamplesDatabaseManager.getInstance(this)
+
+        // setup the toolbar
+
 
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
@@ -110,13 +119,13 @@ class TrackOnMapAftermathActivity : AppCompatActivity(), OnMapReadyCallback {
 
         // showing all location sources (when the user wants it)
         if (TrainingApplication.showAllLocationSourcesOnMap()) {
-            trackOnMapHelper.showTrackOnMap(null, googleMap, workoutId, Roughness.ALL, TrackOnMapHelper.TrackType.GPS, false, false)
-            trackOnMapHelper.showTrackOnMap(null, googleMap, workoutId, Roughness.ALL, TrackOnMapHelper.TrackType.NETWORK, false, false)
-            trackOnMapHelper.showTrackOnMap(null, googleMap, workoutId, Roughness.ALL, TrackOnMapHelper.TrackType.FUSED, false, false)
+            trackOnMapHelper.showTrackOnMap(this, null, googleMap, workoutId, Roughness.ALL, TrackOnMapHelper.TrackType.GPS, false, false)
+            trackOnMapHelper.showTrackOnMap(this, null, googleMap, workoutId, Roughness.ALL, TrackOnMapHelper.TrackType.NETWORK, false, false)
+            trackOnMapHelper.showTrackOnMap(this, null, googleMap, workoutId, Roughness.ALL, TrackOnMapHelper.TrackType.FUSED, false, false)
         }
 
         // Draw the main track
-        trackOnMapHelper.showTrackOnMap(null, googleMap, workoutId, Roughness.ALL, TrackOnMapHelper.TrackType.BEST, zoomToShowTrack, true);
+        trackOnMapHelper.showTrackOnMap(this, null, googleMap, workoutId, Roughness.ALL, TrackOnMapHelper.TrackType.BEST, zoomToShowTrack, true);
     }
 
     /**
@@ -159,16 +168,17 @@ class TrackOnMapAftermathActivity : AppCompatActivity(), OnMapReadyCallback {
      * Replaces `getExtremaPosition`.
      */
     private fun getExtremaPosition(extremaType: ExtremaType, calculateWhenNotInDb: Boolean): LatLng? {
-        val baseFileName = WorkoutSummariesDatabaseManager.getBaseFileName(workoutId)
 
-        var lat = WorkoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.LATITUDE, extremaType)
+        val baseFileName = workoutSummariesDatabaseManager.getBaseFileName(workoutId)
+
+        var lat = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.LATITUDE, extremaType)
         if (lat == null && calculateWhenNotInDb) {
-            lat = WorkoutSamplesDatabaseManager.calcExtremaValue(baseFileName, extremaType, SensorType.LATITUDE)
+            lat = workoutSamplesDatabaseManager.calcExtremaValue(workoutSummariesDatabaseManager, baseFileName, extremaType, SensorType.LATITUDE)
         }
 
-        var lon = WorkoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.LONGITUDE, extremaType)
+        var lon = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.LONGITUDE, extremaType)
         if (lon == null && calculateWhenNotInDb) {
-            lon = WorkoutSamplesDatabaseManager.calcExtremaValue(baseFileName, extremaType, SensorType.LONGITUDE)
+            lon = workoutSamplesDatabaseManager.calcExtremaValue(workoutSummariesDatabaseManager, baseFileName, extremaType, SensorType.LONGITUDE)
         }
 
         return if (lat != null && lon != null) LatLng(lat, lon) else null
@@ -198,7 +208,7 @@ class TrackOnMapAftermathActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun addExtremaMarkerToMap(sensorType: SensorType, extremaType: ExtremaType, drawableId: Int?) {
-        val latLngValue = WorkoutSamplesDatabaseManager.getExtremaPosition(workoutId, sensorType, extremaType)
+        val latLngValue = workoutSamplesDatabaseManager.getExtremaPosition(workoutSummariesDatabaseManager, workoutId, sensorType, extremaType)
 
         if (latLngValue != null) {
             val title = getString(

@@ -130,8 +130,7 @@ public class EditDeviceDialogFragment
         CIRCUMFERENCE_ARRAY_ADAPTER = new ArrayAdapter<String>(getActivity(), android.R.layout.simple_spinner_item, CIRCUMFERENCE_TEXT);
 
         // get the data
-        DevicesDatabaseManager databaseManager = DevicesDatabaseManager.getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
+        SQLiteDatabase db = DevicesDatabaseManager.getInstance(requireContext()).getDatabase();
         Cursor cursor = db.query(DevicesDbHelper.DEVICES,
                 null,
                 DevicesDbHelper.C_ID + "=?",
@@ -172,7 +171,7 @@ public class EditDeviceDialogFragment
 
         // optionally, configure the bike power view
         if (mDeviceType == DeviceType.BIKE_POWER) {
-            mBikePowerSensorFlags = DevicesDatabaseManager.getBikePowerSensorFlags(mDeviceID);
+            mBikePowerSensorFlags = DevicesDatabaseManager.getInstance(requireContext()).getBikePowerSensorFlags(mDeviceID);
 
             if (!BikePowerSensorsHelper.isWheelRevolutionDataSupported(mBikePowerSensorFlags)
                     && !BikePowerSensorsHelper.isWheelDistanceDataSupported(mBikePowerSensorFlags)
@@ -319,19 +318,6 @@ public class EditDeviceDialogFragment
         setCalibrationFactor(mOriginalCalibrationFactor);
 
         cursor.close();
-        databaseManager.closeDatabase(); // db.close();
-
-//        cbPaired.setOnClickListener(new OnClickListener() {
-//            @Override
-//            public void onClick(View v) {
-//                // inform everybody that pairing has changed
-//                Intent intent = new Intent(BANALService.PAIRING_CHANGED);
-//                intent.putExtra(BANALService.DEVICE_ID, mDeviceID);
-//                intent.putExtra(BANALService.PAIRED, cbPaired.isChecked())
-//                intent.setPackage(getActivity().getPackageName())
-//                getActivity().sendBroadcast(intent);
-//            }
-//        });
 
         // configure spinners and buttons
         if (spinnerWheelCircumference != null) {
@@ -421,8 +407,7 @@ public class EditDeviceDialogFragment
 
         }
 
-        DevicesDatabaseManager databaseManager = DevicesDatabaseManager.getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
+        SQLiteDatabase db = DevicesDatabaseManager.getInstance(requireContext()).getDatabase();
         try {
             db.update(DevicesDbHelper.DEVICES,
                     values,
@@ -432,7 +417,6 @@ public class EditDeviceDialogFragment
             // TODO: use Toast?
             Log.e(TAG, "Error while writing" + e);
         }
-        databaseManager.closeDatabase(); // db.close();
 
         if (spinnerEquipment != null && mHaveEquipmentList) {
             if (DEBUG) Log.d(TAG, "save equipment links");
@@ -443,7 +427,7 @@ public class EditDeviceDialogFragment
         if (mDeviceType == DeviceType.BIKE_POWER) {
             mBikePowerSensorFlags = cbDoublePowerBalanceValues.isChecked() ? BikePowerSensorsHelper.addDoublePowerBalanceValues(mBikePowerSensorFlags) : BikePowerSensorsHelper.removeDoublePowerBalanceValues(mBikePowerSensorFlags);
             mBikePowerSensorFlags = cbInvertPowerBalanceValues.isChecked() ? BikePowerSensorsHelper.addInvertPowerBalanceValues(mBikePowerSensorFlags) : BikePowerSensorsHelper.removeInvertPowerBalanceValues(mBikePowerSensorFlags);
-            DevicesDatabaseManager.putBikePowerSensorFlags(mDeviceID, mBikePowerSensorFlags);
+            DevicesDatabaseManager.getInstance(requireContext()).putBikePowerSensorFlags(mDeviceID, mBikePowerSensorFlags);
         }
 
         // TODO: store original value and do this only when necessary???

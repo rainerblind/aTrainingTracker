@@ -61,8 +61,8 @@ public class DeleteWorkoutThread extends Thread {
             progressDialog.show();
         });
 
-        SQLiteDatabase dbSummaries = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
-        SQLiteDatabase dbLaps = LapsDatabaseManager.getInstance().getOpenDatabase();
+        SQLiteDatabase dbSummaries = WorkoutSummariesDatabaseManager.getInstance(context).getDatabase();
+        LapsDatabaseManager lapsDBManager = LapsDatabaseManager.getInstance(context);
 
         Cursor cursor;
 
@@ -92,8 +92,7 @@ public class DeleteWorkoutThread extends Thread {
 
             // delete from WorkoutSamples
             if (DEBUG) Log.d(TAG, "deleting from WorkoutSamples");
-            WorkoutSamplesDatabaseManager.getInstance();
-            WorkoutSamplesDatabaseManager.deleteWorkout(baseFileName);
+            WorkoutSamplesDatabaseManager.getInstance(context).deleteWorkout(baseFileName);
 
             // delete from ExportManager
             if (DEBUG) Log.d(TAG, "deleting from ExportStatusRepository");
@@ -101,11 +100,8 @@ public class DeleteWorkoutThread extends Thread {
 
             // delete from Laps
             if (DEBUG) Log.d(TAG, "deleting from Laps");
-            dbLaps.delete(LapsDatabaseManager.Laps.TABLE, LapsDatabaseManager.Laps.WORKOUT_ID + "=?", new String[]{workoutId + ""});
+            lapsDBManager.deleteWorkout(workoutId);
         }
-
-        WorkoutSummariesDatabaseManager.getInstance().closeDatabase();  // dbSummaries.close();
-        LapsDatabaseManager.getInstance().closeDatabase(); // instead of dbLaps.close();
 
         new Handler(Looper.getMainLooper()).post(() -> {
             if (DEBUG) Log.d(TAG, "onPostExecute");

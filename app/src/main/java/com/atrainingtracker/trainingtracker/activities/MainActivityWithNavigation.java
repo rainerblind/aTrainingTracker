@@ -210,7 +210,8 @@ public class MainActivityWithNavigation
             mBanalServiceComm = (BANALService.BANALServiceComm) service; // IBANALService.Stub.asInterface(service);
 
             // create all the filters
-            for (FilterData filterData : TrackingViewsDatabaseManager.getAllFilterData()) {
+            DevicesDatabaseManager devicesDatabaseManager = DevicesDatabaseManager.getInstance(getApplicationContext());
+            for (FilterData filterData : TrackingViewsDatabaseManager.getInstance(getApplicationContext()).getAllFilterData(devicesDatabaseManager)) {
                 mBanalServiceComm.createFilter(filterData);
             }
 
@@ -778,7 +779,7 @@ public class MainActivityWithNavigation
     // }
 
     protected void checkBatteryStatus() {
-        final List<DevicesDatabaseManager.NameAndBatteryPercentage> criticalBatteryDevices = DevicesDatabaseManager.getCriticalBatteryDevices(CRITICAL_BATTERY_LEVEL);
+        final List<DevicesDatabaseManager.NameAndBatteryPercentage> criticalBatteryDevices = DevicesDatabaseManager.getInstance(getApplicationContext()).getCriticalBatteryDevices(CRITICAL_BATTERY_LEVEL);
         if (!criticalBatteryDevices.isEmpty()) {
 
             final List<String> stringList = new LinkedList<>();

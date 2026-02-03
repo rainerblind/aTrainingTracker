@@ -190,7 +190,7 @@ public class TrackOnMapTrackingFragment
             return;
         }
 
-        mPolylineOptions = TrackOnMapHelper.getPolylineOptions(mWorkoutID, Roughness.ALL, TrackOnMapHelper.TrackType.BEST);  // BEST is not 100% correct since we plot the GPS data, but the users probably expect this
+        mPolylineOptions = TrackOnMapHelper.getPolylineOptions(getContext(), mWorkoutID, Roughness.ALL, TrackOnMapHelper.TrackType.BEST);  // BEST is not 100% correct since we plot the GPS data, but the users probably expect this
         if (mPolylineOptions != null) {
             mPolyline = mMap.addPolyline(mPolylineOptions);
 
