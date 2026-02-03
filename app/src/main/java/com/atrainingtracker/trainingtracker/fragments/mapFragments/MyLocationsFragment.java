@@ -82,6 +82,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Created by rainer on 10.05.16.
@@ -91,6 +92,7 @@ public class MyLocationsFragment
     public static final String TAG = MyLocationsFragment.class.getName();
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
+    private KnownLocationsDatabaseManager mKnownLocationsDatabaseManager;
 
     MapView mMapView;
     GoogleMap mMap;
@@ -120,6 +122,14 @@ public class MyLocationsFragment
         }
         return true;
     }
+
+    @Override
+    public  void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        mKnownLocationsDatabaseManager = KnownLocationsDatabaseManager.getInstance(requireContext());
+    }
+
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -222,7 +232,7 @@ public class MyLocationsFragment
                     @Override
                     public void onMarkerDragEnd(@NonNull Marker marker) {
                         // update position in database
-                        KnownLocationsDatabaseManager.updateLocation(getContext(), mMarker2MyLocationsIdMap.get(marker), marker.getPosition());
+                        mKnownLocationsDatabaseManager.updateLocation(mMarker2MyLocationsIdMap.get(marker), marker.getPosition());
                     }
                 });
 
@@ -353,7 +363,7 @@ public class MyLocationsFragment
         final TextView tvRadius = view.findViewById(R.id.tvRadius);
         final SeekBar sbRadius = view.findViewById(R.id.sbRadius);
 
-        final MyLocation myLocation = KnownLocationsDatabaseManager.getMyLocation(getContext(), myLocationId);
+        final MyLocation myLocation = mKnownLocationsDatabaseManager.getMyLocation(myLocationId);
         etName.setText(myLocation.name);
         etAltitude.setText(Integer.toString(myLocation.altitude));
         tvRadius.setText(getString(R.string.radius_format, getString(R.string.LocationRadius), myLocation.radius, getString(R.string.units_radius)));
@@ -391,7 +401,7 @@ public class MyLocationsFragment
                         }
                         myLocation.radius = sbRadius.getProgress();
 
-                        KnownLocationsDatabaseManager.updateMyLocation(getContext(), myLocationId, myLocation);
+                        mKnownLocationsDatabaseManager.updateMyLocation(myLocationId, myLocation);
                     }
                 });
         alertDialogBuilder.setNeutralButton(R.string.Cancel, new DialogInterface.OnClickListener() {
@@ -435,7 +445,7 @@ public class MyLocationsFragment
 
     private void reallyDeleteLocation(@NonNull MyLocation myLocation) {
         // remove from database
-        KnownLocationsDatabaseManager.deleteId(getContext(), myLocation.id);
+        mKnownLocationsDatabaseManager.deleteId(myLocation.id);
 
         // remove circle
         mMarkerId2CircleMap.get(myLocation.id).remove();
@@ -665,7 +675,7 @@ public class MyLocationsFragment
                 progressDialog.show();
             });
 
-                SQLiteDatabase db = KnownLocationsDatabaseManager.getInstance(getContext()).getDatabase();
+                SQLiteDatabase db = mKnownLocationsDatabaseManager.getDatabase();
                 Cursor cursor = db.query(KnownLocationsDbHelper.TABLE,
                         null,
                         null, // KnownLocationsDbHelper.EXTREMA_TYPE + "=?",
@@ -737,7 +747,7 @@ public class MyLocationsFragment
 
                 Double altitude = WorkoutSamplesDatabaseManager.calcAverageAroundLocation(getContext(), latLng, 100, SensorType.ALTITUDE);
 
-                final KnownLocationsDatabaseManager.MyLocation location = KnownLocationsDatabaseManager.addNewLocation(getContext(), "", altitude.intValue(), KnownLocationsDatabaseManager.DEFAULT_RADIUS, latLng.latitude, latLng.longitude);
+                final KnownLocationsDatabaseManager.MyLocation location = mKnownLocationsDatabaseManager.addNewLocation("", altitude.intValue(), KnownLocationsDatabaseManager.DEFAULT_RADIUS, latLng.latitude, latLng.longitude);
 
             new Handler(Looper.getMainLooper()).post(() -> {
                 addMyLocationToMap(location);

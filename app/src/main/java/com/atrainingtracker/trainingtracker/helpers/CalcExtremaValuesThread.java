@@ -202,25 +202,27 @@ public class CalcExtremaValuesThread extends Thread {
         if (DEBUG) Log.i(TAG, "calcFancyName");
         publishProgress(mContext.getString(R.string.calc_workout_name));
 
+        KnownLocationsDatabaseManager knownLocationsDatabaseManager = KnownLocationsDatabaseManager.getInstance(mContext);
         MyLocation startLocation = null;
+
         Double startLat = WorkoutSummariesDatabaseManager.getExtremaValue(mContext,workoutId, SensorType.LATITUDE, ExtremaType.START);
         Double startLon = WorkoutSummariesDatabaseManager.getExtremaValue(mContext, workoutId, SensorType.LONGITUDE, ExtremaType.START);
         if (startLat != null && startLon != null) {
-            startLocation = KnownLocationsDatabaseManager.getMyLocation(mContext, new LatLng(startLat, startLon));
+            startLocation = knownLocationsDatabaseManager.getMyLocation(new LatLng(startLat, startLon));
         }
 
         MyLocation maxLineLocation = null;
         Double maxLineLat = WorkoutSummariesDatabaseManager.getExtremaValue(mContext, workoutId, SensorType.LATITUDE, ExtremaType.MAX_LINE_DISTANCE);
         Double maxLineLon = WorkoutSummariesDatabaseManager.getExtremaValue(mContext, workoutId, SensorType.LONGITUDE, ExtremaType.MAX_LINE_DISTANCE);
         if (maxLineLat != null && maxLineLon != null) {
-            maxLineLocation = KnownLocationsDatabaseManager.getMyLocation(mContext, new LatLng(maxLineLat, maxLineLon));
+            maxLineLocation = knownLocationsDatabaseManager.getMyLocation(new LatLng(maxLineLat, maxLineLon));
         }
 
         MyLocation endLocation = null;
         Double endLat = WorkoutSummariesDatabaseManager.getExtremaValue(mContext, workoutId, SensorType.LATITUDE, ExtremaType.END);
         Double endLon = WorkoutSummariesDatabaseManager.getExtremaValue(mContext, workoutId, SensorType.LONGITUDE, ExtremaType.END);
         if (endLat != null && endLon != null) {
-            endLocation = KnownLocationsDatabaseManager.getMyLocation(mContext, new LatLng(endLat, endLon));
+            endLocation = knownLocationsDatabaseManager.getMyLocation(new LatLng(endLat, endLon));
         }
 
         Long sportTypeId = WorkoutSummariesDatabaseManager.getLong(mContext, workoutId, WorkoutSummaries.SPORT_ID);
