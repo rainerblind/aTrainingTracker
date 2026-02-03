@@ -36,9 +36,10 @@ class WorkoutDetailsDataProvider(private val context: Context) {
         val bSportType = SportTypeDatabaseManager.getBSportType(sportId)
 
         // 2. Fetch the extra data from the database manager
-        val maxDisplacement = WorkoutSummariesDatabaseManager.getExtremaValue(context, workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX)
-        val minAlt = WorkoutSummariesDatabaseManager.getExtremaValue(context, workoutId, SensorType.ALTITUDE, ExtremaType.MIN)
-        val maxAlt = WorkoutSummariesDatabaseManager.getExtremaValue(context, workoutId, SensorType.ALTITUDE, ExtremaType.MAX)
+        val workoutSummariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(context)
+        val maxDisplacement = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX)
+        val minAlt = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.ALTITUDE, ExtremaType.MIN)
+        val maxAlt = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.ALTITUDE, ExtremaType.MAX)
 
         // 3. Create and return the clean data object
         return WorkoutDetailsData(

@@ -242,7 +242,7 @@ public class TrackerService extends Service {
                 // The workout name is just the date+time
                 mBaseFileName = (new SimpleDateFormat("yyyy-MM-dd_HHmmss", Locale.US)).format(new Date());
                 mWorkoutID = createNewWorkout();
-                WorkoutSamplesDatabaseManager.createNewTable(this, mBaseFileName, Arrays.asList(SensorType.values()));       // create a new table with a column for each possible sensor
+                WorkoutSamplesDatabaseManager.getInstance(this).createNewTable(mBaseFileName, Arrays.asList(SensorType.values()));       // create a new table with a column for each possible sensor
                 break;
 
             case RESUME_BY_USER:

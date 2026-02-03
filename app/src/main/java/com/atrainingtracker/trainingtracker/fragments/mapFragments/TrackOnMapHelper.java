@@ -57,7 +57,7 @@ public class TrackOnMapHelper {
 
     @Nullable
     public static PolylineOptions getPolylineOptions(Context context, long workoutId, @NonNull Roughness roughness, @NonNull TrackType trackType) {
-        String baseFileName = WorkoutSummariesDatabaseManager.getBaseFileName(context, workoutId);
+        String baseFileName = WorkoutSummariesDatabaseManager.getInstance(context).getBaseFileName(workoutId);
         if (baseFileName == null) {
             return null;
         }
