@@ -232,7 +232,7 @@ public class BTLEBikePowerDevice extends MyBTLEDevice {
 
         addPowerSensor();
 
-        int sensorFlags = DevicesDatabaseManager.getBikePowerSensorFlags(getDeviceId());
+        int sensorFlags = DevicesDatabaseManager.getInstance(mContext).getBikePowerSensorFlags(getDeviceId());
         if (BikePowerSensorsHelper.isPowerBalanceSupported(sensorFlags)) {
             mIsPowerBalanceSupported = true;
             addPowerBalanceSensor();

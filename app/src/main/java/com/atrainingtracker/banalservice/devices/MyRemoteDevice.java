@@ -43,6 +43,7 @@ public abstract class MyRemoteDevice extends MyDevice {
     protected double mCalibrationFactor = 1;
     long mDeviceId = -1;  // the id of the device within the database
     private final String TAG = "MyRemoteDevice";
+    private final DevicesDatabaseManager mDevicesDatabaseManager;
     private final BroadcastReceiver mCalibrationFactorChangedReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
             long deviceId = intent.getLongExtra(BANALService.DEVICE_ID, -1);
@@ -59,15 +60,17 @@ public abstract class MyRemoteDevice extends MyDevice {
         super(context, mySensorManager, deviceType);
         if (DEBUG) Log.i(TAG, "MyRemoteDevice()");
 
+        mDevicesDatabaseManager = DevicesDatabaseManager.getInstance(mContext);
+
         mDeviceId = deviceId;
 
-        mCalibrationFactor = DevicesDatabaseManager.getCalibrationFactor(deviceId);
+        mCalibrationFactor = mDevicesDatabaseManager.getCalibrationFactor(deviceId);
         ContextCompat.registerReceiver(context, mCalibrationFactorChangedReceiver, mCalibrationFactorChangedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     @Override
     public String getName() {
-        return DevicesDatabaseManager.getDeviceName(getDeviceId());
+        return mDevicesDatabaseManager.getDeviceName(getDeviceId());
     }
 
     abstract public Protocol getProtocol();
@@ -136,28 +139,28 @@ public abstract class MyRemoteDevice extends MyDevice {
     }
 
     public String getManufacturerName() {
-        return DevicesDatabaseManager.getManufacturerName(mDeviceId);
+        return mDevicesDatabaseManager.getManufacturerName(mDeviceId);
     }
 
     protected void setManufacturerName(String name) {
         if (DEBUG) Log.i(TAG, "woho, we have a manufacturer: " + name);
-        DevicesDatabaseManager.setManufacturerName(mDeviceId, name);
+        mDevicesDatabaseManager.setManufacturerName(mDeviceId, name);
     }
 
     public String getDeviceName() {
-        return DevicesDatabaseManager.getDeviceName(mDeviceId);
+        return mDevicesDatabaseManager.getDeviceName(mDeviceId);
     }
 
     public boolean isPaired() {
-        return DevicesDatabaseManager.isPaired(mDeviceId);
+        return mDevicesDatabaseManager.isPaired(mDeviceId);
     }
 
     protected void setLastActive() {
-        DevicesDatabaseManager.setLastActive(mDeviceId);
+        mDevicesDatabaseManager.setLastActive(mDeviceId);
     }
 
     protected void setBatteryPercentage(int percentage) {
-        DevicesDatabaseManager.setBatteryPercentage(mDeviceId, percentage);
+        mDevicesDatabaseManager.setBatteryPercentage(mDeviceId, percentage);
     }
 
     @Override

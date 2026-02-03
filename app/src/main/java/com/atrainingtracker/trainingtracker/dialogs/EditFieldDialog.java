@@ -247,7 +247,7 @@ public class EditFieldDialog extends DialogFragment {
     protected void configureSourceSpinner(@NonNull View parentView) {
         Spinner sourceSpinner = parentView.findViewById(R.id.spinnerSource);
         TextView textViewSource = parentView.findViewById(R.id.textViewSource);
-        DevicesDatabaseManager.DeviceIdAndNameLists deviceIdAndNameLists = DevicesDatabaseManager.getDeviceIdAndNameLists(mSensorType);
+        DevicesDatabaseManager.DeviceIdAndNameLists deviceIdAndNameLists = DevicesDatabaseManager.getInstance(requireContext()).getDeviceIdAndNameLists(mSensorType);
         if (DEBUG)
             Log.i(TAG, "configuring view for sensorType " + mSensorType + " deviceId=" + mDeviceId);
         if (deviceIdAndNameLists == null) {                        // only build in sensors like TIME, ...

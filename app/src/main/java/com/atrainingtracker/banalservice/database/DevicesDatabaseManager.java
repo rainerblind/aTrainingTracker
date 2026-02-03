@@ -28,6 +28,8 @@ import android.os.Build;
 import android.provider.BaseColumns;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.devices.BikePowerSensorsHelper;
@@ -50,35 +52,39 @@ import java.util.Set;
 public class DevicesDatabaseManager {
     private static final String TAG = DevicesDatabaseManager.class.getName();
     private static final boolean DEBUG = BANALService.getDebug(false);
-    private static DevicesDatabaseManager cInstance;
-    private static DevicesDbHelper cDevicesDbHelper;
-    private int mOpenCounter;
-    private SQLiteDatabase mDatabase;
 
-    public static synchronized void initializeInstance(DevicesDbHelper devicesDbHelper) {
-        if (cInstance == null) {
-            cInstance = new DevicesDatabaseManager();
-            cDevicesDbHelper = devicesDbHelper;
-        }
+    // --- Modern Singleton Pattern ---
+    private static volatile DevicesDatabaseManager cInstance;
+    private final DevicesDbHelper cDevicesDbHelper;
+    private final Context mContext;
+
+    private DevicesDatabaseManager(@NonNull Context context) {
+        this.mContext = context.getApplicationContext();
+        this.cDevicesDbHelper = new DevicesDbHelper(mContext);
     }
 
-    public static synchronized DevicesDatabaseManager getInstance() {
+    @NonNull
+    public static DevicesDatabaseManager getInstance(@NonNull Context context) {
         if (cInstance == null) {
-            throw new IllegalStateException(DevicesDatabaseManager.class.getSimpleName() +
-                    " is not initialized, call initializeInstance(..) method first.");
+            synchronized (DevicesDatabaseManager.class) {
+                if (cInstance == null) {
+                    cInstance = new DevicesDatabaseManager(context);
+                }
+            }
         }
-
         return cInstance;
     }
 
-    public static boolean isANTDeviceInDB(DeviceType deviceType, int antDeviceNumber) {
+    public SQLiteDatabase getDatabase() {
+        return cDevicesDbHelper.getWritableDatabase();
+    }
+    // --- End of Singleton Pattern ---
+
+    public boolean isANTDeviceInDB(DeviceType deviceType, int antDeviceNumber) {
         if (DEBUG) Log.d(TAG, "isANTDeviceInDB");
         boolean result = false;
 
-        DevicesDatabaseManager databaseManager = DevicesDatabaseManager.getInstance();
-
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
-        Cursor cursor = db.query(DevicesDbHelper.DEVICES,
+        Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
                 new String[]{DevicesDbHelper.C_ID},
                 DevicesDbHelper.PROTOCOL + "=? AND " + DevicesDbHelper.DEVICE_TYPE + "=? AND " + DevicesDbHelper.ANT_DEVICE_NUMBER + "=?",
                 new String[]{Protocol.ANT_PLUS.name(), deviceType.name(), Integer.toString(antDeviceNumber)},
@@ -88,21 +94,17 @@ public class DevicesDatabaseManager {
         // device already known
         result = cursor.getCount() > 0;
 
-        databaseManager.closeDatabase(); // db.close();
         cursor.close();
 
         return result;
     }
 
-    public static boolean haveTemperatureDevice(Context context) {
+    public boolean haveTemperatureDevice() {
         if (DEBUG) Log.i(TAG, "haveTemperatureDevice");
-        if (context == null) Log.d(TAG, "WTF: context == null");
 
         boolean result = false;
 
-        DevicesDatabaseManager databaseManager = DevicesDatabaseManager.getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
-        Cursor cursor = db.query(DevicesDbHelper.DEVICES,
+        Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
                 new String[]{DevicesDbHelper.C_ID},
                 DevicesDbHelper.DEVICE_TYPE + "=?",
                 new String[]{DeviceType.ENVIRONMENT.name()},
@@ -112,20 +114,17 @@ public class DevicesDatabaseManager {
         // there is at least one environment/temperature device
         result = cursor.getCount() > 0;
 
-        databaseManager.closeDatabase(); // db.close();
         cursor.close();
 
         return result;
     }
 
-    public static long getDeviceId(DeviceType deviceType, int antDeviceNumber) {
+    public long getDeviceId(DeviceType deviceType, int antDeviceNumber) {
         if (DEBUG) Log.d(TAG, "getDeviceId");
 
         long deviceId = -1;
 
-        DevicesDatabaseManager databaseManager = DevicesDatabaseManager.getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
-        Cursor cursor = db.query(DevicesDbHelper.DEVICES,
+        Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
                 new String[]{DevicesDbHelper.C_ID},
                 DevicesDbHelper.PROTOCOL + "=? AND " + DevicesDbHelper.DEVICE_TYPE + "=? AND " + DevicesDbHelper.ANT_DEVICE_NUMBER + "=?",
                 new String[]{Protocol.ANT_PLUS.name(), deviceType.name(), Integer.toString(antDeviceNumber)},
@@ -137,20 +136,16 @@ public class DevicesDatabaseManager {
             cursor.moveToFirst();
             deviceId = cursor.getLong(cursor.getColumnIndex(DevicesDbHelper.C_ID));
         }
-
-        databaseManager.closeDatabase(); //.close();
         cursor.close();
 
         return deviceId;
     }
 
-    public static boolean isBluetoothDeviceInDB(DeviceType deviceType, String bluetooth_address) {
+    public boolean isBluetoothDeviceInDB(DeviceType deviceType, String bluetooth_address) {
         if (DEBUG) Log.d(TAG, "isBluetoothDeviceInDB");
         boolean result = false;
 
-        DevicesDatabaseManager databaseManager = DevicesDatabaseManager.getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
-        Cursor cursor = db.query(DevicesDbHelper.DEVICES,
+        Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
                 new String[]{DevicesDbHelper.C_ID},
                 DevicesDbHelper.PROTOCOL + "=? AND " + DevicesDbHelper.DEVICE_TYPE + "=? AND " + DevicesDbHelper.BT_ADDRESS + "=?",
                 new String[]{Protocol.BLUETOOTH_LE.name(), deviceType.name(), bluetooth_address},
@@ -160,19 +155,16 @@ public class DevicesDatabaseManager {
         // device already known
         result = cursor.getCount() > 0;
 
-        databaseManager.closeDatabase(); // db.close();
         cursor.close();
 
         return result;
     }
 
-    public static long getDeviceId(DeviceType deviceType, String bluetooth_address) {
+    public long getDeviceId(DeviceType deviceType, String bluetooth_address) {
         if (DEBUG) Log.d(TAG, "getDeviceId");
         long result = -1;
 
-        DevicesDatabaseManager databaseManager = DevicesDatabaseManager.getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
-        Cursor cursor = db.query(DevicesDbHelper.DEVICES,
+        Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
                 new String[]{DevicesDbHelper.C_ID},
                 DevicesDbHelper.PROTOCOL + "=? AND " + DevicesDbHelper.DEVICE_TYPE + "=? AND " + DevicesDbHelper.BT_ADDRESS + "=?",
                 new String[]{Protocol.BLUETOOTH_LE.name(), deviceType.name(), bluetooth_address},
@@ -182,14 +174,12 @@ public class DevicesDatabaseManager {
         if (cursor.moveToFirst()) {
             result = cursor.getLong(cursor.getColumnIndex(DevicesDbHelper.C_ID));
         }
-
-        databaseManager.closeDatabase(); // db.close();
         cursor.close();
 
         return result;
     }
 
-    public static DeviceIdAndNameLists getDeviceIdAndNameLists(SensorType sensorType) {
+    public DeviceIdAndNameLists getDeviceIdAndNameLists(SensorType sensorType) {
         if (DEBUG) Log.i(TAG, "getDeviceIdAndNameLists(" + sensorType + ")");
 
         Set deviceTypeSet = DeviceType.getDeviceTypeList(sensorType);
@@ -201,9 +191,7 @@ public class DevicesDatabaseManager {
         LinkedList<Long> deviceIdsList = new LinkedList<>();
         LinkedList<String> namesList = new LinkedList<>();
 
-        SQLiteDatabase db = getInstance().getOpenDatabase();
-
-        Cursor cursor = db.query(DevicesDbHelper.DEVICES,
+        Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
                 null,
                 null,
                 null,
@@ -218,7 +206,7 @@ public class DevicesDatabaseManager {
                 if (DEBUG) Log.i(TAG, "checking " + deviceType);
 
                 if (deviceType == DeviceType.BIKE_POWER) {  // Ok, a Bike Power Sensor.  Here, we have to check the flags
-                    int sensorFlags = DevicesDatabaseManager.getBikePowerSensorFlags(deviceId);
+                    int sensorFlags = getBikePowerSensorFlags(deviceId);
                     switch (sensorType) {
                         case CADENCE:
                             if (!BikePowerSensorsHelper.isCrankRevolutionDataSupported(sensorFlags)) {
@@ -282,22 +270,19 @@ public class DevicesDatabaseManager {
             }
         }
 
-        getInstance().closeDatabase();
-
         return new DeviceIdAndNameLists(deviceIdsList, namesList);
     }
 
     /**
      * @return the id of the device within the database or -1 if the device is already in the database or -2 when an SQLException was caught.
      */
-    public static long insertNewAntDeviceIntoDB(DeviceType deviceType, String name, int antDeviceNumber, boolean paired, String manufacturer, int batteryPercentage) {
+    public long insertNewAntDeviceIntoDB(DeviceType deviceType, String name, int antDeviceNumber, boolean paired, String manufacturer, int batteryPercentage) {
         if (DEBUG)
             Log.d(TAG, "insertNewAntDeviceIntoDB: " + deviceType + " " + name + " " + antDeviceNumber);
 
         long result = -1;
 
-        DevicesDatabaseManager databaseManager = getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
+        SQLiteDatabase db = getDatabase();
 
         // first, check whether device is already in database
         Cursor cursor = db.query(DevicesDbHelper.DEVICES,
@@ -333,13 +318,12 @@ public class DevicesDatabaseManager {
             }
         }
 
-        databaseManager.closeDatabase(); // db.close();
         cursor.close();
 
         return result;
     }
 
-    public static long insertNewBluetoothDeviceIntoDB(DeviceType deviceType,
+    public long insertNewBluetoothDeviceIntoDB(DeviceType deviceType,
                                                       String bluetoothMACAddress,
                                                       String name,
                                                       String manufacturer,
@@ -350,8 +334,7 @@ public class DevicesDatabaseManager {
 
         long result = -1;
 
-        DevicesDatabaseManager databaseManager = getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
+        SQLiteDatabase db = getDatabase();
 
         // first, check whether device is already in database
         Cursor cursor = db.query(DevicesDbHelper.DEVICES,
@@ -388,8 +371,6 @@ public class DevicesDatabaseManager {
                 result = -2;
             }
         }
-
-        databaseManager.closeDatabase(); // db.close();
         cursor.close();
 
         return result;
@@ -398,13 +379,12 @@ public class DevicesDatabaseManager {
     /**
      * get the calibration factor from the database
      **/
-    public static double getCalibrationFactor(long deviceID) {
+    public double getCalibrationFactor(long deviceID) {
         if (DEBUG) Log.d(TAG, "readCalibrationFactor");
 
         double calibrationFactor = 1;
 
-        DevicesDatabaseManager databaseManager = getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
+        SQLiteDatabase db = getDatabase();
         Cursor cursor = getCursor(db, deviceID, DevicesDbHelper.CALIBRATION_FACTOR);
 
         if (cursor.getCount() > 0) {
@@ -420,97 +400,88 @@ public class DevicesDatabaseManager {
             }
         }
 
-        databaseManager.closeDatabase(); // db.close();
         cursor.close();
 
         return calibrationFactor;
     }
 
-    public static boolean isPaired(long deviceID) {
+    public boolean isPaired(long deviceID) {
         boolean result = false;
 
-        DevicesDatabaseManager databaseManager = getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
+        SQLiteDatabase db = getDatabase();
         Cursor cursor = getCursor(db, deviceID, DevicesDbHelper.PAIRED);
         if (cursor.getCount() > 0) {
             cursor.moveToFirst();
             result = cursor.getLong(0) > 0;
         }
 
-        // TODO: which order???
-        databaseManager.closeDatabase(); // db.close();
         cursor.close();
 
         return result;
     }
 
-    public static DeviceType getDeviceType(long deviceId) {
+    public DeviceType getDeviceType(long deviceId) {
         return DeviceType.valueOf(getString(deviceId, DevicesDbHelper.DEVICE_TYPE));
     }
 
-    public static String getManufacturerName(long deviceId) {
+    public String getManufacturerName(long deviceId) {
         return getString(deviceId, DevicesDbHelper.MANUFACTURER_NAME);
     }
 
-    public static String getDeviceName(long deviceId) {
+    public String getDeviceName(long deviceId) {
         return getString(deviceId, DevicesDbHelper.NAME);
     }
 
-    public static int getAntDeviceNumber(long deviceId) {
+    public int getAntDeviceNumber(long deviceId) {
         return getInt(deviceId, DevicesDbHelper.ANT_DEVICE_NUMBER);
     }
 
-    public static String getBluetoothMACAddress(long deviceId) {
+    public String getBluetoothMACAddress(long deviceId) {
         return getString(deviceId, DevicesDbHelper.BT_ADDRESS);
     }
 
-    public static Protocol getProtocol(long deviceId) {
+    public Protocol getProtocol(long deviceId) {
         return Protocol.valueOf(getString(deviceId, DevicesDbHelper.PROTOCOL));
     }
 
-    public static void setManufacturerName(long deviceId, String manufacturerName) {
+    public void setManufacturerName(long deviceId, String manufacturerName) {
         setString(deviceId, DevicesDbHelper.MANUFACTURER_NAME, manufacturerName);
     }
 
-    public static void setLastActive(long deviceId) {
+    public void setLastActive(long deviceId) {
         setString(deviceId, DevicesDbHelper.LAST_ACTIVE, getLastActiveString());
     }
 
-    public static void setBatteryPercentage(long deviceId, int percentage) {
+    public void setBatteryPercentage(long deviceId, int percentage) {
         setInt(deviceId, DevicesDbHelper.LAST_BATTERY_PERCENTAGE, percentage);
     }
 
-    public static void putBikePowerSensorFlags(long deviceId, int sensorFlags) {
+    public void putBikePowerSensorFlags(long deviceId, int sensorFlags) {
         if (DEBUG)
             Log.i(TAG, "putBikePowerSensorFlags: deviceId=" + deviceId + ", sensorFlags=" + sensorFlags);
-
-        SQLiteDatabase db = getInstance().getOpenDatabase();
 
         ContentValues values = new ContentValues();
         values.put(DevicesDbHelper.DEVICE_ID, deviceId);
         values.put(DevicesDbHelper.BIKE_POWER_SENSOR_FLAGS, sensorFlags);
 
-        int updates = db.update(DevicesDbHelper.BIKE_POWER_SENSOR_FLAGS_TABLE,
+        int updates = getDatabase().update(DevicesDbHelper.BIKE_POWER_SENSOR_FLAGS_TABLE,
                 values,
                 DevicesDbHelper.DEVICE_ID + "=?",
                 new String[]{deviceId + ""});
 
         if (updates == 0) { // not known yet
-            db.insert(DevicesDbHelper.BIKE_POWER_SENSOR_FLAGS_TABLE,
+            getDatabase().insert(DevicesDbHelper.BIKE_POWER_SENSOR_FLAGS_TABLE,
                     null,
                     values);
         }
-
-        getInstance().closeDatabase();
     }
 
-    public static int getBikePowerSensorFlags(long deviceId) {
+    public int getBikePowerSensorFlags(long deviceId) {
         if (DEBUG) Log.i(TAG, "getBikePowerSensorFlags: deviceId=" + deviceId);
 
         int result = 0;
 
-        SQLiteDatabase db = getInstance().getOpenDatabase();
-        Cursor cursor = db.query(DevicesDbHelper.BIKE_POWER_SENSOR_FLAGS_TABLE,
+        Cursor cursor = getDatabase().query(DevicesDbHelper.BIKE_POWER_SENSOR_FLAGS_TABLE,
                 null,
                 DevicesDbHelper.DEVICE_ID + "=?",
                 new String[]{deviceId + ""},
@@ -520,57 +491,46 @@ public class DevicesDatabaseManager {
         }
         cursor.close();
 
-        getInstance().closeDatabase();
-
         return result;
     }
 
-    private static String getString(long deviceID, String key) {
+    private String getString(long deviceID, String key) {
         if (DEBUG) Log.i(TAG, "getString: deviceID=" + deviceID + ", key=" + key);
 
         // TODO: list with allowed/valid keys
         String result = null;
 
-        DevicesDatabaseManager databaseManager = getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
-        Cursor cursor = getCursor(db, deviceID, key);
+        Cursor cursor = getCursor(getDatabase(), deviceID, key);
         if (cursor.getCount() > 0) {
             cursor.moveToFirst();
             result = cursor.getString(0);
         }
-        // TODO: which order???
         cursor.close();
-        databaseManager.closeDatabase(); // db.close();
 
         return result;
     }
 
-    private static int getInt(long deviceID, String key) {
+    private int getInt(long deviceID, String key) {
         if (DEBUG) Log.i(TAG, "getInt: deviceID=" + deviceID + ", key=" + key);
 
         int result = 0;
 
         // TODO: check list with allowed/valid keys?
 
-        DevicesDatabaseManager databaseManager = getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
-        Cursor cursor = getCursor(db, deviceID, key);
+        Cursor cursor = getCursor(getDatabase(), deviceID, key);
         if (cursor.getCount() > 0) {
             cursor.moveToFirst();
             result = cursor.getInt(0);
         }
-        // TODO: which order???
         cursor.close();
-        databaseManager.closeDatabase(); // db.close();
 
         return result;
     }
 
-    public static List<NameAndBatteryPercentage> getCriticalBatteryDevices(int batteryPercentage) {
+    public List<NameAndBatteryPercentage> getCriticalBatteryDevices(int batteryPercentage) {
         LinkedList<NameAndBatteryPercentage> result = new LinkedList<>();
 
-        SQLiteDatabase db = getInstance().getOpenDatabase();
-        Cursor cursor = db.query(DevicesDbHelper.DEVICES,
+        Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
                 null,
                 DevicesDbHelper.LAST_BATTERY_PERCENTAGE + " >= 0 AND " + DevicesDbHelper.LAST_BATTERY_PERCENTAGE + " <= ?",
                 new String[]{batteryPercentage + ""},
@@ -580,13 +540,12 @@ public class DevicesDatabaseManager {
                     cursor.getInt(cursor.getColumnIndex(DevicesDbHelper.LAST_BATTERY_PERCENTAGE)),
                     cursor.getLong(cursor.getColumnIndex(DevicesDbHelper.C_ID))));
         }
-
-        getInstance().closeDatabase();
+        cursor.close();
 
         return result;
     }
 
-    private static void setString(long deviceID, String key, String value) {
+    private void setString(long deviceID, String key, String value) {
         if (DEBUG)
             Log.i(TAG, "setString: deviceID=" + deviceID + ", key=" + key + ", value=" + value);
 
@@ -595,20 +554,17 @@ public class DevicesDatabaseManager {
         ContentValues values = new ContentValues();
         values.put(key, value);
 
-        DevicesDatabaseManager databaseManager = getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
-        int updates = db.update(DevicesDbHelper.DEVICES,
+        int updates = getDatabase().update(DevicesDbHelper.DEVICES,
                 values,
                 DevicesDbHelper.C_ID + "=?",
                 new String[]{Long.toString(deviceID)});
-        databaseManager.closeDatabase();
 
         if (updates == 0) { // not known yet
             if (DEBUG) Log.d(TAG, "set: there should already be an entry in the database");
         }
     }
 
-    private static void setInt(long deviceID, String key, int value) {
+    private void setInt(long deviceID, String key, int value) {
         if (DEBUG) Log.i(TAG, "setInt: deviceID=" + deviceID + ", key=" + key + ", value=" + value);
 
         // check list with allowed keys
@@ -617,13 +573,10 @@ public class DevicesDatabaseManager {
             ContentValues values = new ContentValues();
             values.put(key, value);
 
-            DevicesDatabaseManager databaseManager = getInstance();
-            SQLiteDatabase db = databaseManager.getOpenDatabase();
-            int updates = db.update(DevicesDbHelper.DEVICES,
+            int updates = getDatabase().update(DevicesDbHelper.DEVICES,
                     values,
                     DevicesDbHelper.C_ID + "=?",
                     new String[]{Long.toString(deviceID)});
-            databaseManager.closeDatabase();
 
             if (updates == 0) { // not known yet
                 if (DEBUG) Log.d(TAG, "set: there should already be an entry in the database");
@@ -651,23 +604,6 @@ public class DevicesDatabaseManager {
                 null);
     }
 
-    public synchronized SQLiteDatabase getOpenDatabase() {
-        mOpenCounter++;
-        if (mOpenCounter == 1) {
-            // Opening new database
-            mDatabase = cDevicesDbHelper.getWritableDatabase();
-        }
-        return mDatabase;
-    }
-
-    public synchronized void closeDatabase() {
-        mOpenCounter--;
-        if (mOpenCounter == 0) {
-            // Closing database
-            mDatabase.close();
-
-        }
-    }
 
     public static class DeviceIdAndNameLists {
         public final LinkedList<Long> deviceIds;
