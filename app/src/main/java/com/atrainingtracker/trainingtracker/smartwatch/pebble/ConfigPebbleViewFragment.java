@@ -62,6 +62,9 @@ public class ConfigPebbleViewFragment extends ConfigViewFragment {
     protected SensorType mSensorType4 = SensorType.DISTANCE_m;
     protected SensorType mSensorType5 = SensorType.LAP_NR;
 
+    PebbleDatabaseManager mPebbleDatabaseManager;
+
+
     @NonNull
     public static ConfigPebbleViewFragment newInstance(long viewId) {
         ConfigPebbleViewFragment fragment = new ConfigPebbleViewFragment();
@@ -77,6 +80,8 @@ public class ConfigPebbleViewFragment extends ConfigViewFragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        mPebbleDatabaseManager = PebbleDatabaseManager.getInstance(requireContext());
+
         NUMBER_OF_FIELDS_ARRAY_ADAPTER = new ArrayAdapter<>(getContext(), android.R.layout.simple_spinner_item, new Integer[]{3, 5});
 
         mViewId = getArguments().getLong(ConfigViewsActivity.VIEW_ID);
@@ -87,7 +92,7 @@ public class ConfigPebbleViewFragment extends ConfigViewFragment {
         super.onCreateView(inflater, container, savedInstanceState);
         if (DEBUG) Log.d(TAG, "onCreateView");
 
-        mActivityType = PebbleDatabaseManager.getActivityType(mViewId);
+        mActivityType = mPebbleDatabaseManager.getActivityType(mViewId);
 
         mSensorTypes = ActivityType.getSensorTypeArray(mActivityType, getContext());
         SENSOR_ARRAY_ADAPTER = new SensorArrayAdapter(getContext(), android.R.layout.simple_spinner_item, mSensorTypes);
@@ -97,8 +102,8 @@ public class ConfigPebbleViewFragment extends ConfigViewFragment {
 
 
         final EditText etName = view.findViewById(R.id.editTextName);
-        etName.setText(PebbleDatabaseManager.getName(mViewId));
-        if (DEBUG) Log.i(TAG, "set name to " + PebbleDatabaseManager.getName(mViewId));
+        etName.setText(mPebbleDatabaseManager.getName(mViewId));
+        if (DEBUG) Log.i(TAG, "set name to " + mPebbleDatabaseManager.getName(mViewId));
 
         etName.addTextChangedListener(new TextWatcher() {
             @Override
@@ -119,7 +124,7 @@ public class ConfigPebbleViewFragment extends ConfigViewFragment {
             }
         });
 
-        LinkedList<SensorType> sensorTypeList = PebbleDatabaseManager.getSensorTypeList(mViewId);
+        LinkedList<SensorType> sensorTypeList = mPebbleDatabaseManager.getSensorTypeList(mViewId);
         final int nrOfFields = sensorTypeList.size();
         if (DEBUG) Log.i(TAG, "nrOfFields=" + nrOfFields);
 
@@ -146,14 +151,14 @@ public class ConfigPebbleViewFragment extends ConfigViewFragment {
                 switch (newNumberOfFields) {
 
                     case 3:  // here, we have to delete row 4 and 5
-                        PebbleDatabaseManager.deleteRow(mViewId, 4);
-                        PebbleDatabaseManager.deleteRow(mViewId, 5);
+                        mPebbleDatabaseManager.deleteRow(mViewId, 4);
+                        mPebbleDatabaseManager.deleteRow(mViewId, 5);
                         field4and5LinearLayout.setVisibility(View.GONE);
                         break;
 
                     case 5:  // now, we have to insert values for row 4 and 5
-                        PebbleDatabaseManager.addRow(mViewId, 4, mSensorType4);
-                        PebbleDatabaseManager.addRow(mViewId, 5, mSensorType5);
+                        mPebbleDatabaseManager.addRow(mViewId, 4, mSensorType4);
+                        mPebbleDatabaseManager.addRow(mViewId, 5, mSensorType5);
                         field4and5LinearLayout.setVisibility(View.VISIBLE);
                         break;
 
@@ -189,7 +194,7 @@ public class ConfigPebbleViewFragment extends ConfigViewFragment {
                 public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                     if (finalCounter < 4 || field4and5LinearLayout.getVisibility() == View.VISIBLE) {
                         if (DEBUG) Log.i(TAG, "update sensorType finalCounter=" + finalCounter);
-                        PebbleDatabaseManager.updateSensorType(mViewId, finalCounter, mSensorTypes[position]);
+                        mPebbleDatabaseManager.updateSensorType(mViewId, finalCounter, mSensorTypes[position]);
                     }
                     if (finalCounter == 4) {
                         mSensorType4 = mSensorTypes[position];
@@ -223,7 +228,7 @@ public class ConfigPebbleViewFragment extends ConfigViewFragment {
 
     @Override
     protected void updateNameOfView(String name) {
-        PebbleDatabaseManager.updateNameOfView(mViewId, name);
+        mPebbleDatabaseManager.updateNameOfView(mViewId, name);
     }
 
     public void onPause() {
