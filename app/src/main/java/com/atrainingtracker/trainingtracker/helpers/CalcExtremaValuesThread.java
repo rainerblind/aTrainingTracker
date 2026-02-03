@@ -231,7 +231,7 @@ public class CalcExtremaValuesThread extends Thread {
         if (sportTypeId == null) {
             sportTypeId = SportTypeDatabaseManager.getDefaultSportTypeId();
         }
-        String fancyName = WorkoutSummariesDatabaseManager.getFancyName(mContext, sportTypeId, startLocation, maxLineLocation, endLocation);
+        String fancyName = workoutSummariesDatabaseManager.getFancyName(sportTypeId, startLocation, maxLineLocation, endLocation);
 
         if (fancyName != null) {
             Intent intent = new Intent(FINISHED_CALCULATING_FANCY_NAME)
@@ -242,7 +242,7 @@ public class CalcExtremaValuesThread extends Thread {
             ContentValues contentValues = new ContentValues();
             contentValues.put(WorkoutSummaries.WORKOUT_NAME, fancyName);
 
-            SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance(mContext).getDatabase();
+            SQLiteDatabase db = workoutSummariesDatabaseManager.getDatabase();
             db.update(WorkoutSummaries.TABLE, contentValues, WorkoutSummaries.C_ID + " = ?", new String[]{Long.toString(workoutId)});
         }
     }

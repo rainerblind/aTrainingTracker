@@ -528,11 +528,10 @@ public class WorkoutSummariesDatabaseManager {
     // -- Fancy / Auto Name
 
     @NonNull
-    public static List<String> getFancyNameList(Context context) {
+    public List<String> getFancyNameList() {
         List result = new LinkedList();
 
-        SQLiteDatabase db = getInstance(context).getDatabase();
-        Cursor cursor = db.query(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS, // table
+        Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS, // table
                 null, null, null, null, null, null);
 
         while (cursor.moveToNext()) {
@@ -542,12 +541,10 @@ public class WorkoutSummariesDatabaseManager {
         return result;
     }
 
-    public static long getFancyNameId(Context context, String fancyName) {
+    public long getFancyNameId(String fancyName) {
         long fancyNameId = -1;
 
-        SQLiteDatabase db = getInstance(context).getDatabase();
-
-        Cursor cursor = db.query(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS,
+        Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS,
                 null,
                 WorkoutSummaries.FANCY_NAME + "=?",
                 new String[]{fancyName},
@@ -560,12 +557,11 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     @NonNull
-    public static String getFancyNameAndIncrement(Context context, String fancyName) {
+    public String getFancyNameAndIncrement(String fancyName) {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append(fancyName);
 
-        SQLiteDatabase db = getInstance(context).getDatabase();
-
+        SQLiteDatabase db = getDatabase();
         Cursor cursor = db.query(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS,
                 null,
                 WorkoutSummaries.FANCY_NAME + "=?",
@@ -590,16 +586,15 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     @Nullable
-    public static String getFancyName(Context context,
-                                      long sportTypeId,
-                                      @Nullable KnownLocationsDatabaseManager.MyLocation startLocation,
-                                      @Nullable KnownLocationsDatabaseManager.MyLocation maxLineDistanceLocation,
-                                      @Nullable KnownLocationsDatabaseManager.MyLocation endLocation) {
+    public String getFancyName(long sportTypeId,
+                               @Nullable KnownLocationsDatabaseManager.MyLocation startLocation,
+                               @Nullable KnownLocationsDatabaseManager.MyLocation maxLineDistanceLocation,
+                               @Nullable KnownLocationsDatabaseManager.MyLocation endLocation) {
         if (startLocation != null & endLocation != null) {
 
             StringBuilder stringBuilder = new StringBuilder();
 
-            SQLiteDatabase db = getInstance(context).getDatabase();
+            SQLiteDatabase db = getDatabase();
 
             // get the first part, something like #bike2work, b2w, >> work ...
             Cursor cursor = db.query(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS, // table
@@ -611,7 +606,7 @@ public class WorkoutSummariesDatabaseManager {
             if (cursor.moveToFirst()) {
                 stringBuilder.append(cursor.getString(cursor.getColumnIndex(WorkoutSummaries.FANCY_NAME)));
             } else {
-                stringBuilder.append(createDefaultFancyName(context, sportTypeId, startLocation, maxLineDistanceLocation, endLocation));
+                stringBuilder.append(createDefaultFancyName(sportTypeId, startLocation, maxLineDistanceLocation, endLocation));
                 cursor.requery();
             }
 
@@ -654,11 +649,10 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     @Nullable
-    protected static String createDefaultFancyName(Context context,
-                                                   long sportTypeId,
-                                                   @Nullable KnownLocationsDatabaseManager.MyLocation startLocation,
-                                                   KnownLocationsDatabaseManager.MyLocation maxLineDistanceLocation,
-                                                   @Nullable KnownLocationsDatabaseManager.MyLocation endLocation) {
+    protected String createDefaultFancyName(long sportTypeId,
+                                            @Nullable KnownLocationsDatabaseManager.MyLocation startLocation,
+                                            KnownLocationsDatabaseManager.MyLocation maxLineDistanceLocation,
+                                            @Nullable KnownLocationsDatabaseManager.MyLocation endLocation) {
 
         if (startLocation != null & endLocation != null) {
             StringBuilder stringBuilder = new StringBuilder();
@@ -683,8 +677,7 @@ public class WorkoutSummariesDatabaseManager {
             contentValues.put(WorkoutSummaries.COUNTER, 0);
             contentValues.put(WorkoutSummaries.ADD_VIA, 1);
 
-            SQLiteDatabase db = getInstance(context).getDatabase();
-            db.insert(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS, null, contentValues);
+            getDatabase().insert(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS, null, contentValues);
 
             return baseName;
         }
@@ -692,11 +685,10 @@ public class WorkoutSummariesDatabaseManager {
         return null;
     }
 
-    public static void deleteFancyName(Context context, long id) {
+    public void deleteFancyName(long id) {
         if (DEBUG) Log.i(TAG, "deleteFancyName: id=" + id);
 
-        SQLiteDatabase db = getInstance(context).getDatabase();
-        db.delete(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS,
+        getDatabase().delete(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS,
                 WorkoutSummaries.C_ID + " =? ",
                 new String[]{Long.toString(id)});
     }

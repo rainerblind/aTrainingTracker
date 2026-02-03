@@ -1070,13 +1070,15 @@ public class EditWorkoutFragmentClassic extends Fragment {
         builder.setView(listView);
         final Dialog dialog = builder.create();
 
-        final List<String> fancyNameList = WorkoutSummariesDatabaseManager.getFancyNameList(getContext());
+        WorkoutSummariesDatabaseManager workoutSummariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(getContext());
+
+        final List<String> fancyNameList = workoutSummariesDatabaseManager.getFancyNameList();
         ArrayAdapter<String> arrayAdapter = new ArrayAdapter<>(getContext(), android.R.layout.simple_list_item_1, fancyNameList.toArray(new String[fancyNameList.size()]));
         listView.setAdapter(arrayAdapter);
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                String fullFancyName = WorkoutSummariesDatabaseManager.getFancyNameAndIncrement(getContext(), fancyNameList.get(position));
+                String fullFancyName = workoutSummariesDatabaseManager.getFancyNameAndIncrement(fancyNameList.get(position));
                 editExportName.setText(fullFancyName);
                 dialog.dismiss();
             }
@@ -1084,7 +1086,7 @@ public class EditWorkoutFragmentClassic extends Fragment {
         listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
             @Override
             public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
-                long fancyNameId = WorkoutSummariesDatabaseManager.getFancyNameId(getContext(), fancyNameList.get(position));
+                long fancyNameId = workoutSummariesDatabaseManager.getFancyNameId(fancyNameList.get(position));
                 EditFancyWorkoutNameDialog dialog = EditFancyWorkoutNameDialog.newInstance(fancyNameId);
                 dialog.show(getFragmentManager(), EditFancyWorkoutNameDialog.TAG);
                 return true;
