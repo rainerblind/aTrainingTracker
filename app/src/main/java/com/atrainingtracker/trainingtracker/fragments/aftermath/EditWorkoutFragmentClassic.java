@@ -731,7 +731,7 @@ public class EditWorkoutFragmentClassic extends Fragment {
 
     protected boolean fillTvExtrema(@NonNull SensorType sensorType, @NonNull ExtremaType extremaType, int tvId) {
 
-        Double extremaValue = WorkoutSummariesDatabaseManager.getExtremaValue(getContext(), mWorkoutID, sensorType, extremaType);
+        Double extremaValue = WorkoutSummariesDatabaseManager.getInstance(getContext()).getExtremaValue(mWorkoutID, sensorType, extremaType);
         Log.d(TAG, sensorType.name() + " " + extremaType.name() + " extremaValue=" + extremaValue);
         if (extremaValue != null) {
             TextView tv = getActivity().findViewById(tvId) ;

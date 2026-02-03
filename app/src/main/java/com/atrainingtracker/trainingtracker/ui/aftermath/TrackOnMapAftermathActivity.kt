@@ -34,6 +34,9 @@ class TrackOnMapAftermathActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private lateinit var workoutHeaderViewHolder: WorkoutHeaderViewHolder
 
+    private lateinit var workoutSummariesDatabaseManager: WorkoutSummariesDatabaseManager
+    private lateinit var workoutSamplesDatabaseManager: WorkoutSamplesDatabaseManager
+
 
     private lateinit var mapView: MapView
     private var googleMap: GoogleMap? = null
@@ -56,6 +59,12 @@ class TrackOnMapAftermathActivity : AppCompatActivity(), OnMapReadyCallback {
             finish()
             return
         }
+
+        workoutSummariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(this)
+        workoutSamplesDatabaseManager = WorkoutSamplesDatabaseManager.getInstance(this)
+
+        // setup the toolbar
+
 
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
@@ -159,16 +168,17 @@ class TrackOnMapAftermathActivity : AppCompatActivity(), OnMapReadyCallback {
      * Replaces `getExtremaPosition`.
      */
     private fun getExtremaPosition(extremaType: ExtremaType, calculateWhenNotInDb: Boolean): LatLng? {
-        val baseFileName = WorkoutSummariesDatabaseManager.getBaseFileName(this, workoutId)
 
-        var lat = WorkoutSummariesDatabaseManager.getExtremaValue(this, workoutId, SensorType.LATITUDE, extremaType)
+        val baseFileName = workoutSummariesDatabaseManager.getBaseFileName(workoutId)
+
+        var lat = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.LATITUDE, extremaType)
         if (lat == null && calculateWhenNotInDb) {
-            lat = WorkoutSamplesDatabaseManager.calcExtremaValue(this, baseFileName, extremaType, SensorType.LATITUDE)
+            lat = workoutSamplesDatabaseManager.calcExtremaValue(workoutSummariesDatabaseManager, baseFileName, extremaType, SensorType.LATITUDE)
         }
 
-        var lon = WorkoutSummariesDatabaseManager.getExtremaValue(this, workoutId, SensorType.LONGITUDE, extremaType)
+        var lon = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.LONGITUDE, extremaType)
         if (lon == null && calculateWhenNotInDb) {
-            lon = WorkoutSamplesDatabaseManager.calcExtremaValue(this, baseFileName, extremaType, SensorType.LONGITUDE)
+            lon = workoutSamplesDatabaseManager.calcExtremaValue(workoutSummariesDatabaseManager, baseFileName, extremaType, SensorType.LONGITUDE)
         }
 
         return if (lat != null && lon != null) LatLng(lat, lon) else null
@@ -198,7 +208,7 @@ class TrackOnMapAftermathActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun addExtremaMarkerToMap(sensorType: SensorType, extremaType: ExtremaType, drawableId: Int?) {
-        val latLngValue = WorkoutSamplesDatabaseManager.getExtremaPosition(this, workoutId, sensorType, extremaType)
+        val latLngValue = workoutSamplesDatabaseManager.getExtremaPosition(workoutSummariesDatabaseManager, workoutId, sensorType, extremaType)
 
         if (latLngValue != null) {
             val title = getString(

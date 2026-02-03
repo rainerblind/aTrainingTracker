@@ -145,15 +145,19 @@ public abstract class TrackOnMapBaseFragment
     // helper method to get START and END position
     @Nullable
     LatLng getExtremaPosition(@NonNull ExtremaType extremaType, boolean calculateWhenNotInDb) {
-        String baseFileName = WorkoutSummariesDatabaseManager.getBaseFileName(getContext(), mWorkoutID);
+        WorkoutSummariesDatabaseManager workoutSummariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(requireContext());
+        WorkoutSamplesDatabaseManager workoutSamplesDatabaseManager = WorkoutSamplesDatabaseManager.getInstance(requireContext());
+        // TODO: implement a Helper class to get the extrema values instead of passing database managers to an database manager...
 
-        Double lat = WorkoutSummariesDatabaseManager.getExtremaValue(getContext(), mWorkoutID, SensorType.LATITUDE, extremaType);
+        String baseFileName = workoutSummariesDatabaseManager.getBaseFileName(mWorkoutID);
+
+        Double lat = workoutSummariesDatabaseManager.getExtremaValue(mWorkoutID, SensorType.LATITUDE, extremaType);
         if (lat == null && calculateWhenNotInDb) {
-            lat = WorkoutSamplesDatabaseManager.calcExtremaValue(getContext(), baseFileName, extremaType, SensorType.LATITUDE);
+            lat = workoutSamplesDatabaseManager.calcExtremaValue(workoutSummariesDatabaseManager, baseFileName, extremaType, SensorType.LATITUDE);
         }
-        Double lon = WorkoutSummariesDatabaseManager.getExtremaValue(getContext(), mWorkoutID, SensorType.LONGITUDE, extremaType);
+        Double lon = workoutSummariesDatabaseManager.getExtremaValue(mWorkoutID, SensorType.LONGITUDE, extremaType);
         if (lon == null && calculateWhenNotInDb) {
-            lon = WorkoutSamplesDatabaseManager.calcExtremaValue(getContext(), baseFileName, extremaType, SensorType.LONGITUDE);
+            lon = workoutSamplesDatabaseManager.calcExtremaValue(workoutSummariesDatabaseManager, baseFileName, extremaType, SensorType.LONGITUDE);
         }
 
         return (lat != null & lon != null) ? new LatLng(lat, lon) : null;

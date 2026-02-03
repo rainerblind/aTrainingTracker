@@ -745,9 +745,11 @@ public class MyLocationsFragment
                 progressDialog.show();
             });
 
-                Double altitude = WorkoutSamplesDatabaseManager.calcAverageAroundLocation(getContext(), latLng, 100, SensorType.ALTITUDE);
+            WorkoutSummariesDatabaseManager workoutSummariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(requireContext());
+            WorkoutSamplesDatabaseManager workoutSamplesDatabaseManager = WorkoutSamplesDatabaseManager.getInstance(requireContext());
+            Double altitude = workoutSamplesDatabaseManager.calcAverageAroundLocation(workoutSummariesDatabaseManager, latLng, 100, SensorType.ALTITUDE);
 
-                final KnownLocationsDatabaseManager.MyLocation location = mKnownLocationsDatabaseManager.addNewLocation("", altitude.intValue(), KnownLocationsDatabaseManager.DEFAULT_RADIUS, latLng.latitude, latLng.longitude);
+            final KnownLocationsDatabaseManager.MyLocation location = mKnownLocationsDatabaseManager.addNewLocation("", altitude.intValue(), KnownLocationsDatabaseManager.DEFAULT_RADIUS, latLng.latitude, latLng.longitude);
 
             new Handler(Looper.getMainLooper()).post(() -> {
                 addMyLocationToMap(location);

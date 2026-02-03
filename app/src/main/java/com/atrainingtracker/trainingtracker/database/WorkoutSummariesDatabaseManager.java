@@ -126,12 +126,12 @@ public class WorkoutSummariesDatabaseManager {
 
 
     @Nullable
-    public static String getBaseFileName(Context context, long workoutId) {
+    public String getBaseFileName(long workoutId) {
         if (DEBUG) Log.i(TAG, "getBaseFileName for workoutId: " + workoutId);
 
         String baseFileName = null;
 
-        try (Cursor cursor = getInstance(context).getDatabase().query(WorkoutSummaries.TABLE,
+        try (Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE,
                 new String[]{WorkoutSummaries.FILE_BASE_NAME},
                 WorkoutSummaries.C_ID + "=?",
                 new String[]{Long.toString(workoutId)},
@@ -147,12 +147,12 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     @Nullable
-    public static Double getDouble(Context context, long workoutId, String key) {
+    public Double getDouble(long workoutId, String key) {
         if (DEBUG) Log.i(TAG, "getDouble for workoutId: " + workoutId + ", " + key);
 
         Double value = null;
 
-        try(Cursor cursor = getInstance(context).getDatabase().query(WorkoutSummaries.TABLE,
+        try(Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE,
                 new String[]{key},
                 WorkoutSummaries.C_ID + "=?",
                 new String[]{Long.toString(workoutId)},
@@ -167,7 +167,7 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     @Nullable
-    public static Double getDouble(Context context, @Nullable String baseFileName, String key) {
+    public Double getDouble(@Nullable String baseFileName, String key) {
         if (DEBUG) Log.i(TAG, "getDouble for baseFileName: " + baseFileName + ", " + key);
 
         if (baseFileName == null) {
@@ -177,7 +177,7 @@ public class WorkoutSummariesDatabaseManager {
 
         Double value = null;
 
-        try(Cursor cursor = getInstance(context).getDatabase().query(WorkoutSummaries.TABLE,
+        try(Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE,
                 new String[]{key},
                 WorkoutSummaries.FILE_BASE_NAME + "=?",
                 new String[]{baseFileName},
@@ -214,12 +214,12 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     @Nullable
-    public static Integer getInt(Context context, long workoutId, String key) {
+    public Integer getInt(long workoutId, String key) {
         if (DEBUG) Log.i(TAG, "getInt for workoutId: " + workoutId + ", " + key);
 
         Integer value = null;
 
-        try(Cursor cursor = getInstance(context).getDatabase().query(WorkoutSummaries.TABLE,
+        try(Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE,
                 new String[]{key},
                 WorkoutSummaries.C_ID + "=?",
                 new String[]{Long.toString(workoutId)},
@@ -234,12 +234,12 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     @Nullable
-    public static Integer getInt(Context context, String baseFileName, String key) {
+    public Integer getInt(String baseFileName, String key) {
         if (DEBUG) Log.i(TAG, "getInt for baseFileName: " + baseFileName + ", " + key);
 
         Integer value = null;
 
-        try (Cursor cursor = getInstance(context).getDatabase().query(WorkoutSummaries.TABLE,
+        try (Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE,
                 new String[]{key},
                 WorkoutSummaries.FILE_BASE_NAME + "=?",
                 new String[]{baseFileName},
@@ -295,10 +295,10 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     @Nullable
-    public static Double getExtremaValue(Context context, long workoutId, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType) {
+    public Double getExtremaValue(long workoutId, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType) {
         Double extremaValue = null;
 
-        try(Cursor cursor = getInstance(context).getDatabase().query(WorkoutSummaries.TABLE_EXTREMA_VALUES,
+        try(Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE_EXTREMA_VALUES,
                 new String[]{WorkoutSummaries.VALUE},
                 WorkoutSummaries.WORKOUT_ID + "=? AND " + WorkoutSummaries.SENSOR_TYPE + "=? AND " + WorkoutSummaries.EXTREMA_TYPE + "=?",
                 new String[]{Long.toString(workoutId), sensorType.name(), extremaType.name()},
@@ -538,8 +538,7 @@ public class WorkoutSummariesDatabaseManager {
 
         // delete from WorkoutSamples
         if (DEBUG) Log.d(TAG, "deleting from WorkoutSamples");
-        WorkoutSamplesDatabaseManager.getInstance(context);
-        WorkoutSamplesDatabaseManager.deleteWorkout(context, baseFileName);
+        WorkoutSamplesDatabaseManager.getInstance(context).deleteWorkout(baseFileName);
 
         // delete from ExportManager
         if (DEBUG) Log.d(TAG, "deleting from ExportStatusRepository");
