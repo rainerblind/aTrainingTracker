@@ -307,8 +307,8 @@ public class StartAndTrackingFragmentTabbedContainer extends Fragment {
         if (DEBUG)
             Log.i(TAG, "createViewIdList(), mActivityType=" + mActivityType + "mSelectedItemNr=" + mSelectedItemNr);
 
-        TrackingViewsDatabaseManager databaseManager = TrackingViewsDatabaseManager.getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
+        TrackingViewsDatabaseManager databaseManager = TrackingViewsDatabaseManager.getInstance(getContext());
+        SQLiteDatabase db = databaseManager.getDatabase();
         Cursor cursor = db.query(TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEWS_TABLE,
                 null,
                 TrackingViewsDatabaseManager.TrackingViewsDbHelper.ACTIVITY_TYPE + "=?",
@@ -324,7 +324,6 @@ public class StartAndTrackingFragmentTabbedContainer extends Fragment {
             mViewIdList.add(cursor.getInt(cursor.getColumnIndex(TrackingViewsDbHelper.C_ID)));
         }
         cursor.close();
-        databaseManager.closeDatabase();
 
         mSectionsPagerAdapter.notifyDataSetChanged();
         if (mSelectedItemNr > mSectionsPagerAdapter.getCount()) {

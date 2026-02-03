@@ -182,8 +182,8 @@ public class EditWorkoutFragmentClassic extends Fragment {
     };
     private final BroadcastReceiver mFinishedGuessingCommuteAndTrainerReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
-            WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance();
-            SQLiteDatabase db = databaseManager.getOpenDatabase();
+            WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance(context);
+            SQLiteDatabase db = databaseManager.getDatabase();
             Cursor cursor = db.query(WorkoutSummaries.TABLE,
                     null,
                     WorkoutSummaries.C_ID + "=?",
@@ -195,7 +195,6 @@ public class EditWorkoutFragmentClassic extends Fragment {
             rbCommute.setChecked(cursor.getInt(cursor.getColumnIndex(WorkoutSummaries.COMMUTE)) > 0);
             rbTrainer.setChecked(cursor.getInt(cursor.getColumnIndex(WorkoutSummaries.TRAINER)) > 0);
             cursor.close();
-            databaseManager.closeDatabase(); // db.close();
         }
     };
     private final BroadcastReceiver mFinishedCalculatingExtremaValueReceiver = new BroadcastReceiver() {
@@ -540,8 +539,8 @@ public class EditWorkoutFragmentClassic extends Fragment {
         if (DEBUG) Log.i(TAG, "mWorkoutID=" + mWorkoutID);
 
         // first, open the database and get a valid cursor
-        WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
+        WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance(getActivity());
+        SQLiteDatabase db = databaseManager.getDatabase();
         Cursor cursor = db.query(WorkoutSummaries.TABLE,
                 null,
                 WorkoutSummaries.C_ID + "=?",
@@ -578,7 +577,7 @@ public class EditWorkoutFragmentClassic extends Fragment {
 
         // finally, the remaining views
         // ((TextView) getActivity().findViewById(R.id.tvStartTime)).setText(cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_START)));
-        ((TextView) getActivity().findViewById(R.id.tvStartTime)).setText(WorkoutSummariesDatabaseManager.getStartTime(mWorkoutID, "localtime"));
+        ((TextView) getActivity().findViewById(R.id.tvStartTime)).setText(WorkoutSummariesDatabaseManager.getInstance(getContext()).getStartTime(mWorkoutID, "localtime"));
 
         int totalTime = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_TOTAL_s));
         ((TextView) getActivity().findViewById(R.id.tvTotalTime)).setText((new TimeFormatter()).format(totalTime));
@@ -622,7 +621,6 @@ public class EditWorkoutFragmentClassic extends Fragment {
         onSportTypeChanged();
 
         cursor.close();
-        databaseManager.closeDatabase(); // db.close();
     }
 
     protected void fillExtremaValuesFromDb() {
@@ -659,7 +657,7 @@ public class EditWorkoutFragmentClassic extends Fragment {
     }
 
     protected void showOrHideTrPace() {
-        if (SportTypeDatabaseManager.getBSportType(mSportTypeId) == BSportType.RUN
+        if (SportTypeDatabaseManager.getInstance(requireContext()).getBSportType(mSportTypeId) == BSportType.RUN
                 && mPaceExtremaValuesAvailable) {
             getActivity().findViewById(R.id.trPace).setVisibility(View.VISIBLE);
         } else {
@@ -733,7 +731,7 @@ public class EditWorkoutFragmentClassic extends Fragment {
 
     protected boolean fillTvExtrema(@NonNull SensorType sensorType, @NonNull ExtremaType extremaType, int tvId) {
 
-        Double extremaValue = WorkoutSummariesDatabaseManager.getExtremaValue(mWorkoutID, sensorType, extremaType);
+        Double extremaValue = WorkoutSummariesDatabaseManager.getInstance(getContext()).getExtremaValue(mWorkoutID, sensorType, extremaType);
         Log.d(TAG, sensorType.name() + " " + extremaType.name() + " extremaValue=" + extremaValue);
         if (extremaValue != null) {
             TextView tv = getActivity().findViewById(tvId) ;
@@ -904,7 +902,7 @@ public class EditWorkoutFragmentClassic extends Fragment {
     protected void onSportTypeChanged() {
         if (DEBUG) Log.d(TAG, "onSportTypeChanged to " + mSportTypeId);
 
-        mBSportType = SportTypeDatabaseManager.getBSportType(mSportTypeId);
+        mBSportType = SportTypeDatabaseManager.getInstance(requireContext()).getBSportType(mSportTypeId);
 
         // first, configure the sport spinner
         setSpinnerSport();
@@ -952,14 +950,16 @@ public class EditWorkoutFragmentClassic extends Fragment {
     private void setSpinnerSport() {
         if (DEBUG) Log.i(TAG, "setSpinnerSport");
 
+        SportTypeDatabaseManager sportTypeDatabaseManager = SportTypeDatabaseManager.getInstance(requireContext());
+
         if (mShowAllSportTypes) {
             if (DEBUG) Log.i(TAG, "show all sport types");
-            mSportTypeUiNameList = SportTypeDatabaseManager.getSportTypesUiNameList();
-            mSportTypeIdList = SportTypeDatabaseManager.getSportTypesIdList();
+            mSportTypeUiNameList = sportTypeDatabaseManager.getSportTypesUiNameList();
+            mSportTypeIdList = sportTypeDatabaseManager.getSportTypesIdList();
         } else {
             if (DEBUG) Log.i(TAG, "do NOT show all sport types");
-            mSportTypeUiNameList = SportTypeDatabaseManager.getSportTypesUiNameList(mBSportType, mAverageSpeed);
-            mSportTypeIdList = SportTypeDatabaseManager.getSportTypesIdList(mBSportType, mAverageSpeed);
+            mSportTypeUiNameList = sportTypeDatabaseManager.getSportTypesUiNameList(mBSportType, mAverageSpeed);
+            mSportTypeIdList = sportTypeDatabaseManager.getSportTypesIdList(mBSportType, mAverageSpeed);
             if (mSportTypeUiNameList.size() <= 1
                     || !mSportTypeIdList.contains(mSportTypeId)) {
                 mShowAllSportTypes = true;
@@ -998,7 +998,7 @@ public class EditWorkoutFragmentClassic extends Fragment {
                 mEquipmentName = equipmentList.get(0);
             }
 
-            equipmentList = equipmentDbHelper.getEquipment(SportTypeDatabaseManager.getBSportType(mSportTypeId));
+            equipmentList = equipmentDbHelper.getEquipment(SportTypeDatabaseManager.getInstance(requireContext()).getBSportType(mSportTypeId));
 
         }
         if (DEBUG) {
@@ -1049,8 +1049,8 @@ public class EditWorkoutFragmentClassic extends Fragment {
             values.put(WorkoutSummaries.EQUIPMENT_ID, new EquipmentDbHelper(getActivity()).getEquipmentId((String) spinnerEquipment.getSelectedItem()));
         }
 
-        WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
+        WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance(getContext());
+        SQLiteDatabase db = databaseManager.getInstance(getContext()).getDatabase();
 
         try {
             db.update(WorkoutSummaries.TABLE,
@@ -1061,7 +1061,6 @@ public class EditWorkoutFragmentClassic extends Fragment {
             // TODO: use Toast?
             Log.e(TAG, "Error while writing" + e);
         }
-        databaseManager.closeDatabase(); // db.close();
 
         if (DEBUG) Log.d(TAG, "end of saveWorkout()");
     }
@@ -1073,13 +1072,15 @@ public class EditWorkoutFragmentClassic extends Fragment {
         builder.setView(listView);
         final Dialog dialog = builder.create();
 
-        final List<String> fancyNameList = WorkoutSummariesDatabaseManager.getFancyNameList();
+        WorkoutSummariesDatabaseManager workoutSummariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(getContext());
+
+        final List<String> fancyNameList = workoutSummariesDatabaseManager.getFancyNameList();
         ArrayAdapter<String> arrayAdapter = new ArrayAdapter<>(getContext(), android.R.layout.simple_list_item_1, fancyNameList.toArray(new String[fancyNameList.size()]));
         listView.setAdapter(arrayAdapter);
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                String fullFancyName = WorkoutSummariesDatabaseManager.getFancyNameAndIncrement(fancyNameList.get(position));
+                String fullFancyName = workoutSummariesDatabaseManager.getFancyNameAndIncrement(fancyNameList.get(position));
                 editExportName.setText(fullFancyName);
                 dialog.dismiss();
             }
@@ -1087,7 +1088,7 @@ public class EditWorkoutFragmentClassic extends Fragment {
         listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
             @Override
             public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
-                long fancyNameId = WorkoutSummariesDatabaseManager.getFancyNameId(fancyNameList.get(position));
+                long fancyNameId = workoutSummariesDatabaseManager.getFancyNameId(fancyNameList.get(position));
                 EditFancyWorkoutNameDialog dialog = EditFancyWorkoutNameDialog.newInstance(fancyNameId);
                 dialog.show(getFragmentManager(), EditFancyWorkoutNameDialog.TAG);
                 return true;

@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.fragments.mapFragments;
 
+import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Color;
@@ -55,8 +56,8 @@ public class TrackOnMapHelper {
     private final EnumMap<TrackType, HashMap<GoogleMap, Polyline>> mPolylines = new EnumMap<>(TrackType.class);
 
     @Nullable
-    public static PolylineOptions getPolylineOptions(long workoutId, @NonNull Roughness roughness, @NonNull TrackType trackType) {
-        String baseFileName = WorkoutSummariesDatabaseManager.getBaseFileName(workoutId);
+    public static PolylineOptions getPolylineOptions(Context context, long workoutId, @NonNull Roughness roughness, @NonNull TrackType trackType) {
+        String baseFileName = WorkoutSummariesDatabaseManager.getInstance(context).getBaseFileName(workoutId);
         if (baseFileName == null) {
             return null;
         }
@@ -65,8 +66,8 @@ public class TrackOnMapHelper {
                 .color(trackType.color)
                 .zIndex(5);
 
-        WorkoutSamplesDatabaseManager databaseManager = WorkoutSamplesDatabaseManager.getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
+        WorkoutSamplesDatabaseManager databaseManager = WorkoutSamplesDatabaseManager.getInstance(context);
+        SQLiteDatabase db = databaseManager.getDatabase();
         Cursor cursor = db.query(WorkoutSamplesDatabaseManager.getTableName(baseFileName),          // TODO: on some devices, an exception is thrown here
                 null,
                 null,
@@ -87,7 +88,6 @@ public class TrackOnMapHelper {
         }
 
         cursor.close();
-        databaseManager.closeDatabase(); // db.close();
 
         return polylineOptions;
     }
@@ -120,7 +120,7 @@ public class TrackOnMapHelper {
         return true;
     }
 
-    public void showTrackOnMap(MapView mapView, GoogleMap map, long workoutId, @NonNull Roughness roughness, @NonNull TrackType trackType, boolean zoomToMap, boolean animateZoom) {
+    public void showTrackOnMap(Context context, MapView mapView, GoogleMap map, long workoutId, @NonNull Roughness roughness, @NonNull TrackType trackType, boolean zoomToMap, boolean animateZoom) {
         if (DEBUG)
             Log.i(TAG, "showTrackOnMap for workoutId=" + workoutId + ", roughness=" + roughness.name() + ", trackType=" + trackType.name());
 
@@ -141,7 +141,7 @@ public class TrackOnMapHelper {
         }
 
         if (calcTrackData) {
-            new TrackOnMapThread(mapView, map, workoutId, roughness, trackType, zoomToMap, animateZoom).start();
+            new TrackOnMapThread(context, mapView, map, workoutId, roughness, trackType, zoomToMap, animateZoom).start();
         }
     }
 
@@ -206,12 +206,12 @@ public class TrackOnMapHelper {
         return trackData;
     }
 
-    private void calcTrackData(long workoutId, @NonNull Roughness roughness, @NonNull TrackType trackType) {
+    private void calcTrackData(Context context, long workoutId, @NonNull Roughness roughness, @NonNull TrackType trackType) {
         if (DEBUG)
             Log.i(TAG, "calcTrackData for workoutId=" + workoutId + ", roughness=" + roughness.name() + ", trackType=" + trackType.name());
         if (DEBUG) Log.i(TAG, "sensorTypeLatitude=" + trackType.getLatitudeName());
 
-        PolylineOptions polylineOptions = getPolylineOptions(workoutId, roughness, trackType);
+        PolylineOptions polylineOptions = getPolylineOptions(context, workoutId, roughness, trackType);
 
         if (polylineOptions != null && !polylineOptions.getPoints().isEmpty()) {
             if (!mTrackCache.containsKey(roughness)) {
@@ -267,6 +267,7 @@ public class TrackOnMapHelper {
     private record TrackData(PolylineOptions polylineOptions, LatLngBounds latLngBounds) {
     }
     private class TrackOnMapThread extends Thread {
+        final Context context;
         final MapView mapView;
         final GoogleMap map;
         final long workoutId;
@@ -275,7 +276,8 @@ public class TrackOnMapHelper {
         final boolean zoomToMap;
         final boolean animateZoom;
 
-        public TrackOnMapThread(MapView mapView, GoogleMap map, long workoutId, Roughness roughness, TrackType trackType, boolean zoomToMap, boolean animateZoom) {
+        public TrackOnMapThread(Context context, MapView mapView, GoogleMap map, long workoutId, Roughness roughness, TrackType trackType, boolean zoomToMap, boolean animateZoom) {
+            this.context = context;
             this.mapView = mapView;
             this.map = map;
             this.workoutId = workoutId;
@@ -291,7 +293,7 @@ public class TrackOnMapHelper {
             if (DEBUG)
                 Log.i(TAG, "doInBackground for workoutId=" + workoutId);
 
-            calcTrackData(workoutId, roughness, trackType);
+            calcTrackData(context, workoutId, roughness, trackType);
             new Handler(Looper.getMainLooper()).post(() -> {
                 if (DEBUG)
                     Log.i(TAG, "onPostExecute workoutId=" + workoutId);

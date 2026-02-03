@@ -227,7 +227,7 @@ public class TrackingFragment extends BaseTrackingFragment {
 
         mMapContainer = view.findViewById(R.id.map_container);
         // optionally show a map with the track
-        if (mTrackOnMapTrackingFragment == null && TrackingViewsDatabaseManager.showMap(mViewId)) {
+        if (mTrackOnMapTrackingFragment == null && TrackingViewsDatabaseManager.getInstance(getContext()).showMap(mViewId)) {
             mTrackOnMapTrackingFragment = TrackOnMapTrackingAndFollowingFragment.newInstance();
             getChildFragmentManager().beginTransaction().add(mMapContainer.getId(), mTrackOnMapTrackingFragment).commit();
         }
@@ -255,8 +255,9 @@ public class TrackingFragment extends BaseTrackingFragment {
         super.onResume();
         if (DEBUG) Log.i(TAG, "onResume " + mViewId);
 
+        TrackingViewsDatabaseManager trackingViewsDatabaseManager = TrackingViewsDatabaseManager.getInstance(getContext());
         // optionally enable fullscreen mode
-        if (TrackingViewsDatabaseManager.fullscreen(mViewId)) {
+        if (trackingViewsDatabaseManager.fullscreen(mViewId)) {
             hideSystemUI();
         }
         else {
@@ -264,9 +265,9 @@ public class TrackingFragment extends BaseTrackingFragment {
         }
 
         // optionally force day or night...
-        if (TrackingViewsDatabaseManager.day(mViewId))   { forceDay();   }
-        if (TrackingViewsDatabaseManager.night(mViewId)) { forceNight(); }
-        if (TrackingViewsDatabaseManager.systemSettings(mViewId)) { followSystem(); }
+        if (trackingViewsDatabaseManager.day(mViewId))   { forceDay();   }
+        if (trackingViewsDatabaseManager.night(mViewId)) { forceNight(); }
+        if (trackingViewsDatabaseManager.systemSettings(mViewId)) { followSystem(); }
     }
 
 
@@ -347,7 +348,9 @@ public class TrackingFragment extends BaseTrackingFragment {
     public void updateSensorFields() {
         if (DEBUG) Log.d(TAG, "updateSensorFields for " + mViewId);
 
-        TreeMap<Integer, TreeMap<Integer, TrackingViewsDatabaseManager.ViewInfo>> viewInfoMap = TrackingViewsDatabaseManager.getViewInfoMap(mViewId);
+        TrackingViewsDatabaseManager trackingViewsDatabaseManager = TrackingViewsDatabaseManager.getInstance(getContext());
+
+        TreeMap<Integer, TreeMap<Integer, TrackingViewsDatabaseManager.ViewInfo>> viewInfoMap = trackingViewsDatabaseManager.getViewInfoMap(mViewId);
 
         mLLSensors.removeAllViews();
         mHashMapTextViews = new HashMap<>();
@@ -358,7 +361,7 @@ public class TrackingFragment extends BaseTrackingFragment {
         }
 
 
-        if (TrackingViewsDatabaseManager.showLapButton(mViewId)) {
+        if (trackingViewsDatabaseManager.showLapButton(mViewId)) {
             mButtonLap.setVisibility(View.VISIBLE);
         } else {
             mButtonLap.setVisibility(View.GONE);
@@ -401,7 +404,7 @@ public class TrackingFragment extends BaseTrackingFragment {
             long deviceId = viewInfo.sourceDeviceId();
             String deviceName = null;
             if (deviceId > 0) {
-                deviceName = DevicesDatabaseManager.getDeviceName(deviceId);
+                deviceName = DevicesDatabaseManager.getInstance(requireContext()).getDeviceName(deviceId);
             }
             if (DEBUG) {
                 Log.d(TAG, "creating view for sensor: " + sensorType.name() + " (" + deviceName + ")" + " deviceId=" + deviceId);

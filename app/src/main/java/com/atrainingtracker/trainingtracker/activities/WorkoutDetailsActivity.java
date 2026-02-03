@@ -138,7 +138,7 @@ public class WorkoutDetailsActivity extends AppCompatActivity
 
         if (mCalculatingExtremaValues) {  // currently calculating the extrema values
             findViewById(R.id.llProgress).setVisibility(View.VISIBLE);
-        } else if (!WorkoutSummariesDatabaseManager.getBoolean(mWorkoutID, WorkoutSummaries.EXTREMA_VALUES_CALCULATED)) {  // extrema values are not yet calculated
+        } else if (!WorkoutSummariesDatabaseManager.getInstance(this).getBoolean(mWorkoutID, WorkoutSummaries.EXTREMA_VALUES_CALCULATED)) {  // extrema values are not yet calculated
             Log.i(TAG, "calculate the extrema values");
             mCalculatingExtremaValues = true;
 

@@ -98,7 +98,7 @@ public class EditSportTypeDialog extends DialogFragment {
         double minAvgSpeed = SportType.DEFAULT_MIN_AVG_SPEED;
         double maxAvgSpeed = SportType.DEFAULT_MAX_AVG_SPEED;
 
-        SQLiteDatabase db = SportTypeDatabaseManager.getInstance().getOpenDatabase();
+        SQLiteDatabase db = SportTypeDatabaseManager.getInstance(requireContext()).getDatabase();
 
         Cursor cursor = db.query(SportType.TABLE,  // String table,
                 null,                              // String[] columns,
@@ -118,7 +118,6 @@ public class EditSportTypeDialog extends DialogFragment {
             maxAvgSpeed = cursor.getDouble(cursor.getColumnIndex(SportType.MAX_AVG_SPEED));
         }
         cursor.close();
-        SportTypeDatabaseManager.getInstance().closeDatabase();
 
         // now, create the view
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
@@ -233,7 +232,7 @@ public class EditSportTypeDialog extends DialogFragment {
             contentValues.put(SportType.TRAINING_PEAKS_NAME, (String) mSpTrainingPeaks.getSelectedItem());
         }
 
-        SQLiteDatabase db = SportTypeDatabaseManager.getInstance().getOpenDatabase();
+        SQLiteDatabase db = SportTypeDatabaseManager.getInstance(requireContext()).getDatabase();
 
         if (mSportTypeId < 0) {  // create an entry
             db.insert(SportType.TABLE, null, contentValues);
@@ -241,8 +240,6 @@ public class EditSportTypeDialog extends DialogFragment {
             db.update(SportType.TABLE, contentValues,
                     SportType.C_ID + "=?", new String[]{Long.toString(mSportTypeId)});
         }
-
-        SportTypeDatabaseManager.getInstance().closeDatabase();
 
         getContext().sendBroadcast(new Intent(SPORT_TYPE_CHANGED_INTENT)
                 .setPackage(getContext().getPackageName()));

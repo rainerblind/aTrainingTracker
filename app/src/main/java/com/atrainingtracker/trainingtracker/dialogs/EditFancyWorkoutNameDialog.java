@@ -98,10 +98,10 @@ public class EditFancyWorkoutNameDialog extends DialogFragment {
         boolean addVia = true;
 
         // get all the data
-        List<String> myLocationNameList = KnownLocationsDatabaseManager.getMyLocationNameList();
-        List<String> sportTypesList = SportTypeDatabaseManager.getSportTypesList();
+        List<String> myLocationNameList = KnownLocationsDatabaseManager.getInstance(requireContext()).getMyLocationNameList();
+        List<String> sportTypesList = SportTypeDatabaseManager.getInstance(requireContext()).getSportTypesList();
 
-        final SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
+        final SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance(getContext()).getDatabase();
 
         Cursor cursor = db.query(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS,  // String table,
                 null,                                           // String[] columns,
@@ -111,7 +111,7 @@ public class EditFancyWorkoutNameDialog extends DialogFragment {
 
         if (cursor.moveToFirst()) {
             sportTypeId = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.SPORT_ID));
-            sportTypeName = SportTypeDatabaseManager.getUIName(sportTypeId);
+            sportTypeName = SportTypeDatabaseManager.getInstance(requireContext()).getUIName(sportTypeId);
             startLocationName = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.START_LOCATION_NAME));
             endLocationName = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.END_LOCATION_NAME));
             fancyName = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.FANCY_NAME));
@@ -210,7 +210,7 @@ public class EditFancyWorkoutNameDialog extends DialogFragment {
 
                         // save everything
                         ContentValues contentValues = new ContentValues();
-                        contentValues.put(WorkoutSummaries.SPORT_ID, SportTypeDatabaseManager.getSportTypesIdList().get(spinnerSport.getSelectedItemPosition()));
+                        contentValues.put(WorkoutSummaries.SPORT_ID, SportTypeDatabaseManager.getInstance(requireContext()).getSportTypesIdList().get(spinnerSport.getSelectedItemPosition()));
                         contentValues.put(WorkoutSummaries.START_LOCATION_NAME, (String) spinnerStartName.getSelectedItem());
                         contentValues.put(WorkoutSummaries.END_LOCATION_NAME, (String) spinnerEndName.getSelectedItem());
                         contentValues.put(WorkoutSummaries.FANCY_NAME, etName.getText().toString());
@@ -231,8 +231,6 @@ public class EditFancyWorkoutNameDialog extends DialogFragment {
                         getContext().sendBroadcast(new Intent(FANCY_WORKOUT_NAME_CHANGED_INTENT)
                                 .setPackage(getContext().getPackageName()));
 
-                        WorkoutSummariesDatabaseManager.getInstance().closeDatabase();
-
                         dialog.dismiss();
                     }
                 });
@@ -240,8 +238,6 @@ public class EditFancyWorkoutNameDialog extends DialogFragment {
                 new DialogInterface.OnClickListener() {
                     public void onClick(@NonNull DialogInterface dialog, int whichButton) {
                         Log.i(TAG, "Cancel clicked");
-
-                        WorkoutSummariesDatabaseManager.getInstance().closeDatabase();
 
                         dialog.dismiss();
                     }

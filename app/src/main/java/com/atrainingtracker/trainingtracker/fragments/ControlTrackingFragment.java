@@ -510,8 +510,8 @@ public class ControlTrackingFragment extends BaseTrackingFragment {
 
         boolean finishedProperly = true;
 
-        WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
+        WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance(getContext());
+        SQLiteDatabase db = databaseManager.getDatabase();
         Cursor cursor = db.query(WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE, null, null, null, null, null, null);
         if (cursor.getCount() > 0) {
             cursor.moveToLast();
@@ -519,7 +519,6 @@ public class ControlTrackingFragment extends BaseTrackingFragment {
             finishedProperly = cursor.getInt(index) >= 1;
         }
         cursor.close();
-        databaseManager.closeDatabase(); // db.close();
 
         return finishedProperly;
 

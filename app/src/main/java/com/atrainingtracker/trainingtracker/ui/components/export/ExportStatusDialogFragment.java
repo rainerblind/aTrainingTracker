@@ -118,7 +118,7 @@ public class ExportStatusDialogFragment extends DialogFragment {
         float scale = getResources().getDisplayMetrics().density;
         int padding_scaled = (int) (PADDING * scale + 0.5f);
 
-        String workoutName = WorkoutSummariesDatabaseManager.getBaseFileName(mWorkoutId);
+        String workoutName = WorkoutSummariesDatabaseManager.getInstance(requireContext()).getBaseFileName(mWorkoutId);
 
         ExportStatusRepository repository = ExportStatusRepository.getInstance(getContext());
         EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>> exportStatusTable = repository.getExportStatusMap(workoutName);

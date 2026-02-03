@@ -58,8 +58,8 @@ public abstract class BaseFileWriter extends BaseExporter {
 
 
     protected void getHeaderData(@NonNull ExportInfo exportInfo) {
-        WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
+        WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance(mContext);
+        SQLiteDatabase db = databaseManager.getDatabase();
 
         Cursor cursor = db.query(WorkoutSummaries.TABLE,
                 null,
@@ -84,7 +84,6 @@ public abstract class BaseFileWriter extends BaseExporter {
 
         // now, that we have all the data, we close the mCursor
         cursor.close();
-        databaseManager.closeDatabase(); // db.close();
 
         haveDistance = data.indexOf('D') > 0;
         haveSpeed = data.indexOf('S') > 0;
@@ -117,7 +116,7 @@ public abstract class BaseFileWriter extends BaseExporter {
             } */
         }
 
-        BSportType bSportType = SportTypeDatabaseManager.getBSportType(sportTypeId);
+        BSportType bSportType = SportTypeDatabaseManager.getInstance(mContext).getBSportType(sportTypeId);
         haveBikeCadence = haveCadence & bSportType == BSportType.BIKE;
         haveRunCadence = haveCadence & bSportType == BSportType.RUN;
     }

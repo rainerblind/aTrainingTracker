@@ -35,8 +35,8 @@ class ChangeSportAndEquipmentDialogFragment : DialogFragment() {
     private lateinit var equipmentLabel: TextView
 
     // Data
-    private val sportTypeIds: List<Long> by lazy { SportTypeDatabaseManager.getSportTypesIdList() }
-    private val sportTypeNames: List<String> by lazy { SportTypeDatabaseManager.getSportTypesUiNameList() }
+    private val sportTypeIds: List<Long> by lazy { SportTypeDatabaseManager.getInstance(requireContext()).getSportTypesIdList() }
+    private val sportTypeNames: List<String> by lazy { SportTypeDatabaseManager.getInstance(requireContext()).getSportTypesUiNameList() }
     private lateinit var equipmentDbHelper: EquipmentDbHelper
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
@@ -104,7 +104,7 @@ class ChangeSportAndEquipmentDialogFragment : DialogFragment() {
     }
 
     private fun updateEquipmentSpinner(sportId: Long, equipmentToSelect: String?) {
-        val bSportType = SportTypeDatabaseManager.getBSportType(sportId);
+        val bSportType = SportTypeDatabaseManager.getInstance(requireContext()).getBSportType(sportId);
 
         // Set the equipment label based on sport type
         equipmentLabel.setText(

@@ -195,7 +195,7 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
             setRefreshing(true);
         }
 
-        mDb = SegmentsDatabaseManager.getInstance().getOpenDatabase();
+        mDb = SegmentsDatabaseManager.getInstance(requireContext()).getDatabase();
         updateCursor();
 
         ContextCompat.registerReceiver(getContext(), mSegmentUpdateStartedReceiver, mSegmentUpdateStartedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
@@ -207,8 +207,6 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
     public void onPause() {
         super.onPause();
         if (DEBUG) Log.i(TAG, "onPause()");
-
-        SegmentsDatabaseManager.getInstance().closeDatabase();
 
         getContext().unregisterReceiver(mSegmentUpdateStartedReceiver);
         getContext().unregisterReceiver(mUpdateSegmentsListReceiver);
@@ -234,7 +232,7 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
         switch (item.getItemId()) {
             case R.id.itemDeleteAllSegments:
                 Log.i(TAG, "option delete all segments");
-                SegmentsDatabaseManager.deleteAllTables(getContext());
+                SegmentsDatabaseManager.getInstance(requireContext()).deleteAllTables();
 
                 updateCursor();
 
@@ -259,12 +257,12 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
 
     protected void updateCursor() {
         if (DEBUG)
-            Log.i(TAG, "updateCursor, activity_type=" + SportTypeDatabaseManager.getStravaName(mSportTypeId));
+            Log.i(TAG, "updateCursor, activity_type=" + SportTypeDatabaseManager.getInstance(requireContext()).getStravaName(mSportTypeId));
 
         mStarredSegmentsCursor = mDb.query(Segments.TABLE_STARRED_SEGMENTS,
                 StarredSegmentsCursorAdapter.FROM,           // columns
                 Segments.ACTIVITY_TYPE + "=?",               // selection
-                new String[]{SportTypeDatabaseManager.getStravaName(mSportTypeId)},  // selectionArgs
+                new String[]{SportTypeDatabaseManager.getInstance(requireContext()).getStravaName(mSportTypeId)},  // selectionArgs
                 null, null,                                  // groupBy, having
                 null);                                              // orderBy
 

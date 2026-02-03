@@ -39,6 +39,7 @@ import com.atrainingtracker.trainingtracker.MyHelper;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.ExtremaType;
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager;
+import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
 import com.atrainingtracker.trainingtracker.helpers.CalcExtremaValuesThread;
 import com.google.android.gms.maps.GoogleMap;
@@ -129,9 +130,9 @@ public class TrackOnMapAftermathFragment
 
             TrackOnMapHelper trackOnMapHelper = ((TrainingApplication) getActivity().getApplication()).trackOnMapHelper;
 
-            trackOnMapHelper.showTrackOnMap(null, mMap, mWorkoutID, Roughness.ALL, TrackOnMapHelper.TrackType.GPS, false, false);
-            trackOnMapHelper.showTrackOnMap(null, mMap, mWorkoutID, Roughness.ALL, TrackOnMapHelper.TrackType.NETWORK, false, false);
-            trackOnMapHelper.showTrackOnMap(null, mMap, mWorkoutID, Roughness.ALL, TrackOnMapHelper.TrackType.FUSED, false, false);
+            trackOnMapHelper.showTrackOnMap(getContext(), null, mMap, mWorkoutID, Roughness.ALL, TrackOnMapHelper.TrackType.GPS, false, false);
+            trackOnMapHelper.showTrackOnMap(getContext(), null, mMap, mWorkoutID, Roughness.ALL, TrackOnMapHelper.TrackType.NETWORK, false, false);
+            trackOnMapHelper.showTrackOnMap(getContext(), null, mMap, mWorkoutID, Roughness.ALL, TrackOnMapHelper.TrackType.FUSED, false, false);
         }
 
         // we always show the best track
@@ -180,7 +181,10 @@ public class TrackOnMapAftermathFragment
             return;
         }
 
-        WorkoutSamplesDatabaseManager.LatLngValue latLngValue = WorkoutSamplesDatabaseManager.getExtremaPosition(mWorkoutID, sensorType, extremaType);
+        WorkoutSummariesDatabaseManager workoutSummariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(requireContext());
+        WorkoutSamplesDatabaseManager workoutSamplesDatabaseManager = WorkoutSamplesDatabaseManager.getInstance(requireContext());
+
+        WorkoutSamplesDatabaseManager.LatLngValue latLngValue = workoutSamplesDatabaseManager.getExtremaPosition(workoutSummariesDatabaseManager, mWorkoutID, sensorType, extremaType);
 
         if (latLngValue != null) {
             MarkerOptions markerOptions = new MarkerOptions()

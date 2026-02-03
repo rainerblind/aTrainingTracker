@@ -5,6 +5,7 @@ import androidx.compose.animation.core.copy
 import androidx.lifecycle.*
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
+import com.atrainingtracker.trainingtracker.database.WorkoutDeletionHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.atrainingtracker.trainingtracker.exporter.ExportManager
@@ -20,8 +21,8 @@ import kotlinx.coroutines.launch
 class EditWorkoutViewModel(application: Application, private val workoutId: Long) : AndroidViewModel(application) {
     private val context = application
 
-    private val workoutSummariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance()
-    private val sportTypeDatabaseManager = SportTypeDatabaseManager.getInstance()
+    private val workoutSummariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(application)
+    private val sportTypeDatabaseManager = SportTypeDatabaseManager.getInstance(application)
     private val equipmentDbHelper = EquipmentDbHelper(application)
 
 
@@ -33,7 +34,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
 
     private val headerDataProvider =
         WorkoutHeaderDataProvider(application, EquipmentDbHelper(application))
-    private val detailsDataProvider = WorkoutDetailsDataProvider()
+    private val detailsDataProvider = WorkoutDetailsDataProvider(application)
     private val extremaDataProvider = ExtremaDataProvider(application)
     private val descriptionDataProvider = DescriptionDataProvider()
 
@@ -43,7 +44,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
 
     private fun loadWorkout() {
         viewModelScope.launch(Dispatchers.IO) {
-            val db = workoutSummariesDatabaseManager.getOpenDatabase()
+            val db = workoutSummariesDatabaseManager.getDatabase()
             val cursor = db.query(
                 WorkoutSummaries.TABLE,
                 null,
@@ -74,7 +75,6 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
                 _workoutData.postValue(data)
             }
             cursor.close()
-            workoutSummariesDatabaseManager.closeDatabase()
         }
     }
 
@@ -94,8 +94,9 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         val currentData = _workoutData.value ?: return
 
         // get the sportId
-        val newSportId = SportTypeDatabaseManager.getSportTypeIdFromUIName(newSportName)
-        val newBSportType = SportTypeDatabaseManager.getBSportType(newSportId)
+        val sportTypeDatabaseManager = SportTypeDatabaseManager.getInstance(context)
+        val newSportId = sportTypeDatabaseManager.getSportTypeIdFromUIName(newSportName)
+        val newBSportType = sportTypeDatabaseManager.getBSportType(newSportId)
 
         // update the LiveData state with all the new information
         _workoutData.value = currentData.copy(
@@ -166,12 +167,12 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     // -- fancy / auto name
     // LiveData to hold the list of fancy names for the dialog
     val fancyNameList: LiveData<List<String>> by lazy {
-        MutableLiveData(WorkoutSummariesDatabaseManager.getFancyNameList())
+        MutableLiveData(workoutSummariesDatabaseManager.getFancyNameList())
     }
 
     // This function will be called when the user selects a name from the dialog.
     fun onFancyNameSelected(baseName: String) {
-        val fullFancyName = WorkoutSummariesDatabaseManager.getFancyNameAndIncrement(baseName)
+        val fullFancyName = workoutSummariesDatabaseManager.getFancyNameAndIncrement(baseName)
 
         updateWorkoutName(fullFancyName)
     }
@@ -189,7 +190,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
 
             // -- update the Database
             // Update Workout Name
-            WorkoutSummariesDatabaseManager.updateWorkoutName(
+            workoutSummariesDatabaseManager.updateWorkoutName(
                 workoutId,
                 dataToSave.headerData.workoutName ?: ""
             )
@@ -197,21 +198,21 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
             // Update Sport and Equipment
             val equipmentDbHelper = EquipmentDbHelper(getApplication())
             val equipmentId = equipmentDbHelper.getEquipmentId(dataToSave.headerData.equipmentName ?: "")
-            WorkoutSummariesDatabaseManager.updateSportAndEquipment(
+            workoutSummariesDatabaseManager.updateSportAndEquipment(
                 workoutId,
                 dataToSave.headerData.sportId,
                 equipmentId
             )
 
             // Update Commute and Trainer flags
-            WorkoutSummariesDatabaseManager.updateCommuteAndTrainerFlag(
+            workoutSummariesDatabaseManager.updateCommuteAndTrainerFlag(
                 workoutId,
                 dataToSave.isCommute,
                 dataToSave.isTrainer
             )
 
             // Update Description, Goal, and Method
-            WorkoutSummariesDatabaseManager.updateDescription(
+            workoutSummariesDatabaseManager.updateDescription(
                 workoutId,
                 dataToSave.descriptionData.description ?: "",
                 dataToSave.descriptionData.goal ?: "",
@@ -228,7 +229,8 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
 
     fun deleteWorkout() {
         viewModelScope.launch(Dispatchers.IO) {
-            val success = WorkoutSummariesDatabaseManager.deleteWorkout(workoutId, context)
+            val workoutDeletionHelper = WorkoutDeletionHelper(context)
+            val success = workoutDeletionHelper.deleteWorkout(workoutId)
             deleteFinishedEvent.postValue(Event(success))
         }
     }

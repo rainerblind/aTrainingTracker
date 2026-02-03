@@ -108,7 +108,7 @@ public abstract class TrackOnMapBaseFragment
             return;
         }
 
-        ((TrainingApplication) getActivity().getApplication()).trackOnMapHelper.showTrackOnMap(null, mMap, mWorkoutID, Roughness.ALL, TrackOnMapHelper.TrackType.BEST, zoomToShowTrack, true);
+        ((TrainingApplication) getActivity().getApplication()).trackOnMapHelper.showTrackOnMap(getContext(), null, mMap, mWorkoutID, Roughness.ALL, TrackOnMapHelper.TrackType.BEST, zoomToShowTrack, true);
         mTrackOnMapLoaded = true;
 
     }
@@ -145,15 +145,19 @@ public abstract class TrackOnMapBaseFragment
     // helper method to get START and END position
     @Nullable
     LatLng getExtremaPosition(@NonNull ExtremaType extremaType, boolean calculateWhenNotInDb) {
-        String baseFileName = WorkoutSummariesDatabaseManager.getBaseFileName(mWorkoutID);
+        WorkoutSummariesDatabaseManager workoutSummariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(requireContext());
+        WorkoutSamplesDatabaseManager workoutSamplesDatabaseManager = WorkoutSamplesDatabaseManager.getInstance(requireContext());
+        // TODO: implement a Helper class to get the extrema values instead of passing database managers to an database manager...
 
-        Double lat = WorkoutSummariesDatabaseManager.getExtremaValue(mWorkoutID, SensorType.LATITUDE, extremaType);
+        String baseFileName = workoutSummariesDatabaseManager.getBaseFileName(mWorkoutID);
+
+        Double lat = workoutSummariesDatabaseManager.getExtremaValue(mWorkoutID, SensorType.LATITUDE, extremaType);
         if (lat == null && calculateWhenNotInDb) {
-            lat = WorkoutSamplesDatabaseManager.calcExtremaValue(baseFileName, extremaType, SensorType.LATITUDE);
+            lat = workoutSamplesDatabaseManager.calcExtremaValue(workoutSummariesDatabaseManager, baseFileName, extremaType, SensorType.LATITUDE);
         }
-        Double lon = WorkoutSummariesDatabaseManager.getExtremaValue(mWorkoutID, SensorType.LONGITUDE, extremaType);
+        Double lon = workoutSummariesDatabaseManager.getExtremaValue(mWorkoutID, SensorType.LONGITUDE, extremaType);
         if (lon == null && calculateWhenNotInDb) {
-            lon = WorkoutSamplesDatabaseManager.calcExtremaValue(baseFileName, extremaType, SensorType.LONGITUDE);
+            lon = workoutSamplesDatabaseManager.calcExtremaValue(workoutSummariesDatabaseManager, baseFileName, extremaType, SensorType.LONGITUDE);
         }
 
         return (lat != null & lon != null) ? new LatLng(lat, lon) : null;
@@ -165,16 +169,18 @@ public abstract class TrackOnMapBaseFragment
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     public void showStarredSegmentsOnMap(@NonNull SegmentHelper.SegmentType segmentType) {
+        SportTypeDatabaseManager sportTypeDatabaseManager = SportTypeDatabaseManager.getInstance(requireContext());
+
         String selection = SegmentsDatabaseManager.Segments.ACTIVITY_TYPE + "=?";
         String[] selectionArgs = null;
         switch (segmentType) {
             case NONE:
                 return; // do not search and show any segment
             case BIKE:
-                selectionArgs = new String[]{SportTypeDatabaseManager.getStravaName(SportTypeDatabaseManager.getSportTypeId(BSportType.BIKE))};
+                selectionArgs = new String[]{sportTypeDatabaseManager.getStravaName(SportTypeDatabaseManager.getSportTypeId(BSportType.BIKE))};
                 break;
             case RUN:
-                selectionArgs = new String[]{SportTypeDatabaseManager.getStravaName(SportTypeDatabaseManager.getSportTypeId(BSportType.RUN))};
+                selectionArgs = new String[]{sportTypeDatabaseManager.getStravaName(SportTypeDatabaseManager.getSportTypeId(BSportType.RUN))};
                 break;
             case ALL:
                 // selectionArgs = null;
@@ -182,7 +188,7 @@ public abstract class TrackOnMapBaseFragment
                 break;
         }
 
-        SQLiteDatabase db = SegmentsDatabaseManager.getInstance().getOpenDatabase();
+        SQLiteDatabase db = SegmentsDatabaseManager.getInstance(requireContext()).getDatabase();
         Cursor cursor = db.query(SegmentsDatabaseManager.Segments.TABLE_STARRED_SEGMENTS, null,
                 selection, selectionArgs,
                 null, null, null);
@@ -193,8 +199,6 @@ public abstract class TrackOnMapBaseFragment
                 Log.i(TAG, "segmentId=" + cursor.getLong(cursor.getColumnIndex(SegmentsDatabaseManager.Segments.SEGMENT_ID)) +
                         ", segment name=" + cursor.getString(cursor.getColumnIndex(SegmentsDatabaseManager.Segments.SEGMENT_NAME)));
         }
-
-        SegmentsDatabaseManager.getInstance().closeDatabase();
     }
 
     public void showSegmentOnMap(long segmentId, boolean zoomToShowTrack) {
@@ -215,7 +219,7 @@ public abstract class TrackOnMapBaseFragment
     @Deprecated
     // use addSegmentDirectionMarkers instead
     protected void addSegmentStartAndFinishMarker(long segmentId, boolean zoomToStart) {
-        SQLiteDatabase db = SegmentsDatabaseManager.getInstance().getOpenDatabase();
+        SQLiteDatabase db = SegmentsDatabaseManager.getInstance(requireContext()).getDatabase();
         Cursor cursor = db.query(SegmentsDatabaseManager.Segments.TABLE_STARRED_SEGMENTS, null,
                 SegmentsDatabaseManager.Segments.SEGMENT_ID + "=?", new String[]{segmentId + ""},
                 null, null, null);
@@ -235,12 +239,10 @@ public abstract class TrackOnMapBaseFragment
             addMarker(latLng, R.drawable.stop_logo_map, getString(R.string.Stop));
 
         }
-
-        SegmentsDatabaseManager.getInstance().closeDatabase();
     }
 
     protected void addSegmentDirectionMarkers(long segmentId, boolean zoomToStart) {
-        SQLiteDatabase db = SegmentsDatabaseManager.getInstance().getOpenDatabase();
+        SQLiteDatabase db = SegmentsDatabaseManager.getInstance(requireContext()).getDatabase();
         Cursor cursor = db.query(SegmentsDatabaseManager.Segments.TABLE_SEGMENT_STREAMS, null,
                 SegmentsDatabaseManager.Segments.SEGMENT_ID + "=?", new String[]{segmentId + ""},
                 null, null, null);
@@ -289,7 +291,7 @@ public abstract class TrackOnMapBaseFragment
     protected void addSegmentStartAndFinishLine(long segmentId) {
         if (DEBUG) Log.i(TAG, "addSegmentStartAndFinishLine");
 
-        SQLiteDatabase db = SegmentsDatabaseManager.getInstance().getOpenDatabase();
+        SQLiteDatabase db = SegmentsDatabaseManager.getInstance(requireContext()).getDatabase();
 
         Cursor cursor = db.query(SegmentsDatabaseManager.Segments.TABLE_SEGMENT_STREAMS, null,
                 SegmentsDatabaseManager.Segments.SEGMENT_ID + "=?", new String[]{segmentId + ""},
@@ -302,9 +304,6 @@ public abstract class TrackOnMapBaseFragment
                 null, null,
                 SegmentsDatabaseManager.Segments.C_ID + " DESC", START_AND_FINISH_LINE_POINTS);   // using DISTANCE does not work :-(
         addOrthogonalLine(cursor);
-
-        SegmentsDatabaseManager.getInstance().closeDatabase();
-
     }
 
     protected void addOrthogonalLine(@NonNull Cursor cursor) {

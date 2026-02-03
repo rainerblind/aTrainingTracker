@@ -848,16 +848,6 @@ public class TrainingApplication extends Application {
 
         mNotificationSummary = getString(R.string.searching);
 
-        // initialize DatabaseManagers
-        LapsDatabaseManager.initializeInstance(new LapsDatabaseManager.LapsDbHelper(this));
-        WorkoutSummariesDatabaseManager.initializeInstance(new WorkoutSummariesDatabaseManager.WorkoutSummariesDbHelper(this));
-        WorkoutSamplesDatabaseManager.initializeInstance(new WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper(this));
-        DevicesDatabaseManager.initializeInstance(new DevicesDatabaseManager.DevicesDbHelper(this));
-        TrackingViewsDatabaseManager.initializeInstance(new TrackingViewsDatabaseManager.TrackingViewsDbHelper(this));
-        PebbleDatabaseManager.initializeInstance(new PebbleDatabaseManager.PebbleDbHelper(this));
-        KnownLocationsDatabaseManager.initializeInstance(new KnownLocationsDatabaseManager.KnownLocationsDbHelper(this));
-        SegmentsDatabaseManager.initializeInstance(new SegmentsDatabaseManager.SegmentsDbHelper(this));
-        SportTypeDatabaseManager.initializeInstance(new SportTypeDatabaseManager.SportTypeDbHelper(this));
 
         PreferenceManager.setDefaultValues(this, R.xml.prefs, false);
         cSharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
