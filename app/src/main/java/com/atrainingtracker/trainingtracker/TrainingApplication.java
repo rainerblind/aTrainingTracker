@@ -848,9 +848,6 @@ public class TrainingApplication extends Application {
 
         mNotificationSummary = getString(R.string.searching);
 
-        // initialize DatabaseManagers
-        // TODO: remove this initializations by implementing the singleton pattern properly
-        PebbleDatabaseManager.initializeInstance(new PebbleDatabaseManager.PebbleDbHelper(this));
 
         PreferenceManager.setDefaultValues(this, R.xml.prefs, false);
         cSharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);

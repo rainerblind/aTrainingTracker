@@ -35,7 +35,7 @@ public class ConfigPebbleViewsActivity extends ConfigViewsActivity {
     @NonNull
     @Override
     public ActivityType getActivityType(long viewId) {
-        return PebbleDatabaseManager.getActivityType(viewId);
+        return PebbleDatabaseManager.getInstance(this).getActivityType(viewId);
     }
 
     @NonNull
