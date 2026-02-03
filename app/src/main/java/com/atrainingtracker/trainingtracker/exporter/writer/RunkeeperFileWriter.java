@@ -101,7 +101,7 @@ public class RunkeeperFileWriter extends BaseFileWriter {
         bufferedWriter.write(String.format(FORMAT_q, HAS_PATH, haveGeo));
 
         // TODO: check before writing!
-        startTime = WorkoutSummariesDatabaseManager.getStartTime(mContext, exportInfo.getFileBaseName(), "localtime");
+        startTime = WorkoutSummariesDatabaseManager.getInstance(mContext).getStartTime(exportInfo.getFileBaseName(), "localtime");
         bufferedWriter.write(String.format(FORMAT_qq, START_TIME, dbTime2RunkeeperTime(startTime)));
         bufferedWriter.write(String.format(FORMAT_q, TOTAL_DISTANCE, totalDistance)); // double, in meters
         bufferedWriter.write(String.format(FORMAT_q, DURATION, totalTime)); // double, in seconds

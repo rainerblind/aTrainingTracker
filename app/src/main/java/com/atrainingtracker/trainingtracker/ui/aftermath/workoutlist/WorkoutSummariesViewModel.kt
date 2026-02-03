@@ -27,6 +27,8 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
     // Public LiveData that the Fragment will observe. This is immutable.
     val workouts: LiveData<List<WorkoutData>> = _workouts
 
+    private val workoutSummariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(application)
+
     private val headerDataProvider = WorkoutHeaderDataProvider(application, EquipmentDbHelper(application))
     private val detailsDataProvider = WorkoutDetailsDataProvider(application)
     private val extremaDataProvider = ExtremaDataProvider(application)
@@ -40,7 +42,8 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
         // Use the ViewModel's coroutine scope to launch on a background thread.
         viewModelScope.launch(Dispatchers.IO) {
             val summaryList = mutableListOf<WorkoutData>()
-            val db = WorkoutSummariesDatabaseManager.getInstance(application).getDatabase()
+
+            val db = workoutSummariesDatabaseManager.getDatabase()
             val cursor = db.query(
                 WorkoutSummaries.TABLE,
                 null, null, null, null, null,
@@ -84,7 +87,7 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
      */
     fun updateWorkoutName(id: Long, newName: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            WorkoutSummariesDatabaseManager.updateWorkoutName(application, id, newName)
+            workoutSummariesDatabaseManager.updateWorkoutName(id, newName)
 
             // After updating, reload the data to reflect the change.
             loadWorkouts()
@@ -96,7 +99,7 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
      */
     fun updateDescription(id: Long, newDescription: String, newGoal: String, newMethod: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            WorkoutSummariesDatabaseManager.updateDescription(application,id, newDescription, newGoal, newMethod)
+            workoutSummariesDatabaseManager.updateDescription(id, newDescription, newGoal, newMethod)
 
             // Reload to show the updated data.
             loadWorkouts()
@@ -108,7 +111,7 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
      */
     fun updateSportAndEquipment(id: Long, newSportId: Long, newEquipmentId: Long) {
         viewModelScope.launch(Dispatchers.IO) {
-            WorkoutSummariesDatabaseManager.updateSportAndEquipment(application,id, newSportId, newEquipmentId)
+            workoutSummariesDatabaseManager.updateSportAndEquipment(id, newSportId, newEquipmentId)
 
             // Reload to show the updated sport icon and equipment name.
             loadWorkouts()
