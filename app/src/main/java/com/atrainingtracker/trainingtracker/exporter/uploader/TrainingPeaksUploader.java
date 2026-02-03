@@ -102,7 +102,7 @@ public class TrainingPeaksUploader extends BaseExporter {
         boolean isPrivate;
 
         sportId = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.SPORT_ID));
-        sportName = SportTypeDatabaseManager.getTrainingPeaksName(sportId);
+        sportName = SportTypeDatabaseManager.getInstance(mContext).getTrainingPeaksName(sportId);
 
         name = myGetStringFromCursor(cursor, WorkoutSummaries.WORKOUT_NAME);
         description = myGetStringFromCursor(cursor, WorkoutSummaries.DESCRIPTION);

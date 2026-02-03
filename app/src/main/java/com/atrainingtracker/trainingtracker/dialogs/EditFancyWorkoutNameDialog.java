@@ -99,7 +99,7 @@ public class EditFancyWorkoutNameDialog extends DialogFragment {
 
         // get all the data
         List<String> myLocationNameList = KnownLocationsDatabaseManager.getInstance(requireContext()).getMyLocationNameList();
-        List<String> sportTypesList = SportTypeDatabaseManager.getSportTypesList();
+        List<String> sportTypesList = SportTypeDatabaseManager.getInstance(requireContext()).getSportTypesList();
 
         final SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance(getContext()).getDatabase();
 
@@ -111,7 +111,7 @@ public class EditFancyWorkoutNameDialog extends DialogFragment {
 
         if (cursor.moveToFirst()) {
             sportTypeId = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.SPORT_ID));
-            sportTypeName = SportTypeDatabaseManager.getUIName(sportTypeId);
+            sportTypeName = SportTypeDatabaseManager.getInstance(requireContext()).getUIName(sportTypeId);
             startLocationName = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.START_LOCATION_NAME));
             endLocationName = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.END_LOCATION_NAME));
             fancyName = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.FANCY_NAME));
@@ -210,7 +210,7 @@ public class EditFancyWorkoutNameDialog extends DialogFragment {
 
                         // save everything
                         ContentValues contentValues = new ContentValues();
-                        contentValues.put(WorkoutSummaries.SPORT_ID, SportTypeDatabaseManager.getSportTypesIdList().get(spinnerSport.getSelectedItemPosition()));
+                        contentValues.put(WorkoutSummaries.SPORT_ID, SportTypeDatabaseManager.getInstance(requireContext()).getSportTypesIdList().get(spinnerSport.getSelectedItemPosition()));
                         contentValues.put(WorkoutSummaries.START_LOCATION_NAME, (String) spinnerStartName.getSelectedItem());
                         contentValues.put(WorkoutSummaries.END_LOCATION_NAME, (String) spinnerEndName.getSelectedItem());
                         contentValues.put(WorkoutSummaries.FANCY_NAME, etName.getText().toString());

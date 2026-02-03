@@ -852,7 +852,6 @@ public class TrainingApplication extends Application {
         // TODO: remove this initializations by implementing the singleton pattern properly
         PebbleDatabaseManager.initializeInstance(new PebbleDatabaseManager.PebbleDbHelper(this));
         SegmentsDatabaseManager.initializeInstance(new SegmentsDatabaseManager.SegmentsDbHelper(this));
-        SportTypeDatabaseManager.initializeInstance(new SportTypeDatabaseManager.SportTypeDbHelper(this));
 
         PreferenceManager.setDefaultValues(this, R.xml.prefs, false);
         cSharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);

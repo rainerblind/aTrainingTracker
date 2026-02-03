@@ -165,7 +165,7 @@ public class TrackerService extends Service {
                 if (DEBUG) Log.i(TAG, "updating notification");
                 mTrainingApplication.updateTimeAndDistanceToNotification(mBanalService.getBestSensorData(SensorType.TIME_ACTIVE),
                         mBanalService.getBestSensorData(SensorType.DISTANCE_m),
-                        SportTypeDatabaseManager.getUIName(mBanalService.getSportTypeId()));
+                        SportTypeDatabaseManager.getInstance(TrackerService.this).getUIName(mBanalService.getSportTypeId()));
                 if (DEBUG) Log.i(TAG, "updated notification");
 
             }
@@ -423,7 +423,7 @@ public class TrackerService extends Service {
         values.put(WorkoutSummaries.METHOD, "");
         values.put(WorkoutSummaries.GC_DATA, MySensorManager.EMPTY_GC_DATA);
         values.put(WorkoutSummaries.SPORT_ID, sportTypeId);
-        values.put(WorkoutSummaries.B_SPORT, SportTypeDatabaseManager.getBSportType(sportTypeId).name());
+        values.put(WorkoutSummaries.B_SPORT, SportTypeDatabaseManager.getInstance(this).getBSportType(sportTypeId).name());
         values.put(WorkoutSummaries.WORKOUT_NAME, mBaseFileName);
         values.put(WorkoutSummaries.FILE_BASE_NAME, mBaseFileName);
 
@@ -457,7 +457,7 @@ public class TrackerService extends Service {
         // now, that we know the sport and the available sensors, we update the summaries DB
         ContentValues values = new ContentValues();
         values.put(WorkoutSummaries.SPORT_ID, sportTypeId);
-        values.put(WorkoutSummaries.B_SPORT, SportTypeDatabaseManager.getBSportType(sportTypeId).name());
+        values.put(WorkoutSummaries.B_SPORT, SportTypeDatabaseManager.getInstance(this).getBSportType(sportTypeId).name());
         values.put(WorkoutSummaries.GC_DATA, mBanalService.getGCDataString());
 
         WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance(this);
@@ -508,7 +508,7 @@ public class TrackerService extends Service {
 
         long sportTypeId = getSportTypeId();
         summaryValues.put(WorkoutSummaries.SPORT_ID, sportTypeId);
-        summaryValues.put(WorkoutSummaries.B_SPORT, SportTypeDatabaseManager.getBSportType(sportTypeId).name());
+        summaryValues.put(WorkoutSummaries.B_SPORT, SportTypeDatabaseManager.getInstance(this).getBSportType(sportTypeId).name());
 
         SQLiteDatabase summariesDb = summariesDatabaseManager.getDatabase();
         summariesDb.update(WorkoutSummaries.TABLE,

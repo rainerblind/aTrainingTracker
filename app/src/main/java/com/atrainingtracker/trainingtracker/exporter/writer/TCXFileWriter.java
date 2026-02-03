@@ -74,7 +74,7 @@ public class TCXFileWriter extends BaseFileWriter {
         bufferedWriter.write("<?xml version=\"1.0\"?>\n");
         bufferedWriter.write("<TrainingCenterDatabase xmlns=\"http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://www.garmin.com/xmlschemas/ActivityExtension/v2 http://www.garmin.com/xmlschemas/ActivityExtensionv2.xsd http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2 http://www.garmin.com/xmlschemas/TrainingCenterDatabasev2.xsd\">\n");
         bufferedWriter.write("  <Activities>\n");
-        bufferedWriter.write("    <Activity Sport=\"" + SportTypeDatabaseManager.getTcxName(sportTypeId) + "\">\n");
+        bufferedWriter.write("    <Activity Sport=\"" + SportTypeDatabaseManager.getInstance(mContext).getTcxName(sportTypeId) + "\">\n");
         bufferedWriter.write("      <Id>" + dbTime2XMLTime(startTime) + "</Id>\n");
 
         SQLiteDatabase db = WorkoutSamplesDatabaseManager.getInstance(mContext).getDatabase();

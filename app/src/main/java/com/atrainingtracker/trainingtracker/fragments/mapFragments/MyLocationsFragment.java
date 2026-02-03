@@ -105,8 +105,8 @@ public class MyLocationsFragment
     final Map<Marker, Long> mMarker2MyLocationsIdMap = new HashMap<>();
     final Map<Long, Circle> mMarkerId2CircleMap = new HashMap<>();
 
-    final List<Long> mSportTypesIdList = SportTypeDatabaseManager.getSportTypesIdList();
-    final List<String> mSportTypesUiNamList = SportTypeDatabaseManager.getSportTypesUiNameList();
+    final List<Long> mSportTypesIdList = SportTypeDatabaseManager.getInstance(requireContext()).getSportTypesIdList();
+    final List<String> mSportTypesUiNamList = SportTypeDatabaseManager.getInstance(requireContext()).getSportTypesUiNameList();
 
     /**
      * stolen from BaseExporter
@@ -540,7 +540,7 @@ public class MyLocationsFragment
                 mExtremaTypeSpinner.setClickable(false);
 
                 // show a progress dialog
-                progressDialog.setMessage(context.getString(R.string.get_extremaType_of_sportType_format, mExtremaType.toString(), SportTypeDatabaseManager.getUIName(mSportTypeId)));
+                progressDialog.setMessage(context.getString(R.string.get_extremaType_of_sportType_format, mExtremaType.toString(), SportTypeDatabaseManager.getInstance(requireContext()).getUIName(mSportTypeId)));
                 progressDialog.setCancelable(false);
                 progressDialog.setCanceledOnTouchOutside(false);
                 progressDialog.show();

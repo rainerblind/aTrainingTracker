@@ -259,12 +259,12 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
 
     protected void updateCursor() {
         if (DEBUG)
-            Log.i(TAG, "updateCursor, activity_type=" + SportTypeDatabaseManager.getStravaName(mSportTypeId));
+            Log.i(TAG, "updateCursor, activity_type=" + SportTypeDatabaseManager.getInstance(requireContext()).getStravaName(mSportTypeId));
 
         mStarredSegmentsCursor = mDb.query(Segments.TABLE_STARRED_SEGMENTS,
                 StarredSegmentsCursorAdapter.FROM,           // columns
                 Segments.ACTIVITY_TYPE + "=?",               // selection
-                new String[]{SportTypeDatabaseManager.getStravaName(mSportTypeId)},  // selectionArgs
+                new String[]{SportTypeDatabaseManager.getInstance(requireContext()).getStravaName(mSportTypeId)},  // selectionArgs
                 null, null,                                  // groupBy, having
                 null);                                              // orderBy
 

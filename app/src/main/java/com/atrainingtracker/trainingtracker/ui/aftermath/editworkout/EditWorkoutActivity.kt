@@ -68,6 +68,9 @@ class EditWorkoutActivity : AppCompatActivity() {
     private var extremaValuesViewHolder: ExtremaValuesViewHolder? = null
     private var mapComponent: MapComponent? = null
 
+    private lateinit var sportTypeDatabaseManager: SportTypeDatabaseManager
+
+
 
     companion object {
         const val EXTRA_SHOW_DETAILS = "com.atrainingtracker.trainingtracker.SHOW_DETAILS"
@@ -82,6 +85,8 @@ class EditWorkoutActivity : AppCompatActivity() {
 
         // Set the content view
         setContentView(R.layout.edit_workout_modern)
+
+        sportTypeDatabaseManager = SportTypeDatabaseManager.getInstance(this)
 
         // Retrieve the parameters from the Intent's extras
         workoutId = intent.getLongExtra(WorkoutSummaries.WORKOUT_ID, -1)
@@ -324,10 +329,10 @@ class EditWorkoutActivity : AppCompatActivity() {
 
         // first, calculate the list of sport types
         if (showAllSportTypes || bSportType == null) {  // when we have to show all or the sport type is not known, we show all...
-            sportTypeNameList =  SportTypeDatabaseManager.getSportTypesUiNameList()
+            sportTypeNameList =  sportTypeDatabaseManager.getSportTypesUiNameList()
         } else {
             // first, we get a list of sport types based on the basic sport type and the average speed
-            sportTypeNameList = SportTypeDatabaseManager.getSportTypesUiNameList(bSportType, avgSpd?.toDouble() ?: 0.0)
+            sportTypeNameList = sportTypeDatabaseManager.getSportTypesUiNameList(bSportType, avgSpd?.toDouble() ?: 0.0)
 
             // when the sportName is not yet defined and the list has only one element, this will be selected as the current sport
             if (currentSportName == null && sportTypeNameList.size == 1) {

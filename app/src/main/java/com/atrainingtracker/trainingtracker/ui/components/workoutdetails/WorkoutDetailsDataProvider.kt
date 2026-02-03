@@ -33,7 +33,7 @@ class WorkoutDetailsDataProvider(private val context: Context) {
         val ascent = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.ASCENDING))
         val descent = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.DESCENDING))
         val sportId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPORT_ID))
-        val bSportType = SportTypeDatabaseManager.getBSportType(sportId)
+        val bSportType = SportTypeDatabaseManager.getInstance(context).getBSportType(sportId)
 
         // 2. Fetch the extra data from the database manager
         val workoutSummariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(context)

@@ -97,7 +97,7 @@ public class RunkeeperFileWriter extends BaseFileWriter {
         // }
 
         bufferedWriter.write("{\n");
-        bufferedWriter.write(String.format(FORMAT_qq, TYPE, SportTypeDatabaseManager.getRunkeeperName(sportTypeId)));
+        bufferedWriter.write(String.format(FORMAT_qq, TYPE, SportTypeDatabaseManager.getInstance(mContext).getRunkeeperName(sportTypeId)));
         bufferedWriter.write(String.format(FORMAT_q, HAS_PATH, haveGeo));
 
         // TODO: check before writing!
