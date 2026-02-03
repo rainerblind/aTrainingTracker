@@ -188,7 +188,7 @@ public abstract class RemoteDevicesFragment extends Fragment {
         super.onResume();
         if (DEBUG) Log.d(TAG, "onResume()");
 
-        mRemoteDevicesDb = DevicesDatabaseManager.getInstance().getOpenDatabase();
+        mRemoteDevicesDb = DevicesDatabaseManager.getInstance(requireContext()).getDatabase();
         mRemoteDevicesCursor = getCursor();
 
         // really necessary???
@@ -208,7 +208,6 @@ public abstract class RemoteDevicesFragment extends Fragment {
 
         stopTimer();
 
-        DevicesDatabaseManager.getInstance().closeDatabase();
         mRemoteDevicesDb = null;
 
         if (mRemoteDevicesCursor != null && !mRemoteDevicesCursor.isClosed()) {
@@ -378,7 +377,7 @@ public abstract class RemoteDevicesFragment extends Fragment {
                                 if (mGetBanalServiceInterface != null
                                         && mGetBanalServiceInterface.getBanalServiceComm() != null) {
                                     if (!mDeviceId2Units.containsKey(deviceId)) {
-                                        mDeviceId2Units.put(deviceId, getString(MyHelper.getUnitsId(DevicesDatabaseManager.getDeviceType(deviceId).getMainSensorType())));
+                                        mDeviceId2Units.put(deviceId, getString(MyHelper.getUnitsId(DevicesDatabaseManager.getInstance(requireContext()).getDeviceType(deviceId).getMainSensorType())));
                                     }
                                     mRemoteDevicesAdapter.updateMainField(deviceId, getString(R.string.ValueAndUnitFormat,
                                             mGetBanalServiceInterface.getBanalServiceComm().getMainSensorStringValue(deviceId),

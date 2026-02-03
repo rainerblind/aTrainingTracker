@@ -404,7 +404,7 @@ public class TrackingFragment extends BaseTrackingFragment {
             long deviceId = viewInfo.sourceDeviceId();
             String deviceName = null;
             if (deviceId > 0) {
-                deviceName = DevicesDatabaseManager.getDeviceName(deviceId);
+                deviceName = DevicesDatabaseManager.getInstance(requireContext()).getDeviceName(deviceId);
             }
             if (DEBUG) {
                 Log.d(TAG, "creating view for sensor: " + sensorType.name() + " (" + deviceName + ")" + " deviceId=" + deviceId);

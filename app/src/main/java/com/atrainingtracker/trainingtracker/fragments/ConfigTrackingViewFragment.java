@@ -281,7 +281,7 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
             if (viewInfo.sourceDeviceId() <= 0) {
                 tvSource.setText(R.string.bestSensor);
             } else {
-                tvSource.setText(DevicesDatabaseManager.getDeviceName(viewInfo.sourceDeviceId()));
+                tvSource.setText(DevicesDatabaseManager.getInstance(requireContext()).getDeviceName(viewInfo.sourceDeviceId()));
             }
 
             TextView tvFilterTitle = llView.findViewById(R.id.tvConfigureFilterTitle);

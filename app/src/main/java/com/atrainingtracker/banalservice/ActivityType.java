@@ -246,7 +246,7 @@ public enum ActivityType {
                 break;
         }
 
-        if (context != null && DevicesDatabaseManager.haveTemperatureDevice(context)) {
+        if (context != null && DevicesDatabaseManager.getInstance(context).haveTemperatureDevice()) {
             sensors = Arrays.copyOf(sensors, sensors.length + 3);
             sensors[sensors.length - 3] = SensorType.TEMPERATURE;
             sensors[sensors.length - 2] = SensorType.TEMPERATURE_MIN;

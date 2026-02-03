@@ -849,7 +849,7 @@ public class TrainingApplication extends Application {
         mNotificationSummary = getString(R.string.searching);
 
         // initialize DatabaseManagers
-        DevicesDatabaseManager.initializeInstance(new DevicesDatabaseManager.DevicesDbHelper(this));
+        // TODO: remove this initializations by implementing the singleton pattern properly
         PebbleDatabaseManager.initializeInstance(new PebbleDatabaseManager.PebbleDbHelper(this));
         SegmentsDatabaseManager.initializeInstance(new SegmentsDatabaseManager.SegmentsDbHelper(this));
         SportTypeDatabaseManager.initializeInstance(new SportTypeDatabaseManager.SportTypeDbHelper(this));

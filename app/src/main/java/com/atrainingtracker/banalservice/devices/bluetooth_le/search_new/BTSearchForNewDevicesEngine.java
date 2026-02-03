@@ -65,6 +65,8 @@ public class BTSearchForNewDevicesEngine
     protected Map<String, Integer> mBatteryPercentage = new HashMap<String, Integer>();
     protected Map<String, Queue<BluetoothGattCharacteristic>> mReadCharacteristicQueue = new HashMap<String, Queue<BluetoothGattCharacteristic>>();
     BluetoothAdapter mBluetoothAdapter;
+    final DevicesDatabaseManager mDevicesDatabaseManager;
+
     boolean scanning = false;
     private final IBTSearchForNewDevicesEngineInterface mCallbackInterface;
     // callback to get the manufacturer and battery percentage
@@ -189,8 +191,8 @@ public class BTSearchForNewDevicesEngine
                     } else if (BluetoothConstants.UUID_CHARACTERISTIC_CYCLING_POWER_FEATURE.equals(characteristic.getUuid())
                             && getDeviceType() == DeviceType.BIKE_POWER) {
                         newDeviceFound(gatt.getDevice().getAddress());  // first, we have to put this device into the database, then we can add its features...
-                        long deviceId = DevicesDatabaseManager.getDeviceId(DeviceType.BIKE_POWER, gatt.getDevice().getAddress());
-                        DevicesDatabaseManager.putBikePowerSensorFlags(deviceId, BTLEBikePowerDevice.btFeature2BikePowerSensorFlags(characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT32, 0)));
+                        long deviceId = mDevicesDatabaseManager.getDeviceId(DeviceType.BIKE_POWER, gatt.getDevice().getAddress());
+                        mDevicesDatabaseManager.putBikePowerSensorFlags(deviceId, BTLEBikePowerDevice.btFeature2BikePowerSensorFlags(characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT32, 0)));
                     } else {
                         Log.d(TAG, "unknown characteristic: " + characteristic.getUuid());
                     }
@@ -245,6 +247,8 @@ public class BTSearchForNewDevicesEngine
 
         BluetoothManager bluetoothManager = (BluetoothManager) context.getSystemService(Context.BLUETOOTH_SERVICE);
         mBluetoothAdapter = bluetoothManager.getAdapter();
+
+        mDevicesDatabaseManager = DevicesDatabaseManager.getInstance(mContext);
     }
 
     // 	@Override

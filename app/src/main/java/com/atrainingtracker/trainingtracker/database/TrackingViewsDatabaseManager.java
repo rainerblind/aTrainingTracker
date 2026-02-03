@@ -553,8 +553,9 @@ public class TrackingViewsDatabaseManager {
         return result;
     }
 
+    // TODO: create own helper class instad of passing a database manager.
     @NonNull
-    public List<FilterData> getAllFilterData() {
+    public List<FilterData> getAllFilterData(DevicesDatabaseManager devicesDatabaseManager) {
         LinkedList<FilterData> result = new LinkedList<>();
 
         SQLiteDatabase db = getDatabase();
@@ -566,7 +567,7 @@ public class TrackingViewsDatabaseManager {
         while (cursor.moveToNext()) {
             SensorType sensorType = SensorType.valueOf(cursor.getString(cursor.getColumnIndex(TrackingViewsDbHelper.SENSOR_TYPE)));
             int sourceDeviceId = cursor.getInt(cursor.getColumnIndex(TrackingViewsDbHelper.SOURCE_DEVICE_ID));
-            String deviceName = DevicesDatabaseManager.getDeviceName(sourceDeviceId);
+            String deviceName = devicesDatabaseManager.getDeviceName(sourceDeviceId);
             FilterType filterType = FilterType.valueOf(cursor.getString(cursor.getColumnIndex(TrackingViewsDbHelper.FILTER_TYPE)));
             double filterConstant = cursor.getDouble(cursor.getColumnIndex(TrackingViewsDbHelper.FILTER_CONSTANT));
 
