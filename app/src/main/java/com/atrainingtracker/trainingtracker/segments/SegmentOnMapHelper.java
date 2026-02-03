@@ -159,7 +159,7 @@ public class SegmentOnMapHelper {
 
         PolylineOptions polylineOptions = new PolylineOptions().color(context.getResources().getColor(R.color.strava));
 
-        SQLiteDatabase db = SegmentsDatabaseManager.getInstance().getOpenDatabase();
+        SQLiteDatabase db = SegmentsDatabaseManager.getInstance(context).getDatabase();
         Cursor cursor = db.query(Segments.TABLE_SEGMENT_STREAMS, null,
                 Segments.SEGMENT_ID + "=?", new String[]{segmentId + ""},
                 null, null, null);
@@ -184,7 +184,6 @@ public class SegmentOnMapHelper {
         }
 
         cursor.close();
-        SegmentsDatabaseManager.getInstance().closeDatabase();
 
         if (havePoints) {
             if (!mSegmentCache.containsKey(roughness)) {

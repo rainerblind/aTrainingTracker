@@ -110,9 +110,7 @@ public class StravaSegmentsIntentService extends IntentService {
         super("StravaSegmentsIntentService");
     }
 
-    private static void getStream(@NonNull StreamType streamType, long id) {
-        SQLiteDatabase db = SegmentsDatabaseManager.getInstance().getOpenDatabase();
-
+    private static void getStream(SQLiteDatabase db, @NonNull StreamType streamType, long id) {
         // first, check whether this stream is already in the database
         Cursor cursor = db.query(streamType.table,
                 null,
@@ -241,8 +239,6 @@ public class StravaSegmentsIntentService extends IntentService {
         } catch (JSONException e) {
             e.printStackTrace();
         }
-
-        SegmentsDatabaseManager.getInstance().closeDatabase();
     }
 
     @Override
@@ -283,7 +279,7 @@ public class StravaSegmentsIntentService extends IntentService {
 
         notifySegmentUpdateStarred();
 
-        SQLiteDatabase db = SegmentsDatabaseManager.getInstance().getOpenDatabase();
+        SQLiteDatabase db = SegmentsDatabaseManager.getInstance(this).getDatabase();
 
         // first, save the segment_ids contained in the database.
         HashSet<Long> segmentIdSet = new HashSet<>();
@@ -419,9 +415,6 @@ public class StravaSegmentsIntentService extends IntentService {
             }
         }
 
-        // close the database
-        SegmentsDatabaseManager.getInstance().closeDatabase();
-
         // remove no longer available segments from ALL databases!
         if (DEBUG)
             Log.i(TAG, "segmentIdSet=" + segmentIdSet + ", newSegmentIdSet=" + newSegmentIdSet);
@@ -469,7 +462,7 @@ public class StravaSegmentsIntentService extends IntentService {
     private void getSegmentStream(long segmentId) {
         if (DEBUG) Log.i(TAG, "getSegmentStream: segmentId=" + segmentId);
 
-        getStream(StreamType.SEGMENT, segmentId);
+        getStream(SegmentsDatabaseManager.getInstance(this).getDatabase(), StreamType.SEGMENT, segmentId);
     }
 
     private void deleteSegments(@NonNull Set<Long> segmentIdSet) {
@@ -481,12 +474,10 @@ public class StravaSegmentsIntentService extends IntentService {
     private void deleteSegment(long segmentId) {
         if (DEBUG) Log.i(TAG, "deleteSegment: segmentId=" + segmentId);
 
-        SQLiteDatabase db = SegmentsDatabaseManager.getInstance().getOpenDatabase();
+        SQLiteDatabase db = SegmentsDatabaseManager.getInstance(this).getDatabase();
 
         db.delete(Segments.TABLE_SEGMENT_STREAMS, Segments.SEGMENT_ID + "=?", new String[]{segmentId + ""});
         db.delete(Segments.TABLE_STARRED_SEGMENTS, Segments.SEGMENT_ID + "=?", new String[]{segmentId + ""});
-
-        SegmentsDatabaseManager.getInstance().closeDatabase();
     }
 
 }

@@ -195,7 +195,7 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
             setRefreshing(true);
         }
 
-        mDb = SegmentsDatabaseManager.getInstance().getOpenDatabase();
+        mDb = SegmentsDatabaseManager.getInstance(requireContext()).getDatabase();
         updateCursor();
 
         ContextCompat.registerReceiver(getContext(), mSegmentUpdateStartedReceiver, mSegmentUpdateStartedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
@@ -207,8 +207,6 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
     public void onPause() {
         super.onPause();
         if (DEBUG) Log.i(TAG, "onPause()");
-
-        SegmentsDatabaseManager.getInstance().closeDatabase();
 
         getContext().unregisterReceiver(mSegmentUpdateStartedReceiver);
         getContext().unregisterReceiver(mUpdateSegmentsListReceiver);
@@ -234,7 +232,7 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
         switch (item.getItemId()) {
             case R.id.itemDeleteAllSegments:
                 Log.i(TAG, "option delete all segments");
-                SegmentsDatabaseManager.deleteAllTables(getContext());
+                SegmentsDatabaseManager.getInstance(requireContext()).deleteAllTables();
 
                 updateCursor();
 
