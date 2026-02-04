@@ -22,5 +22,7 @@ data class WorkoutData(
     val headerData: WorkoutHeaderData,
     val detailsData: WorkoutDetailsData,
     val descriptionData: DescriptionData,
-    val extremaData: List<ExtremaData>
+    val extremaData: List<ExtremaData>,
+
+    val extremaValuesCalculated: Boolean
 )

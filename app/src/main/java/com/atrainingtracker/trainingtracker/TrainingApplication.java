@@ -39,6 +39,11 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
+import androidx.work.Data;
+import androidx.work.ExistingWorkPolicy;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkManager;
+
 import android.util.Log;
 import android.widget.Toast;
 
@@ -53,6 +58,7 @@ import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation;
 import com.atrainingtracker.trainingtracker.activities.WorkoutDetailsActivity;
 import com.atrainingtracker.trainingtracker.exporter.FileFormat;
+import com.atrainingtracker.trainingtracker.helpers.CalcExtremaWorker;
 import com.atrainingtracker.trainingtracker.tracker.TrackerService;
 import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager;
@@ -1149,8 +1155,33 @@ public class TrainingApplication extends Application {
     }
 
     protected void trackingStopped() {
-        sendBroadcast(new Intent(BANALService.RESET_ACCUMULATORS_INTENT)
-                .setPackage(getPackageName()));
+        // send boadcast to reset the accumulators
+        sendBroadcast(new Intent(BANALService.RESET_ACCUMULATORS_INTENT).setPackage(getPackageName()));
+
+        // -- trigger the calculation of the extrema values here.
+        // Define a unique name for this work
+        final String uniqueWorkName = "extrema_calc_" + mWorkoutID;
+
+        // Create input data for the worker
+        Data inputData = new Data.Builder()
+                .putLong(CalcExtremaWorker.KEY_WORKOUT_ID, mWorkoutID)
+                .build();
+
+        // Create the Work Request
+        OneTimeWorkRequest calcWorkRequest = new OneTimeWorkRequest.Builder(CalcExtremaWorker.class)
+                .setInputData(inputData)
+                .addTag(uniqueWorkName) // Also add a tag for easier observation
+                .build();
+
+        // Enqueue the work as UNIQUE work. This prevents it from being started twice.
+        // If it's already running (e.g. due to a quick app restart), it will KEEP the existing one.
+        WorkManager.getInstance(getApplicationContext()).enqueueUniqueWork(
+                uniqueWorkName,
+                ExistingWorkPolicy.KEEP,
+                calcWorkRequest
+        );
+
+        // start EditWorkoutActivity
         startEditWorkoutActivity(mWorkoutID, true); // here, the EditWorkoutActivity shall show the details, extrema values and the map.
         mNotificationManager.cancel(TRACKING_NOTIFICATION_ID);
     }

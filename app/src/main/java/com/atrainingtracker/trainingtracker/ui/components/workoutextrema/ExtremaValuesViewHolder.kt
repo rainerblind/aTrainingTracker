@@ -6,23 +6,74 @@ import android.view.View
 import android.widget.TableLayout
 import android.widget.TableRow
 import android.widget.TextView
+import androidx.lifecycle.LifecycleOwner
+import androidx.work.WorkManager
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.helpers.CalcExtremaWorker
 
 /**
  * A "dumb" ViewHolder responsible *only* for displaying a pre-processed list of ExtremaData objects.
  * It has no knowledge of the database, business rules, or data sources.
  */
 class ExtremaValuesViewHolder(val view: View) {
+
+    private val progressTextView: TextView = view.findViewById(R.id.extrema_progress_text)
     val tableLayout: TableLayout = view.findViewById(R.id.extrema_values_container)
     private val context: Context = view.context
 
     /**
-     * Binds a list of ExtremaData to the UI by populating the table.
-     * If the list is empty, the container's visibility is set to GONE.
+     * Binds data and observes a background worker's progress.
+     * @param initData Contains the workoutId and any pre-calculated extrema values.
+     * @param lifecycleOwner The lifecycle of the Fragment/Activity to safely observe LiveData.
      */
-    fun bind(extremaList: List<ExtremaData>) {
-        // Set visibility of the whole component
-        view.visibility = if (extremaList.isEmpty()) View.GONE else View.VISIBLE
+    fun bind(workoutId: Long, isCalculated: Boolean, extremaList: List<ExtremaData>, lifecycleOwner: LifecycleOwner) {
+        val workTag = "extrema_calc_${workoutId}"
+
+        // CRITICAL: Remove any previous observers from this ViewHolder instance.
+        // This prevents the ViewHolder from listening to updates for an old item when it gets recycled.
+        WorkManager.getInstance(context).getWorkInfosByTagLiveData(workTag).removeObservers(lifecycleOwner)
+
+        // If calculation is already done, just display the data and ensure progress text is hidden.
+        if (isCalculated) {
+            progressTextView.visibility = View.GONE
+            displayExtremaValues(extremaList)
+            return // Nothing more to do.
+        }
+
+        // --- If calculation is NOT done, observe the worker ---
+
+        // Show the progress text with a default message.
+        progressTextView.visibility = View.VISIBLE
+        progressTextView.text = context.getString(R.string.calculating_extrema_values)
+
+        displayExtremaValues(extremaList)
+
+        WorkManager.getInstance(context)
+            .getWorkInfosByTagLiveData(workTag)
+            .observe(lifecycleOwner) { workInfos ->
+                // We tagged the work, so we expect a list with one item.
+                val workInfo = workInfos?.firstOrNull() ?: return@observe
+
+                if (workInfo.state.isFinished) {
+                    // WORK FINISHED: Hide progress text. At this point, the list should be
+                    // refreshed by the ViewModel, which will re-bind with isCalculated = true.
+                    progressTextView.visibility = View.GONE
+                } else {
+                    // WORK IN PROGRESS: Show the progress message from the worker.
+                    val progressMsg =
+                        workInfo.progress.getString(CalcExtremaWorker.KEY_PROGRESS_MESSAGE)
+                    if (progressMsg != null) {
+                        progressTextView.text = progressMsg
+                    }
+                }
+            }
+    }
+
+
+
+    private fun displayExtremaValues(extremaList: List<ExtremaData>) {
+        // Set visibility of the table
+        tableLayout.visibility = if (extremaList.isEmpty()) View.GONE else View.VISIBLE
         if (extremaList.isEmpty()) {
             return
         }
