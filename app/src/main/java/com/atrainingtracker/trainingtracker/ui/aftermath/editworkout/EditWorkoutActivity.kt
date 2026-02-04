@@ -211,10 +211,21 @@ class EditWorkoutActivity : AppCompatActivity() {
             }
         }
 
-        viewModel.extremaData.observe(this) { extremaData ->
-            extremaValuesViewHolder?.bind(extremaData, this)
+        viewModel.autoWorkoutName.observe(this) { event ->
+            event.getContentIfNotHandled()?.let { newName ->
+                editWorkoutName.setText(newName)
+            }
         }
 
+        viewModel.extremaData.observe(this) { extremaData ->
+            extremaValuesViewHolder?.bind(extremaData)
+        }
+
+        viewModel.extremaCalculationMessage.observe(this) { event ->
+            event.getContentIfNotHandled()?.let { message ->
+                extremaValuesViewHolder?.updateProgressMessage(message)
+            }
+        }
 
         viewModel.saveFinishedEvent.observe(this) { event ->
             event.getContentIfNotHandled()?.let { success ->
