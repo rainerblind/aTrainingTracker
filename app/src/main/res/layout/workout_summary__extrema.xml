@@ -10,17 +10,6 @@
     android:layout_height="wrap_content"
     android:orientation="vertical">
 
-    <TextView
-        android:id="@+id/extrema_progress_text"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center_horizontal"
-        android:padding="8dp"
-        android:text="@string/calculating_extrema_values"
-        android:textAppearance="?android:attr/textAppearanceSmall"
-        android:visibility="gone"
-        tools:visibility="visible" />
-
     <TableLayout
         android:id="@+id/extrema_values_container"
         android:layout_width="match_parent"
@@ -86,5 +75,18 @@
         <!-- The dynamic data rows will be added here by the ViewHolder -->
 
     </TableLayout>
+
+
+
+    <TextView
+        android:id="@+id/extrema_progress_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:padding="8dp"
+        android:text="@string/calculating_extrema_values"
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:visibility="gone"
+        tools:visibility="visible" />
 
 </LinearLayout>

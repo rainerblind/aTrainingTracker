@@ -32,7 +32,7 @@ class ExtremaDataProvider(context: Context) {
     /**
      * Fetches and prepares a list of ExtremaData for a given workout.
      */
-    fun getExtremaDataList(cursor: Cursor): List<ExtremaData> {
+    fun getExtremaData(cursor: Cursor): ExtremaData {
         if (DEBUG) Log.d(TAG, "getExtremaDataList()")
 
         // Define all sensors to check
@@ -55,9 +55,10 @@ class ExtremaDataProvider(context: Context) {
         val workoutId = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.C_ID))
         val sportId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPORT_ID))
         val bSportType = SportTypeDatabaseManager.getInstance(appContext).getBSportType(sportId)
+        val isCalculating = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.EXTREMA_VALUES_CALCULATED)) == 0
 
         // Use Kotlin's functional style to build the list
-        return sensorsToCheck.mapNotNull { sensorType ->
+        val rows = sensorsToCheck.mapNotNull { sensorType ->
             // Business logic: do not show speed for running activities
             if (bSportType == BSportType.RUN && sensorType == SensorType.SPEED_mps) {
                 return@mapNotNull null // Skip this sensor
@@ -71,7 +72,7 @@ class ExtremaDataProvider(context: Context) {
             val avg = getFormattedValue(workoutId, sensorType, ExtremaType.AVG)
             val max = getFormattedValue(workoutId, sensorType, ExtremaType.MAX)
 
-            val data = ExtremaData(
+            val data = ExtremaDataRow(
                 sensorLabel = appContext.getString(sensorType.shortNameId),
                 unitLabel = appContext.getString(MyHelper.getUnitsId(sensorType)),
                 minValue = min,
@@ -82,6 +83,8 @@ class ExtremaDataProvider(context: Context) {
             // Only return the data object if it's not empty, otherwise return null
             if (data.hasAnyData()) data else null
         }
+
+        return ExtremaData(workoutId = workoutId, isCalculating = isCalculating, dataRows = rows)
     }
 
     private fun getFormattedValue(workoutId: Long, sensorType: SensorType, extremaType: ExtremaType): String? {

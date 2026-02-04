@@ -227,7 +227,7 @@ class WorkoutSummariesAdapter(
             headerViewHolder?.bind(summary.headerData)
             detailsViewHolder?.bind(summary.detailsData)
             descriptionViewHolder?.bind(summary.descriptionData)
-            extremaValuesViewHolder?.bind(summary.id, summary.extremaValuesCalculated, summary.extremaData, lifecycleOwner)
+            extremaValuesViewHolder?.bind(summary.extremaData)
             exportStatusViewHolder?.bind(summary.fileBaseName)
 
             // Bind the map component

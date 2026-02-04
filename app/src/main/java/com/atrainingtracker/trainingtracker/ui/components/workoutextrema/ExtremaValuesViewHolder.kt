@@ -22,56 +22,25 @@ class ExtremaValuesViewHolder(val view: View) {
     private val context: Context = view.context
 
     /**
-     * Binds data and observes a background worker's progress.
-     * @param initData Contains the workoutId and any pre-calculated extrema values.
-     * @param lifecycleOwner The lifecycle of the Fragment/Activity to safely observe LiveData.
+     * @param extremaData Contains the list of extrema values.
      */
-    fun bind(workoutId: Long, isCalculated: Boolean, extremaList: List<ExtremaData>, lifecycleOwner: LifecycleOwner) {
-        val workTag = "extrema_calc_${workoutId}"
-
-        // CRITICAL: Remove any previous observers from this ViewHolder instance.
-        // This prevents the ViewHolder from listening to updates for an old item when it gets recycled.
-        WorkManager.getInstance(context).getWorkInfosByTagLiveData(workTag).removeObservers(lifecycleOwner)
-
+    fun bind(extremaData: ExtremaData) {
         // If calculation is already done, just display the data and ensure progress text is hidden.
-        if (isCalculated) {
+        if (extremaData.isCalculating) {
+            progressTextView.visibility = View.VISIBLE
+        } else {
             progressTextView.visibility = View.GONE
-            displayExtremaValues(extremaList)
-            return // Nothing more to do.
         }
 
-        // --- If calculation is NOT done, observe the worker ---
+        displayExtremaValues(extremaData.dataRows)
+    }
 
-        // Show the progress text with a default message.
-        progressTextView.visibility = View.VISIBLE
-        progressTextView.text = context.getString(R.string.calculating_extrema_values)
-
-        displayExtremaValues(extremaList)
-
-        WorkManager.getInstance(context)
-            .getWorkInfosByTagLiveData(workTag)
-            .observe(lifecycleOwner) { workInfos ->
-                // We tagged the work, so we expect a list with one item.
-                val workInfo = workInfos?.firstOrNull() ?: return@observe
-
-                if (workInfo.state.isFinished) {
-                    // WORK FINISHED: Hide progress text. At this point, the list should be
-                    // refreshed by the ViewModel, which will re-bind with isCalculated = true.
-                    progressTextView.visibility = View.GONE
-                } else {
-                    // WORK IN PROGRESS: Show the progress message from the worker.
-                    val progressMsg =
-                        workInfo.progress.getString(CalcExtremaWorker.KEY_PROGRESS_MESSAGE)
-                    if (progressMsg != null) {
-                        progressTextView.text = progressMsg
-                    }
-                }
-            }
+    fun updateProgressMessage(message: String) {
+        progressTextView.text = message
     }
 
 
-
-    private fun displayExtremaValues(extremaList: List<ExtremaData>) {
+    private fun displayExtremaValues(extremaList: List<ExtremaDataRow>) {
         // Set visibility of the table
         tableLayout.visibility = if (extremaList.isEmpty()) View.GONE else View.VISIBLE
         if (extremaList.isEmpty()) {
@@ -91,7 +60,7 @@ class ExtremaValuesViewHolder(val view: View) {
     /**
      * Creates and adds a single TableRow for a given ExtremaData object.
      */
-    private fun addExtremaRow(data: ExtremaData) {
+    private fun addExtremaRow(data: ExtremaDataRow) {
         val row = TableRow(context)
 
         // Use Kotlin's 'apply' scope function for cleaner object configuration
