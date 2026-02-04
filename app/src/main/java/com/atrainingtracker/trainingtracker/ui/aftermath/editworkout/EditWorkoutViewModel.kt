@@ -1,14 +1,17 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.editworkout
 
 import android.app.Application
-import androidx.compose.animation.core.copy
+import android.util.Log
 import androidx.lifecycle.*
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutDeletionHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.atrainingtracker.trainingtracker.exporter.ExportManager
+import com.atrainingtracker.trainingtracker.helpers.CalcExtremaWorker
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.DescriptionDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsDataProvider
@@ -38,11 +41,35 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     private val extremaDataProvider = ExtremaDataProvider(application)
     private val descriptionDataProvider = DescriptionDataProvider()
 
-    init {
-        loadWorkout()
+    private val extremaDataObserver = object : Observer<List<WorkInfo>> {
+        private var lastMessage: String? = ""
+        override fun onChanged(workInfos: List<WorkInfo>) {
+            Log.d("EditWorkoutViewModel", "called for workoutId=$workoutId")
+            val workInfo = workInfos.firstOrNull() ?: return
+
+            val currentMessage = workInfo.progress.getString(CalcExtremaWorker.KEY_PROGRESS_MESSAGE)
+            val isFinished = workInfo.state.isFinished
+            Log.d("EditWorkoutViewModel", "currentMessage=$currentMessage, lastMessage=$lastMessage, isFinished=$isFinished")
+
+            if (isFinished || currentMessage != lastMessage) {
+                lastMessage = currentMessage
+                Log.d("EditWorkoutViewModel", "Update lastMessage: currentMessage=$currentMessage, lastMessage=$lastMessage, isFinished=$isFinished")
+                Log.d("EditWorkoutViewModel", "-> loadWorkout()")
+
+                // Trigger a reload from the database. The `loadWorkouts` function will
+                // handle getting the new data and posting it to the UI.
+                loadWorkout()
+            }
+
+        }
     }
 
-    private fun loadWorkout() {
+
+    init {
+        loadWorkout(true)
+    }
+
+    private fun loadWorkout(initObserver: Boolean = false) {
         viewModelScope.launch(Dispatchers.IO) {
             val db = workoutSummariesDatabaseManager.getDatabase()
             val cursor = db.query(
@@ -69,10 +96,32 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
                     headerData = headerData,
                     detailsData = detailsData,
                     descriptionData = descriptionData,
-                    extremaData = extremaData
+                    extremaData = extremaData,
+                    extremaValuesCalculated = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.EXTREMA_VALUES_CALCULATED)) > 0
                 )
 
                 _workoutData.postValue(data)
+
+                if (initObserver && !data.extremaValuesCalculated) {
+                    launch(Dispatchers.Main) {
+                        Log.d("EditWorkoutViewModel", "Initial setup: Attaching the single observer.")
+                        val workTag = "extrema_calc_${data.id}"
+                        val workManager = WorkManager.getInstance(getApplication())
+                        // Remove any stale observers first, just in case.
+                        workManager.getWorkInfosByTagLiveData(workTag).removeObserver(extremaDataObserver)
+                        // Attach our single, persistent observer.
+                        workManager.getWorkInfosByTagLiveData(workTag).observeForever(extremaDataObserver)
+                    }
+                } else if (data.extremaValuesCalculated) {
+                    launch(Dispatchers.Main) {
+                        Log.d("EditWorkoutViewModel", "No longer need to observe the worker.")
+                        val workTag = "extrema_calc_${data.id}"
+                        val workManager = WorkManager.getInstance(getApplication())
+                        // Remove any stale observers.
+                        workManager.getWorkInfosByTagLiveData(workTag).removeObserver(extremaDataObserver)
+                    }
+                }
+
             }
             cursor.close()
         }

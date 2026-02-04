@@ -6,12 +6,12 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.widget.PopupMenu
 import androidx.fragment.app.FragmentManager
+import androidx.lifecycle.LifecycleOwner
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
-import com.atrainingtracker.trainingtracker.activities.WorkoutDetailsActivity
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusViewHolder
@@ -38,6 +38,7 @@ import com.google.android.gms.maps.MapView
 class WorkoutSummariesAdapter(
     private val activity: Activity,
     private val fragmentManager: FragmentManager,
+    private val lifecycleOwner: LifecycleOwner,
     private val isPlayServiceAvailable: Boolean,
     private val viewModel: WorkoutSummariesViewModel
 ) : ListAdapter<WorkoutData, WorkoutSummariesAdapter.SummaryViewHolder>(WorkoutDiffCallback()) {
@@ -50,6 +51,7 @@ class WorkoutSummariesAdapter(
             row,
             activity,
             fragmentManager,
+            lifecycleOwner,
             isPlayServiceAvailable,
             viewModel
         )
@@ -68,6 +70,7 @@ class WorkoutSummariesAdapter(
         row: View,
         activity: Activity,
         private val fragmentManager: FragmentManager,
+        private val lifecycleOwner: LifecycleOwner,
         isPlayServiceAvailable: Boolean,
         private val viewModel: WorkoutSummariesViewModel
     ) : RecyclerView.ViewHolder(row) {
@@ -224,7 +227,7 @@ class WorkoutSummariesAdapter(
             headerViewHolder?.bind(summary.headerData)
             detailsViewHolder?.bind(summary.detailsData)
             descriptionViewHolder?.bind(summary.descriptionData)
-            extremaValuesViewHolder?.bind(summary.extremaData)
+            extremaValuesViewHolder?.bind(summary.id, summary.extremaValuesCalculated, summary.extremaData, lifecycleOwner)
             exportStatusViewHolder?.bind(summary.fileBaseName)
 
             // Bind the map component
