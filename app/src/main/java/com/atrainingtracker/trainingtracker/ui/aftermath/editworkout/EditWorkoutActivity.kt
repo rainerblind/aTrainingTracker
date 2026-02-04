@@ -469,11 +469,23 @@ class EditWorkoutActivity : AppCompatActivity() {
         }
 
         checkboxCommute.setOnCheckedChangeListener { _, isChecked ->
+            // Tell the ViewModel about the change
             viewModel.updateIsCommute(isChecked)
+
+            // If Commute is checked, uncheck Trainer.
+            if (isChecked && checkboxTrainer.isChecked) {
+                checkboxTrainer.isChecked = false
+            }
         }
 
         checkboxTrainer.setOnCheckedChangeListener { _, isChecked ->
+            // Tell the ViewModel about the change
             viewModel.updateIsTrainer(isChecked)
+
+            // If Trainer is checked, uncheck Commute.
+            if (isChecked && checkboxCommute.isChecked) {
+                checkboxCommute.isChecked = false
+            }
         }
 
         buttonSave.setOnClickListener {
