@@ -186,8 +186,8 @@ class EditWorkoutActivity : AppCompatActivity() {
             }
 
             // Populate Checkboxes
-            checkboxCommute.isChecked = workoutData.isCommute
-            checkboxTrainer.isChecked = workoutData.isTrainer
+            checkboxCommute.isChecked = workoutData.headerData.commute
+            checkboxTrainer.isChecked = workoutData.headerData.trainer
 
             // Populate Spinners
             setupSpinners()
@@ -211,10 +211,10 @@ class EditWorkoutActivity : AppCompatActivity() {
             }
         }
 
-        viewModel.autoWorkoutName.observe(this) { event ->
-            event.getContentIfNotHandled()?.let { newName ->
-                editWorkoutName.setText(newName)
-            }
+        viewModel.headerData.observe(this) { headerData ->
+            editWorkoutName.setText(headerData.workoutName)
+            checkboxCommute.isChecked = headerData.commute
+            checkboxTrainer.isChecked = headerData.trainer
         }
 
         viewModel.detailsData.observe(this) { detailsData ->
@@ -464,11 +464,23 @@ class EditWorkoutActivity : AppCompatActivity() {
         }
 
         checkboxCommute.setOnCheckedChangeListener { _, isChecked ->
+            // Tell the ViewModel about the change
             viewModel.updateIsCommute(isChecked)
+
+            // If Commute is checked, uncheck Trainer.
+            if (isChecked && checkboxTrainer.isChecked) {
+                checkboxTrainer.isChecked = false
+            }
         }
 
         checkboxTrainer.setOnCheckedChangeListener { _, isChecked ->
+            // Tell the ViewModel about the change
             viewModel.updateIsTrainer(isChecked)
+
+            // If Trainer is checked, uncheck Commute.
+            if (isChecked && checkboxCommute.isChecked) {
+                checkboxCommute.isChecked = false
+            }
         }
 
         buttonSave.setOnClickListener {
