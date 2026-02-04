@@ -121,6 +121,10 @@ public class WorkoutSummariesDatabaseManager {
     }
 
 
+    public String getWorkoutName(long workoutId) {
+        return getString(workoutId, WorkoutSummaries.WORKOUT_NAME);
+    }
+
 
 
     @Nullable

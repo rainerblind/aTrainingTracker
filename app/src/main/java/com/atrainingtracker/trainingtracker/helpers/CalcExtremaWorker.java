@@ -37,15 +37,19 @@ public class CalcExtremaWorker extends Worker {
 
     // --- KEYS for Input/Output/Progress Data ---
     public static final String KEY_WORKOUT_ID = "WORKOUT_ID";
-    public static final String KEY_PROGRESS_MESSAGE = "PROGRESS_MESSAGE";
-    public static final String FANCY_NAME = "FANCY_NAME";
-    public static final String SENSOR_TYPE = "SENSOR_TYPE";
 
 
-    public static final String FINISHED_CALCULATING_EXTREMA_VALUES = "com.atrainingtracker.helpers.CalcExtremaValuesThread.FINISHED_CALCULATING_EXTREMA_VALUES";
-    public static final String FINISHED_CALCULATING_EXTREMA_VALUE = "com.atrainingtracker.helpers.CalcExtremaValuesThread.FINISHED_CALCULATING_EXTREMA_VALUE";
-    public static final String FINISHED_GUESSING_COMMUTE_AND_TRAINER = "com.atrainingtracker.helpers.CalcExtremaValuesThread.FINISHED_GUESSING_COMMUTE_AND_TRAINER";
-    public static final String FINISHED_CALCULATING_FANCY_NAME = "com.atrainingtracker.helpers.CalcExtremaValuesThread.FINISHED_CALCULATING_FANCY_NAME";
+    private int progressCounter = 0;
+    public static final String KEY_PROGRESS_SEQUENCE = "PROGRESS_SEQUENCE";
+
+    public static final String KEY_STARTING_MESSAGE = "STARTING_MESSAGE";
+
+
+    public static final String KEY_FINISHED_MESSAGE = "FINISHED_MESSAGE";
+    public static final String FINISHED_EXTREMA_VALE = "EXTREMA_VALUE";
+    public static final String FINISHED_COMMUTE_AND_TRAINER = "COMMUTE_AND_TRAINER";
+    public static final String FINISHED_AUTO_NAME = "AUTO_NAME";
+
 
 
     // Same sensor types from the old thread
@@ -69,6 +73,40 @@ public class CalcExtremaWorker extends Worker {
         super(context, workerParams);
     }
 
+
+    private void publishStarting(String message) {
+        if (DEBUG) {
+            Log.d(TAG, "...: " + message);
+            try {
+                Thread.sleep(1000); // 1 second delay
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt(); // Restore the interrupted status
+            }
+
+            Log.d(TAG, "Progress: " + message);
+        }
+
+        progressCounter++;
+        Data progressData = new Data.Builder()
+                .putString(KEY_STARTING_MESSAGE, message)
+                .putInt(KEY_PROGRESS_SEQUENCE, progressCounter)
+                .build();
+
+        setProgressAsync(progressData);
+    }
+
+    private void publishFinished (String message) {
+        progressCounter++;
+        Data progressData = new Data.Builder()
+                .putString(KEY_FINISHED_MESSAGE, message)
+                .putInt(KEY_PROGRESS_SEQUENCE, progressCounter)
+                .build();
+
+        setProgressAsync(progressData);
+    }
+
+
+
     @NonNull
     @Override
     public Result doWork() {
@@ -82,7 +120,7 @@ public class CalcExtremaWorker extends Worker {
 
         try {
             if (DEBUG) Log.d(TAG, "Starting extrema calculation for workout " + workoutId);
-            publishProgress(context.getString(R.string.initializing));
+            publishStarting(context.getString(R.string.initializing));
 
             String baseFileName = WorkoutSummariesDatabaseManager.getInstance(context).getBaseFileName(workoutId);
 
@@ -113,8 +151,6 @@ public class CalcExtremaWorker extends Worker {
             values.put(WorkoutSummaries.EXTREMA_VALUES_CALCULATED, 1);
             WorkoutSummariesDatabaseManager.getInstance(context).getDatabase().update(WorkoutSummaries.TABLE, values, WorkoutSummaries.C_ID + "=?", new String[]{Long.toString(workoutId)});
 
-            // Send broadcast to inform others...
-            context.sendBroadcast(new Intent(FINISHED_CALCULATING_EXTREMA_VALUES).setPackage(context.getPackageName()));
 
             if (DEBUG) Log.d(TAG, "Successfully finished extrema calculations for workout " + workoutId);
 
@@ -127,26 +163,13 @@ public class CalcExtremaWorker extends Worker {
     }
 
 
-    private void publishProgress(String message) {
-        if (DEBUG) {
-            Log.d(TAG, "...: " + message);
-            try {
-                Thread.sleep(2000); // 2000 milliseconds delay
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt(); // Restore the interrupted status
-            }
-
-            Log.d(TAG, "Progress: " + message);
-        }
-
-        setProgressAsync(new Data.Builder().putString(KEY_PROGRESS_MESSAGE, message).build());
-    }
-
-
     // --- Helper Methods (Copied from CalcExtremaValuesThread and made non-static) ---
 
     public void calcAndSaveMaxLineDistancePosition(Context context, final long workoutId) {
         if (DEBUG) Log.i(TAG, "calcAndSaveMaxLineDistancePosition: workoutId=" + workoutId);
+        publishStarting(context.getString(R.string.calculating_extrema_value_for,
+                ExtremaType.MAX.name(),
+                context.getString(SensorType.LINE_DISTANCE_m.getShortNameId())));
 
         WorkoutSummariesDatabaseManager workoutSummariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(context);
         WorkoutSamplesDatabaseManager.LatLngValue latLngValue = WorkoutSamplesDatabaseManager.getInstance(context).getExtremaPosition(workoutSummariesDatabaseManager, workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX);
@@ -201,7 +224,7 @@ public class CalcExtremaWorker extends Worker {
 
     private void calcFancyName(Context context, long workoutId) {
         if (DEBUG) Log.i(TAG, "calcFancyName");
-        publishProgress(context.getString(R.string.calc_workout_name));
+        publishStarting(context.getString(R.string.calc_workout_name));
 
         WorkoutSummariesDatabaseManager workoutSummariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(context);
         KnownLocationsDatabaseManager knownLocationsDatabaseManager = KnownLocationsDatabaseManager.getInstance(context);
@@ -243,18 +266,14 @@ public class CalcExtremaWorker extends Worker {
             SQLiteDatabase db = workoutSummariesDatabaseManager.getDatabase();
             db.update(WorkoutSummaries.TABLE, contentValues, WorkoutSummaries.C_ID + " = ?", new String[]{Long.toString(workoutId)});
 
-            // send broadcast.
-            Intent intent = new Intent(FINISHED_CALCULATING_FANCY_NAME)
-                    .putExtra(FANCY_NAME, fancyName)
-                    .setPackage(context.getPackageName());
-            context.sendBroadcast(intent);
-
+            // inform others that we are done
+            publishFinished(FINISHED_AUTO_NAME);
         }
     }
 
     private void guessCommuteAndTrainer(Context context, long workoutId) {
         if (DEBUG) Log.i(TAG, "guessCommuteAndTrainer");
-        publishProgress(context.getString(R.string.guess_commute_and_trainer));
+        publishStarting(context.getString(R.string.guess_commute_and_trainer));
 
         WorkoutSummariesDatabaseManager workoutSummariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(context);
 
@@ -306,8 +325,8 @@ public class CalcExtremaWorker extends Worker {
                     new String[]{Long.toString(workoutId)});
         }
 
-        context.sendBroadcast(new Intent(FINISHED_GUESSING_COMMUTE_AND_TRAINER)
-                .setPackage(context.getPackageName()));
+        // inform others that this is done
+        publishFinished(FINISHED_COMMUTE_AND_TRAINER);
     }
 
     private void calcAndSaveExtremaValues(Context context, long workoutId, String baseFileName, @NonNull Iterable<SensorType> sensorTypeList, @NonNull Iterable<ExtremaType> extremaTypeList) {
@@ -323,7 +342,7 @@ public class CalcExtremaWorker extends Worker {
 
         for (SensorType sensorType : sensorTypeList) {
             for (ExtremaType extremaType : extremaTypeList) {
-                publishProgress(context.getString(R.string.calculating_extrema_value_for, extremaType.name(), context.getString(sensorType.getShortNameId())));
+                publishStarting(context.getString(R.string.calculating_extrema_value_for, extremaType.name(), context.getString(sensorType.getShortNameId())));
 
                 WorkoutSamplesDatabaseManager.getInstance(context);
                 Double value = workoutSamplesDatabaseManager.calcExtremaValue(workoutSummariesDatabaseManager, baseFileName, extremaType, sensorType);
@@ -362,10 +381,7 @@ public class CalcExtremaWorker extends Worker {
                 }
             }
 
-            Intent intent = new Intent(FINISHED_CALCULATING_EXTREMA_VALUE)
-                    .putExtra(SENSOR_TYPE, sensorType.name())
-                    .setPackage(context.getPackageName());
-            context.sendBroadcast(intent);
+            publishFinished(FINISHED_EXTREMA_VALE);
         }
     }
 
