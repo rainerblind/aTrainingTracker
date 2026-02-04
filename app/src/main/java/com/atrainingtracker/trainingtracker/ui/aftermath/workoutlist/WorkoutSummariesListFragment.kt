@@ -82,6 +82,7 @@ class WorkoutSummariesListFragment : Fragment() {
         workoutAdapter = WorkoutSummariesAdapter(
             requireActivity(),
             parentFragmentManager, // Correct fragment manager for dialogs
+            viewLifecycleOwner,
             isPlayAvailable,
             viewModel
         )

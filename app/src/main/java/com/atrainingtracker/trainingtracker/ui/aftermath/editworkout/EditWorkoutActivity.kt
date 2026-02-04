@@ -17,14 +17,12 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.TrainingApplication
-import com.atrainingtracker.trainingtracker.activities.WorkoutDetailsActivity
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.atrainingtracker.trainingtracker.dialogs.EditFancyWorkoutNameDialog
 import com.atrainingtracker.trainingtracker.ui.components.map.MapComponent
 import com.atrainingtracker.trainingtracker.ui.components.map.MapContentType
-import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.DescriptionViewHolder
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsViewHolder
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaValuesViewHolder
 import com.google.android.gms.common.ConnectionResult
@@ -196,7 +194,7 @@ class EditWorkoutActivity : AppCompatActivity() {
 
             // details, extrema values, and the map.
             detailsViewHolder?.bind(workoutData.detailsData)
-            extremaValuesViewHolder?.bind(workoutData.extremaData)
+            extremaValuesViewHolder?.bind(workoutData.id, workoutData.extremaValuesCalculated, workoutData.extremaData, this)
             mapComponent?.bind(workoutData.id, MapContentType.WORKOUT_TRACK)
 
             // -- visibility of delete button

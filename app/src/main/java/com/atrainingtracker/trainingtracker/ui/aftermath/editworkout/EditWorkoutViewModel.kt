@@ -3,12 +3,15 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.editworkout
 import android.app.Application
 import androidx.compose.animation.core.copy
 import androidx.lifecycle.*
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutDeletionHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.atrainingtracker.trainingtracker.exporter.ExportManager
+import com.atrainingtracker.trainingtracker.helpers.CalcExtremaWorker
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.DescriptionDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsDataProvider
@@ -69,13 +72,54 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
                     headerData = headerData,
                     detailsData = detailsData,
                     descriptionData = descriptionData,
-                    extremaData = extremaData
+                    extremaData = extremaData,
+                    extremaValuesCalculated = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.EXTREMA_VALUES_CALCULATED)) > 0
                 )
 
                 _workoutData.postValue(data)
+
+                // Check if calculation is ongoing
+                if (!data.extremaValuesCalculated) {
+                    // Switch to the main thread before calling observeForever.
+                    launch(Dispatchers.Main) {
+                        observeExtremaCalculation(data.id)
+                    }
+                }
             }
             cursor.close()
         }
+    }
+
+    private fun observeExtremaCalculation(workoutId: Long) {
+        val workManager = WorkManager.getInstance(getApplication())
+        val workTag = "extrema_calc_${workoutId}"
+
+        // Observe the worker's status using LiveData, which is lifecycle-aware.
+        // We use observeForever because the ViewModel's lifecycle is longer than the View's.
+        val observer = object : androidx.lifecycle.Observer<List<WorkInfo>> {
+            private var lastMessage: String? = ""
+            override fun onChanged(workInfos: List<WorkInfo>) {
+                val workInfo = workInfos.firstOrNull() ?: return
+
+                val currentMessage = workInfo.progress.getString(CalcExtremaWorker.KEY_PROGRESS_MESSAGE)
+                val isFinished = workInfo.state.isFinished
+
+                if (isFinished || currentMessage != lastMessage) {
+                    lastMessage = currentMessage
+
+                    // Trigger a reload from the database. The `loadWorkouts` function will
+                    // handle getting the new data and posting it to the UI.
+                    loadWorkout()
+                }
+
+                // If the work is finished, we don't need to observe it anymore.
+                if (isFinished) {
+                    workManager.getWorkInfosByTagLiveData(workTag).removeObserver(this)
+                }
+            }
+        }
+
+        workManager.getWorkInfosByTagLiveData(workTag).observeForever(observer)
     }
 
     fun updateWorkoutName(newName: String) {

@@ -4,13 +4,22 @@
   ~ Copyright (C) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
   ... (license header) ...
 -->
-<FrameLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:visibility="visible"
-    tools:visibility="visible">
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/extrema_progress_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:padding="8dp"
+        android:text="@string/calculating_extrema_values"
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:visibility="gone"
+        tools:visibility="visible" />
 
     <TableLayout
         android:id="@+id/extrema_values_container"
@@ -78,4 +87,4 @@
 
     </TableLayout>
 
-</FrameLayout>
+</LinearLayout>
