@@ -99,7 +99,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
                             // The fancy/aut name was calculated. We need to fetch it.
                             loadWorkoutName()
                         } else if (updateType == CalcExtremaWorker.FINISHED_COMMUTE_AND_TRAINER) {
-                            // TODO: loadCommuteAndTrainer()
+                            loadHeaderData()
                         } else if (updateType == CalcExtremaWorker.FINISHED_EXTREMA_VALE) {
                             loadDetailsAndExtremaData()
                         }
