@@ -49,10 +49,6 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     private val _extremaData = MutableLiveData<ExtremaData>()
     val extremaData: LiveData<ExtremaData> = _extremaData
 
-    // LiveData specifically for the auto-calculated workout name ---
-    private val _autoWorkoutName = MutableLiveData<Event<String>>()
-    val autoWorkoutName: LiveData<Event<String>> = _autoWorkoutName
-
     // LiveData specifically for the message from the extrema calculation worker
     private val _extremaCalculationMessage = MutableLiveData<Event<String>>()
     val extremaCalculationMessage: LiveData<Event<String>> = _extremaCalculationMessage
@@ -96,10 +92,8 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
                         val updateType =
                             workInfo.progress.getString(CalcExtremaWorker.KEY_FINISHED_MESSAGE)
                         Log.d("EditWorkoutViewModel", "received update type: $updateType")
-                        if (updateType == CalcExtremaWorker.FINISHED_AUTO_NAME) {
-                            // The fancy/aut name was calculated. We need to fetch it.
-                            loadWorkoutName()
-                        } else if (updateType == CalcExtremaWorker.FINISHED_COMMUTE_AND_TRAINER) {
+                        if (updateType == CalcExtremaWorker.FINISHED_AUTO_NAME ||
+                            updateType == CalcExtremaWorker.FINISHED_COMMUTE_AND_TRAINER) {
                             loadHeaderData()
                         } else if (updateType == CalcExtremaWorker.FINISHED_EXTREMA_VALE) {
                             loadDetailsAndExtremaData()
@@ -113,13 +107,6 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
 
     init {
         loadInitialWorkout()
-    }
-
-    private fun loadWorkoutName() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val newName = workoutSummariesDatabaseManager.getWorkoutName(workoutId)
-            _autoWorkoutName.postValue(Event(newName))
-        }
     }
 
     private fun loadHeaderData() {

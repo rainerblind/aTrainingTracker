@@ -211,13 +211,8 @@ class EditWorkoutActivity : AppCompatActivity() {
             }
         }
 
-        viewModel.autoWorkoutName.observe(this) { event ->
-            event.getContentIfNotHandled()?.let { newName ->
-                editWorkoutName.setText(newName)
-            }
-        }
-
         viewModel.headerData.observe(this) { headerData ->
+            editWorkoutName.setText(headerData.workoutName)
             checkboxCommute.isChecked = headerData.commute
             checkboxTrainer.isChecked = headerData.trainer
         }
