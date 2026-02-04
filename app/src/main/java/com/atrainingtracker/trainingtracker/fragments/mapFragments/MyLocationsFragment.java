@@ -57,7 +57,6 @@ import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.ExtremaType;
-import com.atrainingtracker.trainingtracker.helpers.CalcExtremaValuesThread;
 import com.atrainingtracker.trainingtracker.views.MultiSelectionSpinner;
 import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager.KnownLocationsDbHelper;
@@ -612,7 +611,8 @@ public class MyLocationsFragment
                 } else if (mExtremaType == ExtremaType.MAX_LINE_DISTANCE) {
                     if (DEBUG)
                         Log.i(TAG, "try to calculate the max line distance of workoutId=" + workoutId);
-                    CalcExtremaValuesThread.calcAndSaveMaxLineDistancePosition(getContext(), workoutId);
+                    // TODO: why did we do this???
+                    // CalcExtremaValuesThread.calcAndSaveMaxLineDistancePosition(getContext(), workoutId);
                     cursor.moveToPrevious();
 
                 }
