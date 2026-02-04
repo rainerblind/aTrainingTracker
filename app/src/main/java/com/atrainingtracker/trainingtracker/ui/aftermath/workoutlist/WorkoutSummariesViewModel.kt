@@ -1,8 +1,6 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 
 import android.app.Application
-import android.content.ContentValues
-import androidx.compose.animation.core.isFinished
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -58,9 +56,9 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
                 if (c.moveToFirst()) {
                     do {
                         val headerData = headerDataProvider.createWorkoutHeaderData(c)
-                        val detailsData = detailsDataProvider.createWorkoutDetailsData(c)
+                        val detailsData = detailsDataProvider.getWorkoutDetailsData(c)
                         val descriptionData = descriptionDataProvider.createDescriptionData(c)
-                        val extremaData = extremaDataProvider.getExtremaDataList(c)
+                        val extremaData = extremaDataProvider.getExtremaData(c)
 
                         summaryList.add(
                             WorkoutData(
@@ -74,7 +72,6 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
                                 detailsData = detailsData,
                                 descriptionData = descriptionData,
                                 extremaData = extremaData,
-                                extremaValuesCalculated = c.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.EXTREMA_VALUES_CALCULATED)) > 0
                             )
                         )
                     } while (c.moveToNext())
@@ -87,7 +84,7 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
 
         // After the initial list is loaded and posted, check for any ongoing calculations.
         workouts.value?.forEach { workoutData ->
-            if (!workoutData.extremaValuesCalculated) {
+            if (workoutData.extremaData.isCalculating) {
                 observeExtremaCalculation(workoutData.id)
             }
         }

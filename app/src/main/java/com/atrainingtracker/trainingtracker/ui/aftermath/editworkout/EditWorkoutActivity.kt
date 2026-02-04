@@ -192,9 +192,8 @@ class EditWorkoutActivity : AppCompatActivity() {
             // Populate Spinners
             setupSpinners()
 
-            // details, extrema values, and the map.
+            // details and the map.
             detailsViewHolder?.bind(workoutData.detailsData)
-            extremaValuesViewHolder?.bind(workoutData.id, workoutData.extremaValuesCalculated, workoutData.extremaData, this)
             mapComponent?.bind(workoutData.id, MapContentType.WORKOUT_TRACK)
 
             // -- visibility of delete button
@@ -209,6 +208,26 @@ class EditWorkoutActivity : AppCompatActivity() {
             // similarly, when tracking, the button is also not visible
             if (TrainingApplication.isTracking()) {
                 buttonDelete.visibility = View.GONE
+            }
+        }
+
+        viewModel.autoWorkoutName.observe(this) { event ->
+            event.getContentIfNotHandled()?.let { newName ->
+                editWorkoutName.setText(newName)
+            }
+        }
+
+        viewModel.detailsData.observe(this) { detailsData ->
+            detailsViewHolder?.bind(detailsData)
+        }
+
+        viewModel.extremaData.observe(this) { extremaData ->
+            extremaValuesViewHolder?.bind(extremaData)
+        }
+
+        viewModel.extremaCalculationMessage.observe(this) { event ->
+            event.getContentIfNotHandled()?.let { message ->
+                extremaValuesViewHolder?.updateProgressMessage(message)
             }
         }
 

@@ -14,7 +14,9 @@ import com.atrainingtracker.trainingtracker.exporter.ExportManager
 import com.atrainingtracker.trainingtracker.helpers.CalcExtremaWorker
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.DescriptionDataProvider
+import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsData
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsDataProvider
+import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaData
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderDataProvider
 import com.atrainingtracker.trainingtracker.util.Event
@@ -32,6 +34,23 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     // LiveData to hold the entire WorkoutData object. The UI will observe this.
     private val _workoutData = MutableLiveData<WorkoutData>()
     val workoutData: LiveData<WorkoutData> = _workoutData
+
+    // LiveData specifically for the details
+    private val _detailsData = MutableLiveData< WorkoutDetailsData>()
+    val detailsData: LiveData<WorkoutDetailsData> = _detailsData
+
+    // LiveData specifically for the list of extrema values ---
+    private val _extremaData = MutableLiveData<ExtremaData>()
+    val extremaData: LiveData<ExtremaData> = _extremaData
+
+    // LiveData specifically for the auto-calculated workout name ---
+    private val _autoWorkoutName = MutableLiveData<Event<String>>()
+    val autoWorkoutName: LiveData<Event<String>> = _autoWorkoutName
+
+    // LiveData specifically for the message from the extrema calculation worker
+    private val _extremaCalculationMessage = MutableLiveData<Event<String>>()
+    val extremaCalculationMessage: LiveData<Event<String>> = _extremaCalculationMessage
+
     val saveFinishedEvent = MutableLiveData<Event<Boolean>>()
     val deleteFinishedEvent = MutableLiveData<Event<Boolean>>()
 
@@ -41,35 +60,87 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     private val extremaDataProvider = ExtremaDataProvider(application)
     private val descriptionDataProvider = DescriptionDataProvider()
 
+    // observe the calculation of the extrema values
     private val extremaDataObserver = object : Observer<List<WorkInfo>> {
-        private var lastMessage: String? = ""
+        private var lastProgressSequence = -1
         override fun onChanged(workInfos: List<WorkInfo>) {
             Log.d("EditWorkoutViewModel", "called for workoutId=$workoutId")
+
+            // Find the worker
             val workInfo = workInfos.firstOrNull() ?: return
 
-            val currentMessage = workInfo.progress.getString(CalcExtremaWorker.KEY_PROGRESS_MESSAGE)
-            val isFinished = workInfo.state.isFinished
-            Log.d("EditWorkoutViewModel", "currentMessage=$currentMessage, lastMessage=$lastMessage, isFinished=$isFinished")
+            if (workInfo.state.isFinished) {
+                Log.d("EditWorkoutViewModel", "finished calculation")
+                loadDetailsAndExtremaData()
+            } else {
+                val currentProgress =
+                    workInfo.progress.getInt(CalcExtremaWorker.KEY_PROGRESS_SEQUENCE, -1)
+                if (currentProgress > lastProgressSequence) {
+                    lastProgressSequence = currentProgress
 
-            if (isFinished || currentMessage != lastMessage) {
-                lastMessage = currentMessage
-                Log.d("EditWorkoutViewModel", "Update lastMessage: currentMessage=$currentMessage, lastMessage=$lastMessage, isFinished=$isFinished")
-                Log.d("EditWorkoutViewModel", "-> loadWorkout()")
-
-                // Trigger a reload from the database. The `loadWorkouts` function will
-                // handle getting the new data and posting it to the UI.
-                loadWorkout()
+                    // first, check for a message regarding the doing
+                    val message =
+                        workInfo.progress.getString(CalcExtremaWorker.KEY_STARTING_MESSAGE)
+                    if (message != null) {
+                        Log.d("EditWorkoutViewModel", "received message: $message")
+                        _extremaCalculationMessage.postValue(Event(message))
+                    } else {
+                        // check the update type ---
+                        val updateType =
+                            workInfo.progress.getString(CalcExtremaWorker.KEY_FINISHED_MESSAGE)
+                        Log.d("EditWorkoutViewModel", "received update type: $updateType")
+                        if (updateType == CalcExtremaWorker.FINISHED_AUTO_NAME) {
+                            // The fancy/aut name was calculated. We need to fetch it.
+                            loadWorkoutName()
+                        } else if (updateType == CalcExtremaWorker.FINISHED_COMMUTE_AND_TRAINER) {
+                            // TODO: loadCommuteAndTrainer()
+                        } else if (updateType == CalcExtremaWorker.FINISHED_EXTREMA_VALE) {
+                            loadDetailsAndExtremaData()
+                        }
+                    }
+                }
             }
-
         }
     }
 
 
     init {
-        loadWorkout(true)
+        loadInitialWorkout()
     }
 
-    private fun loadWorkout(initObserver: Boolean = false) {
+    private fun loadWorkoutName() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val newName = workoutSummariesDatabaseManager.getWorkoutName(workoutId)
+            _autoWorkoutName.postValue(Event(newName))
+        }
+    }
+
+    // Function to load only the extrema data ---
+    private fun loadDetailsAndExtremaData() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val db = workoutSummariesDatabaseManager.getDatabase()
+            val cursor = db.query(
+                WorkoutSummaries.TABLE,
+                null, // We only need extrema columns, but null is fine for performance here
+                "${WorkoutSummaries.C_ID} = ?",
+                arrayOf(workoutId.toString()),
+                null, null, null
+            )
+
+            if (cursor.moveToFirst()) {
+                val newExtremaList = extremaDataProvider.getExtremaData(cursor)
+                // Post the new list to the specific LiveData for the ViewHolder
+                _extremaData.postValue(newExtremaList)
+
+                val newDetailsData = detailsDataProvider.getWorkoutDetailsData(cursor)
+                // Post the new list to the specific LiveData for the ViewHolder
+                _detailsData.postValue(newDetailsData)
+            }
+            cursor.close()
+        }
+    }
+
+    private fun loadInitialWorkout() {
         viewModelScope.launch(Dispatchers.IO) {
             val db = workoutSummariesDatabaseManager.getDatabase()
             val cursor = db.query(
@@ -82,9 +153,9 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
 
             if (cursor.moveToFirst()) {
                 val headerData = headerDataProvider.createWorkoutHeaderData(cursor)
-                val detailsData = detailsDataProvider.createWorkoutDetailsData(cursor)
+                val detailsData = detailsDataProvider.getWorkoutDetailsData(cursor)
                 val descriptionData = descriptionDataProvider.createDescriptionData(cursor)
-                val extremaData = extremaDataProvider.getExtremaDataList(cursor)
+                val extremaData = extremaDataProvider.getExtremaData(cursor)
 
                 val data = WorkoutData(
                     id = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.C_ID)),
@@ -96,13 +167,15 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
                     headerData = headerData,
                     detailsData = detailsData,
                     descriptionData = descriptionData,
-                    extremaData = extremaData,
-                    extremaValuesCalculated = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.EXTREMA_VALUES_CALCULATED)) > 0
+                    extremaData = extremaData
                 )
 
+                // Post to the main LiveData for the one-time setup
                 _workoutData.postValue(data)
+                // Also post the initial list to the new LiveData
+                _extremaData.postValue(extremaData)
 
-                if (initObserver && !data.extremaValuesCalculated) {
+                if (extremaData.isCalculating) {
                     launch(Dispatchers.Main) {
                         Log.d("EditWorkoutViewModel", "Initial setup: Attaching the single observer.")
                         val workTag = "extrema_calc_${data.id}"
@@ -111,14 +184,6 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
                         workManager.getWorkInfosByTagLiveData(workTag).removeObserver(extremaDataObserver)
                         // Attach our single, persistent observer.
                         workManager.getWorkInfosByTagLiveData(workTag).observeForever(extremaDataObserver)
-                    }
-                } else if (data.extremaValuesCalculated) {
-                    launch(Dispatchers.Main) {
-                        Log.d("EditWorkoutViewModel", "No longer need to observe the worker.")
-                        val workTag = "extrema_calc_${data.id}"
-                        val workManager = WorkManager.getInstance(getApplication())
-                        // Remove any stale observers.
-                        workManager.getWorkInfosByTagLiveData(workTag).removeObserver(extremaDataObserver)
                     }
                 }
 
