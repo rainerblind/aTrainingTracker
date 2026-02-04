@@ -56,7 +56,6 @@ import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation;
-import com.atrainingtracker.trainingtracker.activities.WorkoutDetailsActivity;
 import com.atrainingtracker.trainingtracker.exporter.FileFormat;
 import com.atrainingtracker.trainingtracker.helpers.CalcExtremaWorker;
 import com.atrainingtracker.trainingtracker.tracker.TrackerService;
