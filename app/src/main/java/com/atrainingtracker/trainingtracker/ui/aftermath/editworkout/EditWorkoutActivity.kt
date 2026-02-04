@@ -217,6 +217,10 @@ class EditWorkoutActivity : AppCompatActivity() {
             }
         }
 
+        viewModel.detailsData.observe(this) { detailsData ->
+            detailsViewHolder?.bind(detailsData)
+        }
+
         viewModel.extremaData.observe(this) { extremaData ->
             extremaValuesViewHolder?.bind(extremaData)
         }

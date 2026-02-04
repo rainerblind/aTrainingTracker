@@ -14,6 +14,7 @@ import com.atrainingtracker.trainingtracker.exporter.ExportManager
 import com.atrainingtracker.trainingtracker.helpers.CalcExtremaWorker
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.DescriptionDataProvider
+import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsData
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaData
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaDataProvider
@@ -33,6 +34,10 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     // LiveData to hold the entire WorkoutData object. The UI will observe this.
     private val _workoutData = MutableLiveData<WorkoutData>()
     val workoutData: LiveData<WorkoutData> = _workoutData
+
+    // LiveData specifically for the details
+    private val _detailsData = MutableLiveData< WorkoutDetailsData>()
+    val detailsData: LiveData<WorkoutDetailsData> = _detailsData
 
     // LiveData specifically for the list of extrema values ---
     private val _extremaData = MutableLiveData<ExtremaData>()
@@ -66,7 +71,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
 
             if (workInfo.state.isFinished) {
                 Log.d("EditWorkoutViewModel", "finished calculation")
-                loadExtremaData()
+                loadDetailsAndExtremaData()
             } else {
                 val currentProgress =
                     workInfo.progress.getInt(CalcExtremaWorker.KEY_PROGRESS_SEQUENCE, -1)
@@ -89,8 +94,9 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
                             loadWorkoutName()
                         } else if (updateType == CalcExtremaWorker.FINISHED_COMMUTE_AND_TRAINER) {
                             // TODO: loadCommuteAndTrainer()
-                        } else if (updateType == CalcExtremaWorker.FINISHED_EXTREMA_VALE)
-                            loadExtremaData()
+                        } else if (updateType == CalcExtremaWorker.FINISHED_EXTREMA_VALE) {
+                            loadDetailsAndExtremaData()
+                        }
                     }
                 }
             }
@@ -110,7 +116,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     }
 
     // Function to load only the extrema data ---
-    private fun loadExtremaData() {
+    private fun loadDetailsAndExtremaData() {
         viewModelScope.launch(Dispatchers.IO) {
             val db = workoutSummariesDatabaseManager.getDatabase()
             val cursor = db.query(
@@ -125,6 +131,10 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
                 val newExtremaList = extremaDataProvider.getExtremaData(cursor)
                 // Post the new list to the specific LiveData for the ViewHolder
                 _extremaData.postValue(newExtremaList)
+
+                val newDetailsData = detailsDataProvider.getWorkoutDetailsData(cursor)
+                // Post the new list to the specific LiveData for the ViewHolder
+                _detailsData.postValue(newDetailsData)
             }
             cursor.close()
         }
@@ -143,7 +153,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
 
             if (cursor.moveToFirst()) {
                 val headerData = headerDataProvider.createWorkoutHeaderData(cursor)
-                val detailsData = detailsDataProvider.createWorkoutDetailsData(cursor)
+                val detailsData = detailsDataProvider.getWorkoutDetailsData(cursor)
                 val descriptionData = descriptionDataProvider.createDescriptionData(cursor)
                 val extremaData = extremaDataProvider.getExtremaData(cursor)
 
