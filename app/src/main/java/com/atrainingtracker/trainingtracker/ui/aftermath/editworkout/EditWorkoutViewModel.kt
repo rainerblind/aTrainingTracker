@@ -77,6 +77,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
 
             if (workInfo.state.isFinished) {
                 Log.d("EditWorkoutViewModel", "finished calculation")
+                loadHeaderData()
                 loadDetailsAndExtremaData()
             } else {
                 val currentProgress =
