@@ -18,6 +18,7 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.Workout
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaData
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaDataProvider
+import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderData
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderDataProvider
 import com.atrainingtracker.trainingtracker.util.Event
 import kotlinx.coroutines.Dispatchers
@@ -34,6 +35,11 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     // LiveData to hold the entire WorkoutData object. The UI will observe this.
     private val _workoutData = MutableLiveData<WorkoutData>()
     val workoutData: LiveData<WorkoutData> = _workoutData
+
+    // LiveData specifically for the header
+    private val _headerData = MutableLiveData<WorkoutHeaderData>()
+    val headerData: LiveData<WorkoutHeaderData> = _headerData
+
 
     // LiveData specifically for the details
     private val _detailsData = MutableLiveData< WorkoutDetailsData>()
@@ -115,6 +121,26 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         }
     }
 
+    private fun loadHeaderData() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val db = workoutSummariesDatabaseManager.getDatabase()
+            val cursor = db.query(
+                WorkoutSummaries.TABLE,
+                null, // We only need extrema columns, but null is fine for performance here
+                "${WorkoutSummaries.C_ID} = ?",
+                arrayOf(workoutId.toString()),
+                null, null, null
+            )
+
+            if (cursor.moveToFirst()) {
+                val newHeaderData = headerDataProvider.createWorkoutHeaderData(cursor)
+                // Post the new list to the specific LiveData for the ViewHolder
+                _headerData.postValue(newHeaderData)
+            }
+            cursor.close()
+        }
+    }
+
     // Function to load only the extrema data ---
     private fun loadDetailsAndExtremaData() {
         viewModelScope.launch(Dispatchers.IO) {
@@ -160,8 +186,6 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
                 val data = WorkoutData(
                     id = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.C_ID)),
                     fileBaseName = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.FILE_BASE_NAME)),
-                    isCommute = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.COMMUTE)) > 0,
-                    isTrainer = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.TRAINER)) > 0,
                     activeTime = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_ACTIVE_s)),
 
                     headerData = headerData,
@@ -264,17 +288,21 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     fun updateIsCommute(isChecked: Boolean) {
         val currentData = _workoutData.value ?: return
         // Avoid unnecessary updates
-        if (isChecked == currentData.isCommute) return
+        if (isChecked == currentData.headerData.commute) return
 
-        _workoutData.value = currentData.copy(isCommute = isChecked)
+        _workoutData.value = currentData.copy(
+            headerData = currentData.headerData.copy(commute = isChecked)
+        )
     }
 
     fun updateIsTrainer(isChecked: Boolean) {
         val currentData = _workoutData.value ?: return
         // Avoid unnecessary updates
-        if (isChecked == currentData.isTrainer) return
+        if (isChecked == currentData.headerData.trainer) return
 
-        _workoutData.value = currentData.copy(isTrainer = isChecked)
+        _workoutData.value = currentData.copy(
+            headerData = currentData.headerData.copy(trainer = isChecked)
+        )
     }
 
 
@@ -321,8 +349,8 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
             // Update Commute and Trainer flags
             workoutSummariesDatabaseManager.updateCommuteAndTrainerFlag(
                 workoutId,
-                dataToSave.isCommute,
-                dataToSave.isTrainer
+                dataToSave.headerData.commute,
+                dataToSave.headerData.trainer
             )
 
             // Update Description, Goal, and Method

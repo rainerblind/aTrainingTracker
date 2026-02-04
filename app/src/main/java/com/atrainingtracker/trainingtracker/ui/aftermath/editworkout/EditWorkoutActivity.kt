@@ -186,8 +186,8 @@ class EditWorkoutActivity : AppCompatActivity() {
             }
 
             // Populate Checkboxes
-            checkboxCommute.isChecked = workoutData.isCommute
-            checkboxTrainer.isChecked = workoutData.isTrainer
+            checkboxCommute.isChecked = workoutData.headerData.commute
+            checkboxTrainer.isChecked = workoutData.headerData.trainer
 
             // Populate Spinners
             setupSpinners()
@@ -215,6 +215,11 @@ class EditWorkoutActivity : AppCompatActivity() {
             event.getContentIfNotHandled()?.let { newName ->
                 editWorkoutName.setText(newName)
             }
+        }
+
+        viewModel.headerData.observe(this) { headerData ->
+            checkboxCommute.isChecked = headerData.commute
+            checkboxTrainer.isChecked = headerData.trainer
         }
 
         viewModel.detailsData.observe(this) { detailsData ->
