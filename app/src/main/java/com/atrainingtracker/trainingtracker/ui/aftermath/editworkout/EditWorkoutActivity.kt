@@ -192,9 +192,8 @@ class EditWorkoutActivity : AppCompatActivity() {
             // Populate Spinners
             setupSpinners()
 
-            // details, extrema values, and the map.
+            // details and the map.
             detailsViewHolder?.bind(workoutData.detailsData)
-            extremaValuesViewHolder?.bind(workoutData.id, workoutData.extremaValuesCalculated, workoutData.extremaData, this)
             mapComponent?.bind(workoutData.id, MapContentType.WORKOUT_TRACK)
 
             // -- visibility of delete button
@@ -211,6 +210,11 @@ class EditWorkoutActivity : AppCompatActivity() {
                 buttonDelete.visibility = View.GONE
             }
         }
+
+        viewModel.extremaData.observe(this) { extremaData ->
+            extremaValuesViewHolder?.bind(extremaData, this)
+        }
+
 
         viewModel.saveFinishedEvent.observe(this) { event ->
             event.getContentIfNotHandled()?.let { success ->

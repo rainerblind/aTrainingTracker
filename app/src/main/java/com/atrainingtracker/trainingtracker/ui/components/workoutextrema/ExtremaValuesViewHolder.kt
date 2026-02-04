@@ -23,20 +23,20 @@ class ExtremaValuesViewHolder(val view: View) {
 
     /**
      * Binds data and observes a background worker's progress.
-     * @param initData Contains the workoutId and any pre-calculated extrema values.
+     * @param extremaData Contains the list of extrema values.
      * @param lifecycleOwner The lifecycle of the Fragment/Activity to safely observe LiveData.
      */
-    fun bind(workoutId: Long, isCalculated: Boolean, extremaList: List<ExtremaData>, lifecycleOwner: LifecycleOwner) {
-        val workTag = "extrema_calc_${workoutId}"
+    fun bind(extremaData: ExtremaData, lifecycleOwner: LifecycleOwner) {
+        val workTag = "extrema_calc_${extremaData.workoutId}"
 
         // CRITICAL: Remove any previous observers from this ViewHolder instance.
         // This prevents the ViewHolder from listening to updates for an old item when it gets recycled.
         WorkManager.getInstance(context).getWorkInfosByTagLiveData(workTag).removeObservers(lifecycleOwner)
 
         // If calculation is already done, just display the data and ensure progress text is hidden.
-        if (isCalculated) {
+        if (!extremaData.isCalculating) {
             progressTextView.visibility = View.GONE
-            displayExtremaValues(extremaList)
+            displayExtremaValues(extremaData.dataRows)
             return // Nothing more to do.
         }
 
@@ -46,7 +46,7 @@ class ExtremaValuesViewHolder(val view: View) {
         progressTextView.visibility = View.VISIBLE
         progressTextView.text = context.getString(R.string.calculating_extrema_values)
 
-        displayExtremaValues(extremaList)
+        displayExtremaValues(extremaData.dataRows)
 
         WorkManager.getInstance(context)
             .getWorkInfosByTagLiveData(workTag)
@@ -71,7 +71,7 @@ class ExtremaValuesViewHolder(val view: View) {
 
 
 
-    private fun displayExtremaValues(extremaList: List<ExtremaData>) {
+    private fun displayExtremaValues(extremaList: List<ExtremaDataRow>) {
         // Set visibility of the table
         tableLayout.visibility = if (extremaList.isEmpty()) View.GONE else View.VISIBLE
         if (extremaList.isEmpty()) {
@@ -91,7 +91,7 @@ class ExtremaValuesViewHolder(val view: View) {
     /**
      * Creates and adds a single TableRow for a given ExtremaData object.
      */
-    private fun addExtremaRow(data: ExtremaData) {
+    private fun addExtremaRow(data: ExtremaDataRow) {
         val row = TableRow(context)
 
         // Use Kotlin's 'apply' scope function for cleaner object configuration
