@@ -1,8 +1,6 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 
 import android.app.Application
-import android.content.ContentValues
-import androidx.compose.animation.core.isFinished
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -58,7 +56,7 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
                 if (c.moveToFirst()) {
                     do {
                         val headerData = headerDataProvider.createWorkoutHeaderData(c)
-                        val detailsData = detailsDataProvider.createWorkoutDetailsData(c)
+                        val detailsData = detailsDataProvider.getWorkoutDetailsData(c)
                         val descriptionData = descriptionDataProvider.createDescriptionData(c)
                         val extremaData = extremaDataProvider.getExtremaData(c)
 
