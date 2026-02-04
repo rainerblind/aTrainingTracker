@@ -14,8 +14,6 @@ data class WorkoutData(
     // --- Raw Data (Primary Key) ---
     val id: Long,
     val fileBaseName: String?,
-    val isCommute: Boolean,
-    val isTrainer: Boolean,
     val activeTime: Long,
 
 

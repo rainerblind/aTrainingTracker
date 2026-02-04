@@ -9,5 +9,7 @@ data class WorkoutHeaderData(
     val sportId: Long,
     val bSportType: BSportType,
     var sportName: String,
-    var equipmentName: String?
+    var equipmentName: String?,
+    var commute: Boolean,
+    var trainer: Boolean
 )

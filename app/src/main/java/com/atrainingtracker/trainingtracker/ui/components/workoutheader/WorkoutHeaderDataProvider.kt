@@ -50,6 +50,9 @@ class WorkoutHeaderDataProvider(
         val sportName = sportTypeDatabaseManager.getUIName(sportId)
         val equipmentName = equipmentDbHelper.getEquipmentNameFromId(equipmentId)
 
+        val commute = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.COMMUTE)) == 1
+        val trainer = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.TRAINER)) == 1
+
         return WorkoutHeaderData(
             workoutName = workoutName,
             formattedDate = date,
@@ -57,7 +60,9 @@ class WorkoutHeaderDataProvider(
             sportId = sportId,
             bSportType = sportType,
             sportName = sportName,
-            equipmentName = equipmentName
+            equipmentName = equipmentName,
+            commute = commute,
+            trainer = trainer
         )
     }
 
