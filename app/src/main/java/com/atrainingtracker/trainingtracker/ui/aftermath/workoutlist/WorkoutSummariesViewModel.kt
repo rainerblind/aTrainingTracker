@@ -1,5 +1,6 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 
+import android.R.id
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
@@ -12,6 +13,7 @@ import com.atrainingtracker.trainingtracker.SingleLiveEvent
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
+import com.atrainingtracker.trainingtracker.exporter.ExportManager
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.DescriptionDataProvider
@@ -20,6 +22,7 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.Extrema
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderDataProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+
 
 class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -37,7 +40,6 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
 
 
     val confirmDeleteWorkoutEvent = SingleLiveEvent<Long>()
-    val exportWorkoutEvent = SingleLiveEvent<Pair<Long, FileFormat>>()
 
     fun loadWorkouts() {
         // Use the ViewModel's coroutine scope to launch on a background thread.
@@ -162,11 +164,6 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
         confirmDeleteWorkoutEvent.postValue(id)
     }
 
-    fun onExportWorkoutClicked(id: Long, format: FileFormat) {
-        // Post an event commanding the fragment/activity to handle the export.
-        exportWorkoutEvent.postValue(Pair(id, format))
-    }
-
     /**
      * This method will be called by the Fragment *after* the user confirms the deletion.
      */
@@ -179,6 +176,20 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
 
             // After deleting, reload the data. The UI will update automatically.
             loadWorkouts()
+        }
+    }
+
+
+    fun onExportWorkoutClicked(id: Long, format: FileFormat) {
+        // Post an event commanding the fragment/activity to handle the export.
+        exportWorkout(id, format)    }
+
+    // --- NEW METHOD TO HANDLE THE EXPORT LOGIC ---
+    fun exportWorkout(workoutId: Long, fileFormat: FileFormat) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val exportManager = ExportManager(application)
+            exportManager.exportWorkoutTo(workoutId, fileFormat)
+
         }
     }
 }
