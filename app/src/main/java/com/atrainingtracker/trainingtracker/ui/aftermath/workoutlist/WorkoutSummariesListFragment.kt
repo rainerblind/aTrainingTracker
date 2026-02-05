@@ -111,11 +111,6 @@ class WorkoutSummariesListFragment : Fragment() {
                 showDeleteConfirmationDialog(workoutId)
                 // (activity as? ReallyDeleteDialogInterface)?.confirmDeleteWorkout(workoutId)
             }
-
-            // Observe the export command
-            viewModel.exportWorkoutEvent.observe(viewLifecycleOwner) { (workoutId, format) ->
-                (activity as? ShowWorkoutDetailsInterface)?.exportWorkout(workoutId, format)
-            }
         }
     }
 
