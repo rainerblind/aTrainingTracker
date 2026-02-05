@@ -93,7 +93,6 @@ import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManage
 import com.atrainingtracker.trainingtracker.dialogs.DeleteOldWorkoutsDialog;
 import com.atrainingtracker.trainingtracker.dialogs.EnableBluetoothDialog;
 import com.atrainingtracker.trainingtracker.dialogs.GPSDisabledDialog;
-import com.atrainingtracker.trainingtracker.dialogs.ReallyDeleteWorkoutDialog;
 import com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialog;
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusDialogFragment;
 import com.atrainingtracker.trainingtracker.fragments.StartAndTrackingFragmentTabbedContainer;
@@ -115,7 +114,6 @@ import com.atrainingtracker.trainingtracker.fragments.preferences.StartSearchFra
 import com.atrainingtracker.trainingtracker.fragments.preferences.StravaUploadFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.TrainingpeaksUploadFragment;
 import com.atrainingtracker.trainingtracker.helpers.DeleteWorkoutThread;
-import com.atrainingtracker.trainingtracker.interfaces.ReallyDeleteDialogInterface;
 import com.atrainingtracker.trainingtracker.interfaces.RemoteDevicesSettingsInterface;
 import com.atrainingtracker.trainingtracker.interfaces.ShowWorkoutDetailsInterface;
 import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface;
@@ -143,7 +141,6 @@ public class MainActivityWithNavigation
         RemoteDevicesSettingsInterface,
         ShowWorkoutDetailsInterface,
         BANALService.GetBanalServiceInterface,
-        ReallyDeleteDialogInterface,
         PreferenceFragmentCompat.OnPreferenceStartScreenCallback,
         StartAndTrackingFragmentTabbedContainer.UpdateActivityTypeInterface,
         StarredSegmentsListFragment.StartSegmentDetailsActivityInterface,
@@ -826,17 +823,6 @@ public class MainActivityWithNavigation
 
         ExportStatusDialogFragment exportStatusFragment = ExportStatusDialogFragment.newInstance(workoutId);
         exportStatusFragment.show(getSupportFragmentManager(), ExportStatusDialogFragment.TAG);
-    }
-
-    @Override
-    public void confirmDeleteWorkout(long workoutId) {
-        ReallyDeleteWorkoutDialog newFragment = ReallyDeleteWorkoutDialog.newInstance(workoutId);
-        newFragment.show(getSupportFragmentManager(), ReallyDeleteWorkoutDialog.TAG);
-    }
-
-    @Override
-    public void reallyDeleteWorkout(long workoutId) {
-        (new DeleteWorkoutThread(this, new Long[]{workoutId})).start();
     }
 
     public void deleteOldWorkouts() {
