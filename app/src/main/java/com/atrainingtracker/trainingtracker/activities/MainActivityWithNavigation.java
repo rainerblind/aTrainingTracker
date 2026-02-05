@@ -86,8 +86,6 @@ import com.atrainingtracker.banalservice.fragments.RemoteDevicesFragment;
 import com.atrainingtracker.banalservice.fragments.RemoteDevicesFragmentTabbedContainer;
 import com.atrainingtracker.banalservice.fragments.SportTypeListFragment;
 import com.atrainingtracker.banalservice.helpers.BatteryStatusHelper;
-import com.atrainingtracker.trainingtracker.exporter.ExportManager;
-import com.atrainingtracker.trainingtracker.exporter.FileFormat;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
 import com.atrainingtracker.trainingtracker.dialogs.DeleteOldWorkoutsDialog;
@@ -113,9 +111,7 @@ import com.atrainingtracker.trainingtracker.fragments.preferences.SearchFragment
 import com.atrainingtracker.trainingtracker.fragments.preferences.StartSearchFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.StravaUploadFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.TrainingpeaksUploadFragment;
-import com.atrainingtracker.trainingtracker.helpers.DeleteWorkoutThread;
 import com.atrainingtracker.trainingtracker.interfaces.RemoteDevicesSettingsInterface;
-import com.atrainingtracker.trainingtracker.interfaces.ShowWorkoutDetailsInterface;
 import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface;
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager;
 import com.atrainingtracker.trainingtracker.segments.StarredSegmentsListFragment;
@@ -139,7 +135,6 @@ public class MainActivityWithNavigation
         DeviceTypeChoiceFragment.OnDeviceTypeSelectedListener,
         RemoteDevicesFragment.OnRemoteDeviceSelectedListener,
         RemoteDevicesSettingsInterface,
-        ShowWorkoutDetailsInterface,
         BANALService.GetBanalServiceInterface,
         PreferenceFragmentCompat.OnPreferenceStartScreenCallback,
         StartAndTrackingFragmentTabbedContainer.UpdateActivityTypeInterface,
@@ -807,22 +802,6 @@ public class MainActivityWithNavigation
         Intent segmentDetailsIntent = new Intent(this, SegmentDetailsActivity.class);
         segmentDetailsIntent.putExtras(bundle);
         startActivity(segmentDetailsIntent);
-    }
-
-    @Override
-    public void exportWorkout(long id, @NonNull FileFormat fileFormat) {
-        if (DEBUG) Log.i(TAG, "exportWorkout");
-
-        ExportManager exportManager = new ExportManager(this);
-        exportManager.exportWorkoutTo(id, fileFormat);
-    }
-
-    @Override
-    public void showExportStatusDialog(long workoutId) {
-        if (DEBUG) Log.i(TAG, "startExportDetailsActivity");
-
-        ExportStatusDialogFragment exportStatusFragment = ExportStatusDialogFragment.newInstance(workoutId);
-        exportStatusFragment.show(getSupportFragmentManager(), ExportStatusDialogFragment.TAG);
     }
 
     public void deleteOldWorkouts() {

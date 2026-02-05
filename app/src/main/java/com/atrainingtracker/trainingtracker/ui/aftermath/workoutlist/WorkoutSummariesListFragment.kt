@@ -15,7 +15,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.atrainingtracker.R
-import com.atrainingtracker.trainingtracker.interfaces.ShowWorkoutDetailsInterface
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 
@@ -110,11 +109,6 @@ class WorkoutSummariesListFragment : Fragment() {
             viewModel.confirmDeleteWorkoutEvent.observe(viewLifecycleOwner) { workoutId ->
                 showDeleteConfirmationDialog(workoutId)
                 // (activity as? ReallyDeleteDialogInterface)?.confirmDeleteWorkout(workoutId)
-            }
-
-            // Observe the export command
-            viewModel.exportWorkoutEvent.observe(viewLifecycleOwner) { (workoutId, format) ->
-                (activity as? ShowWorkoutDetailsInterface)?.exportWorkout(workoutId, format)
             }
         }
     }
