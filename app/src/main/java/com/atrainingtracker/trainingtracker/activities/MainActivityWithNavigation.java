@@ -88,11 +88,9 @@ import com.atrainingtracker.banalservice.fragments.SportTypeListFragment;
 import com.atrainingtracker.banalservice.helpers.BatteryStatusHelper;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
-import com.atrainingtracker.trainingtracker.dialogs.DeleteOldWorkoutsDialog;
 import com.atrainingtracker.trainingtracker.dialogs.EnableBluetoothDialog;
 import com.atrainingtracker.trainingtracker.dialogs.GPSDisabledDialog;
 import com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialog;
-import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusDialogFragment;
 import com.atrainingtracker.trainingtracker.fragments.StartAndTrackingFragmentTabbedContainer;
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesListFragment;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.MyLocationsFragment;
@@ -699,11 +697,6 @@ public class MainActivityWithNavigation
                 mDrawerLayout.openDrawer(GravityCompat.START);
                 return true;
 
-            case R.id.itemDeleteOldWorkouts:  // TODO: move to somewhere else?  automatically??
-                if (DEBUG) Log.i(TAG, "option itemDeleteOldWorkouts pressed");
-                deleteOldWorkouts();
-                return true;
-
             default:
                 return super.onOptionsItemSelected(item);
 
@@ -802,13 +795,6 @@ public class MainActivityWithNavigation
         Intent segmentDetailsIntent = new Intent(this, SegmentDetailsActivity.class);
         segmentDetailsIntent.putExtras(bundle);
         startActivity(segmentDetailsIntent);
-    }
-
-    public void deleteOldWorkouts() {
-        if (DEBUG) Log.i(TAG, "deleteOldWorkouts");
-
-        DeleteOldWorkoutsDialog deleteOldWorkoutsDialog = new DeleteOldWorkoutsDialog();
-        deleteOldWorkoutsDialog.show(getSupportFragmentManager(), DeleteOldWorkoutsDialog.TAG);
     }
 
     @Override

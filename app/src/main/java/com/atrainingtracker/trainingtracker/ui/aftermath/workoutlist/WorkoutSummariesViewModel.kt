@@ -2,6 +2,7 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 
 import android.R.id
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -11,6 +12,7 @@ import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.atrainingtracker.trainingtracker.SingleLiveEvent
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
+import com.atrainingtracker.trainingtracker.database.WorkoutDeletionHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.atrainingtracker.trainingtracker.exporter.ExportManager
@@ -22,6 +24,7 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.Extrema
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderDataProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.util.Date
 
 
 class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(application) {
@@ -30,6 +33,10 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
     private val _workouts = MutableLiveData<List<WorkoutData>>()
     // Public LiveData that the Fragment will observe. This is immutable.
     val workouts: LiveData<List<WorkoutData>> = _workouts
+
+    //
+    // LiveData to trigger showing the "Delete Old Workouts" dialog
+    val showDeleteOldWorkoutsDialogEvent = SingleLiveEvent<Unit>()
 
     private val workoutSummariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(application)
 
@@ -180,16 +187,38 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
     }
 
 
+    // --- Methods for the delection of old workouts ---
+    /**
+     * Called from the Fragment's menu. Triggers the dialog.
+     */
+    fun onDeleteOldWorkoutsClicked() {
+        showDeleteOldWorkoutsDialogEvent.postValue(Unit)
+    }
+
+    /**
+     * Called from the Fragment AFTER the user confirms the date in the dialog.
+     */
+    fun executeDeleteOldWorkouts(daysToKeep: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val workoutDeletionHelper = WorkoutDeletionHelper(getApplication())
+            val success = workoutDeletionHelper.deleteOldWorkouts(daysToKeep)
+
+            // After deleting, reload the data so the UI updates automatically.
+            if (success) {
+                loadWorkouts()
+            }
+        }
+    }
+
+
     fun onExportWorkoutClicked(id: Long, format: FileFormat) {
         // Post an event commanding the fragment/activity to handle the export.
         exportWorkout(id, format)    }
 
-    // --- NEW METHOD TO HANDLE THE EXPORT LOGIC ---
     fun exportWorkout(workoutId: Long, fileFormat: FileFormat) {
         viewModelScope.launch(Dispatchers.IO) {
             val exportManager = ExportManager(application)
             exportManager.exportWorkoutTo(workoutId, fileFormat)
-
         }
     }
 }

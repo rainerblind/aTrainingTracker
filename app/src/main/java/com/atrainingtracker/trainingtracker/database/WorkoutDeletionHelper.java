@@ -2,11 +2,14 @@ package com.atrainingtracker.trainingtracker.database;
 
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusRepository;
+
+import java.util.List;
 
 public class WorkoutDeletionHelper {
 
@@ -49,6 +52,18 @@ public class WorkoutDeletionHelper {
         String fileBaseName = mSummariesManager.getBaseFileName(workoutId);
         mSamplesManager.deleteWorkout(fileBaseName);
         mExportStatusRepo.deleteWorkout(fileBaseName);
+
+        return true;
+    }
+
+    public boolean deleteOldWorkouts(int daysToKeep) {
+        Log.i(TAG, "deleteOldWorkouts(" + daysToKeep + ")");
+        List<Long> oldWorkoutIds = WorkoutSummariesDatabaseManager.getInstance(mContext).getOldWorkouts(daysToKeep);
+        for (long workoutId : oldWorkoutIds) {
+            Log.d(TAG, "Deleting workout with ID: " + workoutId);
+
+            deleteWorkout(workoutId);
+        }
 
         return true;
     }
