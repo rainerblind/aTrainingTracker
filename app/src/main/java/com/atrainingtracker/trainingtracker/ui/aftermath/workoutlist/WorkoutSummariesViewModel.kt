@@ -181,13 +181,29 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
      */
     fun deleteWorkout(id: Long) {
         viewModelScope.launch(Dispatchers.IO) {
-            val db = WorkoutSummariesDatabaseManager.getInstance(application).getDatabase()
-            // Using DeleteWorkoutThread is good practice if it does more than just a DB delete.
-            // For a simple delete, this is also fine:
-            db.delete(WorkoutSummaries.TABLE, "${WorkoutSummaries.C_ID} = ?", arrayOf(id.toString()))
+            try {
+                // Find the workout name *before* deleting it.
+                val workout = _workouts.value?.find { it.id == id }
+                val workoutName = workout?.headerData?.workoutName ?: "Workout ID: $id"
 
-            // After deleting, reload the data. The UI will update automatically.
-            loadWorkouts()
+                // --- START PROGRESS ---
+                // Post the detailed progress to the LiveData.
+                _deletionProgress.postValue(DeletionProgress.InProgress(workoutName, id))
+
+                // Perform the actual deletion.
+                val workoutDeletionHelper = WorkoutDeletionHelper(getApplication())
+                val success = workoutDeletionHelper.deleteWorkout(id)
+
+                // After deleting, reload the data so the UI updates automatically.
+                if (success) {
+                    loadWorkouts()
+                }
+
+            } finally {
+                // --- END PROGRESS ---
+                // Reset the state to Idle when done or if an error occurs.
+                _deletionProgress.postValue(DeletionProgress.Idle)
+            }
         }
     }
 
