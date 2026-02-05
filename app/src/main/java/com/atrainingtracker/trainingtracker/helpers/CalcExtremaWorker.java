@@ -75,7 +75,6 @@ public class CalcExtremaWorker extends Worker {
 
 
     private void publishStarting(String message) {
-
         progressCounter++;
         Data progressData = new Data.Builder()
                 .putString(KEY_STARTING_MESSAGE, message)
