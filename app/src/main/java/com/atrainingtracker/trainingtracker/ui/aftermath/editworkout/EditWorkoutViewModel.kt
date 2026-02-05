@@ -1,296 +1,81 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.editworkout
 
 import android.app.Application
-import android.util.Log
 import androidx.lifecycle.*
-import androidx.work.WorkInfo
-import androidx.work.WorkManager
-import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
-import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
-import com.atrainingtracker.trainingtracker.database.WorkoutDeletionHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
-import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
-import com.atrainingtracker.trainingtracker.exporter.ExportManager
-import com.atrainingtracker.trainingtracker.helpers.CalcExtremaWorker
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
-import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.DescriptionDataProvider
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsData
-import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaData
-import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderData
-import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderDataProvider
 import com.atrainingtracker.trainingtracker.util.Event
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class EditWorkoutViewModel(application: Application, private val workoutId: Long) : AndroidViewModel(application) {
-    private val context = application
 
-    private val workoutSummariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(application)
-    private val sportTypeDatabaseManager = SportTypeDatabaseManager.getInstance(application)
-    private val equipmentDbHelper = EquipmentDbHelper(application)
+    private val repository = WorkoutRepository(application)
+
+    private val workoutSummariesDatabaseManager =
+        WorkoutSummariesDatabaseManager.getInstance(application)
 
 
     // LiveData to hold the entire WorkoutData object. The UI will observe this.
-    private val _workoutData = MutableLiveData<WorkoutData>()
-    val workoutData: LiveData<WorkoutData> = _workoutData
+    val workoutData: LiveData<WorkoutData> = repository.workoutData
 
     // LiveData specifically for the header
-    private val _headerData = MutableLiveData<WorkoutHeaderData>()
-    val headerData: LiveData<WorkoutHeaderData> = _headerData
-
+    val headerData: LiveData<Pair<Long, WorkoutHeaderData>> = repository.headerData
 
     // LiveData specifically for the details
-    private val _detailsData = MutableLiveData< WorkoutDetailsData>()
-    val detailsData: LiveData<WorkoutDetailsData> = _detailsData
+    val detailsData: LiveData<Pair<Long, WorkoutDetailsData>> = repository.detailsData
 
     // LiveData specifically for the list of extrema values ---
-    private val _extremaData = MutableLiveData<ExtremaData>()
-    val extremaData: LiveData<ExtremaData> = _extremaData
+    val extremaData: LiveData<Pair<Long, ExtremaData>> = repository.extremaData
 
     // LiveData specifically for the message from the extrema calculation worker
-    private val _extremaCalculationMessage = MutableLiveData<Event<String>>()
-    val extremaCalculationMessage: LiveData<Event<String>> = _extremaCalculationMessage
+    val extremaCalculationMessage: LiveData<Event<String>> = repository.extremaCalculationMessage
 
-    val saveFinishedEvent = MutableLiveData<Event<Boolean>>()
-    val deleteFinishedEvent = MutableLiveData<Event<Boolean>>()
 
-    private val headerDataProvider =
-        WorkoutHeaderDataProvider(application, EquipmentDbHelper(application))
-    private val detailsDataProvider = WorkoutDetailsDataProvider(application)
-    private val extremaDataProvider = ExtremaDataProvider(application)
-    private val descriptionDataProvider = DescriptionDataProvider()
-
-    // observe the calculation of the extrema values
-    private val extremaDataObserver = object : Observer<List<WorkInfo>> {
-        private var lastProgressSequence = -1
-        override fun onChanged(workInfos: List<WorkInfo>) {
-            Log.d("EditWorkoutViewModel", "called for workoutId=$workoutId")
-
-            // Find the worker
-            val workInfo = workInfos.firstOrNull() ?: return
-
-            if (workInfo.state.isFinished) {
-                Log.d("EditWorkoutViewModel", "finished calculation")
-                loadHeaderData()
-                loadDetailsAndExtremaData()
-            } else {
-                val currentProgress =
-                    workInfo.progress.getInt(CalcExtremaWorker.KEY_PROGRESS_SEQUENCE, -1)
-                if (currentProgress > lastProgressSequence) {
-                    lastProgressSequence = currentProgress
-
-                    // first, check for a message regarding the doing
-                    val message =
-                        workInfo.progress.getString(CalcExtremaWorker.KEY_STARTING_MESSAGE)
-                    if (message != null) {
-                        Log.d("EditWorkoutViewModel", "received message: $message")
-                        _extremaCalculationMessage.postValue(Event(message))
-                    } else {
-                        // check the update type ---
-                        val updateType =
-                            workInfo.progress.getString(CalcExtremaWorker.KEY_FINISHED_MESSAGE)
-                        Log.d("EditWorkoutViewModel", "received update type: $updateType")
-                        if (updateType == CalcExtremaWorker.FINISHED_AUTO_NAME ||
-                            updateType == CalcExtremaWorker.FINISHED_COMMUTE_AND_TRAINER) {
-                            loadHeaderData()
-                        } else if (updateType == CalcExtremaWorker.FINISHED_EXTREMA_VALE) {
-                            loadDetailsAndExtremaData()
-                        }
-                    }
-                }
-            }
-        }
-    }
+    val saveFinishedEvent: MutableLiveData<Event<Boolean>> = repository.saveFinishedEvent
+    val deleteFinishedEvent: MutableLiveData<Event<Boolean>> = repository.deleteFinishedEvent
 
 
     init {
-        loadInitialWorkout()
-    }
-
-    private fun loadHeaderData() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val db = workoutSummariesDatabaseManager.getDatabase()
-            val cursor = db.query(
-                WorkoutSummaries.TABLE,
-                null, // We only need extrema columns, but null is fine for performance here
-                "${WorkoutSummaries.C_ID} = ?",
-                arrayOf(workoutId.toString()),
-                null, null, null
-            )
-
-            if (cursor.moveToFirst()) {
-                val newHeaderData = headerDataProvider.createWorkoutHeaderData(cursor)
-                // Post the new list to the specific LiveData for the ViewHolder
-                _headerData.postValue(newHeaderData)
-            }
-            cursor.close()
-        }
-    }
-
-    // Function to load only the extrema data ---
-    private fun loadDetailsAndExtremaData() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val db = workoutSummariesDatabaseManager.getDatabase()
-            val cursor = db.query(
-                WorkoutSummaries.TABLE,
-                null, // We only need extrema columns, but null is fine for performance here
-                "${WorkoutSummaries.C_ID} = ?",
-                arrayOf(workoutId.toString()),
-                null, null, null
-            )
-
-            if (cursor.moveToFirst()) {
-                val newExtremaList = extremaDataProvider.getExtremaData(cursor)
-                // Post the new list to the specific LiveData for the ViewHolder
-                _extremaData.postValue(newExtremaList)
-
-                val newDetailsData = detailsDataProvider.getWorkoutDetailsData(cursor)
-                // Post the new list to the specific LiveData for the ViewHolder
-                _detailsData.postValue(newDetailsData)
-            }
-            cursor.close()
-        }
-    }
-
-    private fun loadInitialWorkout() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val db = workoutSummariesDatabaseManager.getDatabase()
-            val cursor = db.query(
-                WorkoutSummaries.TABLE,
-                null,
-                "${WorkoutSummaries.C_ID} = ?",
-                arrayOf(workoutId.toString()),
-                null, null, null
-            )
-
-            if (cursor.moveToFirst()) {
-                val headerData = headerDataProvider.createWorkoutHeaderData(cursor)
-                val detailsData = detailsDataProvider.getWorkoutDetailsData(cursor)
-                val descriptionData = descriptionDataProvider.createDescriptionData(cursor)
-                val extremaData = extremaDataProvider.getExtremaData(cursor)
-
-                val data = WorkoutData(
-                    id = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.C_ID)),
-                    fileBaseName = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.FILE_BASE_NAME)),
-                    activeTime = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_ACTIVE_s)),
-
-                    headerData = headerData,
-                    detailsData = detailsData,
-                    descriptionData = descriptionData,
-                    extremaData = extremaData
-                )
-
-                // Post to the main LiveData for the one-time setup
-                _workoutData.postValue(data)
-                // Also post the initial list to the new LiveData
-                _extremaData.postValue(extremaData)
-
-                if (extremaData.isCalculating) {
-                    launch(Dispatchers.Main) {
-                        Log.d("EditWorkoutViewModel", "Initial setup: Attaching the single observer.")
-                        val workTag = "extrema_calc_${data.id}"
-                        val workManager = WorkManager.getInstance(getApplication())
-                        // Remove any stale observers first, just in case.
-                        workManager.getWorkInfosByTagLiveData(workTag).removeObserver(extremaDataObserver)
-                        // Attach our single, persistent observer.
-                        workManager.getWorkInfosByTagLiveData(workTag).observeForever(extremaDataObserver)
-                    }
-                }
-
-            }
-            cursor.close()
+        // Tell the repository to load the initial data
+        viewModelScope.launch {
+            repository.loadWorkout(workoutId)
         }
     }
 
     fun updateWorkoutName(newName: String) {
-        val currentData = _workoutData.value ?: return
-        // Avoid unnecessary updates if the text hasn't changed
-        if (newName == currentData.headerData.workoutName) return
-
-        _workoutData.value = currentData.copy(
-            headerData = currentData.headerData.copy(workoutName = newName)
-        )
+        repository.updateWorkoutName(newName)
     }
 
     fun updateSportName(newSportName: String?) {
-        if (newSportName == null) return
-
-        val currentData = _workoutData.value ?: return
-
-        // get the sportId
-        val sportTypeDatabaseManager = SportTypeDatabaseManager.getInstance(context)
-        val newSportId = sportTypeDatabaseManager.getSportTypeIdFromUIName(newSportName)
-        val newBSportType = sportTypeDatabaseManager.getBSportType(newSportId)
-
-        // update the LiveData state with all the new information
-        _workoutData.value = currentData.copy(
-            headerData = currentData.headerData.copy(
-                sportName = newSportName,
-                sportId = newSportId,
-                bSportType = newBSportType
-            )
-        )
+        repository.updateSportName(newSportName)
     }
 
     fun updateEquipmentName(newEquipmentName: String?) {
-        if (newEquipmentName == null) return
-
-        val currentData = _workoutData.value ?: return
-
-        _workoutData.value = currentData.copy(
-            headerData = currentData.headerData.copy(
-                equipmentName = newEquipmentName
-            )
-        )
+        repository.updateEquipmentName(newEquipmentName)
     }
 
     fun updateDescription(newDescription: String) {
-        val currentData = _workoutData.value ?: return
-        if (newDescription == currentData.descriptionData.description) return
-
-        _workoutData.value = currentData.copy(
-            descriptionData = currentData.descriptionData.copy(description = newDescription)
-        )
+        repository.updateDescription(newDescription)
     }
 
     fun updateGoal(newGoal: String) {
-        val currentData = _workoutData.value ?: return
-        if (newGoal == currentData.descriptionData.goal) return
-
-        _workoutData.value = currentData.copy(
-            descriptionData = currentData.descriptionData.copy(goal = newGoal)
-        )
+        repository.updateGoal(newGoal)
     }
 
     fun updateMethod(newMethod: String) {
-        val currentData = _workoutData.value ?: return
-        if (newMethod == currentData.descriptionData.method) return
-
-        _workoutData.value = currentData.copy(
-            descriptionData = currentData.descriptionData.copy(method = newMethod)
-        )
+        repository.updateMethod(newMethod)
     }
 
     fun updateIsCommute(isChecked: Boolean) {
-        val currentData = _workoutData.value ?: return
-        // Avoid unnecessary updates
-        if (isChecked == currentData.headerData.commute) return
-
-        _workoutData.value = currentData.copy(
-            headerData = currentData.headerData.copy(commute = isChecked)
-        )
+        repository.updateIsCommute(isChecked)
     }
 
     fun updateIsTrainer(isChecked: Boolean) {
-        val currentData = _workoutData.value ?: return
-        // Avoid unnecessary updates
-        if (isChecked == currentData.headerData.trainer) return
-
-        _workoutData.value = currentData.copy(
-            headerData = currentData.headerData.copy(trainer = isChecked)
-        )
+        repository.updateIsTrainer(isChecked)
     }
 
 
@@ -311,60 +96,12 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
      * Saves the current state of the WorkoutData object to the database.
      */
     fun saveChanges() {
-        // Get the most recent state from the LiveData. If it's null, there's nothing to save.
-        val dataToSave = _workoutData.value ?: return
-
-        // Launch a coroutine in the IO dispatcher to perform database operations off the main thread.
-        viewModelScope.launch(Dispatchers.IO) {
-            val workoutId = dataToSave.id
-
-            // -- update the Database
-            // Update Workout Name
-            workoutSummariesDatabaseManager.updateWorkoutName(
-                workoutId,
-                dataToSave.headerData.workoutName ?: ""
-            )
-
-            // Update Sport and Equipment
-            val equipmentDbHelper = EquipmentDbHelper(getApplication())
-            val equipmentId = equipmentDbHelper.getEquipmentId(dataToSave.headerData.equipmentName ?: "")
-            workoutSummariesDatabaseManager.updateSportAndEquipment(
-                workoutId,
-                dataToSave.headerData.sportId,
-                equipmentId
-            )
-
-            // Update Commute and Trainer flags
-            workoutSummariesDatabaseManager.updateCommuteAndTrainerFlag(
-                workoutId,
-                dataToSave.headerData.commute,
-                dataToSave.headerData.trainer
-            )
-
-            // Update Description, Goal, and Method
-            workoutSummariesDatabaseManager.updateDescription(
-                workoutId,
-                dataToSave.descriptionData.description ?: "",
-                dataToSave.descriptionData.goal ?: "",
-                dataToSave.descriptionData.method ?: ""
-            )
-
-            // -- trigger export
-            val exportManager = ExportManager(application)
-            exportManager.exportWorkout(dataToSave.fileBaseName)
-
-            saveFinishedEvent.postValue(Event(true))
-        }
+        repository.saveWorkout()
     }
 
     fun deleteWorkout() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val workoutDeletionHelper = WorkoutDeletionHelper(context)
-            val success = workoutDeletionHelper.deleteWorkout(workoutId)
-            deleteFinishedEvent.postValue(Event(success))
-        }
+        repository.deleteWorkout()
     }
-
 }
 
 class EditWorkoutViewModelFactory(private val application: Application, private val workoutId: Long) : ViewModelProvider.Factory {

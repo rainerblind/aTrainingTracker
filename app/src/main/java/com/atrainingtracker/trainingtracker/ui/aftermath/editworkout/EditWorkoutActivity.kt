@@ -211,17 +211,17 @@ class EditWorkoutActivity : AppCompatActivity() {
             }
         }
 
-        viewModel.headerData.observe(this) { headerData ->
+        viewModel.headerData.observe(this) { (id, headerData) ->
             editWorkoutName.setText(headerData.workoutName)
             checkboxCommute.isChecked = headerData.commute
             checkboxTrainer.isChecked = headerData.trainer
         }
 
-        viewModel.detailsData.observe(this) { detailsData ->
+        viewModel.detailsData.observe(this) { (id, detailsData) ->
             detailsViewHolder?.bind(detailsData)
         }
 
-        viewModel.extremaData.observe(this) { extremaData ->
+        viewModel.extremaData.observe(this) { (id, extremaData) ->
             extremaValuesViewHolder?.bind(extremaData)
         }
 

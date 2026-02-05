@@ -125,6 +125,13 @@ public class WorkoutSummariesDatabaseManager {
         return getString(workoutId, WorkoutSummaries.WORKOUT_NAME);
     }
 
+    public Cursor getWorkoutCursor(long workoutId) {
+        return getDatabase().query(WorkoutSummaries.TABLE,
+                null,
+                WorkoutSummaries.C_ID + "=?",
+                new String[]{Long.toString(workoutId)},
+                null, null, null);
+    }
 
 
     @Nullable
