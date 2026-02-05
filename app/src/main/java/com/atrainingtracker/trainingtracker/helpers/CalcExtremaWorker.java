@@ -75,16 +75,6 @@ public class CalcExtremaWorker extends Worker {
 
 
     private void publishStarting(String message) {
-        if (DEBUG) {
-            Log.d(TAG, "...: " + message);
-            try {
-                Thread.sleep(1000); // 1 second delay
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt(); // Restore the interrupted status
-            }
-
-            Log.d(TAG, "Progress: " + message);
-        }
 
         progressCounter++;
         Data progressData = new Data.Builder()
