@@ -17,6 +17,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseMan
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.atrainingtracker.trainingtracker.exporter.ExportManager
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
+import com.atrainingtracker.trainingtracker.ui.aftermath.DeletionProgress
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.DescriptionDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsDataProvider
@@ -37,6 +38,10 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
     //
     // LiveData to trigger showing the "Delete Old Workouts" dialog
     val showDeleteOldWorkoutsDialogEvent = SingleLiveEvent<Unit>()
+
+    // --- LiveData for granular deletion progress ---
+    private val _deletionProgress = MutableLiveData<DeletionProgress>(DeletionProgress.Idle)
+    val deletionProgress: LiveData<DeletionProgress> = _deletionProgress
 
     private val workoutSummariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(application)
 
@@ -200,12 +205,28 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
      */
     fun executeDeleteOldWorkouts(daysToKeep: Int) {
         viewModelScope.launch(Dispatchers.IO) {
-            val workoutDeletionHelper = WorkoutDeletionHelper(getApplication())
-            val success = workoutDeletionHelper.deleteOldWorkouts(daysToKeep)
+            try {
+                val workoutDeletionHelper = WorkoutDeletionHelper(getApplication())
 
-            // After deleting, reload the data so the UI updates automatically.
-            if (success) {
-                loadWorkouts()
+                // The callback lambda that will be executed inside the helper.
+                val progressCallback: (Long) -> Unit = { workoutId ->
+                    // Find the workout name from the current list to display it.
+                    val workout = _workouts.value?.find { it.id == workoutId }
+                    val workoutName = workout?.headerData?.workoutName ?: "Workout ID: $workoutId"
+
+                    // Post the detailed progress to the LiveData.
+                    _deletionProgress.postValue(DeletionProgress.InProgress(workoutName, workoutId))
+                }
+
+                val success = workoutDeletionHelper.deleteOldWorkouts(daysToKeep, progressCallback)
+
+                // After deleting, reload the data so the UI updates automatically.
+                if (success) {
+                    loadWorkouts()
+                }
+            } finally {
+                // Reset the state to Idle when done or if an error occurs.
+                _deletionProgress.postValue(DeletionProgress.Idle)
             }
         }
     }

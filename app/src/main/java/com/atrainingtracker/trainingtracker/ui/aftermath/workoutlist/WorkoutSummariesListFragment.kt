@@ -2,6 +2,7 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 
 import android.os.Bundle
 import android.text.InputType
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuInflater
@@ -10,6 +11,9 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.FrameLayout
+import android.widget.LinearLayout
+import android.widget.ProgressBar
+import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
@@ -18,6 +22,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.aftermath.DeletionProgress
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 
@@ -33,13 +38,18 @@ class WorkoutSummariesListFragment : Fragment() {
     private lateinit var workoutAdapter: WorkoutSummariesAdapter
     private lateinit var recyclerView: RecyclerView
 
+    private lateinit var progressContainer: View // Will hold the ProgressBar and TextView
+    private lateinit var progressText: TextView
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        val context = requireContext()
+
         // Programmatically create the RecyclerView, similar to the Java version.
-        recyclerView = RecyclerView(requireContext()).apply {
+        recyclerView = RecyclerView(context).apply {
             id = View.generateViewId() // For state restoration
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -48,7 +58,42 @@ class WorkoutSummariesListFragment : Fragment() {
             setHasFixedSize(true) // Important for performance
             layoutManager = LinearLayoutManager(context)
         }
-        return recyclerView
+
+        // --- Create a container for the progress indicators ---
+        progressContainer = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            visibility = View.GONE // Initially hidden
+
+            setBackgroundResource(R.drawable.progress_container_background)
+
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.TOP
+            )
+
+            // Add some padding inside the container
+            val padding = (16 * resources.displayMetrics.density).toInt()
+            setPadding(padding, padding, padding, padding)
+
+            // Add the ProgressBar to the container
+            addView(ProgressBar(context))
+
+            // Add the TextView for progress text
+            progressText = TextView(context).apply {
+                setTextAppearance(android.R.style.TextAppearance_Material_Body2)
+                setPadding(0, (8 * resources.displayMetrics.density).toInt(), 0, 0) // 8dp top padding
+                gravity = Gravity.CENTER_HORIZONTAL
+            }
+            addView(progressText)
+        }
+
+        // Create the root FrameLayout
+        return FrameLayout(context).apply {
+            addView(recyclerView)
+            addView(progressContainer) // Add the container instead of just the ProgressBar
+        }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -122,6 +167,20 @@ class WorkoutSummariesListFragment : Fragment() {
 
         viewModel.showDeleteOldWorkoutsDialogEvent.observe(viewLifecycleOwner) {
             showDeleteOldWorkoutsDialog()
+        }
+
+        viewModel.deletionProgress.observe(viewLifecycleOwner) { state ->
+            when (state) {
+                is DeletionProgress.Idle -> {
+                    progressContainer.visibility = View.GONE
+                    recyclerView.alpha = 1.0f
+                }
+                is DeletionProgress.InProgress -> {
+                    progressContainer.visibility = View.VISIBLE
+                    progressText.text = getString(R.string.deleting_workout, state.workoutName)
+                    recyclerView.alpha = 0.5f // Keep the list dimmed
+                }
+            }
         }
 
     }
