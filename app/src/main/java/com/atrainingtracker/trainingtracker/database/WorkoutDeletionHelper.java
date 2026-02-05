@@ -1,7 +1,6 @@
 package com.atrainingtracker.trainingtracker.database;
 
 import android.content.Context;
-import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -10,6 +9,9 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusRepository;
 
 import java.util.List;
+
+import kotlin.Unit;
+import kotlin.jvm.functions.Function1;
 
 public class WorkoutDeletionHelper {
 
@@ -56,11 +58,13 @@ public class WorkoutDeletionHelper {
         return true;
     }
 
-    public boolean deleteOldWorkouts(int daysToKeep) {
+    public boolean deleteOldWorkouts(int daysToKeep, Function1<Long, Unit> progressCallback) {
         Log.i(TAG, "deleteOldWorkouts(" + daysToKeep + ")");
         List<Long> oldWorkoutIds = WorkoutSummariesDatabaseManager.getInstance(mContext).getOldWorkouts(daysToKeep);
         for (long workoutId : oldWorkoutIds) {
             Log.d(TAG, "Deleting workout with ID: " + workoutId);
+
+            progressCallback.invoke(workoutId);
 
             deleteWorkout(workoutId);
         }
