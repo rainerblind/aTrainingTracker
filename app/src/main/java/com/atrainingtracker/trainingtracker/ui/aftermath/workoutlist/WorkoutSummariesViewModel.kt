@@ -2,6 +2,7 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 
 import android.R.id
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -11,10 +12,12 @@ import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.atrainingtracker.trainingtracker.SingleLiveEvent
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
+import com.atrainingtracker.trainingtracker.database.WorkoutDeletionHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.atrainingtracker.trainingtracker.exporter.ExportManager
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
+import com.atrainingtracker.trainingtracker.ui.aftermath.DeletionProgress
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.DescriptionDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsDataProvider
@@ -22,6 +25,7 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.Extrema
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderDataProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.util.Date
 
 
 class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(application) {
@@ -30,6 +34,14 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
     private val _workouts = MutableLiveData<List<WorkoutData>>()
     // Public LiveData that the Fragment will observe. This is immutable.
     val workouts: LiveData<List<WorkoutData>> = _workouts
+
+    //
+    // LiveData to trigger showing the "Delete Old Workouts" dialog
+    val showDeleteOldWorkoutsDialogEvent = SingleLiveEvent<Unit>()
+
+    // --- LiveData for granular deletion progress ---
+    private val _deletionProgress = MutableLiveData<DeletionProgress>(DeletionProgress.Idle)
+    val deletionProgress: LiveData<DeletionProgress> = _deletionProgress
 
     private val workoutSummariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(application)
 
@@ -169,13 +181,69 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
      */
     fun deleteWorkout(id: Long) {
         viewModelScope.launch(Dispatchers.IO) {
-            val db = WorkoutSummariesDatabaseManager.getInstance(application).getDatabase()
-            // Using DeleteWorkoutThread is good practice if it does more than just a DB delete.
-            // For a simple delete, this is also fine:
-            db.delete(WorkoutSummaries.TABLE, "${WorkoutSummaries.C_ID} = ?", arrayOf(id.toString()))
+            try {
+                // Find the workout name *before* deleting it.
+                val workout = _workouts.value?.find { it.id == id }
+                val workoutName = workout?.headerData?.workoutName ?: "Workout ID: $id"
 
-            // After deleting, reload the data. The UI will update automatically.
-            loadWorkouts()
+                // --- START PROGRESS ---
+                // Post the detailed progress to the LiveData.
+                _deletionProgress.postValue(DeletionProgress.InProgress(workoutName, id))
+
+                // Perform the actual deletion.
+                val workoutDeletionHelper = WorkoutDeletionHelper(getApplication())
+                val success = workoutDeletionHelper.deleteWorkout(id)
+
+                // After deleting, reload the data so the UI updates automatically.
+                if (success) {
+                    loadWorkouts()
+                }
+
+            } finally {
+                // --- END PROGRESS ---
+                // Reset the state to Idle when done or if an error occurs.
+                _deletionProgress.postValue(DeletionProgress.Idle)
+            }
+        }
+    }
+
+
+    // --- Methods for the delection of old workouts ---
+    /**
+     * Called from the Fragment's menu. Triggers the dialog.
+     */
+    fun onDeleteOldWorkoutsClicked() {
+        showDeleteOldWorkoutsDialogEvent.postValue(Unit)
+    }
+
+    /**
+     * Called from the Fragment AFTER the user confirms the date in the dialog.
+     */
+    fun executeDeleteOldWorkouts(daysToKeep: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val workoutDeletionHelper = WorkoutDeletionHelper(getApplication())
+
+                // The callback lambda that will be executed inside the helper.
+                val progressCallback: (Long) -> Unit = { workoutId ->
+                    // Find the workout name from the current list to display it.
+                    val workout = _workouts.value?.find { it.id == workoutId }
+                    val workoutName = workout?.headerData?.workoutName ?: "Workout ID: $workoutId"
+
+                    // Post the detailed progress to the LiveData.
+                    _deletionProgress.postValue(DeletionProgress.InProgress(workoutName, workoutId))
+                }
+
+                val success = workoutDeletionHelper.deleteOldWorkouts(daysToKeep, progressCallback)
+
+                // After deleting, reload the data so the UI updates automatically.
+                if (success) {
+                    loadWorkouts()
+                }
+            } finally {
+                // Reset the state to Idle when done or if an error occurs.
+                _deletionProgress.postValue(DeletionProgress.Idle)
+            }
         }
     }
 
@@ -184,12 +252,10 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
         // Post an event commanding the fragment/activity to handle the export.
         exportWorkout(id, format)    }
 
-    // --- NEW METHOD TO HANDLE THE EXPORT LOGIC ---
     fun exportWorkout(workoutId: Long, fileFormat: FileFormat) {
         viewModelScope.launch(Dispatchers.IO) {
             val exportManager = ExportManager(application)
             exportManager.exportWorkoutTo(workoutId, fileFormat)
-
         }
     }
 }
