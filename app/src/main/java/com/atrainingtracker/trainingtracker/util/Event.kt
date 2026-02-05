@@ -4,7 +4,7 @@ package com.atrainingtracker.trainingtracker.util
  * Used as a wrapper for data that is exposed via a LiveData that represents an event.
  * This prevents the event from being fired again on configuration changes (like screen rotation).
  */
-open class Event<out T>(private val content: T) {
+open class Event<out T>(private val content: T, val workoutId: Long) {
 
     private var hasBeenHandled = false
 
