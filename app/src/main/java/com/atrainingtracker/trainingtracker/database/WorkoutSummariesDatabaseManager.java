@@ -469,9 +469,7 @@ public class WorkoutSummariesDatabaseManager {
 
             while (cursor.moveToNext()) {
                 long workoutId = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.C_ID));
-                if (DEBUG) Log.i(TAG, "adding " + workoutId + " to oldWorkoutId List (name="
-                        + cursor.getString(cursor.getColumnIndex(WorkoutSummaries.WORKOUT_NAME)) + ", startTime="
-                        + cursor.getString(cursor.getColumnIndex(WorkoutSummaries.TIME_START)) + ")");
+                if (DEBUG) Log.i(TAG, "adding " + workoutId + " to oldWorkoutId List");
                 oldWorkoutIds.add(workoutId);
             }
         }

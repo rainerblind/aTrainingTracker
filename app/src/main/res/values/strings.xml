@@ -63,6 +63,7 @@
     <string name="really_delete_pebble_view_format">Do you really want to delete the Pebble view "%1$s"?</string>
     <string name="really_delete_view_format">Do you really want to delete the tracking view "%1$s"?</string>
     <string name="deleting_please_wait">Deleting workout …\nplease wait</string>
+    <string name="deleting_workout">Deleting: %1$s…</string>)
     <string name="calculating_extrema_values">Calculating min, mean, and max values…</string>
     <string name="calculating_extrema_value_for">calculating %1$s of %2$s</string>
     <string name="calculating_max_away_point">calculating max away point</string>
