@@ -15,7 +15,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.atrainingtracker.R
-import com.atrainingtracker.trainingtracker.interfaces.ReallyDeleteDialogInterface
 import com.atrainingtracker.trainingtracker.interfaces.ShowWorkoutDetailsInterface
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
