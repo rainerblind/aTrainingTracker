@@ -7,6 +7,7 @@ import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import androidx.appcompat.app.AlertDialog
 import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -60,6 +61,14 @@ class WorkoutSummariesListFragment : Fragment() {
         viewModel.loadWorkouts()
     }
 
+    override fun onResume() {
+        super.onResume()
+        // Refresh data on resume, e.g., if details were changed in another activity.
+        // The ViewModel can internally prevent redundant loads if desired.
+        viewModel.loadWorkouts()
+    }
+
+
     private fun setupMenu() {
         // Add the MenuProvider to the Fragment's Lifecycle
         requireActivity().addMenuProvider(object : MenuProvider {
@@ -100,7 +109,8 @@ class WorkoutSummariesListFragment : Fragment() {
 
             // Observe the delete command
             viewModel.confirmDeleteWorkoutEvent.observe(viewLifecycleOwner) { workoutId ->
-                (activity as? ReallyDeleteDialogInterface)?.confirmDeleteWorkout(workoutId)
+                showDeleteConfirmationDialog(workoutId)
+                // (activity as? ReallyDeleteDialogInterface)?.confirmDeleteWorkout(workoutId)
             }
 
             // Observe the export command
@@ -110,12 +120,19 @@ class WorkoutSummariesListFragment : Fragment() {
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        // Refresh data on resume, e.g., if details were changed in another activity.
-        // The ViewModel can internally prevent redundant loads if desired.
-        viewModel.loadWorkouts()
+    private fun showDeleteConfirmationDialog(workoutId: Long) {
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.delete_workout)
+            .setMessage(R.string.really_delete_workout)
+            .setIcon(android.R.drawable.ic_menu_delete)
+            .setPositiveButton(R.string.delete_workout) { _, _ ->
+                // If user clicks "Delete", tell the ViewModel to proceed with the deletion.
+                viewModel.deleteWorkout(workoutId)
+            }
+            .setNegativeButton(R.string.cancel, null) // Do nothing on cancel
+            .show()
     }
+
 
     companion object {
         @JvmField
