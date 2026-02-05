@@ -133,42 +133,6 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
         workManager.getWorkInfosByTagLiveData(workTag).observeForever(observer)
     }
 
-    /**
-     * Updates the name of a workout in the database and reloads the list.
-     */
-    fun updateWorkoutName(id: Long, newName: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            workoutSummariesDatabaseManager.updateWorkoutName(id, newName)
-
-            // After updating, reload the data to reflect the change.
-            loadWorkouts()
-        }
-    }
-
-    /**
-     * Updates the description, goal, and method of a workout in the database and reloads the list.
-     */
-    fun updateDescription(id: Long, newDescription: String, newGoal: String, newMethod: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            workoutSummariesDatabaseManager.updateDescription(id, newDescription, newGoal, newMethod)
-
-            // Reload to show the updated data.
-            loadWorkouts()
-        }
-    }
-
-    /**
-     * Updates the sport and equipment for a workout in the database and reloads the list.
-     */
-    fun updateSportAndEquipment(id: Long, newSportId: Long, newEquipmentId: Long) {
-        viewModelScope.launch(Dispatchers.IO) {
-            workoutSummariesDatabaseManager.updateSportAndEquipment(id, newSportId, newEquipmentId)
-
-            // Reload to show the updated sport icon and equipment name.
-            loadWorkouts()
-        }
-    }
-
 
     fun onDeleteWorkoutClicked(id: Long) {
         // Post an event to the LiveData. The fragment will observe this

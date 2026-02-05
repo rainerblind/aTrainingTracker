@@ -18,11 +18,8 @@ import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusVie
 import com.atrainingtracker.trainingtracker.ui.components.map.MapComponent
 import com.atrainingtracker.trainingtracker.ui.components.map.MapContentType
 import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.DescriptionViewHolder
-import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.EditDescriptionDialogFragment
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsViewHolder
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaValuesViewHolder
-import com.atrainingtracker.trainingtracker.ui.components.workoutheader.ChangeSportAndEquipmentDialogFragment
-import com.atrainingtracker.trainingtracker.ui.components.workoutheader.EditWorkoutNameDialogFragment
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderViewHolder
 import com.google.android.gms.maps.MapView
 
@@ -124,47 +121,12 @@ class WorkoutSummariesAdapter(
         private fun setupClickListeners() {
             // This method is called only once, during ViewHolder creation.
 
-            // --- Long-Click Listeners for Editing ---
-            headerViewHolder?.workoutNameView?.setOnLongClickListener {
-                // Use the stored workoutSummary object for the current data.
-                val dialog = EditWorkoutNameDialogFragment.newInstance(workoutSummary.headerData.workoutName)
-                dialog.onWorkoutNameChanged = { newName ->
-                    // Instead of updating UI directly, we notify the ViewModel of the event.
-                    viewModel.updateWorkoutName(workoutSummary.id, newName)
-                }
-                dialog.show(fragmentManager, "EditWorkoutNameDialogFragment")
-                true // Consume the long-click event
-            }
-
-            headerViewHolder?.sportContainerView?.setOnLongClickListener {
-                val dialog = ChangeSportAndEquipmentDialogFragment.newInstance(
-                    workoutSummary.headerData.sportId,
-                    workoutSummary.headerData.equipmentName
-                )
-                dialog.onSave = { newSportId, newEquipmentId ->
-                    viewModel.updateSportAndEquipment(workoutSummary.id, newSportId, newEquipmentId)
-                }
-                dialog.show(fragmentManager, "ChangeSportAndEquipmentDialogFragment")
-                true
-            }
-
-            descriptionViewHolder?.rootView?.setOnLongClickListener {
-                val dialog = EditDescriptionDialogFragment.newInstance(workoutSummary.descriptionData.description, workoutSummary.descriptionData.goal, workoutSummary.descriptionData.method)
-                dialog.onDescriptionChanged = { newDescription, newGoal, newMethod ->
-                    viewModel.updateDescription(workoutSummary.id, newDescription, newGoal, newMethod)
-                }
-                dialog.show(fragmentManager, "EditDescriptionDialogFragment")
-                true
-            }
-
-            // --- Short-Click Listener for Navigation ---
+            // create on click listener
             val detailsClickListener = View.OnClickListener {
                 TrainingApplication.startEditWorkoutActivity(workoutSummary.id, false) // only show the editable fields
             }
             // Attach this listener to multiple views
             headerViewHolder?.view?.setOnClickListener(detailsClickListener)
-            headerViewHolder?.sportContainerView?.setOnClickListener(detailsClickListener)
-            headerViewHolder?.workoutNameView?.setOnClickListener(detailsClickListener)
             detailsViewHolder?.view?.setOnClickListener(detailsClickListener)
             extremaValuesViewHolder?.view?.setOnClickListener(detailsClickListener)
             descriptionViewHolder?.rootView?.setOnClickListener(detailsClickListener)
