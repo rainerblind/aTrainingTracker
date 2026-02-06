@@ -134,6 +134,15 @@ public class WorkoutSummariesDatabaseManager {
     }
 
 
+    public Cursor getCursorForAllWorkouts() {
+        return getDatabase().query(
+                WorkoutSummaries.TABLE,
+                null, null, null, null, null,
+                WorkoutSummaries.TIME_START + " DESC"
+        );
+    }
+
+
     @Nullable
     public String getBaseFileName(long workoutId) {
         if (DEBUG) Log.i(TAG, "getBaseFileName for workoutId: " + workoutId);
