@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
+import androidx.lifecycle.map
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
@@ -17,6 +18,7 @@ import kotlinx.coroutines.withContext
 import com.atrainingtracker.trainingtracker.database.WorkoutDeletionHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.exporter.ExportManager
+import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.helpers.CalcExtremaWorker
 import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.DescriptionDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsData
@@ -56,9 +58,20 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
 
     // --- LiveData for Data and Progress ---
 
-    // LiveData for the single, currently edited workout
-    private val _workoutData = MutableLiveData<WorkoutData>()
-    val workoutData: LiveData<WorkoutData> = _workoutData
+    // LiveData for all workouts
+    private val _allWorkouts = MutableLiveData<List<WorkoutData>>()
+    val allWorkouts: LiveData<List<WorkoutData>> = _allWorkouts
+
+    /**
+     * Returns a LiveData object that contains only the workout with the specified ID.
+     * This is derived from the main 'allWorkouts' list.
+     */
+    fun getWorkoutById(id: Long): LiveData<WorkoutData?> {
+        return allWorkouts.map { list ->
+            list.find { it.id == id }
+        }
+    }
+
 
     // LiveData specifically for the header
     private val _headerData = MutableLiveData<Pair<Long, WorkoutHeaderData>>()
@@ -77,6 +90,12 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
     // LiveData specifically for the message from the extrema calculation worker
     private val _extremaCalculationMessage = MutableLiveData<Event<String>>()
     val extremaCalculationMessage: LiveData<Event<String>> = _extremaCalculationMessage
+
+
+    // --- LiveData for granular deletion progress ---
+    private val _deletionProgress = MutableLiveData<DeletionProgress>(DeletionProgress.Idle)
+    val deletionProgress: LiveData<DeletionProgress> = _deletionProgress
+
 
 
     val saveFinishedEvent = MutableLiveData<Event<Boolean>>()
@@ -127,6 +146,16 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
     }
 
 
+    private fun observeExtremaCalculation(workoutId: Long) {
+        Log.d("EditWorkoutViewModel", "Attaching the single observer.")
+        val workTag = "extrema_calc_${workoutId}"
+        val workManager = WorkManager.getInstance(application)
+        // Remove any stale observers first, just in case.
+        workManager.getWorkInfosByTagLiveData(workTag).removeObserver(extremaDataObserver)
+        // Attach our single, persistent observer.
+        workManager.getWorkInfosByTagLiveData(workTag).observeForever(extremaDataObserver)
+    }
+
     // --- Public API for ViewModels ---
 
     /**
@@ -134,159 +163,198 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
      */
     suspend fun loadWorkout(id: Long) {
         withContext(Dispatchers.IO) {
-            val cursor = summariesManager.getWorkoutCursor(id)
-            if (cursor != null && cursor.moveToFirst()) {
-                // get the workoutData
-                val data = mapper.fromCursor(cursor)
+            summariesManager.getWorkoutCursor(id).use { cursor ->
+                if (cursor?.moveToFirst() == true) {
+                    val workout = mapper.fromCursor(cursor)
+                    _allWorkouts.postValue(listOf(workout))
 
-                // Post it
-                _workoutData.postValue(data)
-
-                // eventually, observe the extrema calculation
-                if (data.extremaData.isCalculating) {
-                    workoutIdExtremaCalculation = data.id
-
-                    launch(Dispatchers.Main) {
-                        Log.d("EditWorkoutViewModel", "Initial setup: Attaching the single observer.")
-                        val workTag = "extrema_calc_${data.id}"
-                        val workManager = WorkManager.getInstance(application)
-                        // Remove any stale observers first, just in case.
-                        workManager.getWorkInfosByTagLiveData(workTag).removeObserver(extremaDataObserver)
-                        // Attach our single, persistent observer.
-                        workManager.getWorkInfosByTagLiveData(workTag).observeForever(extremaDataObserver)
+                    // eventually, observe the extrema calculation
+                    if (workout.extremaData.isCalculating) {
+                        launch(Dispatchers.Main) {
+                            observeExtremaCalculation(workout.id)
+                        }
                     }
+                } else {
+                    _allWorkouts.postValue(emptyList())
+                }
+            }
+        }
+    }
+
+
+    suspend fun loadAllWorkouts() {
+        withContext(Dispatchers.IO) {
+            val summaryList = mutableListOf<WorkoutData>()
+            val cursor = summariesManager.getCursorForAllWorkouts()
+            // Safely iterate through the cursor and convert each row to a data object
+            cursor.use { c ->
+                if (c.moveToFirst()) {
+                    do {
+                        val data = mapper.fromCursor(c)
+                        summaryList.add( data)
+                    } while (c.moveToNext())
                 }
             }
             cursor.close()
+
+            // Post the final list to the LiveData. This will update the UI on the main thread.
+            _allWorkouts.postValue(summaryList)
+            // TODO: also post the header data???
+        }
+
+        // After the initial list is loaded and posted, check for any ongoing calculations.
+        allWorkouts.value?.forEach { workoutData ->
+            if (workoutData.extremaData.isCalculating) {
+                observeExtremaCalculation(workoutData.id)
+            }
         }
     }
 
-    // Function to load only the header data
+    private fun updateWorkoutInList(workoutId: Long, updatedWorkout: WorkoutData) {
+        val currentList = _allWorkouts.value ?: return
+        val updatedList = currentList.map {
+            if (it.id == workoutId) updatedWorkout else it
+        }
+        _allWorkouts.postValue(updatedList)
+    }
+
+    // Function to load only the header data of one workout
     private fun loadHeaderData(workoutId: Long) {
         launch(Dispatchers.IO) {
-            val cursor = summariesManager.getWorkoutCursor(workoutId)
-            if (cursor.moveToFirst()) {
-                val data = mapper.fromCursor(cursor)
-
-                _headerData.postValue(Pair(workoutId, data.headerData))
+            summariesManager.getWorkoutCursor(workoutId).use { cursor ->
+                if (cursor?.moveToFirst() == true) {
+                    val data = mapper.fromCursor(cursor)
+                    _headerData.postValue(Pair(workoutId, data.headerData))
+                    // Also update the main list to keep it consistent
+                    updateWorkoutInList(workoutId, data)
+                }
             }
-            cursor.close()
         }
     }
 
-    // Function to load only the extrema data ---
+    // Function to load only the extrema data of one workout
     private fun loadDetailsAndExtremaData(workoutId: Long) {
         launch(Dispatchers.IO) {
-            val cursor = summariesManager.getWorkoutCursor(workoutId)
-            if (cursor.moveToFirst()) {
-                val data = mapper.fromCursor(cursor)
-
-                _extremaData.postValue(Pair(workoutId, data.extremaData))
-                _detailsData.postValue(Pair(workoutId, data.detailsData))
+            summariesManager.getWorkoutCursor(workoutId).use { cursor ->
+                if (cursor?.moveToFirst() == true) {
+                    val data = mapper.fromCursor(cursor)
+                    _extremaData.postValue(Pair(workoutId, data.extremaData))
+                    _detailsData.postValue(Pair(workoutId, data.detailsData))
+                    // Also update the main list to keep it consistent
+                    updateWorkoutInList(workoutId, data)
+                }
             }
-            cursor.close()
         }
     }
 
-    fun updateWorkoutName(newName: String) {
-        val currentData = _workoutData.value ?: return
-        if (newName == currentData.headerData.workoutName) return
 
-        val updatedData = currentData.copy(
-            headerData = currentData.headerData.copy(workoutName = newName)
+    // Function to update the workout name of one workout
+    fun updateWorkoutName(workoutId: Long, newName: String) {
+        val currentList = _allWorkouts.value ?: return
+        val workoutToUpdate = currentList.find { it.id == workoutId } ?: return
+        if (newName == workoutToUpdate.headerData.workoutName) return
+
+        val updatedWorkout = workoutToUpdate.copy(
+            headerData = workoutToUpdate.headerData.copy(workoutName = newName)
         )
-        _workoutData.postValue(updatedData)
+        updateWorkoutInList(workoutId, updatedWorkout)
     }
 
-    fun updateSportName(newSportName: String?) {
+    fun updateSportName(workoutId: Long, newSportName: String?) {
         if (newSportName == null) return
+        val currentList = _allWorkouts.value ?: return
+        val workoutToUpdate = currentList.find { it.id == workoutId } ?: return
 
-        val currentData = _workoutData.value ?: return
-
-        // get the sportId
         val sportTypeDatabaseManager = SportTypeDatabaseManager.getInstance(application)
         val newSportId = sportTypeDatabaseManager.getSportTypeIdFromUIName(newSportName)
         val newBSportType = sportTypeDatabaseManager.getBSportType(newSportId)
 
-        // update the LiveData state with all the new information
-        _workoutData.value = currentData.copy(
-            headerData = currentData.headerData.copy(
+        val updatedWorkout = workoutToUpdate.copy(
+            headerData = workoutToUpdate.headerData.copy(
                 sportName = newSportName,
                 sportId = newSportId,
                 bSportType = newBSportType
             )
         )
+        updateWorkoutInList(workoutId, updatedWorkout)
     }
 
-    fun updateEquipmentName(newEquipmentName: String?) {
+
+    fun updateEquipmentName(workoutId: Long, newEquipmentName: String?) {
         if (newEquipmentName == null) return
+        val currentList = _allWorkouts.value ?: return
+        val workoutToUpdate = currentList.find { it.id == workoutId } ?: return
 
-        val currentData = _workoutData.value ?: return
-
-        _workoutData.value = currentData.copy(
-            headerData = currentData.headerData.copy(
-                equipmentName = newEquipmentName
-            )
+        val updatedWorkout = workoutToUpdate.copy(
+            headerData = workoutToUpdate.headerData.copy(equipmentName = newEquipmentName)
         )
+        updateWorkoutInList(workoutId, updatedWorkout)
     }
 
-    fun updateDescription(newDescription: String) {
-        val currentData = _workoutData.value ?: return
-        if (newDescription == currentData.descriptionData.description) return
+    fun updateDescription(workoutId: Long, newDescription: String) {
+        val currentList = _allWorkouts.value ?: return
+        val workoutToUpdate = currentList.find { it.id == workoutId } ?: return
+        if (newDescription == workoutToUpdate.descriptionData.description) return
 
-        _workoutData.value = currentData.copy(
-            descriptionData = currentData.descriptionData.copy(description = newDescription)
+        val updatedWorkout = workoutToUpdate.copy(
+            descriptionData = workoutToUpdate.descriptionData.copy(description = newDescription)
         )
+        updateWorkoutInList(workoutId, updatedWorkout)
     }
 
-    fun updateGoal(newGoal: String) {
-        val currentData = _workoutData.value ?: return
-        if (newGoal == currentData.descriptionData.goal) return
+    fun updateGoal(workoutId: Long, newGoal: String) {
+        val currentList = _allWorkouts.value ?: return
+        val workoutToUpdate = currentList.find { it.id == workoutId } ?: return
+        if (newGoal == workoutToUpdate.descriptionData.goal) return
 
-        _workoutData.value = currentData.copy(
-            descriptionData = currentData.descriptionData.copy(goal = newGoal)
+        val updatedWorkout = workoutToUpdate.copy(
+            descriptionData = workoutToUpdate.descriptionData.copy(goal = newGoal)
         )
+        updateWorkoutInList(workoutId, updatedWorkout)
     }
 
-    fun updateMethod(newMethod: String) {
-        val currentData = _workoutData.value ?: return
-        if (newMethod == currentData.descriptionData.method) return
+    fun updateMethod(workoutId: Long, newMethod: String) {
+        val currentList = _allWorkouts.value ?: return
+        val workoutToUpdate = currentList.find { it.id == workoutId } ?: return
+        if (newMethod == workoutToUpdate.descriptionData.method) return
 
-        _workoutData.value = currentData.copy(
-            descriptionData = currentData.descriptionData.copy(method = newMethod)
+        val updatedWorkout = workoutToUpdate.copy(
+            descriptionData = workoutToUpdate.descriptionData.copy(method = newMethod)
         )
+        updateWorkoutInList(workoutId, updatedWorkout)
     }
 
-    fun updateIsCommute(isChecked: Boolean) {
-        val currentData = _workoutData.value ?: return
-        // Avoid unnecessary updates
-        if (isChecked == currentData.headerData.commute) return
+    fun updateIsCommute(workoutId: Long, isChecked: Boolean) {
+        val currentList = _allWorkouts.value ?: return
+        val workoutToUpdate = currentList.find { it.id == workoutId } ?: return
+        if (isChecked == workoutToUpdate.headerData.commute) return
 
-        _workoutData.value = currentData.copy(
-            headerData = currentData.headerData.copy(commute = isChecked)
+        val updatedWorkout = workoutToUpdate.copy(
+            headerData = workoutToUpdate.headerData.copy(commute = isChecked)
         )
+        updateWorkoutInList(workoutId, updatedWorkout)
     }
 
-    fun updateIsTrainer(isChecked: Boolean) {
-        val currentData = _workoutData.value ?: return
-        // Avoid unnecessary updates
-        if (isChecked == currentData.headerData.trainer) return
+    fun updateIsTrainer(workoutId: Long, isChecked: Boolean) {
+        val currentList = _allWorkouts.value ?: return
+        val workoutToUpdate = currentList.find { it.id == workoutId } ?: return
+        if (isChecked == workoutToUpdate.headerData.trainer) return
 
-        _workoutData.value = currentData.copy(
-            headerData = currentData.headerData.copy(trainer = isChecked)
+        val updatedWorkout = workoutToUpdate.copy(
+            headerData = workoutToUpdate.headerData.copy(trainer = isChecked)
         )
+        updateWorkoutInList(workoutId, updatedWorkout)
     }
 
     /**
      * Saves the current state of the WorkoutData object to the database.
      */
-    fun saveWorkout() {
+    fun saveWorkout(workoutId: Long) {
         // Get the most recent state from the LiveData. If it's null, there's nothing to save.
-        val dataToSave = _workoutData.value ?: return
+        val dataToSave = allWorkouts.value?.find { it.id == workoutId } ?: return
 
         // Launch a coroutine in the IO dispatcher to perform database operations off the main thread.
         launch(Dispatchers.IO) {
-            val workoutId = dataToSave.id
 
             // -- update the Database
             // Update Workout Name
@@ -327,18 +395,71 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
         }
     }
 
-    fun deleteWorkout() {
-        val dataToSave = _workoutData.value ?: return
+    suspend fun exportWorkoutTo(workoutId: Long, fileFormat: FileFormat) {
+        withContext(Dispatchers.IO) {
+            val exportManager = ExportManager(application)
+            exportManager.exportWorkoutTo(workoutId, fileFormat)
+        }
+    }
 
+    /**
+     * Deletes a workout from the current list and posts the update.
+     */
+    fun deleteWorkout(id: Long) {
         launch(Dispatchers.IO) {
-            val workoutId = dataToSave.id
-            val success = deletionHelper.deleteWorkout(workoutId)
-            deleteFinishedEvent.postValue(Event(success, workoutId))
+            // Find the workout name *before* deleting it.
+            val workout = _allWorkouts.value?.find { it.id == id }
+            val workoutName = workout?.headerData?.workoutName ?: "Workout ID: $id"
+
+            // --- START PROGRESS ---
+            // Post the detailed progress to the LiveData.
+            _deletionProgress.postValue(DeletionProgress.InProgress(workoutName, id))
+
+            // Perform the actual deletion in the database first
+            val success = deletionHelper.deleteWorkout(id)
+            if (success) {
+                // Now, update the in-memory LiveData list
+                val currentList = _allWorkouts.value ?: emptyList()
+                val updatedList = currentList.filterNot { it.id == id }
+                _allWorkouts.postValue(updatedList)
+
+                // Post event for UI to react (e.g., close screen)
+                deleteFinishedEvent.postValue(Event(true, id))
+            } else {
+                deleteFinishedEvent.postValue(Event(false, id))
+            }
+
+            // Reset the state to Idle when done or if an error occurs.
+            _deletionProgress.postValue(DeletionProgress.Idle)
         }
     }
 
 
+    suspend fun deleteOldWorkouts(daysToKeep: Int) {
+        withContext(Dispatchers.IO) {
+            try {
+                // The callback lambda that will be executed inside the helper.
+                val progressCallback: (Long) -> Unit = { workoutId ->
+                    // Find the workout name from the current list to display it.
+                    val workout = allWorkouts.value?.find { it.id == workoutId }
+                    val workoutName = workout?.headerData?.workoutName ?: "Workout ID: $workoutId"
 
+                    // Post the detailed progress to the LiveData.
+                    _deletionProgress.postValue(DeletionProgress.InProgress(workoutName, workoutId))
+                }
+
+                val success = deletionHelper.deleteOldWorkouts(daysToKeep, progressCallback)
+
+                // After deleting, reload the data so the UI updates automatically.
+                if (success) {
+                    loadAllWorkouts()
+                }
+            } finally {
+                // Reset the state to Idle when done or if an error occurs.
+                _deletionProgress.postValue(DeletionProgress.Idle)
+            }
+        }
+    }
 
 
 }
