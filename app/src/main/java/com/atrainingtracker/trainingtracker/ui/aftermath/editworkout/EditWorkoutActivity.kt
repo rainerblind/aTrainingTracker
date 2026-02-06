@@ -165,6 +165,8 @@ class EditWorkoutActivity : AppCompatActivity() {
 
     private fun observeViewModel() {
         viewModel.workoutData.observe(this) { workoutData ->
+            Log.d("EditWorkoutActivity", "workoutData changed")
+
             // This block is called when the initial data is loaded and on every update
             if (workoutData == null) return@observe
 
@@ -172,9 +174,9 @@ class EditWorkoutActivity : AppCompatActivity() {
 
             // Populate Text Fields
             // Use 'setText' and check if the current text is already the same to avoid cursor jumps
-            if (editWorkoutName.text.toString() != workoutData.headerData.workoutName) {
-                editWorkoutName.setText(workoutData.headerData.workoutName)
-            }
+            // if (editWorkoutName.text.toString() != workoutData.headerData.workoutName) {
+            //     editWorkoutName.setText(workoutData.headerData.workoutName)
+            // }
             if (editDescription.text.toString() != workoutData.descriptionData.description) {
                 editDescription.setText(workoutData.descriptionData.description)
             }
@@ -186,15 +188,15 @@ class EditWorkoutActivity : AppCompatActivity() {
             }
 
             // Populate Checkboxes
-            checkboxCommute.isChecked = workoutData.headerData.commute
-            checkboxTrainer.isChecked = workoutData.headerData.trainer
+            // checkboxCommute.isChecked = workoutData.headerData.commute
+            // checkboxTrainer.isChecked = workoutData.headerData.trainer
 
             // Populate Spinners
-            setupSpinners()
+            // setupSpinners()
 
             // details and the map.
-            detailsViewHolder?.bind(workoutData.detailsData)
-            mapComponent?.bind(workoutData.id, MapContentType.WORKOUT_TRACK)
+            // detailsViewHolder?.bind(workoutData.detailsData)
+            mapComponent?.bind(workoutId, MapContentType.WORKOUT_TRACK)
 
             // -- visibility of delete button
             // By default, the button is visible
@@ -211,47 +213,69 @@ class EditWorkoutActivity : AppCompatActivity() {
             }
         }
 
-        viewModel.headerData.observe(this) { (id, headerData) ->
-            editWorkoutName.setText(headerData.workoutName)
-            checkboxCommute.isChecked = headerData.commute
-            checkboxTrainer.isChecked = headerData.trainer
-        }
-
-        viewModel.detailsData.observe(this) { (id, detailsData) ->
-            detailsViewHolder?.bind(detailsData)
-        }
-
-        viewModel.extremaData.observe(this) { (id, extremaData) ->
-            extremaValuesViewHolder?.bind(extremaData)
-        }
-
-        viewModel.extremaCalculationMessage.observe(this) { event ->
-            event.getContentIfNotHandled()?.let { message ->
-                extremaValuesViewHolder?.updateProgressMessage(message)
-            }
-        }
-
-        viewModel.saveFinishedEvent.observe(this) { event ->
-            event.getContentIfNotHandled()?.let { success ->
-                if (success) {
-                    // This is the classic, correct pattern you wanted!
-                    setResult(Activity.RESULT_OK) // Signal success to the calling activity
-                    finish() // Close this activity
-                } else {
-                    Toast.makeText(this, "Error saving workout.", Toast.LENGTH_SHORT).show()
+        viewModel.headerDataUpdated.observe(this) { event ->
+            event.getContentIfNotHandled()?.let { updatedId ->
+                // check the passed workoutId to be save.
+                if (updatedId == workoutId) {
+                    Log.d("EditWorkoutActivity", "Header update signal received for our workout.")
+                    viewModel.workoutData.value?.let { wd ->
+                        // Pull fresh data and update views
+                        editWorkoutName.setText(wd.headerData.workoutName)
+                        checkboxCommute.isChecked = wd.headerData.commute
+                        checkboxTrainer.isChecked = wd.headerData.trainer
+                    }
+                    setupSpinners()
                 }
             }
         }
 
-        viewModel.deleteFinishedEvent.observe(this) { event ->
-            event.getContentIfNotHandled()?.let { success ->
-                if (success) {
-                    Toast.makeText(this, "Workout deleted", Toast.LENGTH_SHORT).show()
-                    setResult(Activity.RESULT_OK)
-                    finish()
-                } else {
-                    Toast.makeText(this, "Error deleting workout", Toast.LENGTH_SHORT).show()
+        viewModel.detailsDataUpdated.observe(this) { event ->
+            event.getContentIfNotHandled()?.let { updatedId ->
+                // check the passed workoutId to be save.
+                if (updatedId == workoutId) {
+                    Log.d("EditWorkoutActivity", "Details update signal received for our workout.")
+                    viewModel.workoutData.value?.let { wd ->
+                        // Pull fresh data and update views
+                        detailsViewHolder?.bind(wd.detailsData)
+                    }
                 }
+            }
+        }
+
+        viewModel.extremaDataUpdated.observe(this) { event ->
+            event.getContentIfNotHandled()?.let { updatedId ->
+                // check the passed workoutId to be save.
+                if (updatedId == workoutId) {
+                    Log.d("EditWorkoutActivity", "Details update signal received for our workout.")
+                    viewModel.workoutData.value?.let { wd ->
+                        extremaValuesViewHolder?.bind(wd.extremaData)
+                    }
+                }
+            }
+        }
+
+        viewModel.extremaCalculationMessage.observe(this) { (workoutId, message) ->
+            extremaValuesViewHolder?.updateProgressMessage(message)
+        }
+
+        viewModel.saveFinishedEvent.observe(this) { (safedWorkoutId, success) ->
+            if (safedWorkoutId == workoutId
+                &&  success) {
+                setResult(Activity.RESULT_OK) // Signal success to the calling activity
+                finish() // Close this activity
+            } else {
+                Toast.makeText(this, "Error saving workout.", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        viewModel.deleteFinishedEvent.observe(this) { (deletedWorkoutId, success) ->
+            if (deletedWorkoutId == workoutId
+                && success) {
+                Toast.makeText(this, "Workout deleted", Toast.LENGTH_SHORT).show()
+                setResult(Activity.RESULT_OK)
+                finish()
+            } else {
+                Toast.makeText(this, "Error deleting workout", Toast.LENGTH_SHORT).show()
             }
         }
     }
