@@ -9,6 +9,7 @@ import androidx.lifecycle.map
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -38,6 +39,12 @@ import kotlinx.coroutines.launch
  * It abstracts the data source (database) from the ViewModels.
  */
 class WorkoutRepository(private val application: Application) : CoroutineScope {
+
+    companion object {
+        private val TAG = WorkoutRepository::class.java.simpleName
+        private val DEBUG = TrainingApplication.getDebug(true)
+    }
+
     private val job = SupervisorJob()
     override val coroutineContext = Dispatchers.Main + job
 
@@ -108,13 +115,13 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
     private val extremaDataObserver = object : Observer<List<WorkInfo>> {
         private var lastProgressSequence = -1
         override fun onChanged(workInfos: List<WorkInfo>) {
-            Log.d("EditWorkoutViewModel", "called for workoutId=$workoutIdExtremaCalculation")
+            Log.d(TAG, "called for workoutId=$workoutIdExtremaCalculation")
 
             // Find the worker
             val workInfo = workInfos.firstOrNull() ?: return
 
             if (workInfo.state.isFinished) {
-                Log.d("EditWorkoutViewModel", "finished calculation")
+                Log.d(TAG, "finished calculation")
                 loadHeaderData(workoutIdExtremaCalculation)
                 loadDetailsAndExtremaData(workoutIdExtremaCalculation)
             } else {
@@ -127,13 +134,13 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
                     val message =
                         workInfo.progress.getString(CalcExtremaWorker.KEY_STARTING_MESSAGE)
                     if (message != null) {
-                        Log.d("EditWorkoutViewModel", "received message: $message")
+                        Log.d(TAG, "received message: $message")
                         _extremaCalculationMessage.postValue(Pair(workoutIdExtremaCalculation, message))
                     } else {
                         // check the update type ---
                         val updateType =
                             workInfo.progress.getString(CalcExtremaWorker.KEY_FINISHED_MESSAGE)
-                        Log.d("EditWorkoutViewModel", "received update type: $updateType")
+                        Log.d(TAG, "received update type: $updateType")
                         if (updateType == CalcExtremaWorker.FINISHED_AUTO_NAME ||
                             updateType == CalcExtremaWorker.FINISHED_COMMUTE_AND_TRAINER) {
                             loadHeaderData(workoutIdExtremaCalculation)
@@ -148,13 +155,17 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
 
 
     private fun observeExtremaCalculation(workoutId: Long) {
-        Log.d("EditWorkoutViewModel", "Attaching the single observer.")
-        val workTag = "extrema_calc_${workoutId}"
-        val workManager = WorkManager.getInstance(application)
-        // Remove any stale observers first, just in case.
-        workManager.getWorkInfosByTagLiveData(workTag).removeObserver(extremaDataObserver)
-        // Attach our single, persistent observer.
-        workManager.getWorkInfosByTagLiveData(workTag).observeForever(extremaDataObserver)
+        workoutIdExtremaCalculation = workoutId
+        Log.d(TAG, "Attaching the single observer.")
+        launch(Dispatchers.Main) {
+            Log.d(TAG, "Attaching the single observer on main thread.")
+            val workTag = "extrema_calc_${workoutId}"
+            val workManager = WorkManager.getInstance(application)
+            // Remove any stale observers first, just in case.
+            workManager.getWorkInfosByTagLiveData(workTag).removeObserver(extremaDataObserver)
+            // Attach our single, persistent observer.
+            workManager.getWorkInfosByTagLiveData(workTag).observeForever(extremaDataObserver)
+        }
     }
 
     // --- Public API for ViewModels ---
@@ -172,9 +183,8 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
 
                     // eventually, observe the extrema calculation
                     if (workout.extremaData.isCalculating) {
-                        launch(Dispatchers.Main) {
-                            observeExtremaCalculation(workout.id)
-                        }
+                        if (DEBUG) Log.i(TAG, "Starting to observe extrema calculation for workout ${workout.id} on main thread")
+                        observeExtremaCalculation(id)
                     }
                 } else {
                     _allWorkouts.postValue(emptyList())
@@ -238,6 +248,8 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
             summariesManager.getWorkoutCursor(workoutId).use { cursor ->
                 if (cursor?.moveToFirst() == true) {
                     val freshWorkoutData = mapper.fromCursor(cursor)
+                    if (DEBUG) Log.d(TAG, "loadDetailsAndExtremaData: got freshWorkoutData=$freshWorkoutData")
+
                     updateWorkoutInList(workoutId, freshWorkoutData)
 
                     _detailsDataUpdated.postValue(Event(freshWorkoutData.detailsData))
