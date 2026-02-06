@@ -73,23 +73,21 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
     }
 
 
-    // LiveData specifically for the header
-    private val _headerData = MutableLiveData<Pair<Long, WorkoutHeaderData>>()
-    val headerData: LiveData<Pair<Long, WorkoutHeaderData>> = _headerData
+    // LiveData to trigger the header, details, and extrema view to update
+    private val _headerDataUpdated = MutableLiveData<Event<Long>>()
+    val headerDataUpdated: LiveData<Event<Long>> = _headerDataUpdated
 
-    // LiveData specifically for the details
-    private val _detailsData = MutableLiveData<Pair<Long, WorkoutDetailsData>>()
-    val detailsData: LiveData<Pair<Long, WorkoutDetailsData>> = _detailsData
+    private val _detailsDataUpdated = MutableLiveData<Event<Long>>()
+    val detailsDataUpdated: LiveData<Event<Long>> = _detailsDataUpdated
 
-    // LiveData specifically for the list of extrema values ---
-    private val _extremaData = MutableLiveData<Pair<Long, ExtremaData>>()
-    val extremaData: LiveData<Pair<Long, ExtremaData>> = _extremaData
+    private val _extremaDataUpdated = MutableLiveData<Event<Long>>()
+    val extremaDataUpdated: LiveData<Event<Long>> = _extremaDataUpdated
 
 
 
     // LiveData specifically for the message from the extrema calculation worker
-    private val _extremaCalculationMessage = MutableLiveData<Event<String>>()
-    val extremaCalculationMessage: LiveData<Event<String>> = _extremaCalculationMessage
+    private val _extremaCalculationMessage = MutableLiveData<Pair<Long, String>>()
+    val extremaCalculationMessage: LiveData<Pair<Long, String>> = _extremaCalculationMessage
 
 
     // --- LiveData for granular deletion progress ---
@@ -98,8 +96,8 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
 
 
 
-    val saveFinishedEvent = MutableLiveData<Event<Boolean>>()
-    val deleteFinishedEvent = MutableLiveData<Event<Boolean>>()
+    val saveFinishedEvent = MutableLiveData<Pair<Long, Boolean>>()
+    val deleteFinishedEvent = MutableLiveData<Pair<Long, Boolean>>()
 
 
     var workoutIdExtremaCalculation = -1L
@@ -127,7 +125,7 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
                         workInfo.progress.getString(CalcExtremaWorker.KEY_STARTING_MESSAGE)
                     if (message != null) {
                         Log.d("EditWorkoutViewModel", "received message: $message")
-                        _extremaCalculationMessage.postValue(Event(message, workoutIdExtremaCalculation))
+                        _extremaCalculationMessage.postValue(Pair(workoutIdExtremaCalculation, message))
                     } else {
                         // check the update type ---
                         val updateType =
@@ -167,6 +165,7 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
                 if (cursor?.moveToFirst() == true) {
                     val workout = mapper.fromCursor(cursor)
                     _allWorkouts.postValue(listOf(workout))
+                    // also post all others?
 
                     // eventually, observe the extrema calculation
                     if (workout.extremaData.isCalculating) {
@@ -218,30 +217,29 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
         _allWorkouts.postValue(updatedList)
     }
 
-    // Function to load only the header data of one workout
+    // Function to update the workout data and trigger an update in the UI
     private fun loadHeaderData(workoutId: Long) {
         launch(Dispatchers.IO) {
             summariesManager.getWorkoutCursor(workoutId).use { cursor ->
                 if (cursor?.moveToFirst() == true) {
-                    val data = mapper.fromCursor(cursor)
-                    _headerData.postValue(Pair(workoutId, data.headerData))
-                    // Also update the main list to keep it consistent
-                    updateWorkoutInList(workoutId, data)
+                    val freshData = mapper.fromCursor(cursor)
+                    updateWorkoutInList(workoutId, freshData)
+                    _headerDataUpdated.postValue(Event(workoutId))
                 }
             }
         }
     }
 
-    // Function to load only the extrema data of one workout
+    // Function to update the workout data and trigger an update in the UI
     private fun loadDetailsAndExtremaData(workoutId: Long) {
         launch(Dispatchers.IO) {
             summariesManager.getWorkoutCursor(workoutId).use { cursor ->
                 if (cursor?.moveToFirst() == true) {
-                    val data = mapper.fromCursor(cursor)
-                    _extremaData.postValue(Pair(workoutId, data.extremaData))
-                    _detailsData.postValue(Pair(workoutId, data.detailsData))
-                    // Also update the main list to keep it consistent
-                    updateWorkoutInList(workoutId, data)
+                    val freshData = mapper.fromCursor(cursor)
+                    updateWorkoutInList(workoutId, freshData)
+
+                    _detailsDataUpdated.postValue(Event(workoutId))
+                    _extremaDataUpdated.postValue(Event(workoutId))
                 }
             }
         }
@@ -391,7 +389,7 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
             val exportManager = ExportManager(application)
             exportManager.exportWorkout(dataToSave.fileBaseName)
 
-            saveFinishedEvent.postValue(Event(true, workoutId))
+            saveFinishedEvent.postValue(Pair(workoutId, true))
         }
     }
 
@@ -424,9 +422,9 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
                 _allWorkouts.postValue(updatedList)
 
                 // Post event for UI to react (e.g., close screen)
-                deleteFinishedEvent.postValue(Event(true, id))
+                deleteFinishedEvent.postValue(Pair(id, true))
             } else {
-                deleteFinishedEvent.postValue(Event(false, id))
+                deleteFinishedEvent.postValue(Pair(id, true))
             }
 
             // Reset the state to Idle when done or if an error occurs.

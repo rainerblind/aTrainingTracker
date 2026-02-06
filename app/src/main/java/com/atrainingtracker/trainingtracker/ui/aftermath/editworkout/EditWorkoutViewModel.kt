@@ -23,20 +23,20 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     val workoutData: LiveData<WorkoutData?>
 
     // LiveData specifically for the header
-    val headerData: LiveData<Pair<Long, WorkoutHeaderData>> = repository.headerData
+    val headerDataUpdated: LiveData<Event<Long>> = repository.headerDataUpdated
 
     // LiveData specifically for the details
-    val detailsData: LiveData<Pair<Long, WorkoutDetailsData>> = repository.detailsData
+    val detailsDataUpdated: LiveData<Event<Long>> = repository.detailsDataUpdated
 
     // LiveData specifically for the list of extrema values ---
-    val extremaData: LiveData<Pair<Long, ExtremaData>> = repository.extremaData
+    val extremaDataUpdated: LiveData<Event<Long>> = repository.extremaDataUpdated
 
     // LiveData specifically for the message from the extrema calculation worker
-    val extremaCalculationMessage: LiveData<Event<String>> = repository.extremaCalculationMessage
+    val extremaCalculationMessage: LiveData<Pair<Long, String>> = repository.extremaCalculationMessage
 
 
-    val saveFinishedEvent: MutableLiveData<Event<Boolean>> = repository.saveFinishedEvent
-    val deleteFinishedEvent: MutableLiveData<Event<Boolean>> = repository.deleteFinishedEvent
+    val saveFinishedEvent: MutableLiveData<Pair<Long, Boolean>> = repository.saveFinishedEvent
+    val deleteFinishedEvent: MutableLiveData<Pair<Long, Boolean>> = repository.deleteFinishedEvent
 
 
     init {
