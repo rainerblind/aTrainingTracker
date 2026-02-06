@@ -72,6 +72,9 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
         }
     }
 
+    // LiveData for the one-time initial load event
+    private val _initialWorkoutLoaded = MutableLiveData<Event<Long>>()
+    val initialWorkoutLoaded: LiveData<Event<Long>> = _initialWorkoutLoaded
 
     // LiveData to trigger the header, details, and extrema view to update
     private val _headerDataUpdated = MutableLiveData<Event<Long>>()
@@ -165,7 +168,7 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
                 if (cursor?.moveToFirst() == true) {
                     val workout = mapper.fromCursor(cursor)
                     _allWorkouts.postValue(listOf(workout))
-                    // also post all others?
+                    _initialWorkoutLoaded.postValue(Event(id))
 
                     // eventually, observe the extrema calculation
                     if (workout.extremaData.isCalculating) {
