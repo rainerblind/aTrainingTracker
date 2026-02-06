@@ -73,18 +73,18 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
     }
 
     // LiveData for the one-time initial load event
-    private val _initialWorkoutLoaded = MutableLiveData<Event<Long>>()
-    val initialWorkoutLoaded: LiveData<Event<Long>> = _initialWorkoutLoaded
+    private val _initialWorkoutLoaded = MutableLiveData<Event<WorkoutData>>()
+    val initialWorkoutLoaded: LiveData<Event<WorkoutData>> = _initialWorkoutLoaded
 
     // LiveData to trigger the header, details, and extrema view to update
-    private val _headerDataUpdated = MutableLiveData<Event<Long>>()
-    val headerDataUpdated: LiveData<Event<Long>> = _headerDataUpdated
+    private val _headerDataUpdated = MutableLiveData<Event<WorkoutHeaderData>>()
+    val headerDataUpdated: LiveData<Event<WorkoutHeaderData>> = _headerDataUpdated
 
-    private val _detailsDataUpdated = MutableLiveData<Event<Long>>()
-    val detailsDataUpdated: LiveData<Event<Long>> = _detailsDataUpdated
+    private val _detailsDataUpdated = MutableLiveData<Event<WorkoutDetailsData>>()
+    val detailsDataUpdated: LiveData<Event<WorkoutDetailsData>> = _detailsDataUpdated
 
-    private val _extremaDataUpdated = MutableLiveData<Event<Long>>()
-    val extremaDataUpdated: LiveData<Event<Long>> = _extremaDataUpdated
+    private val _extremaDataUpdated = MutableLiveData<Event<ExtremaData>>()
+    val extremaDataUpdated: LiveData<Event<ExtremaData>> = _extremaDataUpdated
 
 
 
@@ -168,7 +168,7 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
                 if (cursor?.moveToFirst() == true) {
                     val workout = mapper.fromCursor(cursor)
                     _allWorkouts.postValue(listOf(workout))
-                    _initialWorkoutLoaded.postValue(Event(id))
+                    _initialWorkoutLoaded.postValue(Event(workout))
 
                     // eventually, observe the extrema calculation
                     if (workout.extremaData.isCalculating) {
@@ -201,7 +201,6 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
 
             // Post the final list to the LiveData. This will update the UI on the main thread.
             _allWorkouts.postValue(summaryList)
-            // TODO: also post the header data???
         }
 
         // After the initial list is loaded and posted, check for any ongoing calculations.
@@ -225,9 +224,9 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
         launch(Dispatchers.IO) {
             summariesManager.getWorkoutCursor(workoutId).use { cursor ->
                 if (cursor?.moveToFirst() == true) {
-                    val freshData = mapper.fromCursor(cursor)
-                    updateWorkoutInList(workoutId, freshData)
-                    _headerDataUpdated.postValue(Event(workoutId))
+                    val freshWorkoutData = mapper.fromCursor(cursor)
+                    updateWorkoutInList(workoutId, freshWorkoutData)
+                    _headerDataUpdated.postValue(Event(freshWorkoutData.headerData))
                 }
             }
         }
@@ -238,11 +237,11 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
         launch(Dispatchers.IO) {
             summariesManager.getWorkoutCursor(workoutId).use { cursor ->
                 if (cursor?.moveToFirst() == true) {
-                    val freshData = mapper.fromCursor(cursor)
-                    updateWorkoutInList(workoutId, freshData)
+                    val freshWorkoutData = mapper.fromCursor(cursor)
+                    updateWorkoutInList(workoutId, freshWorkoutData)
 
-                    _detailsDataUpdated.postValue(Event(workoutId))
-                    _extremaDataUpdated.postValue(Event(workoutId))
+                    _detailsDataUpdated.postValue(Event(freshWorkoutData.detailsData))
+                    _extremaDataUpdated.postValue(Event(freshWorkoutData.extremaData))
                 }
             }
         }
