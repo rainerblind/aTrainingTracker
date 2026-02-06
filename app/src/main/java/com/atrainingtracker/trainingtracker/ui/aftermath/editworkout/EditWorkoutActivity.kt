@@ -164,52 +164,55 @@ class EditWorkoutActivity : AppCompatActivity() {
     }
 
     private fun observeViewModel() {
-        viewModel.workoutData.observe(this) { workoutData ->
-            Log.d("EditWorkoutActivity", "workoutData changed")
+        viewModel.initialWorkoutLoaded.observe(this) { event ->
+            event.getContentIfNotHandled()?.let { loadedWorkoutId ->
+                if (loadedWorkoutId == workoutId) {
+                    Log.d("EditWorkoutActivity", "Initial data loaded. Setting up all views once.")
+                    viewModel.workoutData.value?.let { wd ->
 
-            // This block is called when the initial data is loaded and on every update
-            if (workoutData == null) return@observe
+                        // --- Populate UI with data from ViewModel ---
 
-            // --- Populate UI with data from ViewModel ---
+                        // Populate Text Fields
+                        // Use 'setText' and check if the current text is already the same to avoid cursor jumps
+                        if (editWorkoutName.text.toString() != wd.headerData.workoutName) {
+                            editWorkoutName.setText(wd.headerData.workoutName)
+                        }
+                        if (editDescription.text.toString() != wd.descriptionData.description) {
+                            editDescription.setText(wd.descriptionData.description)
+                        }
+                        if (editGoal.text.toString() != wd.descriptionData.goal) {
+                            editGoal.setText(wd.descriptionData.goal)
+                        }
+                        if (editMethod.text.toString() != wd.descriptionData.method) {
+                            editMethod.setText(wd.descriptionData.method)
+                        }
 
-            // Populate Text Fields
-            // Use 'setText' and check if the current text is already the same to avoid cursor jumps
-            // if (editWorkoutName.text.toString() != workoutData.headerData.workoutName) {
-            //     editWorkoutName.setText(workoutData.headerData.workoutName)
-            // }
-            if (editDescription.text.toString() != workoutData.descriptionData.description) {
-                editDescription.setText(workoutData.descriptionData.description)
-            }
-            if (editGoal.text.toString() != workoutData.descriptionData.goal) {
-                editGoal.setText(workoutData.descriptionData.goal)
-            }
-            if (editMethod.text.toString() != workoutData.descriptionData.method) {
-                editMethod.setText(workoutData.descriptionData.method)
-            }
+                        // Populate Checkboxes
+                        checkboxCommute.isChecked = wd.headerData.commute
+                        checkboxTrainer.isChecked = wd.headerData.trainer
 
-            // Populate Checkboxes
-            // checkboxCommute.isChecked = workoutData.headerData.commute
-            // checkboxTrainer.isChecked = workoutData.headerData.trainer
+                        // Populate Spinners
+                        setupSpinners()
 
-            // Populate Spinners
-            // setupSpinners()
+                        // details and the map.
+                        detailsViewHolder?.bind(wd.detailsData)
+                        mapComponent?.bind(workoutId, MapContentType.WORKOUT_TRACK)
 
-            // details and the map.
-            // detailsViewHolder?.bind(workoutData.detailsData)
-            mapComponent?.bind(workoutId, MapContentType.WORKOUT_TRACK)
+                        // -- visibility of delete button
+                        // By default, the button is visible
+                        buttonDelete.visibility = View.VISIBLE
 
-            // -- visibility of delete button
-            // By default, the button is visible
-            buttonDelete.visibility = View.VISIBLE
+                        // when the workout is more than some minutes, the button is not visible
+                        if (wd.activeTime > MAX_WORKOUT_TIME_TO_SHOW_DELETE_BUTTON) {
+                            buttonDelete.visibility = View.GONE
+                        }
 
-            // when the workout is more than some minutes, the button is not visible
-            if (workoutData.activeTime > MAX_WORKOUT_TIME_TO_SHOW_DELETE_BUTTON) {
-                buttonDelete.visibility = View.GONE
-            }
-
-            // similarly, when tracking, the button is also not visible
-            if (TrainingApplication.isTracking()) {
-                buttonDelete.visibility = View.GONE
+                        // similarly, when tracking, the button is also not visible
+                        if (TrainingApplication.isTracking()) {
+                            buttonDelete.visibility = View.GONE
+                        }
+                    }
+                }
             }
         }
 
@@ -224,6 +227,7 @@ class EditWorkoutActivity : AppCompatActivity() {
                         checkboxCommute.isChecked = wd.headerData.commute
                         checkboxTrainer.isChecked = wd.headerData.trainer
                     }
+                    // since the header data also contains the sport, we need to rebuild the spinners
                     setupSpinners()
                 }
             }
