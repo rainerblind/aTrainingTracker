@@ -14,12 +14,17 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDiffCallback
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutUpdatePayload
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusViewHolder
 import com.atrainingtracker.trainingtracker.ui.components.map.MapComponent
 import com.atrainingtracker.trainingtracker.ui.components.map.MapContentType
 import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.DescriptionViewHolder
+import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsData
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsViewHolder
+import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaData
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaValuesViewHolder
+import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderData
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderViewHolder
 import com.google.android.gms.maps.MapView
 
@@ -52,6 +57,45 @@ class WorkoutSummariesAdapter(
             isPlayServiceAvailable,
             viewModel
         )
+    }
+
+    override fun onBindViewHolder(
+        holder: SummaryViewHolder,
+        position: Int,
+        payloads: MutableList<Any>
+    ) {
+        if (payloads.isEmpty()) {
+            // If the payloads list is empty, it means this is a full bind.
+            // We call the other onBindViewHolder to render the entire item from scratch.
+            super.onBindViewHolder(holder, position, payloads)
+        } else {
+            // Payloads are present, so we can perform one or more partial updates.
+            // The payload from our DiffUtil is expected to be a List<WorkoutUpdatePayload>.
+            payloads.forEach { payload ->
+                if (payload is List<*>) {
+                    // Iterate through the actual change events inside the list.
+                    payload.forEach { item ->
+                        when (item) {
+                            is WorkoutUpdatePayload.HeaderChanged -> {
+                                // This is a header-only update.
+                                // Call a specific, lightweight update function in the ViewHolder.
+                                holder.updateHeader(item.newHeaderData)
+                            }
+
+                            is WorkoutUpdatePayload.DetailsChanged -> {
+                                // This is a details-only update.
+                                holder.updateDetails(item.newDetailsData)
+                            }
+
+                            is WorkoutUpdatePayload.ExtremaChanged -> {
+                                // This is an extrema-only update.
+                                holder.updateExtrema(item.newExtremaData)
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     override fun onBindViewHolder(holder: SummaryViewHolder, position: Int) {
@@ -195,22 +239,26 @@ class WorkoutSummariesAdapter(
             // Bind the map component
             mapComponent?.bind(summary.id, MapContentType.WORKOUT_TRACK)
         }
-    }
 
-    /**
-     * A DiffUtil.ItemCallback to help ListAdapter determine which items in the list have changed.
-     * This enables efficient updates and animations.
-     */
-    class WorkoutDiffCallback : DiffUtil.ItemCallback<WorkoutData>() {
-        override fun areItemsTheSame(oldItem: WorkoutData, newItem: WorkoutData): Boolean {
-            // The ID is the unique identifier for an item.
-            return oldItem.id == newItem.id
+        /**
+         * A lightweight update function that only re-binds the header view.
+         */
+        fun updateHeader(headerData: WorkoutHeaderData) {
+            headerViewHolder?.bind(headerData)
         }
 
-        override fun areContentsTheSame(oldItem: WorkoutData, newItem: WorkoutData): Boolean {
-            // The data class's generated `equals` method compares all properties.
-            // If any property is different, the content has changed.
-            return oldItem == newItem
+        /**
+         * A lightweight update function that only re-binds the details view.
+         */
+        fun updateDetails(detailsData: WorkoutDetailsData) {
+            detailsViewHolder?.bind(detailsData)
+        }
+
+        /**
+         * A lightweight update function that only re-binds the extrema values view.
+         */
+        fun updateExtrema(extremaData: ExtremaData) {
+            extremaValuesViewHolder?.bind(extremaData)
         }
     }
 }
