@@ -37,11 +37,6 @@ class ExtremaValuesViewHolder(val view: View) {
         displayExtremaValues(extremaData.dataRows)
     }
 
-    fun updateProgressMessage(message: String) {
-        progressTextView.text = message
-    }
-
-
     private fun displayExtremaValues(extremaList: List<ExtremaDataRow>) {
         // Set visibility of the table
         tableLayout.visibility = if (extremaList.isEmpty()) View.GONE else View.VISIBLE
