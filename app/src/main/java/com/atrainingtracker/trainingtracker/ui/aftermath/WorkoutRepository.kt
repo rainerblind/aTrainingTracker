@@ -110,61 +110,61 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
     val deleteFinishedEvent = MutableLiveData<Pair<Long, Boolean>>()
 
 
-    var workoutIdExtremaCalculation = -1L
-    // observe the calculation of the extrema values
-    private val extremaDataObserver = object : Observer<List<WorkInfo>> {
-        private var lastProgressSequence = -1
-        override fun onChanged(workInfos: List<WorkInfo>) {
-            Log.d(TAG, "called for workoutId=$workoutIdExtremaCalculation")
+    // Keep track of the observers we create so we can remove them later if needed.
+    private val activeObservers = mutableMapOf<Long, Observer<List<WorkInfo>>>()
 
-            // Find the worker
-            val workInfo = workInfos.firstOrNull() ?: return
+    private fun observeExtremaCalculation(workoutId: Long) {
+        // Create a new, dedicated observer for this specific workoutId.
+        val newObserver = object : Observer<List<WorkInfo>> {
+            private var lastProgressSequence = -1
+            override fun onChanged(workInfos: List<WorkInfo>) {
+                // This observer now uses its own 'workoutId', which is captured
+                // from the function's scope and will never change.
+                Log.d(TAG, "Observer called for its specific workoutId=$workoutId")
 
-            if (workInfo.state.isFinished) {
-                Log.d(TAG, "finished calculation")
-                loadHeaderData(workoutIdExtremaCalculation)
-                loadDetailsAndExtremaData(workoutIdExtremaCalculation)
-            } else {
-                val currentProgress =
-                    workInfo.progress.getInt(CalcExtremaWorker.KEY_PROGRESS_SEQUENCE, -1)
-                if (currentProgress > lastProgressSequence) {
-                    lastProgressSequence = currentProgress
+                val workInfo = workInfos.firstOrNull() ?: return
 
-                    // first, check for a message regarding the doing
-                    val message =
-                        workInfo.progress.getString(CalcExtremaWorker.KEY_STARTING_MESSAGE)
-                    if (message != null) {
-                        Log.d(TAG, "received message: $message")
-                        _extremaCalculationMessage.postValue(Pair(workoutIdExtremaCalculation, message))
-                    } else {
-                        // check the update type ---
-                        val updateType =
-                            workInfo.progress.getString(CalcExtremaWorker.KEY_FINISHED_MESSAGE)
-                        Log.d(TAG, "received update type: $updateType")
-                        if (updateType == CalcExtremaWorker.FINISHED_AUTO_NAME ||
-                            updateType == CalcExtremaWorker.FINISHED_COMMUTE_AND_TRAINER) {
-                            loadHeaderData(workoutIdExtremaCalculation)
-                        } else if (updateType == CalcExtremaWorker.FINISHED_EXTREMA_VALE) {
-                            loadDetailsAndExtremaData(workoutIdExtremaCalculation)
+                if (workInfo.state.isFinished) {
+                    Log.d(TAG, "Finished calculation for workout $workoutId")
+                    loadHeaderData(workoutId)
+                    loadDetailsAndExtremaData(workoutId)
+                    // Once finished, we can clean up this specific observer.
+                    WorkManager.getInstance(application).getWorkInfosByTagLiveData("extrema_calc_$workoutId").removeObserver(this)
+                    activeObservers.remove(workoutId)
+                } else {
+                    val currentProgress =
+                        workInfo.progress.getInt(CalcExtremaWorker.KEY_PROGRESS_SEQUENCE, -1)
+                    if (currentProgress > lastProgressSequence) {
+                        lastProgressSequence = currentProgress
+                        val message = workInfo.progress.getString(CalcExtremaWorker.KEY_STARTING_MESSAGE)
+                        if (message != null) {
+                            _extremaCalculationMessage.postValue(Pair(workoutId, message))
+                        } else {
+                            val updateType = workInfo.progress.getString(CalcExtremaWorker.KEY_FINISHED_MESSAGE)
+                            when (updateType) {
+                                CalcExtremaWorker.FINISHED_AUTO_NAME,
+                                CalcExtremaWorker.FINISHED_COMMUTE_AND_TRAINER -> loadHeaderData(workoutId)
+                                CalcExtremaWorker.FINISHED_EXTREMA_VALE -> loadDetailsAndExtremaData(workoutId)
+                            }
                         }
                     }
                 }
             }
         }
-    }
 
-
-    private fun observeExtremaCalculation(workoutId: Long) {
-        workoutIdExtremaCalculation = workoutId
-        Log.d(TAG, "Attaching the single observer.")
+        // Attach the new, dedicated observer.
         launch(Dispatchers.Main) {
-            Log.d(TAG, "Attaching the single observer on main thread.")
             val workTag = "extrema_calc_${workoutId}"
             val workManager = WorkManager.getInstance(application)
-            // Remove any stale observers first, just in case.
-            workManager.getWorkInfosByTagLiveData(workTag).removeObserver(extremaDataObserver)
-            // Attach our single, persistent observer.
-            workManager.getWorkInfosByTagLiveData(workTag).observeForever(extremaDataObserver)
+
+            // Remove any old observer for this ID before adding a new one.
+            activeObservers[workoutId]?.let { oldObserver ->
+                workManager.getWorkInfosByTagLiveData(workTag).removeObserver(oldObserver)
+            }
+
+            // Store and observe with the new one.
+            activeObservers[workoutId] = newObserver
+            workManager.getWorkInfosByTagLiveData(workTag).observeForever(newObserver)
         }
     }
 
