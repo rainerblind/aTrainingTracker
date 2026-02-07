@@ -83,24 +83,7 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
     private val _initialWorkoutLoaded = MutableLiveData<Event<WorkoutData>>()
     val initialWorkoutLoaded: LiveData<Event<WorkoutData>> = _initialWorkoutLoaded
 
-    // LiveData to trigger the header, details, and extrema view to update
-    private val _headerDataUpdated = MutableLiveData<Event<WorkoutHeaderData>>()
-    val headerDataUpdated: LiveData<Event<WorkoutHeaderData>> = _headerDataUpdated
-
-    private val _detailsDataUpdated = MutableLiveData<Event<WorkoutDetailsData>>()
-    val detailsDataUpdated: LiveData<Event<WorkoutDetailsData>> = _detailsDataUpdated
-
-    private val _extremaDataUpdated = MutableLiveData<Event<ExtremaData>>()
-    val extremaDataUpdated: LiveData<Event<ExtremaData>> = _extremaDataUpdated
-
-
-
-    // LiveData specifically for the message from the extrema calculation worker
-    private val _extremaCalculationMessage = MutableLiveData<Pair<Long, String>>()
-    val extremaCalculationMessage: LiveData<Pair<Long, String>> = _extremaCalculationMessage
-
-
-    // --- LiveData for granular deletion progress ---
+    //  LiveData for granular deletion progress ---
     private val _deletionProgress = MutableLiveData<DeletionProgress>(DeletionProgress.Idle)
     val deletionProgress: LiveData<DeletionProgress> = _deletionProgress
 
@@ -126,7 +109,7 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
 
                 if (workInfo.state.isFinished) {
                     Log.d(TAG, "Finished calculation for workout $workoutId")
-                    // When finished, clear the message
+                    // --- When finished, clear the calculation message, reload the data, and remove the observer.
 
                     // Find the current workout in the list.
                     val workout = _allWorkouts.value?.find { it.id == workoutId }
@@ -135,9 +118,9 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
                         val updatedExtrema = workout.extremaData.copy(calculationMessage = null)
                         updateWorkoutInList(workoutId, workout.copy(extremaData = updatedExtrema))
                     }
+                    // TODO: Currently, we update the workout list twice.  This should be avoided.
 
-                    loadHeaderData(workoutId)
-                    loadDetailsAndExtremaData(workoutId)
+                    reloadWorkoutData(workoutId)
 
                     // Once finished, we can clean up this specific observer.
                     WorkManager.getInstance(application).getWorkInfosByTagLiveData("extrema_calc_$workoutId").removeObserver(this)
@@ -159,14 +142,11 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
                                 // Post the update. DiffUtil will see that extremaData has changed.
                                 updateWorkoutInList(workoutId, updatedWorkout)
                             }
-                            // and also post it.
-                            _extremaCalculationMessage.postValue(Pair(workoutId, message))
+
                         } else {
                             val updateType = workInfo.progress.getString(CalcExtremaWorker.KEY_FINISHED_MESSAGE)
-                            when (updateType) {
-                                CalcExtremaWorker.FINISHED_AUTO_NAME,
-                                CalcExtremaWorker.FINISHED_COMMUTE_AND_TRAINER -> loadHeaderData(workoutId)
-                                CalcExtremaWorker.FINISHED_EXTREMA_VALE -> loadDetailsAndExtremaData(workoutId)
+                            if (updateType != null) {
+                                reloadWorkoutData(workoutId)
                             }
                         }
                     }
@@ -251,8 +231,8 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
         _allWorkouts.postValue(updatedList)
     }
 
-    // Function to update the workout data and trigger an update in the UI
-    private fun loadHeaderData(workoutId: Long) {
+    // Function to update the workout data from the database but keep the calculationMessage of the extrema data
+    private fun reloadWorkoutData(workoutId: Long) {
         launch(Dispatchers.IO) {
             summariesManager.getWorkoutCursor(workoutId).use { cursor ->
                 if (cursor?.moveToFirst() == true) {
@@ -274,42 +254,8 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
                         freshWorkoutData
                     }
 
-                    // 4. Update the list and the legacy LiveData.
+                    // 4. Update the workout list
                     updateWorkoutInList(workoutId, finalWorkoutData)
-                    _headerDataUpdated.postValue(Event(freshWorkoutData.headerData))
-                }
-            }
-        }
-    }
-
-    // Function to update the workout data and trigger an update in the UI
-    private fun loadDetailsAndExtremaData(workoutId: Long) {
-        launch(Dispatchers.IO) {
-            summariesManager.getWorkoutCursor(workoutId).use { cursor ->
-                if (cursor?.moveToFirst() == true) {
-                    // 1. Get the completely fresh data from the database.
-                    val freshWorkoutData = mapper.fromCursor(cursor)
-
-                    // 2. Get the current in-memory version of the workout to check its state.
-                    val currentWorkoutInMemory = allWorkouts.value?.find { it.id == workoutId }
-                    val currentMessage = currentWorkoutInMemory?.extremaData?.calculationMessage
-
-                    // 3. Create the final workout object to be posted.
-                    val finalWorkoutData = if (currentMessage != null) {
-                        // If a message exists, copy it over to the fresh data.
-                        freshWorkoutData.copy(
-                            extremaData = freshWorkoutData.extremaData.copy(calculationMessage = currentMessage)
-                        )
-                    } else {
-                        // Otherwise, use the fresh data as is.
-                        freshWorkoutData
-                    }
-
-                    // 4. Update the list and the legacy LiveData.
-                    updateWorkoutInList(workoutId, finalWorkoutData)
-
-                    _detailsDataUpdated.postValue(Event(freshWorkoutData.detailsData))
-                    _extremaDataUpdated.postValue(Event(freshWorkoutData.extremaData))
                 }
             }
         }
