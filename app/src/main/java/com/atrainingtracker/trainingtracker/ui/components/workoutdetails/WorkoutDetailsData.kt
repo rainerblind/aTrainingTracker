@@ -16,7 +16,7 @@ data class WorkoutDetailsData(
     val avgSpeedMps: Float,
     val ascentMeters: Int,
     val descentMeters: Int,
-    val sportType: BSportType,
+    val bSportType: BSportType,  // necessary for distinguishing to show speed or pace
 
     val maxDisplacement: Double?,
     val minAltitude: Double?,
