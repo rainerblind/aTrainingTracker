@@ -26,8 +26,10 @@ class ExtremaValuesViewHolder(val view: View) {
      */
     fun bind(extremaData: ExtremaData) {
         // If calculation is already done, just display the data and ensure progress text is hidden.
-        if (extremaData.isCalculating) {
+        if (extremaData.isCalculating && extremaData.calculationMessage != null) {
             progressTextView.visibility = View.VISIBLE
+            progressTextView.text = extremaData.calculationMessage
+            return
         } else {
             progressTextView.visibility = View.GONE
         }

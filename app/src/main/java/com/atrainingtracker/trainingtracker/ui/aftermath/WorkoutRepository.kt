@@ -126,8 +126,19 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
 
                 if (workInfo.state.isFinished) {
                     Log.d(TAG, "Finished calculation for workout $workoutId")
+                    // When finished, clear the message
+
+                    // Find the current workout in the list.
+                    val workout = _allWorkouts.value?.find { it.id == workoutId }
+                    // If it has a calculation message, clear it.
+                    if (workout != null && workout.extremaData.calculationMessage != null) {
+                        val updatedExtrema = workout.extremaData.copy(calculationMessage = null)
+                        updateWorkoutInList(workoutId, workout.copy(extremaData = updatedExtrema))
+                    }
+
                     loadHeaderData(workoutId)
                     loadDetailsAndExtremaData(workoutId)
+
                     // Once finished, we can clean up this specific observer.
                     WorkManager.getInstance(application).getWorkInfosByTagLiveData("extrema_calc_$workoutId").removeObserver(this)
                     activeObservers.remove(workoutId)
@@ -138,6 +149,17 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
                         lastProgressSequence = currentProgress
                         val message = workInfo.progress.getString(CalcExtremaWorker.KEY_STARTING_MESSAGE)
                         if (message != null) {
+                            // update the message in the list
+                            val workoutToUpdate = _allWorkouts.value?.find { it.id == workoutId }
+                            if (workoutToUpdate != null) {
+                                // Create a new ExtremaData with the updated message.
+                                val updatedExtrema = workoutToUpdate.extremaData.copy(calculationMessage = message)
+                                // Create a new WorkoutData with the new ExtremaData.
+                                val updatedWorkout = workoutToUpdate.copy(extremaData = updatedExtrema)
+                                // Post the update. DiffUtil will see that extremaData has changed.
+                                updateWorkoutInList(workoutId, updatedWorkout)
+                            }
+                            // and also post it.
                             _extremaCalculationMessage.postValue(Pair(workoutId, message))
                         } else {
                             val updateType = workInfo.progress.getString(CalcExtremaWorker.KEY_FINISHED_MESSAGE)
@@ -234,8 +256,26 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
         launch(Dispatchers.IO) {
             summariesManager.getWorkoutCursor(workoutId).use { cursor ->
                 if (cursor?.moveToFirst() == true) {
+                    // 1. Get the completely fresh data from the database.
                     val freshWorkoutData = mapper.fromCursor(cursor)
-                    updateWorkoutInList(workoutId, freshWorkoutData)
+
+                    // 2. Get the current in-memory version of the workout to check its state.
+                    val currentWorkoutInMemory = allWorkouts.value?.find { it.id == workoutId }
+                    val currentMessage = currentWorkoutInMemory?.extremaData?.calculationMessage
+
+                    // 3. Create the final workout object to be posted.
+                    val finalWorkoutData = if (currentMessage != null) {
+                        // If a message exists, copy it over to the fresh data.
+                        freshWorkoutData.copy(
+                            extremaData = freshWorkoutData.extremaData.copy(calculationMessage = currentMessage)
+                        )
+                    } else {
+                        // Otherwise, use the fresh data as is.
+                        freshWorkoutData
+                    }
+
+                    // 4. Update the list and the legacy LiveData.
+                    updateWorkoutInList(workoutId, finalWorkoutData)
                     _headerDataUpdated.postValue(Event(freshWorkoutData.headerData))
                 }
             }
@@ -247,10 +287,26 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
         launch(Dispatchers.IO) {
             summariesManager.getWorkoutCursor(workoutId).use { cursor ->
                 if (cursor?.moveToFirst() == true) {
+                    // 1. Get the completely fresh data from the database.
                     val freshWorkoutData = mapper.fromCursor(cursor)
-                    if (DEBUG) Log.d(TAG, "loadDetailsAndExtremaData: got freshWorkoutData=$freshWorkoutData")
 
-                    updateWorkoutInList(workoutId, freshWorkoutData)
+                    // 2. Get the current in-memory version of the workout to check its state.
+                    val currentWorkoutInMemory = allWorkouts.value?.find { it.id == workoutId }
+                    val currentMessage = currentWorkoutInMemory?.extremaData?.calculationMessage
+
+                    // 3. Create the final workout object to be posted.
+                    val finalWorkoutData = if (currentMessage != null) {
+                        // If a message exists, copy it over to the fresh data.
+                        freshWorkoutData.copy(
+                            extremaData = freshWorkoutData.extremaData.copy(calculationMessage = currentMessage)
+                        )
+                    } else {
+                        // Otherwise, use the fresh data as is.
+                        freshWorkoutData
+                    }
+
+                    // 4. Update the list and the legacy LiveData.
+                    updateWorkoutInList(workoutId, finalWorkoutData)
 
                     _detailsDataUpdated.postValue(Event(freshWorkoutData.detailsData))
                     _extremaDataUpdated.postValue(Event(freshWorkoutData.extremaData))
