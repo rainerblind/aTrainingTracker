@@ -4,10 +4,9 @@ import android.app.Application
 import androidx.lifecycle.*
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDiffCallback
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
-import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsData
-import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaData
-import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderData
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutUpdatePayload
 import com.atrainingtracker.trainingtracker.util.Event
 import kotlinx.coroutines.launch
 
@@ -24,19 +23,16 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
 
     val initialWorkoutLoaded: LiveData<Event<WorkoutData>> = repository.initialWorkoutLoaded
 
+    // The current, stable state of the workout as known by the UI.
+    private var currentWorkoutState: WorkoutData? = null
 
-    // LiveData specifically for the header
-    val headerDataUpdated: LiveData<Event<WorkoutHeaderData>> = repository.headerDataUpdated
 
-    // LiveData specifically for the details
-    val detailsDataUpdated: LiveData<Event<WorkoutDetailsData>> = repository.detailsDataUpdated
+    // LiveData to emit specific update payloads ---
+    private val _updatePayloads = MutableLiveData<Event<List<WorkoutUpdatePayload>>>()
+    val updatePayloads: LiveData<Event<List<WorkoutUpdatePayload>>> = _updatePayloads
 
-    // LiveData specifically for the list of extrema values ---
-    val extremaDataUpdated: LiveData<Event<ExtremaData>> = repository.extremaDataUpdated
-
-    // LiveData specifically for the message from the extrema calculation worker
-    val extremaCalculationMessage: LiveData<Pair<Long, String>> = repository.extremaCalculationMessage
-
+    // Diffing utility
+    private val diffCallback = WorkoutDiffCallback()
 
     val saveFinishedEvent: MutableLiveData<Pair<Long, Boolean>> = repository.saveFinishedEvent
     val deleteFinishedEvent: MutableLiveData<Pair<Long, Boolean>> = repository.deleteFinishedEvent
@@ -48,6 +44,29 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         // Tell the repository to load the initial data
         viewModelScope.launch {
             repository.loadWorkout(workoutId)
+        }
+
+        // Observe the single source of truth from the repository.
+        repository.allWorkouts.observeForever { list ->
+            val newWorkoutState = list.find { it.id == workoutId }
+
+            // If we have both old and new state, perform a diff.
+            if (currentWorkoutState != null && newWorkoutState != null) {
+                // Check if contents have actually changed.
+                if (!diffCallback.areContentsTheSame(currentWorkoutState!!, newWorkoutState)) {
+
+                    // Manually get the change payloads.
+                    val payloads = diffCallback.getChangePayload(currentWorkoutState!!, newWorkoutState)
+
+                    if (payloads is List<*>) {
+                        @Suppress("UNCHECKED_CAST")
+                        _updatePayloads.postValue(Event(payloads as List<WorkoutUpdatePayload>))
+                    }
+                }
+            }
+
+            // Always update the current state to the latest version.
+            currentWorkoutState = newWorkoutState
         }
     }
 

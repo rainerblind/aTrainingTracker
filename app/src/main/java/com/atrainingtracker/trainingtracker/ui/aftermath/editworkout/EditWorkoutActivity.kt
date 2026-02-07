@@ -22,11 +22,12 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseMan
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.atrainingtracker.trainingtracker.dialogs.EditFancyWorkoutNameDialog
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutUpdatePayload
 import com.atrainingtracker.trainingtracker.ui.components.map.MapComponent
 import com.atrainingtracker.trainingtracker.ui.components.map.MapContentType
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsViewHolder
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaValuesViewHolder
-import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderData
+import com.atrainingtracker.trainingtracker.util.EventObserver
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.maps.MapView
@@ -73,6 +74,9 @@ class EditWorkoutActivity : AppCompatActivity() {
 
 
     companion object {
+        private val TAG = EditWorkoutActivity::class.java.simpleName
+        private var DEBUG = TrainingApplication.getDebug(true)
+
         const val EXTRA_SHOW_DETAILS = "com.atrainingtracker.trainingtracker.SHOW_DETAILS"
         const val EXTRA_SHOW_EXTREMA = "com.atrainingtracker.trainingtracker.SHOW_EXTREMA"
         const val EXTRA_SHOW_MAP = "com.atrainingtracker.trainingtracker.SHOW_MAP"
@@ -180,33 +184,37 @@ class EditWorkoutActivity : AppCompatActivity() {
             }
         }
 
-        viewModel.headerDataUpdated.observe(this) { event ->
-            event.getContentIfNotHandled()?.let { headerData ->
-                // Pull fresh data and update views
-                editWorkoutName.setText(headerData.workoutName)
-                checkboxCommute.isChecked = headerData.commute
-                checkboxTrainer.isChecked = headerData.trainer
-            }
-            // since the header data also contains the sport, we need to rebuild the spinners
-            // unfortunately, this might theoretically lead to a race condition
-            setupSpinners()
-        }
+        // observer for the update payloads
+        viewModel.updatePayloads.observe(this, EventObserver { payloads ->
+            // The EventObserver gives us the clean List<WorkoutUpdatePayload>
+            Log.d("EditWorkoutActivity", "Received partial update with payloads: $payloads")
 
-        viewModel.detailsDataUpdated.observe(this) { event ->
-            event.getContentIfNotHandled()?.let { detailsData ->
-                detailsViewHolder?.bind(detailsData)
-            }
-        }
+            // Iterate through the list of changes and apply them to the specific UI part
+            payloads.forEach { payload ->
+                when (payload) {
+                    is WorkoutUpdatePayload.HeaderChanged -> {
+                        Log.d("EditWorkoutActivity", "Partial update: Header changed")
+                        editWorkoutName.setText(payload.newHeaderData.workoutName)
+                        checkboxCommute.isChecked = payload.newHeaderData.commute
+                        checkboxTrainer.isChecked = payload.newHeaderData.trainer
+                    }
 
-        viewModel.extremaDataUpdated.observe(this) { event ->
-            event.getContentIfNotHandled()?.let { extremaData ->
-                extremaValuesViewHolder?.bind(extremaData)
-            }
-        }
+                    is WorkoutUpdatePayload.DetailsChanged -> {
+                        Log.d("EditWorkoutActivity", "Partial update: Details changed")
+                        detailsViewHolder?.bind(payload.newDetailsData)
 
-        viewModel.extremaCalculationMessage.observe(this) { (workoutId, message) ->
-            extremaValuesViewHolder?.updateProgressMessage(message)
-        }
+                        // since the details data contain the sport and average speed, we also update the spinners here.
+                        setupSpinners()
+                    }
+
+                    is WorkoutUpdatePayload.ExtremaChanged -> {
+                        Log.d("EditWorkoutActivity", "Partial update: Extrema changed")
+                        // This will now correctly update the calculation message as well
+                        extremaValuesViewHolder?.bind(payload.newExtremaData)
+                    }
+                }
+            }
+        })
 
         viewModel.saveFinishedEvent.observe(this) { (safedWorkoutId, success) ->
             if (safedWorkoutId == workoutId
