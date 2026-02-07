@@ -5,6 +5,7 @@ import android.database.Cursor
 import android.util.Log
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
+import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import java.text.ParseException
@@ -16,7 +17,8 @@ import java.util.TimeZone
 
 class WorkoutHeaderDataProvider(
     private val context: Context,
-    private val equipmentDbHelper: com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
+    private val equipmentDbHelper: EquipmentDbHelper,
+    private val sportTypeDatabaseManager: SportTypeDatabaseManager
 ) {
 
     fun createWorkoutHeaderData(workoutId: Long): WorkoutHeaderData? {
@@ -46,7 +48,7 @@ class WorkoutHeaderDataProvider(
         val (date, time) = formatDateTime(cursor)
 
         val sportTypeDatabaseManager = SportTypeDatabaseManager.getInstance(context)
-        val sportType = sportTypeDatabaseManager.getBSportType(sportId)
+        val bSportType = sportTypeDatabaseManager.getBSportType(sportId)
         val sportName = sportTypeDatabaseManager.getUIName(sportId)
         val equipmentName = equipmentDbHelper.getEquipmentNameFromId(equipmentId)
 
@@ -57,8 +59,7 @@ class WorkoutHeaderDataProvider(
             workoutName = workoutName,
             formattedDate = date,
             formattedTime = time,
-            sportId = sportId,
-            bSportType = sportType,
+            bSportType = bSportType,
             sportName = sportName,
             equipmentName = equipmentName,
             commute = commute,

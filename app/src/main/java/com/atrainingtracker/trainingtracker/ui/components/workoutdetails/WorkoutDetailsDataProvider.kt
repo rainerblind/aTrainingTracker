@@ -49,7 +49,7 @@ class WorkoutDetailsDataProvider(private val context: Context) {
             avgSpeedMps = avgSpeed,
             ascentMeters = ascent,
             descentMeters = descent,
-            sportType = bSportType,
+            bSportType = bSportType,
             maxDisplacement = maxDisplacement,
             minAltitude = minAlt,
             maxAltitude = maxAlt

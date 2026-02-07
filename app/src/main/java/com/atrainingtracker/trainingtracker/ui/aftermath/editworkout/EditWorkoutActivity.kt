@@ -21,6 +21,7 @@ import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.atrainingtracker.trainingtracker.dialogs.EditFancyWorkoutNameDialog
+import com.atrainingtracker.trainingtracker.ui.aftermath.SportAndEquipmentData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutUpdatePayload
 import com.atrainingtracker.trainingtracker.ui.components.map.MapComponent
@@ -61,8 +62,6 @@ class EditWorkoutActivity : AppCompatActivity() {
     private lateinit var sportTypeAdapter: ArrayAdapter<String>
     private lateinit var equipmentAdapter: ArrayAdapter<String>
 
-    private var showAllSportTypes = false
-    private var showAllEquipment = false
     private lateinit var sportTypeNameList: MutableList<String>
 
     private var detailsViewHolder: WorkoutDetailsViewHolder? = null
@@ -116,7 +115,6 @@ class EditWorkoutActivity : AppCompatActivity() {
         // Setup the UI components and listeners
         setupClickListeners()
         setupTextWatchers()
-        setupSpinnerOnItemSelectedListeners()
 
         // Observe the LiveData from the ViewModel
         observeViewModel()
@@ -192,6 +190,11 @@ class EditWorkoutActivity : AppCompatActivity() {
             // Iterate through the list of changes and apply them to the specific UI part
             payloads.forEach { payload ->
                 when (payload) {
+                    is WorkoutUpdatePayload.SportAndEquipmentChanged -> {
+                        if (DEBUG) Log.d(TAG, "Partial update: Sport and Equipment changed")
+                        setupSpinners(payload.newSportAndEquipmentData)
+                    }
+
                     is WorkoutUpdatePayload.HeaderChanged -> {
                         if (DEBUG) Log.d(TAG, "Partial update: Header changed")
                         // Only call setText if the content has actually changed.  This prevents the cursor from jumping during user input.
@@ -206,8 +209,6 @@ class EditWorkoutActivity : AppCompatActivity() {
                         if (DEBUG)Log.d(TAG, "Partial update: Details changed")
                         detailsViewHolder?.bind(payload.newDetailsData)
 
-                        // since the details data contain the sport and average speed, we also update the spinners here.
-                        setupSpinners()
                     }
 
                     is WorkoutUpdatePayload.ExtremaChanged -> {
@@ -263,7 +264,7 @@ class EditWorkoutActivity : AppCompatActivity() {
         checkboxTrainer.isChecked = wd.headerData.trainer
 
         // Populate Spinners
-        setupSpinners()
+        setupSpinners(wd.sportAndEquipmentData)
 
         // details and the map.
         detailsViewHolder?.bind(wd.detailsData)
@@ -284,19 +285,17 @@ class EditWorkoutActivity : AppCompatActivity() {
         }
     }
 
-    private fun setupSpinnerOnItemSelectedListeners() {
-        setupSportSpinnerOnItemSelected()
-        setupEquipmentSpinnerOnItemSelected()
+    private fun setupSpinners(sportAndEquipmentData: SportAndEquipmentData) {
+        if (DEBUG) Log.i(TAG, "Setting up spinners")
+
+        setupSportSpinner(sportAndEquipmentData)
+        setupEquipmentSpinner(sportAndEquipmentData)
+
+        setupSportSpinnerOnItemSelected(sportAndEquipmentData)
+        setupEquipmentSpinnerOnItemSelected(sportAndEquipmentData)
     }
 
-    private fun setupSpinners() {
-        setupSportSpinner()
-        setupEquipmentSpinner()
-    }
-
-
-
-    private fun setupSportSpinnerOnItemSelected() {
+    private fun setupSportSpinnerOnItemSelected(sportAndEquipmentData: SportAndEquipmentData) {
         spinnerSportType.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
 
@@ -305,20 +304,11 @@ class EditWorkoutActivity : AppCompatActivity() {
 
                 // This is the "Show all sport types" item
                 if (selectedSportType == getString(R.string.show_all_sport_types)) {  // -> user selected 'show all sports'
-                    if (!showAllSportTypes) {
-                        showAllSportTypes = true
-                        setupSportSpinner()              // Rebuild the spinner with all items
-                        spinnerSportType.performClick() // Open the spinner for the user to select again
-                    }
-                    return // Stop further processing
-                }
-
-                // A regular sport type was selected
-
-                val currentSportName = viewModel.workoutData.value?.headerData?.sportName
-                if (selectedSportType != currentSportName) {
+                    setupSportSpinner(sportAndEquipmentData, true)  // Rebuild the spinner with all items
+                    spinnerSportType.performClick()           // Open the spinner for the user to select again
+                } else {
+                    // A regular sport type was selected  -> update the viewModel
                     viewModel.updateSportName(selectedSportType)
-                    onSportTypeChanged()
                 }
             }
 
@@ -328,7 +318,7 @@ class EditWorkoutActivity : AppCompatActivity() {
         }
     }
 
-    private fun setupEquipmentSpinnerOnItemSelected() {
+    private fun setupEquipmentSpinnerOnItemSelected(sportAndEquipmentData: SportAndEquipmentData) {
 
         spinnerEquipment.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
@@ -340,18 +330,10 @@ class EditWorkoutActivity : AppCompatActivity() {
                 if (selectedEquipment == getString(R.string.equipment_all)
                     || selectedEquipment == getString(R.string.equipment_all_shoes)
                     || selectedEquipment == getString(R.string.equipment_all_bikes)) {  // -> user selected 'show all equipment/shoes/bikes'
-                    if (!showAllEquipment) {
-                        showAllEquipment = true
-                        setupEquipmentSpinner()         // Rebuild the spinner with all items
-                        spinnerEquipment.performClick() // Open the spinner for the user to select again
-                    }
-                    return // Stop further processing
-                }
-
-                // A regular equipment was selected
-
-                val currentEquipmentName = viewModel.workoutData.value?.headerData?.equipmentName
-                if (selectedEquipment != currentEquipmentName) {
+                    setupEquipmentSpinner(sportAndEquipmentData, true)         // Rebuild the spinner with all items
+                    spinnerEquipment.performClick() // Open the spinner for the user to select again
+                } else {
+                    // A regular equipment was selected  -> update the view model
                     viewModel.updateEquipmentName(selectedEquipment)
                 }
             }
@@ -362,33 +344,31 @@ class EditWorkoutActivity : AppCompatActivity() {
         }
     }
 
-    private fun onSportTypeChanged() {
-        Log.d("EditWorkoutFragment", "Sport type changed. The ViewModel has been notified.")
-    }
+    private fun setupSportSpinner(sportAndEquipmentData: SportAndEquipmentData, showAllSportTypes: Boolean = false) {
+        if (DEBUG) Log.i(TAG, "Setting up sport spinner")
 
-    private fun setupSportSpinner() {
-        val currentWorkoutData = viewModel.workoutData.value
-        val bSportType = currentWorkoutData?.headerData?.bSportType
-        val avgSpd = currentWorkoutData?.detailsData?.avgSpeedMps
-        var currentSportName = currentWorkoutData?.headerData?.sportName
+        val bSportType = sportAndEquipmentData.bSportType
+        val avgSpd = sportAndEquipmentData.avgSpeedMps
+        val currentSportName = sportAndEquipmentData.sportName
 
         // first, calculate the list of sport types
-        if (showAllSportTypes || bSportType == null) {  // when we have to show all or the sport type is not known, we show all...
+        if (showAllSportTypes) {  // when we have to show all or the sport type is not known, we show all...
+            if (DEBUG) Log.i(TAG, "Setting up sport spinner with all sport types")
             sportTypeNameList =  sportTypeDatabaseManager.getSportTypesUiNameList()
         } else {
+            if (DEBUG) Log.i(TAG, "Setting up sport spinner with filtered sport types. bSportType=$bSportType avgSpd=$avgSpd")
             // first, we get a list of sport types based on the basic sport type and the average speed
             sportTypeNameList = sportTypeDatabaseManager.getSportTypesUiNameList(bSportType, avgSpd?.toDouble() ?: 0.0)
 
-            // when the sportName is not yet defined and the list has only one element, this will be selected as the current sport
-            if (currentSportName == null && sportTypeNameList.size == 1) {
-                viewModel.workoutData.value?.headerData?.sportName = sportTypeNameList[0]
+            // when the list has only one element, this will be selected as the current sport
+            if (sportTypeNameList.size == 1) {
+                viewModel.updateSportName(sportTypeNameList[0])
             }
 
             // when this list is empty or has only one entry, we show all sports.  (Having a list with only the current sport to select from, makes no sense.)
             // similarly, when the current sport is not in the list, we also show all sports.
             if (sportTypeNameList.size <= 1  || !sportTypeNameList.contains(currentSportName)) {
-                showAllSportTypes = true
-                setupSportSpinner()
+                setupSportSpinner(sportAndEquipmentData, true)
                 return
             }
             sportTypeNameList.add(getString(R.string.show_all_sport_types))
@@ -408,9 +388,11 @@ class EditWorkoutActivity : AppCompatActivity() {
         spinnerSportType.setSelection(selectionIndex)
     }
 
-    private fun setupEquipmentSpinner() {
-        val currentBSportType = viewModel.workoutData.value?.headerData?.bSportType ?: BSportType.UNKNOWN
-        var currentEquipmentName = viewModel.workoutData.value?.headerData?.equipmentName
+    private fun setupEquipmentSpinner(sportAndEquipmentData: SportAndEquipmentData, showAllEquipment: Boolean = false) {
+        if (DEBUG) Log.i(TAG, "Setting up equipment spinner")
+
+        val currentBSportType = sportAndEquipmentData.bSportType
+        val currentEquipmentName = sportAndEquipmentData.equipmentName
 
         val equipmentDbHelper = EquipmentDbHelper(this)
         var equipmentList: MutableList<String?> = ArrayList<String?>()
@@ -422,14 +404,13 @@ class EditWorkoutActivity : AppCompatActivity() {
 
             // when the equipment is not yet known and there is only one entry in the list, this entry will be selected as the current equipment
             if (currentEquipmentName == null && equipmentList.size == 1) {
-                viewModel.workoutData.value?.headerData?.equipmentName = equipmentList[0]
+                viewModel.updateEquipmentName(equipmentList[0])
             }
 
             // when the list is empty or has only one entry, we show all equipment.
             // Similarly, when the current equipment is not in the list, we also show all equipment.
             if (equipmentList.size <= 1 || !equipmentList.contains(currentEquipmentName)) {
-                showAllEquipment = true
-                setupEquipmentSpinner()
+                setupEquipmentSpinner(sportAndEquipmentData, true)
                 return
             }
 

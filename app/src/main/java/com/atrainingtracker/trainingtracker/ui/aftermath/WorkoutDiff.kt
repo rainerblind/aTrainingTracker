@@ -10,6 +10,7 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutH
 */
 sealed class WorkoutUpdatePayload {
     /** Indicates that only the ExtremaData has changed. */
+    data class SportAndEquipmentChanged(val newSportAndEquipmentData: SportAndEquipmentData) : WorkoutUpdatePayload()
     data class HeaderChanged(val newHeaderData: WorkoutHeaderData) : WorkoutUpdatePayload()
     data class DetailsChanged(val newDetailsData: WorkoutDetailsData) : WorkoutUpdatePayload()
     data class ExtremaChanged(val newExtremaData: ExtremaData) : WorkoutUpdatePayload()
@@ -35,6 +36,11 @@ class WorkoutDiffCallback : DiffUtil.ItemCallback<WorkoutData>() {
         // This is called by DiffUtil only if areItemsTheSame() is true and
         // areContentsTheSame() is false.
         val payloads = mutableListOf<WorkoutUpdatePayload>()
+
+        // Check for a change in the sport and equipment data.
+        if (oldItem.sportAndEquipmentData != newItem.sportAndEquipmentData) {
+            payloads.add(WorkoutUpdatePayload.SportAndEquipmentChanged(newItem.sportAndEquipmentData))
+        }
 
         // Check for a change in the header data.
         if (oldItem.headerData != newItem.headerData) {

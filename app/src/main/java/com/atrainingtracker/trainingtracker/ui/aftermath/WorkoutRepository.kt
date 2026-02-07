@@ -22,11 +22,8 @@ import com.atrainingtracker.trainingtracker.exporter.ExportManager
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.helpers.CalcExtremaWorker
 import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.DescriptionDataProvider
-import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsData
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsDataProvider
-import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaData
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaDataProvider
-import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderData
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderDataProvider
 import com.atrainingtracker.trainingtracker.util.Event
 import kotlinx.coroutines.CoroutineScope
@@ -52,15 +49,19 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
     private val deletionHelper by lazy { WorkoutDeletionHelper(application) }
     private val summariesManager by lazy { WorkoutSummariesDatabaseManager.getInstance(application) }
 
+    val equipmentDbHelper = EquipmentDbHelper(application)
+    val sportTypeDatabaseManager = SportTypeDatabaseManager.getInstance(application)
+
     private val mapper by lazy {
         // Create instances of the required providers
-        val headerProvider = WorkoutHeaderDataProvider(application, EquipmentDbHelper(application))
+        val sportAndEquipmentDataProvider = SportAndEquipmentDataProvider(equipmentDbHelper, sportTypeDatabaseManager)
+        val headerProvider = WorkoutHeaderDataProvider(application, equipmentDbHelper, sportTypeDatabaseManager)
         val detailsProvider = WorkoutDetailsDataProvider(application)
         val extremaProvider = ExtremaDataProvider(application)
         val descriptionProvider = DescriptionDataProvider()
 
         // Inject them into the mapper
-        WorkoutDataMapper(headerProvider, detailsProvider, descriptionProvider, extremaProvider)
+        WorkoutDataMapper(sportAndEquipmentDataProvider, headerProvider, detailsProvider, descriptionProvider, extremaProvider)
     }
 
     // --- LiveData for Data and Progress ---
@@ -288,17 +289,24 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
         if (newSportName == null) return
         val currentList = _allWorkouts.value ?: return
         val workoutToUpdate = currentList.find { it.id == workoutId } ?: return
+        if (newSportName == workoutToUpdate.headerData.sportName) return
 
-        val sportTypeDatabaseManager = SportTypeDatabaseManager.getInstance(application)
         val newSportId = sportTypeDatabaseManager.getSportTypeIdFromUIName(newSportName)
         val newBSportType = sportTypeDatabaseManager.getBSportType(newSportId)
 
+        // update the workout.  Thereby, we have to update the sportAndEquipment, header, and details...
         val updatedWorkout = workoutToUpdate.copy(
-            headerData = workoutToUpdate.headerData.copy(
-                sportName = newSportName,
+            sportAndEquipmentData = workoutToUpdate.sportAndEquipmentData.copy(
                 sportId = newSportId,
-                bSportType = newBSportType
-            )
+                bSportType = newBSportType,
+                sportName = newSportName
+            ),
+            headerData = workoutToUpdate.headerData.copy(
+                bSportType = newBSportType,
+                sportName = newSportName,
+            ),
+            detailsData = workoutToUpdate.detailsData.copy(
+                bSportType = newBSportType)
         )
         updateWorkoutInList(workoutId, updatedWorkout)
     }
@@ -308,9 +316,15 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
         if (newEquipmentName == null) return
         val currentList = _allWorkouts.value ?: return
         val workoutToUpdate = currentList.find { it.id == workoutId } ?: return
+        if (newEquipmentName == workoutToUpdate.headerData.equipmentName) return
 
+        // update the workout.  Thereby, we have to update the sportAndEquipment and header ...
         val updatedWorkout = workoutToUpdate.copy(
-            headerData = workoutToUpdate.headerData.copy(equipmentName = newEquipmentName)
+            sportAndEquipmentData = workoutToUpdate.sportAndEquipmentData.copy(
+                equipmentName = newEquipmentName
+            ),
+            headerData = workoutToUpdate.headerData.copy(
+                equipmentName = newEquipmentName)
         )
         updateWorkoutInList(workoutId, updatedWorkout)
     }
@@ -389,10 +403,10 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
 
             // Update Sport and Equipment
             val equipmentDbHelper = EquipmentDbHelper(application)
-            val equipmentId = equipmentDbHelper.getEquipmentId(dataToSave.headerData.equipmentName ?: "")
+            val equipmentId = equipmentDbHelper.getEquipmentId(dataToSave.sportAndEquipmentData.equipmentName ?: "")
             summariesManager.updateSportAndEquipment(
                 workoutId,
-                dataToSave.headerData.sportId,
+                dataToSave.sportAndEquipmentData.sportId,
                 equipmentId
             )
 

@@ -42,13 +42,6 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
     // --- LiveData for granular deletion progress ---
     val deletionProgress: LiveData<DeletionProgress> = repository.deletionProgress
 
-    private val workoutSummariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(application)
-
-    private val headerDataProvider = WorkoutHeaderDataProvider(application, EquipmentDbHelper(application))
-    private val detailsDataProvider = WorkoutDetailsDataProvider(application)
-    private val extremaDataProvider = ExtremaDataProvider(application)
-    private val descriptionDataProvider = DescriptionDataProvider()
-
 
     val confirmDeleteWorkoutEvent = SingleLiveEvent<Long>()
 
