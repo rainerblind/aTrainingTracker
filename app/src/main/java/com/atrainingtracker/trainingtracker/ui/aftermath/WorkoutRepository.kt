@@ -231,30 +231,40 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
         _allWorkouts.postValue(updatedList)
     }
 
-    // Function to update the workout data from the database but keep the calculationMessage of the extrema data
+    // Function to update the workout data from the database but keep the calculationMessage of the extrema data and the workout name if it has changed
     private fun reloadWorkoutData(workoutId: Long) {
         launch(Dispatchers.IO) {
             summariesManager.getWorkoutCursor(workoutId).use { cursor ->
                 if (cursor?.moveToFirst() == true) {
-                    // 1. Get the completely fresh data from the database.
+                    // Get the completely fresh data from the database.
                     val freshWorkoutData = mapper.fromCursor(cursor)
 
-                    // 2. Get the current in-memory version of the workout to check its state.
+                    // Get the current in-memory version of the workout to check its state.
                     val currentWorkoutInMemory = allWorkouts.value?.find { it.id == workoutId }
                     val currentMessage = currentWorkoutInMemory?.extremaData?.calculationMessage
 
-                    // 3. Create the final workout object to be posted.
-                    val finalWorkoutData = if (currentMessage != null) {
-                        // If a message exists, copy it over to the fresh data.
-                        freshWorkoutData.copy(
-                            extremaData = freshWorkoutData.extremaData.copy(calculationMessage = currentMessage)
-                        )
+                    // Calculate the new workout name
+                    val currentWorkoutName = currentWorkoutInMemory?.headerData?.workoutName
+                    val currentFileBaseName = currentWorkoutInMemory?.fileBaseName
+                    val finalWorkoutName = if (currentWorkoutName == currentFileBaseName) {
+                        // If the name has NOT been edited by the user, use the fresh name from the DB
+                        // (which may have been promoted to the fancy/auto name by the CalcExtremaWorker.)
+                        freshWorkoutData.headerData.workoutName
                     } else {
-                        // Otherwise, use the fresh data as is.
-                        freshWorkoutData
+                        // If the user HAS edited the name, stick with the name currently in memory.
+                        currentWorkoutName
                     }
+                    // Create the final workout object to be posted.
+                    val finalWorkoutData = freshWorkoutData.copy(
+                        // Always preserve the calculation message if it exists
+                        extremaData = freshWorkoutData.extremaData.copy(calculationMessage = currentMessage),
 
-                    // 4. Update the workout list
+                        // And always use the final, intelligently decided name.
+                        // Provide a fallback to the original fresh name just in case.
+                        headerData = freshWorkoutData.headerData.copy(workoutName = finalWorkoutName ?: freshWorkoutData.headerData.workoutName)
+                    )
+
+                    // Update the workout list
                     updateWorkoutInList(workoutId, finalWorkoutData)
                 }
             }
