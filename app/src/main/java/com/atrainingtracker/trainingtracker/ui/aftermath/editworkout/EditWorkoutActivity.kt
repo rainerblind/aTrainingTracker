@@ -193,14 +193,17 @@ class EditWorkoutActivity : AppCompatActivity() {
             payloads.forEach { payload ->
                 when (payload) {
                     is WorkoutUpdatePayload.HeaderChanged -> {
-                        Log.d("EditWorkoutActivity", "Partial update: Header changed")
-                        editWorkoutName.setText(payload.newHeaderData.workoutName)
+                        if (DEBUG) Log.d(TAG, "Partial update: Header changed")
+                        // Only call setText if the content has actually changed.  This prevents the cursor from jumping during user input.
+                        if (editWorkoutName.text.toString() != payload.newHeaderData.workoutName) {
+                            editWorkoutName.setText(payload.newHeaderData.workoutName)
+                        }
                         checkboxCommute.isChecked = payload.newHeaderData.commute
                         checkboxTrainer.isChecked = payload.newHeaderData.trainer
                     }
 
                     is WorkoutUpdatePayload.DetailsChanged -> {
-                        Log.d("EditWorkoutActivity", "Partial update: Details changed")
+                        if (DEBUG)Log.d(TAG, "Partial update: Details changed")
                         detailsViewHolder?.bind(payload.newDetailsData)
 
                         // since the details data contain the sport and average speed, we also update the spinners here.
@@ -208,8 +211,7 @@ class EditWorkoutActivity : AppCompatActivity() {
                     }
 
                     is WorkoutUpdatePayload.ExtremaChanged -> {
-                        Log.d("EditWorkoutActivity", "Partial update: Extrema changed")
-                        // This will now correctly update the calculation message as well
+                        if (DEBUG) Log.d(TAG, "Partial update: Extrema changed")
                         extremaValuesViewHolder?.bind(payload.newExtremaData)
                     }
                 }
