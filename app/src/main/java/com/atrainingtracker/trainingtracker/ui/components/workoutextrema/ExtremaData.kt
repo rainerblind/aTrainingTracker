@@ -9,6 +9,7 @@ package com.atrainingtracker.trainingtracker.ui.components.workoutextrema
 data class ExtremaData(
     val workoutId: Long,
     val isCalculating: Boolean,
+    val calculationMessage: String? = null,
     val dataRows: List<ExtremaDataRow>
 )
 
