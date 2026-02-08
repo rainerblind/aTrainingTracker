@@ -10,7 +10,6 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDiffCallback
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutUpdatePayload
-import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.SummaryViewHolder
 
 /**
  * A modern ListAdapter for the workout summaries RecyclerView.
@@ -60,18 +59,18 @@ class WorkoutSummariesAdapter(
                     // Iterate through the actual change events inside the list.
                     payload.forEach { item ->
                         when (item) {
-                            is WorkoutUpdatePayload.HeaderChanged -> {
+                            is WorkoutUpdatePayload.HeaderDataChanged -> {
                                 // This is a header-only update.
                                 // Call a specific, lightweight update function in the ViewHolder.
                                 holder.updateHeader(item.newHeaderData)
                             }
 
-                            is WorkoutUpdatePayload.DetailsChanged -> {
+                            is WorkoutUpdatePayload.DetailsDataChanged -> {
                                 // This is a details-only update.
                                 holder.updateDetails(item.newDetailsData)
                             }
 
-                            is WorkoutUpdatePayload.ExtremaChanged -> {
+                            is WorkoutUpdatePayload.ExtremaDataChanged -> {
                                 // This is an extrema-only update.
                                 holder.updateExtrema(item.newExtremaData)
                             }
