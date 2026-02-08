@@ -50,9 +50,9 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
     // Helper instances, initialized lazily
     private val deletionHelper by lazy { WorkoutDeletionHelper(application) }
     private val summariesManager by lazy { WorkoutSummariesDatabaseManager.getInstance(application) }
-
-    val equipmentDbHelper = EquipmentDbHelper(application)
-    val sportTypeDatabaseManager = SportTypeDatabaseManager.getInstance(application)
+    private val equipmentDbHelper by lazy { EquipmentDbHelper(application) }
+    private val sportTypeDatabaseManager by lazy { SportTypeDatabaseManager.getInstance(application) }
+    private val exportManager by lazy { ExportManager(application) }
 
     private val mapper by lazy {
         // Create instances of the required providers
@@ -406,7 +406,6 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
             )
 
             // Update Sport and Equipment
-            val equipmentDbHelper = EquipmentDbHelper(application)
             val equipmentId = equipmentDbHelper.getEquipmentId(dataToSave.equipmentData.equipmentName ?: "")
             summariesManager.updateSportAndEquipment(
                 workoutId,
@@ -430,7 +429,6 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
             )
 
             // -- trigger export
-            val exportManager = ExportManager(application)
             exportManager.exportWorkout(dataToSave.fileBaseName)
 
             saveFinishedEvent.postValue(Pair(workoutId, true))
@@ -439,7 +437,6 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
 
     suspend fun exportWorkoutTo(workoutId: Long, fileFormat: FileFormat) {
         withContext(Dispatchers.IO) {
-            val exportManager = ExportManager(application)
             exportManager.exportWorkoutTo(workoutId, fileFormat)
         }
     }
