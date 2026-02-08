@@ -81,7 +81,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * Created by rainer on 10.05.16.
@@ -104,8 +103,8 @@ public class MyLocationsFragment
     final Map<Marker, Long> mMarker2MyLocationsIdMap = new HashMap<>();
     final Map<Long, Circle> mMarkerId2CircleMap = new HashMap<>();
 
-    final List<Long> mSportTypesIdList = SportTypeDatabaseManager.getInstance(requireContext()).getSportTypesIdList();
-    final List<String> mSportTypesUiNamList = SportTypeDatabaseManager.getInstance(requireContext()).getSportTypesUiNameList();
+    private List<Long> mSportTypesIdList;
+    private List<String> mSportTypesUiNameList;
 
     /**
      * stolen from BaseExporter
@@ -127,6 +126,9 @@ public class MyLocationsFragment
         super.onCreate(savedInstanceState);
 
         mKnownLocationsDatabaseManager = KnownLocationsDatabaseManager.getInstance(requireContext());
+
+        mSportTypesIdList = SportTypeDatabaseManager.getInstance(requireContext()).getSportTypesIdList();
+        mSportTypesUiNameList = SportTypeDatabaseManager.getInstance(requireContext()).getSportTypesUiNameList();
     }
 
 
@@ -142,7 +144,7 @@ public class MyLocationsFragment
         mMapView = v.findViewById(R.id.mapView);
 
         // now, configure the views
-        mSportSpinner.setItems(mSportTypesUiNamList);
+        mSportSpinner.setItems(mSportTypesUiNameList);
         // mSportSpinner.setSelection(new int[]{TTSportType.RUN.ordinal(), TTSportType.BIKE.ordinal(), TTSportType.MTB.ordinal()});
         mSportSpinner.setSelection(new int[]{});
         mSportSpinner.setmMSSOnitemClickedListener(new MultiSelectionSpinner.MSSOnItemClickedListener() {
