@@ -30,7 +30,7 @@ class WorkoutDataMapper(
     fun fromCursor(cursor: Cursor): WorkoutData {
 
         // Use the injected providers to create parts of the WorkoutData object
-        val sportAndEquipmentData = sportAndEquipmentDataProvider.getSportAndDescriptionData(cursor)
+        val sportAndEquipmentData = sportAndEquipmentDataProvider.getSportAndEquipmentData(cursor)
         val headerData = headerDataProvider.createWorkoutHeaderData(cursor)
         val detailsData = detailsDataProvider.getWorkoutDetailsData(cursor)
         val descriptionData = descriptionDataProvider.createDescriptionData(cursor)
