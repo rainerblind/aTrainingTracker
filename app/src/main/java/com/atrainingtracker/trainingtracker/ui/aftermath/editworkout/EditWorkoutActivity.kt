@@ -191,7 +191,7 @@ class EditWorkoutActivity : AppCompatActivity() {
             payloads.forEach { payload ->
                 when (payload) {
                     is WorkoutUpdatePayload.SportAndEquipmentChanged -> {
-                        if (DEBUG) Log.d(TAG, "Partial update: Sport and Equipment changed")
+                        if (DEBUG) Log.d(TAG, "Partial update: Sport and Equipment changed to ${payload.newSportAndEquipmentData}")
                         setupSpinners(payload.newSportAndEquipmentData)
                     }
 
@@ -301,12 +301,15 @@ class EditWorkoutActivity : AppCompatActivity() {
 
                 // First, get the selected sportType
                 val selectedSportType = parent?.getItemAtPosition(position) as? String
+                if (DEBUG) Log.i(TAG, "OnItemSelected: Selected sport type: $selectedSportType")
 
                 // This is the "Show all sport types" item
                 if (selectedSportType == getString(R.string.show_all_sport_types)) {  // -> user selected 'show all sports'
+                    if (DEBUG) Log.i(TAG, "OnItemSelected: Show all sport types was selected -> reset up the spinner and perform a click.")
                     setupSportSpinner(sportAndEquipmentData, true)  // Rebuild the spinner with all items
                     spinnerSportType.performClick()           // Open the spinner for the user to select again
                 } else {
+                    if (DEBUG) Log.i(TAG, "OnItemSelected: A regular sport type was selected -> update the viewModel")
                     // A regular sport type was selected  -> update the viewModel
                     viewModel.updateSportName(selectedSportType)
                 }
@@ -345,11 +348,10 @@ class EditWorkoutActivity : AppCompatActivity() {
     }
 
     private fun setupSportSpinner(sportAndEquipmentData: SportAndEquipmentData, showAllSportTypes: Boolean = false) {
-        if (DEBUG) Log.i(TAG, "Setting up sport spinner")
-
         val bSportType = sportAndEquipmentData.bSportType
         val avgSpd = sportAndEquipmentData.avgSpeedMps
         val currentSportName = sportAndEquipmentData.sportName
+        if (DEBUG) Log.i(TAG, "Setting up sport spinner. bSportType=$bSportType avgSpd=$avgSpd currentSportName=$currentSportName, showAllSportTypes=$showAllSportTypes")
 
         // first, calculate the list of sport types
         if (showAllSportTypes) {  // when we have to show all or the sport type is not known, we show all...
@@ -361,13 +363,15 @@ class EditWorkoutActivity : AppCompatActivity() {
             sportTypeNameList = sportTypeDatabaseManager.getSportTypesUiNameList(bSportType, avgSpd?.toDouble() ?: 0.0)
 
             // when the list has only one element, this will be selected as the current sport
-            if (sportTypeNameList.size == 1) {
-                viewModel.updateSportName(sportTypeNameList[0])
-            }
+            // if (sportTypeNameList.size == 1) {
+            //    if (DEBUG) Log.i(TAG, "SetupSportSpinner: List of sports has only one sport type ($sportTypeNameList[0]) -> we inform the viewModel")
+            //    viewModel.updateSportName(sportTypeNameList[0])
+            // }
 
             // when this list is empty or has only one entry, we show all sports.  (Having a list with only the current sport to select from, makes no sense.)
             // similarly, when the current sport is not in the list, we also show all sports.
             if (sportTypeNameList.size <= 1  || !sportTypeNameList.contains(currentSportName)) {
+                if (DEBUG) Log.i(TAG, "SetupSportSpinner: List of sports is empty or has only one entry (or less) -> we show all sports")
                 setupSportSpinner(sportAndEquipmentData, true)
                 return
             }
@@ -403,9 +407,9 @@ class EditWorkoutActivity : AppCompatActivity() {
             equipmentList = equipmentDbHelper.getLinkedEquipment(workoutId)
 
             // when the equipment is not yet known and there is only one entry in the list, this entry will be selected as the current equipment
-            if (currentEquipmentName == null && equipmentList.size == 1) {
-                viewModel.updateEquipmentName(equipmentList[0])
-            }
+            // if (currentEquipmentName == null && equipmentList.size == 1) {
+            //     viewModel.updateEquipmentName(equipmentList[0])
+            // }
 
             // when the list is empty or has only one entry, we show all equipment.
             // Similarly, when the current equipment is not in the list, we also show all equipment.
