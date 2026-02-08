@@ -42,7 +42,6 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     private val diffCallback = WorkoutDiffCallback()
 
     val saveFinishedEvent: MutableLiveData<Pair<Long, Boolean>> = repository.saveFinishedEvent
-    val deleteFinishedEvent: MutableLiveData<Pair<Long, Boolean>> = repository.deleteFinishedEvent
 
 
     init {
@@ -167,10 +166,6 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
      */
     fun saveChanges() {
         repository.saveWorkout(workoutId)
-    }
-
-    fun deleteWorkout() {
-        repository.deleteWorkout(workoutId)
     }
 }
 
