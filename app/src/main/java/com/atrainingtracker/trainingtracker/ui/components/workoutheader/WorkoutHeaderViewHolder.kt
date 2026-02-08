@@ -60,18 +60,4 @@ class WorkoutHeaderViewHolder(val view: View) {
         tvEquipment.isVisible = data.equipmentName != null
         tvEquipment.text = data.equipmentName
     }
-
-    // some getters
-    fun getWorkoutName(): String? {
-        return currentData?.workoutName
-    }
-
-    fun getEquipmentName(): String? {
-        return currentData?.equipmentName
-    }
-
-    fun getSportId(): Long {
-        // Return a default value like 0L if data is null, or handle it as an error
-        return currentData?.sportId ?: 0L
-    }
 }

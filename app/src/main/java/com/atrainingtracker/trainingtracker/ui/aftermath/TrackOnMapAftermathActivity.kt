@@ -9,6 +9,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.res.ResourcesCompat
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.TrainingApplication
@@ -82,7 +83,11 @@ class TrackOnMapAftermathActivity : AppCompatActivity(), OnMapReadyCallback {
         // Use a background thread to fetch data to avoid blocking the UI
         Executors.newSingleThreadExecutor().execute {
             // Background thread: Fetch the data
-            val workoutHeaderDataProvider = WorkoutHeaderDataProvider(this, EquipmentDbHelper(this))
+            val workoutHeaderDataProvider = WorkoutHeaderDataProvider(
+                this,
+                EquipmentDbHelper(this),
+                SportTypeDatabaseManager.getInstance(this)
+            )
             val workoutHeaderData = workoutHeaderDataProvider.createWorkoutHeaderData(workoutId)
 
             // Switch back to the main thread to update the UI

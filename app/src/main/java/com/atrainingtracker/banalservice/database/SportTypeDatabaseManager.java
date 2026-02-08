@@ -33,7 +33,6 @@ import androidx.annotation.NonNull;
 import androidx.core.content.res.ResourcesCompat;
 
 import com.atrainingtracker.R;
-import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 
@@ -430,7 +429,7 @@ public class SportTypeDatabaseManager {
     private enum TTSportType {
         // only for the UI we use the R.string, others are hard coded because they should never ever be translated
         //                         UI Id    gc       strava   tcx         Runkeeper           TrainingPeaks
-        WALK(BSportType.UNKNOWN, R.string.sport_type_walk, "walk", "Walk", "Walking", "Walking", "Walk"),
+        WALK(BSportType.RUN, R.string.sport_type_walk, "walk", "Walk", "Walking", "Walking", "Walk"),
         RUN(BSportType.RUN, R.string.sport_type_run, "run", "Run", "Running", "Running", "Run"),
         MTB(BSportType.BIKE, R.string.sport_type_MTB, "mtb", "Ride", "Biking", "Mountain Biking", "MTB"),
         BIKE(BSportType.BIKE, R.string.sport_type_bike, "bike", "Ride", "Biking", "Cycling", "Bike"),
@@ -520,7 +519,7 @@ public class SportTypeDatabaseManager {
 
     public static class SportTypeDbHelper extends SQLiteOpenHelper {
         public static final String DB_NAME = "SportType.db";
-        public static final int DB_VERSION = 1;
+        public static final int DB_VERSION = 2;  // 08.02.2026: Changed the BSportType of a 'walk' to RUN instead of UNKNOWN.
         protected static final String CREATE_TABLE = "create table " + SportType.TABLE + " ("
                 + SportType.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                 + SportType.UI_NAME + " text, "

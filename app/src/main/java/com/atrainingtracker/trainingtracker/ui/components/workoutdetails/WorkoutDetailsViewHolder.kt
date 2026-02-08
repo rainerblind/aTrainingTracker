@@ -89,7 +89,7 @@ class WorkoutDetailsViewHolder(
         val formattedValue: String
         val unit: String
 
-        if (data.sportType == BSportType.RUN) {
+        if (data.bSportType == BSportType.RUN) {
             val paceSpm = if (data.avgSpeedMps > 0) 1 / data.avgSpeedMps else 0f
             formattedValue = paceFormatter.format(paceSpm.toDouble())
             unit = context.getString(MyHelper.getPaceUnitNameId())
