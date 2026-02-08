@@ -32,7 +32,7 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.Des
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderDataProvider
-import com.atrainingtracker.trainingtracker.util.SingleLiveEvent
+import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch

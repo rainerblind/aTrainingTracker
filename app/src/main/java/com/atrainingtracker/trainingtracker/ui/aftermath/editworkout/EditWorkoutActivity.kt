@@ -29,7 +29,7 @@ import com.atrainingtracker.trainingtracker.ui.components.map.MapComponent
 import com.atrainingtracker.trainingtracker.ui.components.map.MapContentType
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsViewHolder
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaValuesViewHolder
-import com.atrainingtracker.trainingtracker.util.EventObserver
+import com.atrainingtracker.trainingtracker.ui.util.EventObserver
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.maps.MapView

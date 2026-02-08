@@ -9,7 +9,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDiffCallback
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutUpdatePayload
-import com.atrainingtracker.trainingtracker.util.Event
+import com.atrainingtracker.trainingtracker.ui.util.Event
 import kotlinx.coroutines.launch
 
 class EditWorkoutViewModel(application: Application, private val workoutId: Long) : AndroidViewModel(application) {

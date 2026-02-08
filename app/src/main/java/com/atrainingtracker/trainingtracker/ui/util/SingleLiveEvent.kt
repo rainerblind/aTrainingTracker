@@ -1,4 +1,4 @@
-package com.atrainingtracker.trainingtracker.util
+package com.atrainingtracker.trainingtracker.ui.util
 
 import androidx.annotation.MainThread
 import androidx.lifecycle.LifecycleOwner

@@ -4,7 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.viewModelScope
-import com.atrainingtracker.trainingtracker.util.SingleLiveEvent
+import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.aftermath.DeletionProgress
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
