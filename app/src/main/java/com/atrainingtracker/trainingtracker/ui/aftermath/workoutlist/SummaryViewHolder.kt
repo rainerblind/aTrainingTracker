@@ -36,6 +36,7 @@ class SummaryViewHolder(
 ) : RecyclerView.ViewHolder(row) {
 
     // --- Component ViewHolders & Components ---
+    private val contentContainer: View?
     private val headerViewHolder: WorkoutHeaderViewHolder?
     private val detailsViewHolder: WorkoutDetailsViewHolder?
     private val descriptionViewHolder: DescriptionViewHolder?
@@ -48,13 +49,14 @@ class SummaryViewHolder(
 
     init {
         // --- Find Views ---
+        contentContainer = row.findViewById(R.id.content_container)
+
         val headerView = row.findViewById<View>(R.id.workout_header_include)
         val detailsView = row.findViewById<View>(R.id.workout_details_include)
         val descriptionView = row.findViewById<View>(R.id.workout_description_include)
         val extremaView = row.findViewById<View>(R.id.extrema_values_include)
         val exportStatusView = row.findViewById<View>(R.id.export_status_include)
         val mapView = row.findViewById<MapView>(R.id.workout_summaries_mapView)
-
 
         // --- Create Component ViewHolders ---
         headerViewHolder = headerView?.let { WorkoutHeaderViewHolder(it) }
@@ -161,6 +163,14 @@ class SummaryViewHolder(
 
         // Bind the map component
         mapComponent?.bind(summary.id, MapContentType.WORKOUT_TRACK)
+
+        if (!summary.headerData.finished) {
+            contentContainer?.alpha = 0.5f
+        }
+        else {
+            contentContainer?.alpha = 1.0f
+        }
+
     }
 
     /**
