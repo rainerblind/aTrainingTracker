@@ -55,10 +55,6 @@ class SummaryViewHolder(
         val exportStatusView = row.findViewById<View>(R.id.export_status_include)
         val mapView = row.findViewById<MapView>(R.id.workout_summaries_mapView)
 
-        // Find the menu button inside the header layout
-        val menuButton = headerView?.findViewById<View>(R.id.workout_header_menu_button)
-        // Call the setup method, now passing the menu button
-        setupMenuButtonClickListeners(menuButton)
 
         // --- Create Component ViewHolders ---
         headerViewHolder = headerView?.let { WorkoutHeaderViewHolder(it) }
@@ -66,6 +62,9 @@ class SummaryViewHolder(
         descriptionViewHolder = descriptionView?.let { DescriptionViewHolder(it) }
         extremaValuesViewHolder = extremaView?.let { ExtremaValuesViewHolder(it) }
         exportStatusViewHolder = exportStatusView?.let { ExportStatusViewHolder(it) }
+
+        // Call the setup method, now passing the menu button
+        setupMenuButtonClickListeners(headerViewHolder?.menuButton)
 
         // --- Initialize Map Component ---
         mapComponent = if (isPlayServiceAvailable && mapView != null) {
@@ -84,9 +83,14 @@ class SummaryViewHolder(
     private fun setupClickListeners() {
         // This method is called only once, during ViewHolder creation.
 
-        // create on click listener
+        // create a click listener
         val detailsClickListener = View.OnClickListener {
-            TrainingApplication.startEditWorkoutActivity(workoutSummary.id, false) // only show the editable fields
+            if (workoutSummary.headerData.finished) {  // only when tracking is finished, the EditWorkoutActivity can be opened.
+                TrainingApplication.startEditWorkoutActivity(
+                    workoutSummary.id,
+                    false               // only show the editable fields
+                )
+            }
         }
         // Attach this listener to multiple views
         headerViewHolder?.view?.setOnClickListener(detailsClickListener)
