@@ -10,7 +10,7 @@ class SportAndEquipmentDataProvider(
     private val sportTypeDatabaseManager: SportTypeDatabaseManager
 ) {
 
-    fun getSportAndDescriptionData(cursor: Cursor): SportAndEquipmentData {
+    fun getSportAndEquipmentData(cursor: Cursor): SportAndEquipmentData {
         val sportId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPORT_ID))
         val equipmentId = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.EQUIPMENT_ID))
         val avgSpeed = cursor.getFloat(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPEED_AVERAGE_mps))
