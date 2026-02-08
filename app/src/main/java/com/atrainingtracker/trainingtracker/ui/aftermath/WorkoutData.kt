@@ -22,3 +22,5 @@ data class WorkoutData(
     val descriptionData: DescriptionData,
     val extremaData: ExtremaData
 )
+
+// TODO: move the methods to update redundant data to here???
