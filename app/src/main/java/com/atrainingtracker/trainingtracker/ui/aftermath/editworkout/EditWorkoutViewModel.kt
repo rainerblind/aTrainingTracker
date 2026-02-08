@@ -16,11 +16,9 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
 
     private val repository = WorkoutRepository(application)
 
-    private val workoutSummariesDatabaseManager =
-        WorkoutSummariesDatabaseManager.getInstance(application)
-
-    val sportTypeDatabaseManager = SportTypeDatabaseManager.getInstance(application)
-
+    private val workoutSummariesDatabaseManager by lazy {
+        WorkoutSummariesDatabaseManager.getInstance(application) }
+    private val sportTypeDatabaseManager by lazy { SportTypeDatabaseManager.getInstance(application) }
 
 
     // LiveData to hold the entire WorkoutData object. The UI will observe this.
