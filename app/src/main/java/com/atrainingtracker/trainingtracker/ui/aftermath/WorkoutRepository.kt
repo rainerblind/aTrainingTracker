@@ -295,6 +295,13 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
         val newSportId = sportTypeDatabaseManager.getSportTypeIdFromUIName(newSportName)
         val newBSportType = sportTypeDatabaseManager.getBSportType(newSportId)
 
+        // set the equipment name to null when the BSportType has changed
+        val newEquipmentName = if (newBSportType == workoutToUpdate.sportData.bSportType) {
+            workoutToUpdate.equipmentData.equipmentName
+        } else {
+            null
+        }
+
         // update the workout.  Thereby, we have to update the sport, equipment, header, and details...
         val updatedWorkout = workoutToUpdate.copy(
             sportData = workoutToUpdate.sportData.copy(
@@ -303,11 +310,13 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
                 sportName = newSportName
             ),
             equipmentData = workoutToUpdate.equipmentData.copy(
-                bSportType = newBSportType
+                bSportType = newBSportType,
+                equipmentName = newEquipmentName
             ),
             headerData = workoutToUpdate.headerData.copy(
                 bSportType = newBSportType,
                 sportName = newSportName,
+                equipmentName = newEquipmentName
             ),
             detailsData = workoutToUpdate.detailsData.copy(
                 bSportType = newBSportType)
