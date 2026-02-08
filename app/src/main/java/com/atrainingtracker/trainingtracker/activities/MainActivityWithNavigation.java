@@ -45,6 +45,7 @@ import android.os.IBinder;
 
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
 import com.atrainingtracker.trainingtracker.segments.StarredSegmentsTabbedContainer;
+import com.atrainingtracker.trainingtracker.tracker.TrackerService;
 import com.google.android.material.navigation.NavigationView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -190,6 +191,15 @@ public class MainActivityWithNavigation
             checkBatteryStatus();
         }
     };
+    protected final BroadcastReceiver mTrackingStoppedReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            // show the workout list
+            mSelectedFragmentId = R.id.drawer_workouts;
+            onNavigationItemSelected(mNavigationView.getMenu().findItem(mSelectedFragmentId));
+        }
+    };
+
     private IntentFilter mStartTrackingFilter;
     private boolean mAlreadyTriedToRequestDropboxToken = false;
     // class BANALConnection implements ServiceConnection
@@ -462,6 +472,7 @@ public class MainActivityWithNavigation
         ContextCompat.registerReceiver(this, mStartTrackingReceiver, mStartTrackingFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mPauseTrackingReceiver, new IntentFilter(TrainingApplication.REQUEST_PAUSE_TRACKING), ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mStopTrackingReceiver, new IntentFilter(TrainingApplication.REQUEST_STOP_TRACKING), ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mTrackingStoppedReceiver, new IntentFilter(TrackerService.TRACKING_FINISHED_INTENT), ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     // method to verify the preferences
@@ -562,6 +573,9 @@ public class MainActivityWithNavigation
             unregisterReceiver(mStopTrackingReceiver);
         } catch (IllegalArgumentException e) {
         }
+        try {
+            unregisterReceiver(mTrackingStoppedReceiver);
+        } catch (IllegalArgumentException ignored) {}
 
 
         mHandler.postDelayed(mDisconnectFromBANALServiceRunnable, WAITING_TIME_BEFORE_DISCONNECTING);

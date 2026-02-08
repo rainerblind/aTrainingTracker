@@ -832,7 +832,7 @@ public class TrainingApplication extends Application {
 
         bundle.putBoolean(EditWorkoutActivity.EXTRA_SHOW_DETAILS, showAllDetails);
         bundle.putBoolean(EditWorkoutActivity.EXTRA_SHOW_EXTREMA, showAllDetails);
-        bundle.putBoolean(EditWorkoutActivity.EXTRA_SHOW_MAP, showAllDetails);
+        // bundle.putBoolean(EditWorkoutActivity.EXTRA_SHOW_MAP, showAllDetails);
 
         Intent intent = new Intent(cAppContext, EditWorkoutActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
