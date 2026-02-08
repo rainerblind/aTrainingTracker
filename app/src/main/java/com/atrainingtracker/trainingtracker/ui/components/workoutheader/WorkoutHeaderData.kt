@@ -10,5 +10,6 @@ data class WorkoutHeaderData(
     var sportName: String,
     var equipmentName: String?,
     var commute: Boolean,
-    var trainer: Boolean
+    var trainer: Boolean,
+    val finished: Boolean
 )
