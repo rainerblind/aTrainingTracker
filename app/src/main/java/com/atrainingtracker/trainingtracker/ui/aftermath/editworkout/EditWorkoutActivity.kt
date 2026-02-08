@@ -171,15 +171,12 @@ class EditWorkoutActivity : AppCompatActivity() {
     private fun observeViewModel() {
 
         // Observer for the initial load event
-        viewModel.initialWorkoutLoaded.observe(this) { event ->
-            // Get the WorkoutData object from the event
-            event.getContentIfNotHandled()?.let { workoutData ->
-                // Check if this event is for the workout we care about.
-                if (workoutData.id == workoutId) {
-                    Log.d("EditWorkoutActivity", "Initial data loaded for workout ${workoutData.id}. Setting up all views.")
+        viewModel.initialWorkoutLoaded.observe(this) {  workoutData ->
+            // Check if this event is for the workout we care about.
+            if (workoutData.id == workoutId) {
+                Log.d("EditWorkoutActivity", "Initial data loaded for workout ${workoutData.id}. Setting up all views.")
 
-                    initializeAllViews(workoutData)
-                }
+                initializeAllViews(workoutData)
             }
         }
 
