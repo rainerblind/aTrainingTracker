@@ -1,11 +1,16 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath
 
 import android.app.Application
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
 import androidx.lifecycle.map
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.atrainingtracker.banalservice.BSportType
@@ -22,6 +27,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseMan
 import com.atrainingtracker.trainingtracker.exporter.ExportManager
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.helpers.CalcExtremaWorker
+import com.atrainingtracker.trainingtracker.tracker.TrackerService
 import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.DescriptionDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaDataProvider
@@ -95,6 +101,26 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
     val saveFinishedEvent = MutableLiveData<Pair<Long, Boolean>>()
     val deleteFinishedEvent = MutableLiveData<Pair<Long, Boolean>>()
 
+
+    private val workoutUpdateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == TrackerService.WORKOUT_UPDATED_INTENT) {
+                // Get the specific workoutId from the broadcast. Default to -1 if not found.
+                val workoutId = intent.getLongExtra(TrackerService.WORKOUT_ID, -1L)
+
+                if (workoutId != -1L) {
+                    // We have a specific ID, so reload only that workout.
+                    if (DEBUG) Log.d(TAG, "Workout update broadcast received for specific workoutId=$workoutId. Reloading it.")
+                    reloadWorkoutData(workoutId)
+                } // TODO: we might want to reload all workouts here.
+            }
+        }
+    }
+
+
+    /*
+    Observer stuff for the extrema calculation
+     */
 
     // Keep track of the observers we create so we can remove them later if needed.
     private val activeObservers = mutableMapOf<Long, Observer<List<WorkInfo>>>()
@@ -171,6 +197,13 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
             activeObservers[workoutId] = newObserver
             workManager.getWorkInfosByTagLiveData(workTag).observeForever(newObserver)
         }
+    }
+
+
+    init {
+        val filter = IntentFilter(TrackerService.WORKOUT_UPDATED_INTENT)
+        LocalBroadcastManager.getInstance(application).registerReceiver(workoutUpdateReceiver, filter)
+        if (DEBUG) Log.d(TAG, "WorkoutRepository initialized and workout update receiver registered.")
     }
 
     // --- Public API for ViewModels ---
