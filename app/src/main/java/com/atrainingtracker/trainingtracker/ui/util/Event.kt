@@ -1,4 +1,4 @@
-package com.atrainingtracker.trainingtracker.util
+package com.atrainingtracker.trainingtracker.ui.util
 
 import android.util.Log
 import androidx.lifecycle.Observer
