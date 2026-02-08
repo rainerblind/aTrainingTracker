@@ -556,9 +556,9 @@ public class TrackerService extends Service {
     private void sampleAndWriteToDb() {
         if (DEBUG) Log.d(TAG, "sampleAndWriteToDb()");
 
-        if (TrainingApplication.isPaused()) {  // when we are pause, nothing is sampled and written.  TODO: is this the correct behaviour?
-            return;
-        }
+        // if (TrainingApplication.isPaused()) {  // when we are pause, nothing is sampled and written.  TODO: is this the correct behaviour?
+        //     return;
+        // }
 
         ContentValues samplingValues = new ContentValues();
         ContentValues summaryValues = new ContentValues();
