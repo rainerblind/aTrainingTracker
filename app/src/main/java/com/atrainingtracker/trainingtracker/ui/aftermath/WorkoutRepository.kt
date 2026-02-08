@@ -8,6 +8,7 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.map
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
@@ -26,6 +27,7 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.Workout
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderDataProvider
 import com.atrainingtracker.trainingtracker.util.Event
+import com.atrainingtracker.trainingtracker.util.SingleLiveEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
@@ -82,8 +84,8 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
     }
 
     // LiveData for the one-time initial load event
-    private val _initialWorkoutLoaded = MutableLiveData<Event<WorkoutData>>()
-    val initialWorkoutLoaded: LiveData<Event<WorkoutData>> = _initialWorkoutLoaded
+    private val _initialWorkoutLoaded = SingleLiveEvent<WorkoutData>()
+    val initialWorkoutLoaded: LiveData<WorkoutData> = _initialWorkoutLoaded
 
     //  LiveData for granular deletion progress ---
     private val _deletionProgress = MutableLiveData<DeletionProgress>(DeletionProgress.Idle)
@@ -183,7 +185,7 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
                 if (cursor?.moveToFirst() == true) {
                     val workout = mapper.fromCursor(cursor)
                     _allWorkouts.postValue(listOf(workout))
-                    _initialWorkoutLoaded.postValue(Event(workout))
+                    _initialWorkoutLoaded.postValue(workout)
 
                     // eventually, observe the extrema calculation
                     if (workout.extremaData.isCalculating) {
@@ -286,21 +288,10 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
         updateWorkoutInList(workoutId, updatedWorkout)
     }
 
-    fun updateSportName(workoutId: Long, newSportName: String?) {
-        if (newSportName == null) return
+    fun updateSportAndEquipment(workoutId: Long, newSportName: String, newSportId: Long, newBSportType: BSportType, newEquipmentName: String?) {
         val currentList = _allWorkouts.value ?: return
         val workoutToUpdate = currentList.find { it.id == workoutId } ?: return
         if (newSportName == workoutToUpdate.sportData.sportName) return
-
-        val newSportId = sportTypeDatabaseManager.getSportTypeIdFromUIName(newSportName)
-        val newBSportType = sportTypeDatabaseManager.getBSportType(newSportId)
-
-        // set the equipment name to null when the BSportType has changed
-        val newEquipmentName = if (newBSportType == workoutToUpdate.sportData.bSportType) {
-            workoutToUpdate.equipmentData.equipmentName
-        } else {
-            null
-        }
 
         // update the workout.  Thereby, we have to update the sport, equipment, header, and details...
         val updatedWorkout = workoutToUpdate.copy(

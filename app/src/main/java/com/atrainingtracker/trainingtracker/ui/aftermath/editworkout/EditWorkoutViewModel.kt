@@ -2,6 +2,8 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.editworkout
 
 import android.app.Application
 import androidx.lifecycle.*
+import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDiffCallback
@@ -17,14 +19,21 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     private val workoutSummariesDatabaseManager =
         WorkoutSummariesDatabaseManager.getInstance(application)
 
+    val sportTypeDatabaseManager = SportTypeDatabaseManager.getInstance(application)
+
+
 
     // LiveData to hold the entire WorkoutData object. The UI will observe this.
     val workoutData: LiveData<WorkoutData?>
 
-    val initialWorkoutLoaded: LiveData<Event<WorkoutData>> = repository.initialWorkoutLoaded
+    val initialWorkoutLoaded: LiveData<WorkoutData> = repository.initialWorkoutLoaded
 
     // The current, stable state of the workout as known by the UI.
     private var currentWorkoutState: WorkoutData? = null
+
+    // --- Two-tier cache system for remembering equipment choices ---
+    private val sportNameEquipmentCache = mutableMapOf<String, String?>()
+    private val bSportTypeEquipmentCache = mutableMapOf<BSportType, String?>()
 
 
     // LiveData to emit specific update payloads ---
@@ -44,6 +53,19 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         // Tell the repository to load the initial data
         viewModelScope.launch {
             repository.loadWorkout(workoutId)
+        }
+
+        // --- Prime the caches when the initial workout is loaded ---
+        initialWorkoutLoaded.observeForever { initialWorkout ->
+            // Only prime if the caches are empty to avoid overwriting user changes in the session
+            if (sportNameEquipmentCache.isEmpty() && bSportTypeEquipmentCache.isEmpty()) {
+                val initialSportName = initialWorkout.sportData.sportName
+                val initialBSportType = initialWorkout.sportData.bSportType
+                val initialEquipmentName = initialWorkout.equipmentData.equipmentName
+
+                sportNameEquipmentCache[initialSportName] = initialEquipmentName
+                bSportTypeEquipmentCache[initialBSportType] = initialEquipmentName
+            }
         }
 
         // Observe the single source of truth from the repository.
@@ -74,13 +96,39 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         repository.updateWorkoutName(workoutId, newName)
     }
 
+
+    // --- Smart handler for sport type changes ---
     fun updateSportName(newSportName: String?) {
-        repository.updateSportName(workoutId, newSportName)
+        val workout = currentWorkoutState ?: return
+        if (newSportName == null || newSportName == workout.sportData.sportName) return
+
+        // first, get the new sportId and bSportType
+        val newSportId = sportTypeDatabaseManager.getSportTypeIdFromUIName(newSportName)
+        val newBSportType = sportTypeDatabaseManager.getBSportType(newSportId)
+
+        // then, get the equipment from the cache
+        val cachedEquipment = sportNameEquipmentCache[newSportName] // 1. Check specific sport name
+            ?: bSportTypeEquipmentCache[newBSportType]              // 2. Fallback to BSportType
+
+        // finally, call a repository method that updates the sport and equipment data
+        repository.updateSportAndEquipment(workoutId, newSportName, newSportId, newBSportType, cachedEquipment)
     }
 
+    // --- Smart handler for equipment changes ---
     fun updateEquipmentName(newEquipmentName: String?) {
+        val workout = currentWorkoutState ?: return
+        if (newEquipmentName == workout.equipmentData.equipmentName) return
+
+        // first, cache the equipment name with the new user choice
+        val currentSportName = workout.sportData.sportName
+        val currentBSportType = workout.sportData.bSportType
+        sportNameEquipmentCache[currentSportName] = newEquipmentName
+        bSportTypeEquipmentCache[currentBSportType] = newEquipmentName
+
+        // then, call the repository method that updates the equipment data
         repository.updateEquipmentName(workoutId, newEquipmentName)
     }
+
 
     fun updateDescription(newDescription: String) {
         repository.updateDescription(workoutId, newDescription)

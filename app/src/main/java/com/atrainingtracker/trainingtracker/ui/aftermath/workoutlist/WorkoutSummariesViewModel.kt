@@ -10,7 +10,7 @@ import androidx.lifecycle.application
 import androidx.lifecycle.viewModelScope
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
-import com.atrainingtracker.trainingtracker.SingleLiveEvent
+import com.atrainingtracker.trainingtracker.util.SingleLiveEvent
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutDeletionHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
