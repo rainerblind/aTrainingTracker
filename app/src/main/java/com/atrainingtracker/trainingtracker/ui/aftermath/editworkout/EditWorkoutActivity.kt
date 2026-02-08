@@ -86,7 +86,7 @@ class EditWorkoutActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         // Set the content view
-        setContentView(R.layout.edit_workout_modern)
+        setContentView(R.layout.edit_workout)
 
         sportTypeDatabaseManager = SportTypeDatabaseManager.getInstance(this)
 
