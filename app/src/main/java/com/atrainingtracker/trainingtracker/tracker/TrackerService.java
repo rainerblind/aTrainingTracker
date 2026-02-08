@@ -150,6 +150,14 @@ public class TrackerService extends Service {
             }
         }
     };
+
+    private final BroadcastReceiver mUserSelectedSportTypeChangedReceiver = new BroadcastReceiver() {
+        public void onReceive(Context context, Intent intent) {
+            if (DEBUG) Log.d(TAG, "user selected sport type changed");
+            onUserSelectedSportTypeChanged();
+        }
+    };
+
     // finally the main tracking routine, that is called periodically
     final Runnable tracker = new Runnable() {
         public void run() {
@@ -221,6 +229,7 @@ public class TrackerService extends Service {
         ContextCompat.registerReceiver(this, mSearchingFinishedReceiver, mSearchingFinishedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mAltitudeCorrectionReceiver, mAltitudeCorrectionFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mLapSummaryReceiver, mLapSummaryFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mUserSelectedSportTypeChangedReceiver, new IntentFilter(BANALService.SPORT_TYPE_CHANGED_BY_USER_INTENT), ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     @Override
@@ -319,6 +328,7 @@ public class TrackerService extends Service {
         unregisterReceiver(mSearchingFinishedReceiver);
         unregisterReceiver(mAltitudeCorrectionReceiver);
         unregisterReceiver(mLapSummaryReceiver);
+        unregisterReceiver(mUserSelectedSportTypeChangedReceiver);
     }
 
     private void recreateValuesWhenResuming() {
@@ -467,6 +477,23 @@ public class TrackerService extends Service {
                 WorkoutSummaries.C_ID + "=?",
                 new String[]{Long.toString(mWorkoutID)});
     }
+
+    private void onUserSelectedSportTypeChanged() {
+        long sportTypeId = getSportTypeId();
+
+        // when the user changes the sport type, we update the summaries DB
+        ContentValues values = new ContentValues();
+        values.put(WorkoutSummaries.SPORT_ID, sportTypeId);
+        values.put(WorkoutSummaries.B_SPORT, SportTypeDatabaseManager.getInstance(this).getBSportType(sportTypeId).name());
+
+        WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance(this);
+        SQLiteDatabase summariesDb = databaseManager.getDatabase();
+        summariesDb.update(WorkoutSummaries.TABLE,
+                values,
+                WorkoutSummaries.C_ID + "=?",
+                new String[]{Long.toString(mWorkoutID)});
+    }
+
 
 
     // TODO: the database entries should be correct even when this method is not called due to a crash
