@@ -56,7 +56,6 @@ class EditWorkoutActivity : AppCompatActivity() {
     private lateinit var editGoal: TextInputEditText
     private lateinit var editMethod: TextInputEditText
     private lateinit var buttonSave: Button
-    private lateinit var buttonDelete: Button
 
 
     // Adapters for Spinners
@@ -81,7 +80,6 @@ class EditWorkoutActivity : AppCompatActivity() {
         const val EXTRA_SHOW_EXTREMA = "com.atrainingtracker.trainingtracker.SHOW_EXTREMA"
         const val EXTRA_SHOW_MAP = "com.atrainingtracker.trainingtracker.SHOW_MAP"
 
-        private const val MAX_WORKOUT_TIME_TO_SHOW_DELETE_BUTTON = 5*60 // 5 minutes
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -165,7 +163,6 @@ class EditWorkoutActivity : AppCompatActivity() {
         }
 
         buttonSave = findViewById(R.id.buttonSave)
-        buttonDelete = findViewById(R.id.buttonDelete)
     }
 
     private fun observeViewModel() {
@@ -232,16 +229,6 @@ class EditWorkoutActivity : AppCompatActivity() {
             }
         }
 
-        viewModel.deleteFinishedEvent.observe(this) { (deletedWorkoutId, success) ->
-            if (deletedWorkoutId == workoutId
-                && success) {
-                Toast.makeText(this, "Workout deleted", Toast.LENGTH_SHORT).show()
-                setResult(Activity.RESULT_OK)
-                finish()
-            } else {
-                Toast.makeText(this, "Error deleting workout", Toast.LENGTH_SHORT).show()
-            }
-        }
     }
 
     // Helper fun to populate the UI with the initial WorkoutData
@@ -273,20 +260,6 @@ class EditWorkoutActivity : AppCompatActivity() {
         // details and the map.
         detailsViewHolder?.bind(wd.detailsData)
         mapComponent?.bind(workoutId, MapContentType.WORKOUT_TRACK)
-
-        // -- visibility of delete button
-        // By default, the button is visible
-        buttonDelete.visibility = View.VISIBLE
-
-        // when the workout is more than some minutes, the button is not visible
-        if (wd.activeTime > MAX_WORKOUT_TIME_TO_SHOW_DELETE_BUTTON) {
-            buttonDelete.visibility = View.GONE
-        }
-
-        // similarly, when tracking, the button is also not visible
-        if (TrainingApplication.isTracking()) {
-            buttonDelete.visibility = View.GONE
-        }
     }
 
     private fun setupSportSpinnerAndOnItemSelected(sportData: SportData) {
@@ -508,25 +481,9 @@ class EditWorkoutActivity : AppCompatActivity() {
         buttonSave.setOnClickListener {
             viewModel.saveChanges()
         }
-
-        buttonDelete.setOnClickListener {
-            showDeleteConfirmationDialog()
-        }
     }
 
-    private fun showDeleteConfirmationDialog() {
-        AlertDialog.Builder(this)
-            .setTitle(R.string.delete_workout)
-            .setMessage(R.string.really_delete_workout)
-            .setPositiveButton(R.string.delete_workout) { _, _ ->
-                // Tell the ViewModel to delete the workout
-                viewModel.deleteWorkout()
-            }
-            .setNegativeButton(R.string.Cancel, null)
-            .show()
-    }
-
-        private fun showFancyWorkoutNameDialog() {
+    private fun showFancyWorkoutNameDialog() {
         // Observe the list of names from the ViewModel.
         // We use .observe once here to get the data and build the dialog.
         viewModel.fancyNameList.observe(this) { nameList ->
