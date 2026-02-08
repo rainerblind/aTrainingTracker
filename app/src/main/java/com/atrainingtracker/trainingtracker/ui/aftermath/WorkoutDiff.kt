@@ -11,7 +11,7 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutH
 sealed class WorkoutUpdatePayload {
     /** Indicates that only the ExtremaData has changed. */
     data class SportDataChanged(val newSportData: SportData) : WorkoutUpdatePayload()
-    data class EquipmentDataChanged(val newEqipmentData: EquipmentData) : WorkoutUpdatePayload()
+    data class EquipmentDataChanged(val newEquipmentData: EquipmentData) : WorkoutUpdatePayload()
     data class HeaderDataChanged(val newHeaderData: WorkoutHeaderData) : WorkoutUpdatePayload()
     data class DetailsDataChanged(val newDetailsData: WorkoutDetailsData) : WorkoutUpdatePayload()
     data class ExtremaDataChanged(val newExtremaData: ExtremaData) : WorkoutUpdatePayload()
