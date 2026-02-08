@@ -36,6 +36,7 @@ class SummaryViewHolder(
 ) : RecyclerView.ViewHolder(row) {
 
     // --- Component ViewHolders & Components ---
+    private val contentContainer: View?
     private val headerViewHolder: WorkoutHeaderViewHolder?
     private val detailsViewHolder: WorkoutDetailsViewHolder?
     private val descriptionViewHolder: DescriptionViewHolder?
@@ -48,6 +49,8 @@ class SummaryViewHolder(
 
     init {
         // --- Find Views ---
+        contentContainer = row.findViewById(R.id.content_container)
+
         val headerView = row.findViewById<View>(R.id.workout_header_include)
         val detailsView = row.findViewById<View>(R.id.workout_details_include)
         val descriptionView = row.findViewById<View>(R.id.workout_description_include)
@@ -55,17 +58,15 @@ class SummaryViewHolder(
         val exportStatusView = row.findViewById<View>(R.id.export_status_include)
         val mapView = row.findViewById<MapView>(R.id.workout_summaries_mapView)
 
-        // Find the menu button inside the header layout
-        val menuButton = headerView?.findViewById<View>(R.id.workout_header_menu_button)
-        // Call the setup method, now passing the menu button
-        setupMenuButtonClickListeners(menuButton)
-
         // --- Create Component ViewHolders ---
         headerViewHolder = headerView?.let { WorkoutHeaderViewHolder(it) }
         detailsViewHolder = detailsView?.let { WorkoutDetailsViewHolder(it, activity) }
         descriptionViewHolder = descriptionView?.let { DescriptionViewHolder(it) }
         extremaValuesViewHolder = extremaView?.let { ExtremaValuesViewHolder(it) }
         exportStatusViewHolder = exportStatusView?.let { ExportStatusViewHolder(it) }
+
+        // Call the setup method, now passing the menu button
+        setupMenuButtonClickListeners(headerViewHolder?.menuButton)
 
         // --- Initialize Map Component ---
         mapComponent = if (isPlayServiceAvailable && mapView != null) {
@@ -84,9 +85,14 @@ class SummaryViewHolder(
     private fun setupClickListeners() {
         // This method is called only once, during ViewHolder creation.
 
-        // create on click listener
+        // create a click listener
         val detailsClickListener = View.OnClickListener {
-            TrainingApplication.startEditWorkoutActivity(workoutSummary.id, false) // only show the editable fields
+            if (workoutSummary.headerData.finished) {  // only when tracking is finished, the EditWorkoutActivity can be opened.
+                TrainingApplication.startEditWorkoutActivity(
+                    workoutSummary.id,
+                    false               // only show the editable fields
+                )
+            }
         }
         // Attach this listener to multiple views
         headerViewHolder?.view?.setOnClickListener(detailsClickListener)
@@ -157,6 +163,14 @@ class SummaryViewHolder(
 
         // Bind the map component
         mapComponent?.bind(summary.id, MapContentType.WORKOUT_TRACK)
+
+        if (!summary.headerData.finished) {
+            contentContainer?.alpha = 0.5f
+        }
+        else {
+            contentContainer?.alpha = 1.0f
+        }
+
     }
 
     /**

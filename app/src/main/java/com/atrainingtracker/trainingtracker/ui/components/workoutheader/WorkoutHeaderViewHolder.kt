@@ -13,9 +13,8 @@ class WorkoutHeaderViewHolder(val view: View) {
 
     private var currentData: WorkoutHeaderData? = null
 
-    // containers necessary for adding click listeners
-    val workoutNameView: TextView = view.findViewById(R.id.tv_workout_summaries_name)
-    val sportContainerView: View = view.findViewById(R.id.ll_workout_summaries__sport_container)
+    // public menuButton. Others should add a click listener to it.
+    val menuButton: View = view.findViewById(R.id.workout_header_menu_button)
 
     // Views
     private val tvName: TextView = view.findViewById(R.id.tv_workout_summaries_name)
@@ -59,5 +58,7 @@ class WorkoutHeaderViewHolder(val view: View) {
 
         tvEquipment.isVisible = data.equipmentName != null
         tvEquipment.text = data.equipmentName
+
+        menuButton.isVisible = data.finished
     }
 }

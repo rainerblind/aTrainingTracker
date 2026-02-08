@@ -35,6 +35,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.BANALService.BANALServiceComm;
@@ -72,7 +73,9 @@ public class TrackerService extends Service {
     public static final String WORKOUT_NAME = "de.rainerblind.trainingtracker.TrackerService.WORKOUT_NAME";
     public static final String TRACKING_STARTED_INTENT = "de.rainerblind.trainingtracker.TrackerService.TRACKING_STARTED_INTENT";
     public static final String TRACKING_FINISHED_INTENT = "de.rainerblind.trainingtracker.TrackerService.TRACKING_FINISHED_INTENT";
-    // public static final String WORKOUT_ID               = "de.rainerblind.trainingtracker.TrackerService.WORKOUT_ID";
+    public static final String WORKOUT_ID               = "WORKOUT_ID";
+    public static final String WORKOUT_UPDATED_INTENT   = "com.atrainingtracker.trainingtracker.WOKRKOUT_UPDATED_INTENT";
+
     public static final String START_TYPE = "START_TYPE";
     private static final String TAG = "TrackerService";
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
@@ -150,6 +153,14 @@ public class TrackerService extends Service {
             }
         }
     };
+
+    private final BroadcastReceiver mUserSelectedSportTypeChangedReceiver = new BroadcastReceiver() {
+        public void onReceive(Context context, Intent intent) {
+            if (DEBUG) Log.d(TAG, "user selected sport type changed");
+            onUserSelectedSportTypeChanged();
+        }
+    };
+
     // finally the main tracking routine, that is called periodically
     final Runnable tracker = new Runnable() {
         public void run() {
@@ -221,6 +232,7 @@ public class TrackerService extends Service {
         ContextCompat.registerReceiver(this, mSearchingFinishedReceiver, mSearchingFinishedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mAltitudeCorrectionReceiver, mAltitudeCorrectionFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mLapSummaryReceiver, mLapSummaryFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mUserSelectedSportTypeChangedReceiver, new IntentFilter(BANALService.SPORT_TYPE_CHANGED_BY_USER_INTENT), ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     @Override
@@ -319,6 +331,7 @@ public class TrackerService extends Service {
         unregisterReceiver(mSearchingFinishedReceiver);
         unregisterReceiver(mAltitudeCorrectionReceiver);
         unregisterReceiver(mLapSummaryReceiver);
+        unregisterReceiver(mUserSelectedSportTypeChangedReceiver);
     }
 
     private void recreateValuesWhenResuming() {
@@ -468,6 +481,23 @@ public class TrackerService extends Service {
                 new String[]{Long.toString(mWorkoutID)});
     }
 
+    private void onUserSelectedSportTypeChanged() {
+        long sportTypeId = getSportTypeId();
+
+        // when the user changes the sport type, we update the summaries DB
+        ContentValues values = new ContentValues();
+        values.put(WorkoutSummaries.SPORT_ID, sportTypeId);
+        values.put(WorkoutSummaries.B_SPORT, SportTypeDatabaseManager.getInstance(this).getBSportType(sportTypeId).name());
+
+        WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance(this);
+        SQLiteDatabase summariesDb = databaseManager.getDatabase();
+        summariesDb.update(WorkoutSummaries.TABLE,
+                values,
+                WorkoutSummaries.C_ID + "=?",
+                new String[]{Long.toString(mWorkoutID)});
+    }
+
+
 
     // TODO: the database entries should be correct even when this method is not called due to a crash
     // some stuff could be written earlier, others from the calling part (and then also executed when a crash is detected...), ...
@@ -526,9 +556,9 @@ public class TrackerService extends Service {
     private void sampleAndWriteToDb() {
         if (DEBUG) Log.d(TAG, "sampleAndWriteToDb()");
 
-        if (TrainingApplication.isPaused()) {  // when we are pause, nothing is sampled and written.  TODO: is this the correct behaviour?
-            return;
-        }
+        // if (TrainingApplication.isPaused()) {  // when we are pause, nothing is sampled and written.  TODO: is this the correct behaviour?
+        //     return;
+        // }
 
         ContentValues samplingValues = new ContentValues();
         ContentValues summaryValues = new ContentValues();
@@ -688,6 +718,12 @@ public class TrackerService extends Service {
                 summaryValues,
                 WorkoutSummaries.C_ID + "=" + mWorkoutID,
                 null);
+
+        // After successfully saving to the DB, we send a broadcast to notify the UI.
+        Log.d(TAG, "Database updated. Sending WORKOUT_UPDATED_INTENT broadcast.");
+        Intent intent = new Intent(WORKOUT_UPDATED_INTENT);
+        intent.putExtra("WORKOUT_ID", mWorkoutID);
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
 
     protected boolean averageSpeedCalculateable() {
