@@ -194,8 +194,8 @@ class EditWorkoutActivity : AppCompatActivity() {
                     }
 
                     is WorkoutUpdatePayload.EquipmentDataChanged -> {
-                        if (DEBUG) Log.d(TAG, "Partial update: Equipment changed to ${payload.newEqipmentData}")
-                        setupEquipmentSpinnerAndOnItemSelected(payload.newEqipmentData)
+                        if (DEBUG) Log.d(TAG, "Partial update: Equipment changed to ${payload.newEquipmentData}")
+                        setupEquipmentSpinnerAndOnItemSelected(payload.newEquipmentData)
                     }
 
                     is WorkoutUpdatePayload.HeaderDataChanged -> {
