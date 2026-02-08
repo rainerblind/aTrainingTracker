@@ -14,7 +14,7 @@ import kotlinx.coroutines.launch
 
 class EditWorkoutViewModel(application: Application, private val workoutId: Long) : AndroidViewModel(application) {
 
-    private val repository = WorkoutRepository(application)
+    private val repository = WorkoutRepository.getInstance(application)
 
     private val workoutSummariesDatabaseManager by lazy {
         WorkoutSummariesDatabaseManager.getInstance(application) }

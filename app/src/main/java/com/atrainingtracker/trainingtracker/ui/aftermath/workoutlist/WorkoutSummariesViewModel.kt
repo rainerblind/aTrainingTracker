@@ -15,7 +15,7 @@ import kotlinx.coroutines.launch
 
 class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val repository = WorkoutRepository(application)
+    private val repository = WorkoutRepository.getInstance(application)
 
     val workouts: LiveData<List<WorkoutData>> = repository.allWorkouts
 
