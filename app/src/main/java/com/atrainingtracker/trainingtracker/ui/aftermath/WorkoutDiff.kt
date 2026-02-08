@@ -10,10 +10,11 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutH
 */
 sealed class WorkoutUpdatePayload {
     /** Indicates that only the ExtremaData has changed. */
-    data class SportAndEquipmentChanged(val newSportAndEquipmentData: SportAndEquipmentData) : WorkoutUpdatePayload()
-    data class HeaderChanged(val newHeaderData: WorkoutHeaderData) : WorkoutUpdatePayload()
-    data class DetailsChanged(val newDetailsData: WorkoutDetailsData) : WorkoutUpdatePayload()
-    data class ExtremaChanged(val newExtremaData: ExtremaData) : WorkoutUpdatePayload()
+    data class SportDataChanged(val newSportData: SportData) : WorkoutUpdatePayload()
+    data class EquipmentDataChanged(val newEqipmentData: EquipmentData) : WorkoutUpdatePayload()
+    data class HeaderDataChanged(val newHeaderData: WorkoutHeaderData) : WorkoutUpdatePayload()
+    data class DetailsDataChanged(val newDetailsData: WorkoutDetailsData) : WorkoutUpdatePayload()
+    data class ExtremaDataChanged(val newExtremaData: ExtremaData) : WorkoutUpdatePayload()
 
 }
 
@@ -37,24 +38,29 @@ class WorkoutDiffCallback : DiffUtil.ItemCallback<WorkoutData>() {
         // areContentsTheSame() is false.
         val payloads = mutableListOf<WorkoutUpdatePayload>()
 
-        // Check for a change in the sport and equipment data.
-        if (oldItem.sportAndEquipmentData != newItem.sportAndEquipmentData) {
-            payloads.add(WorkoutUpdatePayload.SportAndEquipmentChanged(newItem.sportAndEquipmentData))
+        // Check for a change in the sport data.
+        if (oldItem.sportData != newItem.sportData) {
+            payloads.add(WorkoutUpdatePayload.SportDataChanged(newItem.sportData))
+        }
+
+        // Check for change in the equipment data.
+        if (oldItem.equipmentData != newItem.equipmentData) {
+            payloads.add(WorkoutUpdatePayload.EquipmentDataChanged(newItem.equipmentData))
         }
 
         // Check for a change in the header data.
         if (oldItem.headerData != newItem.headerData) {
-            payloads.add(WorkoutUpdatePayload.HeaderChanged(newItem.headerData))
+            payloads.add(WorkoutUpdatePayload.HeaderDataChanged(newItem.headerData))
         }
 
         // Check for a change in the details data.
         if (oldItem.detailsData != newItem.detailsData) {
-            payloads.add(WorkoutUpdatePayload.DetailsChanged(newItem.detailsData))
+            payloads.add(WorkoutUpdatePayload.DetailsDataChanged(newItem.detailsData))
         }
 
         // Check for a change in the extrema data.
         if (oldItem.extremaData != newItem.extremaData) {
-            payloads.add(WorkoutUpdatePayload.ExtremaChanged(newItem.extremaData))
+            payloads.add(WorkoutUpdatePayload.ExtremaDataChanged(newItem.extremaData))
         }
 
         // If the list of payloads is not empty, return it.

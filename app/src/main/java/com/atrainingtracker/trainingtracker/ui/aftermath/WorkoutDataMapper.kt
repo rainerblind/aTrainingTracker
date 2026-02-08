@@ -14,7 +14,8 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutH
  */
 class WorkoutDataMapper(
     // Dependencies are passed into the constructor
-    private val sportAndEquipmentDataProvider: SportAndEquipmentDataProvider,
+    private val sportDataProvider: SportDataProvider,
+    private val equipmentDataProvider: EquipmentDataProvider,
     private val headerDataProvider: WorkoutHeaderDataProvider,
     private val detailsDataProvider: WorkoutDetailsDataProvider,
     private val descriptionDataProvider: DescriptionDataProvider,
@@ -30,7 +31,8 @@ class WorkoutDataMapper(
     fun fromCursor(cursor: Cursor): WorkoutData {
 
         // Use the injected providers to create parts of the WorkoutData object
-        val sportAndEquipmentData = sportAndEquipmentDataProvider.getSportAndEquipmentData(cursor)
+        val sportData = sportDataProvider.getSportData(cursor)
+        val equipmentData = equipmentDataProvider.getEquipmentData(cursor)
         val headerData = headerDataProvider.createWorkoutHeaderData(cursor)
         val detailsData = detailsDataProvider.getWorkoutDetailsData(cursor)
         val descriptionData = descriptionDataProvider.createDescriptionData(cursor)
@@ -43,7 +45,8 @@ class WorkoutDataMapper(
             activeTime = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_ACTIVE_s)),
 
             // Assign the data created by the providers
-            sportAndEquipmentData = sportAndEquipmentData,
+            sportData = sportData,
+            equipmentData = equipmentData,
             headerData = headerData,
             detailsData = detailsData,
             descriptionData = descriptionData,

@@ -54,14 +54,15 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
 
     private val mapper by lazy {
         // Create instances of the required providers
-        val sportAndEquipmentDataProvider = SportAndEquipmentDataProvider(equipmentDbHelper, sportTypeDatabaseManager)
+        val sportDataProvider = SportDataProvider(sportTypeDatabaseManager)
+        val equipmentDataProvider = EquipmentDataProvider(equipmentDbHelper, sportTypeDatabaseManager)
         val headerProvider = WorkoutHeaderDataProvider(application, equipmentDbHelper, sportTypeDatabaseManager)
         val detailsProvider = WorkoutDetailsDataProvider(application)
         val extremaProvider = ExtremaDataProvider(application)
         val descriptionProvider = DescriptionDataProvider()
 
         // Inject them into the mapper
-        WorkoutDataMapper(sportAndEquipmentDataProvider, headerProvider, detailsProvider, descriptionProvider, extremaProvider)
+        WorkoutDataMapper(sportDataProvider, equipmentDataProvider, headerProvider, detailsProvider, descriptionProvider, extremaProvider)
     }
 
     // --- LiveData for Data and Progress ---
@@ -289,17 +290,20 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
         if (newSportName == null) return
         val currentList = _allWorkouts.value ?: return
         val workoutToUpdate = currentList.find { it.id == workoutId } ?: return
-        if (newSportName == workoutToUpdate.headerData.sportName) return
+        if (newSportName == workoutToUpdate.sportData.sportName) return
 
         val newSportId = sportTypeDatabaseManager.getSportTypeIdFromUIName(newSportName)
         val newBSportType = sportTypeDatabaseManager.getBSportType(newSportId)
 
-        // update the workout.  Thereby, we have to update the sportAndEquipment, header, and details...
+        // update the workout.  Thereby, we have to update the sport, equipment, header, and details...
         val updatedWorkout = workoutToUpdate.copy(
-            sportAndEquipmentData = workoutToUpdate.sportAndEquipmentData.copy(
+            sportData = workoutToUpdate.sportData.copy(
                 sportId = newSportId,
                 bSportType = newBSportType,
                 sportName = newSportName
+            ),
+            equipmentData = workoutToUpdate.equipmentData.copy(
+                bSportType = newBSportType
             ),
             headerData = workoutToUpdate.headerData.copy(
                 bSportType = newBSportType,
@@ -316,11 +320,11 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
         if (newEquipmentName == null) return
         val currentList = _allWorkouts.value ?: return
         val workoutToUpdate = currentList.find { it.id == workoutId } ?: return
-        if (newEquipmentName == workoutToUpdate.headerData.equipmentName) return
+        if (newEquipmentName == workoutToUpdate.equipmentData.equipmentName) return
 
         // update the workout.  Thereby, we have to update the sportAndEquipment and header ...
         val updatedWorkout = workoutToUpdate.copy(
-            sportAndEquipmentData = workoutToUpdate.sportAndEquipmentData.copy(
+            equipmentData = workoutToUpdate.equipmentData.copy(
                 equipmentName = newEquipmentName
             ),
             headerData = workoutToUpdate.headerData.copy(
@@ -403,10 +407,10 @@ class WorkoutRepository(private val application: Application) : CoroutineScope {
 
             // Update Sport and Equipment
             val equipmentDbHelper = EquipmentDbHelper(application)
-            val equipmentId = equipmentDbHelper.getEquipmentId(dataToSave.sportAndEquipmentData.equipmentName ?: "")
+            val equipmentId = equipmentDbHelper.getEquipmentId(dataToSave.equipmentData.equipmentName ?: "")
             summariesManager.updateSportAndEquipment(
                 workoutId,
-                dataToSave.sportAndEquipmentData.sportId,
+                dataToSave.sportData.sportId,
                 equipmentId
             )
 

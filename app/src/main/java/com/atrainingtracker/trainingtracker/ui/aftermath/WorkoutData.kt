@@ -16,7 +16,8 @@ data class WorkoutData(
     val activeTime: Long,
 
     // --- Composed Component Data ---
-    val sportAndEquipmentData: SportAndEquipmentData,
+    val sportData: SportData,
+    val equipmentData: EquipmentData,
     val headerData: WorkoutHeaderData,
     val detailsData: WorkoutDetailsData,
     val descriptionData: DescriptionData,
