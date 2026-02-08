@@ -54,6 +54,8 @@ class WorkoutHeaderDataProvider(
 
         val commute = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.COMMUTE)) == 1
         val trainer = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.TRAINER)) == 1
+        val finished = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.FINISHED)) == 1
+
 
         return WorkoutHeaderData(
             workoutName = workoutName,
@@ -63,7 +65,8 @@ class WorkoutHeaderDataProvider(
             sportName = sportName,
             equipmentName = equipmentName,
             commute = commute,
-            trainer = trainer
+            trainer = trainer,
+            finished = finished
         )
     }
 
