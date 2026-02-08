@@ -33,7 +33,6 @@ import androidx.annotation.NonNull;
 import androidx.core.content.res.ResourcesCompat;
 
 import com.atrainingtracker.R;
-import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 
