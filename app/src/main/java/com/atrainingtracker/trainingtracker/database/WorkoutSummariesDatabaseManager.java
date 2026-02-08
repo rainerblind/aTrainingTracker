@@ -125,6 +125,22 @@ public class WorkoutSummariesDatabaseManager {
         return getString(workoutId, WorkoutSummaries.WORKOUT_NAME);
     }
 
+    public Cursor getWorkoutCursor(long workoutId) {
+        return getDatabase().query(WorkoutSummaries.TABLE,
+                null,
+                WorkoutSummaries.C_ID + "=?",
+                new String[]{Long.toString(workoutId)},
+                null, null, null);
+    }
+
+
+    public Cursor getCursorForAllWorkouts() {
+        return getDatabase().query(
+                WorkoutSummaries.TABLE,
+                null, null, null, null, null,
+                WorkoutSummaries.TIME_START + " DESC"
+        );
+    }
 
 
     @Nullable
