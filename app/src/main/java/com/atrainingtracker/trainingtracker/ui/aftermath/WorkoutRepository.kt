@@ -42,11 +42,36 @@ import kotlinx.coroutines.launch
  * A repository that acts as a single source of truth for workout data.
  * It abstracts the data source (database) from the ViewModels.
  */
-class WorkoutRepository(private val application: Application) : CoroutineScope {
+class WorkoutRepository private constructor(private val application: Application) : CoroutineScope {
 
     companion object {
         private val TAG = WorkoutRepository::class.java.simpleName
         private val DEBUG = TrainingApplication.getDebug(true)
+
+        // The single, volatile instance of the repository.
+        // @Volatile guarantees that writes to this field are immediately visible to other threads.
+        @Volatile
+        private var INSTANCE: WorkoutRepository? = null
+
+        /**
+         * Gets the singleton instance of the WorkoutRepository.
+         *
+         * @param application The application context, needed to create the instance for the first time.
+         * @return The single instance of WorkoutRepository.
+         */
+        fun getInstance(application: Application): WorkoutRepository {
+            // Double-check locking ensures thread safety and performance.
+            return INSTANCE ?: synchronized(this) {
+                val instance = INSTANCE
+                if (instance != null) {
+                    instance
+                } else {
+                    val newInstance = WorkoutRepository(application)
+                    INSTANCE = newInstance
+                    newInstance
+                }
+            }
+        }
     }
 
     private val job = SupervisorJob()
