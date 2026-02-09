@@ -699,12 +699,6 @@
     <string name="startSearchOnlyManually">Nur manuell</string>
 
 
-    <string name="OnlineCommunities">Online Gemeinschaften</string>
-    <string name="ExportFiles">Datei Export</string>
-    <string name="edit_sport_type">Sportart bearbeiten</string>
-    <string name="you_can_not_delete_this_sport_type">Diese Sportart kann nicht gelöscht werden</string>
-    <string name="min_avg_speed">min durchschnittliche Geschwindigkeit:</string>
-    <string name="max_avg_speed">max durchschnittliche Geschwindigkeit</string>
     <string name="show_all_sport_types">Alle Sportarten</string>
     <string name="sport_types">Sportarten</string>
     <string name="configure_sport_types">Sportarten bearbeiten</string>
@@ -974,8 +968,16 @@
 
 
 
-    <!-- edit sport type -->
+    <!-- sport type list / edit sport type -->
+    <string name="you_can_not_delete_this_sport_type">Diese Sportart kann nicht gelöscht werden</string>
+    <string name="add_sport_type">Sportart hinzufügen</string>
+    <string name="edit_sport_type">Sportart bearbeiten</string>
     <string name="sport_type_name">Sport Name</string>
     <string name="basic_sport_type">Basis Sport Typ</string>
+    <string name="OnlineCommunities">Online Gemeinschaften</string>
+    <string name="ExportFiles">Datei Export</string>
+    <string name="min_avg_speed">min durchschnittliche Geschwindigkeit:</string>
+    <string name="max_avg_speed">max durchschnittliche Geschwindigkeit</string>
+
 
 </resources>
