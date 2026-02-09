@@ -43,6 +43,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 
+import com.atrainingtracker.banalservice.ui.SportTypeListFragment;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
 import com.atrainingtracker.trainingtracker.segments.StarredSegmentsTabbedContainer;
 import com.atrainingtracker.trainingtracker.tracker.TrackerService;
@@ -85,7 +86,6 @@ import com.atrainingtracker.banalservice.fragments.DeviceTypeChoiceFragment;
 import com.atrainingtracker.banalservice.fragments.EditDeviceDialogFragment;
 import com.atrainingtracker.banalservice.fragments.RemoteDevicesFragment;
 import com.atrainingtracker.banalservice.fragments.RemoteDevicesFragmentTabbedContainer;
-import com.atrainingtracker.banalservice.fragments.SportTypeListFragment;
 import com.atrainingtracker.banalservice.helpers.BatteryStatusHelper;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
