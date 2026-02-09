@@ -28,7 +28,7 @@
     android:layout_marginTop="4dp"
     android:layout_marginEnd="8dp"
     android:layout_marginBottom="4dp"
-    app:cardCornerRadius="8dp"
+    app:cardCornerRadius="12dp"
     app:cardElevation="2dp">
 
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -36,7 +36,7 @@
         android:layout_height="wrap_content"
         android:padding="16dp">
 
-        <!-- 1. Sport Name: Mapped to Headline6 -->
+        <!-- 1. Sport Name -->
         <TextView
             android:id="@+id/st_tvName"
             android:layout_width="0dp"
@@ -44,49 +44,67 @@
             android:drawablePadding="8dp"
             android:gravity="center_vertical"
             android:textAppearance="?attr/textAppearanceHeadline6"
-            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/speed_group"
+            app:layout_constraintHorizontal_bias="0.0"
+            app:layout_constraintHorizontal_chainStyle="packed"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             tools:drawableStart="@drawable/bsport_run"
             tools:text="Trail Running" />
 
-        <!-- 2. Speed Range: Mapped to Subtitle1 -->
-        <TextView
-            android:id="@+id/st_tvSpeed"
-            android:layout_width="0dp"
+        <!-- Group for Speed Icon and Text -->
+        <LinearLayout
+            android:id="@+id/speed_group"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:drawablePadding="8dp"
-            android:textAppearance="?attr/textAppearanceSubtitle1"
+            android:layout_marginStart="16dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            app:layout_constraintBottom_toBottomOf="@+id/st_tvName"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/st_tvName"
-            android:drawableStart="@drawable/ic_speed"
-            tools:text="Average Speed: 5.0 - 15.0 km/h" />
+            app:layout_constraintStart_toEndOf="@+id/st_tvName"
+            app:layout_constraintTop_toTopOf="@+id/st_tvName">
 
-        <!-- 3. Strava Mapping: Also mapped to Subtitle1 -->
+            <ImageView
+                android:id="@+id/iv_speed_icon"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_speed"
+                app:tint="?android:attr/textColorSecondary" />
+
+            <TextView
+                android:id="@+id/st_tvSpeed"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:textAppearance="?attr/textAppearanceSubtitle1"
+                tools:text="5.0-15.0 km/h" />
+
+        </LinearLayout>
+
+        <!-- 3. Strava Mapping -->
         <TextView
             android:id="@+id/st_tvStrava"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginStart="21dp"
             android:drawablePadding="8dp"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp"
             android:gravity="center_vertical"
             android:textAppearance="?attr/textAppearanceSubtitle1"
             android:textColor="?android:attr/textColorSecondary"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/st_tvSpeed"
+            app:layout_constraintTop_toBottomOf="@id/st_tvName"
             tools:text="TrailRun" />
 
-        <!-- 4. File Export Mappings: Mapped to Body2 -->
+        <!-- 4. File Export Mappings -->
         <TextView
             android:id="@+id/st_tvTcx"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
+            android:layout_marginStart="21dp"
             android:background="@drawable/chip_background"
             android:paddingStart="8dp"
             android:paddingTop="2dp"
