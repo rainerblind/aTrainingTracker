@@ -1082,5 +1082,9 @@
 
     <string name="invalid_date">\???</string>
 
+    <!-- edit sport type -->
+    <string name="sport_type_name">Sport name</string>
+    <string name="basic_sport_type">basic sport type</string>
+
 
 </resources>
