@@ -1,3 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+
 <!--
   ~ aTrainingTracker (ANT+ BTLE)
   ~ Copyright (C) 2011 - 2019 Rainer Blind <rainer.blind@gmail.com>
@@ -16,29 +18,122 @@
   ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
   -->
 
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="fill_parent"
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:clickable="false"
-    android:focusable="false"
-    android:orientation="horizontal">
+    android:layout_marginStart="8dp"
+    android:layout_marginTop="4dp"
+    android:layout_marginEnd="8dp"
+    android:layout_marginBottom="4dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="2dp">
 
-    <TextView
-        android:id="@+id/st_tvName"
-        android:layout_width="wrap_content"
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:gravity="left"
-        android:text="Bike"
-        android:textAppearance="?android:attr/textAppearanceLarge" />
+        android:padding="16dp">
 
-    <TextView
-        android:id="@+id/st_tvSpeed"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:gravity="right"
-        android:text="15.4 .. 22.4 km/h"
-        android:textAppearance="?android:attr/textAppearanceLarge" />
+        <!-- 1. Sport Name -->
+        <TextView
+            android:id="@+id/st_tvName"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:drawablePadding="8dp"
+            android:gravity="center_vertical"
+            android:textAppearance="?attr/textAppearanceHeadline6"
+            app:layout_constraintEnd_toStartOf="@+id/speed_group"
+            app:layout_constraintHorizontal_bias="0.0"
+            app:layout_constraintHorizontal_chainStyle="packed"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:drawableStart="@drawable/bsport_run"
+            tools:text="Trail Running" />
 
-</LinearLayout>
+        <!-- Group for Speed Icon and Text -->
+        <LinearLayout
+            android:id="@+id/speed_group"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            app:layout_constraintBottom_toBottomOf="@+id/st_tvName"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/st_tvName"
+            app:layout_constraintTop_toTopOf="@+id/st_tvName">
+
+            <ImageView
+                android:id="@+id/iv_speed_icon"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_speed"
+                app:tint="?android:attr/textColorSecondary" />
+
+            <TextView
+                android:id="@+id/st_tvSpeed"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:textAppearance="?attr/textAppearanceSubtitle1"
+                tools:text="5.0-15.0 km/h" />
+
+        </LinearLayout>
+
+        <!-- 3. Strava Mapping -->
+        <TextView
+            android:id="@+id/st_tvStrava"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:layout_marginStart="21dp"
+            android:drawablePadding="8dp"
+            android:gravity="center_vertical"
+            android:textAppearance="?attr/textAppearanceSubtitle1"
+            android:textColor="?android:attr/textColorSecondary"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/st_tvName"
+            tools:text="TrailRun" />
+
+        <!-- 4. File Export Mappings -->
+        <TextView
+            android:id="@+id/st_tvTcx"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:layout_marginStart="21dp"
+            android:background="@drawable/chip_background"
+            android:paddingStart="8dp"
+            android:paddingTop="2dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="2dp"
+            android:textAppearance="?attr/textAppearanceBody2"
+            android:textColor="?android:attr/textColorSecondary"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/st_tvStrava"
+            app:layout_constraintBottom_toBottomOf="parent"
+            tools:text="TCX: Biking" />
+
+        <TextView
+            android:id="@+id/st_tvGc"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/chip_background"
+            android:paddingStart="8dp"
+            android:paddingTop="2dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="2dp"
+            android:textAppearance="?attr/textAppearanceBody2"
+            android:textColor="?android:attr/textColorSecondary"
+            app:layout_constraintStart_toEndOf="@id/st_tvTcx"
+            app:layout_constraintTop_toTopOf="@id/st_tvTcx"
+            app:layout_constraintBottom_toBottomOf="@id/st_tvTcx"
+            tools:text="GC: Other" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</com.google.android.material.card.MaterialCardView>
