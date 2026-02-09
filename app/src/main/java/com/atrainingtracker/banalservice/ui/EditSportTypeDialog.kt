@@ -82,27 +82,80 @@ class EditSportTypeDialog : DialogFragment() {
     }
 
     private fun loadAndPopulateData() {
-        // Use a 'use' block for safe cursor handling
+        // Shared setup for both new and existing items
+        dialog?.setTitle(if (sportTypeId == -1L) R.string.add_sport_type else R.string.edit_sport_type)
+        val speedUnit = getString(MyHelper.getSpeedUnitNameId())
+        layoutMinSpeed?.suffixText = speedUnit
+        layoutMaxSpeed?.suffixText = speedUnit
+
+        if (sportTypeId == -1L) {
+            // This is a NEW Sport Type
+            populateNewSportType()
+        } else {
+            // This is an EXISTING Sport Type to edit
+            populateExistingSportType()
+        }
+    }
+
+    /**
+     * Sets up the dialog with default values for creating a new SportType.
+     */
+    private fun populateNewSportType() {
+        if (DEBUG) Log.d(TAG, "Populating for a new SportType")
+
+        // Set default text for editable fields
+        etName?.setText("")
+        etMinAvgSpeed?.setText("3.14")
+        etMaxAvgSpeed?.setText("4.2")
+
+        // New items are always editable
+        editableSection?.isVisible = true
+
+        // Now, setup the spinners with their default (first) values
+        val safeContext = context ?: return
+
+        // Basic Sport Type Spinner (default to the first item, e.g., "Generic")
+        ArrayAdapter.createFromResource(safeContext, R.array.Basic_Sport_Types, android.R.layout.simple_list_item_1)
+            .let { adapter ->
+                spBSportType?.setAdapter(adapter)
+                spBSportType?.setText(adapter.getItem(0), false) // Default to first item
+            }
+
+        // Helper function for setting up a spinner with a default value
+        fun setupAutoCompleteWithDefault(view: AutoCompleteTextView?, uiNamesRes: Int) {
+            ArrayAdapter.createFromResource(safeContext, uiNamesRes, android.R.layout.simple_list_item_1).let { adapter ->
+                view?.setAdapter(adapter)
+                view?.setText(adapter.getItem(0), false) // Default to first item
+            }
+        }
+
+        // Setup all spinners to their default value
+        setupAutoCompleteWithDefault(spStrava, R.array.Strava_Sport_Types_UI_Names)
+        setupAutoCompleteWithDefault(spTcx, R.array.TCX_Sport_Types)
+        setupAutoCompleteWithDefault(spGc, R.array.GC_Sport_Types)
+        // TODO: Add other spinners here (Runkeeper, TrainingPeaks, etc.) in the same pattern
+    }
+
+    /**
+     * Loads data from the database and populates the dialog for an existing SportType.
+     */
+    private fun populateExistingSportType() {
+        if (DEBUG) Log.d(TAG, "Populating for existing SportType ID: $sportTypeId")
+
         val db = SportTypeDatabaseManager.getInstance(requireContext()).database
         db.query(
             SportType.TABLE, null, "${SportType.C_ID} =? ",
             arrayOf(sportTypeId.toString()), null, null, null
         )?.use { cursor ->
             if (cursor.moveToFirst()) {
+                // This logic is mostly the same as before
                 val bSportType = BSportType.valueOf(cursor.getString(cursor.getColumnIndexOrThrow(SportType.BASE_SPORT_TYPE)))
                 val uiName = cursor.getString(cursor.getColumnIndexOrThrow(SportType.UI_NAME))
-                val stravaName = cursor.getString(cursor.getColumnIndexOrThrow(SportType.STRAVA_NAME))
-                // TODO: Get other names (Runkeeper, GC, etc.)
                 val minAvgSpeed = cursor.getDouble(cursor.getColumnIndexOrThrow(SportType.MIN_AVG_SPEED))
                 val maxAvgSpeed = cursor.getDouble(cursor.getColumnIndexOrThrow(SportType.MAX_AVG_SPEED))
 
                 // Populate Views
-                dialog?.setTitle(R.string.edit_sport_type)
                 etName?.setText(uiName)
-                val speedUnit = getString(MyHelper.getSpeedUnitNameId())
-                layoutMinSpeed?.suffixText = speedUnit
-                layoutMaxSpeed?.suffixText = speedUnit
-
                 etMinAvgSpeed?.setText(String.format(Locale.getDefault(), "%.1f", MyHelper.mps2userUnit(minAvgSpeed)))
                 etMaxAvgSpeed?.setText(String.format(Locale.getDefault(), "%.1f", MyHelper.mps2userUnit(maxAvgSpeed)))
 
@@ -110,6 +163,7 @@ class EditSportTypeDialog : DialogFragment() {
                 val isEditable = SportTypeDatabaseManager.canDelete(sportTypeId)
                 editableSection?.isVisible = isEditable
                 if (isEditable) {
+                    // This spinner setup function already handles loading the correct value from the cursor
                     setupSpinners(cursor, bSportType)
                 }
             }

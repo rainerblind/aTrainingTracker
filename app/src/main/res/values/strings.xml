@@ -789,12 +789,6 @@
     <string name="startSearchOnlyManually">only manually</string>
 
 
-    <string name="OnlineCommunities">Online Communities</string>
-    <string name="ExportFiles">File Export</string>
-    <string name="edit_sport_type">Edit Sport Type</string>
-    <string name="you_can_not_delete_this_sport_type">You can not delete this sport type</string>
-    <string name="min_avg_speed">min avg speed:</string>
-    <string name="max_avg_speed">max avg speed:</string>
     <string name="show_all_sport_types">all sport types</string>
     <string name="sport_types">Sport Types</string>
     <string name="configure_sport_types">Configure Sport Types</string>
@@ -1082,10 +1076,16 @@
 
     <string name="invalid_date">\???</string>
 
-    <!-- edit sport type -->
+    <!-- sport type list / edit sport type -->
+    <string name="you_can_not_delete_this_sport_type">You can not delete this sport type</string>
+    <string name="add_sport_type">add sport type</string>
+    <string name="edit_sport_type">Edit Sport Type</string>
     <string name="sport_type_name">Sport name</string>
     <string name="basic_sport_type">basic sport type</string>
-    <string name="add_sport_type">add sport type</string>
+    <string name="OnlineCommunities">Online Communities</string>
+    <string name="ExportFiles">File Export</string>
+    <string name="min_avg_speed">min avg speed:</string>
+    <string name="max_avg_speed">max avg speed:</string>
 
 
 </resources>
