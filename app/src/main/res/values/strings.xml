@@ -1086,6 +1086,9 @@
     <string name="ExportFiles">File Export</string>
     <string name="min_avg_speed">min avg speed:</string>
     <string name="max_avg_speed">max avg speed:</string>
+    <string name="mapping_format_strava">Strava: %1$s</string>
+    <string name="mapping_format_tcx">TCX: %1$s</string>
+    <string name="mapping_format_gc">GC: %1$s</string>
 
 
 </resources>

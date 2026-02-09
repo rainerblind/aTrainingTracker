@@ -69,37 +69,85 @@ class SportTypeListFragment : ListFragment() {
         val db = SportTypeDatabaseManager.getInstance(requireContext()).database
         cursor = db.query(
             SportType.TABLE,
-            FROM_WITH_C_ID,
+            ALL_COLUMNS, // Use the new, expanded column array
             null, null, null, null, null
         )
 
-        val fromColumns = arrayOf(SportType.UI_NAME, SportType.MIN_AVG_SPEED, SportType.MAX_AVG_SPEED)
-        val toViews = intArrayOf(R.id.st_tvName, R.id.st_tvSpeed, R.id.st_tvSpeed)
+        // These from/to arrays are now just placeholders. The real work is in the ViewBinder.
+        val fromColumns = arrayOf(
+            SportType.UI_NAME,
+            SportType.MIN_AVG_SPEED,
+            SportType.STRAVA_NAME,
+            SportType.TCX_NAME,
+            SportType.GOLDEN_CHEETAH_NAME
+        )
+        val toViews = intArrayOf(
+            R.id.st_tvName,
+            R.id.st_tvSpeed,
+            R.id.st_tvStrava,
+            R.id.st_tvTcx,
+            R.id.st_tvGc
+        )
 
         cursorAdapter = SimpleCursorAdapter(context, R.layout.sport_type_row, cursor, fromColumns, toViews, 0)
-        cursorAdapter.viewBinder = SimpleCursorAdapter.ViewBinder { view, cursor, columnIndex ->
-            val tv = view as TextView
-            when (view.id) {
+        cursorAdapter.viewBinder = SimpleCursorAdapter.ViewBinder { view, cursor, _ ->
+            // The binding logic is now handled entirely here for all views in the row.
+            val id = view.id
+            val tv = view as? TextView ?: return@ViewBinder false
+
+            when (id) {
                 R.id.st_tvName -> {
                     val name = cursor.getString(cursor.getColumnIndexOrThrow(SportType.UI_NAME))
                     val sportTypeId = cursor.getLong(cursor.getColumnIndexOrThrow(SportType.C_ID))
 
-                    // Use a safe-call for context, which is good practice in fragments.
                     context?.let { ctx ->
                         val icon = SportTypeDatabaseManager.getInstance(ctx).getBSportTypeIcon(ctx, sportTypeId, 0.75)
                         icon.setBounds(0, 0, icon.intrinsicWidth, icon.intrinsicHeight)
                         tv.setCompoundDrawables(icon, null, null, null)
                     }
                     tv.text = name
-                    true // Signal that the view was handled
+                    true
                 }
                 R.id.st_tvSpeed -> {
                     val minSpeed = MyHelper.mps2userUnit(cursor.getDouble(cursor.getColumnIndexOrThrow(SportType.MIN_AVG_SPEED)))
                     val maxSpeed = MyHelper.mps2userUnit(cursor.getDouble(cursor.getColumnIndexOrThrow(SportType.MAX_AVG_SPEED)))
                     tv.text = getString(R.string.average_speed_range_format, minSpeed, maxSpeed, speedUnit)
-                    true // Signal that the view was handled
+                    true
                 }
-                else -> false // Let the adapter handle other views
+                R.id.st_tvStrava -> {
+                    val stravaType = cursor.getString(cursor.getColumnIndexOrThrow(SportType.STRAVA_NAME))
+                    tv.text = getString(R.string.mapping_format_strava, stravaType)
+
+                    // Get the Strava logo drawable
+                    val stravaLogo = ContextCompat.getDrawable(tv.context, R.drawable.logo_square_strava)
+
+                    stravaLogo?.let { drawable ->
+                        // Get the current text size to use as the height for the icon
+                        val iconSize = tv.textSize.toInt()
+
+                        // Calculate the width while maintaining the aspect ratio
+                        val aspectRatio = drawable.intrinsicWidth.toFloat() / drawable.intrinsicHeight.toFloat()
+                        val iconWidth = (iconSize * aspectRatio).toInt()
+
+                        // Set the bounds for the drawable (left, top, right, bottom)
+                        drawable.setBounds(0, 0, iconWidth, iconSize)
+
+                        // Set the drawable to the start of the TextView
+                        tv.setCompoundDrawables(drawable, null, null, null)
+                    }
+                    true
+                }
+                R.id.st_tvTcx -> {
+                    val tcxType = cursor.getString(cursor.getColumnIndexOrThrow(SportType.TCX_NAME))
+                    tv.text = getString(R.string.mapping_format_tcx, tcxType)
+                    true
+                }
+                R.id.st_tvGc -> {
+                    val gcType = cursor.getString(cursor.getColumnIndexOrThrow(SportType.GOLDEN_CHEETAH_NAME))
+                    tv.text = getString(R.string.mapping_format_gc, gcType)
+                    true
+                }
+                else -> false // Let the adapter handle other views if any
             }
         }
         listAdapter = cursorAdapter
@@ -123,7 +171,6 @@ class SportTypeListFragment : ListFragment() {
 
     override fun onResume() {
         super.onResume()
-        // Use the modern, lifecycle-aware way to register a receiver.
         context?.let {
             ContextCompat.registerReceiver(it, sportTypeChangedReceiver, sportTypeChangedFilter, ContextCompat.RECEIVER_NOT_EXPORTED)
         }
@@ -136,7 +183,6 @@ class SportTypeListFragment : ListFragment() {
 
     override fun onDestroy() {
         super.onDestroy()
-        // Safely close the cursor using the ?.let scope function.
         cursor?.close()
         cursor = null
     }
@@ -148,7 +194,6 @@ class SportTypeListFragment : ListFragment() {
     }
 
     override fun onContextItemSelected(item: MenuItem): Boolean {
-        // Use 'as?' for safe casting which returns null on failure.
         val info = item.menuInfo as? AdapterView.AdapterContextMenuInfo ?: return super.onContextItemSelected(item)
         val id = info.id
         if (DEBUG) Log.i(TAG, "onContextItemSelected: id=$id")
@@ -167,12 +212,10 @@ class SportTypeListFragment : ListFragment() {
     }
 
     private fun updateView() {
-        // The 'requery()' method is deprecated. The modern way is to get a new cursor.
         val db = SportTypeDatabaseManager.getInstance(requireContext()).database
-        val newCursor = db.query(SportType.TABLE, FROM_WITH_C_ID, null, null, null, null, null)
+        val newCursor = db.query(SportType.TABLE, ALL_COLUMNS, null, null, null, null, null) // Use new columns
         cursorAdapter.changeCursor(newCursor)
 
-        // Close the old cursor that was swapped out.
         cursor?.close()
         cursor = newCursor
     }
@@ -182,7 +225,6 @@ class SportTypeListFragment : ListFragment() {
         val sportTypeDatabaseManager = SportTypeDatabaseManager.getInstance(requireContext())
         val sportTypeUiName = sportTypeDatabaseManager.getUIName(id)
 
-        // Using the Kotlin-friendly AlertDialog builder from Material Components.
         AlertDialog.Builder(requireContext())
             .setTitle(R.string.delete)
             .setMessage(getString(R.string.really_delete_workout_name_scheme, sportTypeUiName))
@@ -199,7 +241,6 @@ class SportTypeListFragment : ListFragment() {
     }
 
     private fun showEditSportTypeDialog(id: Long) {
-        // Ensure fragmentManager is not null.
         fragmentManager?.let {
             val editSportTypeDialog = EditSportTypeDialog.newInstance(id)
             editSportTypeDialog.show(it, EditSportTypeDialog.TAG)
@@ -212,7 +253,11 @@ class SportTypeListFragment : ListFragment() {
 
         private val DEBUG = TrainingApplication.getDebug(false)
 
-        // Encapsulating the column arrays within the companion object.
-        private val FROM_WITH_C_ID = arrayOf(SportType.C_ID, SportType.MIN_AVG_SPEED, SportType.MAX_AVG_SPEED, SportType.UI_NAME)
+        // Renamed and expanded this array to include all columns needed for the view.
+        private val ALL_COLUMNS = arrayOf(
+            SportType.C_ID, SportType.UI_NAME, SportType.MIN_AVG_SPEED,
+            SportType.MAX_AVG_SPEED, SportType.STRAVA_NAME,
+            SportType.TCX_NAME, SportType.GOLDEN_CHEETAH_NAME
+        )
     }
 }
