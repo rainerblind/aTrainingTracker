@@ -47,7 +47,7 @@ import android.widget.Toast;
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.SportType;
-import com.atrainingtracker.banalservice.dialogs.EditSportTypeDialog;
+import com.atrainingtracker.banalservice.ui.EditSportTypeDialog;
 import com.atrainingtracker.trainingtracker.MyHelper;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 

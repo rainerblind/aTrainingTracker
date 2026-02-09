@@ -972,4 +972,10 @@
     <string name="format_with_equipment_run">mit %1$s</string>
     <string name="format_with_equipment_other">mit %1$s</string>
 
+
+
+    <!-- edit sport type -->
+    <string name="sport_type_name">Sport Name</string>
+    <string name="basic_sport_type">Basis Sport Typ</string>
+
 </resources>
