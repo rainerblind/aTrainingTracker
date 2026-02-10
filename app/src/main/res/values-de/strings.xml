@@ -978,6 +978,8 @@
     <string name="ExportFiles">Datei Export</string>
     <string name="min_avg_speed">min durchschnittliche Geschwindigkeit:</string>
     <string name="max_avg_speed">max durchschnittliche Geschwindigkeit</string>
+    <string name="item_is_fixed_and_cannot_be_deleted">Sportart kann nicht gelöscht oder geändert werden.</string>
+
 
 
 </resources>

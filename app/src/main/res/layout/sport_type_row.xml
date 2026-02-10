@@ -134,6 +134,21 @@
             app:layout_constraintBottom_toBottomOf="@id/st_tvTcx"
             tools:text="GC: Other" />
 
+        <ImageView
+            android:id="@+id/st_ivLock"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@android:drawable/ic_lock_lock"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="@+id/st_tvGc"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/st_tvStrava"
+            android:contentDescription="@string/item_is_fixed_and_cannot_be_deleted"
+            app:tint="?android:attr/textColorSecondary"
+            tools:visibility="visible"/>
+
     </androidx.constraintlayout.widget.ConstraintLayout>
 
 </com.google.android.material.card.MaterialCardView>
