@@ -118,7 +118,7 @@ class SportTypeListFragment : ListFragment() {
                                 val icon = SportTypeDatabaseManager.getInstance(ctx)
                                     .getBSportTypeIcon(ctx, sportTypeId, 0.75)
                                 icon?.alpha =
-                                    if (canDelete) 128 else 255 // 50% transparent for editable
+                                    if (canDelete) 150 else 255 // some transparency for editable
                                 icon.setBounds(0, 0, icon.intrinsicWidth, icon.intrinsicHeight)
                                 tv.setCompoundDrawables(icon, null, null, null)
                             }
