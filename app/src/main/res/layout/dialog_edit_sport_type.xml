@@ -6,6 +6,15 @@
     android:orientation="vertical"
     android:padding="16dp">
 
+    <!-- Title -->
+    <TextView
+        android:id="@+id/dialog_title"
+        style="@style/TextAppearance.Material3.HeadlineSmall"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:text="@string/edit_sport_type" />
+
     <!-- Sport Type Name -->
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/layout_name"
