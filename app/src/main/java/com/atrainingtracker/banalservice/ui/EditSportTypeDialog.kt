@@ -10,6 +10,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
+import android.widget.TextView
 import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
 import com.atrainingtracker.R
@@ -31,6 +32,7 @@ class EditSportTypeDialog : DialogFragment() {
     }
 
     // It's safer to make views nullable and handle them after onViewCreated
+    private var tvTitle: TextView? = null
     private var etName: TextInputEditText? = null
     private var etMinAvgSpeed: TextInputEditText? = null
     private var etMaxAvgSpeed: TextInputEditText? = null
@@ -58,6 +60,7 @@ class EditSportTypeDialog : DialogFragment() {
         if (DEBUG) Log.d(TAG, "onViewCreated")
 
         // Initialize views
+        tvTitle = view.findViewById(R.id.dialog_title)
         etName = view.findViewById(R.id.edit_name)
         etMinAvgSpeed = view.findViewById(R.id.edit_min_speed)
         etMaxAvgSpeed = view.findViewById(R.id.edit_max_speed)
@@ -81,9 +84,10 @@ class EditSportTypeDialog : DialogFragment() {
         loadAndPopulateData()
     }
 
+
     private fun loadAndPopulateData() {
         // Shared setup for both new and existing items
-        dialog?.setTitle(if (sportTypeId == -1L) R.string.add_sport_type else R.string.edit_sport_type)
+        tvTitle?.setText(if (sportTypeId == -1L) R.string.add_sport_type else R.string.edit_sport_type)
         val speedUnit = getString(MyHelper.getSpeedUnitNameId())
         layoutMinSpeed?.suffixText = speedUnit
         layoutMaxSpeed?.suffixText = speedUnit
