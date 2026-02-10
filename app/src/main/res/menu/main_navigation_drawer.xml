@@ -18,69 +18,77 @@
   -->
 
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
-    <group android:checkableBehavior="single">
+    <item android:title="@string/drawer__training">
+        <menu>
+            <group android:checkableBehavior="single">
+                <item
+                    android:id="@+id/drawer_start_tracking"
+                    android:icon="@drawable/control_start"
+                    android:title="@string/tab_start" />
 
-        <item
-            android:id="@+id/drawer_start_tracking"
-            android:icon="@drawable/control_start"
-            android:title="@string/tab_start" />
+                <item
+                    android:id="@+id/drawer_workouts"
+                    android:icon="@drawable/workout_list"
+                    android:title="@string/tab_workouts" />
+            </group>
+        </menu>
+    </item>
+    <item android:title="@string/drawer__maps">
+        <menu>
+            <group
+                android:id="@+id/drawer_group_map"
+                android:checkableBehavior="single">
+                <item
+                    android:id="@+id/drawer_map"
+                    android:icon="@drawable/ic_map"
+                    android:title="@string/tab_map" />
 
-        <item
-            android:id="@+id/drawer_map"
-            android:title="@string/tab_map" />
+                <item
+                    android:id="@+id/drawer_segments"
+                    android:icon="@drawable/ic_segment"
+                    android:title="@string/segments" />
 
-        <item
-            android:id="@+id/drawer_segments"
-            android:title="@string/segments" />
+                <item
+                    android:id="@+id/drawer_my_locations"
+                    android:icon="@drawable/my_locations"
+                    android:title="@string/my_locations" />
+            </group>
+        </menu>
+    </item>
+    <item android:title="@string/drawer__pairing">
+        <menu>
+            <group android:checkableBehavior="single">
+                <item
+                    android:id="@+id/drawer_pairing_ant"
+                    android:icon="@drawable/ant_logo"
+                    android:title="@string/pairing_ANT" />
 
-        <item
-            android:id="@+id/drawer_my_locations"
-            android:title="@string/my_locations" />
+                <item
+                    android:id="@+id/drawer_pairing_BTLE"
+                    android:icon="@drawable/logo_protocol_bluetooth"
+                    android:title="@string/pairing_bluetooth" />
 
-        <item
-            android:id="@+id/drawer_workouts"
-            android:title="@string/tab_workouts" />
-
-
-        <item
-            android:id="@+id/drawer_group_pairing"
-            android:title="@string/pairing">
-
-            <menu>
-                <group android:checkableBehavior="single">
-                    <item
-                        android:id="@+id/drawer_pairing_ant"
-                        android:icon="@drawable/ant_logo"
-                        android:title="@string/pairing_ANT" />
-
-                    <item
-                        android:id="@+id/drawer_pairing_BTLE"
-                        android:icon="@drawable/logo_protocol_bluetooth"
-                        android:title="@string/pairing_bluetooth" />
-
-                    <item
-                        android:id="@+id/drawer_my_sensors"
-                        android:title="@string/myRemoteDevices" />
-                </group>
-            </menu>
-        </item>
-
-    </group>
-
-    <!-- group: settings -->
-    <group
-        android:id="@+id/drawer_group_settings"
-        android:checkableBehavior="single">
-
-        <item
-            android:id="@+id/drawer_settings"
-            android:icon="@drawable/ic_settings_black_48dp"
-            android:title="@string/Preferences" />
-
-        <item
-            android:id="@+id/drawer_privacy_policy"
-            android:title="@string/privacy_policy" />
-
-    </group>
-
+                <item
+                    android:id="@+id/drawer_my_sensors"
+                    android:icon="@drawable/ic_my_paired_devices"
+                    android:title="@string/myRemoteDevices" />
+            </group>
+        </menu>
+    </item>
+    <item android:title="@string/drawer__settings">
+        <menu>
+            <group
+                android:id="@+id/drawer_group_settings"
+                android:checkableBehavior="single">
+                <item
+                    android:id="@+id/drawer_settings"
+                    android:icon="@drawable/ic_settings_black_48dp"
+                    android:title="@string/Preferences" />
+                <item
+                    android:id="@+id/drawer_privacy_policy"
+                    android:icon="@drawable/ic_privacy"
+                    android:title="@string/privacy_policy" />
+            </group>
+        </menu>
+    </item>
 </menu>
