@@ -80,72 +80,114 @@ class SportTypeListFragment : ListFragment() {
             SportType.MIN_AVG_SPEED,
             SportType.STRAVA_NAME,
             SportType.TCX_NAME,
-            SportType.GOLDEN_CHEETAH_NAME
+            SportType.GOLDEN_CHEETAH_NAME,
+            SportType.C_ID
         )
         val toViews = intArrayOf(
             R.id.st_tvName,
             R.id.st_tvSpeed,
             R.id.st_tvStrava,
             R.id.st_tvTcx,
-            R.id.st_tvGc
+            R.id.st_tvGc,
+            R.id.st_ivLock
         )
 
         cursorAdapter = SimpleCursorAdapter(context, R.layout.sport_type_row, cursor, fromColumns, toViews, 0)
         cursorAdapter.viewBinder = SimpleCursorAdapter.ViewBinder { view, cursor, _ ->
-            // The binding logic is now handled entirely here for all views in the row.
+            // The binding logic is handled entirely here for all views in the row.
             val id = view.id
-            val tv = view as? TextView ?: return@ViewBinder false
+
+            val sportTypeId = cursor.getLong(cursor.getColumnIndexOrThrow(SportType.C_ID))
+            val canDelete = SportTypeDatabaseManager.canDelete(sportTypeId)
 
             when (id) {
-                R.id.st_tvName -> {
-                    val name = cursor.getString(cursor.getColumnIndexOrThrow(SportType.UI_NAME))
-                    val sportTypeId = cursor.getLong(cursor.getColumnIndexOrThrow(SportType.C_ID))
 
-                    context?.let { ctx ->
-                        val icon = SportTypeDatabaseManager.getInstance(ctx).getBSportTypeIcon(ctx, sportTypeId, 0.75)
-                        icon.setBounds(0, 0, icon.intrinsicWidth, icon.intrinsicHeight)
-                        tv.setCompoundDrawables(icon, null, null, null)
+                // show the lock icon when the item is not editable
+                R.id.st_ivLock -> {
+                    view.visibility = if (canDelete) View.GONE else View.VISIBLE
+                    true
+                }
+                R.id.st_tvName, R.id.st_tvSpeed, R.id.st_tvStrava, R.id.st_tvTcx, R.id.st_tvGc -> {
+                    val tv = view as TextView
+                    when (view.id) {
+                        R.id.st_tvName -> {
+                            val name =
+                                cursor.getString(cursor.getColumnIndexOrThrow(SportType.UI_NAME))
+
+                            context?.let { ctx ->
+                                val icon = SportTypeDatabaseManager.getInstance(ctx)
+                                    .getBSportTypeIcon(ctx, sportTypeId, 0.75)
+                                icon?.alpha =
+                                    if (canDelete) 128 else 255 // 50% transparent for editable
+                                icon.setBounds(0, 0, icon.intrinsicWidth, icon.intrinsicHeight)
+                                tv.setCompoundDrawables(icon, null, null, null)
+                            }
+
+                            //  Set a slightly more grey text color for editable items
+                            val textColorRes =
+                                if (canDelete) android.R.color.secondary_text_light else android.R.color.primary_text_light
+                            tv.setTextColor(ContextCompat.getColor(tv.context, textColorRes))
+
+                            tv.text = name
+                        }
+
+                        R.id.st_tvSpeed -> {
+                            val minSpeed = MyHelper.mps2userUnit(
+                                cursor.getDouble(
+                                    cursor.getColumnIndexOrThrow(SportType.MIN_AVG_SPEED)
+                                )
+                            )
+                            val maxSpeed = MyHelper.mps2userUnit(
+                                cursor.getDouble(
+                                    cursor.getColumnIndexOrThrow(SportType.MAX_AVG_SPEED)
+                                )
+                            )
+                            tv.text = getString(
+                                R.string.average_speed_range_format,
+                                minSpeed,
+                                maxSpeed,
+                                speedUnit
+                            )
+                        }
+
+                        R.id.st_tvStrava -> {
+                            val stravaType =
+                                cursor.getString(cursor.getColumnIndexOrThrow(SportType.STRAVA_NAME))
+                            tv.text = getString(R.string.mapping_format_strava, stravaType)
+
+                            // Get the Strava logo drawable
+                            val stravaLogo =
+                                ContextCompat.getDrawable(tv.context, R.drawable.logo_square_strava)
+
+                            stravaLogo?.let { drawable ->
+                                // Get the current text size to use as the height for the icon
+                                val iconSize = tv.textSize.toInt()
+
+                                // Calculate the width while maintaining the aspect ratio
+                                val aspectRatio =
+                                    drawable.intrinsicWidth.toFloat() / drawable.intrinsicHeight.toFloat()
+                                val iconWidth = (iconSize * aspectRatio).toInt()
+
+                                // Set the bounds for the drawable (left, top, right, bottom)
+                                drawable.setBounds(0, 0, iconWidth, iconSize)
+
+                                // Set the drawable to the start of the TextView
+                                tv.setCompoundDrawables(drawable, null, null, null)
+                            }
+                        }
+
+                        R.id.st_tvTcx -> {
+                            val tcxType =
+                                cursor.getString(cursor.getColumnIndexOrThrow(SportType.TCX_NAME))
+                            tv.text = getString(R.string.mapping_format_tcx, tcxType)
+                        }
+
+                        R.id.st_tvGc -> {
+                            val gcType =
+                                cursor.getString(cursor.getColumnIndexOrThrow(SportType.GOLDEN_CHEETAH_NAME))
+                            tv.text = getString(R.string.mapping_format_gc, gcType)
+                        }
                     }
-                    tv.text = name
-                    true
-                }
-                R.id.st_tvSpeed -> {
-                    val minSpeed = MyHelper.mps2userUnit(cursor.getDouble(cursor.getColumnIndexOrThrow(SportType.MIN_AVG_SPEED)))
-                    val maxSpeed = MyHelper.mps2userUnit(cursor.getDouble(cursor.getColumnIndexOrThrow(SportType.MAX_AVG_SPEED)))
-                    tv.text = getString(R.string.average_speed_range_format, minSpeed, maxSpeed, speedUnit)
-                    true
-                }
-                R.id.st_tvStrava -> {
-                    val stravaType = cursor.getString(cursor.getColumnIndexOrThrow(SportType.STRAVA_NAME))
-                    tv.text = getString(R.string.mapping_format_strava, stravaType)
-
-                    // Get the Strava logo drawable
-                    val stravaLogo = ContextCompat.getDrawable(tv.context, R.drawable.logo_square_strava)
-
-                    stravaLogo?.let { drawable ->
-                        // Get the current text size to use as the height for the icon
-                        val iconSize = tv.textSize.toInt()
-
-                        // Calculate the width while maintaining the aspect ratio
-                        val aspectRatio = drawable.intrinsicWidth.toFloat() / drawable.intrinsicHeight.toFloat()
-                        val iconWidth = (iconSize * aspectRatio).toInt()
-
-                        // Set the bounds for the drawable (left, top, right, bottom)
-                        drawable.setBounds(0, 0, iconWidth, iconSize)
-
-                        // Set the drawable to the start of the TextView
-                        tv.setCompoundDrawables(drawable, null, null, null)
-                    }
-                    true
-                }
-                R.id.st_tvTcx -> {
-                    val tcxType = cursor.getString(cursor.getColumnIndexOrThrow(SportType.TCX_NAME))
-                    tv.text = getString(R.string.mapping_format_tcx, tcxType)
-                    true
-                }
-                R.id.st_tvGc -> {
-                    val gcType = cursor.getString(cursor.getColumnIndexOrThrow(SportType.GOLDEN_CHEETAH_NAME))
-                    tv.text = getString(R.string.mapping_format_gc, gcType)
                     true
                 }
                 else -> false // Let the adapter handle other views if any
