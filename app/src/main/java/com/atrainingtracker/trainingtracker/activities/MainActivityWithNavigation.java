@@ -674,7 +674,7 @@ public class MainActivityWithNavigation
                 break;
 
             case R.id.drawer_settings:
-                titleId = R.string.settings;
+                titleId = R.string.drawer__settings;
                 mFragment = new RootPrefsFragment();
                 tag = RootPrefsFragment.TAG;
                 break;

@@ -471,7 +471,7 @@
     <!-- layouts -->
     <string name="pairedText">paired</string>
 
-    <string name="pairing">pairing</string>
+    <string name="drawer__pairing">pairing</string>
     <string name="unpairing">unpairing</string>
 
     <!-- TODO: prefixes -->
@@ -720,7 +720,7 @@
     <string name="max_line_distance">furthest away</string>
     <string name="end">end</string>
     <string name="my_locations">My Locations</string>
-    <string name="settings">Settings</string>
+    <string name="drawer__settings">Settings</string>
     <string name="get_extremaType_of_sportType_format">Get %1$s positions of your %2$s workouts.</string>
     <string name="getting_my_locations">Looking for known locations.</string>
     <string name="editLocationName">Name:</string>
@@ -1090,6 +1090,10 @@
     <string name="mapping_format_tcx">TCX: %1$s</string>
     <string name="mapping_format_gc">GC: %1$s</string>
     <string name="item_is_fixed_and_cannot_be_deleted">Sport type can not be deleted or edited.</string>
+
+    <!-- drawer -->
+    <string name="drawer__training">Training</string>
+    <string name="drawer__maps">Maps</string>
 
 
 </resources>
