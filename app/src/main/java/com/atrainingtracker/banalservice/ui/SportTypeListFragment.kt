@@ -188,10 +188,20 @@ class SportTypeListFragment : ListFragment() {
         cursor = null
     }
 
+    /* adds the 'delete' option only when it is allowed to be deleted */
     override fun onCreateContextMenu(menu: ContextMenu, v: View, menuInfo: ContextMenu.ContextMenuInfo?) {
         super.onCreateContextMenu(menu, v, menuInfo)
         if (DEBUG) Log.i(TAG, "onCreateContextMenu")
-        activity?.menuInflater?.inflate(R.menu.delete, menu)
+
+        // Get the ID of the item that was long-pressed.
+        val info = menuInfo as? AdapterView.AdapterContextMenuInfo ?: return
+        val id = info.id
+
+        // Check if this sport type is allowed to be deleted.
+        if (SportTypeDatabaseManager.canDelete(id)) {
+            // Only inflate (show) the menu if it is deletable.
+            activity?.menuInflater?.inflate(R.menu.delete, menu)
+        }
     }
 
     override fun onContextItemSelected(item: MenuItem): Boolean {
