@@ -70,7 +70,8 @@ class SportTypeListFragment : ListFragment() {
         cursor = db.query(
             SportType.TABLE,
             ALL_COLUMNS, // Use the new, expanded column array
-            null, null, null, null, null
+            null, null, null, null,
+            SORT_ORDER
         )
 
         // These from/to arrays are now just placeholders. The real work is in the ViewBinder.
@@ -213,7 +214,8 @@ class SportTypeListFragment : ListFragment() {
 
     private fun updateView() {
         val db = SportTypeDatabaseManager.getInstance(requireContext()).database
-        val newCursor = db.query(SportType.TABLE, ALL_COLUMNS, null, null, null, null, null) // Use new columns
+        val newCursor = db.query(SportType.TABLE, ALL_COLUMNS, null, null, null, null,
+            SORT_ORDER) // Use new columns
         cursorAdapter.changeCursor(newCursor)
 
         cursor?.close()
@@ -259,5 +261,6 @@ class SportTypeListFragment : ListFragment() {
             SportType.MAX_AVG_SPEED, SportType.STRAVA_NAME,
             SportType.TCX_NAME, SportType.GOLDEN_CHEETAH_NAME
         )
+        private val SORT_ORDER = "${SportType.MIN_AVG_SPEED} ASC"
     }
 }
