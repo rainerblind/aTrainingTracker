@@ -50,7 +50,8 @@
                 android:id="@+id/edit_min_speed"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="numberDecimal" />
+                android:inputType="numberDecimal"
+                android:digits="0123456789,."/>
         </com.google.android.material.textfield.TextInputLayout>
 
         <View
@@ -70,7 +71,8 @@
                 android:id="@+id/edit_max_speed"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="numberDecimal" />
+                android:inputType="numberDecimal"
+                android:digits="0123456789,."/>
         </com.google.android.material.textfield.TextInputLayout>
     </LinearLayout>
 
