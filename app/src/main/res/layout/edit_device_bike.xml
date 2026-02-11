@@ -124,9 +124,10 @@
                 android:text="@string/pairedText" />
         </LinearLayout>
 
+        <!-- Wheel Circumference (Editable) and Spinner -->
         <LinearLayout
             android:id="@+id/llWheelCircumference"
-            android:layout_width="fill_parent"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:orientation="horizontal"
@@ -135,9 +136,9 @@
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/layout_calibration_factor"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                android:layout_width="fill_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_weight="1.5"
+                android:layout_weight="1"
                 app:suffixText="@string/units_distance_basic">
 
                 <com.google.android.material.textfield.TextInputEditText
@@ -154,9 +155,10 @@
 
             <Spinner
                 android:id="@+id/spinnerWheelCircumference"
-                android:layout_width="fill_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_weight="1" />
+                android:layout_weight="1.75"
+                android:layout_marginStart="8dp" />
 
         </LinearLayout>
 
