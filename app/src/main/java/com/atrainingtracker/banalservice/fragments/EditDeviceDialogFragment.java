@@ -444,14 +444,14 @@ public class EditDeviceDialogFragment
             case BIKE_POWER:
                 mCalibrationFactorTitle = getString(R.string.Wheel_Circumference);
                 mCalibrationFactorName = getString(R.string.wheel_circumference);
-                CIRCUMFERENCE_TEXT[0] = getString(R.string.wheel_circumference);
+                CIRCUMFERENCE_TEXT[0] = getString(R.string.select_wheel_size_prompt);
                 return R.layout.edit_device_bike_power;
 
             case BIKE_SPEED_AND_CADENCE:
             case BIKE_SPEED:
                 mCalibrationFactorTitle = getString(R.string.Wheel_Circumference);
                 mCalibrationFactorName = getString(R.string.wheel_circumference);
-                CIRCUMFERENCE_TEXT[0] = getString(R.string.wheel_circumference);
+                CIRCUMFERENCE_TEXT[0] = getString(R.string.select_wheel_size_prompt);
                 return R.layout.edit_device_bike;
 
             case BIKE_CADENCE:
