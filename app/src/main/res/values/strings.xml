@@ -541,13 +541,13 @@
     <!-- edit_device_bike -->
     <string name="editDeviceBikeDeviceNameValue">Garmin speed</string>
     <string name="editDeviceBikeDeviceTypeValue">Bike Speed</string>
-    <string name="editDeviceBikeEditCalibrationFactorBasedOnDistance">calculate wheel circumference</string>
+    <string name="editDeviceBikeEditCalibrationFactorBasedOnDistance">correct wheel circumference</string>
     <string name="editDeviceBikeCalibrationFactorValue" translatable="false">2.01</string>
 
     <!-- edit_device_run -->
     <string name="editDeviceRunDeviceNameValue">Garmin run</string>
     <string name="editDeviceRunDeviceTypeValue">Run Speed</string>
-    <string name="editDeviceRunEditCalibrationFactorBasedOnDistance">calculate calibration factor</string>
+    <string name="editDeviceRunEditCalibrationFactorBasedOnDistance">correct</string>
     <string name="editDeviceRunCalibrationFactorValue" translatable="false">1.0</string>
 
     <!-- edit_device_generic -->
@@ -1094,6 +1094,9 @@
     <!-- drawer -->
     <string name="drawer__training">Training</string>
     <string name="drawer__maps">Maps</string>
+
+    <!-- edit device -->
+    <string name="select_wheel_size_prompt">Select wheel size…</string>
 
 
 </resources>
