@@ -70,27 +70,26 @@
                 tools:ignore="ContentDescription" />
         </LinearLayout>
 
-        <LinearLayout
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content"
+        <!-- Manufacturer (Read-Only) -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/layout_manufacturer"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
             android:background="@color/my_light_blue"
-            android:orientation="vertical">
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp">
 
-            <TextView
-                android:layout_width="fill_parent"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/manufacturerText"
-                android:textAppearance="?android:attr/textAppearanceSmall" />
-
-            <TextView
+            <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/tvManufacturer"
-                android:layout_width="fill_parent"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
+                android:focusable="false"
+                android:clickable="false"
+                android:hint="@string/manufacturerText"
                 android:text="@string/manufacturerValue"
                 android:textAppearance="?android:attr/textAppearanceLarge" />
-        </LinearLayout>
+
+        </com.google.android.material.textfield.TextInputLayout>
 
         <LinearLayout
             android:layout_width="fill_parent"
