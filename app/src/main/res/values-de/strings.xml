@@ -463,11 +463,11 @@
     <!-- edit_device_bike -->
     <string name="editDeviceBikeDeviceNameValue">Garmin Geschwindigkeit</string>
     <string name="editDeviceBikeDeviceTypeValue">Rad Geschwindigkeit</string>
-    <string name="editDeviceBikeEditCalibrationFactorBasedOnDistance">Radumfang berechnen</string>
+    <string name="editDeviceBikeEditCalibrationFactorBasedOnDistance">Radumfang korrigieren</string>
     <!-- edit_device_run -->
     <string name="editDeviceRunDeviceNameValue">Garmin Laufsensor</string>
     <string name="editDeviceRunDeviceTypeValue">Laufsensor</string>
-    <string name="editDeviceRunEditCalibrationFactorBasedOnDistance">berechnen</string>
+    <string name="editDeviceRunEditCalibrationFactorBasedOnDistance">korrigieren</string>
     <!-- edit_device_generic -->
     <string name="editDeviceGenericDeviceNameValue">Generischer Sensor</string>
     <string name="editDeviceGenericDeviceTypeValue">Generisch</string>
@@ -983,5 +983,9 @@
     <!-- drawer -->
     <string name="drawer__training">Training</string>
     <string name="drawer__maps">Karten</string>
+
+    <!-- edit device -->
+    <string name="select_wheel_size_prompt">Radgröße wählen…</string>
+
 
 </resources>
