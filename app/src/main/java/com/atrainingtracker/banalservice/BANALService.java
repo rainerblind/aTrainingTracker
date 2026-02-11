@@ -205,11 +205,11 @@ public class BANALService
     }
 
     /* filtered stuff */
-    protected static void createFilter(FilterData filterData) {
+    public static void createFilter(FilterData filterData) {
         cFilterManager.createFilter(filterData);
     }
 
-    protected static FilteredSensorData getFilteredSensorData(FilterData filterData) {
+    public static FilteredSensorData getFilteredSensorData(FilterData filterData) {
         return cFilterManager.getFilteredSensorData(filterData);
     }
 
@@ -286,7 +286,7 @@ public class BANALService
     }
 
     public BSportType getUserSelectedBSportType() {
-        return mHaveUserSelectedSportType ? SportTypeDatabaseManager.getBSportType(mUserSelectedSportTypeId) : null;
+        return mHaveUserSelectedSportType ? SportTypeDatabaseManager.getInstance(this).getBSportType(mUserSelectedSportTypeId) : null;
     }
 
     private void setUserSelectedBSportType(BSportType bSportType) {
@@ -295,7 +295,7 @@ public class BANALService
 
     public BSportType getBSportType() {
         if (mHaveUserSelectedSportType) {
-            return SportTypeDatabaseManager.getBSportType(mUserSelectedSportTypeId);
+            return SportTypeDatabaseManager.getInstance(this).getBSportType(mUserSelectedSportTypeId);
         } else {
             return cDeviceManager.getSportType();
         }
@@ -313,7 +313,7 @@ public class BANALService
         if (mHaveUserSelectedSportType) {
             return mUserSelectedSportTypeId;
         } else {
-            List<Long> sportTypeIds = SportTypeDatabaseManager.getSportTypesIdList(cDeviceManager.getSportType(), avgSpd);
+            List<Long> sportTypeIds = SportTypeDatabaseManager.getInstance(this).getSportTypesIdList(cDeviceManager.getSportType(), avgSpd);
             return sportTypeIds.get(0);
         }
     }
@@ -485,8 +485,8 @@ public class BANALService
         if (DEBUG) Log.d(TAG, "onCreate");
 
         cSensorManager = new MySensorManager(this);
-        cDeviceManager = new DeviceManager(this, cSensorManager);
         cFilterManager = new FilterManager(this, cDeviceManager, cSensorManager);
+        cDeviceManager = new DeviceManager(this, cSensorManager);
 
         ContextCompat.registerReceiver(this, mStartSearchForPairedDevices, new IntentFilter(REQUEST_START_SEARCH_FOR_PAIRED_DEVICES), ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mNewLapReceiver, new IntentFilter(REQUEST_NEW_LAP), ContextCompat.RECEIVER_NOT_EXPORTED);

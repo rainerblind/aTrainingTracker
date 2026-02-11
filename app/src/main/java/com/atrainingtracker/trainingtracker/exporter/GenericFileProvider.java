@@ -23,6 +23,7 @@ import androidx.core.content.FileProvider;
 /**
  * Created by rainer on 22.02.18.
  */
-
+// TODO: Do we still need this?
+// probably, it was necessary to do the e-Mail export.  Currently, this feature is removed.  -> This class might also be removed.
 public class GenericFileProvider extends FileProvider {
 }

@@ -231,9 +231,10 @@ public class PebbleService extends Service {
 
                 if (buttonPressed == BUTTON_NEXT_VIEW) {
                     if (DEBUG) Log.d(TAG, "got info from pebble: next view");
-                    mViewId = PebbleDatabaseManager.getNextViewId(mViewId);
+                    PebbleDatabaseManager pebbleDatabaseManager = PebbleDatabaseManager.getInstance(PebbleService.this);
+                    mViewId = pebbleDatabaseManager.getNextViewId(mViewId);
                     if (mViewId < 0) {
-                        mViewId = PebbleDatabaseManager.getFirstViewId(getActivityType());
+                        mViewId = pebbleDatabaseManager.getFirstViewId(getActivityType());
                     }
                     configurePebbleWatchApp();
                 } else if (buttonPressed == BUTTON_RESTART_SEARCH) {
@@ -367,7 +368,7 @@ public class PebbleService extends Service {
         }
         super.onStartCommand(intent, flags, startId);
 
-        mViewId = PebbleDatabaseManager.getFirstViewId(getActivityType());
+        mViewId = PebbleDatabaseManager.getInstance(this).getFirstViewId(getActivityType());
         startPebbleWatchApp();
 
         // We want this service to continue running until it is explicitly
@@ -444,7 +445,7 @@ public class PebbleService extends Service {
         }
 
         data = new PebbleDictionary();
-        String layoutName = PebbleDatabaseManager.getName(mViewId);
+        String layoutName = PebbleDatabaseManager.getInstance(this).getName(mViewId);
         if (DEBUG) Log.d(TAG, "layoutName = " + layoutName);
         data.addString(LAYOUT_NAME, cutString(layoutName));
         data.addString(ACTIVITY_TYPE, cutString(getString(getActivityType().getShortTitleId())));

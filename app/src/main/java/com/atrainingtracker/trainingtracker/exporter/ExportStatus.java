@@ -21,9 +21,9 @@ package com.atrainingtracker.trainingtracker.exporter;
 public enum ExportStatus {
     UNWANTED,
     TRACKING,
+    TRACKING_FINISHED,
     WAITING,
     PROCESSING,
-    FINISHED_RETRY,
     FINISHED_SUCCESS,
     FINISHED_FAILED
 }

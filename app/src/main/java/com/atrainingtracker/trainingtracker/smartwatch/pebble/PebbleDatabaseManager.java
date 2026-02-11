@@ -42,27 +42,36 @@ import java.util.LinkedList;
 public class PebbleDatabaseManager {
     private static final String TAG = PebbleDatabaseManager.class.getName();
     private static final boolean DEBUG = TrainingApplication.getDebug(true);
-    private static PebbleDatabaseManager cInstance;
-    private static PebbleDbHelper cPebbleDbHelper;
-    private int mOpenCounter;
-    private SQLiteDatabase mDatabase;
 
-    public static synchronized void initializeInstance(PebbleDbHelper pebbleDbHelper) {
-        if (cInstance == null) {
-            cInstance = new PebbleDatabaseManager();
-            cPebbleDbHelper = pebbleDbHelper;
-        }
+    // --- Modern Singleton Pattern ---
+    private static volatile PebbleDatabaseManager cInstance;
+    private final PebbleDbHelper cPebbleDbHelper;
+    private final Context mContext;
+
+    private PebbleDatabaseManager(@NonNull Context context) {
+        this.mContext = context.getApplicationContext();
+        this.cPebbleDbHelper = new PebbleDbHelper(this.mContext);
     }
 
     @NonNull
-    public static synchronized PebbleDatabaseManager getInstance() {
+    public static PebbleDatabaseManager getInstance(@NonNull Context context) {
         if (cInstance == null) {
-            throw new IllegalStateException(PebbleDatabaseManager.class.getSimpleName() +
-                    " is not initialized, call initializeInstance(..) method first.");
+            synchronized (PebbleDatabaseManager.class) {
+                if (cInstance == null) {
+                    cInstance = new PebbleDatabaseManager(context);
+                }
+            }
         }
-
         return cInstance;
     }
+
+    /**
+     * Returns a writable database instance, managed by the helper.
+     */
+    private SQLiteDatabase getDatabase() {
+        return cPebbleDbHelper.getWritableDatabase();
+    }
+    // --- End of Singleton Pattern ---
 
     @NonNull
     private static Cursor getViewsCursor(@NonNull SQLiteDatabase db, long viewId) {
@@ -76,19 +85,16 @@ public class PebbleDatabaseManager {
     }
 
     @NonNull
-    public static ActivityType getActivityType(long viewId) {
+    public ActivityType getActivityType(long viewId) {
 
         ActivityType activityType = ActivityType.getDefaultActivityType();
 
-        SQLiteDatabase db = getInstance().getOpenDatabase();
-        Cursor cursor = getViewsCursor(db, viewId);
+        Cursor cursor = getViewsCursor(getDatabase(), viewId);
 
         if (cursor.moveToFirst()) {
             activityType = ActivityType.valueOf(cursor.getString(cursor.getColumnIndex(PebbleDbHelper.ACTIVITY_TYPE)));
         }
-
         cursor.close();
-        getInstance().closeDatabase();
 
         return activityType;
     }
@@ -98,52 +104,44 @@ public class PebbleDatabaseManager {
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     @Nullable
-    public static String getName(long viewId) {
+    public String getName(long viewId) {
         String name = null;
 
-        SQLiteDatabase db = getInstance().getOpenDatabase();
-        Cursor cursor = getViewsCursor(db, viewId);
+        Cursor cursor = getViewsCursor(getDatabase(), viewId);
 
         if (cursor.moveToFirst()) {
             name = cursor.getString(cursor.getColumnIndex(PebbleDbHelper.NAME));
         }
 
-        getInstance().closeDatabase();
-
         return name;
     }
 
-    public static void updateSensorType(long viewId, int rowNr, @NonNull SensorType sensorType) {
+    public void updateSensorType(long viewId, int rowNr, @NonNull SensorType sensorType) {
         ContentValues values = new ContentValues();
         values.put(PebbleDbHelper.SENSOR_TYPE, sensorType.name());
 
-        SQLiteDatabase db = getInstance().getOpenDatabase();
-        db.update(PebbleDbHelper.ROWS_TABLE,
+        getDatabase().update(PebbleDbHelper.ROWS_TABLE,
                 values,
                 PebbleDbHelper.ROW_NR + "=? AND " + PebbleDbHelper.VIEW_ID + "=?",
                 new String[]{rowNr + "", viewId + ""});
-        getInstance().closeDatabase();
     }
 
-    public static void updateNameOfView(long viewId, String name) {
+    public void updateNameOfView(long viewId, String name) {
 
         ContentValues values = new ContentValues();
         values.put(PebbleDbHelper.NAME, name);
 
-        SQLiteDatabase db = getInstance().getOpenDatabase();
-        db.update(PebbleDbHelper.VIEWS_TABLE,
+        getDatabase().update(PebbleDbHelper.VIEWS_TABLE,
                 values,
                 PebbleDbHelper.C_ID + "=?",
                 new String[]{viewId + ""});
-        getInstance().closeDatabase();
     }
 
-    public static long getFirstViewId(@NonNull ActivityType activityType) // the first view is the one with a negative value for PREV_VIEW_ID
+    public long getFirstViewId(@NonNull ActivityType activityType) // the first view is the one with a negative value for PREV_VIEW_ID
     {
         long viewId = -1;
 
-        SQLiteDatabase db = getInstance().getOpenDatabase();
-        Cursor cursor = db.query(PebbleDbHelper.VIEWS_TABLE,
+        Cursor cursor = getDatabase().query(PebbleDbHelper.VIEWS_TABLE,
                 null,
                 PebbleDbHelper.ACTIVITY_TYPE + "=? AND " + PebbleDbHelper.PREV_VIEW_ID + "<0",
                 new String[]{activityType.name()},
@@ -153,54 +151,45 @@ public class PebbleDatabaseManager {
             viewId = cursor.getInt(cursor.getColumnIndex(PebbleDbHelper.C_ID));
         }
         cursor.close();
-        getInstance().closeDatabase();
 
         return viewId;
     }
 
-    public static long getNextViewId(long viewId) {
+    public long getNextViewId(long viewId) {
         long nextViewId = -1;
 
-        SQLiteDatabase db = getInstance().getOpenDatabase();
-        Cursor cursor = getViewsCursor(db, viewId);
+        Cursor cursor = getViewsCursor(getDatabase(), viewId);
 
         if (cursor.moveToFirst()) {
             nextViewId = cursor.getInt(cursor.getColumnIndex(PebbleDbHelper.NEXT_VIEW_ID));
         }
-
         cursor.close();
-        getInstance().closeDatabase(); // db.close();
 
         return nextViewId;
     }
 
-    public static long getPrevViewId(long viewId) {
+    public long getPrevViewId(long viewId) {
         long nextViewId = -1;
 
-        SQLiteDatabase db = getInstance().getOpenDatabase();
-        Cursor cursor = getViewsCursor(db, viewId);
+        Cursor cursor = getViewsCursor(getDatabase(), viewId);
 
         if (cursor.moveToFirst()) {
             nextViewId = cursor.getInt(cursor.getColumnIndex(PebbleDbHelper.PREV_VIEW_ID));
         }
-
         cursor.close();
-        getInstance().closeDatabase(); // db.close();
 
         return nextViewId;
     }
 
-    public static void ensureEntryForActivityTypeExists(@NonNull Context context, @NonNull ActivityType activityType) {
+    public void ensureEntryForActivityTypeExists(@NonNull Context context, @NonNull ActivityType activityType) {
         if (getFirstViewId(activityType) == -1) {  // entry does not exist
-            PebbleDatabaseManager databaseManager = getInstance();
-            SQLiteDatabase db = databaseManager.getOpenDatabase();
+            SQLiteDatabase db = getDatabase();
             PebbleDbHelper.insertDefaultViewToDb(context, db, activityType, -1, -1);
-            databaseManager.closeDatabase();
         }
     }
 
     @NonNull
-    public static LinkedList<Long> getViewIdList(@NonNull ActivityType activityType) {
+    public LinkedList<Long> getViewIdList(@NonNull ActivityType activityType) {
         LinkedList<Long> result = new LinkedList<>();
 
         long viewId = getFirstViewId(activityType);
@@ -213,7 +202,7 @@ public class PebbleDatabaseManager {
     }
 
     @NonNull
-    public static LinkedList<String> getTitleList(@NonNull ActivityType activityType) {
+    public LinkedList<String> getTitleList(@NonNull ActivityType activityType) {
         LinkedList<String> result = new LinkedList<>();
 
         for (long viewId : getViewIdList(activityType)) {
@@ -224,11 +213,10 @@ public class PebbleDatabaseManager {
     }
 
     @NonNull
-    public static LinkedList<SensorType> getSensorTypeList(long viewId) {
+    public LinkedList<SensorType> getSensorTypeList(long viewId) {
         LinkedList<SensorType> result = new LinkedList<>();
 
-        SQLiteDatabase db = getInstance().getOpenDatabase();
-        Cursor cursor = db.query(PebbleDbHelper.ROWS_TABLE,
+        Cursor cursor = getDatabase().query(PebbleDbHelper.ROWS_TABLE,
                 null,
                 PebbleDbHelper.VIEW_ID + "=?",
                 new String[]{viewId + ""},
@@ -241,17 +229,16 @@ public class PebbleDatabaseManager {
         }
 
         cursor.close();
-        getInstance().closeDatabase();
 
         return result;
     }
 
-    public static void deleteView(long viewId) {
+    public void deleteView(long viewId) {
 
         long prevViewId = getPrevViewId(viewId);
         long nextViewId = getNextViewId(viewId);
 
-        SQLiteDatabase db = getInstance().getOpenDatabase();
+        SQLiteDatabase db = getDatabase();
         // delete from both tables
         db.delete(PebbleDbHelper.VIEWS_TABLE, PebbleDbHelper.C_ID + "=?", new String[]{viewId + ""});
         db.delete(PebbleDbHelper.ROWS_TABLE, PebbleDbHelper.VIEW_ID + "=?", new String[]{viewId + ""});
@@ -269,14 +256,12 @@ public class PebbleDatabaseManager {
             db.update(PebbleDbHelper.VIEWS_TABLE, values,
                     PebbleDbHelper.C_ID + "=?", new String[]{nextViewId + ""});
         }
-
-        getInstance().closeDatabase();
     }
 
-    public static long addDefaultView(@NonNull Context context, long viewId, boolean addAfterCurrentLayout) {
+    public long addDefaultView(@NonNull Context context, long viewId, boolean addAfterCurrentLayout) {
         long newViewId = -1;
 
-        SQLiteDatabase db = getInstance().getOpenDatabase();
+        SQLiteDatabase db = getDatabase();
 
         if (addAfterCurrentLayout) {
             long nextViewId = getNextViewId(viewId);
@@ -312,24 +297,19 @@ public class PebbleDatabaseManager {
 
         }
 
-        getInstance().closeDatabase();
-
         return newViewId;
     }
 
-    public static void deleteRow(long viewId, int rowNr) {
+    public void deleteRow(long viewId, int rowNr) {
         if (DEBUG) Log.i(TAG, "deleteRow viewId=" + viewId + ", rowNr=" + rowNr);
 
-        SQLiteDatabase db = getInstance().getOpenDatabase();
-
-        db.delete(PebbleDbHelper.ROWS_TABLE,
+        getDatabase().delete(PebbleDbHelper.ROWS_TABLE,
                 PebbleDbHelper.VIEW_ID + "=? AND " + PebbleDbHelper.ROW_NR + "=?",
                 new String[]{viewId + "", rowNr + ""});
 
-        getInstance().closeDatabase();
     }
 
-    public static void addRow(long viewId, int rowNr, @NonNull SensorType sensorType) {
+    public void addRow(long viewId, int rowNr, @NonNull SensorType sensorType) {
         if (DEBUG)
             Log.i(TAG, "addRow viewId=" + viewId + ", rowNr=" + rowNr + ", sensorType=" + sensorType.name());
         ContentValues values = new ContentValues();
@@ -337,7 +317,7 @@ public class PebbleDatabaseManager {
         values.put(PebbleDbHelper.VIEW_ID, viewId);
         values.put(PebbleDbHelper.SENSOR_TYPE, sensorType.name());
 
-        SQLiteDatabase db = getInstance().getOpenDatabase();
+        SQLiteDatabase db = getDatabase();
 
         // first delete the corresponding rowNr
         db.delete(PebbleDbHelper.ROWS_TABLE,
@@ -345,25 +325,6 @@ public class PebbleDatabaseManager {
                 new String[]{viewId + "", rowNr + ""});
         // then insert the new values
         db.insert(PebbleDbHelper.ROWS_TABLE, null, values);
-        getInstance().closeDatabase();
-    }
-
-    public synchronized SQLiteDatabase getOpenDatabase() {
-        mOpenCounter++;
-        if (mOpenCounter == 1) {
-            // Opening new database
-            mDatabase = cPebbleDbHelper.getWritableDatabase();
-        }
-        return mDatabase;
-    }
-
-    public synchronized void closeDatabase() {
-        mOpenCounter--;
-        if (mOpenCounter == 0) {
-            // Closing database
-            mDatabase.close();
-
-        }
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////

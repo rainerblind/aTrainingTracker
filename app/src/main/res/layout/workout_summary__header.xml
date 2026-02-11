@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:parentTag="androidx.constraintlayout.widget.ConstraintLayout">
+
+    <!-- Scrim is the header area for the workout details -->
+    <View
+        android:id="@+id/scrim"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="?attr/colorPrimary"
+        android:paddingBottom="16dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Workout Title -->
+    <TextView
+        android:id="@+id/tv_workout_summaries_name"
+        style="@style/TextAppearance.MaterialComponents.Headline6"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="16dp"
+        android:textColor="?attr/colorOnPrimary"
+        app:layout_constraintEnd_toStartOf="@id/ll_workout_summaries__sport_container"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="Schmellbachtal" />
+
+    <!-- Date/Time container -->
+    <LinearLayout
+        android:id="@+id/date_time_container"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp"
+        android:gravity="center_vertical"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/ll_workout_summaries__sport_container"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tv_workout_summaries_name">
+
+        <TextView
+            android:id="@+id/tv_workout_summaries__date"
+            style="@style/TextAppearance.MaterialComponents.Body2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:drawableStart="@drawable/ic_date_start_18dp"
+            android:drawablePadding="4dp"
+            android:gravity="center_vertical"
+            android:textColor="?attr/colorOnPrimary"
+            app:drawableTint="?attr/colorOnPrimary"
+            tools:text="Mon, 27. Nov 2023" />
+
+        <TextView
+            android:id="@+id/tv_workout_summaries__time"
+            style="@style/TextAppearance.MaterialComponents.Body2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:drawableStart="@drawable/ic_time_start_18dp"
+            android:drawablePadding="4dp"
+            android:gravity="center_vertical"
+            android:textColor="?attr/colorOnPrimary"
+            app:drawableTint="?attr/colorOnPrimary"
+            tools:text="10:30" />
+
+        <TextView
+            android:id="@+id/tv_workout_summaries__trainer_or_commute"
+            style="@style/TextAppearance.MaterialComponents.Body2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:drawablePadding="4dp"
+            android:gravity="center_vertical"
+            android:textColor="?attr/colorOnPrimary"
+            app:drawableTint="?attr/colorOnPrimary"
+            tools:text="indoor trainer" />
+
+
+    </LinearLayout>
+
+    <!-- Sport container -->
+    <LinearLayout
+        android:id="@+id/ll_workout_summaries__sport_container"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="4dp"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/workout_header_menu_button"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageView
+            android:id="@+id/iv_workout_summaries__sport_icon"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/bsport_run_gray"
+            app:tint="?attr/colorOnPrimary" />
+
+        <TextView
+            android:id="@+id/tv_workout_summaries__sport_name"
+            style="@style/TextAppearance.MaterialComponents.Body2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="?attr/colorOnPrimary"
+            tools:text="@string/sport_type_run" />
+
+        <TextView
+            android:id="@+id/tv_workout_summaries__equipment"
+            style="@style/TextAppearance.MaterialComponents.Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="?attr/colorOnPrimary"
+            android:visibility="gone"
+            tools:text="with Hoka Clifton 9"
+            tools:visibility="visible" />
+    </LinearLayout>
+
+    <ImageButton
+        android:id="@+id/workout_header_menu_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:layout_marginEnd="4dp"
+        android:src="@drawable/ic_baseline_more_vert_24"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        app:tint="?attr/colorOnPrimary"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+</merge>

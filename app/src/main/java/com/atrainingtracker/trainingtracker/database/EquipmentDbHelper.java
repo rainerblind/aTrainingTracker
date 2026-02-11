@@ -82,7 +82,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     }
 
     @NonNull
-    public List<String> getLinkedEquipment(int workoutId) {
+    public List<String> getLinkedEquipment(long workoutId) {
         if (DEBUG) Log.d(TAG, "getLinkedEquipment, workoutId=" + workoutId);
 
         return getLinkedEquipment(new ActiveDevicesDbHelper(mContext).getDatabaseIdsOfActiveDevices(workoutId));
@@ -169,7 +169,6 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         }
 
         cursor.close();
-        db.close();
 
         return equipmentList;
     }
@@ -225,7 +224,6 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         }
 
         linkCursor.close();
-        db.close();
 
         return equipmentList;
     }
@@ -251,14 +249,13 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
             db.insert(LINKS, null, values);
         }
 
-        db.close();
         if (DEBUG) Log.d(TAG, "inserted");
     }
 
-    private int getEquipmentId(@NonNull SQLiteDatabase db, @NonNull String equipmentName) {
+    private long getEquipmentId(@NonNull SQLiteDatabase db, @NonNull String equipmentName) {
         equipmentName.isEmpty();  // throw an exception when equipmentName is null
 
-        int equipmentId = -1;
+        long equipmentId = -1;
 
         Cursor cursor = db.query(EQUIPMENT, null, NAME + "=?", new String[]{equipmentName}, null, null, null);
         if (cursor.moveToFirst()) {
@@ -271,15 +268,13 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         return equipmentId;
     }
 
-    public int getEquipmentId(@NonNull String equipmentName) {
+    public long getEquipmentId(@NonNull String equipmentName) {
         SQLiteDatabase db = this.getReadableDatabase();
-        int equipmentId = getEquipmentId(db, equipmentName);
-        db.close();
-        return equipmentId;
+        return getEquipmentId(db, equipmentName);
     }
 
     @Nullable
-    public String getEquipmentFromId(int equipmentId) {
+    public String getEquipmentNameFromId(int equipmentId) {
         String equipmentName = null;
 
         SQLiteDatabase db = this.getReadableDatabase();
@@ -292,7 +287,6 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         }
 
         cursor.close();
-        db.close();
 
         return equipmentName;
     }
@@ -311,7 +305,6 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         }
 
         cursor.close();
-        db.close();
 
         return stravaId;
     }

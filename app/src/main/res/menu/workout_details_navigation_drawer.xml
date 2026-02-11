@@ -25,7 +25,7 @@
 
         <item
             android:id="@+id/edit_workout_details"
-            android:title="@string/edit_workout_details" />
+            android:title="@string/edit_workout" />
 
         <item
             android:id="@+id/drawer_export_status"

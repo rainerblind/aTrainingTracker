@@ -38,41 +38,45 @@ import java.util.List;
 
 public class WorkoutSamplesDatabaseManager {
     private static final String TAG = WorkoutSamplesDatabaseManager.class.getName();
-    private static final boolean DEBUG = TrainingApplication.getDebug(false);
-    private static WorkoutSamplesDatabaseManager cInstance;
-    private static WorkoutSamplesDbHelper cWorkoutSamplesDbHelper;
-    private int mOpenCounter;
-    private SQLiteDatabase mDatabase;
+    private static final boolean DEBUG = TrainingApplication.getDebug(true);
+    private static volatile WorkoutSamplesDatabaseManager cInstance;
+    private final WorkoutSamplesDbHelper cDbHelper;
 
-    public static synchronized void initializeInstance(WorkoutSamplesDbHelper workoutSamplesDbHelper) {
-        if (cInstance == null) {
-            cInstance = new WorkoutSamplesDatabaseManager();
-            cWorkoutSamplesDbHelper = workoutSamplesDbHelper;
-        }
+    private WorkoutSamplesDatabaseManager(@NonNull Context context) {
+        this.cDbHelper = new WorkoutSamplesDbHelper(context);
     }
 
     @NonNull
-    public static synchronized WorkoutSamplesDatabaseManager getInstance() {
+    public static WorkoutSamplesDatabaseManager getInstance(@NonNull Context context) {
         if (cInstance == null) {
-            throw new IllegalStateException(WorkoutSamplesDatabaseManager.class.getSimpleName() +
-                    " is not initialized, call initializeInstance(..) method first.");
+            synchronized (WorkoutSamplesDatabaseManager.class) {
+                if (cInstance == null) {
+                    cInstance = new WorkoutSamplesDatabaseManager(context);
+                }
+            }
         }
-
         return cInstance;
+    }
+
+    /**
+     * Returns a writable database instance for the MAIN samples.db, managed by the helper.
+     */
+    public SQLiteDatabase getDatabase() {
+        return cDbHelper.getWritableDatabase();
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // some high level helper methods
     ////////////////////////////////////////////////////////////////////////////////////////////////
     @Nullable
-    public static Double calcExtremaValue(String baseFileName, @NonNull ExtremaType extremaType, @NonNull SensorType sensorType) {
+    public Double calcExtremaValue(WorkoutSummariesDatabaseManager workoutSummariesDatabaseManager, String baseFileName, @NonNull ExtremaType extremaType, @NonNull SensorType sensorType) {
         if (DEBUG)
             Log.i(TAG, "calcExtremaValue(" + baseFileName + ", " + extremaType.name() + ", " + sensorType.name() + ")");
 
         // first, a special case: when asked to calc the values for the pace,
         // we return the inverse of the corresponding extrema value of the speed.
         if (sensorType == SensorType.PACE_spm) {
-            Double speed = calcExtremaValue(baseFileName, extremaType, SensorType.SPEED_mps);
+            Double speed = calcExtremaValue(workoutSummariesDatabaseManager, baseFileName, extremaType, SensorType.SPEED_mps);
             if (speed != null) {
                 return 1 / speed;
             } else {
@@ -85,10 +89,8 @@ public class WorkoutSamplesDatabaseManager {
         if ((extremaType == ExtremaType.AVG) & (sensorType == SensorType.SPEED_mps)) {
             if (DEBUG) Log.i(TAG, "calculating average speed based on distance and active time");
 
-            WorkoutSummariesDatabaseManager.getInstance();
-            Double distance = WorkoutSummariesDatabaseManager.getDouble(baseFileName, WorkoutSummaries.DISTANCE_TOTAL_m);
-            WorkoutSummariesDatabaseManager.getInstance();
-            Integer time = WorkoutSummariesDatabaseManager.getInt(baseFileName, WorkoutSummaries.TIME_ACTIVE_s);
+            Double distance = workoutSummariesDatabaseManager.getDouble(baseFileName, WorkoutSummaries.DISTANCE_TOTAL_m);
+            Integer time = workoutSummariesDatabaseManager.getInt(baseFileName, WorkoutSummaries.TIME_ACTIVE_s);
 
             if (distance != null & time != null) {
                 if (DEBUG)
@@ -104,7 +106,7 @@ public class WorkoutSamplesDatabaseManager {
         // in all other cases, we let sqlite do the job
         Double extremaValue = null;
         Cursor cursor = null;
-        SQLiteDatabase db = getInstance().getOpenDatabase();
+        SQLiteDatabase db = getDatabase();
 
         // it might be possible that the corresponding sensor is not a column of the database, so we first check this
         if (existsColumnInTable(db, getTableName(baseFileName), sensorType.name())) {
@@ -162,7 +164,6 @@ public class WorkoutSamplesDatabaseManager {
             }
         }
 
-        getInstance().closeDatabase(); // if (db.isOpen()) { db.close(); }
         if (cursor != null && !cursor.isClosed()) {
             cursor.close();
         }
@@ -172,7 +173,7 @@ public class WorkoutSamplesDatabaseManager {
     }
 
     // since this method goes through all? samples, this might take long.
-    public static double calcAverageAroundLocation(@NonNull LatLng center, double radius, @NonNull SensorType sensorType) {
+    public double calcAverageAroundLocation(WorkoutSummariesDatabaseManager workoutSummariesDatabaseManager, @NonNull LatLng center, double radius, @NonNull SensorType sensorType) {
         // based on http://stackoverflow.com/questions/3695224/sqlite-getting-nearest-locations-with-latitude-and-longitude
 
         Location centerLocation = new Location("center");
@@ -195,7 +196,7 @@ public class WorkoutSamplesDatabaseManager {
         int counter = 0;
         double average = 0.0;
 
-        SQLiteDatabase summariesDb = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
+        SQLiteDatabase summariesDb = workoutSummariesDatabaseManager.getDatabase();
         Cursor summariesCursor = summariesDb.query(WorkoutSummaries.TABLE,
                 new String[]{WorkoutSummaries.FILE_BASE_NAME},
                 null, null,
@@ -206,7 +207,7 @@ public class WorkoutSamplesDatabaseManager {
             String name = summariesCursor.getString(0);
             if (DEBUG) Log.i(TAG, "querying table: " + name);
 
-            SQLiteDatabase samplesDb = getInstance().getOpenDatabase();
+            SQLiteDatabase samplesDb = getDatabase();
             Cursor samplesCursor = samplesDb.query(getTableName(name), // Table
                     new String[]{SensorType.LATITUDE.name(), SensorType.LONGITUDE.name(), sensorType.name()}, // columns
                     SensorType.LATITUDE.name() + " > ? AND " +
@@ -240,9 +241,6 @@ public class WorkoutSamplesDatabaseManager {
             samplesCursor.close();
         }
         summariesCursor.close();
-
-        getInstance().closeDatabase();
-        WorkoutSummariesDatabaseManager.getInstance().closeDatabase();
 
         if (counter != 0) {
             average = valueSum / counter;
@@ -290,7 +288,7 @@ public class WorkoutSamplesDatabaseManager {
     }
 
     @Nullable
-    public static LatLngValue getExtremaPosition(long workoutId, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType) {
+    public LatLngValue getExtremaPosition(WorkoutSummariesDatabaseManager workoutSummariesDatabaseManager, long workoutId, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType) {
         if (DEBUG)
             Log.i(TAG, "getExtremaPosition for " + extremaType.name() + " " + sensorType.name());
 
@@ -299,17 +297,16 @@ public class WorkoutSamplesDatabaseManager {
         LatLngValue result = null;
 
         // WorkoutSummariesDbHelper summariesDbHelper = new WorkoutSummariesDbHelper(mContext);
-        String baseFileName = WorkoutSummariesDatabaseManager.getBaseFileName(workoutId);
+        String baseFileName = workoutSummariesDatabaseManager.getBaseFileName(workoutId);
 
         // first, get the extrema value
-        Double extremaValue = WorkoutSummariesDatabaseManager.getExtremaValue(workoutId, sensorType, extremaType);
+        Double extremaValue = workoutSummariesDatabaseManager.getExtremaValue(workoutId, sensorType, extremaType);
         if (DEBUG) Log.i(TAG, "got " + extremaValue);
 
         // if there is an extrema value, we look for its location
         if (extremaValue != null) {
 
-            WorkoutSamplesDatabaseManager databaseManager = WorkoutSamplesDatabaseManager.getInstance();
-            SQLiteDatabase samplesDb = databaseManager.getOpenDatabase();
+            SQLiteDatabase samplesDb = getDatabase();
             Cursor cursor = null;
 
             // depending on the extremaType, there are two alternative ways to find the corresponding row
@@ -361,7 +358,6 @@ public class WorkoutSamplesDatabaseManager {
 
             // clean up
             cursor.close();
-            databaseManager.closeDatabase(); // samplesDb.close();
 
         } else {
             if (DEBUG)
@@ -372,10 +368,10 @@ public class WorkoutSamplesDatabaseManager {
         return result;
     }
 
-    public static void createNewTable(String workoutName, @NonNull List<SensorType> sensorTypes) {
+    public void createNewTable(String workoutName, @NonNull List<SensorType> sensorTypes) {
         if (DEBUG) Log.d(TAG, "createNewTable: " + WorkoutSamplesDbHelper.DB_NAME);
 
-        SQLiteDatabase db = getInstance().getOpenDatabase();
+        SQLiteDatabase db = getDatabase();
         String table = getTableName(workoutName);
 
         // first of all, delete an existing db.
@@ -386,13 +382,10 @@ public class WorkoutSamplesDatabaseManager {
         if (DEBUG) Log.d(TAG, "execSQL: " + execSQL);
 
         db.execSQL(execSQL);
-        getInstance().closeDatabase(); // db.close();
     }
 
-    public static void deleteWorkout(String baseFileName) {
-        SQLiteDatabase db = getInstance().getOpenDatabase();// getWritableDatabase();
-        db.execSQL("drop table if exists " + getTableName(baseFileName));
-        getInstance().closeDatabase(); // db.close();
+    public void deleteWorkout(String baseFileName) {
+        getDatabase().execSQL("drop table if exists " + getTableName(baseFileName));
     }
 
     // stolen from http://stackoverflow.com/questions/4719594/checking-if-a-column-exists-in-an-application-database-in-android
@@ -457,28 +450,6 @@ public class WorkoutSamplesDatabaseManager {
         return result.toString();
     }
 
-
-    /**
-     * helper method to check whether there is some data
-     */
-
-    public synchronized SQLiteDatabase getOpenDatabase() {
-        mOpenCounter++;
-        if (mOpenCounter == 1) {
-            // Opening new database
-            mDatabase = cWorkoutSamplesDbHelper.getWritableDatabase();
-        }
-        return mDatabase;
-    }
-
-    public synchronized void closeDatabase() {
-        mOpenCounter--;
-        if (mOpenCounter == 0) {
-            // Closing database
-            mDatabase.close();
-
-        }
-    }
 
     public static class LatLngValue {
         public final LatLng latLng;

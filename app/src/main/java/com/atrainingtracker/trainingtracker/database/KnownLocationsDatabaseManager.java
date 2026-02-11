@@ -38,34 +38,41 @@ import java.util.LinkedList;
 import java.util.List;
 
 public class KnownLocationsDatabaseManager {
-    // private static final double maxDistanceDiff = 200;
     public static final int DEFAULT_RADIUS = 200;
     private static final String TAG = KnownLocationsDatabaseManager.class.getName();
     private static final boolean DEBUG = BANALService.getDebug(false);
-    private static KnownLocationsDatabaseManager cInstance;
-    private static KnownLocationsDbHelper cDbHelper;
-    private int mOpenCounter;
-    private SQLiteDatabase mDatabase;
 
-    public static synchronized void initializeInstance(KnownLocationsDbHelper dbHelper) {
-        if (cInstance == null) {
-            cInstance = new KnownLocationsDatabaseManager();
-            cDbHelper = dbHelper;
-        }
+    // --- Modern Singleton Pattern ---
+    private static volatile KnownLocationsDatabaseManager cInstance;
+    private final KnownLocationsDbHelper cDbHelper;
+
+    // Private constructor
+    private KnownLocationsDatabaseManager(@NonNull Context context) {
+        cDbHelper = new KnownLocationsDbHelper(context.getApplicationContext());
     }
 
     @NonNull
-    public static synchronized KnownLocationsDatabaseManager getInstance() {
+    public static KnownLocationsDatabaseManager getInstance(@NonNull Context context) {
         if (cInstance == null) {
-            throw new IllegalStateException(KnownLocationsDatabaseManager.class.getSimpleName() +
-                    " is not initialized, call initializeInstance(..) method first.");
+            synchronized (KnownLocationsDatabaseManager.class) {
+                if (cInstance == null) {
+                    cInstance = new KnownLocationsDatabaseManager(context);
+                }
+            }
         }
-
         return cInstance;
     }
 
+    /**
+     * Returns a writable database instance, managed safely by the helper.
+     */
+    public SQLiteDatabase getDatabase() {
+        return cDbHelper.getWritableDatabase();
+    }
+    // --- End of Singleton Pattern ---
+
     @Deprecated
-    public static void addStartAltitude(Context context, String name, int altitude, double latitude, double longitude) {
+    public void addStartAltitude(String name, int altitude, double latitude, double longitude) {
         if (DEBUG) Log.d(TAG, "addStartAltitude: " + name + " " + altitude + "m");
 
         ContentValues values = new ContentValues();
@@ -75,19 +82,16 @@ public class KnownLocationsDatabaseManager {
         values.put(KnownLocationsDbHelper.LONGITUDE, longitude);
         values.put(KnownLocationsDbHelper.LATITUDE, latitude);
 
-        // StartLocation2AltitudeDbHelper dbHelper = new StartLocation2AltitudeDbHelper(context);
-        // SQLiteDatabase db = dbHelper.getWritableDatabase();
-        SQLiteDatabase db = getInstance().getOpenDatabase();
+        SQLiteDatabase db = getDatabase();
         try {
             db.insert(KnownLocationsDbHelper.TABLE, null, values);
         } catch (SQLException e) {
             Log.e(TAG, "Error while writing" + e);
         }
-        getInstance().closeDatabase();
     }
 
     @Nullable
-    public static MyLocation addNewLocation(String name, int altitude, int radius, double latitude, double longitude) {
+    public MyLocation addNewLocation(String name, int altitude, int radius, double latitude, double longitude) {
         if (DEBUG)
             Log.d(TAG, "addNewLocation: " + name + " " + altitude + " m" + ", radius=" + radius);
 
@@ -101,29 +105,26 @@ public class KnownLocationsDatabaseManager {
         values.put(KnownLocationsDbHelper.LONGITUDE, longitude);
         values.put(KnownLocationsDbHelper.LATITUDE, latitude);
 
-        SQLiteDatabase db = getInstance().getOpenDatabase();
         try {
-            long id = db.insert(KnownLocationsDbHelper.TABLE, null, values);
+            long id = getDatabase().insert(KnownLocationsDbHelper.TABLE, null, values);
             myLocation = new MyLocation(id, latitude, longitude, name, altitude, radius);
         } catch (SQLException e) {
             Log.e(TAG, "Error while writing" + e);
         }
-        getInstance().closeDatabase();
 
         return myLocation;
     }
 
     // public static Integer getStartAltitude(Context context, double latitude, double longitude)
     @Nullable
-    public static MyLocation getMyLocation(@NonNull LatLng latLng) {
+    public MyLocation getMyLocation(@NonNull LatLng latLng) {
         MyLocation myLocation = null;
 
         Location currentLocation = new Location("");
         currentLocation.setLatitude(latLng.latitude);
         currentLocation.setLongitude(latLng.longitude);
 
-        SQLiteDatabase db = getInstance().getOpenDatabase();
-        Cursor cursor = db.query(KnownLocationsDbHelper.TABLE,
+        Cursor cursor = getDatabase().query(KnownLocationsDbHelper.TABLE,
                 null,
                 null,
                 null,
@@ -156,22 +157,17 @@ public class KnownLocationsDatabaseManager {
         }
 
         cursor.close();
-        getInstance().closeDatabase();
 
         return myLocation;
     }
 
-    public static void deleteId(long id) {
-        SQLiteDatabase db = getInstance().getOpenDatabase();
-
-        db.delete(KnownLocationsDbHelper.TABLE,
+    public void deleteId(long id) {
+        getDatabase().delete(KnownLocationsDbHelper.TABLE,
                 KnownLocationsDbHelper.C_ID + "=?",
                 new String[]{id + ""});
-
-        getInstance().closeDatabase();
     }
 
-    public static void updateLocation(long id, @NonNull LatLng latLng) {
+    public void updateLocation(long id, @NonNull LatLng latLng) {
         ContentValues contentValues = new ContentValues();
         contentValues.put(KnownLocationsDbHelper.LATITUDE, latLng.latitude);
         contentValues.put(KnownLocationsDbHelper.LONGITUDE, latLng.longitude);
@@ -179,7 +175,7 @@ public class KnownLocationsDatabaseManager {
         updateId(id, contentValues);
     }
 
-    public static void updateMyLocation(long id, @NonNull MyLocation myLocation) {
+    public void updateMyLocation(long id, @NonNull MyLocation myLocation) {
         ContentValues contentValues = new ContentValues();
         contentValues.put(KnownLocationsDbHelper.NAME, myLocation.name);
         contentValues.put(KnownLocationsDbHelper.ALTITUDE, myLocation.altitude);
@@ -190,24 +186,18 @@ public class KnownLocationsDatabaseManager {
         updateId(id, contentValues);
     }
 
-    // TODO: make this method private!
-    public static void updateId(long id, ContentValues contentValues) {
-        SQLiteDatabase db = getInstance().getOpenDatabase();
-
-        db.update(KnownLocationsDbHelper.TABLE,
+    private void updateId(long id, ContentValues contentValues) {
+        getDatabase().update(KnownLocationsDbHelper.TABLE,
                 contentValues,
                 KnownLocationsDbHelper.C_ID + "=?",
                 new String[]{id + ""});
-
-        getInstance().closeDatabase();
     }
 
     @Nullable
-    public static MyLocation getMyLocation(long myLocationId) {
+    public MyLocation getMyLocation(long myLocationId) {
         MyLocation myLocation = null;
 
-        SQLiteDatabase db = getInstance().getOpenDatabase();
-        Cursor cursor = db.query(KnownLocationsDbHelper.TABLE,
+        Cursor cursor = getDatabase().query(KnownLocationsDbHelper.TABLE,
                 null,
                 KnownLocationsDbHelper.C_ID + "=?",
                 new String[]{Long.toString(myLocationId)},
@@ -227,17 +217,15 @@ public class KnownLocationsDatabaseManager {
         }
 
         cursor.close();
-        getInstance().closeDatabase();
 
         return myLocation;
     }
 
     @NonNull
-    public static List<String> getMyLocationNameList() {
+    public List<String> getMyLocationNameList() {
         List<String> result = new LinkedList<>();
 
-        SQLiteDatabase db = getInstance().getOpenDatabase();
-        Cursor cursor = db.query(KnownLocationsDbHelper.TABLE,
+        Cursor cursor = getDatabase().query(KnownLocationsDbHelper.TABLE,
                 null,
                 null,
                 null,
@@ -251,17 +239,15 @@ public class KnownLocationsDatabaseManager {
         }
 
         cursor.close();
-        getInstance().closeDatabase();
 
         return result;
     }
 
     @NonNull
-    public static List<NamedLatLng> getLocationsList(@NonNull ExtremaType extremaType) {
+    public List<NamedLatLng> getLocationsList(@NonNull ExtremaType extremaType) {
         List<NamedLatLng> startLocations = new LinkedList<>();
 
-        SQLiteDatabase db = getInstance().getOpenDatabase();
-        Cursor cursor = db.query(KnownLocationsDbHelper.TABLE,
+        Cursor cursor = getDatabase().query(KnownLocationsDbHelper.TABLE,
                 null,
                 KnownLocationsDbHelper.EXTREMA_TYPE + "=?",
                 new String[]{extremaType.name()},
@@ -279,27 +265,8 @@ public class KnownLocationsDatabaseManager {
         }
 
         cursor.close();
-        getInstance().closeDatabase();
 
         return startLocations;
-    }
-
-    public synchronized SQLiteDatabase getOpenDatabase() {
-        mOpenCounter++;
-        if (mOpenCounter == 1) {
-            // Opening new database
-            mDatabase = cDbHelper.getWritableDatabase();
-        }
-        return mDatabase;
-    }
-
-    public synchronized void closeDatabase() {
-        mOpenCounter--;
-        if (mOpenCounter == 0) {
-            // Closing database
-            mDatabase.close();
-
-        }
     }
 
     public static class MyLocation {

@@ -55,30 +55,30 @@ public class ConfigPebbleViewsFragment extends ConfigViewsFragment {
 
     @Override
     protected void ensureEntryForActivityTypeExists() {
-        PebbleDatabaseManager.ensureEntryForActivityTypeExists(getContext(), mActivityType);
+        PebbleDatabaseManager.getInstance(requireContext()).ensureEntryForActivityTypeExists(getContext(), mActivityType);
     }
 
     @NonNull
     @Override
     protected LinkedList<Long> getViewIdList() {
-        return PebbleDatabaseManager.getViewIdList(mActivityType);
+        return PebbleDatabaseManager.getInstance(requireContext()).getViewIdList(mActivityType);
     }
 
     @NonNull
     @Override
     protected LinkedList<String> getTitleList() {
-        return PebbleDatabaseManager.getTitleList(mActivityType);
+        return PebbleDatabaseManager.getInstance(requireContext()).getTitleList(mActivityType);
     }
 
     @Override
     protected void deleteView(long viewId) {
-        PebbleDatabaseManager.deleteView(viewId);
+        PebbleDatabaseManager.getInstance(requireContext()).deleteView(viewId);
     }
 
     @Override
     protected long addView(long viewId, boolean addAfterCurrentLayout) {
         // TODO: show dialog with several options
-        return PebbleDatabaseManager.addDefaultView(getContext(), viewId, addAfterCurrentLayout);
+        return PebbleDatabaseManager.getInstance(requireContext()).addDefaultView(getContext(), viewId, addAfterCurrentLayout);
     }
 
     @NonNull

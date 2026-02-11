@@ -31,6 +31,7 @@ public enum ExportType {
     private final int uiId;
     private final FileFormat[] exportToFileFormats;
 
+
     ExportType(int uiId, FileFormat[] exportToFileFormats) {
         this.uiId = uiId;
         this.exportToFileFormats = exportToFileFormats;
@@ -49,4 +50,5 @@ public enum ExportType {
     public FileFormat[] getExportToFileFormats() {
         return exportToFileFormats;
     }
+
 }

@@ -43,8 +43,10 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 
-import com.atrainingtracker.trainingtracker.exporter.ExportWorkoutWorker;
+import com.atrainingtracker.banalservice.ui.SportTypeListFragment;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
+import com.atrainingtracker.trainingtracker.segments.StarredSegmentsTabbedContainer;
+import com.atrainingtracker.trainingtracker.tracker.TrackerService;
 import com.google.android.material.navigation.NavigationView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -62,8 +64,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceScreen;
 import androidx.appcompat.widget.Toolbar;
-import androidx.work.OneTimeWorkRequest;
-import androidx.work.WorkManager;
 
 import android.provider.Settings;
 import android.util.Log;
@@ -86,20 +86,14 @@ import com.atrainingtracker.banalservice.fragments.DeviceTypeChoiceFragment;
 import com.atrainingtracker.banalservice.fragments.EditDeviceDialogFragment;
 import com.atrainingtracker.banalservice.fragments.RemoteDevicesFragment;
 import com.atrainingtracker.banalservice.fragments.RemoteDevicesFragmentTabbedContainer;
-import com.atrainingtracker.banalservice.fragments.SportTypeListFragment;
 import com.atrainingtracker.banalservice.helpers.BatteryStatusHelper;
-import com.atrainingtracker.trainingtracker.exporter.ExportManager;
-import com.atrainingtracker.trainingtracker.exporter.FileFormat;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
-import com.atrainingtracker.trainingtracker.dialogs.DeleteOldWorkoutsDialog;
 import com.atrainingtracker.trainingtracker.dialogs.EnableBluetoothDialog;
 import com.atrainingtracker.trainingtracker.dialogs.GPSDisabledDialog;
-import com.atrainingtracker.trainingtracker.dialogs.ReallyDeleteWorkoutDialog;
 import com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialog;
-import com.atrainingtracker.trainingtracker.fragments.ExportStatusDialogFragment;
 import com.atrainingtracker.trainingtracker.fragments.StartAndTrackingFragmentTabbedContainer;
-import com.atrainingtracker.trainingtracker.fragments.WorkoutSummariesWithMapListFragment;
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesListFragment;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.MyLocationsFragment;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapTrackingFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.AltitudeCorrectionFragment;
@@ -116,14 +110,10 @@ import com.atrainingtracker.trainingtracker.fragments.preferences.SearchFragment
 import com.atrainingtracker.trainingtracker.fragments.preferences.StartSearchFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.StravaUploadFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.TrainingpeaksUploadFragment;
-import com.atrainingtracker.trainingtracker.helpers.DeleteWorkoutThread;
-import com.atrainingtracker.trainingtracker.interfaces.ReallyDeleteDialogInterface;
 import com.atrainingtracker.trainingtracker.interfaces.RemoteDevicesSettingsInterface;
-import com.atrainingtracker.trainingtracker.interfaces.ShowWorkoutDetailsInterface;
 import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface;
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager;
 import com.atrainingtracker.trainingtracker.segments.StarredSegmentsListFragment;
-import com.dropbox.core.android.Auth;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 
@@ -144,9 +134,7 @@ public class MainActivityWithNavigation
         DeviceTypeChoiceFragment.OnDeviceTypeSelectedListener,
         RemoteDevicesFragment.OnRemoteDeviceSelectedListener,
         RemoteDevicesSettingsInterface,
-        ShowWorkoutDetailsInterface,
         BANALService.GetBanalServiceInterface,
-        ReallyDeleteDialogInterface,
         PreferenceFragmentCompat.OnPreferenceStartScreenCallback,
         StartAndTrackingFragmentTabbedContainer.UpdateActivityTypeInterface,
         StarredSegmentsListFragment.StartSegmentDetailsActivityInterface,
@@ -203,6 +191,15 @@ public class MainActivityWithNavigation
             checkBatteryStatus();
         }
     };
+    protected final BroadcastReceiver mTrackingStoppedReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            // show the workout list
+            mSelectedFragmentId = R.id.drawer_workouts;
+            onNavigationItemSelected(mNavigationView.getMenu().findItem(mSelectedFragmentId));
+        }
+    };
+
     private IntentFilter mStartTrackingFilter;
     private boolean mAlreadyTriedToRequestDropboxToken = false;
     // class BANALConnection implements ServiceConnection
@@ -213,7 +210,8 @@ public class MainActivityWithNavigation
             mBanalServiceComm = (BANALService.BANALServiceComm) service; // IBANALService.Stub.asInterface(service);
 
             // create all the filters
-            for (FilterData filterData : TrackingViewsDatabaseManager.getAllFilterData()) {
+            DevicesDatabaseManager devicesDatabaseManager = DevicesDatabaseManager.getInstance(getApplicationContext());
+            for (FilterData filterData : TrackingViewsDatabaseManager.getInstance(getApplicationContext()).getAllFilterData(devicesDatabaseManager)) {
                 mBanalServiceComm.createFilter(filterData);
             }
 
@@ -474,6 +472,7 @@ public class MainActivityWithNavigation
         ContextCompat.registerReceiver(this, mStartTrackingReceiver, mStartTrackingFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mPauseTrackingReceiver, new IntentFilter(TrainingApplication.REQUEST_PAUSE_TRACKING), ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mStopTrackingReceiver, new IntentFilter(TrainingApplication.REQUEST_STOP_TRACKING), ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mTrackingStoppedReceiver, new IntentFilter(TrackerService.TRACKING_FINISHED_INTENT), ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     // method to verify the preferences
@@ -574,6 +573,9 @@ public class MainActivityWithNavigation
             unregisterReceiver(mStopTrackingReceiver);
         } catch (IllegalArgumentException e) {
         }
+        try {
+            unregisterReceiver(mTrackingStoppedReceiver);
+        } catch (IllegalArgumentException ignored) {}
 
 
         mHandler.postDelayed(mDisconnectFromBANALServiceRunnable, WAITING_TIME_BEFORE_DISCONNECTING);
@@ -625,18 +627,16 @@ public class MainActivityWithNavigation
                 tag = TrackOnMapTrackingFragment.TAG;
                 break;
 
-                /* Segments no longer supported for 3rd parties
             case R.id.drawer_segments:
                 titleId = R.string.segments;
                 mFragment = new StarredSegmentsTabbedContainer();
                 tag = StarredSegmentsTabbedContainer.TAG;
                 break;
-                */
 
             case R.id.drawer_workouts:
                 titleId = R.string.tab_workouts;
-                mFragment = new WorkoutSummariesWithMapListFragment();
-                tag = WorkoutSummariesWithMapListFragment.TAG;
+                mFragment = new WorkoutSummariesListFragment();
+                tag = WorkoutSummariesListFragment.TAG;
                 break;
 
             case R.id.drawer_pairing_ant:
@@ -674,7 +674,7 @@ public class MainActivityWithNavigation
                 break;
 
             case R.id.drawer_settings:
-                titleId = R.string.settings;
+                titleId = R.string.drawer__settings;
                 mFragment = new RootPrefsFragment();
                 tag = RootPrefsFragment.TAG;
                 break;
@@ -709,11 +709,6 @@ public class MainActivityWithNavigation
         switch (item.getItemId()) {
             case android.R.id.home:
                 mDrawerLayout.openDrawer(GravityCompat.START);
-                return true;
-
-            case R.id.itemDeleteOldWorkouts:  // TODO: move to somewhere else?  automatically??
-                if (DEBUG) Log.i(TAG, "option itemDeleteOldWorkouts pressed");
-                deleteOldWorkouts();
                 return true;
 
             default:
@@ -783,7 +778,7 @@ public class MainActivityWithNavigation
     // }
 
     protected void checkBatteryStatus() {
-        final List<DevicesDatabaseManager.NameAndBatteryPercentage> criticalBatteryDevices = DevicesDatabaseManager.getCriticalBatteryDevices(CRITICAL_BATTERY_LEVEL);
+        final List<DevicesDatabaseManager.NameAndBatteryPercentage> criticalBatteryDevices = DevicesDatabaseManager.getInstance(getApplicationContext()).getCriticalBatteryDevices(CRITICAL_BATTERY_LEVEL);
         if (!criticalBatteryDevices.isEmpty()) {
 
             final List<String> stringList = new LinkedList<>();
@@ -806,54 +801,14 @@ public class MainActivityWithNavigation
     }
 
     @Override
-    public void startSegmentDetailsActivity(int segmentId, @NonNull SegmentDetailsActivity.SelectedFragment selectedFragment) {
+    public void startSegmentDetailsActivity(int segmentId) {
         if (DEBUG) Log.i(TAG, "startSegmentDetailsActivity: segmentId=" + segmentId);
 
         Bundle bundle = new Bundle();
         bundle.putLong(SegmentsDatabaseManager.Segments.SEGMENT_ID, segmentId);
-        bundle.putString(WorkoutDetailsActivity.SELECTED_FRAGMENT, selectedFragment.name());
         Intent segmentDetailsIntent = new Intent(this, SegmentDetailsActivity.class);
         segmentDetailsIntent.putExtras(bundle);
         startActivity(segmentDetailsIntent);
-    }
-
-    @Override
-    public void exportWorkout(long id, @NonNull FileFormat fileFormat) {
-        if (DEBUG) Log.i(TAG, "exportWorkout");
-
-        ExportManager exportManager = new ExportManager(this, TAG);
-        exportManager.exportWorkoutTo(id, fileFormat);
-        exportManager.onFinished(TAG);
-
-        OneTimeWorkRequest workRequest = new OneTimeWorkRequest.Builder(ExportWorkoutWorker.class)
-                .build();
-        WorkManager.getInstance(this).enqueue(workRequest);
-    }
-
-    @Override
-    public void showExportStatusDialog(long workoutId) {
-        if (DEBUG) Log.i(TAG, "startExportDetailsActivity");
-
-        ExportStatusDialogFragment exportStatusFragment = ExportStatusDialogFragment.newInstance(workoutId);
-        exportStatusFragment.show(getSupportFragmentManager(), ExportStatusDialogFragment.TAG);
-    }
-
-    @Override
-    public void confirmDeleteWorkout(long workoutId) {
-        ReallyDeleteWorkoutDialog newFragment = ReallyDeleteWorkoutDialog.newInstance(workoutId);
-        newFragment.show(getSupportFragmentManager(), ReallyDeleteWorkoutDialog.TAG);
-    }
-
-    @Override
-    public void reallyDeleteWorkout(long workoutId) {
-        (new DeleteWorkoutThread(this, new Long[]{workoutId})).start();
-    }
-
-    public void deleteOldWorkouts() {
-        if (DEBUG) Log.i(TAG, "deleteOldWorkouts");
-
-        DeleteOldWorkoutsDialog deleteOldWorkoutsDialog = new DeleteOldWorkoutsDialog();
-        deleteOldWorkoutsDialog.show(getSupportFragmentManager(), DeleteOldWorkoutsDialog.TAG);
     }
 
     @Override

@@ -25,9 +25,7 @@ import android.util.Log;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 
 import static com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaSegmentsIntentService.REQUEST_TYPE;
-import static com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaSegmentsIntentService.REQUEST_UPDATE_LEADERBOARD;
 import static com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaSegmentsIntentService.REQUEST_UPDATE_STARRED_SEGMENTS;
-import static com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaSegmentsIntentService.SEGMENT_ID;
 import static com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaSegmentsIntentService.SPORT_TYPE_ID;
 
 
@@ -47,11 +45,6 @@ public class StravaSegmentsHelper {
         return ((TrainingApplication) mContext.getApplicationContext()).isSegmentListUpdating(sportTypeId);
     }
 
-    public boolean isLeaderboardUpdating(long segmentId) {
-        return ((TrainingApplication) mContext.getApplicationContext()).isLeaderboardUpdating(segmentId);
-    }
-
-
     public void getStarredStravaSegments(long sportTypeId) {
         if (DEBUG) Log.i(TAG, "getStarredStravaSegments");
 
@@ -65,19 +58,4 @@ public class StravaSegmentsHelper {
             mContext.startService(intent);
         }
     }
-
-    public void getSegmentLeaderboard(long segmentId) {
-        if (DEBUG) Log.i(TAG, "getSegmentLeaderboard");
-
-        if (((TrainingApplication) mContext.getApplicationContext()).isLeaderboardUpdating(segmentId)) {
-
-        } else {
-            Intent intent = new Intent(mContext, StravaSegmentsIntentService.class);
-            intent.putExtra(REQUEST_TYPE, REQUEST_UPDATE_LEADERBOARD);
-            intent.putExtra(SEGMENT_ID, segmentId);
-
-            mContext.startService(intent);
-        }
-    }
-
 }

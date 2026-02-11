@@ -55,31 +55,31 @@ public class ConfigTrackingViewsFragment extends ConfigViewsFragment {
 
     @Override
     protected void ensureEntryForActivityTypeExists() {
-        TrackingViewsDatabaseManager.ensureEntryForActivityTypeExists(getContext(), mActivityType);
+        TrackingViewsDatabaseManager.getInstance(getContext()).ensureEntryForActivityTypeExists(getContext(), mActivityType);
     }
 
     @NonNull
     @Override
     protected LinkedList<Long> getViewIdList() {
-        return TrackingViewsDatabaseManager.getViewIdList(mActivityType);
+        return TrackingViewsDatabaseManager.getInstance(getContext()).getViewIdList(mActivityType);
     }
 
     @NonNull
     @Override
     protected LinkedList<String> getTitleList() {
-        return TrackingViewsDatabaseManager.getTitleList(mActivityType);
+        return TrackingViewsDatabaseManager.getInstance(getContext()).getTitleList(mActivityType);
     }
 
     @Override
     protected void deleteView(long viewId) {
-        TrackingViewsDatabaseManager.deleteView(viewId);
+        TrackingViewsDatabaseManager.getInstance(getContext()).deleteView(viewId);
     }
 
     @Override
     protected long addView(long viewId, boolean addAfterCurrentLayout) {
         // TODO: show dialog with several options
         // TrackingViewsDatabaseManager.addEmptyView(viewId, addAfterCurrentLayout);
-        return TrackingViewsDatabaseManager.addDefaultView(getContext(), viewId, mActivityType, addAfterCurrentLayout);
+        return TrackingViewsDatabaseManager.getInstance(getContext()).addDefaultView(viewId, mActivityType, addAfterCurrentLayout);
     }
 
     @NonNull

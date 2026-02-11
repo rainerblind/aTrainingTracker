@@ -39,10 +39,14 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
+import androidx.work.Data;
+import androidx.work.ExistingWorkPolicy;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkManager;
+
 import android.util.Log;
 import android.widget.Toast;
 
-import com.atrainingtracker.BuildConfig;
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.BSportType;
@@ -52,8 +56,8 @@ import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation;
-import com.atrainingtracker.trainingtracker.activities.WorkoutDetailsActivity;
 import com.atrainingtracker.trainingtracker.exporter.FileFormat;
+import com.atrainingtracker.trainingtracker.helpers.CalcExtremaWorker;
 import com.atrainingtracker.trainingtracker.tracker.TrackerService;
 import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager;
@@ -69,6 +73,8 @@ import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleDatabaseMana
 import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleService;
 import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleServiceBuildIn;
 import com.atrainingtracker.trainingtracker.smartwatch.pebble.Watchapp;
+import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutActivity;
+import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapAftermathActivity;
 import com.dropbox.core.json.JsonReadException;
 import com.dropbox.core.oauth.DbxCredential;
 
@@ -76,7 +82,7 @@ import java.util.HashMap;
 import java.util.Locale;
 
 public class TrainingApplication extends Application {
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = true;
     // some Strings to handle tracking globally
     public static final String REQUEST_START_TRACKING = "com.atrainingtracker.trainingapplication.REQUEST_START_TRACKING";
     public static final String REQUEST_PAUSE_TRACKING = "com.atrainingtracker.trainingapplication.REQUEST_PAUSE_TRACKING";
@@ -133,8 +139,6 @@ public class TrainingApplication extends Application {
     public static final String SP_UPLOAD_TO_TRAINING_PEAKS = "uploadToTrainingPeaks";
     public static final String SP_TRAINING_PEAKS_ACCESS_TOKEN = "trainingPeaksAccessToken";
     public static final String SP_TRAINING_PEAKS_REFRESH_TOKEN = "trainingPeaksRefreshToken";
-    public static final String SP_SAMPLING_TIME = "samplingTime";
-    public static final String SP_ATHLETE_NAME = "athleteName";
     // public static final String SP_DISPLAY_UPDATE_TIME     = "displayUpdateTime";
     public static final String SP_LACTATE_THRESHOLD_POWER = "lactateThresholdPower";
     public static final String SP_LOCATION_SOURCE_GPS = "locationSourceGPS";
@@ -161,7 +165,6 @@ public class TrainingApplication extends Application {
     public static final int EXPORT_RESULT_NOTIFICATION_ID = 3;
     public static final int SEND_EMAIL_NOTIFICATION_ID = 4;
 
-    public static final int DEFAULT_SAMPLING_TIME = 1;
     public static final float MIN_DISTANCE_BETWEEN_START_AND_STOP = 100;
     public static final double DISTANCE_TO_MAX_THRESHOLD_FOR_TRAINER = 200;
     public static final double DISTANCE_TO_MAX_RATIO_FOR_COMMUTE = Math.PI / 2; // probably the best value ;-)
@@ -206,7 +209,6 @@ public class TrainingApplication extends Application {
     private static final double DEFAULT_MAX_WALK_SPEED_mps = 2;
     private static final double DEFAULT_MAX_RUN_SPEED_mps = 4;
     private static final double DEFAULT_MAX_MTB_SPEED_mps = 5.5;
-    private static final String DEFAULT_ATHLETE_NAME = "Athlete";
     private static final String APPLICATION_NAME = TAG;
     protected static Context cAppContext;
     @NonNull
@@ -218,7 +220,6 @@ public class TrainingApplication extends Application {
     public TrackOnMapHelper trackOnMapHelper;
     public SegmentOnMapHelper segmentOnMapHelper;
     private final HashMap<Long, Boolean> mSegmentListUpdating = new HashMap<>();
-    private final HashMap<Long, Boolean> mLeaderboardUpdating = new HashMap<>();
     private long mWorkoutID = -1;
     protected final BroadcastReceiver mTrackingStartedReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, @NonNull Intent intent) {
@@ -463,27 +464,9 @@ public class TrainingApplication extends Application {
         return cSharedPreferences.getBoolean(SP_SHOW_UNITS, true);
     }
 
-    public static int getSamplingTime() {
-        String samplingTimePref = cSharedPreferences.getString(SP_SAMPLING_TIME, null);
-        if (samplingTimePref == null || samplingTimePref.isEmpty()) {
-            return DEFAULT_SAMPLING_TIME;
-        } else {
-            try {
-                return Integer.parseInt(samplingTimePref);
-            } catch (Exception e) {
-                return DEFAULT_SAMPLING_TIME;
-            }
-        }
-    }
-
     @NonNull
     public static String getAppName() {
         return cAppContext.getString(R.string.application_name);
-    }
-
-    @NonNull
-    public static String getAthleteName() {
-        return cSharedPreferences.getString(SP_ATHLETE_NAME, DEFAULT_ATHLETE_NAME);
     }
 
     public static double getMinWalkSpeed_UserUnits() {
@@ -834,17 +817,29 @@ public class TrainingApplication extends Application {
         cResumeFromCrash = resumeFromCrash;
     }
 
-    public static void startWorkoutDetailsActivity(long workoutId, @NonNull WorkoutDetailsActivity.SelectedFragment selectedFragment) {
-        if (DEBUG) Log.i(TAG, "startWorkoutDetailsActivity(" + workoutId + ")");
+    public static void startTrackOnMapAftermathActivity(Context context, long workoutId) {
+        if (DEBUG) Log.i(TAG, "startTrackOnMapAftermathActivity(" + workoutId + ")");
+
+        TrackOnMapAftermathActivity.start(context, workoutId);
+    }
+
+    // TODO: remove cAppContext and FLAG_ACTIVITY_NEW_TASK from here
+    public static void startEditWorkoutActivity(long workoutId, boolean showAllDetails) {
+        if (DEBUG) Log.i(TAG, "startEditWorkoutActivity(" + workoutId + ")");
 
         Bundle bundle = new Bundle();
         bundle.putLong(WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_ID, workoutId);
-        bundle.putString(WorkoutDetailsActivity.SELECTED_FRAGMENT, selectedFragment.name());
-        Intent intent = new Intent(cAppContext, WorkoutDetailsActivity.class);
+
+        bundle.putBoolean(EditWorkoutActivity.EXTRA_SHOW_DETAILS, showAllDetails);
+        bundle.putBoolean(EditWorkoutActivity.EXTRA_SHOW_EXTREMA, showAllDetails);
+        // bundle.putBoolean(EditWorkoutActivity.EXTRA_SHOW_MAP, showAllDetails);
+
+        Intent intent = new Intent(cAppContext, EditWorkoutActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.putExtras(bundle);
         cAppContext.startActivity(intent);
     }
+
 
     @Override
     public void onCreate() {
@@ -858,16 +853,6 @@ public class TrainingApplication extends Application {
 
         mNotificationSummary = getString(R.string.searching);
 
-        // initialize DatabaseManagers
-        LapsDatabaseManager.initializeInstance(new LapsDatabaseManager.LapsDbHelper(this));
-        WorkoutSummariesDatabaseManager.initializeInstance(new WorkoutSummariesDatabaseManager.WorkoutSummariesDbHelper(this));
-        WorkoutSamplesDatabaseManager.initializeInstance(new WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper(this));
-        DevicesDatabaseManager.initializeInstance(new DevicesDatabaseManager.DevicesDbHelper(this));
-        TrackingViewsDatabaseManager.initializeInstance(new TrackingViewsDatabaseManager.TrackingViewsDbHelper(this));
-        PebbleDatabaseManager.initializeInstance(new PebbleDatabaseManager.PebbleDbHelper(this));
-        KnownLocationsDatabaseManager.initializeInstance(new KnownLocationsDatabaseManager.KnownLocationsDbHelper(this));
-        SegmentsDatabaseManager.initializeInstance(new SegmentsDatabaseManager.SegmentsDbHelper(this));
-        SportTypeDatabaseManager.initializeInstance(new SportTypeDatabaseManager.SportTypeDbHelper(this));
 
         PreferenceManager.setDefaultValues(this, R.xml.prefs, false);
         cSharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
@@ -1090,14 +1075,6 @@ public class TrainingApplication extends Application {
         }
     }
 
-    public void setIsLeaderboardUpdating(Long segmentId, boolean isUpdating) {
-        mLeaderboardUpdating.put(segmentId, isUpdating);
-    }
-
-    public boolean isLeaderboardUpdating(Long segmentId) {
-        return mLeaderboardUpdating.getOrDefault(segmentId, false);
-    }
-
     public long getWorkoutID() {
         return mWorkoutID;
     }
@@ -1177,9 +1154,34 @@ public class TrainingApplication extends Application {
     }
 
     protected void trackingStopped() {
-        sendBroadcast(new Intent(BANALService.RESET_ACCUMULATORS_INTENT)
-                .setPackage(getPackageName()));
-        startWorkoutDetailsActivity(mWorkoutID, WorkoutDetailsActivity.SelectedFragment.EDIT_DETAILS);
+        // send boadcast to reset the accumulators
+        sendBroadcast(new Intent(BANALService.RESET_ACCUMULATORS_INTENT).setPackage(getPackageName()));
+
+        // -- trigger the calculation of the extrema values here.
+        // Define a unique name for this work
+        final String uniqueWorkName = "extrema_calc_" + mWorkoutID;
+
+        // Create input data for the worker
+        Data inputData = new Data.Builder()
+                .putLong(CalcExtremaWorker.KEY_WORKOUT_ID, mWorkoutID)
+                .build();
+
+        // Create the Work Request
+        OneTimeWorkRequest calcWorkRequest = new OneTimeWorkRequest.Builder(CalcExtremaWorker.class)
+                .setInputData(inputData)
+                .addTag(uniqueWorkName) // Also add a tag for easier observation
+                .build();
+
+        // Enqueue the work as UNIQUE work. This prevents it from being started twice.
+        // If it's already running (e.g. due to a quick app restart), it will KEEP the existing one.
+        WorkManager.getInstance(getApplicationContext()).enqueueUniqueWork(
+                uniqueWorkName,
+                ExistingWorkPolicy.KEEP,
+                calcWorkRequest
+        );
+
+        // start EditWorkoutActivity
+        startEditWorkoutActivity(mWorkoutID, true); // here, the EditWorkoutActivity shall show the details, extrema values and the map.
         mNotificationManager.cancel(TRACKING_NOTIFICATION_ID);
     }
 

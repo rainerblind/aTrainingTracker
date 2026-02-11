@@ -71,8 +71,8 @@ abstract public class BTLEBikeDevice extends MyBTLEDevice {
 
         mSpeedSensor = new MySensor<Double>(this, SensorType.SPEED_mps);
         mPaceSensor = new MySensor<Double>(this, SensorType.PACE_spm);
-        mDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m);
-        mLapDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m_LAP);
+        mDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m, false);
+        mLapDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m_LAP, false);
 
         addSensor(mSpeedSensor);
         addSensor(mPaceSensor);

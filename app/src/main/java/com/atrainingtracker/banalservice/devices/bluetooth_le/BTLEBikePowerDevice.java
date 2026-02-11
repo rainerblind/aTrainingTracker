@@ -232,7 +232,7 @@ public class BTLEBikePowerDevice extends MyBTLEDevice {
 
         addPowerSensor();
 
-        int sensorFlags = DevicesDatabaseManager.getBikePowerSensorFlags(getDeviceId());
+        int sensorFlags = DevicesDatabaseManager.getInstance(mContext).getBikePowerSensorFlags(getDeviceId());
         if (BikePowerSensorsHelper.isPowerBalanceSupported(sensorFlags)) {
             mIsPowerBalanceSupported = true;
             addPowerBalanceSensor();
@@ -275,8 +275,8 @@ public class BTLEBikePowerDevice extends MyBTLEDevice {
 
         mSpeedSensor = new MySensor<>(this, SensorType.SPEED_mps);
         mPaceSensor = new MySensor<>(this, SensorType.PACE_spm);
-        mDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m);
-        mLapDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m_LAP);
+        mDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m, false);
+        mLapDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m_LAP, false);
 
         addSensor(mSpeedSensor);
         addSensor(mPaceSensor);

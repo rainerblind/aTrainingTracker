@@ -52,7 +52,10 @@ public class MySensor<T> {
     public void addSensorListener(SensorListener sensorListener) {
         if (DEBUG) Log.i(TAG, "addSensorListener() to " + mDevice + ", " + mSensorType);
 
-        mSensorListeners.add(sensorListener);
+        mSensorListeners.add(sensorListener);   // first, add the listener to the list
+        if (mActivated) {
+            sensorListener.newValue(mValue);    // then, inform the listener about the current value
+        }
     }
 
     public void removeSensorListener(SensorListener sensorListener) {
