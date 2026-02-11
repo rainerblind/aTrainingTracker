@@ -91,9 +91,12 @@
 
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- Device Name (Editable) and Paired Checkbox -->
         <LinearLayout
-            android:layout_width="fill_parent"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center_vertical"
             android:orientation="horizontal">
 
             <com.google.android.material.textfield.TextInputLayout
@@ -115,11 +118,10 @@
 
             <CheckBox
                 android:id="@+id/cbPaired"
-                android:layout_width="0dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="right"
-                android:text="@string/pairedText"
-                android:layout_weight="0.5"/>
+                android:layout_marginStart="8dp"
+                android:text="@string/pairedText" />
         </LinearLayout>
 
         <LinearLayout
