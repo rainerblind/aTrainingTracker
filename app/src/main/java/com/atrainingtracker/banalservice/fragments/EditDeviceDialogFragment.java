@@ -27,6 +27,8 @@ import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
+
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.DialogFragment;
 import android.util.Log;
 import android.view.View;
@@ -121,6 +123,27 @@ public class EditDeviceDialogFragment
         mDeviceID = getArguments().getLong(DevicesDbHelper.C_ID);
     }
 
+    /**
+     * Creates and adds a styled TextView to the llPowerSensors layout.
+     * This helper method reduces code duplication when listing bike power features.
+     * @param stringResId The resource ID of the string to display.
+     * @param isDeemphasized If true, the text color will be set to a secondary grey.
+     */
+    private void addPowerMeterFeatureTextView(int stringResId, boolean isDeemphasized) {
+        if (getContext() == null) return; // Avoids crash if fragment is detached
+
+        TextView tv = new TextView(getContext());
+        tv.setText(stringResId);
+        tv.setTextAppearance(getContext(), android.R.style.TextAppearance_Medium);
+
+        if (isDeemphasized) {
+            // Use ContextCompat for modern, theme-aware color fetching
+            tv.setTextColor(ContextCompat.getColor(getContext(), R.color.bright_grey));
+        }
+
+        llPowerSensors.addView(tv);
+    }
+
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
 
@@ -185,51 +208,30 @@ public class EditDeviceDialogFragment
 
             // torque (almost power)
             if (BikePowerSensorsHelper.isTorqueDataSupported(mBikePowerSensorFlags)) {
-                TextView tv = new TextView(getContext());
-                tv.setText(R.string.bike_power__torque_data);
-                tv.setTextAppearance(getContext(), android.R.style.TextAppearance_Medium);
-                llPowerSensors.addView(tv);
+                addPowerMeterFeatureTextView(R.string.bike_power__torque_data, false);
             }
 
             // speed and distance
             if (BikePowerSensorsHelper.isWheelRevolutionDataSupported(mBikePowerSensorFlags)) {
-                TextView tv = new TextView(getContext());
-                tv.setText(R.string.bike_power__wheel_revolution_data);
-                tv.setTextAppearance(getContext(), android.R.style.TextAppearance_Medium);
-                llPowerSensors.addView(tv);
+                addPowerMeterFeatureTextView(R.string.bike_power__wheel_revolution_data, false);
             }
 
             if (BikePowerSensorsHelper.isWheelSpeedDataSupported(mBikePowerSensorFlags) && BikePowerSensorsHelper.isWheelDistanceDataSupported(mBikePowerSensorFlags)) {
-                TextView tv = new TextView(getContext());
-                tv.setText(R.string.bike_power__wheel_speed_and_distance_data);
-                tv.setTextAppearance(getContext(), android.R.style.TextAppearance_Medium);
-                llPowerSensors.addView(tv);
+                addPowerMeterFeatureTextView(R.string.bike_power__wheel_speed_and_distance_data, false);
             } else if (BikePowerSensorsHelper.isWheelSpeedDataSupported(mBikePowerSensorFlags)) {
-                TextView tv = new TextView(getContext());
-                tv.setText(R.string.bike_power__wheel_speed_data);
-                tv.setTextAppearance(getContext(), android.R.style.TextAppearance_Medium);
-                llPowerSensors.addView(tv);
+                addPowerMeterFeatureTextView(R.string.bike_power__wheel_speed_data, false);
             } else if (BikePowerSensorsHelper.isWheelDistanceDataSupported(mBikePowerSensorFlags)) {
-                TextView tv = new TextView(getContext());
-                tv.setText(R.string.bike_power__wheel_distance_data);
-                tv.setTextAppearance(getContext(), android.R.style.TextAppearance_Medium);
-                llPowerSensors.addView(tv);
+                addPowerMeterFeatureTextView(R.string.bike_power__wheel_distance_data, false);
             }
 
             // cadence
             if (BikePowerSensorsHelper.isCrankRevolutionDataSupported(mBikePowerSensorFlags)) {
-                TextView tv = new TextView(getContext());
-                tv.setText(R.string.bike_power__crank_revolution_data);
-                tv.setTextAppearance(getContext(), android.R.style.TextAppearance_Medium);
-                llPowerSensors.addView(tv);
+                addPowerMeterFeatureTextView(R.string.bike_power__crank_revolution_data, false);
             }
 
             // balance (related to effectiveness)
             if (BikePowerSensorsHelper.isPowerBalanceSupported(mBikePowerSensorFlags)) {
-                TextView tv = new TextView(getContext());
-                tv.setText(R.string.bike_power__pedal_power_balance);
-                tv.setTextAppearance(getContext(), android.R.style.TextAppearance_Medium);
-                llPowerSensors.addView(tv);
+                addPowerMeterFeatureTextView(R.string.bike_power__pedal_power_balance, false);
 
                 if (protocol == Protocol.BLUETOOTH_LE) {
                     cbDoublePowerBalanceValues.setChecked(BikePowerSensorsHelper.doublePowerBalanceValues(mBikePowerSensorFlags));
@@ -244,58 +246,32 @@ public class EditDeviceDialogFragment
 
             // effectiveness values
             if (BikePowerSensorsHelper.isExtremeMagnitudesSupported(mBikePowerSensorFlags)) {
-                TextView tv = new TextView(getContext());
-                tv.setTextColor(getResources().getColor(R.color.bright_grey));
-                tv.setText(R.string.bike_power__extreme_magnitudes);
-                tv.setTextAppearance(getContext(), android.R.style.TextAppearance_Medium);
-                llPowerSensors.addView(tv);
+                addPowerMeterFeatureTextView(R.string.bike_power__extreme_magnitudes, true);
             }
 
             if (BikePowerSensorsHelper.isExtremeAnglesSupported(mBikePowerSensorFlags)) {
-                TextView tv = new TextView(getContext());
-                tv.setTextColor(getResources().getColor(R.color.bright_grey));
-                tv.setText(R.string.bike_power__extreme_angles);
-                tv.setTextAppearance(getContext(), android.R.style.TextAppearance_Medium);
-                llPowerSensors.addView(tv);
+                addPowerMeterFeatureTextView(R.string.bike_power__extreme_angles, true);
             }
 
             if (BikePowerSensorsHelper.isDeadSpotAnglesSupported(mBikePowerSensorFlags)) {
-                TextView tv = new TextView(getContext());
-                tv.setTextColor(getResources().getColor(R.color.bright_grey));
-                tv.setText(R.string.bike_power__top_and_bottom_dead_sport_angles);
-                tv.setTextAppearance(getContext(), android.R.style.TextAppearance_Medium);
-                llPowerSensors.addView(tv);
+                addPowerMeterFeatureTextView(R.string.bike_power__top_and_bottom_dead_sport_angles, true);
             }
 
             if (BikePowerSensorsHelper.isPedalSmoothnessSupported(mBikePowerSensorFlags)) {
-                TextView tv = new TextView(getContext());
-                tv.setText(R.string.bike_power__pedal_smoothness);
-                tv.setTextAppearance(getContext(), android.R.style.TextAppearance_Medium);
-                llPowerSensors.addView(tv);
+                addPowerMeterFeatureTextView(R.string.bike_power__pedal_smoothness, false);
             }
 
             if (BikePowerSensorsHelper.isTorqueEffectivenessSupported(mBikePowerSensorFlags)) {
-                TextView tv = new TextView(getContext());
-                tv.setText(R.string.bike_power__torque_effectiveness);
-                tv.setTextAppearance(getContext(), android.R.style.TextAppearance_Medium);
-                llPowerSensors.addView(tv);
+                addPowerMeterFeatureTextView(R.string.bike_power__torque_effectiveness, false);
             }
 
             // accumulated values
             if (BikePowerSensorsHelper.isAccumulatedTorqueSupported(mBikePowerSensorFlags)) {
-                TextView tv = new TextView(getContext());
-                tv.setTextColor(getResources().getColor(R.color.bright_grey));
-                tv.setText(R.string.bike_power__accumulated_torque);
-                tv.setTextAppearance(getContext(), android.R.style.TextAppearance_Medium);
-                llPowerSensors.addView(tv);
+                addPowerMeterFeatureTextView(R.string.bike_power__accumulated_torque, true);
             }
 
             if (BikePowerSensorsHelper.isAccumulatedEnergySupported(mBikePowerSensorFlags)) {
-                TextView tv = new TextView(getContext());
-                tv.setTextColor(getResources().getColor(R.color.bright_grey));
-                tv.setText(R.string.bike_power__accumulated_energy);
-                tv.setTextAppearance(getContext(), android.R.style.TextAppearance_Medium);
-                llPowerSensors.addView(tv);
+                addPowerMeterFeatureTextView(R.string.bike_power__accumulated_energy, true);
             }
 
         }
