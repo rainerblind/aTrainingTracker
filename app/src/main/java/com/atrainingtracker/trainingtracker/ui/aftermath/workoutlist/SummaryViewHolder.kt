@@ -1,0 +1,196 @@
+package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
+
+import android.app.Activity
+import android.view.View
+import androidx.appcompat.widget.PopupMenu
+import androidx.fragment.app.FragmentManager
+import androidx.lifecycle.LifecycleOwner
+import androidx.recyclerview.widget.RecyclerView
+import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.exporter.FileFormat
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusViewHolder
+import com.atrainingtracker.trainingtracker.ui.components.map.MapComponent
+import com.atrainingtracker.trainingtracker.ui.components.map.MapContentType
+import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.DescriptionViewHolder
+import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsData
+import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsViewHolder
+import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaData
+import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaValuesViewHolder
+import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderData
+import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderViewHolder
+import com.google.android.gms.maps.MapView
+
+/**
+ * The ViewHolder for a single workout summary row. It contains all the sub-component
+ * ViewHolders and is responsible for setting up listeners and binding data to the components.
+ */
+class SummaryViewHolder(
+    row: View,
+    activity: Activity,
+    private val fragmentManager: FragmentManager,
+    private val lifecycleOwner: LifecycleOwner,
+    isPlayServiceAvailable: Boolean,
+    private val viewModel: WorkoutSummariesViewModel
+) : RecyclerView.ViewHolder(row) {
+
+    // --- Component ViewHolders & Components ---
+    private val contentContainer: View?
+    private val headerViewHolder: WorkoutHeaderViewHolder?
+    private val detailsViewHolder: WorkoutDetailsViewHolder?
+    private val descriptionViewHolder: DescriptionViewHolder?
+    private val extremaValuesViewHolder: ExtremaValuesViewHolder?
+    private val exportStatusViewHolder: ExportStatusViewHolder?
+    private val mapComponent: MapComponent?
+
+    // The current data for this specific row, set during bind().
+    private lateinit var workoutSummary: WorkoutData
+
+    init {
+        // --- Find Views ---
+        contentContainer = row.findViewById(R.id.content_container)
+
+        val headerView = row.findViewById<View>(R.id.workout_header_include)
+        val detailsView = row.findViewById<View>(R.id.workout_details_include)
+        val descriptionView = row.findViewById<View>(R.id.workout_description_include)
+        val extremaView = row.findViewById<View>(R.id.extrema_values_include)
+        val exportStatusView = row.findViewById<View>(R.id.export_status_include)
+        val mapView = row.findViewById<MapView>(R.id.workout_summaries_mapView)
+
+        // --- Create Component ViewHolders ---
+        headerViewHolder = headerView?.let { WorkoutHeaderViewHolder(it) }
+        detailsViewHolder = detailsView?.let { WorkoutDetailsViewHolder(it, activity) }
+        descriptionViewHolder = descriptionView?.let { DescriptionViewHolder(it) }
+        extremaValuesViewHolder = extremaView?.let { ExtremaValuesViewHolder(it) }
+        exportStatusViewHolder = exportStatusView?.let { ExportStatusViewHolder(it) }
+
+        // Call the setup method, now passing the menu button
+        setupMenuButtonClickListeners(headerViewHolder?.menuButton)
+
+        // --- Initialize Map Component ---
+        mapComponent = if (isPlayServiceAvailable && mapView != null) {
+            MapComponent(mapView, activity) { workoutId ->
+                TrainingApplication.startTrackOnMapAftermathActivity(activity, workoutId)
+            }
+        } else {
+            mapView?.visibility = View.GONE
+            null
+        }
+
+        // --- Setup Listeners (Event Handling) ---
+        setupClickListeners()
+    }
+
+    private fun setupClickListeners() {
+        // This method is called only once, during ViewHolder creation.
+
+        // create a click listener
+        val detailsClickListener = View.OnClickListener {
+            if (workoutSummary.headerData.finished) {  // only when tracking is finished, the EditWorkoutActivity can be opened.
+                TrainingApplication.startEditWorkoutActivity(
+                    workoutSummary.id,
+                    false               // only show the editable fields
+                )
+            }
+        }
+        // Attach this listener to multiple views
+        headerViewHolder?.view?.setOnClickListener(detailsClickListener)
+        detailsViewHolder?.view?.setOnClickListener(detailsClickListener)
+        extremaValuesViewHolder?.view?.setOnClickListener(detailsClickListener)
+        descriptionViewHolder?.rootView?.setOnClickListener(detailsClickListener)
+    }
+
+    private fun setupMenuButtonClickListeners(menuButton: View?) {
+        menuButton?.setOnClickListener { view ->
+            // Create a PopupMenu, anchored to the button that was clicked.
+            val popup = PopupMenu(view.context, view)
+            // Inflate the same menu resource the old fragment used.
+            popup.inflate(R.menu.workout_summaries_context)
+
+            // Set a listener for when a menu item is clicked.
+            popup.setOnMenuItemClickListener { item ->
+                // Delegate the action to the ViewModel based on the menu item's ID.
+                // This keeps the adapter clean and dumb.
+                when (item.itemId) {
+                    R.id.contextDelete -> {
+                        // Let the ViewModel handle the deletion logic.
+                        viewModel.onDeleteWorkoutClicked(workoutSummary.id)
+                        true // Consume the click
+                    }
+                    R.id.tcxWrite -> {
+                        viewModel.onExportWorkoutClicked(workoutSummary.id, FileFormat.TCX)
+                        true
+                    }
+                    R.id.gpxWrite -> {
+                        viewModel.onExportWorkoutClicked(workoutSummary.id, FileFormat.GPX)
+                        true
+                    }
+                    R.id.csvWrite -> {
+                        viewModel.onExportWorkoutClicked(workoutSummary.id, FileFormat.CSV)
+                        true
+                    }
+                    R.id.jsonWrite -> {
+                        viewModel.onExportWorkoutClicked(workoutSummary.id, FileFormat.GC)
+                        true
+                    }
+                    R.id.stravaUpload -> {
+                        viewModel.onExportWorkoutClicked(workoutSummary.id, FileFormat.STRAVA)
+                        true
+                    }
+                    // TODO: runkeeper, trainingPeaks, ...
+                    else -> false // Let the system handle other cases
+                }
+            }
+            // Show the menu.
+            popup.show()
+        }
+    }
+
+    /**
+     * Binds a pre-composed WorkoutSummary object to the views. This is called for each item.
+     */
+    fun bind(summary: WorkoutData) {
+        // Store the summary for use in the click listeners.
+        this.workoutSummary = summary
+
+        // --- Pass the pre-made data objects directly to the components ---
+        headerViewHolder?.bind(summary.headerData)
+        detailsViewHolder?.bind(summary.detailsData)
+        descriptionViewHolder?.bind(summary.descriptionData)
+        extremaValuesViewHolder?.bind(summary.extremaData)
+        exportStatusViewHolder?.bind(summary.fileBaseName)
+
+        // Bind the map component
+        mapComponent?.bind(summary.id, MapContentType.WORKOUT_TRACK)
+
+        if (!summary.headerData.finished) {
+            contentContainer?.alpha = 0.5f
+        }
+        else {
+            contentContainer?.alpha = 1.0f
+        }
+
+    }
+
+    /**
+     * A lightweight update function that only re-binds the header view.
+     */
+    fun updateHeader(headerData: WorkoutHeaderData) {
+        headerViewHolder?.bind(headerData)
+    }
+
+    /**
+     * A lightweight update function that only re-binds the details view.
+     */
+    fun updateDetails(detailsData: WorkoutDetailsData) {
+        detailsViewHolder?.bind(detailsData)
+    }
+
+    /**
+     * A lightweight update function that only re-binds the extrema values view.
+     */
+    fun updateExtrema(extremaData: ExtremaData) {
+        extremaValuesViewHolder?.bind(extremaData)
+    }
+}

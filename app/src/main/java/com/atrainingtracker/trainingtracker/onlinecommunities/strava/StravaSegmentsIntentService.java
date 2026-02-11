@@ -60,25 +60,18 @@ public class StravaSegmentsIntentService extends IntentService {
     public static final String REQUEST_TYPE = StravaSegmentsIntentService.class.getName() + ".REQUEST_TYPE";
     public static final String REQUEST_UPDATE_STARRED_SEGMENTS = StravaSegmentsIntentService.class.getName() + ".REQUEST_UPDATE_STARRED_SEGMENTS";
     public static final String SPORT_TYPE_ID = StravaSegmentsIntentService.class.getName() + ".SPORT_TYPE_ID";
-    public static final String REQUEST_UPDATE_LEADERBOARD = StravaSegmentsIntentService.class.getName() + ".REQUEST_UPDATE_LEADERBOARD";
     public static final String SEGMENT_ID = StravaSegmentsIntentService.class.getName() + ".SEGMENT_ID";
     public static final String SEGMENT_UPDATE_STARTED_INTENT = StravaSegmentsIntentService.class.getName() + ".SEGMENT_UPDATE_STARTED_INTENT";
     public static final String NEW_STARRED_SEGMENT_INTENT = StravaSegmentsIntentService.class.getName() + ".NEW_STARRED_SEGMENT_INTENT";       // send when there is a new or updated entry in the list of segments
     public static final String SEGMENTS_UPDATE_COMPLETE_INTENT = StravaSegmentsIntentService.class.getName() + ".SEGMENTS_UPDATE_COMPLETE_INTENT";  // send when all segment are handled
-    public static final String NEW_LEADERBOARD_ENTRY_INTENT = StravaSegmentsIntentService.class.getName() + ".NEW_LEADERBOARD_ENTRY_INTENT";     // send when there is a new entry in the leaderboard
-    public static final String LEADERBOARD_UPDATE_COMPLETE_INTENT = StravaSegmentsIntentService.class.getName() + ".LEADERBOARD_UPDATE_COMPLETE_INTENT";        // send when the leaderboard is completely updated
     public static final String RESULT_MESSAGE = StravaSegmentsIntentService.class.getName() + ".RESULT_MESSAGE";
     // protected static final String URL_STRAVA_STARRED_SEGMENTS = "https://www.strava.com/api/v3/segments/starred";
-    // protected static final String URL_STRAVA_SEGMENT_LEADERBOARD = "https://www.strava.com/api/v3/segments/%i/leaderboard";
     protected static final String HTTPS = "https";
     protected static final String AUTHORITY_STRAVA = "www.strava.com";
     protected static final String API = "api";
     protected static final String V3 = "v3";
     protected static final String SEGMENTS = "segments";
-    protected static final String LEADERBOARD = "leaderboard";
     protected static final String PAGE = "page";
-    protected static final String PER_PAGE = "per_page";
-    protected static final int PER_PAGE_DEFAULT = 10;  // first 10
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     //
@@ -89,10 +82,6 @@ public class StravaSegmentsIntentService extends IntentService {
     protected static final String TIME = "time";
     protected static final String AUTHORIZATION = "Authorization";
     protected static final String BEARER = "Bearer";
-    protected static final String CONTEXT_ENTRIES = "context_entries";
-    protected static final int DEFAULT_CONTEXT_ENTRIES = 5;
-    protected static final String ENTRY_COUNT = "entry_count";
-    protected static final String ENTRIES = "entries";
     private static final String TAG = StravaSegmentsIntentService.class.getName();
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
     private static final String ID = "id";
@@ -116,15 +105,12 @@ public class StravaSegmentsIntentService extends IntentService {
     private long mSportTypeId = -1;
     @Nullable
     private String mStravaSportName = null;
-    private long mSegmentId = -1;
 
     public StravaSegmentsIntentService() {
         super("StravaSegmentsIntentService");
     }
 
-    private static void getStream(@NonNull StreamType streamType, long id) {
-        SQLiteDatabase db = SegmentsDatabaseManager.getInstance().getOpenDatabase();
-
+    private static void getStream(SQLiteDatabase db, @NonNull StreamType streamType, long id) {
         // first, check whether this stream is already in the database
         Cursor cursor = db.query(streamType.table,
                 null,
@@ -151,10 +137,10 @@ public class StravaSegmentsIntentService extends IntentService {
                 .appendPath(STREAMS)
                 .appendPath(streamType.requestStreamTypes)
                 .appendQueryParameter(SERIES_TYPE, TIME);
-        String leaderboardUrl = builder.build().toString();
+        String stravaUrl = builder.build().toString();
 
         HttpClient httpClient = new DefaultHttpClient();
-        HttpGet httpGet = new HttpGet(leaderboardUrl);
+        HttpGet httpGet = new HttpGet(stravaUrl);
         httpGet.addHeader(AUTHORIZATION, BEARER + " " + StravaHelper.getRefreshedAccessToken());
 
         HttpResponse httpResponse;
@@ -187,22 +173,12 @@ public class StravaSegmentsIntentService extends IntentService {
                 }
                 if ("latlng".equals(type)) {
                     myType = "latlng";
-                }
-                if ("velocity_smooth".equals(type)) {
-                    myType = Segments.VELOCITY_SMOOTH;
-                    isDouble = true;
                 } else if ("distance".equals(type)) {
                     myType = Segments.DISTANCE;
                     isDouble = true;
                 } else if ("altitude".equals(type)) {
                     myType = Segments.ALTITUDE;
                     isDouble = true;
-                } else if ("heartrate".equals(type)) {
-                    myType = Segments.HEART_RATE;
-                } else if ("cadence".equals(type)) {
-                    myType = Segments.CADENCE;
-                } else if ("watts".equals(type)) {
-                    myType = Segments.WATTS;
                 }
 
                 if (myType == null) {
@@ -263,19 +239,6 @@ public class StravaSegmentsIntentService extends IntentService {
         } catch (JSONException e) {
             e.printStackTrace();
         }
-
-        SegmentsDatabaseManager.getInstance().closeDatabase();
-    }
-
-    protected static void deleteEffortStream(long effortId) {
-        if (DEBUG) Log.i(TAG, "deleteEffortStream: effortId=" + effortId);
-
-        SQLiteDatabase db = SegmentsDatabaseManager.getInstance().getOpenDatabase();
-
-        db.delete(Segments.TABLE_EFFORT_STREAMS,
-                Segments.EFFORT_ID + "=?", new String[]{effortId + ""});
-
-        SegmentsDatabaseManager.getInstance().closeDatabase();
     }
 
     @Override
@@ -294,10 +257,6 @@ public class StravaSegmentsIntentService extends IntentService {
         if (mSportTypeId > -1) {
             notifyGetStarredSegmentsCompleted("background service destroyed");
         }
-
-        if (mSegmentId > -1) {
-            notifyGetLeaderboardComplete("background service destroyed");
-        }
     }
 
     @Override
@@ -307,13 +266,9 @@ public class StravaSegmentsIntentService extends IntentService {
 
         if (REQUEST_UPDATE_STARRED_SEGMENTS.equals(requestType)) {
             mSportTypeId = bundle.getLong(SPORT_TYPE_ID);
-            mStravaSportName = SportTypeDatabaseManager.getStravaName(mSportTypeId);
+            mStravaSportName = SportTypeDatabaseManager.getInstance(this).getStravaName(mSportTypeId);
             getStarredSegments();
             mSportTypeId = -1;
-        } else if (REQUEST_UPDATE_LEADERBOARD.equals(requestType)) {
-            mSegmentId = bundle.getLong(SEGMENT_ID);
-            getSegmentLeaderboard();
-            mSegmentId = -1;
         } else {
             Log.i(TAG, "unknown request type:" + requestType);
         }
@@ -324,7 +279,7 @@ public class StravaSegmentsIntentService extends IntentService {
 
         notifySegmentUpdateStarred();
 
-        SQLiteDatabase db = SegmentsDatabaseManager.getInstance().getOpenDatabase();
+        SQLiteDatabase db = SegmentsDatabaseManager.getInstance(this).getDatabase();
 
         // first, save the segment_ids contained in the database.
         HashSet<Long> segmentIdSet = new HashSet<>();
@@ -393,15 +348,15 @@ public class StravaSegmentsIntentService extends IntentService {
                         }
 
 
-                        mSegmentId = segmentJsonObject.getInt(ID);
-                        newSegmentIdSet.add(mSegmentId);
+                        long segmentId = segmentJsonObject.getInt(ID);
+                        newSegmentIdSet.add(segmentId);
 
-                        if (segmentIdSet.contains(mSegmentId)) {
+                        if (segmentIdSet.contains(segmentId) && false) {
                             // nothing to do?
                         } else {
 
                             contentValues.clear();
-                            contentValues.put(Segments.SEGMENT_ID, mSegmentId);
+                            contentValues.put(Segments.SEGMENT_ID, segmentId);
 
                             JSONArray latLng = segmentJsonObject.getJSONArray(START_LATLNG);
                             contentValues.put(Segments.START_LATITUDE, latLng.getDouble(0));
@@ -426,16 +381,17 @@ public class StravaSegmentsIntentService extends IntentService {
                             contentValues.put(Segments.PRIVATE, segmentJsonObject.getBoolean(PRIVATE) ? 1 : 0);
                             contentValues.put(Segments.STARRED, segmentJsonObject.getBoolean(STARRED) ? 1 : 0);
                             contentValues.put(Segments.HAZARDOUS, segmentJsonObject.getBoolean(HAZARDOUS) ? 1 : 0);
+                            if (segmentJsonObject.has(Segments.PR_TIME)) {
+                                contentValues.put(Segments.PR_TIME, segmentJsonObject.getInt(Segments.PR_TIME));
+                            }
 
                             db.insert(Segments.TABLE_STARRED_SEGMENTS, null, contentValues);
-                            if (DEBUG) Log.i(TAG, "inserted segment " + mSegmentId);
+                            if (DEBUG) Log.i(TAG, "inserted segment " + segmentId);
 
-                            getSegmentStream();
+                            getSegmentStream(segmentId);
                         }
 
-                        getSegmentLeaderboard();
-
-                        notifyNewSegment();
+                        notifyNewSegment(segmentId);
 
                     } catch (JSONException e) {
                         e.printStackTrace();
@@ -459,9 +415,6 @@ public class StravaSegmentsIntentService extends IntentService {
             }
         }
 
-        // close the database
-        SegmentsDatabaseManager.getInstance().closeDatabase();
-
         // remove no longer available segments from ALL databases!
         if (DEBUG)
             Log.i(TAG, "segmentIdSet=" + segmentIdSet + ", newSegmentIdSet=" + newSegmentIdSet);
@@ -471,13 +424,13 @@ public class StravaSegmentsIntentService extends IntentService {
         notifyGetStarredSegmentsCompleted(updateError);
     }
 
-    private void notifyNewSegment() {
+    private void notifyNewSegment(long segmentId) {
         if (DEBUG) Log.i(TAG, "notifyNewSegment Strava Name=" + mStravaSportName);
 
         // TODO: do something like 'flush' before we send the broadcast???
         Intent intent = new Intent(NEW_STARRED_SEGMENT_INTENT)
                 .putExtra(SPORT_TYPE_ID, mSportTypeId)
-                .putExtra(Segments.SEGMENT_ID, mSegmentId)
+                .putExtra(Segments.SEGMENT_ID, segmentId)
                 .setPackage(getPackageName());
         sendBroadcast(intent);
     }
@@ -505,171 +458,11 @@ public class StravaSegmentsIntentService extends IntentService {
         sendBroadcast(intent);
     }
 
-    private void getSegmentLeaderboard() {
-        if (DEBUG) Log.i(TAG, "getSegmentLeaderboard: segmentId=" + mSegmentId);
 
-        String resultMessage = null;
+    private void getSegmentStream(long segmentId) {
+        if (DEBUG) Log.i(TAG, "getSegmentStream: segmentId=" + segmentId);
 
-        ((TrainingApplication) getApplicationContext()).setIsLeaderboardUpdating(mSegmentId, true);
-
-        SQLiteDatabase db = SegmentsDatabaseManager.getInstance().getOpenDatabase();
-
-        // delete current leaderboard
-        db.delete(Segments.TABLE_SEGMENT_LEADERBOARD, Segments.SEGMENT_ID + "=?", new String[]{mSegmentId + ""});
-
-
-        // "https://www.strava.com/api/v3/segments/%i/leaderboard";
-        Uri.Builder builder = new Uri.Builder();
-        builder.scheme(HTTPS)
-                .authority(AUTHORITY_STRAVA)
-                .appendPath(API)
-                .appendPath(V3)
-                .appendPath(SEGMENTS)
-                .appendPath(mSegmentId + "")
-                .appendPath(LEADERBOARD)
-                .appendQueryParameter(PER_PAGE, PER_PAGE_DEFAULT + "")
-                .appendQueryParameter(CONTEXT_ENTRIES, DEFAULT_CONTEXT_ENTRIES + "");
-        String leaderboardUrl = builder.build().toString();
-
-        HttpClient httpClient = new DefaultHttpClient();
-        HttpGet httpGet = new HttpGet(leaderboardUrl);
-        httpGet.addHeader(AUTHORIZATION, BEARER + " " + StravaHelper.getRefreshedAccessToken());
-
-        HttpResponse httpResponse;
-        try {
-            httpResponse = httpClient.execute(httpGet);
-
-            String response;
-            response = EntityUtils.toString(httpResponse.getEntity());
-            if (DEBUG) Log.d(TAG, "getAndInsertSegmentLeaderboard response: " + response);
-
-
-            JSONObject segmentLeaderboard = new JSONObject(response);
-
-            ContentValues cvSegmentSummary = new ContentValues();
-            cvSegmentSummary.put(Segments.LEADERBOARD_SIZE, segmentLeaderboard.getInt(ENTRY_COUNT));
-
-            JSONArray leaderboardEntries = segmentLeaderboard.getJSONArray(ENTRIES);
-
-            ContentValues contentValues = new ContentValues();
-
-            boolean gapFound = false;
-            for (int i = 0; i < leaderboardEntries.length(); i++) {
-                JSONObject entry = leaderboardEntries.getJSONObject(i);
-
-                int rank = entry.getInt("rank");
-
-                if (!gapFound && rank > i + 1) {
-                    if (DEBUG) Log.i(TAG, "gap found at i=" + i + ", rank=" + rank);
-                    gapFound = true;
-
-                    // insert an empty entry
-                    contentValues.clear();
-                    contentValues.put(Segments.SEGMENT_ID, mSegmentId);
-                    contentValues.put(Segments.RANK, i + 1);
-                    contentValues.put(Segments.ATHLETE_ID, -1);  // add an invalid athleteId
-                    db.insert(Segments.TABLE_SEGMENT_LEADERBOARD, null, contentValues);
-                }
-
-                contentValues.clear();
-                contentValues.put(Segments.SEGMENT_ID, mSegmentId);
-                contentValues.put(Segments.ATHLETE_NAME, entry.getString("athlete_name"));
-                contentValues.put(Segments.ATHLETE_ID, entry.getInt("athlete_id"));
-                contentValues.put(Segments.ATHLETE_GENDER, entry.getString("athlete_gender"));
-
-                if (entry.has("average_hr") && !entry.isNull("average_hr")) {
-                    contentValues.put(Segments.AVERAGE_HR, entry.getDouble("average_hr"));
-                }
-                if (entry.has("average_watts") && !entry.isNull("average_watts")) {
-                    contentValues.put(Segments.AVERAGE_WATTS, entry.getDouble("average_watts"));
-                }
-
-                contentValues.put(Segments.DISTANCE, entry.getDouble("distance"));
-                contentValues.put(Segments.ELAPSED_TIME, entry.getInt("elapsed_time"));
-                contentValues.put(Segments.MOVING_TIME, entry.getInt("moving_time"));
-                contentValues.put(Segments.START_TIME, entry.getString("start_date"));
-                contentValues.put(Segments.START_TIME_LOCAL, entry.getString("start_date_local"));
-                contentValues.put(Segments.ACTIVITY_ID, entry.getInt("activity_id"));
-                contentValues.put(Segments.EFFORT_ID, entry.getInt("effort_id"));
-
-                contentValues.put(Segments.RANK, rank);
-                contentValues.put(Segments.ATHLETE_PROFILE_URL, entry.getString("athlete_profile"));  // "http://pics.com/227615/large.jpg"
-                db.insert(Segments.TABLE_SEGMENT_LEADERBOARD, null, contentValues);
-
-                // check whether this is the current athlete
-                if (entry.getInt("athlete_id") == new StravaHelper().getAthleteId(this)) {
-                    if (DEBUG) Log.i(TAG, "update own athlete");
-                    contentValues.clear();
-                    contentValues.put(Segments.PR_DATE, entry.getString("start_date_local"));
-                    contentValues.put(Segments.PR_TIME, entry.getInt("elapsed_time"));   // or moving time???
-                    contentValues.put(Segments.OWN_RANK, entry.getInt("rank"));
-                    db.update(Segments.TABLE_STARRED_SEGMENTS, contentValues, Segments.SEGMENT_ID + "=?", new String[]{mSegmentId + ""});
-                }
-                // get picture from URL and store it in some cache
-                // Picasso.with(this).load(entry.getString("athlete_profile")).fetch();
-
-                notifyNewLeaderboardEntry();
-
-            }
-
-            // finally, store the date of this update
-            contentValues.clear();
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
-            contentValues.put(Segments.LAST_UPDATED, sdf.format(new Date()));
-            db.update(Segments.TABLE_STARRED_SEGMENTS, contentValues, Segments.SEGMENT_ID + "=?", new String[]{mSegmentId + ""});
-
-        } catch (ClientProtocolException e) {
-            // TODO Auto-generated catch block
-            Log.e(TAG, e.toString());
-            e.printStackTrace();
-            resultMessage = "ClientProtocolException";
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            Log.e(TAG, e.toString());
-            e.printStackTrace();
-            resultMessage = "IOException";
-        } catch (JSONException e) {
-            // TODO Auto-generated catch block
-            Log.e(TAG, e.toString());
-            e.printStackTrace();
-            resultMessage = "JSONException";
-        }
-
-        SegmentsDatabaseManager.getInstance().closeDatabase();
-
-        notifyGetLeaderboardComplete(resultMessage);
-    }
-
-    private void notifyNewLeaderboardEntry() {
-        if (DEBUG) Log.i(TAG, "notifyNewLeaderboardEntry");
-
-        Intent intent = new Intent(NEW_LEADERBOARD_ENTRY_INTENT)
-                .putExtra(Segments.SEGMENT_ID, mSegmentId)
-                .setPackage(getPackageName());
-        sendBroadcast(intent);
-    }
-
-    private void notifyGetLeaderboardComplete(String resultMessage) {
-        if (DEBUG) Log.i(TAG, "notify Get Leaderboard complete: " + resultMessage);
-
-        ((TrainingApplication) getApplicationContext()).setIsLeaderboardUpdating(mSegmentId, false);
-
-        Intent intent = new Intent(LEADERBOARD_UPDATE_COMPLETE_INTENT)
-                .putExtra(Segments.SEGMENT_ID, mSegmentId)
-                .putExtra(RESULT_MESSAGE, resultMessage)
-                .setPackage(getPackageName());
-        sendBroadcast(intent);
-    }
-
-    private void getSegmentStream() {
-        if (DEBUG) Log.i(TAG, "getSegmentStream: segmentId=" + mSegmentId);
-
-        getStream(StreamType.SEGMENT, mSegmentId);
-    }
-
-    private void getEffortStream(long effortId) {
-        if (DEBUG) Log.i(TAG, "getEffortStream: effortId=" + effortId);
-        getStream(StreamType.SEGMENT_EFFORT, effortId);
+        getStream(SegmentsDatabaseManager.getInstance(this).getDatabase(), StreamType.SEGMENT, segmentId);
     }
 
     private void deleteSegments(@NonNull Set<Long> segmentIdSet) {
@@ -681,20 +474,10 @@ public class StravaSegmentsIntentService extends IntentService {
     private void deleteSegment(long segmentId) {
         if (DEBUG) Log.i(TAG, "deleteSegment: segmentId=" + segmentId);
 
-        SQLiteDatabase db = SegmentsDatabaseManager.getInstance().getOpenDatabase();
-
-        Cursor cursor = db.query(Segments.TABLE_SEGMENT_LEADERBOARD, null,
-                Segments.SEGMENT_ID + "=?", new String[]{segmentId + ""},
-                null, null, null);
-        while (cursor.moveToNext()) {
-            deleteEffortStream(cursor.getInt(cursor.getColumnIndex(Segments.EFFORT_ID)));
-        }
+        SQLiteDatabase db = SegmentsDatabaseManager.getInstance(this).getDatabase();
 
         db.delete(Segments.TABLE_SEGMENT_STREAMS, Segments.SEGMENT_ID + "=?", new String[]{segmentId + ""});
-        db.delete(Segments.TABLE_SEGMENT_LEADERBOARD, Segments.SEGMENT_ID + "=?", new String[]{segmentId + ""});
         db.delete(Segments.TABLE_STARRED_SEGMENTS, Segments.SEGMENT_ID + "=?", new String[]{segmentId + ""});
-
-        SegmentsDatabaseManager.getInstance().closeDatabase();
     }
 
 }

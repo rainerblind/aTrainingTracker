@@ -20,6 +20,7 @@ package com.atrainingtracker.banalservice.filters;
 
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.sensor.SensorType;
+import com.atrainingtracker.trainingtracker.TrainingApplication;
 
 import java.util.ArrayList;
 
@@ -50,8 +51,10 @@ public class NumberedMovingAverageFilter
 
     @Override
     public synchronized void newValue(Number value) {
-        mValues.add(mIndex, value);
-        mIndex = mIndex++ % mSize;
+        if (!TrainingApplication.isPaused()){
+            mValues.add(mIndex, value);
+            mIndex = (mIndex + 1) % mSize;
+        }
     }
 
     @Override

@@ -1,768 +1,195 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  ~ aTrainingTracker (ANT+ BTLE)
-  ~ Copyright (C) 2011 - 2019 Rainer Blind <rainer.blind@gmail.com>
-  ~
-  ~ This program is free software: you can redistribute it and/or modify
-  ~ it under the terms of the GNU General Public License as published by
-  ~ the Free Software Foundation, either version 3 of the License, or
-  ~ (at your option) any later version.
-  ~
-  ~ This program is distributed in the hope that it will be useful,
-  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
-  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  ~ GNU General Public License for more details.
-  ~
-  ~ You should have received a copy of the GNU General Public License
-  ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
-  -->
-
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/edit_workout_layout"
-    android:layout_width="fill_parent"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    xmlns:map="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:fillViewport="true">
 
-    <ScrollView
-        android:layout_width="fill_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1">
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp">
 
-        <LinearLayout
-            android:layout_width="fill_parent"
-            android:layout_height="0dp"
-            android:orientation="vertical">
+        <!-- Row 1: Workout Name and Auto Name Button -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/layoutWorkoutName"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:hint="@string/hint_workout_name"
+            app:layout_constraintEnd_toStartOf="@+id/buttonAutoName"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
 
-            <!-- most important stuff first -->
-
-            <!-- workout name -->
-            <LinearLayout
-                android:layout_width="fill_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
-
-                <LinearLayout
-                    android:layout_width="fill_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="2"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/ExportName" />
-
-                    <EditText
-                        android:id="@+id/editExportName"
-                        android:layout_width="fill_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="2" />
-                </LinearLayout>
-
-                <Button
-                    android:id="@+id/buttonFancyName"
-                    android:layout_width="fill_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="5"
-                    android:text="@string/edit_auto_name" />
-            </LinearLayout>
-
-            <!-- sport and equipment -->
-            <LinearLayout
-                android:layout_width="fill_parent"
-                android:layout_height="wrap_content"
-                android:baselineAligned="false"
-                android:orientation="horizontal">
-
-                <!-- sport -->
-                <LinearLayout
-                    android:layout_width="fill_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/Sport" />
-
-                    <Spinner
-                        android:id="@+id/spinnerSport"
-                        android:layout_width="fill_parent"
-                        android:layout_height="wrap_content" />
-                </LinearLayout>
-
-                <!-- equipment -->
-                <LinearLayout
-                    android:layout_width="fill_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:id="@+id/tvEquipment"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/Equipment" />
-
-                    <Spinner
-                        android:id="@+id/spinnerEquipment"
-                        android:layout_width="fill_parent"
-                        android:layout_height="wrap_content" />
-                </LinearLayout>
-            </LinearLayout>
-
-            <!-- separator -->
-            <View
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/editWorkoutName"
                 android:layout_width="match_parent"
-                android:layout_height="2dp"
-                android:background="?android:attr/listDivider" />
-
-            <!-- radio buttons for commute and trainer.  These are multiple exclusive -->
-            <RadioGroup
-                android:id="@+id/rgCommuteTrainer"
-                android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal">
+                android:inputType="textCapSentences" />
+        </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- commute -->
-                <RadioButton
-                    android:id="@+id/rbCommute"
-                    android:layout_width="fill_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/commute" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/buttonAutoName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/edit_auto_name"
+            app:layout_constraintBottom_toBottomOf="@+id/layoutWorkoutName"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/layoutWorkoutName"
+            app:layout_constraintTop_toTopOf="@+id/layoutWorkoutName"
+            tools:ignore="ContentDescription" />
 
-                <!-- trainer -->
-                <RadioButton
-                    android:id="@+id/rbTrainer"
-                    android:layout_width="fill_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/trainer_general" />
-            </RadioGroup>
+        <!-- Row 2: Sport and Equipment Spinners -->
+        <Spinner
+            android:id="@+id/spinnerSportType"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:layout_marginEnd="8dp"
+            app:layout_constraintEnd_toStartOf="@+id/spinnerEquipment"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/layoutWorkoutName"
+            tools:layout_height="48dp" />
 
-            <!-- separator -->
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="2dp"
-                android:background="?android:attr/listDivider" />
+        <Spinner
+            android:id="@+id/spinnerEquipment"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            app:layout_constraintBottom_toBottomOf="@+id/spinnerSportType"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/spinnerSportType"
+            app:layout_constraintTop_toTopOf="@+id/spinnerSportType"
+            tools:layout_height="48dp" />
 
-            <!-- description -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:text="@string/Description" />
+        <!-- Row 3: Commute and Trainer Checkboxes -->
+        <com.google.android.material.checkbox.MaterialCheckBox
+            android:id="@+id/checkboxCommute"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@string/commute"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/spinnerSportType" />
 
-            <EditText
+        <com.google.android.material.checkbox.MaterialCheckBox
+            android:id="@+id/checkboxTrainer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:text="@string/trainer_general"
+            app:layout_constraintBottom_toBottomOf="@+id/checkboxCommute"
+            app:layout_constraintStart_toEndOf="@+id/checkboxCommute"
+            app:layout_constraintTop_toTopOf="@+id/checkboxCommute" />
+
+        <!-- Row 4: Description -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/layoutDescription"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:hint="@string/hint_workout_description"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/checkboxTrainer">
+
+            <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/editDescription"
-                android:layout_width="fill_parent"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/DescriptionHint" />
+                android:gravity="top"
+                android:inputType="textMultiLine|textCapSentences"
+                android:minLines="3" />
+        </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- less important fields -->
+        <!-- Row 5: Goal -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/layoutGoal"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:hint="@string/hint_workout_goal"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/layoutDescription">
 
-            <!-- goal -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/Goal" />
-
-            <EditText
+            <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/editGoal"
-                android:layout_width="fill_parent"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/GoalHint" />
+                android:inputType="textCapSentences" />
+        </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- method -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/Method" />
+        <!-- Row 6: Method -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/layoutMethod"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:hint="@string/hint_workout_method"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/layoutGoal">
 
-            <EditText
+            <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/editMethod"
-                android:layout_width="fill_parent"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/MethodHint" />
-
-            <!-- separator -->
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="2dp"
-                android:background="?android:attr/listDivider" />
-
-
-            <!-- non editable stuff like mean, max values -->
-
-            <!-- now, some summary values -->
-
-            <TableLayout
-                android:layout_width="fill_parent"
-                android:layout_height="wrap_content">
-
-                <!-- start time -->
-                <TableRow android:id="@+id/trStartTime">
-
-                    <TextView
-                        android:gravity="left"
-                        android:padding="5dp"
-                        android:text="@string/StartTime" />
-
-                    <TextView
-                        android:id="@+id/tvStartTime"
-                        android:gravity="right"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-                </TableRow>
-
-                <!-- total time -->
-                <TableRow android:id="@+id/trTotalTime">
-
-                    <TextView
-                        android:gravity="left"
-                        android:padding="5dp"
-                        android:text="@string/TotalTime" />
-
-                    <TextView
-                        android:id="@+id/tvTotalTime"
-                        android:gravity="right"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-                </TableRow>
-
-                <!-- active time -->
-                <TableRow android:id="@+id/trActiveTime">
-
-                    <TextView
-                        android:gravity="left"
-                        android:padding="5dp"
-                        android:text="@string/ActiveTime" />
-
-                    <TextView
-                        android:id="@+id/tvActiveTime"
-                        android:gravity="right"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-                </TableRow>
-
-                <!-- SensorTypes -->
-                <TableRow android:id="@+id/trSensorTypes">
-
-                    <TextView
-                        android:gravity="left"
-                        android:padding="5dp"
-                        android:text="@string/SensorTypes" />
-
-                    <TextView
-                        android:id="@+id/tvSensorTypes"
-                        android:gravity="right"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-                </TableRow>
-
-                <!-- distance -->
-                <TableRow android:id="@+id/trDistance">
-
-                    <TextView
-                        android:gravity="left"
-                        android:padding="5dp"
-                        android:text="@string/Distance" />
-
-                    <TextView
-                        android:id="@+id/tvDistance"
-                        android:gravity="right"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-                </TableRow>
-
-                <!-- maximal line distance -->
-                <TableRow android:id="@+id/trMaxLineDistance">
-
-                    <TextView
-                        android:gravity="left"
-                        android:padding="5dp"
-                        android:text="@string/MaxLineDistance" />
-
-                    <TextView
-                        android:id="@+id/tvMaxLineDistance"
-                        android:gravity="right"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-                </TableRow>
-
-                <!-- calories -->
-                <TableRow android:id="@+id/trCalories">
-
-                    <TextView
-                        android:gravity="left"
-                        android:padding="5dp"
-                        android:text="@string/Calories" />
-
-                    <TextView
-                        android:id="@+id/tvCalories"
-                        android:gravity="right"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-                </TableRow>
-
-                <!-- TODO: strides? or crank revolutions??? -->
-
-            </TableLayout>
-
-
-            <!-- separator -->
-            <View
-                android:id="@+id/separatorViewMeanMaxValues"
-                android:layout_width="match_parent"
-                android:layout_height="2dp"
-                android:background="?android:attr/listDivider" />
-
-            <!-- now, mean and max values -->
-            <TableLayout
-                android:id="@+id/tlMeanMaxValues"
-                android:layout_width="fill_parent"
-                android:layout_height="wrap_content">
-
-                <!-- header:     | min | mean | max -->
-                <TableRow>
-
-                    <TextView
-                        android:layout_column="1"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/min" />
-
-                    <TextView
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/mean" />
-
-                    <TextView
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/max" />
-                </TableRow>
-
-                <!-- HR -->
-                <TableRow android:id="@+id/trHR">
-
-                    <TextView
-                        android:gravity="left"
-                        android:padding="5dp"
-                        android:text="@string/heart_rate_short" />
-
-                    <TextView
-                        android:id="@+id/tvHRMin"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-
-                    <TextView
-                        android:id="@+id/tvHRMean"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-
-                    <TextView
-                        android:id="@+id/tvHRMax"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-
-                    <TextView
-                        android:id="@+id/tvHRUnit"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/units_heart_rate" />
-                </TableRow>
-
-                <!-- speed  -->
-                <TableRow android:id="@+id/trSpeed">
-
-                    <TextView
-                        android:gravity="left"
-                        android:padding="5dp"
-                        android:text="@string/speed_short" />
-
-                    <TextView
-                        android:id="@+id/tvSpeedMin"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-
-                    <TextView
-                        android:id="@+id/tvSpeedMean"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-
-                    <TextView
-                        android:id="@+id/tvSpeedMax"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-
-                    <TextView
-                        android:id="@+id/tvSpeedUnit"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/units_speed_metric" />
-                </TableRow>
-
-                <!-- pace -->
-                <TableRow android:id="@+id/trPace">
-
-                    <TextView
-                        android:gravity="left"
-                        android:padding="5dp"
-                        android:text="@string/pace_short" />
-
-                    <TextView
-                        android:id="@+id/tvPaceMin"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-
-                    <TextView
-                        android:id="@+id/tvPaceMean"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-
-                    <TextView
-                        android:id="@+id/tvPaceMax"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-
-                    <TextView
-                        android:id="@+id/tvPaceUnit"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/units_pace_metric" />
-                </TableRow>
-
-                <!-- cadence -->
-                <TableRow android:id="@+id/trCadence">
-
-                    <TextView
-                        android:id="@+id/tvCadence"
-                        android:gravity="left"
-                        android:padding="5dp"
-                        android:text="@string/cadence_short" />
-
-                    <TextView
-                        android:id="@+id/tvCadenceMin"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-
-                    <TextView
-                        android:id="@+id/tvCadenceMean"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-
-                    <TextView
-                        android:id="@+id/tvCadenceMax"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-
-                    <TextView
-                        android:id="@+id/tvCadenceUnit"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/units_cadence" />
-                </TableRow>
-
-                <!-- power -->
-                <TableRow android:id="@+id/trPower">
-
-                    <TextView
-                        android:gravity="left"
-                        android:padding="5dp"
-                        android:text="@string/power_short" />
-
-                    <TextView
-                        android:id="@+id/tvPowerMin"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-
-                    <TextView
-                        android:id="@+id/tvPowerMean"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-
-                    <TextView
-                        android:id="@+id/tvPowerMax"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-
-                    <TextView
-                        android:id="@+id/tvPowerUnit"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/units_power" />
-                </TableRow>
-
-                <!-- torque -->
-                <TableRow android:id="@+id/trTorque">
-
-                    <TextView
-                        android:gravity="left"
-                        android:padding="5dp"
-                        android:text="@string/torque_short" />
-
-                    <TextView
-                        android:id="@+id/tvTorqueMin"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-
-                    <TextView
-                        android:id="@+id/tvTorqueMean"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-
-                    <TextView
-                        android:id="@+id/tvTorqueMax"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-
-                    <TextView
-                        android:id="@+id/tvTorqueUnit"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/units_torque" />
-                </TableRow>
-
-                <!-- pedal power balance -->
-                <TableRow android:id="@+id/trPedalPowerBalance">
-
-                    <TextView
-                        android:gravity="left"
-                        android:padding="5dp"
-                        android:text="@string/pedal_power_balance_short" />
-
-                    <TextView
-                        android:id="@+id/tvPedalPowerBalanceMin"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-
-                    <TextView
-                        android:id="@+id/tvPedalPowerBalanceMean"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-
-                    <TextView
-                        android:id="@+id/tvPedalPowerBalanceMax"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-
-                    <TextView
-                        android:id="@+id/tvPedalPowerBalanceUnit"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/units_percent" />
-                </TableRow>
-
-                <!-- pedal smoothness left and right -->
-                <TableRow android:id="@+id/trPedalSmoothnessLeft">
-
-                    <TextView
-                        android:gravity="left"
-                        android:padding="5dp"
-                        android:text="@string/pedal_smoothness_l_short" />
-
-                    <TextView
-                        android:id="@+id/tvPedalSmoothnessLeftMin"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-
-                    <TextView
-                        android:id="@+id/tvPedalSmoothnessLeftMean"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-
-                    <TextView
-                        android:id="@+id/tvPedalSmoothnessLeftMax"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-
-                    <TextView
-                        android:id="@+id/tvPedalSmoothnessLeftUnit"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/units_percent" />
-                </TableRow>
-
-                <TableRow android:id="@+id/trPedalSmoothness">
-
-                    <TextView
-                        android:gravity="left"
-                        android:padding="5dp"
-                        android:text="@string/pedal_smoothness_short" />
-
-                    <TextView
-                        android:id="@+id/tvPedalSmoothnessMin"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-
-                    <TextView
-                        android:id="@+id/tvPedalSmoothnessMean"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-
-                    <TextView
-                        android:id="@+id/tvPedalSmoothnessMax"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-
-                    <TextView
-                        android:id="@+id/tvPedalSmoothnessUnit"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/units_percent" />
-                </TableRow>
-
-                <TableRow android:id="@+id/trPedalSmoothnessRight">
-
-                    <TextView
-                        android:gravity="left"
-                        android:padding="5dp"
-                        android:text="@string/pedal_smoothness_r_short" />
-
-                    <TextView
-                        android:id="@+id/tvPedalSmoothnessRightMin"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-
-                    <TextView
-                        android:id="@+id/tvPedalSmoothnessRightMean"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-
-                    <TextView
-                        android:id="@+id/tvPedalSmoothnessRightMax"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-
-                    <TextView
-                        android:id="@+id/tvPedalSmoothnessRightUnit"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/units_percent" />
-                </TableRow>
-
-                <!-- altitude -->
-                <TableRow android:id="@+id/trAltitude">
-
-                    <TextView
-                        android:gravity="left"
-                        android:padding="5dp"
-                        android:text="@string/altitude_short" />
-
-                    <TextView
-                        android:id="@+id/tvAltitudeMin"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-
-                    <TextView
-                        android:id="@+id/tvAltitudeMean"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-
-                    <TextView
-                        android:id="@+id/tvAltitudeMax"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-
-                    <TextView
-                        android:id="@+id/tvAltitudeUnit"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/units_distance_basic" />
-                </TableRow>
-
-                <!-- temperature -->
-                <TableRow android:id="@+id/trTemperature">
-
-                    <TextView
-                        android:gravity="left"
-                        android:padding="5dp"
-                        android:text="@string/temperature_short" />
-
-                    <TextView
-                        android:id="@+id/tvTemperatureMin"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-
-                    <TextView
-                        android:id="@+id/tvTemperatureMean"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-
-                    <TextView
-                        android:id="@+id/tvTemperatureMax"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/NoData" />
-
-                    <TextView
-                        android:id="@+id/tvTemperatureUnit"
-                        android:gravity="center"
-                        android:padding="5dp"
-                        android:text="@string/units_temperature" />
-
-                </TableRow>
-
-            </TableLayout>
-
-
-        </LinearLayout>
-
-    </ScrollView>
-
-
-    <!-- Save (and eventually delete) Button -->
-
-    <Button
-        android:id="@+id/buttonSaveWorkout"
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/buttonSaveWorkoutText"
-        android:textAppearance="?android:attr/textAppearanceMedium" />
-
-    <Button
-        android:id="@+id/buttonDeleteWorkout"
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/buttonDeleteWorkoutText"
-        android:textAppearance="?android:attr/textAppearanceMedium" />
-
-</LinearLayout>
+                android:inputType="textCapSentences" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+
+        <!-- Placeholder for Workout Details (Distance, Time, Ascent, etc.) -->
+        <include
+            android:id="@+id/workout_details_include"
+            layout="@layout/workout_summary__details"
+            android:layout_marginTop="-8dp"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/layoutMethod" />
+
+
+        <!-- Container for Extrema Values -->
+        <include
+            android:id="@+id/extrema_values_include"
+            layout="@layout/workout_summary__extrema"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/workout_details_include" />
+
+
+        <!-- MapView is now positioned below the new extrema container -->
+        <com.google.android.gms.maps.MapView
+            android:id="@+id/mapView_include"
+            android:layout_width="0dp"
+            android:layout_height="180dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/extrema_values_include"
+            map:liteMode="true"
+            map:mapType="none" />
+
+
+        <!-- Save Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/buttonSave"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="@string/buttonSaveWorkoutText"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/mapView_include" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.core.widget.NestedScrollView>

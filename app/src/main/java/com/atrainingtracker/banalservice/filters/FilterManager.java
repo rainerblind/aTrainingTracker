@@ -25,6 +25,7 @@ import android.content.IntentFilter;
 import android.util.Log;
 
 import com.atrainingtracker.banalservice.BANALService;
+import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 import com.atrainingtracker.banalservice.devices.DeviceManager;
 import com.atrainingtracker.banalservice.devices.MyDevice;
 import com.atrainingtracker.banalservice.sensor.MySensor;
@@ -66,7 +67,8 @@ public class FilterManager {
     protected BroadcastReceiver mFiltersChangedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            for (FilterData filterData : TrackingViewsDatabaseManager.getAllFilterData()) {
+            DevicesDatabaseManager devicesDatabaseManager = DevicesDatabaseManager.getInstance(context);
+            for (FilterData filterData : TrackingViewsDatabaseManager.getInstance(context).getAllFilterData(devicesDatabaseManager)) {
                 createFilter(filterData);
             }
         }

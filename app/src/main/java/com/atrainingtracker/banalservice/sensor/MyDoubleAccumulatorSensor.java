@@ -25,39 +25,17 @@ import com.atrainingtracker.banalservice.devices.MyDevice;
 public class MyDoubleAccumulatorSensor extends MyAccumulatorSensor<Double> {
     private static final String TAG = "MyDoubleAccumulatorSensor";
 
-    private double mZeroValue = 0.0;
-
-    public MyDoubleAccumulatorSensor(MyDevice myDevice, SensorType sensorType) {
-        super(myDevice, sensorType);
-        mValue = mZeroValue;
-
-        Double initialValue = (Double) BANALService.getInitialValue(sensorType);
-        mInitialValue = initialValue == null ? 0.0 : initialValue;
-
-        reset();
-    }
-
-    public MyDoubleAccumulatorSensor(MyDevice myDevice, SensorType sensorType, Double zeroValue) {
-        this(myDevice, sensorType);
-
-        mZeroValue = zeroValue;
-        mValue = mZeroValue;
-
-        reset();
+    public MyDoubleAccumulatorSensor(MyDevice myDevice, SensorType sensorType, Boolean respectPause) {
+        super(myDevice, sensorType, respectPause, 0.0);
     }
 
     @Override
-    public Double getValue() {
-        // Log.d(TAG, "getValue");
-        if (mActivated) {
-            return mValue == null ? mInitialValue : mValue + mInitialValue;
-        } else {
-            return null;
-        }
+    // doing the most obvious stuff...
+    protected Double add(Double a, Double b) {
+        return a + b;
     }
 
-    @Override
-    public void reset() {
-        setInitialValue(-mValue + mZeroValue);
+    protected Double sub(Double a, Double b) {
+        return a - b;
     }
 }

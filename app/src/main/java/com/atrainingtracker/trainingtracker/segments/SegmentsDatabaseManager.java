@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.segments;
 
 import android.content.Context;
+import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.BaseColumns;
@@ -33,27 +34,37 @@ import java.io.File;
 public class SegmentsDatabaseManager {
     private static final String TAG = SegmentsDatabaseManager.class.getName();
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
-    private static SegmentsDatabaseManager cInstance;
-    private static SegmentsDbHelper cSegmentsDbHelper;
-    private int mOpenCounter;
-    private SQLiteDatabase mDatabase;
 
-    public static synchronized void initializeInstance(SegmentsDbHelper segmentsDbHelper) {
-        if (cInstance == null) {
-            cInstance = new SegmentsDatabaseManager();
-            cSegmentsDbHelper = segmentsDbHelper;
-        }
+    // --- Modern Singleton Pattern ---
+    private static volatile SegmentsDatabaseManager cInstance;
+    private final SegmentsDbHelper cSegmentsDbHelper;
+    private final Context mContext;
+
+    private SegmentsDatabaseManager(@NonNull Context context) {
+        this.mContext = context.getApplicationContext();
+        this.cSegmentsDbHelper = new SegmentsDbHelper(this.mContext);
     }
 
     @NonNull
-    public static synchronized SegmentsDatabaseManager getInstance() {
+    public static SegmentsDatabaseManager getInstance(@NonNull Context context) {
         if (cInstance == null) {
-            throw new IllegalStateException(SegmentsDatabaseManager.class.getSimpleName() +
-                    " is not initialized, call initializeInstance(..) method first.");
+            synchronized (SegmentsDatabaseManager.class) {
+                if (cInstance == null) {
+                    cInstance = new SegmentsDatabaseManager(context);
+                }
+            }
         }
-
         return cInstance;
     }
+
+    /**
+     * Returns a writable database instance, managed by the helper.
+     */
+    // TODO: make private...
+    public SQLiteDatabase getDatabase() {
+        return cSegmentsDbHelper.getWritableDatabase();
+    }
+    // --- End of Singleton Pattern ---
 
     public static boolean doesDatabaseExist(@NonNull Context context) {
         File dbFile = context.getDatabasePath(SegmentsDbHelper.DB_NAME);
@@ -63,45 +74,34 @@ public class SegmentsDatabaseManager {
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // some high level helper methods
     ////////////////////////////////////////////////////////////////////////////////////////////////
-    public static void deleteAllTables(@NonNull Context context) {
 
-        SQLiteDatabase db = getInstance().getOpenDatabase();
-
-        db.execSQL("drop table if exists " + Segments.TABLE_SEGMENT_LEADERBOARD);
-        db.execSQL("drop table if exists " + Segments.TABLE_STARRED_SEGMENTS);
-        db.execSQL("drop table if exists " + Segments.TABLE_EFFORT_STREAMS);
-        db.execSQL("drop table if exists " + Segments.TABLE_SEGMENT_STREAMS);
-
-        (new SegmentsDbHelper(null)).onCreate(db);  // run onCreate to get new database
-
-        getInstance().closeDatabase();
-
-        context.deleteDatabase(SegmentsDbHelper.DB_NAME);
-    }
-
-    public synchronized SQLiteDatabase getOpenDatabase() {
-        mOpenCounter++;
-        if (mOpenCounter == 1) {
-            // Opening new database
-            mDatabase = cSegmentsDbHelper.getWritableDatabase();
-        }
-        return mDatabase;
-    }
-
-    public synchronized void closeDatabase() {
-        mOpenCounter--;
-        if (mOpenCounter == 0) {
-            // Closing database
-            mDatabase.close();
-
+    /**
+     * Deletes all tables and effectively resets the database.
+     * Note: This is a destructive operation.
+     */
+    public void deleteAllTables() {
+        try {
+            SQLiteDatabase db = getDatabase();
+            db.beginTransaction();
+            try {
+                db.execSQL("DROP TABLE IF EXISTS " + Segments.TABLE_STARRED_SEGMENTS);
+                db.execSQL("DROP TABLE IF EXISTS " + Segments.TABLE_SEGMENT_STREAMS);
+                db.setTransactionSuccessful();
+            } finally {
+                db.endTransaction();
+            }
+            // Recreate the tables
+            cSegmentsDbHelper.onCreate(db);
+            if (DEBUG) Log.d(TAG, "All segment tables deleted and recreated.");
+        } catch (SQLException e) {
+            Log.e(TAG, "Error deleting all tables in SegmentsDatabase", e);
         }
     }
+
 
     public static final class Segments {
         public static final String TABLE_STARRED_SEGMENTS = "StarredSegmentsTable";
-        public static final String TABLE_SEGMENT_LEADERBOARD = "SegmentLeaderboardTable";
         public static final String TABLE_SEGMENT_STREAMS = "SegmentStreams";
-        public static final String TABLE_EFFORT_STREAMS = "EffortStreams";
 
 
         // for TABLE_STARRED_SEGMENTS
@@ -126,28 +126,8 @@ public class SegmentsDatabaseManager {
         public static final String PRIVATE = "Private";       // private: 	boolean
         public static final String STARRED = "Starred";       // starred: 	boolean
         public static final String HAZARDOUS = "Hazardous";     // hazardous: boolean
-        public static final String LAST_UPDATED = "LastUpdated";
-        public static final String PR_TIME = "PRTime";
-        public static final String PR_DATE = "PRDate";
-        public static final String OWN_RANK = "OwnRank";
-        public static final String LEADERBOARD_SIZE = "LeaderboardSize";
+        public static final String PR_TIME = "pr_time";
 
-
-        // for TABLE_SEGMENT_LEADERBOARD
-        public static final String ATHLETE_NAME = "AthleteName";    // "athlete_name": "Jim Whimpey",
-        public static final String ATHLETE_ID = "AthleteID";      // "athlete_id": 123529,
-        public static final String ATHLETE_GENDER = "AthleteGender";  // "athlete_gender": "M",
-        public static final String AVERAGE_HR = "AverageHr";      // "average_hr": 190.5,
-        public static final String AVERAGE_WATTS = "AverageWatts";   // "average_watts": 460.8,
-        // public static final String DISTANCE         = "Distance";       // "distance": 2659.89,
-        public static final String ELAPSED_TIME = "ElapsedTime";    // "elapsed_time": 360,
-        public static final String MOVING_TIME = "MovingTime";     // "moving_time": 360,
-        public static final String START_TIME = "StartTime";      // "start_date": "2013-03-29T13:49:35Z",
-        public static final String START_TIME_LOCAL = "StartTimeLocal"; // "start_date_local": "2013-03-29T06:49:35Z",
-        public static final String ACTIVITY_ID = "ActivityId";     // "activity_id": 46320211,
-        public static final String EFFORT_ID = "EffortId";       // "effort_id": 801006623,
-        public static final String RANK = "Rank";           // "rank": 1,
-        public static final String ATHLETE_PROFILE_URL = "AthleteProfileURL"; // "athlete_profile": "http://pics.com/227615/large.jpg"
 
         // for TABLE_SEGMENT_STREAMS
         // SEGMENT_ID
@@ -155,16 +135,6 @@ public class SegmentsDatabaseManager {
         public static final String ALTITUDE = "Altitude";
         public static final String LATITUDE = "Latitude";
         public static final String LONGITUDE = "Longitude";
-
-        // for TABLE_EFFORT_STREAMS
-        // public static final String EFFORT_ID = "EffortId";
-        // LATITUDE
-        // LONGITUDE
-        // DISTANCE
-        public static final String VELOCITY_SMOOTH = "VelocitySmooth";
-        public static final String HEART_RATE = "HeartRate";
-        public static final String CADENCE = "Cadence";
-        public static final String WATTS = "Watts";
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -174,8 +144,9 @@ public class SegmentsDatabaseManager {
         public static final String DB_NAME = "Segments.db";
         // public static final int DB_VERSION = 1; // created  3.8.2016
         // public static final int DB_VERSION = 2; // updated 19.8.2016
-        public static final int DB_VERSION = 3; // updated 26.9.2016
-        protected static final String CREATE_TABLE_STARRED_SEGMENTS_V1 = "create table " + Segments.TABLE_STARRED_SEGMENTS + " ("
+        // public static final int DB_VERSION = 3; // updated 26.9.2016
+        public static final int DB_VERSION = 5; // updated 11.01.2026: add PR_TIME
+        protected static final String CREATE_TABLE_STARRED_SEGMENTS_V2 = "create table " + Segments.TABLE_STARRED_SEGMENTS + " ("
                 + Segments.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                 + Segments.SEGMENT_ID + " int, "
                 + Segments.RESOURCE_STATE + " int, "
@@ -197,29 +168,9 @@ public class SegmentsDatabaseManager {
                 + Segments.PRIVATE + " int, "
                 + Segments.STARRED + " int, "
                 + Segments.HAZARDOUS + " int, "
+                + Segments.PR_TIME + " int)";
 
-                + Segments.LAST_UPDATED + " datetime, "
-                + Segments.PR_TIME + " int, "
-                + Segments.PR_DATE + " datetime, "
-                + Segments.OWN_RANK + " int, "
-                + Segments.LEADERBOARD_SIZE + " int)";
-        protected static final String CREATE_TABLE_SEGMENT_LEADERBOARD_V1 = "create table " + Segments.TABLE_SEGMENT_LEADERBOARD + " ("
-                + Segments.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
-                + Segments.SEGMENT_ID + " int, "
-                + Segments.ATHLETE_NAME + " text, "    // "athlete_name": "Jim Whimpey",
-                + Segments.ATHLETE_ID + " int, "     // "athlete_id": 123529,
-                + Segments.ATHLETE_GENDER + " text, "    // "athlete_gender": "M",
-                + Segments.AVERAGE_HR + " real, "    // "average_hr": 190.5,
-                + Segments.AVERAGE_WATTS + " real, "    // "average_watts": 460.8,
-                + Segments.DISTANCE + " real, "    // "distance": 2659.89,
-                + Segments.ELAPSED_TIME + " int, "     // "elapsed_time": 360,
-                + Segments.MOVING_TIME + " int, "     // "moving_time": 360,
-                + Segments.START_TIME + " text, "    // "start_date":       "2013-03-29T13:49:35Z",
-                + Segments.START_TIME_LOCAL + " text, "    // "start_date_local": "2013-03-29T06:49:35Z",
-                + Segments.ACTIVITY_ID + " int, "     // "activity_id": 46320211,
-                + Segments.EFFORT_ID + " int, "     // "effort_id": 801006623,
-                + Segments.RANK + " int, "     // "rank": 1,
-                + Segments.ATHLETE_PROFILE_URL + " text)"; // "athlete_profile": "http://pics.com/227615/large.jpg"
+
         protected static final String CREATE_TABLE_SEGMENT_STREAMS_V1 = "create table " + Segments.TABLE_SEGMENT_STREAMS + " ("
                 + Segments.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                 + Segments.SEGMENT_ID + " int, "
@@ -227,16 +178,6 @@ public class SegmentsDatabaseManager {
                 + Segments.ALTITUDE + " real, "
                 + Segments.LATITUDE + " real, "
                 + Segments.LONGITUDE + " real)";
-        protected static final String CREATE_TABLE_EFFORT_STREAMS_V1 = "create table " + Segments.TABLE_EFFORT_STREAMS + " ("
-                + Segments.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
-                + Segments.EFFORT_ID + " int, "
-                + Segments.LATITUDE + " real, "
-                + Segments.LONGITUDE + " real, "
-                + Segments.DISTANCE + " real, "
-                + Segments.VELOCITY_SMOOTH + " real, "
-                + Segments.HEART_RATE + " int, "
-                + Segments.CADENCE + " int, "
-                + Segments.WATTS + " real)";
         private static final String TAG = SegmentsDbHelper.class.getName();
         private static final boolean DEBUG = TrainingApplication.getDebug(true);
 
@@ -251,17 +192,11 @@ public class SegmentsDatabaseManager {
         @Override
         public void onCreate(@NonNull SQLiteDatabase db) {
 
-            db.execSQL(CREATE_TABLE_STARRED_SEGMENTS_V1);
-            if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_STARRED_SEGMENTS_V1);
-
-            db.execSQL(CREATE_TABLE_SEGMENT_LEADERBOARD_V1);
-            if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_SEGMENT_LEADERBOARD_V1);
+            db.execSQL(CREATE_TABLE_STARRED_SEGMENTS_V2);
+            if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_STARRED_SEGMENTS_V2);
 
             db.execSQL(CREATE_TABLE_SEGMENT_STREAMS_V1);
             if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_SEGMENT_STREAMS_V1);
-
-            db.execSQL(CREATE_TABLE_EFFORT_STREAMS_V1);
-            if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_EFFORT_STREAMS_V1);
 
         }
 
@@ -273,15 +208,13 @@ public class SegmentsDatabaseManager {
         @Override
         public void onUpgrade(@NonNull SQLiteDatabase db, int oldVersion, int newVersion) {
 
-            if (newVersion <= 3) {  // simply clear everything
+            // since this database is only a cache for online data, its upgrade policy is
+            // to simply to discard the data and start over
 
-                db.execSQL("drop table if exists " + Segments.TABLE_SEGMENT_LEADERBOARD);
-                db.execSQL("drop table if exists " + Segments.TABLE_STARRED_SEGMENTS);
-                db.execSQL("drop table if exists " + Segments.TABLE_EFFORT_STREAMS);
-                db.execSQL("drop table if exists " + Segments.TABLE_SEGMENT_STREAMS);
+            db.execSQL("drop table if exists " + Segments.TABLE_STARRED_SEGMENTS);
+            db.execSQL("drop table if exists " + Segments.TABLE_SEGMENT_STREAMS);
 
-                onCreate(db);  // run onCreate to get new database
-            }
+            onCreate(db);  // run onCreate to get new database
         }
     }
 }

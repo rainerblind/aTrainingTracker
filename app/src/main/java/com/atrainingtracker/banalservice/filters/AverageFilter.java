@@ -19,6 +19,7 @@
 package com.atrainingtracker.banalservice.filters;
 
 import com.atrainingtracker.banalservice.sensor.SensorType;
+import com.atrainingtracker.trainingtracker.TrainingApplication;
 
 public class AverageFilter extends MyFilter<Number> {
     protected double mAccumulatedValue = 0;
@@ -40,8 +41,10 @@ public class AverageFilter extends MyFilter<Number> {
 
     @Override
     public synchronized void newValue(Number value) {
-        mAccumulatedValue += value.doubleValue();
-        mNumberOfSamples++;
+        if (!TrainingApplication.isPaused()) {
+            mAccumulatedValue += value.doubleValue();
+            mNumberOfSamples++;
+        }
     }
 
     @Override

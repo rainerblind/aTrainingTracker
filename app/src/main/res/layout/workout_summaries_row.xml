@@ -2,169 +2,94 @@
 <!--
   ~ aTrainingTracker (ANT+ BTLE)
   ~ Copyright (C) 2011 - 2019 Rainer Blind <rainer.blind@gmail.com>
-  ~
-  ~ This program is free software: you can redistribute it and/or modify
-  ~ it under the terms of the GNU General Public License as published by
-  ~ the Free Software Foundation, either version 3 of the License, or
-  ~ (at your option) any later version.
-  ~
-  ~ This program is distributed in the hope that it will be useful,
-  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
-  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  ~ GNU General Public License for more details.
-  ~
-  ~ You should have received a copy of the GNU General Public License
-  ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
-  -->
+  ... (license header) ...
+-->
 
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="fill_parent"
-    android:layout_height="fill_parent"
-    android:orientation="vertical"
-    android:padding="8dp">
-
-    <!--
-<LinearLayout
-    android:layout_width="fill_parent"
+    xmlns:map="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal">
+    android:layout_marginStart="8dp"
+    android:layout_marginTop="8dp"
+    android:layout_marginEnd="8dp"
+    android:layout_marginBottom="8dp"
+    app:cardElevation="2dp"
+    app:cardCornerRadius="8dp"
+    app:strokeWidth="1dp">
 
-    <ImageView
-        android:id="@+id/imageWorkout"
-        android:layout_width="50dip"
-        android:layout_height="50dip"
-        android:src="@drawable/workout_sample" >
-    </ImageView>
-    -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/content_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
 
-        <LinearLayout
-            android:layout_width="wrap_content"
+        <!-- TODO: only include? -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/workout_header_include"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
 
-            <TextView
-                android:id="@+id/tvName"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Schmellbachtal"
-                android:textSize="20sp" />
+            <include layout="@layout/workout_summary__header" />
 
-            <TextView
-                android:id="@+id/tvDistanceTypeAndDuration"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="5 km run in 0:40:00"
-                android:textSize="20sp" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
 
-            <TextView
-                android:id="@+id/tvDataAndTime"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="1.9.2012 at 10:10"
-                android:textSize="20sp" />
-
-        </LinearLayout>
-
-    <LinearLayout
-        android:id="@+id/llSensors"
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal">
-
-        <TextView
-            android:id="@+id/tvSensors"
-            android:layout_width="wrap_content"
+        <!-- Placeholder for Workout Details (Distance, Time, Ascent, etc.) -->
+        <include
+            android:id="@+id/workout_details_include"
+            layout="@layout/workout_summary__details"
+            android:layout_marginTop="-8dp"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="Sensors:"
-            android:textSize="20sp">
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/workout_header_include" />
 
-        </TextView>
-
-        <TextView
-            android:id="@+id/tvAvailableSensors"
-            android:layout_width="wrap_content"
+        <!-- Container for Extrema Values -->
+        <include
+            android:id="@+id/extrema_values_include"
+            layout="@layout/workout_summary__extrema"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="TSG-------"
-            android:textSize="20sp">
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/workout_details_include" />
 
-        </TextView>
-    </LinearLayout>
-
-    <LinearLayout
-        android:id="@+id/llExports"
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical">
-
-        <LinearLayout
-            android:id="@+id/llFile"
-            android:layout_width="fill_parent"
+        <include
+            android:id="@+id/workout_description_include"
+            layout="@layout/workout_summary__description"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/extrema_values_include"
+            tools:visibility="visible" />
 
-            <ImageView
-                android:id="@+id/ivFile"
-                android:layout_width="10pt"
-                android:layout_height="fill_parent"
-                android:src="@drawable/export_success"
-                tools:ignore="ContentDescription" />
+        <!-- MapView is now positioned below the new extrema container -->
+        <com.google.android.gms.maps.MapView
+            android:id="@+id/workout_summaries_mapView"
+            android:layout_width="0dp"
+            android:layout_height="180dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/workout_description_include"
+            map:liteMode="true"
+            map:mapType="none" />
 
-            <TextView
-                android:id="@+id/tvFile"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/successfully_exported_to_file"
-                android:textSize="15sp">
-
-            </TextView>
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/llDropbox"
-            android:layout_width="fill_parent"
+        <include
+            android:id="@+id/export_status_include"
+            layout="@layout/workout_summary__export_status"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/workout_summaries_mapView" />
 
-            <ImageView
-                android:id="@+id/ivDropbox"
-                android:layout_width="10pt"
-                android:layout_height="fill_parent"
-                android:src="@drawable/export_failed"
-                tools:ignore="ContentDescription" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
-            <TextView
-                android:id="@+id/tvDropbox"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/successfully_uploaded_to_dropbox"
-                android:textSize="15sp">
-
-            </TextView>
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/llCommunities"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
-
-            <ImageView
-                android:id="@+id/ivCommunities"
-                android:layout_width="10pt"
-                android:layout_height="fill_parent"
-                android:src="@drawable/export_failed"
-                tools:ignore="ContentDescription" />
-
-            <TextView
-                android:id="@+id/tvCommunities"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/successfully_uploaded_to_community"
-                android:textSize="15sp">
-
-            </TextView>
-        </LinearLayout>
-    </LinearLayout>
-
-</LinearLayout>
+</com.google.android.material.card.MaterialCardView>

@@ -39,7 +39,7 @@ public class ConfigTrackingViewsActivity
     @NonNull
     @Override
     public ActivityType getActivityType(long viewId) {
-        return TrackingViewsDatabaseManager.getActivityType(viewId);
+        return TrackingViewsDatabaseManager.getInstance(this).getActivityType(viewId);
     }
 
     @NonNull

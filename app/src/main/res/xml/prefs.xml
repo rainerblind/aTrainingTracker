@@ -21,11 +21,6 @@
     android:key="root">
 
     <PreferenceCategory android:title="@string/prefsBasic">
-        <EditTextPreference
-            android:key="athleteName"
-            android:summary="@string/prefsAthleteNameSummary"
-            android:title="@string/prefsAthleteNameTitle" />
-
         <Preference
             android:key="training_zones_settings"
             android:title="@string/prefs_training_zones"
@@ -39,12 +34,6 @@
             android:key="listUnits"
             android:summary="@string/prefsUnitsSummary"
             android:title="@string/prefsUnitsTitle" />
-
-        <EditTextPreference
-            android:key="samplingTime"
-            android:inputType="number"
-            android:summary="@string/prefsSamplingTimeSummary"
-            android:title="@string/prefsSamplingTimeTitle" />
 
         <PreferenceScreen
             android:key="display"

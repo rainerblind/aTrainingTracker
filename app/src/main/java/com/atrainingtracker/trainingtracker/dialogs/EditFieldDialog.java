@@ -230,9 +230,10 @@ public class EditFieldDialog extends DialogFragment {
         builder.setPositiveButton(R.string.OK, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int whichButton) {
-                TrackingViewsDatabaseManager.updateTextSizeOfRow(mRowId, mTextSize);
-                TrackingViewsDatabaseManager.updateSensorTypeOfRow(mRowId, mSensorType);
-                TrackingViewsDatabaseManager.updateSourceDeviceIdOfRow(mRowId, mDeviceId);
+                TrackingViewsDatabaseManager trackingViewsDatabaseManager = TrackingViewsDatabaseManager.getInstance(getContext());
+                trackingViewsDatabaseManager.updateTextSizeOfRow(mRowId, mTextSize);
+                trackingViewsDatabaseManager.updateSensorTypeOfRow(mRowId, mSensorType);
+                trackingViewsDatabaseManager.updateSourceDeviceIdOfRow(mRowId, mDeviceId);
                 getActivity().sendBroadcast(new Intent(TRACKING_VIEW_CHANGED_INTENT)
                         .setPackage(getActivity().getPackageName()));
             }
@@ -246,7 +247,7 @@ public class EditFieldDialog extends DialogFragment {
     protected void configureSourceSpinner(@NonNull View parentView) {
         Spinner sourceSpinner = parentView.findViewById(R.id.spinnerSource);
         TextView textViewSource = parentView.findViewById(R.id.textViewSource);
-        DevicesDatabaseManager.DeviceIdAndNameLists deviceIdAndNameLists = DevicesDatabaseManager.getDeviceIdAndNameLists(mSensorType);
+        DevicesDatabaseManager.DeviceIdAndNameLists deviceIdAndNameLists = DevicesDatabaseManager.getInstance(requireContext()).getDeviceIdAndNameLists(mSensorType);
         if (DEBUG)
             Log.i(TAG, "configuring view for sensorType " + mSensorType + " deviceId=" + mDeviceId);
         if (deviceIdAndNameLists == null) {                        // only build in sensors like TIME, ...
@@ -307,7 +308,7 @@ public class EditFieldDialog extends DialogFragment {
             button.setVisibility(View.VISIBLE);
             tvConfigure.setVisibility(View.VISIBLE);
 
-            final TrackingViewsDatabaseManager.FilterInfo filterInfo = TrackingViewsDatabaseManager.getFilterInfo(mRowId);
+            final TrackingViewsDatabaseManager.FilterInfo filterInfo = TrackingViewsDatabaseManager.getInstance(getContext()).getFilterInfo(mRowId);
 
             button.setText(ConfigureFilterDialogFragment.getFilterSummary(getContext(), filterInfo.filterType, filterInfo.filterConstant));
 

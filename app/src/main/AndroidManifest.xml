@@ -55,6 +55,17 @@
             android:windowSoftInputMode="stateHidden" />
 
         <activity
+            android:name=".trainingtracker.ui.aftermath.editworkout.EditWorkoutActivity"
+            android:theme="@style/Theme.aTrainingTracker"
+            android:label="@string/edit_workout"/>
+
+        <activity
+            android:name=".trainingtracker.ui.aftermath.TrackOnMapAftermathActivity"
+            android:theme="@style/Theme.aTrainingTracker"
+            android:label="TODO: Map title"/>
+
+
+        <activity
             android:name=".trainingtracker.activities.SegmentDetailsActivity"
             android:launchMode="singleTask"
             android:theme="@style/Theme.aTrainingTracker"
@@ -101,7 +112,7 @@
             android:launchMode="singleTask">
             <intent-filter>
 
-                <data android:scheme="db-${dropboxKey}" />
+                <data android:scheme="db-iknmdmr31sf64r0" />
 
                 <action android:name="android.intent.action.VIEW" />
 

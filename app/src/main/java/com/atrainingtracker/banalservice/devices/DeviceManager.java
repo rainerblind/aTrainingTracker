@@ -87,6 +87,7 @@ public class DeviceManager
     protected ClockDevice mClockDevice;
     protected MyDevice mSpeedAndLocationDevice_GPS, mSpeedAndLocationDevice_GoogleFused, mSpeedAndLocationDevice_Network;
     protected AltitudeFromPressureDevice mAltitudeFromPressureDevice;
+    protected VerticalSpeedAndSlopeDevice mVerticalSpeedAndSlopeDevice;
     protected boolean mHavePressureSensor = false;
     protected IntentFilter mPairingChangedFilter = new IntentFilter(BANALService.PAIRING_CHANGED);
     // protected IntentFilter mRemoveDeviceFilter            = new IntentFilter(BANALService.REMOVE_DEVICE);
@@ -101,6 +102,7 @@ public class DeviceManager
     protected LinkedList<Long> mFoundDevices = new LinkedList<>();
     protected ANTSearchForNewDevicesEngineMultiDeviceSearch mAntAsyncSearchEngine = null;
     protected BTSearchForNewDevicesEngine mBTSearchForNewDevicesEngine = null;
+    private final DevicesDatabaseManager mDevicesDatabaseManager;
     private final BroadcastReceiver mStopSearchingForNewDevicesReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
             if (DEBUG) Log.d(TAG, "Received StopSearchingForNewDevices Broadcast");
@@ -170,11 +172,11 @@ public class DeviceManager
 
             // check whether this device is already in DB
             // ANTDeviceID antDeviceID = new ANTDeviceID(antDeviceType.getDeviceTypeByte(), deviceFound.getAntDeviceNumber());
-            if (!DevicesDatabaseManager.isANTDeviceInDB(deviceType, deviceFound.getAntDeviceNumber())) { // not yet known
+            if (!mDevicesDatabaseManager.isANTDeviceInDB(deviceType, deviceFound.getAntDeviceNumber())) { // not yet known
                 if (DEBUG)
                     Log.d(TAG, "device is not yet in the database, so we have to add it to the database");
 
-                deviceId = DevicesDatabaseManager.insertNewAntDeviceIntoDB(deviceType, deviceFound.getDeviceDisplayName(), deviceFound.getAntDeviceNumber(), pairingRecommendation, manufacturer, batteryPercentage);
+                deviceId = mDevicesDatabaseManager.insertNewAntDeviceIntoDB(deviceType, deviceFound.getDeviceDisplayName(), deviceFound.getAntDeviceNumber(), pairingRecommendation, manufacturer, batteryPercentage);
 
                 if (deviceId > 0 && pairingRecommendation) {
                     pairingChanged(deviceId, pairingRecommendation);
@@ -184,16 +186,16 @@ public class DeviceManager
             } else {
                 if (DEBUG)
                     Log.i(TAG, "Device already in database, so we do not add it to the database");
-                deviceId = DevicesDatabaseManager.getDeviceId(deviceType, deviceFound.getAntDeviceNumber());
+                deviceId = mDevicesDatabaseManager.getDeviceId(deviceType, deviceFound.getAntDeviceNumber());
 
                 if (manufacturer != null) {
                     if (DEBUG) Log.i(TAG, "wow, we got a manufacturer: " + manufacturer);
-                    DevicesDatabaseManager.setManufacturerName(DevicesDatabaseManager.getDeviceId(deviceType, deviceFound.getAntDeviceNumber()), manufacturer);
+                    mDevicesDatabaseManager.setManufacturerName(mDevicesDatabaseManager.getDeviceId(deviceType, deviceFound.getAntDeviceNumber()), manufacturer);
                 }
 
                 if (batteryPercentage >= 0) {
                     if (DEBUG) Log.i(TAG, "wow, we got a battery percentage: " + batteryPercentage);
-                    DevicesDatabaseManager.setBatteryPercentage(DevicesDatabaseManager.getDeviceId(deviceType, deviceFound.getAntDeviceNumber()), batteryPercentage);
+                    mDevicesDatabaseManager.setBatteryPercentage(mDevicesDatabaseManager.getDeviceId(deviceType, deviceFound.getAntDeviceNumber()), batteryPercentage);
                 }
             }
 
@@ -218,13 +220,13 @@ public class DeviceManager
             long deviceId = -1;
 
             // check whether this device is already in DB
-            if (!DevicesDatabaseManager.isBluetoothDeviceInDB(deviceType, BluetoothMACAddress)) {
+            if (!mDevicesDatabaseManager.isBluetoothDeviceInDB(deviceType, BluetoothMACAddress)) {
                 if (DEBUG) Log.d(TAG, "device is not yet in the database, so we have to add it");
 
-                deviceId = DevicesDatabaseManager.insertNewBluetoothDeviceIntoDB(deviceType, BluetoothMACAddress, name, manufacturer, batteryPercentage, false);
+                deviceId = mDevicesDatabaseManager.insertNewBluetoothDeviceIntoDB(deviceType, BluetoothMACAddress, name, manufacturer, batteryPercentage, false);
             } else {
                 if (DEBUG) Log.d(TAG, "Device already in database, so we do not add it");
-                deviceId = DevicesDatabaseManager.getDeviceId(deviceType, BluetoothMACAddress);
+                deviceId = mDevicesDatabaseManager.getDeviceId(deviceType, BluetoothMACAddress);
             }
 
             mFoundDevices.add(deviceId);
@@ -254,6 +256,8 @@ public class DeviceManager
     public DeviceManager(BANALService banalService, MySensorManager mySensorManager) {
         mContext = banalService;
         mBanalService = banalService;
+
+        mDevicesDatabaseManager = DevicesDatabaseManager.getInstance(mContext);
 
         mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(mContext);
         mSharedPreferences.registerOnSharedPreferenceChangeListener(this);
@@ -286,6 +290,8 @@ public class DeviceManager
             if (DEBUG) Log.i(TAG, "creating network location device");
             mSpeedAndLocationDevice_Network = new SpeedAndLocationDevice_Network(mContext, mSensorManager);
         }
+
+        mVerticalSpeedAndSlopeDevice = new VerticalSpeedAndSlopeDevice(mContext, mSensorManager);
 
         // also create paired remote devices and start searching for them
         if (TrainingApplication.startSearchWhenAppStarts()) {
@@ -573,6 +579,7 @@ public class DeviceManager
         if (mAltitudeFromPressureDevice != null) {
             myDeviceList.add(mAltitudeFromPressureDevice);
         }
+        myDeviceList.add(mVerticalSpeedAndSlopeDevice);
         myDeviceList.addAll(getRemoteDeviceList());
 
         return myDeviceList;
@@ -749,17 +756,17 @@ public class DeviceManager
 
     // TODO: code is very similar to createPairedRemoteDevices, so the code might be merged?
     protected MyRemoteDevice createRemoteDevice(long deviceId) {
-        Protocol protocol = DevicesDatabaseManager.getProtocol(deviceId);
-        DeviceType deviceType = DevicesDatabaseManager.getDeviceType(deviceId);
+        Protocol protocol = mDevicesDatabaseManager.getProtocol(deviceId);
+        DeviceType deviceType = mDevicesDatabaseManager.getDeviceType(deviceId);
         MyRemoteDevice myRemoteDevice = null;
 
         switch (protocol) {
             case ANT_PLUS:
-                int antDeviceNumber = DevicesDatabaseManager.getAntDeviceNumber(deviceId);
+                int antDeviceNumber = mDevicesDatabaseManager.getAntDeviceNumber(deviceId);
                 myRemoteDevice = createNewANTDevice(deviceId, deviceType, antDeviceNumber);
                 break;
             case BLUETOOTH_LE:
-                String address = DevicesDatabaseManager.getBluetoothMACAddress(deviceId);
+                String address = mDevicesDatabaseManager.getBluetoothMACAddress(deviceId);
                 myRemoteDevice = createNewBluetoothLEDevice(deviceId, deviceType, address);
                 break;
         }
@@ -770,8 +777,7 @@ public class DeviceManager
     public void createPairedRemoteDevices(Protocol protocol) {
         if (DEBUG) Log.d(TAG, "createPairedRemoteDevices()");
 
-        DevicesDatabaseManager databaseManager = DevicesDatabaseManager.getInstance();
-        SQLiteDatabase db = databaseManager.getOpenDatabase();
+        SQLiteDatabase db = mDevicesDatabaseManager.getDatabase();
 
         // TODO: sort according to the LAST_ACTIVE field?
         Cursor cursor = db.query(DevicesDbHelper.DEVICES,
@@ -809,9 +815,7 @@ public class DeviceManager
                 if (DEBUG) Log.d(TAG, "createPairedDevices(): ignoring unpaired device");
             }
         }
-
         cursor.close();
-        databaseManager.closeDatabase(); // db.close();
 
         if (DEBUG) Log.d(TAG, "finished createPairedDevices");
     }

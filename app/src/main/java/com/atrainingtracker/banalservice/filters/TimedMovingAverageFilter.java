@@ -22,6 +22,7 @@ import android.util.Log;
 
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.sensor.SensorType;
+import com.atrainingtracker.trainingtracker.TrainingApplication;
 
 import java.util.LinkedList;
 
@@ -50,12 +51,14 @@ public class TimedMovingAverageFilter
 
     @Override
     public synchronized void newValue(Number value) {
-        long currentTimeMillis = System.currentTimeMillis();
-        mTimestampedValues.add(new TimestampedValue(currentTimeMillis, value));
-        if (DEBUG)
-            Log.i(TAG, "added a new value: timestamp=" + currentTimeMillis + ", value=" + value);
+        if (!TrainingApplication.isPaused()) {
+            long currentTimeMillis = System.currentTimeMillis();
+            mTimestampedValues.add(new TimestampedValue(currentTimeMillis, value));
+            if (DEBUG)
+                Log.i(TAG, "added a new value: timestamp=" + currentTimeMillis + ", value=" + value);
 
-        trimValues();
+            trimValues();
+        }
     }
 
     @Override
@@ -68,7 +71,7 @@ public class TimedMovingAverageFilter
 
         double sum = 0;
         for (TimestampedValue timestampedValue : mTimestampedValues) {
-            sum += timestampedValue.value.doubleValue();
+            sum += timestampedValue.value == null ? 0 : timestampedValue.value.doubleValue();
         }
         return sum / mTimestampedValues.size();
     }

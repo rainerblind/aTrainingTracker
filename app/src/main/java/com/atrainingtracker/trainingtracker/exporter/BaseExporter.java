@@ -34,8 +34,15 @@ import android.os.Bundle;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
+
+import androidx.work.Constraints;
+import androidx.work.Data;
+import androidx.work.NetworkType;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkManager;
 
 import android.os.Environment;
 import android.provider.MediaStore;
@@ -51,9 +58,11 @@ import org.json.JSONException;
 import java.io.BufferedOutputStream;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
@@ -64,34 +73,33 @@ public abstract class BaseExporter {
     protected static final String PREFIX_FIRST = "\n    ";
     private static final String TAG = "BaseExporter";
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
-    protected static ExportManager cExportManager;
-    private static NotificationCompat.Builder mNotificationBuilder;
-    private static NotificationManagerCompat cNotificationManager;
     @NonNull
     protected final Context mContext;
 
+
+    /** method to be called by the ExportManager to start the export */
+    public final ExportResult export(@NonNull ExportInfo exportInfo) {
+        if (DEBUG) Log.d(TAG, "export: " + exportInfo.toString());
+        try {
+            ExportResult exportResult = doExport(exportInfo);
+            onFinished(exportInfo);
+            return exportResult;
+
+        } catch (IOException | JSONException | ParseException e) {
+            return new ExportResult(false, true, e.getMessage());
+        }
+    }
+
+    /* method that must be overridden by the child classes to do the export */
+    @Nullable
+    abstract protected ExportResult doExport(ExportInfo exportInfo) throws IOException, JSONException, ParseException;
+
+
+    protected void onFinished(@NonNull ExportInfo exportInfo) {}
+
+
     public BaseExporter(@NonNull Context context) {
         mContext = context;
-        cExportManager = new ExportManager(context, TAG);
-
-        cNotificationManager = NotificationManagerCompat.from(context);
-
-        // configure the intent
-        Bundle bundle = new Bundle();
-        bundle.putString(MainActivityWithNavigation.SELECTED_FRAGMENT, MainActivityWithNavigation.SelectedFragment.WORKOUT_LIST.name());
-        Intent newIntent = new Intent(mContext, MainActivityWithNavigation.class);
-        newIntent.putExtras(bundle);
-        newIntent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-        PendingIntent pendingIntent = PendingIntent.getActivity(mContext, 0, newIntent, PendingIntent.FLAG_IMMUTABLE);
-
-        // configure the notification
-        mNotificationBuilder = new NotificationCompat.Builder(mContext, TrainingApplication.NOTIFICATION_CHANNEL__EXPORT)
-                .setSmallIcon(R.drawable.logo)
-                .setLargeIcon(BitmapFactory.decodeResource(mContext.getResources(), R.drawable.ic_save_black_48dp))
-                .setContentTitle(mContext.getString(R.string.TrainingTracker))
-                .setContentText(mContext.getString(R.string.exporting))
-                .setContentIntent(pendingIntent)
-                .setOngoing(true);
     }
 
     /**
@@ -101,12 +109,7 @@ public abstract class BaseExporter {
      */
     @NonNull
     public static File getBaseDirFile(@NonNull Context context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            // relative path
-            return Environment.getExternalStoragePublicDirectory(getRelativePath()).getAbsoluteFile();
-        } else {
-            return context.getExternalFilesDir(null).getAbsoluteFile();
-         }
+        return context.getFilesDir();
     }
 
     /**
@@ -118,26 +121,106 @@ public abstract class BaseExporter {
         return Environment.DIRECTORY_DOCUMENTS + File.separator + "aTrainingTracker";
     }
 
-    @Nullable
-    private static OutputStream getOutputStream(@NonNull Context context, @NonNull String shortPath, String mimeType) throws IOException {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            final ContentValues contentValues = getContentValues(shortPath, mimeType);
 
-            final ContentResolver resolver = context.getApplicationContext().getContentResolver();
+    /**
+     * Gets a BufferedWriter for a file in the app's internal storage.
+     * @param shortPath The relative path of the file (e.g., "gpx/workout.gpx").
+     * @return A BufferedWriter for the specified file.
+     * @throws IOException If the file cannot be created or opened.
+     */
+    @NonNull
+    protected BufferedWriter getBufferedWriter(@NonNull String shortPath) throws IOException {
+        File file = new File(getBaseDirFile(mContext), shortPath);
 
-            final Uri contentUri = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
-            Uri uri = resolver.insert(contentUri, contentValues);
-            if (uri == null) {
-                Log.w(TAG, "No uri: " + contentUri + " " + shortPath);
-                return null;
+        File parentDir = file.getParentFile();
+        if (parentDir != null && !parentDir.exists()) {
+            if (!parentDir.mkdirs()) {
+                Log.e(TAG, "Could not create directory: " + parentDir.getAbsolutePath());
             }
-            return resolver.openOutputStream(uri);
-        } else {
-            String path = context.getExternalFilesDir(null).getAbsolutePath() + File.separator + shortPath;
-            File file = new File(path);
-            return new BufferedOutputStream(new FileOutputStream(file));
+        }
+
+        OutputStream outputStream = new FileOutputStream(file);
+        OutputStreamWriter outputStreamWriter = new OutputStreamWriter(outputStream, StandardCharsets.UTF_8);
+        return new BufferedWriter(outputStreamWriter);
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.Q)
+    protected void copyFileToDownloads(@NonNull ExportInfo exportInfo) {
+        String filename = exportInfo.getShortPath();
+        File fileToCopy = new File(getBaseDirFile(mContext), filename);
+        if (!fileToCopy.exists()) {
+            return;
+        }
+
+        ContentResolver resolver = mContext.getContentResolver();
+
+        deleteExistingFile(resolver, fileToCopy.getName());
+
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, fileToCopy.getName());
+        contentValues.put(MediaStore.MediaColumns.MIME_TYPE, "application/gpx+xml");
+        contentValues.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS);
+
+        Uri targetUri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues);
+
+        try (InputStream in = new FileInputStream(fileToCopy);
+             OutputStream out = resolver.openOutputStream(targetUri)) {
+
+            byte[] buf = new byte[1024];
+            int len;
+            while ((len = in.read(buf)) > 0) {
+                out.write(buf, 0, len);
+            }
+
+        } catch (IOException e) {
+            Log.e("SaveToDownloads", "Fehler beim Kopieren der Datei", e);
+            resolver.delete(targetUri, null, null);
         }
     }
+
+    /**
+     * Finds and deletes a file by its name in the public Downloads directory. * @param resolver The ContentResolver.
+     * @param fileName The name of the file to delete (e.g., "workout.gpx").
+     */
+    @RequiresApi(api = Build.VERSION_CODES.Q)
+    private void deleteExistingFile(ContentResolver resolver, String fileName) {
+
+        // Define the query to find the file
+        Uri collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI;
+        String[] projection = new String[]{MediaStore.Files.FileColumns._ID};
+        String selection = MediaStore.Files.FileColumns.DISPLAY_NAME + " = ?";
+        String[] selectionArgs = new String[]{fileName};
+
+        Uri fileUriToDelete = null;
+
+        // Execute the query
+        try (Cursor cursor = resolver.query(collection, projection, selection, selectionArgs, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                // File found, get its URI
+                long id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID));
+                fileUriToDelete = Uri.withAppendedPath(collection, String.valueOf(id));
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error while querying for existing file.", e);
+            // Don't block the export if query fails
+        }
+
+        // If a file was found, delete it
+        if (fileUriToDelete != null) {
+            try {
+                int rowsDeleted = resolver.delete(fileUriToDelete, null, null);
+                if (rowsDeleted > 0) {
+                    if (DEBUG) Log.d(TAG, "Successfully deleted existing file: " + fileName);
+                }
+            } catch (Exception e) {
+                // This can sometimes fail if the user moved the file, but it's usually safe to ignore.
+                Log.w(TAG, "Could not delete existing file, a duplicate might be created.", e);
+            }
+        }
+    }
+
+
+
 
     @NonNull
     private static ContentValues getContentValues(@NonNull String shortPath, String mimeType) {
@@ -153,66 +236,6 @@ public abstract class BaseExporter {
         return contentValues;
     }
 
-    @NonNull
-    public static BufferedWriter getWriter(@NonNull Context context, @NonNull String shortPath, String mimeType) throws IOException {
-        OutputStream outputStream = getOutputStream(context, shortPath, mimeType);
-        OutputStreamWriter outputStreamWriter = new OutputStreamWriter(outputStream, StandardCharsets.UTF_8);
-        return new BufferedWriter(outputStreamWriter);
-    }
-
-    public void onFinished() {
-        cExportManager.onFinished(TAG);
-    }
-
-    public final boolean export(@NonNull ExportInfo exportInfo) {
-        if (DEBUG) Log.d(TAG, "export: " + exportInfo.toString());
-
-        boolean success = false;
-
-        // ExportStatus oldExportStatus = cExportManager.getExportStatus(exportInfo);
-        // String oldAnswer = cExportManager.getExportAnswer(exportInfo);
-
-        cExportManager.exportingStarted(exportInfo);
-
-        try {
-            ExportResult result = doExport(exportInfo);
-            success = result.success();
-            if (!result.success() && !MyHelper.isOnline()) {
-                // cExportManager.exportingFinishedRetry(exportInfo, "network loss while uploading, will retry later");
-                cExportManager.exportingFinished(exportInfo, false, "network loss while uploading");
-            } else {
-                cExportManager.exportingFinished(exportInfo, result.success(), result.answer());
-            }
-
-        } catch (FileNotFoundException e) {
-            Log.e(TAG, "FileNotFoundException: " + e.getMessage(), e);
-            cExportManager.exportingFinished(exportInfo, false, "InterruptedException: " + e.getMessage());
-        } catch (SQLException e) {
-            Log.e(TAG, e.getMessage(), e);
-            cExportManager.exportingFinished(exportInfo, false, "SQLException: " + e.getMessage());
-        } catch (IOException e) {
-            Log.e(TAG, e.getMessage(), e);
-            cExportManager.exportingFinished(exportInfo, false, "SQLException:" + e.getMessage());
-        } catch (JSONException e) {
-            Log.e(TAG, "JSONException: " + e.getMessage(), e);
-            cExportManager.exportingFinished(exportInfo, false, "JSONException: " + e.getMessage());
-        } catch (IllegalArgumentException e) {
-            Log.e(TAG, "IllegalArgumentException: " + e.getMessage(), e);
-            cExportManager.exportingFinished(exportInfo, false, "IllegalArgumentException: " + e.getMessage());
-        } catch (ParseException e) {
-            Log.e(TAG, "ParseException: " + e.getMessage(), e);
-            cExportManager.exportingFinished(exportInfo, false, "ParseException: " + e.getMessage());
-        } catch (InterruptedException e) {
-            Log.e(TAG, "ParseException: " + e.getMessage(), e);
-            cExportManager.exportingFinished(exportInfo, false, "InterruptedException: " + e.getMessage());
-        }
-
-        return success;
-    }
-
-    @Nullable
-    abstract protected ExportResult doExport(ExportInfo exportInfo)
-            throws IOException, IllegalArgumentException, JSONException, ParseException, InterruptedException;
 
     /**
      * helper method to check whether there is some data
@@ -230,73 +253,7 @@ public abstract class BaseExporter {
         return true;
     }
 
-    /**
-     * create a notification that informs the user about the progress
-     **/
-    @NonNull
-    public Notification getExportProgressNotification(@NonNull ExportInfo exportInfo) {
-        mNotificationBuilder.setProgress(0, 0, false)
-                .setContentText(getExportMessage(exportInfo));
 
-        return mNotificationBuilder.build();
-    }
-
-    public void notifyExportFinished(String message) {
-        mNotificationBuilder.setProgress(0, 0, false)
-                .setContentText(message);
-    }
-
-    @NonNull
-    protected String getExportTitle(@NonNull ExportInfo exportInfo) {
-        return mContext.getString(R.string.notification_title,
-                mContext.getString(getAction().getIngId()),
-                mContext.getString(exportInfo.getExportType().getUiId()));
-    }
-
-    @NonNull
-    protected String getExportMessage(@NonNull ExportInfo exportInfo) {
-        String workoutName = exportInfo.getFileBaseName();
-        FileFormat format = exportInfo.getFileFormat();
-        ExportType type = exportInfo.getExportType();
-        int notification_format_id = switch (type) {
-            case FILE -> R.string.notification_export_file;
-            case DROPBOX -> R.string.notification_export_dropbox;
-            case COMMUNITY -> R.string.notification_export_community;
-        };
-
-        return mContext.getString(notification_format_id,
-                mContext.getString(getAction().getIngId()),
-                mContext.getString(format.getUiNameId()),
-                workoutName);
-    }
-
-    // copied code from getExportMessage
-    @NonNull
-    protected String getPositiveAnswer(@NonNull ExportInfo exportInfo) {
-        String workoutName = exportInfo.getFileBaseName();
-        FileFormat format = exportInfo.getFileFormat();
-        ExportType type = exportInfo.getExportType();
-        int notification_format_id = switch (type) {
-            case FILE -> R.string.notification_finished_file;
-            case DROPBOX -> R.string.notification_finished_dropbox;
-            case COMMUNITY -> R.string.notification_finished_community;
-        };
-
-        return mContext.getString(notification_format_id,
-                mContext.getString(getAction().getPastId()),
-                mContext.getString(format.getUiNameId()),
-                workoutName);
-    }
-
-    protected abstract Action getAction();
-
-    protected void notifyProgress(int max, int count) {
-        if ((count % (10 * 60)) == 0  // TODO take sampling time into account?
-                && cNotificationManager.areNotificationsEnabled()) {
-            mNotificationBuilder.setProgress(max, count, false);
-            cNotificationManager.notify(TrainingApplication.EXPORT_PROGRESS_NOTIFICATION_ID, mNotificationBuilder.build());
-        }
-    }
 
     @NonNull
     protected String getSamplePrefix(boolean isFirst) {
@@ -340,39 +297,24 @@ public abstract class BaseExporter {
         }
     }
 
-    protected enum Action {
-        UPLOAD(R.string.uploading, R.string.uploaded),
-        EXPORT(R.string.exporting, R.string.exported);
 
-        private final int mIngId;
-        private final int mPastId;
-
-        Action(int ingId, int pastId) {
-            mIngId = ingId;
-            mPastId = pastId;
-        }
-
-        public int getIngId() {
-            return mIngId;
-        }
-
-        public int getPastId() {
-            return mPastId;
-        }
-    }
 
     protected static class ExportResult {
         private final boolean mSuccess;
+        private final boolean mPleaseRetryWhenFailed;
         private final String mAnswer;
 
-        public ExportResult(boolean success, String answer) {
+        public ExportResult(boolean success, boolean pleaseRetryWhenFailed, String answer) {
             mSuccess = success;
+            mPleaseRetryWhenFailed = pleaseRetryWhenFailed;
             mAnswer = answer;
         }
 
         public boolean success() {
             return mSuccess;
         }
+
+        public boolean shallRetry() {return mPleaseRetryWhenFailed;}
 
         public String answer() {
             return mAnswer;

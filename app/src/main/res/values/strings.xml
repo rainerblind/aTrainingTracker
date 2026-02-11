@@ -45,7 +45,7 @@
     <string name="edit_device">edit device</string>
     <string name="edit_location">edit location</string>
     <string name="Edit_Location">Edit Location</string>
-    <string name="edit_workout_details">edit workout details</string>
+    <string name="edit_workout">edit workout</string>
     <string name="Edit_Location_Message">Edit the name and altitude of this location</string>
     <string name="edit_wheel_circumference">edit wheel circumference</string>
     <string name="edit_calibration_factor">edit calibration factor</string>
@@ -63,6 +63,7 @@
     <string name="really_delete_pebble_view_format">Do you really want to delete the Pebble view "%1$s"?</string>
     <string name="really_delete_view_format">Do you really want to delete the tracking view "%1$s"?</string>
     <string name="deleting_please_wait">Deleting workout …\nplease wait</string>
+    <string name="deleting_workout">Deleting: %1$s…</string>)
     <string name="calculating_extrema_values">Calculating min, mean, and max values…</string>
     <string name="calculating_extrema_value_for">calculating %1$s of %2$s</string>
     <string name="calculating_max_away_point">calculating max away point</string>
@@ -79,7 +80,7 @@
     <string name="start_or_resume_dialog_message">The previous workout was not finished properly.\n Do you want to start a new workout or resume the previous one?</string>
     <string name="start_new_workout">Start new</string>
     <string name="resume_workout">Resume prev.</string>
-    <string name="SD_card">SD-card</string>
+    <string name="SD_card">SD-card</string>  <!-- TODO: replace -->
     <string name="File">File</string>
     <string name="Community">Community</string>
     <string name="Dropbox" translatable="false">Dropbox</string>
@@ -145,6 +146,7 @@
     <string name="units_speed_basic" translatable="false">m/s</string>
     <string name="units_speed_metric" translatable="false">km/h</string>
     <string name="units_speed_imperial" translatable="false">mile/h</string>
+    <string name="units_vertical_speed_basic" translatable="false">m/h</string>
     <string name="units_speed_unknown" translatable="false">n/a</string>
     <string name="units_speed_short_metric" translatable="false">km/h</string>
     <string name="units_speed_short_imperial" translatable="false">mi/h</string>
@@ -241,6 +243,8 @@
     <string name="accumulated_sensors_short">acc. sensors</string>
     <string name="accuracy">accuracy</string>
     <string name="accuracy_short">acc.</string>
+    <string name="ascent">ascent</string>
+    <string name="ascent_short">ascent</string>
     <string name="bearing">bearing</string>
     <string name="bearing_short">bearing</string>
     <string name="altitude">altitude</string>
@@ -253,6 +257,8 @@
     <string name="cadence_bike_short">cad.</string>
     <string name="calories">calories</string>
     <string name="calories_short">cal.</string>
+    <string name="descent">descent</string>
+    <string name="descent_short">descent</string>
     <string name="distance">distance</string>
     <string name="distance_short">dist.</string>
     <string name="distance_lap">distance lap</string>
@@ -305,6 +311,10 @@
     <string name="torque_effectiveness_l_short">effective l</string>
     <string name="torque_effectiveness_r">torque effectiveness right</string>
     <string name="torque_effectiveness_r_short">effective r</string>
+    <string name="slope">slope</string>
+    <string name="slope_short">slope</string>
+    <string name="vertical_speed">vertical speed (VAM)</string>
+    <string name="vertical_speed_short">VAM</string>
 
     <string name="sport_type_walk">walk</string>
     <string name="sport_type_run">run</string>
@@ -370,8 +380,6 @@
     <string name="prefsUserTitle">User</string>
     <string name="prefsBasic">Basic</string>
     <string name="prefsAdvanced">Advanced</string>
-    <string name="prefsAthleteNameTitle">Athlete Name</string>
-    <string name="prefsAthleteNameSummary">Athlete Name</string>
 
     <string name="prefsThresholdSpeedsTitle">Threshold speeds</string>
     <string name="prefsThresholdSpeedsSummary">Configure the threshold speeds of the different sports</string>
@@ -381,8 +389,6 @@
     <string name="prefsMaxMTBSpeedTitle">max MTB speed</string>
 
     <string name="prefsTrackingTitle">Tracking</string>
-    <string name="prefsSamplingTimeSummary" translatable="false">1 s</string>
-    <string name="prefsSamplingTimeTitle">Sampling Time</string>
 
     <string name="prefsLocationSourceTitle">Location Source</string>
     <string name="prefsLocationSourceSummary">Choose location source (GPS, google fused, network)</string>
@@ -465,7 +471,7 @@
     <!-- layouts -->
     <string name="pairedText">paired</string>
 
-    <string name="pairing">pairing</string>
+    <string name="drawer__pairing">pairing</string>
     <string name="unpairing">unpairing</string>
 
     <!-- TODO: prefixes -->
@@ -558,8 +564,6 @@
     <string name="MethodHint">edit method</string>
     <string name="Description">Description:</string>
     <string name="DescriptionHint">edit description</string>
-    <string name="SamplingTime">Sampling Time:</string>
-    <string name="SamplingTimeValue" translatable="false">1</string>
     <string name="StartTime">Start Time:</string>
     <string name="NoData" translatable="false">--</string>
     <string name="TotalTime">Total Time:</string>
@@ -571,7 +575,7 @@
     <string name="mean">mean</string>
     <string name="max">max</string>
     <string name="SensorTypes">Sensors:</string>
-    <string name="buttonSaveWorkoutText">Save</string>
+    <string name="buttonSaveWorkoutText">Save and export</string>
     <string name="buttonDeleteWorkoutText">Delete</string>
 
     <!-- export_details -->
@@ -599,38 +603,45 @@
     <string name="equipment_all_bikes">all bikes</string>
     <string name="equipment_all_shoes">all shoes</string>
     <string name="equipment_type_bike">Bike</string>
-    <string name="equipment_type_shoe">Shoe</string>
+    <string name="equipment_type_shoe">Shoes</string>
 
     <!-- dialogs -->
     <string name="SD_card_not_available">Sorry, the SD Card is not available.</string>
 
     <!-- actions -->
-    <string name="uploading">uploading</string>
-    <string name="uploaded">uploaded</string>
-    <string name="exporting">exporting</string>
-    <string name="exported">exported</string>
+    <string name="uploading">Uploading</string>
+    <string name="uploaded">Uploaded</string>
+    <string name="writing">Writing</string>
+    <string name="wrote">Wrote</string>
 
-    <string name="something_strange_happened">something strange happened</string>
-    <string name="exporting_to_file_not_wanted">exporting to SD-card not wanted</string>
-    <string name="uploading_to_dropbox_not_wanted">uploading to Dropbox not wanted</string>
-    <string name="uploading_to_community_not_wanted">uploading to an online community not wanted</string>
+    <string name="something_strange_happened">Something strange happened.</string>
+    <string name="exporting_to_file_not_wanted">Exporting to file not wanted.</string>
+    <string name="uploading_to_dropbox_not_wanted">Uploading to Dropbox not wanted.</string>
+    <string name="uploading_to_community_not_wanted">Uploading to an online community not wanted.</string>
 
-    <string name="exporting_to_file_failed_for_one">exporting to SD-card failed for 1/%1$d files</string>
+
+
+    <string name="exporting_to_file">exporting to file: %1$s (%2$d/%3$d)</string>
+    <string name="uploading_to_dropbox">uploading to Dropbox: %1$s (%2$d/%3$d)</string>
+    <string name="uploading_to_community">uploading to online community: %1$s (%2$d/%3$d)</string>
+
+
+    <!-- TODO: remove them and use the plurals instead. -->
+    <string name="exporting_to_file_failed_for_one">exporting to file failed for 1/%1$d files</string>
     <string name="uploading_to_dropbox_failed_for_one">uploading to Dropbox failed for 1/%1$d files</string>
     <string name="uploading_to_community_failed_for_one">uploading to 1/%1$d online communities failed</string>
     <!--  which one??? -->
-    <string name="exporting_to_file_failed_for_several">exporting to SD-card failed for %1$d/%2$d files</string>
+    <string name="exporting_to_file_failed_for_several">exporting to file failed for %1$d/%2$d files</string>
     <string name="uploading_to_dropbox_failed_for_several">uploading to Dropbox failed for %1$d/%2$d files</string>
     <string name="uploading_to_community_failed_for_several">uploading to %1$d/%2$d online communities failed</string>
     <!--  which one??? -->
-    <string name="successfully_exported_to_file">successfully exported %1$d/%2$d files to SD-card</string>
+    <string name="successfully_exported_to_file">successfully exported %1$d/%2$d files to file</string>
     <string name="successfully_uploaded_to_dropbox">successfully uploaded %1$d/%2$d files to Dropbox</string>
     <string name="successfully_uploaded_to_community">successfully uploaded to %1$d/%2$d online communities</string>
-    <string name="exporting_to_file">exporting to SD-card: %1$s (%2$d/%3$d)</string>
-    <string name="uploading_to_dropbox">uploading to Dropbox: %1$s (%2$d/%3$d)</string>
-    <string name="uploading_to_community">uploading to online community: %1$s (%2$d/%3$d)</string>
+
     <string name="tracking">tracking</string>
-    <string name="waiting_to_export_to_file">waiting to export %1$d/%2$d files to SD-card</string>
+    <string name="tracking_finished">stopped</string>
+    <string name="waiting_to_export_to_file">waiting to export %1$d/%2$d files to file</string>
     <string name="waiting_to_upload_to_dropbox">waiting to upload %1$d/%2$d files to Dropbox</string>
     <string name="waiting_to_upload_to_community">waiting to upload %1$d/%2$d online communities</string>
 
@@ -644,7 +655,7 @@
     <!-- exporting to file -->
     <string name="notification_export_unknown">%1$s %2$s file to ???\n%3$s</string>
     <!-- exporting TCX file to ??? <workoutName> -->
-    <string name="notification_export_file">%1$s %2$s file to SD-card\n%3$s</string>
+    <string name="notification_export_file">%1$s %2$s file to filesystem\n%3$s</string>
     <!-- exporting TCX file to SD-card <workoutName> -->
     <string name="notification_export_dropbox">%1$s %2$s file to Dropbox\n%3$s</string>
     <!-- uploading TCX file to Dropbox <workoutName> -->
@@ -652,7 +663,7 @@
     <!-- uploading to Strava <workoutName> -->
     <string name="notification_finished_unknown">successfully %1$s %2$s file to ???\n%3$s</string>
     <!-- successfully exported TCX file to ???<workoutName> -->
-    <string name="notification_finished_file">successfully %1$s %2$s file to SD-card\n%3$s</string>
+    <string name="notification_finished_file">successfully %1$s %2$s file to filesystem\n%3$s</string>
     <!-- successfully exported TCX file to SD-card <workoutName> -->
     <string name="notification_finished_dropbox">successfully %1$s %2$s file to Dropbox\n%3$s</string>
     <!-- successfully uploaded TCX file to Dropbox <workoutName> -->
@@ -709,7 +720,7 @@
     <string name="max_line_distance">furthest away</string>
     <string name="end">end</string>
     <string name="my_locations">My Locations</string>
-    <string name="settings">Settings</string>
+    <string name="drawer__settings">Settings</string>
     <string name="get_extremaType_of_sportType_format">Get %1$s positions of your %2$s workouts.</string>
     <string name="getting_my_locations">Looking for known locations.</string>
     <string name="editLocationName">Name:</string>
@@ -737,8 +748,7 @@
     <string name="workout_name_schemes">Workout Name Schemes</string>
     <string name="starred_run_segments">Run</string>
     <string name="starred_bike_segments">Bike</string>
-    <string name="segments">Segments</string>
-    <string name="segment_leaderboard">Leaderboard</string>
+    <string name="segments">Strava Segments (Stared)</string>
 
     <string name="vertical_ellipsis" translatable="false">&#8942;</string>
     <string name="TODO">prove it!</string>
@@ -779,12 +789,6 @@
     <string name="startSearchOnlyManually">only manually</string>
 
 
-    <string name="OnlineCommunities">Online Communities</string>
-    <string name="ExportFiles">File Export</string>
-    <string name="edit_sport_type">Edit Sport Type</string>
-    <string name="you_can_not_delete_this_sport_type">You can not delete this sport type</string>
-    <string name="min_avg_speed">min avg speed:</string>
-    <string name="max_avg_speed">max avg speed:</string>
     <string name="show_all_sport_types">all sport types</string>
     <string name="sport_types">Sport Types</string>
     <string name="configure_sport_types">Configure Sport Types</string>
@@ -910,4 +914,186 @@
 
     <string name="url_privacy">https://github.com/rainerblind/aTrainingTracker/blob/develop/privacy.md</string> <!-- TODO: replace develop with master -->
     <string name="prefEmailExport">e-Mail</string>
+
+
+<!-- 2026 -->
+    <!-- StringUtils -->
+    <!-- note that \u0020 is just a space -->
+    <string name="list_connector__and">\u0020;and\u0020</string>
+    <string name="list_connector__and_with_comma">,\u0020and\u0020</string>
+    <string name="list_connector__comma">,\u0020</string>
+
+
+<!-- notifications -->
+ <!-- notifications while exporting -->
+    <string name="export_notification__title">Exporting %1$s</string>   <!-- Exporting 2025-01-10 -->
+    <string name="export_notification__summary__started">Exporting started.</string>
+    <string name="export_notification__summary__in_progress_to">Exporting to %1$s.</string>
+    <string name="export_notification__summary__finished">Exporting finished.</string>
+
+    <!-- details -->
+
+    <!-- waiting  -->
+
+    <!-- writing to file waiting
+        (0: #waiting for quantity)
+        1: string representing the waiting file formats -->
+    <plurals name="export_notification__detail__File_waiting">
+        <item quantity="one">⏳ Waiting to write the %1$s file.</item>     <!-- Waiting to write TCX file. -->
+        <item quantity="other">⏳ Waiting to write the %1$s files.</item>  <!-- Waiting to write the TCX and CSV files. -->
+    </plurals>
+
+    <!-- uploading to Dropbox waiting
+        (0: #waiting for quantity)
+        1: string representing the waiting file formats -->
+    <plurals name="export_notification__detail__Dropbox_waiting">
+        <item quantity="one">⏳ Waiting to upload the %1$s file to Dropbox.</item>     <!-- Waiting to upload the TCX file to Dropbox. -->
+        <item quantity="other">⏳ Waiting to upload the %1$s files to Dropbox.</item>  <!-- Waiting to upload the TCX and CSV files to Dropbox. -->
+    </plurals>
+
+    <!-- uploading to Cummunity waiting
+        (0: #waiting for quantity)
+        1: string representing the waiting file formats -->
+    <plurals name="export_notification__detail__Community_waiting">
+        <item quantity="one">⏳ Waiting to upload to %1$s.</item>    <!-- Waiting to upload to Strava. -->
+        <item quantity="other">⏳ Waiting to upload to %1$s.</item>  <!-- Waiting to upload to Strava and Runkeeper. -->
+    </plurals>
+
+
+    <!-- ongoing -->
+
+    <!-- writing to file ongoing
+        (0: #ongoing for quantity)
+        1: string representing the ongoing file formats -->
+    <plurals name="export_notification__detail__File_ongoing">
+        <item quantity="one">💾 Writing the %1$s file.</item>     <!-- Writing the TCX file. -->
+        <item quantity="other">💾 Writing the %1$s files.</item>  <!-- Writing the TCX and CSV files. -->
+    </plurals>
+
+    <!-- uploading to Dropbox ongoing
+        (0: #ongoing for quantity)
+        1: string representing the ongoing file formats -->
+    <plurals name="export_notification__detail__Dropbox_ongoing">
+        <item quantity="one">📤 Uplaoding the %1$s file to Dropbox.</item>     <!-- Uploading the TCX file to Dropbox. -->
+        <item quantity="other">📤 Uploading the %1$s files to Dropbox.</item>  <!-- Uploading the TCX and CSV files to Dropbox. -->
+    </plurals>
+
+    <!-- uploading to Cummunity ongoing
+        (0: #ongoing for quantity)
+        1: string representing the ongoing file formats -->
+    <plurals name="export_notification__detail__Community_ongoing">
+        <item quantity="one">📤 Uploading to %1$s.</item>    <!-- Uploading to Strava. -->
+        <item quantity="other">📤 Uploading to %1$s.</item>  <!-- Uploading to Strava and Runkeeper. -->
+    </plurals>
+
+
+    <!-- success -->
+
+    <!-- writing to file success
+        (0: #successes for quantity)
+        1: string representing the succeeded file formats -->
+    <plurals name="export_notification__detail__File_success">
+        <item quantity="one">✅ Successfully wrote the %1$s file.</item>     <!-- Successfully wrote the TCX file. -->
+        <item quantity="other">✅ Successfully wrote the %1$s files.</item>  <!-- Successfully wrote the TCX and CSV files. -->
+    </plurals>
+
+    <!-- uploading to Dropbox success
+        (0: #successes for quantity)
+        1: string representing the succeeded file formats -->
+    <plurals name="export_notification__detail__Dropbox_success">
+        <item quantity="one">✅ Successfully uploaded the %1$s file to Dropbox.</item>     <!-- Successfully uploaded the TCX file to Dropbox. -->
+        <item quantity="other">✅ Successfully uploaded the %1$s files to Dropbox.</item>  <!-- Successfully uploaded the TCX and CSV files to Dropbox. -->
+    </plurals>
+
+    <!-- uploading to Cummunity success
+        (0: #successes for quantity)
+        1: string representing the succeeded file formats -->
+    <plurals name="export_notification__detail__Community_success">
+        <item quantity="one">✅ Successfully uploaded to %1$s.</item>    <!-- Successfully uploaded to Strava. -->
+        <item quantity="other">✅ Successfully uploaded to %1$s.</item>  <!-- Successfully uploaded to Strava and Runkeeper. -->
+    </plurals>
+
+
+    <!-- failed -->
+
+    <!-- writing to file failed
+        (0: #fails for quantity
+        1: string representing the failed file formats-->
+    <plurals name="export_notification__detail__File_failed">
+        <item quantity="one">❌ Writing the %1$s file failed.</item>    <!-- Writing the TCX file failed. -->
+        <item quantity="other">❌ Writing the %1$s files failed.</item> <!-- Writing the TCX and CSV files failed. -->
+    </plurals>
+
+    <!-- writing to Dropbox failed
+        (0: #fails for quantity)
+        1: string representing the failed file formats-->
+    <plurals name="export_notification__detail__Dropbox_failed">
+        <item quantity="one">❌ Uploading the %1$s file to Dropbox failed.</item>     <!-- Uploading the TCX file to Dropbox failed. -->
+        <item quantity="other">❌ Uploading the %1$s files to Dropbox failed.</item>  <!-- Uploading the TCX and CSV files to Dropbox failed. -->
+    </plurals>
+
+    <!-- writing to Community failed
+        (0: #fails for quantity)
+        1: string representing the failed file formats-->
+    <plurals name="export_notification__detail__Community_failed">
+        <item quantity="one">❌ Uploading to %1$s failed.</item>    <!-- Uploading to Strava failed. -->
+        <item quantity="other">❌ Uploading to %1$s failed.</item>  <!-- Uploading the Strava and Runkeeper failed. -->
+    </plurals>
+
+    <string name="export_notification__detail__no_results">❓ No results found.</string>
+
+
+    <string name="export_status__header_title">Export Status</string>
+
+    <!-- change Sport Dialog -->
+    <string name="change_sport">Change Sport</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+
+    <!-- Edit workout name -->
+    <string name="hint_workout_name">workout\nname</string>
+    <string name="edit_workout_name">edit workout name</string>
+
+    <!-- workout summary description-->
+    <string name="workout_summary__description_header">Description</string>
+
+    <!-- Edit workout description -->
+    <string name="hint_workout_description">description</string>
+    <string name="hint_workout_goal">goal</string>
+    <string name="hint_workout_method">method</string>
+    <string name="title_edit_description">Edit description</string>
+
+    <!-- workout details -->
+    <string name="total_time_format">(total: %1$s)</string>
+    <string name="format_max_displacement">(Max. Air-Line Distance: %1$s)</string>
+
+    <!-- workout summary with equipment -->
+    <string name="format_with_equipment_bike">on %1$s</string>
+    <string name="format_with_equipment_run">with %1$s</string>
+    <string name="format_with_equipment_other">with %1$s</string>
+
+
+
+    <string name="invalid_date">\???</string>
+
+    <!-- sport type list / edit sport type -->
+    <string name="you_can_not_delete_this_sport_type">You can not delete this sport type</string>
+    <string name="add_sport_type">add sport type</string>
+    <string name="edit_sport_type">Edit Sport Type</string>
+    <string name="sport_type_name">Sport name</string>
+    <string name="basic_sport_type">basic sport type</string>
+    <string name="OnlineCommunities">Online Communities</string>
+    <string name="ExportFiles">File Export</string>
+    <string name="min_avg_speed">min avg speed:</string>
+    <string name="max_avg_speed">max avg speed:</string>
+    <string name="mapping_format_strava">Strava: %1$s</string>
+    <string name="mapping_format_tcx">TCX: %1$s</string>
+    <string name="mapping_format_gc">GC: %1$s</string>
+    <string name="item_is_fixed_and_cannot_be_deleted">Sport type can not be deleted or edited.</string>
+
+    <!-- drawer -->
+    <string name="drawer__training">Training</string>
+    <string name="drawer__maps">Maps</string>
+
+
 </resources>

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <!-- Sport Spinner -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/edit_sport_type"
+        android:labelFor="@+id/spinner_change_sport"
+        style="@style/TextAppearance.MaterialComponents.Caption" />
+
+    <Spinner
+        android:id="@+id/spinner_change_sport"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp" />
+
+    <!-- Equipment Spinner -->
+    <TextView
+        android:id="@+id/tv_equipment_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/equipment_type_bike"
+        style="@style/TextAppearance.MaterialComponents.Caption"/>
+    <Spinner
+        android:id="@+id/spinner_change_equipment"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+</LinearLayout>
