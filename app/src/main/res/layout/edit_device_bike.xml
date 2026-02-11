@@ -32,35 +32,41 @@
         <LinearLayout
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
+            android:gravity="center_vertical"
             android:background="@color/my_light_blue"
             android:orientation="horizontal">
 
-            <LinearLayout
+            <!-- Last Seen (Read-Only) -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/layout_last_seen"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
+                android:layout_height="wrap_content">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/lastSeenText"
-                    android:textAppearance="?android:attr/textAppearanceSmall" />
-
-                <TextView
+                <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/tvLastSeen"
-                    android:layout_width="fill_parent"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:focusable="false"
+                    android:clickable="false"
+                    android:hint="@string/lastSeenText"
                     android:text="@string/lastSeenDefaultValue"
                     android:textAppearance="?android:attr/textAppearanceMedium" />
-            </LinearLayout>
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- spacer -->
+            <View
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
 
             <ImageView
                 android:id="@+id/ivBatteryStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_vertical"
                 android:src="@drawable/stat_sys_battery_unknown"
+                android:layout_marginStart="8dp"
                 tools:ignore="ContentDescription" />
         </LinearLayout>
 
