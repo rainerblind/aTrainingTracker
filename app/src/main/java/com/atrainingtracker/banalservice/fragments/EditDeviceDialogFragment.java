@@ -410,7 +410,7 @@ public class EditDeviceDialogFragment
         // inform everybody that pairing has changed
         sendPairingChangedBroadcast();
         if (mCalibrationFactorChanged) {
-            sendCalibrationChangedBroadcast(newCalibrationFactor)
+            sendCalibrationChangedBroadcast(newCalibrationFactor);
         }
 
         // mOnEditDeviceFinishedListener.onEditDeviceFinished();
