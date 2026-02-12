@@ -22,24 +22,6 @@ import com.atrainingtracker.R;
 import com.dsi.ant.plugins.antplus.pcc.defines.BatteryStatus;
 
 public class BatteryStatusHelper {
-    @Deprecated
-    public static int getBatterStatusImageId(BatteryStatus batteryStatus) {
-        switch (batteryStatus) {
-            case NEW:
-                return R.drawable.stat_sys_battery_80;  // TODO: better one?
-            case GOOD:
-                return R.drawable.stat_sys_battery_60;
-            case OK:
-                return R.drawable.stat_sys_battery_40;
-            case LOW:
-                return R.drawable.stat_sys_battery_20;
-            case CRITICAL:
-                return R.drawable.stat_sys_battery_10;
-            default:
-                return R.drawable.stat_sys_battery_unknown;
-        }
-    }
-
     public static int getBatteryStatusImageId(int batteryStatusPercentage) {
         if (batteryStatusPercentage >= 80) {
             return R.drawable.stat_sys_battery_80;

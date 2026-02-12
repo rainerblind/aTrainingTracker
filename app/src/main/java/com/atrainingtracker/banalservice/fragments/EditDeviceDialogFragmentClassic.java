@@ -58,7 +58,7 @@ import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper;
 
 import java.util.List;
 
-public class EditDeviceDialogFragment
+public class EditDeviceDialogFragmentClassic
         extends DialogFragment {
     public static final String TAG = "EditDeviceDialogFragment";
     private static final boolean DEBUG = BANALService.getDebug(false);
@@ -92,14 +92,14 @@ public class EditDeviceDialogFragment
     private String mCalibrationFactorTitle;
     private String mCalibrationFactorName;
 
-    public static EditDeviceDialogFragment newInstance(long deviceId) {
-        EditDeviceDialogFragment editDeviceDialogFragment = new EditDeviceDialogFragment();
+    public static EditDeviceDialogFragmentClassic newInstance(long deviceId) {
+        EditDeviceDialogFragmentClassic editDeviceDialogFragmentClassic = new EditDeviceDialogFragmentClassic();
 
         Bundle args = new Bundle();
         args.putLong(DevicesDbHelper.C_ID, deviceId);
-        editDeviceDialogFragment.setArguments(args);
+        editDeviceDialogFragmentClassic.setArguments(args);
 
-        return editDeviceDialogFragment;
+        return editDeviceDialogFragmentClassic;
     }
 
     // @Override
@@ -356,7 +356,7 @@ public class EditDeviceDialogFragment
         });
         builder.setNegativeButton(getString(R.string.Cancel), new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int id) {
-                EditDeviceDialogFragment.this.getDialog().cancel();
+                EditDeviceDialogFragmentClassic.this.getDialog().cancel();
             }
         });
         return builder.create();
