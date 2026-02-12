@@ -1,7 +1,8 @@
 package com.atrainingtracker.banalservice.ui.devices
 
-import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.BikePowerSensorsHelper
+import com.atrainingtracker.banalservice.devices.DeviceType
 
 
 /**
@@ -18,25 +19,21 @@ import com.atrainingtracker.banalservice.devices.BikePowerSensorsHelper
  * @param selectedEquipmentIds The IDs of the equipment this device is assigned to.
  * @param powerFeatures Contains specific data for power meters, null otherwise.
  */
-data class EditDeviceViewData(
+data class DeviceData(
+    val id: Long,
+    val protocol: Protocol,
+    val deviceType: DeviceType,
     val lastSeen: String,
-    val batteryStatusIconRes: Int = R.drawable.stat_sys_battery_unknown,
+    val batteryStatusIconRes: Int,
     val manufacturer: String,
     val deviceName: String,
     val isPaired: Boolean,
     val calibrationData: CalibrationData?,
-    val availableEquipment: List<EquipmentItem>, // Using a data class for equipment
-    val selectedEquipmentIds: List<Long>,
+    val availableEquipment: List<String>,
+    val linkedEquipment: List<String>,
     val powerFeatures: BikePowerFeatures?
 )
 
-/**
- * A data class to hold information about a piece of selectable equipment (e.g., a bike).
- */
-data class EquipmentItem(
-    val id: Long,
-    val name: String
-)
 
 /**
  * A data class to hold data related to device calibration.
@@ -50,9 +47,7 @@ data class EquipmentItem(
 data class CalibrationData(
     val titleRes: Int,
     val value: String,
-    val showWheelSizeSpinner: Boolean,
-    val availableWheelSizes: List<String>,
-    val selectedWheelSizePosition: Int
+    val showWheelSizeSpinner: Boolean
 )
 
 /**
@@ -77,8 +72,8 @@ data class BikePowerFeatures(
     val torqueEffectivenessSupported: Boolean = false,
 
     // editable by the user
-    var doublePowerBalanceValues: Boolean = false,
-    var invertPowerBalanceValues: Boolean = false
+    val doublePowerBalanceValues: Boolean = false,
+    val invertPowerBalanceValues: Boolean = false
 ) {
     /**
      * A companion object to hold the logic for creating an instance
@@ -111,3 +106,8 @@ data class BikePowerFeatures(
         }
     }
 }
+
+data class PowerFeatureDisplay(
+    val name: String,
+    val isDeemphasized: Boolean
+)
