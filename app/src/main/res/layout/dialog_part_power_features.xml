@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<merge xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    tools:parentTag="android.widget.LinearLayout">
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:layout_marginTop="8dp">
 
     <TextView
         style="?android:attr/listSeparatorTextViewStyle"
@@ -35,4 +38,4 @@
             android:layout_height="wrap_content"
             android:text="@string/bike_power__invert_power_balance_values" />
     </LinearLayout>
-</merge>
+</LinearLayout>

@@ -26,6 +26,9 @@ class EditDeviceDialogFragment : DialogFragment() {
     companion object {
         private const val ARG_DEVICE_ID = "device_id"
 
+        const val TAG = "EditDeviceDialogFragment"
+
+        @JvmStatic
         fun newInstance(deviceId: Long): EditDeviceDialogFragment {
             return EditDeviceDialogFragment().apply {
                 arguments = Bundle().apply {
@@ -100,7 +103,6 @@ class EditDeviceDialogFragment : DialogFragment() {
         binding.tvLastSeen.setText(data.lastSeen)
         binding.ivBatteryStatus.setImageResource(data.batteryStatusIconRes)
         binding.tvManufacturer.setText(data.manufacturer)
-        binding.spinnerEquipment.setSelection(data.linkedEquipment)
 
         // Only set editable text if it's the first time to avoid overwriting user input
         if (isInitialPopulation) {
@@ -138,6 +140,16 @@ class EditDeviceDialogFragment : DialogFragment() {
             binding.groupPower.cbDoublePowerBalanceValues.isChecked = data.powerFeatures.doublePowerBalanceValues
             binding.groupPower.cbInvertPowerBalanceValues.isChecked = data.powerFeatures.invertPowerBalanceValues
         }
+
+        // First, check if the available equipment list exists in the data.
+        if (!data.availableEquipment.isEmpty()) {
+            // Initialize the spinner with the available equipment
+            binding.spinnerEquipment.setItems(data.availableEquipment)
+            // Now that the spinner is initialized, set the selection.
+            binding.spinnerEquipment.setSelection(data.linkedEquipment)
+        }
+        // TODO: remove view...
+
     }
 
     /**
