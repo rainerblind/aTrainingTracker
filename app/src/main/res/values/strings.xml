@@ -328,7 +328,7 @@
     <!-- <string name="run">run</string>   -->
 
     <!-- Bike Power Features -->
-    <string name="featuresText">features</string>
+    <string name="bike_power__features">features</string>
     <string name="bike_power__instantaneous_power">&#8226; Instantaneous Power</string>
     <string name="bike_power__pedal_power_balance">&#8226; Pedal Power Balance</string>
     <string name="bike_power__accumulated_torque">&#8226; Accumulated Torque</string>
@@ -345,9 +345,9 @@
     <string name="bike_power__torque_effectiveness">&#8226; Torque Effectiveness</string>
     <string name="bike_power__torque_data">&#8226; Torque</string>
 
-    <string name="pedalPowerBalanceCorrection">Pedal power balance correction</string>
-    <string name="doublePowerBalanceValues">Double measured values</string>
-    <string name="invertPowerBalanceValues">Invert measured values. I.e., swap left and right</string>
+    <string name="bike_power__pedal_power_balance_correction">Pedal power balance correction</string>
+    <string name="bike_power__double_power_balance_values">Double measured values</string>
+    <string name="bike_power__invert_power_balance_values">Invert measured values. I.e., swap left and right</string>
 
     <!-- Manifest -->
     <string name="app_name" translatable="false">a Training Tracker</string>

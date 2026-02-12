@@ -178,7 +178,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/pedalPowerBalanceCorrection"
+                android:text="@string/bike_power__pedal_power_balance_correction"
                 android:textAppearance="?android:attr/textAppearanceSmall" />
 
             <CheckBox
@@ -186,14 +186,14 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="left"
-                android:text="@string/doublePowerBalanceValues" />
+                android:text="@string/bike_power__double_power_balance_values" />
 
             <CheckBox
                 android:id="@+id/cbInvertPowerBalanceValues"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="left"
-                android:text="@string/invertPowerBalanceValues" />
+                android:text="@string/bike_power__invert_power_balance_values" />
         </LinearLayout>
 
 
@@ -219,7 +219,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/featuresText"
+                android:text="@string/bike_power__features"
                 android:textAppearance="?android:attr/textAppearanceSmall" />
 
             <TextView
