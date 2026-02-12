@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:parentTag="android.widget.LinearLayout">
+
+    <TextView
+        style="?android:attr/listSeparatorTextViewStyle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/bike_power__features" />
+
+    <!-- A container to dynamically add TextViews for each supported feature -->
+    <LinearLayout
+        android:id="@+id/llPowerSensors"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp" />
+
+    <!-- Power Balance Correction -->
+    <LinearLayout
+        android:id="@+id/llPedalPowerBalanceCorrection"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+        <CheckBox
+            android:id="@+id/cbDoublePowerBalanceValues"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/bike_power__double_power_balance_values" />
+        <CheckBox
+            android:id="@+id/cbInvertPowerBalanceValues"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/bike_power__invert_power_balance_values" />
+    </LinearLayout>
+</merge>
