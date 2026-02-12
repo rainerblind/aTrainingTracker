@@ -445,25 +445,25 @@ public class EditDeviceDialogFragment
                 mCalibrationFactorTitle = getString(R.string.Wheel_Circumference);
                 mCalibrationFactorName = getString(R.string.wheel_circumference);
                 CIRCUMFERENCE_TEXT[0] = getString(R.string.select_wheel_size_prompt);
-                return R.layout.edit_device_bike_power;
+                return R.layout.deprecated__edit_device_bike_power;
 
             case BIKE_SPEED_AND_CADENCE:
             case BIKE_SPEED:
                 mCalibrationFactorTitle = getString(R.string.Wheel_Circumference);
                 mCalibrationFactorName = getString(R.string.wheel_circumference);
                 CIRCUMFERENCE_TEXT[0] = getString(R.string.select_wheel_size_prompt);
-                return R.layout.edit_device_bike;
+                return R.layout.deprecated__edit_device_bike;
 
             case BIKE_CADENCE:
-                return R.layout.edit_device_bike_cadence;
+                return R.layout.deprecated__edit_device_bike_cadence;
 
             case RUN_SPEED:
                 mCalibrationFactorTitle = getString(R.string.Calibration_Factor);
                 mCalibrationFactorName = getString(R.string.calibration_factor);
-                return R.layout.edit_device_run;
+                return R.layout.deprecated__edit_device_run;
 
             default:
-                return R.layout.edit_device_generic;
+                return R.layout.deprecated__edit_device_generic;
         }
     }
 
