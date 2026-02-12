@@ -83,7 +83,7 @@ import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 import com.atrainingtracker.banalservice.dialogs.InstallANTShitDialog;
 import com.atrainingtracker.banalservice.filters.FilterData;
 import com.atrainingtracker.banalservice.fragments.DeviceTypeChoiceFragment;
-import com.atrainingtracker.banalservice.fragments.EditDeviceDialogFragmentClassic;
+import com.atrainingtracker.banalservice.ui.devices.EditDeviceDialogFragment;
 import com.atrainingtracker.banalservice.fragments.RemoteDevicesFragment;
 import com.atrainingtracker.banalservice.fragments.RemoteDevicesFragmentTabbedContainer;
 import com.atrainingtracker.banalservice.helpers.BatteryStatusHelper;
@@ -792,8 +792,8 @@ public class MainActivityWithNavigation
             builder.setItems(stringList.toArray(new String[stringList.size()]), new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
-                    EditDeviceDialogFragmentClassic editDeviceDialogFragmentClassic = EditDeviceDialogFragmentClassic.newInstance(criticalBatteryDevices.get(which).deviceId);
-                    editDeviceDialogFragmentClassic.show(getSupportFragmentManager(), EditDeviceDialogFragmentClassic.TAG);
+                    EditDeviceDialogFragment editDeviceDialogFragment = EditDeviceDialogFragment.newInstance(criticalBatteryDevices.get(which).deviceId);
+                    editDeviceDialogFragment.show(getSupportFragmentManager(), EditDeviceDialogFragment.TAG);
                 }
             });
             builder.create().show();
@@ -825,8 +825,8 @@ public class MainActivityWithNavigation
 
     @Override
     public void onRemoteDeviceSelected(long deviceId) {
-        EditDeviceDialogFragmentClassic editDeviceDialogFragmentClassic = EditDeviceDialogFragmentClassic.newInstance(deviceId);
-        editDeviceDialogFragmentClassic.show(getSupportFragmentManager(), EditDeviceDialogFragmentClassic.TAG);
+        EditDeviceDialogFragment editDeviceDialogFragment = EditDeviceDialogFragment.newInstance(deviceId);
+        editDeviceDialogFragment.show(getSupportFragmentManager(), EditDeviceDialogFragment.TAG);
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////

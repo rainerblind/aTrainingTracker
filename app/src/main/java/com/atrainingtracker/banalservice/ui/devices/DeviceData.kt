@@ -23,7 +23,7 @@ data class DeviceData(
     val id: Long,
     val protocol: Protocol,
     val deviceType: DeviceType,
-    val lastSeen: String,
+    val lastSeen: String?,
     val batteryStatusIconRes: Int,
     val manufacturer: String,
     val deviceName: String,

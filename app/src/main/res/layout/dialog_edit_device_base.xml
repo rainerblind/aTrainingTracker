@@ -106,9 +106,6 @@
         <include
             android:id="@+id/group_calibration"
             layout="@layout/dialog_part_calibration"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
             android:visibility="gone"
             tools:visibility="visible" />
 
@@ -116,9 +113,6 @@
         <include
             android:id="@+id/group_power"
             layout="@layout/dialog_part_power_features"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
             android:visibility="gone"
             tools:visibility="visible" />
 
