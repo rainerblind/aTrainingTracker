@@ -48,6 +48,12 @@ class EditDeviceDialogFragment : DialogFragment() {
 
     private lateinit var dialog: AlertDialog
 
+    // Handling linked equipment
+    // To hold the list of all available equipment names for the dialog
+    private lateinit var equipmentNames: Array<String>
+    // To track which items are currently checked
+    private lateinit var checkedItems: BooleanArray
+
     private lateinit var deviceDataObserver: Observer<DeviceEditViewData?>
 
     // A flag to prevent the observer from re-populating editable fields while the user is typing
@@ -126,7 +132,7 @@ class EditDeviceDialogFragment : DialogFragment() {
                 binding.groupCalibration.spinnerWheelCircumference.visibility = View.GONE
             }
             else {
-                setupWheelCircumferenceSpinner(data)
+                setupWheelCircumferenceSpinner()
             }
 
             // finally, the edit/correct calibration factor button
@@ -147,20 +153,34 @@ class EditDeviceDialogFragment : DialogFragment() {
 
         // --- Equipment Section ---
         if (data.availableEquipment.isEmpty()) {
-            binding.spinnerEquipment.visibility = View.GONE
-        }
-        else {
-            binding.spinnerEquipment.visibility = View.VISIBLE
-            // Initialize the spinner with the available equipment
-            binding.spinnerEquipment.setItems(data.availableEquipment)
-            // Now that the spinner is initialized, set the selection.
-            binding.spinnerEquipment.setSelection(data.linkedEquipment)
+            binding.layoutEquipment.visibility = View.GONE
+        } else {
+            binding.layoutEquipment.visibility = View.VISIBLE
+
+            // 1. Prepare data for the multi-choice dialog
+            equipmentNames = data.availableEquipment.toTypedArray()
+
+            // Create a set of linked equipment for fast lookups
+            val linkedEquipmentSet = data.linkedEquipment.toSet()
+
+            // 2. Initialize the checkedItems array
+            checkedItems = data.availableEquipment.map { equipmentName ->
+                linkedEquipmentSet.contains(equipmentName)
+            }.toBooleanArray()
+
+            // 3. Update the text field to show current selection
+            updateEquipmentTextField()
+
+            // 4. Set the click listener to show the dialog
+            binding.etEquipment.setOnClickListener {
+                showMultiChoiceEquipmentDialog()
+            }
         }
     }
 
 
     // Simple helper function to setup the wheel circumference spinner
-    fun setupWheelCircumferenceSpinner(data: DeviceEditViewData) {
+    fun setupWheelCircumferenceSpinner() {
         val spinnerWheelCircumference = binding.groupCalibration.spinnerWheelCircumference
         spinnerWheelCircumference.visibility = View.VISIBLE
 
@@ -246,6 +266,37 @@ class EditDeviceDialogFragment : DialogFragment() {
             container.addView(textView)
         }
     }
+
+    private fun showMultiChoiceEquipmentDialog() {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("On bikes / shoes") // TODO: move to strings and let it depend on the sport...
+            .setMultiChoiceItems(equipmentNames, checkedItems) { dialog, which, isChecked ->
+                // This listener is called every time a checkbox is checked or unchecked.
+                // 'which' is the index of the item, 'isChecked' is its new state.
+                checkedItems[which] = isChecked
+            }
+            .setPositiveButton(R.string.OK) { dialog, _ ->
+                // User confirmed their selection. Update the text field.
+                updateEquipmentTextField()
+                // TODO: Here you would also update your ViewModel with the new selection
+                // viewModel.updateLinkedEquipment( ... )
+            }
+            .setNegativeButton(R.string.cancel, null) // No action needed on cancel
+            .show()
+    }
+
+    private fun updateEquipmentTextField() {
+        val selectedEquipment = equipmentNames.filterIndexed { index, _ -> checkedItems[index] }
+
+        val displayText = if (selectedEquipment.isEmpty()) {
+            getString(R.string.none)
+        } else {selectedEquipment.joinToString(", ")
+        }
+
+        binding.etEquipment.setText(displayText)
+    }
+
+
 
     override fun onDestroyView() {
         super.onDestroyView()

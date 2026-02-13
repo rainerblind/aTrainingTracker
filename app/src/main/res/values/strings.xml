@@ -1098,6 +1098,7 @@
 
     <!-- edit device -->
     <string name="select_wheel_size_prompt">Select wheel size…</string>
+    <string name="none" />
 
 
 </resources>
