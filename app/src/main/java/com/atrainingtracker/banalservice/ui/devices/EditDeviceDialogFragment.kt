@@ -1,17 +1,19 @@
 package com.atrainingtracker.banalservice.ui.devices
 
-import android.app.AlertDialog
 import android.app.Dialog
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
+import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.fragments.SetCalibrationFactorDialogFragment
 import com.atrainingtracker.databinding.DialogEditDeviceBaseBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
@@ -43,6 +45,7 @@ class EditDeviceDialogFragment : DialogFragment() {
     private var _binding: DialogEditDeviceBaseBinding? = null
     private val binding get() = _binding!!
 
+    private lateinit var dialog: AlertDialog
 
     private lateinit var deviceDataObserver: Observer<DeviceEditViewData?>
 
@@ -54,11 +57,11 @@ class EditDeviceDialogFragment : DialogFragment() {
 
         val deviceId = requireArguments().getLong(ARG_DEVICE_ID)
 
-        val dialog = MaterialAlertDialogBuilder(requireContext())
+        dialog = MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.edit_device)
             .setView(binding.root)
             .setPositiveButton(R.string.OK) { _, _ ->
-                // saveChanges()
+                // TODO: saveChanges()
             }
             .setNegativeButton(R.string.cancel, null)
             .create()
@@ -76,11 +79,8 @@ class EditDeviceDialogFragment : DialogFragment() {
                 return@Observer
             }
 
-            // Get the specific UI configuration for this device type
-            val config = viewModel.getDialogConfig(deviceData.deviceType)
-
             // Populate all the UI fields with the new data
-            populateUi(config, deviceData)
+            populateUi(deviceData)
             isInitialPopulation = false // Mark initial population as complete
 
             // Now that data is loaded, enable the OK button
@@ -96,8 +96,9 @@ class EditDeviceDialogFragment : DialogFragment() {
     /**
      * Populates all the UI views with data from the [DeviceRawData] object.
      */
-    private fun populateUi(config: DeviceDialogConfig, data: DeviceRawData) {
+    private fun populateUi(data: DeviceEditViewData) {
         // --- Populate Common Views ---
+        dialog.setIcon(data.deviceTypeIconRes)
         binding.tvLastSeen.setText(data.lastSeen)
         binding.ivBatteryStatus.setImageResource(data.batteryStatusIconRes)
         binding.tvManufacturer.setText(data.manufacturer)
@@ -109,45 +110,111 @@ class EditDeviceDialogFragment : DialogFragment() {
         }
 
         // --- Configure Calibration Section ---
-        binding.groupCalibration.root.visibility = if (config.showsCalibrationFactor) View.VISIBLE else View.GONE
-        if (config.showsCalibrationFactor) {
-            // FIX: Access views VIA the nested binding object
-            binding.groupCalibration.layoutCalibrationFactor.hint = getString(config.calibrationFactorTitleRes)
+        if (data.calibrationData == null) {
+            binding.groupCalibration.root.visibility = View.GONE
+        }
+        else {
+            // TODO: own helper method for this
+            binding.groupCalibration.root.visibility = View.VISIBLE
+            binding.groupCalibration.layoutCalibrationFactor.hint = getString(data.calibrationData.titleRes)
             if (isInitialPopulation) {
                 binding.groupCalibration.etCalibrationFactor.setText(data.calibrationData?.value ?: "")
             }
-            binding.groupCalibration.spinnerWheelCircumference.visibility = if (config.showsWheelCircumferenceSpinner) View.VISIBLE else View.GONE
-            if (config.showsWheelCircumferenceSpinner) {
-                if (binding.groupCalibration.spinnerWheelCircumference.adapter == null) {
-                    val adapter = ArrayAdapter(
-                        requireContext(),
-                        android.R.layout.simple_spinner_dropdown_item,
-                        viewModel.wheelSizeNames
-                    )
-                    binding.groupCalibration.spinnerWheelCircumference.adapter = adapter
-                }
-                // binding.groupCalibration.spinnerWheelCircumference.setSelection(data.calibrationData?.selectedWheelSizePosition ?: 0, false)
+
+            if (!data.calibrationData.showWheelSizeSpinner) {
+                binding.groupCalibration.spinnerWheelCircumference.visibility = View.GONE
             }
+            else {
+                setupWheelCircumferenceSpinner(data)
+            }
+
+            // finally, the edit/correct calibration factor button
+            setupEditCalibrationFactorButton(data)
         }
 
         // --- Configure Power Features Section ---
-        binding.groupPower.root.visibility = if (config is DeviceDialogConfig.BikePower) View.VISIBLE else View.GONE
-        if (config is DeviceDialogConfig.BikePower && data.powerFeatures != null) {
+        if (data.powerFeatures == null) {
+            binding.groupPower.root.visibility = View.GONE
+        }
+        else {
+            binding.groupPower.root.visibility = View.VISIBLE
             val featureDisplayList = viewModel.getPowerFeaturesForDisplay(data.powerFeatures)
             populatePowerFeaturesList(binding.groupPower.llPowerSensors, featureDisplayList)
             binding.groupPower.cbDoublePowerBalanceValues.isChecked = data.powerFeatures.doublePowerBalanceValues
             binding.groupPower.cbInvertPowerBalanceValues.isChecked = data.powerFeatures.invertPowerBalanceValues
         }
 
-        // First, check if the available equipment list exists in the data.
-        if (!data.availableEquipment.isEmpty()) {
+        // --- Equipment Section ---
+        if (data.availableEquipment.isEmpty()) {
+            binding.spinnerEquipment.visibility = View.GONE
+        }
+        else {
+            binding.spinnerEquipment.visibility = View.VISIBLE
             // Initialize the spinner with the available equipment
             binding.spinnerEquipment.setItems(data.availableEquipment)
             // Now that the spinner is initialized, set the selection.
             binding.spinnerEquipment.setSelection(data.linkedEquipment)
         }
-        // TODO: remove view...
+    }
 
+
+    // Simple helper function to setup the wheel circumference spinner
+    fun setupWheelCircumferenceSpinner(data: DeviceEditViewData) {
+        val spinnerWheelCircumference = binding.groupCalibration.spinnerWheelCircumference
+        spinnerWheelCircumference.visibility = View.VISIBLE
+        if (spinnerWheelCircumference.adapter == null) {
+            val adapter = ArrayAdapter(
+                requireContext(),
+                android.R.layout.simple_spinner_dropdown_item,
+                viewModel.wheelSizeNames
+            )
+            spinnerWheelCircumference.adapter = adapter
+        }
+        spinnerWheelCircumference.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                // Position 0 is the hint "Select wheel size...". We don't want to act on it.
+                if (position > 0) {
+                    // Get the selected circumference value from the ViewModel.
+                    val selectedValue = viewModel.getWheelCircumferenceForPosition(position)
+                    // Update the calibration factor text field with the selected value.
+                    binding.groupCalibration.etCalibrationFactor.setText(selectedValue.toString())
+                }
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) {
+                // No action needed here.
+            }
+        }
+    }
+
+    fun setupEditCalibrationFactorButton(data: DeviceEditViewData) {
+        val button = binding.groupCalibration.bEditCalibrationFactor
+        val etCalibrationFactor = binding.groupCalibration.etCalibrationFactor
+
+        button.visibility = View.VISIBLE
+
+        button.setOnClickListener {
+            // Get the required title and name from the calibration data.
+            // We'll pass these to the new dialog.
+            val title = requireContext().getString(data.calibrationData!!.titleRes)
+            val name = title // Or a different name if you have one stored
+
+            // Create an instance of the dialog fragment to show it
+            val dialog = SetCalibrationFactorDialogFragment.newInstance(
+                etCalibrationFactor.text.toString(),
+                title,
+                name
+            )
+
+            // Set the listener to receive the new value back from the dialog.
+            dialog.setNewCalibrationFactorListener { newCalibrationFactor ->
+                // When the dialog returns a value, update the EditText.
+                etCalibrationFactor.setText(newCalibrationFactor)
+            }
+
+            // Show the new dialog over the current one.
+            dialog.show(childFragmentManager, SetCalibrationFactorDialogFragment.TAG)
+        }
     }
 
     /**
