@@ -67,7 +67,7 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
                         deviceTypeIconRes = UIHelper.getIconId(rawData.deviceType, rawData.protocol),
 
                         // get the available equipment from the database
-                        availableEquipment = equipmentDbHelper.getLinkedEquipment(id),
+                        availableEquipment = equipmentDbHelper.getEquipment(rawData.deviceType.sportType),
                         linkedEquipment = rawData.linkedEquipment,
 
                         // Transformed/Calculated data
