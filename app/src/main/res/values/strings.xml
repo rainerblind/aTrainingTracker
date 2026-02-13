@@ -162,6 +162,7 @@
     <string name="units_distance_metric" translatable="false">km</string>
     <string name="units_distance_imperial" translatable="false">mile</string>
     <string name="units_distance_unknown" translatable="false">na</string>
+    <string name="units_distance_mm">mm</string>
     <string name="units_cadence" translatable="false">1/min</string>
     <string name="units_calories" translatable="false">kcal</string>
     <string name="units_heart_rate" translatable="false">bpm</string>

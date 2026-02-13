@@ -15,6 +15,7 @@ import androidx.lifecycle.Observer
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.fragments.SetCalibrationFactorDialogFragment
 import com.atrainingtracker.databinding.DialogEditDeviceBaseBinding
+import com.atrainingtracker.trainingtracker.MyHelper
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 /**
@@ -162,11 +163,16 @@ class EditDeviceDialogFragment : DialogFragment() {
     fun setupWheelCircumferenceSpinner(data: DeviceEditViewData) {
         val spinnerWheelCircumference = binding.groupCalibration.spinnerWheelCircumference
         spinnerWheelCircumference.visibility = View.VISIBLE
+
+        // Translate the first entry of the wheel size list
+        val wheelSizeNames = viewModel.wheelSizeNames.toMutableList()
+        wheelSizeNames[0] = requireContext().getString(R.string.select_wheel_size_prompt)
+
         if (spinnerWheelCircumference.adapter == null) {
             val adapter = ArrayAdapter(
                 requireContext(),
                 android.R.layout.simple_spinner_dropdown_item,
-                viewModel.wheelSizeNames
+                wheelSizeNames
             )
             spinnerWheelCircumference.adapter = adapter
         }
@@ -209,7 +215,9 @@ class EditDeviceDialogFragment : DialogFragment() {
             // Set the listener to receive the new value back from the dialog.
             dialog.setNewCalibrationFactorListener { newCalibrationFactor ->
                 // When the dialog returns a value, update the EditText.
-                etCalibrationFactor.setText(newCalibrationFactor)
+                val newCalFac = MyHelper.string2Double(newCalibrationFactor).toInt()
+
+                etCalibrationFactor.setText(newCalFac.toString())
             }
 
             // Show the new dialog over the current one.
