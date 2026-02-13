@@ -268,7 +268,7 @@
     <!-- <string name="run">run</string>   -->
 
     <!-- Bike Power Features -->
-    <string name="featuresText">Enthaltene Sensoren</string>
+    <string name="bike_power__features">Enthaltene Sensoren</string>
     <string name="bike_power__instantaneous_power">&#8226; Aktuelle Leistung</string>
     <string name="bike_power__pedal_power_balance">&#8226; Pedal Power Balance</string>
     <string name="bike_power__accumulated_torque">&#8226; Summierte Kraft</string>
@@ -285,9 +285,9 @@
     <string name="bike_power__torque_effectiveness">&#8226; Effizienz</string>
     <string name="bike_power__torque_data">&#8226; Kraft</string>
 
-    <string name="pedalPowerBalanceCorrection">Korrektur für Power Balance</string>
-    <string name="doublePowerBalanceValues">Verdopple die gemessenen Werte</string>
-    <string name="invertPowerBalanceValues">Invertiere die gemessenen Werte.  D.h., vertausche rechts und links</string>
+    <string name="bike_power__pedal_power_balance_correction">Korrektur für Power Balance</string>
+    <string name="bike_power__double_power_balance_values">Verdopple die gemessenen Werte</string>
+    <string name="bike_power__invert_power_balance_values">Invertiere die gemessenen Werte.  D.h., vertausche rechts und links</string>
 
     <string name="slope">Steigung</string>
     <string name="slope_short">Steigung</string>
