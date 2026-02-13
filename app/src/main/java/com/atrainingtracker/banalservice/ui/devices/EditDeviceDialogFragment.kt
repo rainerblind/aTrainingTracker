@@ -62,10 +62,12 @@ class EditDeviceDialogFragment : DialogFragment() {
 
     private lateinit var deviceDataObserver: Observer<DeviceEditViewData?>
 
+    private var deviceId = -1L
+
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         _binding = DialogEditDeviceBaseBinding.inflate(LayoutInflater.from(context))
 
-        val deviceId = requireArguments().getLong(ARG_DEVICE_ID)
+        deviceId = requireArguments().getLong(ARG_DEVICE_ID)
 
         // Custom title: Inflate the custom title view
         customTitleView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_custom_title, null)
@@ -76,7 +78,7 @@ class EditDeviceDialogFragment : DialogFragment() {
             .setCustomTitle(customTitleView)
             .setView(binding.root)
             .setPositiveButton(R.string.OK) { _, _ ->
-                // TODO: saveChanges()
+                saveChanges()
             }
             .setNegativeButton(R.string.cancel, null)
             .create()
@@ -151,7 +153,8 @@ class EditDeviceDialogFragment : DialogFragment() {
         // --- Equipment Section ---
         if (data.availableEquipment.isEmpty()) {
             binding.layoutEquipment.visibility = View.GONE
-        } else {
+        }
+        else {
             binding.layoutEquipment.visibility = View.VISIBLE
             val onEquipment = getString(data.onEquipmentResId ?: R.string.onBikesText)
             binding.layoutEquipment.hint = onEquipment
@@ -258,7 +261,8 @@ class EditDeviceDialogFragment : DialogFragment() {
             if (feature.isDeemphasized) {
                 textView.setTextAppearance(android.R.style.TextAppearance_Medium)
                 textView.setTextColor(context?.getColor(R.color.bright_grey) ?: 0) // Example color
-            } else {
+            }
+            else {
                 textView.setTextAppearance(android.R.style.TextAppearance_Medium)
             }
 
@@ -289,11 +293,25 @@ class EditDeviceDialogFragment : DialogFragment() {
 
         val displayText = if (selectedEquipment.isEmpty()) {
             getString(R.string.none)
-        } else {selectedEquipment.joinToString(", ")
+        }
+        else {
+            selectedEquipment.joinToString(", ")
         }
 
         binding.etEquipment.setText(displayText)
     }
+
+    private fun saveChanges() {
+        val paired = binding.cbPaired.isChecked
+        val deviceName = binding.etDeviceName.text.toString()
+        val calibrationFactor = binding.groupCalibration.etCalibrationFactor.text.toString()
+        val linkedEquipment = equipmentNames.filterIndexed { index, _ -> checkedItems[index] }
+        val doublePowerBalanceValues = binding.groupPower.cbDoublePowerBalanceValues.isChecked
+        val invertPowerBalanceValues = binding.groupPower.cbInvertPowerBalanceValues.isChecked
+
+        viewModel.saveChanges(deviceId, paired, deviceName, calibrationFactor, linkedEquipment, doublePowerBalanceValues, invertPowerBalanceValues)
+    }
+
 
 
 
