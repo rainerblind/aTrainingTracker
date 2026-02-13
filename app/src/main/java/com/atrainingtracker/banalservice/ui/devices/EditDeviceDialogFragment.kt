@@ -62,9 +62,6 @@ class EditDeviceDialogFragment : DialogFragment() {
 
     private lateinit var deviceDataObserver: Observer<DeviceEditViewData?>
 
-    // A flag to prevent the observer from re-populating editable fields while the user is typing
-    private var isInitialPopulation = true
-
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         _binding = DialogEditDeviceBaseBinding.inflate(LayoutInflater.from(context))
 
@@ -99,7 +96,6 @@ class EditDeviceDialogFragment : DialogFragment() {
 
             // Populate all the UI fields with the new data
             populateUi(deviceData)
-            isInitialPopulation = false // Mark initial population as complete
 
             // Now that data is loaded, enable the OK button
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = true
@@ -125,23 +121,17 @@ class EditDeviceDialogFragment : DialogFragment() {
         binding.ivBatteryStatus.setImageResource(data.batteryStatusIconRes)
         binding.tvManufacturer.setText(data.manufacturer)
 
-        // Only set editable text if it's the first time to avoid overwriting user input
-        if (isInitialPopulation) {
-            binding.etDeviceName.setText(data.deviceName)
-            binding.cbPaired.isChecked = data.isPaired
-        }
+        binding.etDeviceName.setText(data.deviceName)
+        binding.cbPaired.isChecked = data.isPaired
 
         // --- Configure Calibration Section ---
         if (data.calibrationData == null) {
             binding.groupCalibration.root.visibility = View.GONE
         }
         else {
-            // TODO: own helper method for this
             binding.groupCalibration.root.visibility = View.VISIBLE
             binding.groupCalibration.layoutCalibrationFactor.hint = getString(data.calibrationData.titleRes)
-            if (isInitialPopulation) {
-                binding.groupCalibration.etCalibrationFactor.setText(data.calibrationData?.value ?: "")
-            }
+            binding.groupCalibration.etCalibrationFactor.setText(data.calibrationData?.value ?: "")
 
             if (!data.calibrationData.showWheelSizeSpinner) {
                 binding.groupCalibration.spinnerWheelCircumference.visibility = View.GONE
