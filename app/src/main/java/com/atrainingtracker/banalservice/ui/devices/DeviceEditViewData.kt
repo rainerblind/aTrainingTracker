@@ -1,28 +1,10 @@
 package com.atrainingtracker.banalservice.ui.devices
 
-import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.BikePowerSensorsHelper
-import com.atrainingtracker.banalservice.devices.DeviceType
 
-
-/**
- * A data class to hold all the necessary information prepared for display
- * in the EditDeviceDialogFragment.
- *
- * @param lastSeen A formatted string for the last seen timestamp.
- * @param batteryStatusIconRes The drawable resource ID for the battery icon.
- * @param manufacturer The manufacturer's name.
- * @param deviceName The user-editable name of the device.
- * @param isPaired The current pairing status.
- * @param calibrationData Data related to calibration, null if not applicable.
- * @param availableEquipment All possible equipment options to choose from.
- * @param selectedEquipmentIds The IDs of the equipment this device is assigned to.
- * @param powerFeatures Contains specific data for power meters, null otherwise.
- */
-data class DeviceData(
+class DeviceEditViewData(
     val id: Long,
-    val protocol: Protocol,
-    val deviceType: DeviceType,
+    val deviceTypeIconRes: Int,
     val lastSeen: String?,
     val batteryStatusIconRes: Int,
     val manufacturer: String,
@@ -32,7 +14,9 @@ data class DeviceData(
     val availableEquipment: List<String>,
     val linkedEquipment: List<String>,
     val powerFeatures: BikePowerFeatures?
+
 )
+
 
 
 /**
@@ -85,7 +69,10 @@ data class BikePowerFeatures(
          * Creates a [BikePowerFeatures] instance from a raw integer flag.
          * @param featureFlags The integer value from the database representing the feature bits.
          */
-        fun fromFeatureFlags(featureFlags: Int): BikePowerFeatures {
+        fun fromFeatureFlags(featureFlags: Int?): BikePowerFeatures {
+            if (featureFlags == null) {
+                return BikePowerFeatures()
+            }
             return BikePowerFeatures(
                 pedalPowerBalanceSupported = BikePowerSensorsHelper.isPowerBalanceSupported(featureFlags),
                 wheelRevolutionDataSupported = BikePowerSensorsHelper.isWheelRevolutionDataSupported(featureFlags),
