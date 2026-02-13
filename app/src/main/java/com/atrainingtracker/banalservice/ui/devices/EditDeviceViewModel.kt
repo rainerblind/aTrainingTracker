@@ -88,24 +88,25 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
     private fun mapCalibrationData(rawData: DeviceRawData): CalibrationData? {
 
         val bikePowerFeatures = BikePowerFeatures.fromFeatureFlags(rawData.powerFeaturesFlags)
+        val value_in_mm = rawData.calibrationValue?.let { (it * 1000).toInt().toString() } ?: "???"
 
         return when (rawData.deviceType) {
             DeviceType.RUN_SPEED ->
                 CalibrationData(
                     titleRes = R.string.Calibration_Factor,
-                    value = rawData.calibrationValue?.toString() ?: "",
+                    value = value_in_mm,
                     showWheelSizeSpinner = false
                 )
             DeviceType.BIKE_SPEED, DeviceType.BIKE_SPEED_AND_CADENCE ->
                 CalibrationData(
                     titleRes = R.string.Wheel_Circumference,
-                    value = rawData.calibrationValue?.toString() ?: "",
+                    value = value_in_mm,
                     showWheelSizeSpinner = true,
                 )
             DeviceType.BIKE_POWER ->
                 CalibrationData(
                     titleRes = R.string.Wheel_Circumference,
-                    value = rawData.calibrationValue?.toString() ?: "",
+                    value = value_in_mm,
                     showWheelSizeSpinner = bikePowerFeatures.wheelRevolutionDataSupported
                             || bikePowerFeatures.wheelDistanceDataSupported
                             || bikePowerFeatures.wheelSpeedDataSupported
