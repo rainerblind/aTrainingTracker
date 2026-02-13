@@ -8,6 +8,7 @@ import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.ImageView
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.viewModels
@@ -48,6 +49,11 @@ class EditDeviceDialogFragment : DialogFragment() {
 
     private lateinit var dialog: AlertDialog
 
+    private lateinit var customTitleView: View
+    private lateinit var dialogIcon: ImageView
+    private lateinit var dialogTitle: TextView
+
+
     // Handling linked equipment
     // To hold the list of all available equipment names for the dialog
     private lateinit var equipmentNames: Array<String>
@@ -64,8 +70,13 @@ class EditDeviceDialogFragment : DialogFragment() {
 
         val deviceId = requireArguments().getLong(ARG_DEVICE_ID)
 
+        // Custom title: Inflate the custom title view
+        customTitleView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_custom_title, null)
+        dialogIcon = customTitleView.findViewById<ImageView>(R.id.dialog_icon)
+        dialogTitle = customTitleView.findViewById<TextView>(R.id.dialog_title)
+
         dialog = MaterialAlertDialogBuilder(requireContext())
-            .setTitle(R.string.edit_device)
+            .setCustomTitle(customTitleView)
             .setView(binding.root)
             .setPositiveButton(R.string.OK) { _, _ ->
                 // TODO: saveChanges()
@@ -104,8 +115,12 @@ class EditDeviceDialogFragment : DialogFragment() {
      * Populates all the UI views with data from the [DeviceRawData] object.
      */
     private fun populateUi(data: DeviceEditViewData) {
+
+        // Custom title: Populate the custom title view
+        dialogIcon.setImageResource(data.deviceTypeIconRes)
+        dialogTitle.text = getString(R.string.edit_device)
+
         // --- Populate Common Views ---
-        dialog.setIcon(data.deviceTypeIconRes)
         binding.tvLastSeen.setText(data.lastSeen)
         binding.ivBatteryStatus.setImageResource(data.batteryStatusIconRes)
         binding.tvManufacturer.setText(data.manufacturer)
