@@ -81,11 +81,6 @@ class EditDeviceDialogFragment : DialogFragment() {
             .setNegativeButton(R.string.cancel, null)
             .create()
 
-        // Disable the OK button initially. It will be enabled when data is loaded.
-        dialog.setOnShowListener {
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = false
-        }
-
         // --- Observer Setup ---
         deviceDataObserver = Observer { deviceData ->
             if (deviceData == null) {
@@ -96,9 +91,6 @@ class EditDeviceDialogFragment : DialogFragment() {
 
             // Populate all the UI fields with the new data
             populateUi(deviceData)
-
-            // Now that data is loaded, enable the OK button
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = true
         }
 
         // Start observing the device data from the ViewModel
