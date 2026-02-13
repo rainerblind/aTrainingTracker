@@ -66,6 +66,8 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
                         // get the icon id from the UI helper
                         deviceTypeIconRes = UIHelper.getIconId(rawData.deviceType, rawData.protocol),
 
+                        onEquipmentResId = mapOnEquipment(rawData),
+
                         // get the available equipment from the database
                         availableEquipment = equipmentDbHelper.getEquipment(rawData.deviceType.sportType),
                         linkedEquipment = rawData.linkedEquipment,
@@ -81,6 +83,15 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
             }
         }
     }
+
+    private fun mapOnEquipment(rawData: DeviceRawData): Int? {
+        return when (rawData.deviceType) {
+            DeviceType.RUN_SPEED -> R.string.onShoesText
+            DeviceType.BIKE_POWER, DeviceType.BIKE_SPEED, DeviceType.BIKE_SPEED_AND_CADENCE, DeviceType.BIKE_CADENCE -> R.string.onBikesText
+            else -> null
+        }
+    }
+
 
     /**
      * Private helper to map raw data to the [CalibrationData] view object.

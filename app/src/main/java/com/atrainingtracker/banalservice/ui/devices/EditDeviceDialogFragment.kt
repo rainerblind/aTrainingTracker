@@ -156,6 +156,8 @@ class EditDeviceDialogFragment : DialogFragment() {
             binding.layoutEquipment.visibility = View.GONE
         } else {
             binding.layoutEquipment.visibility = View.VISIBLE
+            val onEquipment = getString(data.onEquipmentResId ?: R.string.onBikesText)
+            binding.layoutEquipment.hint = onEquipment
 
             // 1. Prepare data for the multi-choice dialog
             equipmentNames = data.availableEquipment.toTypedArray()
@@ -173,7 +175,7 @@ class EditDeviceDialogFragment : DialogFragment() {
 
             // 4. Set the click listener to show the dialog
             binding.etEquipment.setOnClickListener {
-                showMultiChoiceEquipmentDialog()
+                showMultiChoiceEquipmentDialog(onEquipment)
             }
         }
     }
@@ -267,9 +269,9 @@ class EditDeviceDialogFragment : DialogFragment() {
         }
     }
 
-    private fun showMultiChoiceEquipmentDialog() {
+    private fun showMultiChoiceEquipmentDialog(title: String) {
         MaterialAlertDialogBuilder(requireContext())
-            .setTitle("On bikes / shoes") // TODO: move to strings and let it depend on the sport...
+            .setTitle(title)
             .setMultiChoiceItems(equipmentNames, checkedItems) { dialog, which, isChecked ->
                 // This listener is called every time a checkbox is checked or unchecked.
                 // 'which' is the index of the item, 'isChecked' is its new state.
