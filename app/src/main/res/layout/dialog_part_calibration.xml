@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This is a modular part, not a full screen. Use <merge> to avoid nested LinearLayouts. -->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:layout_marginTop="8dp">
+
+    <!-- Wheel Circumference (Editable) and Spinner -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/layout_calibration_factor"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            app:suffixText="@string/units_distance_mm">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etCalibrationFactor"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                tools:hint="@string/wheelCircumferenceText"
+                android:inputType="number" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- This spinner is only for BIKE_* devices -->
+        <Spinner
+            android:id="@+id/spinnerWheelCircumference"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1.5" />
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/bEditCalibrationFactor"
+        style="?android:attr/buttonBarButtonStyle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/editDeviceBikeEditCalibrationFactorBasedOnDistance" />
+</LinearLayout>

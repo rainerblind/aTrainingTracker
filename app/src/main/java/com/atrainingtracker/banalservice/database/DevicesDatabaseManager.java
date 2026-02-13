@@ -80,6 +80,28 @@ public class DevicesDatabaseManager {
     }
     // --- End of Singleton Pattern ---
 
+    public Cursor getDeviceCursor(long deviceId) {
+        return getDatabase().query(DevicesDbHelper.DEVICES,
+                null,
+                DevicesDbHelper.C_ID + "=?",
+                new String[]{Long.toString(deviceId)},
+                null,
+                null,
+                null);
+    }
+
+    public Cursor getCursorForAllDevices() {
+        return getDatabase().query(
+                DevicesDbHelper.DEVICES,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+    }
+
     public boolean isANTDeviceInDB(DeviceType deviceType, int antDeviceNumber) {
         if (DEBUG) Log.d(TAG, "isANTDeviceInDB");
         boolean result = false;

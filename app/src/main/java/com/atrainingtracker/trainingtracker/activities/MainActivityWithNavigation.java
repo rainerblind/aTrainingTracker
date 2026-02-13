@@ -83,7 +83,7 @@ import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 import com.atrainingtracker.banalservice.dialogs.InstallANTShitDialog;
 import com.atrainingtracker.banalservice.filters.FilterData;
 import com.atrainingtracker.banalservice.fragments.DeviceTypeChoiceFragment;
-import com.atrainingtracker.banalservice.fragments.EditDeviceDialogFragment;
+import com.atrainingtracker.banalservice.ui.devices.EditDeviceDialogFragment;
 import com.atrainingtracker.banalservice.fragments.RemoteDevicesFragment;
 import com.atrainingtracker.banalservice.fragments.RemoteDevicesFragmentTabbedContainer;
 import com.atrainingtracker.banalservice.helpers.BatteryStatusHelper;
