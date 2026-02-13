@@ -13,8 +13,6 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
 import com.atrainingtracker.R
 import com.atrainingtracker.databinding.DialogEditDeviceBaseBinding
-import com.atrainingtracker.databinding.DialogPartCalibrationBinding
-import com.atrainingtracker.databinding.DialogPartPowerFeaturesBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 /**
@@ -46,7 +44,7 @@ class EditDeviceDialogFragment : DialogFragment() {
     private val binding get() = _binding!!
 
 
-    private lateinit var deviceDataObserver: Observer<DeviceData?>
+    private lateinit var deviceDataObserver: Observer<DeviceEditViewData?>
 
     // A flag to prevent the observer from re-populating editable fields while the user is typing
     private var isInitialPopulation = true
@@ -96,9 +94,9 @@ class EditDeviceDialogFragment : DialogFragment() {
     }
 
     /**
-     * Populates all the UI views with data from the [DeviceData] object.
+     * Populates all the UI views with data from the [DeviceRawData] object.
      */
-    private fun populateUi(config: DeviceDialogConfig, data: DeviceData) {
+    private fun populateUi(config: DeviceDialogConfig, data: DeviceRawData) {
         // --- Populate Common Views ---
         binding.tvLastSeen.setText(data.lastSeen)
         binding.ivBatteryStatus.setImageResource(data.batteryStatusIconRes)
