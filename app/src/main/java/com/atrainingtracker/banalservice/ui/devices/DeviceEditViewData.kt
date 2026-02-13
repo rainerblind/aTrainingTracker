@@ -11,6 +11,7 @@ class DeviceEditViewData(
     val deviceName: String,
     val isPaired: Boolean,
     val calibrationData: CalibrationData?,
+    val onEquipmentResId: Int?,
     val availableEquipment: List<String>,
     val linkedEquipment: List<String>,
     val powerFeatures: BikePowerFeatures?
