@@ -1,11 +1,13 @@
 package com.atrainingtracker.banalservice.ui.devices
 
 import android.app.Application
+import android.content.ContentValues
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.map
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
+import com.atrainingtracker.banalservice.database.DevicesDatabaseManager.DevicesDbHelper
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -100,6 +102,52 @@ class DeviceDataRepository private constructor(private val application: Applicat
                 }
             }
             _allDevices.postValue(deviceList)
+        }
+    }
+
+    fun saveChanges(
+        deviceId: Long,
+        paired: Boolean,
+        deviceName: String,
+        newCalibrationFactor: Double?
+    ) {
+        // Launch a coroutine to perform the database operation on a background thread
+        repositoryScope.launch {
+            withContext(Dispatchers.IO) {
+                val values = ContentValues().apply {
+                    put(DevicesDbHelper.PAIRED, if (paired) 1 else 0) // Use 1/0 for boolean
+                    put(DevicesDbHelper.NAME, deviceName)
+                    if (newCalibrationFactor != null) {
+                        put(DevicesDbHelper.CALIBRATION_FACTOR, newCalibrationFactor)
+                    } else {
+                        putNull(DevicesDbHelper.CALIBRATION_FACTOR)
+                    }
+                }
+
+                devicesDatabaseManager.database.update(
+                    DevicesDbHelper.DEVICES,
+                    values,
+                    "${DevicesDbHelper.C_ID} = ?",
+                    arrayOf(deviceId.toString())
+                )
+            }
+
+            // After the database update is complete, update the LiveData in-memory.
+            // This runs on the main thread because repositoryScope is Dispatchers.Main.
+            val currentList = _allDevices.value ?: return@launch
+            val updatedList = currentList.map { device ->
+                if (device.id == deviceId) {
+                    // Create a new DeviceRawData object with the updated values
+                    device.copy(
+                        deviceName = deviceName,
+                        isPaired = paired,
+                        calibrationValue = newCalibrationFactor
+                    )
+                } else {
+                    device
+                }
+            }
+            _allDevices.value = updatedList
         }
     }
 }

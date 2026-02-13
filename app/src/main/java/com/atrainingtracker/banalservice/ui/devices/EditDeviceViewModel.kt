@@ -1,11 +1,15 @@
 package com.atrainingtracker.banalservice.ui.devices
 
 import android.app.Application
+import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.switchMap
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BANALService
+import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
+import com.atrainingtracker.banalservice.devices.BikePowerSensorsHelper
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.helpers.BatteryStatusHelper
 import com.atrainingtracker.banalservice.helpers.UIHelper
@@ -25,6 +29,7 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
     private val repository = DeviceDataRepository.getInstance(application)
 
     private val equipmentDbHelper by lazy { EquipmentDbHelper(application) }
+    private val devicesDatabaseManager by lazy { DevicesDatabaseManager.getInstance(application) }
 
     val wheelSizeNames: List<String> by lazy {
         application.resources.getStringArray(R.array.wheel_size_names).toList()
@@ -230,4 +235,57 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
         return wheelSizeValues.getOrNull(position)?.toIntOrNull()
     }
 
+    fun saveChanges(deviceId: Long, paired: Boolean, deviceName: String, calibrationFactor: String, linkedEquipment: List<String>, doublePowerBalanceValues: Boolean, invertPowerBalanceValues: Boolean) {
+
+        val newCalibrationFactor = calibrationFactor.toDoubleOrNull()?.div(1000)
+
+        val currentDeviceData = repository.getDeviceById(deviceId).value
+
+        repository.saveChanges(deviceId, paired, deviceName, newCalibrationFactor)
+
+        equipmentDbHelper.setEquipmentLinks(deviceId.toInt(), linkedEquipment)
+        var powerFeatureFlags = currentDeviceData?.powerFeaturesFlags ?: 0
+        powerFeatureFlags = if (doublePowerBalanceValues) {
+            BikePowerSensorsHelper.addDoublePowerBalanceValues(powerFeatureFlags)
+        }
+        else {
+            BikePowerSensorsHelper.removeDoublePowerBalanceValues(powerFeatureFlags)
+        }
+        powerFeatureFlags = if (invertPowerBalanceValues) {
+            BikePowerSensorsHelper.addInvertPowerBalanceValues(powerFeatureFlags)
+        }
+        else {
+            BikePowerSensorsHelper.removeInvertPowerBalanceValues(powerFeatureFlags)
+        }
+        devicesDatabaseManager.putBikePowerSensorFlags(deviceId, powerFeatureFlags)
+
+        if (currentDeviceData != null) {
+            if (currentDeviceData.isPaired != paired) {
+                sendPairingChangedBroadcast(deviceId, paired)
+            }
+
+            if (currentDeviceData.calibrationValue != newCalibrationFactor) {
+                sendCalibrationChangedBroadcast(deviceId, newCalibrationFactor)
+            }
+        }
+
+    }
+
+    fun sendPairingChangedBroadcast(deviceId: Long, paired: Boolean) {
+        val intent = Intent(BANALService.PAIRING_CHANGED)
+            .putExtra(BANALService.DEVICE_ID, deviceId)
+            .putExtra(BANALService.PAIRED, paired)
+            .setPackage(application.getPackageName())
+        application.sendBroadcast(intent)
+    }
+
+    fun sendCalibrationChangedBroadcast(deviceId: Long, newCalibrationFactor: Double?) {
+        if (newCalibrationFactor != null) {
+            val intent = Intent(BANALService.CALIBRATION_FACTOR_CHANGED)
+                .putExtra(BANALService.DEVICE_ID, deviceId)
+                .putExtra(BANALService.CALIBRATION_FACTOR, newCalibrationFactor)
+                .setPackage(application.getPackageName())
+            application.sendBroadcast(intent)
+        }
+    }
 }
