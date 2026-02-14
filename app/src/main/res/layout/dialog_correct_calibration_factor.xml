@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingTop="8dp"
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp">
+
+    <!-- Explanation -->
+    <TextView
+        android:id="@+id/tv_explaining_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:text="@string/correct_calibration_explanation_bike"
+        android:textAppearance="?attr/textAppearanceBody2"
+        android:textColor="?android:attr/textColorSecondary" />
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/til_measured_distance"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:hint="@string/measuredDistanceText">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/et_measured_distance"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="numberDecimal" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/til_correct_distance"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/correctDistanceText">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/et_correct_distance"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="numberDecimal" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Read-Only Field for the Corrected Factor -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/layout_new_calibration_factor"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/wheel_circumference">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/et_new_calibration_factor"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:enabled="false"
+            android:focusable="false"
+            android:textColor="?android:attr/textColorPrimary"
+            android:textAppearance="?attr/textAppearanceHeadline5"
+            tools:text="2105.3" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+</LinearLayout>

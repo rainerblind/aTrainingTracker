@@ -109,24 +109,41 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
         return when (rawData.deviceType) {
             DeviceType.RUN_SPEED ->
                 CalibrationData(
-                    titleRes = R.string.Calibration_Factor,
+                    calibrationFactorNameRes = R.string.Calibration_Factor,
+                    calibrationFactorExplanationRes = R.string.correct_calibration_explanation_run,
+                    correctTitleRes = R.string.correct_calibration_factor_title_run,
                     value = value_in_mm,
-                    showWheelSizeSpinner = false
+                    showWheelSizeSpinner = false,
+                    roundToInt = false,
+                    initialDistanceForCorrection = 42.195
                 )
             DeviceType.BIKE_SPEED, DeviceType.BIKE_SPEED_AND_CADENCE ->
                 CalibrationData(
-                    titleRes = R.string.Wheel_Circumference,
+                    calibrationFactorNameRes = R.string.Wheel_Circumference,
+                    calibrationFactorExplanationRes = R.string.correct_calibration_explanation_bike,
+                    correctTitleRes = R.string.correct_calibration_factor_title_bike,
                     value = value_in_mm,
                     showWheelSizeSpinner = true,
+                    roundToInt = true,
+                    initialDistanceForCorrection = 100.0
                 )
             DeviceType.BIKE_POWER ->
-                CalibrationData(
-                    titleRes = R.string.Wheel_Circumference,
-                    value = value_in_mm,
-                    showWheelSizeSpinner = bikePowerFeatures.wheelRevolutionDataSupported
-                            || bikePowerFeatures.wheelDistanceDataSupported
-                            || bikePowerFeatures.wheelSpeedDataSupported
-                )
+                if (bikePowerFeatures.wheelRevolutionDataSupported
+                    || bikePowerFeatures.wheelDistanceDataSupported
+                    || bikePowerFeatures.wheelSpeedDataSupported) {
+                    CalibrationData(
+                        calibrationFactorNameRes = R.string.Wheel_Circumference,
+                        calibrationFactorExplanationRes = R.string.correct_calibration_explanation_bike,
+                        correctTitleRes = R.string.correct_calibration_factor_title_bike,
+                        value = value_in_mm,
+                        showWheelSizeSpinner = true,
+                        roundToInt = true,
+                        initialDistanceForCorrection = 100.0
+                    )
+                }
+                else {
+                    null
+                }
             else -> null
         }
     }
