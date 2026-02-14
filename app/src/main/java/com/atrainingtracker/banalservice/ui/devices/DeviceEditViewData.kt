@@ -33,7 +33,9 @@ data class CalibrationData(
     val calibrationFactorNameRes: Int,
     val correctTitleRes: Int,
     val value: String,
-    val showWheelSizeSpinner: Boolean
+    val showWheelSizeSpinner: Boolean,
+    val roundToInt: Boolean,
+    val initialDistanceForCorrection: Double
 )
 
 /**
