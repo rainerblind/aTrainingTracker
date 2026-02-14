@@ -432,8 +432,8 @@
     <!-- dialog_set_calibration_factor -->
     <string name="correct_calibration_factor_title_bike">Radumfang anpassen</string>
     <string name="correct_calibration_factor_title_run">Kalibrierungsfaktor anpassen</string>
-    <string name="correct_calibration_explanation_bike">Hier kann der Radumfang dieses Sensors korrigiert werden.  Diese Korrektur basieret auf einer mit dem aktuellen Radumfang gemessenen Strecke und deren korrektem Wert (z.B. die Länge eines Rennens).</string>
-    <string name="correct_calibration_explanation_run">Hier kann der Kalibrierungsfaktor dieses Sensors korrigiert werden.  Diese Korrektur basiert auf einer mit den aktuellen Einstellungen gemessenen Strecke und deren korrektem Wert (z.B. die Länge eines Rennens).</string>
+    <string name="correct_calibration_explanation_bike">Hier kann der Radumfang für diesen Sensors korrigiert werden.  Diese Korrektur basieret auf einer mit dem aktuellen Radumfang gemessenen Strecke und deren korrektem Wert (z.B. die Länge eines Rennens).</string>
+    <string name="correct_calibration_explanation_run">Hier kann der Kalibrierungsfaktor für diesen Sensors korrigiert werden.  Diese Korrektur basiert auf einer mit den aktuellen Einstellungen gemessenen Strecke und deren korrektem Wert (z.B. die Länge eines Rennens).</string>
     <string name="measuredDistanceText">gemessene Strecke:</string>
     <string name="correctDistanceText">korrekte Strecke:</string>
     <!-- edit_device_* -->
