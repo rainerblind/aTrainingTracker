@@ -1,4 +1,4 @@
-package com.atrainingtracker.banalservice.ui.devices
+package com.atrainingtracker.banalservice.ui.devices.editdevice
 
 import android.app.Dialog
 import android.os.Bundle
@@ -6,9 +6,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import android.widget.ImageView
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.viewModels
@@ -58,7 +58,7 @@ class EditDeviceDialogFragment : DialogFragment() {
     // To track which items are currently checked
     private lateinit var checkedItems: BooleanArray
 
-    private lateinit var deviceDataObserver: Observer<DeviceEditViewData?>
+    private lateinit var deviceDataObserver: Observer<EditDeviceData?>
 
     private var deviceId = -1L
 
@@ -100,9 +100,9 @@ class EditDeviceDialogFragment : DialogFragment() {
     }
 
     /**
-     * Populates all the UI views with data from the [DeviceRawData] object.
+     * Populates all the UI views with data from the [com.atrainingtracker.banalservice.ui.devices.RawDeviceData] object.
      */
-    private fun populateUi(data: DeviceEditViewData) {
+    private fun populateUi(data: EditDeviceData) {
 
         // Custom title: Populate the custom title view
         dialogIcon.setImageResource(data.deviceTypeIconRes)
@@ -213,7 +213,7 @@ class EditDeviceDialogFragment : DialogFragment() {
         }
     }
 
-    fun setupEditCalibrationFactorButton(data: DeviceEditViewData) {
+    fun setupEditCalibrationFactorButton(data: EditDeviceData) {
         val button = binding.groupCalibration.bEditCalibrationFactor
         val etCalibrationFactor = binding.groupCalibration.etCalibrationFactor
 
