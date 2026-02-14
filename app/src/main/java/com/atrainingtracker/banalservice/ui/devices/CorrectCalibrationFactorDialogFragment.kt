@@ -28,6 +28,9 @@ class CorrectCalibrationFactorDialogFragment : DialogFragment() {
     private val title: String by lazy {
         arguments?.getString(KEY_TITLE) ?: ""
     }
+    private val explanation: String by lazy {
+        arguments?.getString(KEY_EXPLANATION) ?: ""
+    }
     private val fieldName: String by lazy {
         arguments?.getString(KEY_FIELD_NAME) ?: ""
     }
@@ -45,6 +48,7 @@ class CorrectCalibrationFactorDialogFragment : DialogFragment() {
         // initialize the distances with the default value.
         binding.etCorrectDistance.setText(initialDistance.toString())
         binding.etMeasuredDistance.setText(initialDistance.toString())
+        binding.tvExplainingText.setText(explanation)
 
         val builder = MaterialAlertDialogBuilder(requireActivity())
             .setTitle(title)
@@ -132,15 +136,17 @@ class CorrectCalibrationFactorDialogFragment : DialogFragment() {
         private const val KEY_FIELD_NAME = "field_name"
         private const val KEY_ROUND_TO_INT = "round_to_int"
         private const val KEY_INITIAL_DISTANCE = "default_distance"
+        private const val KEY_EXPLANATION = "explanation"
 
 
 
         // --- FACTORY METHOD ---
-        fun newInstance(originalCalibrationFactor: String, title: String, fieldName: String, roundToInt: Boolean, defautlDistance: Double): CorrectCalibrationFactorDialogFragment {
+        fun newInstance(originalCalibrationFactor: String, title: String, explanation: String, fieldName: String, roundToInt: Boolean, defautlDistance: Double): CorrectCalibrationFactorDialogFragment {
             return CorrectCalibrationFactorDialogFragment().apply {
                 arguments = bundleOf(
                     KEY_CALIBRATION_FACTOR_AS_STRING to originalCalibrationFactor,
                     KEY_TITLE to title,
+                    KEY_EXPLANATION to explanation,
                     KEY_FIELD_NAME to fieldName,
                     KEY_ROUND_TO_INT to roundToInt,
                     KEY_INITIAL_DISTANCE to defautlDistance
