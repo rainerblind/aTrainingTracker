@@ -39,7 +39,7 @@
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="@string/trueDistanceText" />
+            android:text="@string/correctDistanceText" />
     </LinearLayout>
 
     <LinearLayout
@@ -69,7 +69,7 @@
         android:id="@+id/tvCalibrationFactor"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:text="@string/calibrationFactor_Text" />
+        android:text="Calibration factor" />
 
     <EditText
         android:id="@+id/etCalibrationFactor"

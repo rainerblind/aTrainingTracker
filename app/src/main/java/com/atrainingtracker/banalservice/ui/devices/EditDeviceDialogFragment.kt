@@ -14,9 +14,7 @@ import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
 import com.atrainingtracker.R
-import com.atrainingtracker.banalservice.fragments.SetCalibrationFactorDialogFragment
 import com.atrainingtracker.databinding.DialogEditDeviceBaseBinding
-import com.atrainingtracker.trainingtracker.MyHelper
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 /**
@@ -124,7 +122,7 @@ class EditDeviceDialogFragment : DialogFragment() {
         }
         else {
             binding.groupCalibration.root.visibility = View.VISIBLE
-            binding.groupCalibration.layoutCalibrationFactor.hint = getString(data.calibrationData.titleRes)
+            binding.groupCalibration.layoutCalibrationFactor.hint = getString(data.calibrationData.calibrationFactorNameRes)
             binding.groupCalibration.etCalibrationFactor.setText(data.calibrationData?.value ?: "")
 
             if (!data.calibrationData.showWheelSizeSpinner) {
@@ -221,29 +219,35 @@ class EditDeviceDialogFragment : DialogFragment() {
 
         button.visibility = View.VISIBLE
 
+        // Listen for results from the calibration dialog
+        childFragmentManager.setFragmentResultListener(CorrectCalibrationFactorDialogFragment.REQUEST_KEY, this) { _, bundle ->
+            // Check which button was clicked in the dialog
+            val resultType = bundle.getString(CorrectCalibrationFactorDialogFragment.KEY_RESULT_TYPE)
+            if (resultType == CorrectCalibrationFactorDialogFragment.RESULT_TYPE_SAVE) {
+                // Get the newly calculated value and save it
+                val newCalibration = bundle.getString(CorrectCalibrationFactorDialogFragment.KEY_CALIBRATION_FACTOR_AS_STRING)
+                etCalibrationFactor.setText(newCalibration)
+            }
+        }
+
         button.setOnClickListener {
             // Get the required title and name from the calibration data.
-            // We'll pass these to the new dialog.
-            val title = requireContext().getString(data.calibrationData!!.titleRes)
-            val name = title // Or a different name if you have one stored
+            val correctTitle = requireContext().getString(data.calibrationData!!.correctTitleRes)
+            val explanation = requireContext().getString(data.calibrationData!!.calibrationFactorExplanationRes)
+            val calibrationFactorName = requireContext().getString(data.calibrationData!!.calibrationFactorNameRes)
+
 
             // Create an instance of the dialog fragment to show it
-            val dialog = SetCalibrationFactorDialogFragment.newInstance(
+            val dialog = CorrectCalibrationFactorDialogFragment.newInstance(
                 etCalibrationFactor.text.toString(),
-                title,
-                name
+                correctTitle,
+                explanation = explanation,
+                calibrationFactorName,
+                data.calibrationData.roundToInt,
+                data.calibrationData.initialDistanceForCorrection
             )
-
-            // Set the listener to receive the new value back from the dialog.
-            dialog.setNewCalibrationFactorListener { newCalibrationFactor ->
-                // When the dialog returns a value, update the EditText.
-                val newCalFac = MyHelper.string2Double(newCalibrationFactor).toInt()
-
-                etCalibrationFactor.setText(newCalFac.toString())
-            }
-
             // Show the new dialog over the current one.
-            dialog.show(childFragmentManager, SetCalibrationFactorDialogFragment.TAG)
+            dialog.show(childFragmentManager, CorrectCalibrationFactorDialogFragment.TAG)
         }
     }
 
