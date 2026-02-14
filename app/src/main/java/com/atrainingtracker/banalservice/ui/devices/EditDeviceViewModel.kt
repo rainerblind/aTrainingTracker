@@ -109,19 +109,22 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
         return when (rawData.deviceType) {
             DeviceType.RUN_SPEED ->
                 CalibrationData(
-                    titleRes = R.string.Calibration_Factor,
+                    calibrationFactorNameRes = R.string.Calibration_Factor,
+                    correctTitleRes = R.string.correct_calibration_factor_title_run,
                     value = value_in_mm,
                     showWheelSizeSpinner = false
                 )
             DeviceType.BIKE_SPEED, DeviceType.BIKE_SPEED_AND_CADENCE ->
                 CalibrationData(
-                    titleRes = R.string.Wheel_Circumference,
+                    calibrationFactorNameRes = R.string.Wheel_Circumference,
+                    correctTitleRes = R.string.correct_calibration_factor_title_bike,
                     value = value_in_mm,
                     showWheelSizeSpinner = true,
                 )
             DeviceType.BIKE_POWER ->
                 CalibrationData(
-                    titleRes = R.string.Wheel_Circumference,
+                    calibrationFactorNameRes = R.string.Wheel_Circumference,
+                    correctTitleRes = R.string.correct_calibration_factor_title_bike,
                     value = value_in_mm,
                     showWheelSizeSpinner = bikePowerFeatures.wheelRevolutionDataSupported
                             || bikePowerFeatures.wheelDistanceDataSupported

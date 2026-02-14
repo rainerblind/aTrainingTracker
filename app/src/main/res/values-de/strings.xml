@@ -430,9 +430,10 @@
     <string name="searchingForRemoteDevice">suche nach ANT+ Herzfrequenz Sensoren</string>
 
     <!-- dialog_set_calibration_factor -->
+    <string name="correct_calibration_factor_title_bike">Radumfang anpassen</string>
+    <string name="correct_calibration_factor_title_run">Kalibrierungsfaktor anpassen</string>
     <string name="measuredDistanceText">gemessene Distanz:</string>
-    <string name="trueDistanceText">korrekte Distanz:</string>
-    <string name="calibrationFactor_Text">Kalibrierungsfaktor:</string>
+    <string name="correctDistanceText">korrekte Distanz:</string>
     <!-- edit_device_* -->
     <string name="deviceNameText">Sensorname</string>
     <string name="deviceTypeText">Sensortyp</string>

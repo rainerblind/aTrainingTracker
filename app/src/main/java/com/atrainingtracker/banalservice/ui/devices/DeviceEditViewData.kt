@@ -23,14 +23,15 @@ class DeviceEditViewData(
 /**
  * A data class to hold data related to device calibration.
  *
- * @param titleRes The string resource for the field's hint (e.g., "Wheel Circumference" or "Calibration Factor").
+ * @param calibrationFactorNameRes The string resource for the field's hint (e.g., "Wheel Circumference" or "Calibration Factor").
  * @param value The current calibration value as a string.
  * @param showWheelSizeSpinner True if the wheel size presets spinner should be shown.
  * @param availableWheelSizes A list of preset wheel sizes (e.g., "700x25").
  * @param selectedWheelSizePosition The index of the currently selected preset.
  */
 data class CalibrationData(
-    val titleRes: Int,
+    val calibrationFactorNameRes: Int,
+    val correctTitleRes: Int,
     val value: String,
     val showWheelSizeSpinner: Boolean
 )
