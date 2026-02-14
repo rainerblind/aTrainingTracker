@@ -21,15 +21,15 @@ import kotlinx.coroutines.withContext
  * It abstracts the data source (database) from the ViewModels.
  */
 
-class DeviceDataRepository private constructor(private val application: Application) {
+class RawDeviceDataRepository private constructor(private val application: Application) {
     companion object {
-        private val TAG = DeviceDataRepository::class.java.simpleName
+        private val TAG = RawDeviceDataRepository::class.java.simpleName
         private val DEBUG = BANALService.getDebug(true)
 
         // The single, volatile instance of the repository.
         // @Volatile guarantees that writes to this field are immediately visible to other threads.
         @Volatile
-        private var INSTANCE: DeviceDataRepository? = null
+        private var INSTANCE: RawDeviceDataRepository? = null
 
         /**
          * Gets the singleton instance of the DeviceDataRepository.
@@ -37,9 +37,9 @@ class DeviceDataRepository private constructor(private val application: Applicat
          * @param application The application context, needed to create the instance for the first time.
          * @return The single instance of DeviceDataRepository.
          */
-        fun getInstance(application: Application): DeviceDataRepository {
+        fun getInstance(application: Application): RawDeviceDataRepository {
             return INSTANCE ?: synchronized(this) {
-                INSTANCE ?: DeviceDataRepository(application).also { INSTANCE = it }
+                INSTANCE ?: RawDeviceDataRepository(application).also { INSTANCE = it }
             }
         }
     }
@@ -49,11 +49,11 @@ class DeviceDataRepository private constructor(private val application: Applicat
 
     private val devicesDatabaseManager by lazy { DevicesDatabaseManager.getInstance(application) }
     private val equipmentDbHelper by lazy { EquipmentDbHelper(application) }
-    private val mapper by lazy {DeviceDataProvider(devicesDatabaseManager, equipmentDbHelper)}
+    private val mapper by lazy {RawDeviceDataProvider(devicesDatabaseManager, equipmentDbHelper)}
 
 
     private val _allDevices = MutableLiveData<List<RawDeviceData>>()
-    private val allDevices: LiveData<List<RawDeviceData>> = _allDevices
+    val allDevices: LiveData<List<RawDeviceData>> = _allDevices
 
     init {
         // Automatically load all devices when the repository is first created

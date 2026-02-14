@@ -42,6 +42,9 @@ import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.devices.DeviceType;
 import com.atrainingtracker.banalservice.Protocol;
 import com.atrainingtracker.banalservice.dialogs.InstallANTShitDialog;
+import com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceFilterSpec;
+import com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceFilterType;
+import com.atrainingtracker.banalservice.ui.devices.devicelist.ListDeviceFragment;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -271,13 +274,13 @@ public class RemoteDevicesFragmentTabbedContainer extends Fragment {
 
             switch (position) {
                 case 0:
-                    return AvailableRemoteDevicesFragment.newInstance(mProtocol, mDeviceType);
+                    return ListDeviceFragment.newInstance(new DeviceFilterSpec(DeviceFilterType.AVAILABLE, mProtocol, mDeviceType));
 
                 case 1:
-                    return PairedRemoteDevicesFragment.newInstance(mProtocol, mDeviceType);
+                    return ListDeviceFragment.newInstance(new DeviceFilterSpec(DeviceFilterType.PAIRED, mProtocol, mDeviceType));
 
                 case 2:
-                    return KnownRemoteDevicesFragment.newInstance(mProtocol, mDeviceType);
+                    return ListDeviceFragment.newInstance(new DeviceFilterSpec(DeviceFilterType.ALL_KNOWN, mProtocol, mDeviceType));
 
                 default:
                     return new Fragment();

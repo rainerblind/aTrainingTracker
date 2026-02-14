@@ -7,7 +7,7 @@ import com.atrainingtracker.banalservice.database.DevicesDatabaseManager.Devices
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 
-class DeviceDataProvider(val devicesDatabaseManager: DevicesDatabaseManager, val equipmentDbHelper: EquipmentDbHelper) {
+class RawDeviceDataProvider(val devicesDatabaseManager: DevicesDatabaseManager, val equipmentDbHelper: EquipmentDbHelper) {
     fun getDeviceData(cursor: Cursor): RawDeviceData {
         val id = cursor.getLong(cursor.getColumnIndex(DevicesDbHelper.C_ID))
         val deviceType = DeviceType.valueOf(cursor.getString(cursor.getColumnIndex(DevicesDbHelper.DEVICE_TYPE)))

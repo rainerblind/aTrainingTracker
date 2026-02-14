@@ -41,6 +41,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+@Deprecated
 public class DeviceListCursorAdapter extends SimpleCursorAdapter {
     public static final String[] COLUMNS = new String[]{DevicesDbHelper.C_ID, DevicesDbHelper.PROTOCOL, DevicesDbHelper.DEVICE_TYPE, DevicesDbHelper.NAME, DevicesDbHelper.PAIRED};
     protected static final String[] FROM = {DevicesDbHelper.DEVICE_TYPE, DevicesDbHelper.NAME, DevicesDbHelper.C_ID, DevicesDbHelper.PAIRED, DevicesDbHelper.C_ID};

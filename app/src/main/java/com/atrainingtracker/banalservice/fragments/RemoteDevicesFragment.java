@@ -57,6 +57,7 @@ import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
+@Deprecated
 public abstract class RemoteDevicesFragment extends Fragment {
     private static final String TAG = "RemoteDevicesFragment";
     private static final boolean DEBUG = BANALService.getDebug(false);
