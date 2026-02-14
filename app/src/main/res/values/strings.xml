@@ -508,8 +508,8 @@
     <string name="correct_calibration_factor_title_run">Correct calibration factor</string>
     <string name="correct_calibration_explanation_bike">Here, you can correct the wheel circumference based on a measured distance and the correct distance.  The corrected wheel circumference is calculated based on the distance you measured with the current wheel circumference and the correct distance (e.g. you know the exact distance from race report).</string>
     <string name="correct_calibration_explanation_run">Here, you can correct the calibration factor based on a measured distance and the correct distance.  The corrected value is calculated based on the distance you measured with the current value and the correct distance (e.g. the distance of some race).</string>
-    <string name="measuredDistanceText">measured:</string>
-    <string name="correctDistanceText">correct:</string>
+    <string name="measuredDistanceText">measured distance:</string>
+    <string name="correctDistanceText">correct distance:</string>
     <string name="measuredDistanceValue" translatable="false">100</string>
     <string name="trueDistanceValue" translatable="false">100</string>
     <string name="calibrationFactor_Value" translatable="false">1.0</string>
