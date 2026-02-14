@@ -110,6 +110,7 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
             DeviceType.RUN_SPEED ->
                 CalibrationData(
                     calibrationFactorNameRes = R.string.Calibration_Factor,
+                    calibrationFactorExplanationRes = R.string.correct_calibration_explanation_run,
                     correctTitleRes = R.string.correct_calibration_factor_title_run,
                     value = value_in_mm,
                     showWheelSizeSpinner = false,
@@ -119,6 +120,7 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
             DeviceType.BIKE_SPEED, DeviceType.BIKE_SPEED_AND_CADENCE ->
                 CalibrationData(
                     calibrationFactorNameRes = R.string.Wheel_Circumference,
+                    calibrationFactorExplanationRes = R.string.correct_calibration_explanation_bike,
                     correctTitleRes = R.string.correct_calibration_factor_title_bike,
                     value = value_in_mm,
                     showWheelSizeSpinner = true,
@@ -131,6 +133,7 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
                     || bikePowerFeatures.wheelSpeedDataSupported) {
                     CalibrationData(
                         calibrationFactorNameRes = R.string.Wheel_Circumference,
+                        calibrationFactorExplanationRes = R.string.correct_calibration_explanation_bike,
                         correctTitleRes = R.string.correct_calibration_factor_title_bike,
                         value = value_in_mm,
                         showWheelSizeSpinner = true,

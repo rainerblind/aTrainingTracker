@@ -31,6 +31,7 @@ class DeviceEditViewData(
  */
 data class CalibrationData(
     val calibrationFactorNameRes: Int,
+    val calibrationFactorExplanationRes: Int,
     val correctTitleRes: Int,
     val value: String,
     val showWheelSizeSpinner: Boolean,

@@ -238,6 +238,7 @@ class EditDeviceDialogFragment : DialogFragment() {
         button.setOnClickListener {
             // Get the required title and name from the calibration data.
             val correctTitle = requireContext().getString(data.calibrationData!!.correctTitleRes)
+            val explanation = requireContext().getString(data.calibrationData!!.calibrationFactorExplanationRes)
             val calibrationFactorName = requireContext().getString(data.calibrationData!!.calibrationFactorNameRes)
 
 
@@ -245,6 +246,7 @@ class EditDeviceDialogFragment : DialogFragment() {
             val dialog = CorrectCalibrationFactorDialogFragment.newInstance(
                 etCalibrationFactor.text.toString(),
                 correctTitle,
+                explanation = explanation,
                 calibrationFactorName,
                 data.calibrationData.roundToInt,
                 data.calibrationData.initialDistanceForCorrection
