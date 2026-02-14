@@ -6,6 +6,8 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.map
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import com.atrainingtracker.banalservice.Protocol
+import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.helpers.BatteryStatusHelper
 import com.atrainingtracker.banalservice.helpers.UIHelper
 import com.atrainingtracker.banalservice.ui.devices.RawDeviceData
@@ -54,8 +56,8 @@ class ListDeviceViewModel(private val application: Application) : AndroidViewMod
 
             // Then, apply secondary filters for protocol and device type to the result.
             primaryFiltered.filter { device ->
-                val protocolMatch = spec.protocol == null || device.protocol == spec.protocol
-                val deviceTypeMatch = spec.deviceType == null || device.deviceType == spec.deviceType
+                val protocolMatch = spec.protocol == Protocol.ALL || device.protocol == spec.protocol
+                val deviceTypeMatch = spec.deviceType == DeviceType.ALL || device.deviceType == spec.deviceType
                 protocolMatch && deviceTypeMatch
             }
         }
