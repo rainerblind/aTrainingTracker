@@ -2,7 +2,6 @@ package com.atrainingtracker.banalservice.ui.devices.devicelist
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
-import androidx.compose.ui.semantics.text
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
