@@ -49,15 +49,23 @@
 
     </com.google.android.material.textfield.TextInputLayout>
 
-    <!-- TextView to show the calculated factor -->
-    <TextView
-        android:id="@+id/tv_new_calibration_factor"
+    <!-- Read-Only Field for the Corrected Factor -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/layout_new_calibration_factor"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:layout_marginBottom="8dp"
-        android:gravity="center_horizontal"
-        android:textAppearance="?android:attr/textAppearanceMedium"
-        tools:text="New Factor: 1.053" />
+        android:hint="@string/wheel_circumference">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/et_new_calibration_factor"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:enabled="false"
+            android:focusable="false"
+            android:textColor="?android:attr/textColorPrimary"
+            android:textAppearance="?attr/textAppearanceHeadline5"
+            tools:text="2105.3" />
+    </com.google.android.material.textfield.TextInputLayout>
 
 </LinearLayout>

@@ -49,6 +49,7 @@ class CorrectCalibrationFactorDialogFragment : DialogFragment() {
         binding.etCorrectDistance.setText(initialDistance.toString())
         binding.etMeasuredDistance.setText(initialDistance.toString())
         binding.tvExplainingText.setText(explanation)
+        binding.etNewCalibrationFactor.hint = fieldName
 
         val builder = MaterialAlertDialogBuilder(requireActivity())
             .setTitle(title)
@@ -94,19 +95,19 @@ class CorrectCalibrationFactorDialogFragment : DialogFragment() {
 
             val newCalibrationFactor = originalCalibrationFactorString.toDouble() * (correctDistance!! / measuredDistance!!)
             if (roundToInt) {
-                binding.tvNewCalibrationFactor.text = newCalibrationFactor.toInt().toString()
+                binding.etNewCalibrationFactor.setText(newCalibrationFactor.toInt().toString())
             } else {
-                binding.tvNewCalibrationFactor.text = newCalibrationFactor.toString()
+                binding.etNewCalibrationFactor.setText(newCalibrationFactor.toString())
             }
         } else {
             positiveButton?.isEnabled = false
 
-            binding.tvNewCalibrationFactor.text = ""
+            binding.etNewCalibrationFactor.setText("")
         }
     }
 
     private fun handleSave() {
-        val newCalibrationFactor = binding.tvNewCalibrationFactor.text.toString()
+        val newCalibrationFactor = binding.etNewCalibrationFactor.text.toString()
         Log.i(TAG, "Returning new Calibration Factor: $newCalibrationFactor")
 
         // --- SEND RESULT BACK ---
