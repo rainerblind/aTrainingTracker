@@ -52,8 +52,8 @@ class DeviceDataRepository private constructor(private val application: Applicat
     private val mapper by lazy {DeviceDataProvider(devicesDatabaseManager, equipmentDbHelper)}
 
 
-    private val _allDevices = MutableLiveData<List<DeviceRawData>>()
-    private val allDevices: LiveData<List<DeviceRawData>> = _allDevices
+    private val _allDevices = MutableLiveData<List<RawDeviceData>>()
+    private val allDevices: LiveData<List<RawDeviceData>> = _allDevices
 
     init {
         // Automatically load all devices when the repository is first created
@@ -62,7 +62,7 @@ class DeviceDataRepository private constructor(private val application: Applicat
         }
     }
 
-    fun getDeviceById(id: Long): LiveData<DeviceRawData?> {
+    fun getDeviceById(id: Long): LiveData<RawDeviceData?> {
         return allDevices.map { list ->
             list.find {it.id == id}
         }
@@ -92,7 +92,7 @@ class DeviceDataRepository private constructor(private val application: Applicat
      */
     suspend fun loadAllDevices() {
         withContext(Dispatchers.IO) {
-            val deviceList = mutableListOf<DeviceRawData>()
+            val deviceList = mutableListOf<RawDeviceData>()
             devicesDatabaseManager.getCursorForAllDevices()?.use { c ->
                 if (c.moveToFirst()) {
                     do {

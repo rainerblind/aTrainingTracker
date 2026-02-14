@@ -1,4 +1,4 @@
-package com.atrainingtracker.banalservice.ui.devices
+package com.atrainingtracker.banalservice.ui.devices.editdevice
 
 import android.app.Dialog
 import android.os.Bundle
