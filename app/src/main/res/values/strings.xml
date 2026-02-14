@@ -504,11 +504,12 @@
     <string name="searchingForRemoteDevice">searching for ANT+ Heart Rate devices</string>
 
     <!-- dialog_set_calibration_factor -->
+    <string name="correct_calibration_factor_title_bike">Correct wheel circumference</string>
+    <string name="correct_calibration_factor_title_run">Correct calibration factor</string>
     <string name="measuredDistanceText">measured:</string>
-    <string name="trueDistanceText">true:</string>
-    <string name="measuredDistanceValue" translatable="false">1.0</string>
-    <string name="trueDistanceValue" translatable="false">1.0</string>
-    <string name="calibrationFactor_Text">calibration factor:</string>
+    <string name="correctDistanceText">correct:</string>
+    <string name="measuredDistanceValue" translatable="false">100</string>
+    <string name="trueDistanceValue" translatable="false">100</string>
     <string name="calibrationFactor_Value" translatable="false">1.0</string>
 
     <!-- edit_device_* -->

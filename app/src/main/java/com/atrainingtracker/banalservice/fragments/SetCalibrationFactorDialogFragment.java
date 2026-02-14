@@ -38,6 +38,7 @@ import com.atrainingtracker.trainingtracker.MyHelper;
 /**
  * Created by rainer on 06.03.16.
  */
+@Deprecated
 public class SetCalibrationFactorDialogFragment extends DialogFragment {
     public static final String TAG = "SetCalibrationFactorDialogFragment";
     private static final boolean DEBUG = BANALService.getDebug(false);
@@ -113,7 +114,7 @@ public class SetCalibrationFactorDialogFragment extends DialogFragment {
         // Inflate and set the layout for the dialog
         // Pass null as the parent view because its going in the dialog layout
 
-        final View mainDialog = inflater.inflate(R.layout.dialog_set_calibration_factor, null);
+        final View mainDialog = inflater.inflate(R.layout.depricated__dialog_set_calibration_factor, null);
 
         etMeasured = mainDialog.findViewById(R.id.etMeasured);
         etMeasured.addTextChangedListener(calibrationDistancesChangedWatcher);
