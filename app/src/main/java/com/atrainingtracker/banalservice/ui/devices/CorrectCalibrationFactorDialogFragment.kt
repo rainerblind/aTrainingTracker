@@ -34,12 +34,17 @@ class CorrectCalibrationFactorDialogFragment : DialogFragment() {
     private val roundToInt: Boolean by lazy {
         arguments?.getBoolean(KEY_ROUND_TO_INT) ?: false
     }
+    private val initialDistance: Double by lazy {
+        arguments?.getDouble(KEY_INITIAL_DISTANCE) ?: 21.0
+    }
 
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         _binding = DialogCorrectCalibrationFactorBinding.inflate(LayoutInflater.from(requireContext()))
 
-        // TODO: set the hint for the calibration factor field
+        // initialize the distances with the default value.
+        binding.etCorrectDistance.setText(initialDistance.toString())
+        binding.etMeasuredDistance.setText(initialDistance.toString())
 
         val builder = MaterialAlertDialogBuilder(requireActivity())
             .setTitle(title)
@@ -101,10 +106,11 @@ class CorrectCalibrationFactorDialogFragment : DialogFragment() {
         Log.i(TAG, "Returning new Calibration Factor: $newCalibrationFactor")
 
         // --- SEND RESULT BACK ---
-        setFragmentResult(REQUEST_KEY, bundleOf(
-            KEY_RESULT_TYPE to RESULT_TYPE_SAVE,
-            KEY_CALIBRATION_FACTOR_AS_STRING to newCalibrationFactor
-        )
+        setFragmentResult(REQUEST_KEY,
+            bundleOf(
+                KEY_RESULT_TYPE to RESULT_TYPE_SAVE,
+                KEY_CALIBRATION_FACTOR_AS_STRING to newCalibrationFactor
+            )
         )
     }
 
@@ -125,17 +131,19 @@ class CorrectCalibrationFactorDialogFragment : DialogFragment() {
         private const val KEY_TITLE = "title"
         private const val KEY_FIELD_NAME = "field_name"
         private const val KEY_ROUND_TO_INT = "round_to_int"
+        private const val KEY_INITIAL_DISTANCE = "default_distance"
 
 
 
         // --- FACTORY METHOD ---
-        fun newInstance(originalCalibrationFactor: String, title: String, fieldName: String, roundToInt: Boolean): CorrectCalibrationFactorDialogFragment {
+        fun newInstance(originalCalibrationFactor: String, title: String, fieldName: String, roundToInt: Boolean, defautlDistance: Double): CorrectCalibrationFactorDialogFragment {
             return CorrectCalibrationFactorDialogFragment().apply {
                 arguments = bundleOf(
                     KEY_CALIBRATION_FACTOR_AS_STRING to originalCalibrationFactor,
                     KEY_TITLE to title,
                     KEY_FIELD_NAME to fieldName,
-                    KEY_ROUND_TO_INT to roundToInt
+                    KEY_ROUND_TO_INT to roundToInt,
+                    KEY_INITIAL_DISTANCE to defautlDistance
                 )
             }
         }

@@ -112,7 +112,9 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
                     calibrationFactorNameRes = R.string.Calibration_Factor,
                     correctTitleRes = R.string.correct_calibration_factor_title_run,
                     value = value_in_mm,
-                    showWheelSizeSpinner = false
+                    showWheelSizeSpinner = false,
+                    roundToInt = false,
+                    initialDistanceForCorrection = 42.195
                 )
             DeviceType.BIKE_SPEED, DeviceType.BIKE_SPEED_AND_CADENCE ->
                 CalibrationData(
@@ -120,16 +122,25 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
                     correctTitleRes = R.string.correct_calibration_factor_title_bike,
                     value = value_in_mm,
                     showWheelSizeSpinner = true,
+                    roundToInt = true,
+                    initialDistanceForCorrection = 100.0
                 )
             DeviceType.BIKE_POWER ->
-                CalibrationData(
-                    calibrationFactorNameRes = R.string.Wheel_Circumference,
-                    correctTitleRes = R.string.correct_calibration_factor_title_bike,
-                    value = value_in_mm,
-                    showWheelSizeSpinner = bikePowerFeatures.wheelRevolutionDataSupported
-                            || bikePowerFeatures.wheelDistanceDataSupported
-                            || bikePowerFeatures.wheelSpeedDataSupported
-                )
+                if (bikePowerFeatures.wheelRevolutionDataSupported
+                    || bikePowerFeatures.wheelDistanceDataSupported
+                    || bikePowerFeatures.wheelSpeedDataSupported) {
+                    CalibrationData(
+                        calibrationFactorNameRes = R.string.Wheel_Circumference,
+                        correctTitleRes = R.string.correct_calibration_factor_title_bike,
+                        value = value_in_mm,
+                        showWheelSizeSpinner = true,
+                        roundToInt = true,
+                        initialDistanceForCorrection = 100.0
+                    )
+                }
+                else {
+                    null
+                }
             else -> null
         }
     }

@@ -12,11 +12,9 @@ import android.widget.TextView
 import android.widget.ImageView
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.DialogFragment
-import androidx.fragment.app.setFragmentResultListener
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
 import com.atrainingtracker.R
-import com.atrainingtracker.banalservice.fragments.SetCalibrationFactorDialogFragment
 import com.atrainingtracker.databinding.DialogEditDeviceBaseBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
@@ -242,15 +240,14 @@ class EditDeviceDialogFragment : DialogFragment() {
             val correctTitle = requireContext().getString(data.calibrationData!!.correctTitleRes)
             val calibrationFactorName = requireContext().getString(data.calibrationData!!.calibrationFactorNameRes)
 
-            //
-            val roundToInt = data.calibrationData.showWheelSizeSpinner
 
             // Create an instance of the dialog fragment to show it
             val dialog = CorrectCalibrationFactorDialogFragment.newInstance(
                 etCalibrationFactor.text.toString(),
                 correctTitle,
                 calibrationFactorName,
-                roundToInt
+                data.calibrationData.roundToInt,
+                data.calibrationData.initialDistanceForCorrection
             )
             // Show the new dialog over the current one.
             dialog.show(childFragmentManager, CorrectCalibrationFactorDialogFragment.TAG)
