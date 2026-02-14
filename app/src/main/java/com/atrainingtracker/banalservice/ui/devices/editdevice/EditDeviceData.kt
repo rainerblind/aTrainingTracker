@@ -2,7 +2,7 @@ package com.atrainingtracker.banalservice.ui.devices.editdevice
 
 import com.atrainingtracker.banalservice.devices.BikePowerSensorsHelper
 
-class EditDeviceData(
+data class EditDeviceData(
     val id: Long,
     val deviceTypeIconRes: Int,
     val lastSeen: String?,

@@ -13,7 +13,7 @@ import com.atrainingtracker.banalservice.devices.BikePowerSensorsHelper
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.helpers.BatteryStatusHelper
 import com.atrainingtracker.banalservice.helpers.UIHelper
-import com.atrainingtracker.banalservice.ui.devices.DeviceDataRepository
+import com.atrainingtracker.banalservice.ui.devices.RawDeviceDataRepository
 import com.atrainingtracker.banalservice.ui.devices.RawDeviceData
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 
@@ -27,7 +27,7 @@ import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
  */
 class EditDeviceViewModel(private val application: Application) : AndroidViewModel(application) {
 
-    private val repository = DeviceDataRepository.Companion.getInstance(application)
+    private val repository = RawDeviceDataRepository.Companion.getInstance(application)
 
     private val equipmentDbHelper by lazy { EquipmentDbHelper(application) }
     private val devicesDatabaseManager by lazy { DevicesDatabaseManager.getInstance(application) }

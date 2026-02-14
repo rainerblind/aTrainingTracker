@@ -31,6 +31,7 @@ import com.atrainingtracker.banalservice.database.DevicesDatabaseManager.Devices
 /**
  * Created by rainer on 30.01.16.
  */
+@Deprecated
 public class KnownRemoteDevicesFragment extends RemoteDevicesFragment {
     public static final String TAG = "KnownRemoteDevicesFragment";
     private static final boolean DEBUG = BANALService.getDebug(true);

@@ -45,6 +45,7 @@ import java.util.List;
 /**
  * Created by rainer on 30.01.16.
  */
+@Deprecated
 public class AvailableRemoteDevicesFragment extends RemoteDevicesFragment {
     public static final String TAG = "AvailableRemoteDevicesF";
     private static final boolean DEBUG = BANALService.getDebug(false);
