@@ -2,7 +2,6 @@ package com.atrainingtracker.banalservice.ui.devices
 
 import android.app.Dialog
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.AdapterView
@@ -215,7 +214,6 @@ class EditDeviceDialogFragment : DialogFragment() {
     }
 
     fun setupEditCalibrationFactorButton(data: DeviceEditViewData) {
-        Log.i(TAG, "Setting up edit calibration factor button")
         val button = binding.groupCalibration.bEditCalibrationFactor
         val etCalibrationFactor = binding.groupCalibration.etCalibrationFactor
 
@@ -223,14 +221,11 @@ class EditDeviceDialogFragment : DialogFragment() {
 
         // Listen for results from the calibration dialog
         childFragmentManager.setFragmentResultListener(CorrectCalibrationFactorDialogFragment.REQUEST_KEY, this) { _, bundle ->
-            Log.i(TAG, "Received result from calibration dialog")
             // Check which button was clicked in the dialog
             val resultType = bundle.getString(CorrectCalibrationFactorDialogFragment.KEY_RESULT_TYPE)
             if (resultType == CorrectCalibrationFactorDialogFragment.RESULT_TYPE_SAVE) {
-                Log.i(TAG, "Save button clicked in calibration dialog")
                 // Get the newly calculated value and save it
                 val newCalibration = bundle.getString(CorrectCalibrationFactorDialogFragment.KEY_CALIBRATION_FACTOR_AS_STRING)
-                Log.i(TAG, "New Calibration Factor: $newCalibration")
                 etCalibrationFactor.setText(newCalibration)
             }
         }
