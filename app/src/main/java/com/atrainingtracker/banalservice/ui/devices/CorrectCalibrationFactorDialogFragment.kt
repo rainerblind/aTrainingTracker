@@ -2,7 +2,6 @@ package com.atrainingtracker.banalservice.ui.devices
 
 import android.app.Dialog
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.widget.Button
 import androidx.appcompat.app.AlertDialog
@@ -108,7 +107,6 @@ class CorrectCalibrationFactorDialogFragment : DialogFragment() {
 
     private fun handleSave() {
         val newCalibrationFactor = binding.etNewCalibrationFactor.text.toString()
-        Log.i(TAG, "Returning new Calibration Factor: $newCalibrationFactor")
 
         // --- SEND RESULT BACK ---
         setFragmentResult(REQUEST_KEY,
