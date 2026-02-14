@@ -2,6 +2,7 @@ package com.atrainingtracker.banalservice.ui.devices
 
 import android.app.Dialog
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.widget.Button
 import androidx.appcompat.app.AlertDialog
@@ -21,14 +22,17 @@ class CorrectCalibrationFactorDialogFragment : DialogFragment() {
     private var positiveButton: Button? = null
 
     // The original calibration value is now retrieved from arguments
-    private val originalCalibrationFactor: Double by lazy {
-        arguments?.getDouble(ARG_CALIBRATION_VALUE) ?: 1.0
+    private val originalCalibrationFactorString: String by lazy {
+        arguments?.getString(KEY_CALIBRATION_FACTOR_AS_STRING) ?: ""
     }
     private val title: String by lazy {
-        arguments?.getString(ARG_TITLE) ?: ""
+        arguments?.getString(KEY_TITLE) ?: ""
     }
     private val fieldName: String by lazy {
-        arguments?.getString(ARG_FIELD_NAME) ?: ""
+        arguments?.getString(KEY_FIELD_NAME) ?: ""
+    }
+    private val roundToInt: Boolean by lazy {
+        arguments?.getBoolean(KEY_ROUND_TO_INT) ?: false
     }
 
 
@@ -79,8 +83,12 @@ class CorrectCalibrationFactorDialogFragment : DialogFragment() {
         if (canCalculate) {
             positiveButton?.isEnabled = true
 
-            val newCalibrationFactor = originalCalibrationFactor * (correctDistance!! / measuredDistance!!)
-            binding.tvNewCalibrationFactor.text = newCalibrationFactor.toString()
+            val newCalibrationFactor = originalCalibrationFactorString.toDouble() * (correctDistance!! / measuredDistance!!)
+            if (roundToInt) {
+                binding.tvNewCalibrationFactor.text = newCalibrationFactor.toInt().toString()
+            } else {
+                binding.tvNewCalibrationFactor.text = newCalibrationFactor.toString()
+            }
         } else {
             positiveButton?.isEnabled = false
 
@@ -89,17 +97,13 @@ class CorrectCalibrationFactorDialogFragment : DialogFragment() {
     }
 
     private fun handleSave() {
-        val measuredDistance = binding.etMeasuredDistance.text.toString().toDoubleOrNull()
-        val correctDistance = binding.etCorrectDistance.text.toString().toDoubleOrNull()
-
-        if (measuredDistance == null || correctDistance == null || measuredDistance == 0.0) return
-
         val newCalibrationFactor = binding.tvNewCalibrationFactor.text.toString()
+        Log.i(TAG, "Returning new Calibration Factor: $newCalibrationFactor")
 
         // --- SEND RESULT BACK ---
         setFragmentResult(REQUEST_KEY, bundleOf(
             KEY_RESULT_TYPE to RESULT_TYPE_SAVE,
-            KEY_CALIBRATION_VALUE to newCalibrationFactor
+            KEY_CALIBRATION_FACTOR_AS_STRING to newCalibrationFactor
         )
         )
     }
@@ -110,24 +114,29 @@ class CorrectCalibrationFactorDialogFragment : DialogFragment() {
     }
 
     companion object {
-        const val TAG = "SetCalibrationDialogFragment"
+        const val TAG = "CorrectCalibrationFactorDialogFragment"
+
         // --- KEYS FOR FRAGMENT RESULT API ---
         const val REQUEST_KEY = "calibration_request"
-        const val KEY_CALIBRATION_VALUE = "calibration_value"
+        const val KEY_CALIBRATION_FACTOR_AS_STRING = "calibration_factor"
         const val KEY_RESULT_TYPE = "result_type"
         const val RESULT_TYPE_SAVE = "save"
 
-        private const val ARG_CALIBRATION_VALUE = "original_calibration_value"
-        private const val ARG_TITLE = "title"
-        private const val ARG_FIELD_NAME = "field_name"
+        private const val KEY_TITLE = "title"
+        private const val KEY_FIELD_NAME = "field_name"
+        private const val KEY_ROUND_TO_INT = "round_to_int"
+
 
 
         // --- FACTORY METHOD ---
-        fun newInstance(originalCalibrationFactor: Double, title: String, fieldName: String): CorrectCalibrationFactorDialogFragment {
+        fun newInstance(originalCalibrationFactor: String, title: String, fieldName: String, roundToInt: Boolean): CorrectCalibrationFactorDialogFragment {
             return CorrectCalibrationFactorDialogFragment().apply {
-                arguments = bundleOf(ARG_CALIBRATION_VALUE to originalCalibrationFactor,
-                    ARG_TITLE to title,
-                    ARG_FIELD_NAME to fieldName)
+                arguments = bundleOf(
+                    KEY_CALIBRATION_FACTOR_AS_STRING to originalCalibrationFactor,
+                    KEY_TITLE to title,
+                    KEY_FIELD_NAME to fieldName,
+                    KEY_ROUND_TO_INT to roundToInt
+                )
             }
         }
     }
