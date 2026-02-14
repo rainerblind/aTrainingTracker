@@ -22,6 +22,6 @@ enum class DeviceFilterType {
 @Parcelize
 data class DeviceFilterSpec(
     val filterType: DeviceFilterType,
-    val protocol: Protocol?,
-    val deviceType: DeviceType?
+    val protocol: Protocol,
+    val deviceType: DeviceType
 ) : Parcelable
