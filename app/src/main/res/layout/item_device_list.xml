@@ -22,7 +22,7 @@
             android:layout_height="48dp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            tools:srcCompat="@drawable/ant_logo" /> <!-- Use a placeholder icon -->
+            tools:srcCompat="@drawable/ant_logo" />
 
         <TextView
             android:id="@+id/deviceName"
@@ -80,20 +80,10 @@
             style="?attr/borderlessButtonStyle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
             android:text="Pair"
-            app:layout_constraintEnd_toStartOf="@+id/buttonDelete"
-            app:layout_constraintTop_toBottomOf="@+id/linkedEquipment" />
-
-        <Button
-            android:id="@+id/buttonDelete"
-            style="?attr/borderlessButtonStyle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="@android:color/holo_red_dark"
-            android:text="Delete"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/buttonPair" />
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/batteryStatusIcon"
+            app:layout_constraintEnd_toEndOf="parent"/>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </com.google.android.material.card.MaterialCardView>
