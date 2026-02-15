@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Strings for the Devices Feature -->
+
+    <string name="devices_button_pair">Pair</string>
+    <string name="devices_button_unpair">Unpair</string>
+</resources>
