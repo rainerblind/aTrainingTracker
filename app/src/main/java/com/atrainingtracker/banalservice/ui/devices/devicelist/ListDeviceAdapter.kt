@@ -11,8 +11,8 @@ import com.atrainingtracker.databinding.ItemDeviceListBinding
 
 
 class ListDeviceAdapter(
-    private val onDeleteClick: (ListDeviceData) -> Unit,
-    private val onPairClick: (ListDeviceData) -> Unit
+    private val onPairClick: (ListDeviceData) -> Unit,
+    private val onItemClick: (ListDeviceData) -> Unit
 ) : ListAdapter<ListDeviceData, ListDeviceAdapter.DeviceViewHolder>(DeviceDiffCallback()) {
 
     /**
@@ -33,7 +33,7 @@ class ListDeviceAdapter(
      */
     override fun onBindViewHolder(holder: DeviceViewHolder, position: Int) {
         val device = getItem(position)
-        holder.bind(device, onDeleteClick)
+        holder.bind(device, onPairClick, onItemClick)
     }
 
     /**
@@ -45,7 +45,8 @@ class ListDeviceAdapter(
 
         fun bind(
             device: ListDeviceData,
-            onPairClick: (ListDeviceData) -> Unit
+            onPairClick: (ListDeviceData) -> Unit,
+            onItemClick: (ListDeviceData) -> Unit
         ) {
             // Bind all the data from the ListDeviceData object to the views
             binding.deviceName.text = device.deviceName
@@ -54,6 +55,11 @@ class ListDeviceAdapter(
             binding.batteryStatusIcon.setImageResource(device.batteryStatusIconRes)
             binding.mainValue.text = device.mainValue
             binding.linkedEquipment.text = device.linkedEquipment
+
+            // adding the click listeners
+            itemView.setOnClickListener {
+                onItemClick(device)
+            }
 
             binding.buttonPair.setOnClickListener {
                 onPairClick(device)
