@@ -1,89 +1,99 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
+
+<com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:padding="8dp">
+    android:layout_marginStart="8dp"
+    android:layout_marginTop="8dp"
+    android:layout_marginEnd="8dp"
+    app:cardElevation="2dp">
 
-    <ImageView
-        android:id="@+id/deviceTypeIcon"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        tools:srcCompat="@drawable/ant_logo" /> <!-- Use a placeholder icon -->
-
-    <TextView
-        android:id="@+id/deviceName"
-        android:layout_width="0dp"
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:textAppearance="?attr/textAppearanceListItem"
-        app:layout_constraintEnd_toStartOf="@+id/mainValue"
-        app:layout_constraintStart_toEndOf="@+id/deviceTypeIcon"
-        app:layout_constraintTop_toTopOf="parent"
-        tools:text="Garmin HRM-Pro" />
+        android:padding="8dp">
 
-    <TextView
-        android:id="@+id/deviceManufacturer"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:textAppearance="?attr/textAppearanceListItemSecondary"
-        app:layout_constraintEnd_toEndOf="@+id/deviceName"
-        app:layout_constraintStart_toStartOf="@+id/deviceName"
-        app:layout_constraintTop_toBottomOf="@+id/deviceName"
-        tools:text="Garmin" />
+        <ImageView
+            android:id="@+id/deviceTypeIcon"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:srcCompat="@drawable/ant_logo" /> <!-- Use a placeholder icon -->
 
-    <TextView
-        android:id="@+id/linkedEquipment"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:textSize="12sp"
-        app:layout_constraintEnd_toEndOf="@+id/deviceManufacturer"
-        app:layout_constraintStart_toStartOf="@+id/deviceManufacturer"
-        app:layout_constraintTop_toBottomOf="@+id/deviceManufacturer"
-        tools:text="Linked to: Bike, Treadmill" />
+        <TextView
+            android:id="@+id/deviceName"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:textAppearance="?attr/textAppearanceListItem"
+            app:layout_constraintEnd_toStartOf="@+id/mainValue"
+            app:layout_constraintStart_toEndOf="@+id/deviceTypeIcon"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="Garmin HRM-Pro" />
 
-    <TextView
-        android:id="@+id/mainValue"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="8dp"
-        android:textAppearance="@style/TextAppearance.AppCompat.Large"
-        app:layout_constraintBottom_toBottomOf="@+id/deviceManufacturer"
-        app:layout_constraintEnd_toStartOf="@+id/batteryStatusIcon"
-        app:layout_constraintTop_toTopOf="@+id/deviceName"
-        tools:text="145" />
+        <TextView
+            android:id="@+id/deviceManufacturer"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:textAppearance="?attr/textAppearanceListItemSecondary"
+            app:layout_constraintEnd_toEndOf="@+id/deviceName"
+            app:layout_constraintStart_toStartOf="@+id/deviceName"
+            app:layout_constraintTop_toBottomOf="@+id/deviceName"
+            tools:text="Garmin" />
 
-    <ImageView
-        android:id="@+id/batteryStatusIcon"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
-        app:layout_constraintBottom_toBottomOf="@+id/mainValue"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/mainValue"
-        tools:srcCompat="@drawable/stat_sys_battery_unknown" />
+        <TextView
+            android:id="@+id/linkedEquipment"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:textSize="12sp"
+            app:layout_constraintEnd_toEndOf="@+id/deviceManufacturer"
+            app:layout_constraintStart_toStartOf="@+id/deviceManufacturer"
+            app:layout_constraintTop_toBottomOf="@+id/deviceManufacturer"
+            tools:text="Linked to: Bike, Treadmill" />
 
-    <Button
-        android:id="@+id/buttonPair"
-        style="?attr/borderlessButtonStyle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="Pair"
-        app:layout_constraintEnd_toStartOf="@+id/buttonDelete"
-        app:layout_constraintTop_toBottomOf="@+id/linkedEquipment" />
+        <TextView
+            android:id="@+id/mainValue"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:textAppearance="@style/TextAppearance.AppCompat.Large"
+            app:layout_constraintBottom_toBottomOf="@+id/deviceManufacturer"
+            app:layout_constraintEnd_toStartOf="@+id/batteryStatusIcon"
+            app:layout_constraintTop_toTopOf="@+id/deviceName"
+            tools:text="145" />
 
-    <Button
-        android:id="@+id/buttonDelete"
-        style="?attr/borderlessButtonStyle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textColor="@android:color/holo_red_dark"
-        android:text="Delete"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/buttonPair" />
+        <ImageView
+            android:id="@+id/batteryStatusIcon"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            app:layout_constraintBottom_toBottomOf="@+id/mainValue"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/mainValue"
+            tools:srcCompat="@drawable/stat_sys_battery_unknown" />
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+        <Button
+            android:id="@+id/buttonPair"
+            style="?attr/borderlessButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Pair"
+            app:layout_constraintEnd_toStartOf="@+id/buttonDelete"
+            app:layout_constraintTop_toBottomOf="@+id/linkedEquipment" />
+
+        <Button
+            android:id="@+id/buttonDelete"
+            style="?attr/borderlessButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@android:color/holo_red_dark"
+            android:text="Delete"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/buttonPair" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</com.google.android.material.card.MaterialCardView>
