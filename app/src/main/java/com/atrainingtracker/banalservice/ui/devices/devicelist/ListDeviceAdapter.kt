@@ -5,6 +5,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.atrainingtracker.R
 import com.atrainingtracker.databinding.ItemDeviceListBinding
 
 
@@ -56,6 +57,16 @@ class ListDeviceAdapter(
             binding.mainValue.text = device.mainValue
             binding.linkedEquipment.text = device.linkedEquipment
 
+            // Set the button text and style based on the isPaired property
+            if (device.isPaired) {
+                binding.buttonPair.text = itemView.context.getString(R.string.devices_button_unpair)
+                binding.buttonPair.isActivated = true // Activate the "paired" state in our selectors
+
+            } else {
+                binding.buttonPair.text = itemView.context.getString(R.string.devices_button_pair)
+                binding.buttonPair.isActivated = false // Use the default state in our selectors
+            }
+
             // adding the click listeners
             itemView.setOnClickListener {
                 onItemClick(device)
@@ -65,8 +76,6 @@ class ListDeviceAdapter(
                 onPairClick(device)
             }
 
-            // Example of how to change the pair button's appearance
-            // binding.buttonPair.text = if (device.isPaired) "Unpair" else "Pair"
         }
     }
 

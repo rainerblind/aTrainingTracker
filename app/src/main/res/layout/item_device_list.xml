@@ -75,12 +75,13 @@
             app:layout_constraintTop_toTopOf="@+id/mainValue"
             tools:srcCompat="@drawable/stat_sys_battery_unknown" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/buttonPair"
-            style="?attr/borderlessButtonStyle"
+            style="?attr/materialButtonOutlinedStyle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Pair"
+            app:strokeColor="?attr/colorPrimary"
+            android:text="@string/devices_button_pair"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintTop_toBottomOf="@id/batteryStatusIcon"
             app:layout_constraintEnd_toEndOf="parent"/>
