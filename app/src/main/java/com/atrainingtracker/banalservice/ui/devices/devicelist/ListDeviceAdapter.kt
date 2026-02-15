@@ -33,7 +33,7 @@ class ListDeviceAdapter(
      */
     override fun onBindViewHolder(holder: DeviceViewHolder, position: Int) {
         val device = getItem(position)
-        holder.bind(device, onDeleteClick, onPairClick)
+        holder.bind(device, onDeleteClick)
     }
 
     /**
@@ -45,7 +45,6 @@ class ListDeviceAdapter(
 
         fun bind(
             device: ListDeviceData,
-            onDeleteClick: (ListDeviceData) -> Unit,
             onPairClick: (ListDeviceData) -> Unit
         ) {
             // Bind all the data from the ListDeviceData object to the views
@@ -55,11 +54,6 @@ class ListDeviceAdapter(
             binding.batteryStatusIcon.setImageResource(device.batteryStatusIconRes)
             binding.mainValue.text = device.mainValue
             binding.linkedEquipment.text = device.linkedEquipment
-
-            // Set up click listeners
-            binding.buttonDelete.setOnClickListener {
-                onDeleteClick(device)
-            }
 
             binding.buttonPair.setOnClickListener {
                 onPairClick(device)
