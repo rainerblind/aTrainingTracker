@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogFragment
 import com.atrainingtracker.databinding.FragmentDeviceListBinding
 
 class ListDeviceFragment : Fragment() {
@@ -45,11 +46,11 @@ class ListDeviceFragment : Fragment() {
 
     private fun setupRecyclerView() {
         deviceAdapter = ListDeviceAdapter(
-            onDeleteClick = { device ->
-                // TODO: viewModel.deleteDevice(device.)
-            },
             onPairClick = { device ->
                 // TODO: viewModel.setDevicePaired(device.id, !device.isPaired)
+            },
+            onItemClick = { device ->
+                viewModel.onDeviceSelected(device.id)
             }
         )
         binding.recyclerViewDevices.apply {
@@ -67,6 +68,17 @@ class ListDeviceFragment : Fragment() {
 
             // Optional: Show a "no devices" message if the list is empty
             binding.textViewEmptyList.visibility = if (devices.isEmpty()) View.VISIBLE else View.GONE
+        }
+
+        // Observer for the navigation event
+        viewModel.navigateToEditDevice.observe(viewLifecycleOwner) { event ->
+            event.getContentIfNotHandled()?.let { deviceId ->
+                // Create an instance of the dialog fragment using its factory method
+                val editDeviceDialog = EditDeviceDialogFragment.newInstance(deviceId)
+
+                // Show the dialog. Use parentFragmentManager to ensure it's managed by the Activity's fragment manager.
+                editDeviceDialog.show(parentFragmentManager, EditDeviceDialogFragment.TAG)
+            }
         }
     }
 

@@ -3,6 +3,7 @@ package com.atrainingtracker.banalservice.ui.devices.devicelist
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.map
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
@@ -10,6 +11,7 @@ import com.atrainingtracker.banalservice.helpers.BatteryStatusHelper
 import com.atrainingtracker.banalservice.helpers.UIHelper
 import com.atrainingtracker.banalservice.ui.devices.RawDeviceData
 import com.atrainingtracker.banalservice.ui.devices.RawDeviceDataRepository
+import com.atrainingtracker.trainingtracker.ui.util.Event
 
 class ListDeviceViewModel(private val application: Application) : AndroidViewModel(application) {
 
@@ -17,6 +19,16 @@ class ListDeviceViewModel(private val application: Application) : AndroidViewMod
 
     // the single source of truth: the raw device list from the repository.
     private val allRawDevices: LiveData<List<RawDeviceData>> = repository.allDevices
+
+    // LiveData to trigger navigation. It holds the ID of the device to edit.
+    private val _navigateToEditDevice = MutableLiveData<Event<Long>>()
+    val navigateToEditDevice: LiveData<Event<Long>>
+        get() = _navigateToEditDevice
+
+    // A public function the fragment will call from the click listener.
+    fun onDeviceSelected(deviceId: Long) {
+        _navigateToEditDevice.value = Event(deviceId)
+    }
 
     private val allListDevices: LiveData<List<ListDeviceData>> = allRawDevices.map{ rawDevices ->
         rawDevices.map { device ->
