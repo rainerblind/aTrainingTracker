@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- State when paired (solid green background): No stroke color -->
+    <item android:state_activated="true" android:color="@android:color/transparent" />
+    <!-- Default state (light green background): Darker green stroke -->
+    <item android:color="@color/pair_button_unpaired_text" />
+</selector>

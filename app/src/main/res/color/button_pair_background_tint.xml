@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- State when paired: Solid green background -->
+    <item android:state_activated="true" android:color="@color/pair_button_paired_background" />
+    <!-- Default state (not paired): Light green background -->
+    <item android:color="@color/pair_button_unpaired_background" />
+</selector>
