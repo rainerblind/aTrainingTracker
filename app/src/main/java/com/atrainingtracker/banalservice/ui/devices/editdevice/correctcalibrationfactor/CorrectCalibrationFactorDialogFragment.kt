@@ -1,4 +1,4 @@
-package com.atrainingtracker.banalservice.ui.devices.editdevice
+package com.atrainingtracker.banalservice.ui.devices.editdevice.correctcalibrationfactor
 
 import android.app.Dialog
 import android.os.Bundle
@@ -13,6 +13,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.databinding.DialogCorrectCalibrationFactorBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
+@Deprecated("Use a subclass of CorrectCalibrationFactorBaseDialogFragment instead")
 class CorrectCalibrationFactorDialogFragment : DialogFragment() {
 
     private var _binding: DialogCorrectCalibrationFactorBinding? = null

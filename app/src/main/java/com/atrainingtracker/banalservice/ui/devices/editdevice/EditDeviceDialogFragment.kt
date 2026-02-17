@@ -14,6 +14,7 @@ import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.ui.devices.editdevice.correctcalibrationfactor.CorrectCalibrationFactorDialogFragment
 import com.atrainingtracker.databinding.DialogEditDeviceBaseBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
