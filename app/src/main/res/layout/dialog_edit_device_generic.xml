@@ -12,15 +12,6 @@
         android:orientation="vertical"
         android:padding="8dp">
 
-        <!-- Paired Checkbox -->
-        <CheckBox
-            android:id="@+id/cbPaired"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="@string/pairedText"
-            android:textAppearance="?android:attr/textAppearanceMedium" />
-
         <!-- Non-editable section with light blue background -->
         <LinearLayout
             android:layout_width="match_parent"

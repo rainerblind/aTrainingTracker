@@ -105,7 +105,6 @@ abstract class BaseEditDeviceFragment<T : DeviceUiData> : DialogFragment() {
         binding.ivBatteryStatus.setImageResource(data.batteryStatusIconRes)
         binding.tvManufacturer.setText(data.manufacturer)
         binding.etDeviceName.setText(data.deviceName)
-        binding.cbPaired.isChecked = data.isPaired
 
         // Handle equipment section automatically
         setupEquipmentSection(data, binding.etEquipment)
@@ -117,9 +116,6 @@ abstract class BaseEditDeviceFragment<T : DeviceUiData> : DialogFragment() {
     open fun setupEventListeners() {
         binding.etDeviceName.doOnTextChanged { text, _, _, _ ->
             viewModel.onDeviceNameChanged(deviceId, text.toString())
-        }
-        binding.cbPaired.setOnCheckedChangeListener { _, isChecked ->
-            viewModel.onPairedChanged(deviceId, isChecked)
         }
     }
 
