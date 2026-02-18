@@ -5,10 +5,14 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogFragment
+import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.banalservice.ui.devices.editdevice.EditBikeDeviceFragment
+import com.atrainingtracker.banalservice.ui.devices.editdevice.BaseEditDeviceFragment
+import com.atrainingtracker.banalservice.ui.devices.editdevice.EditRunDeviceFragment
 import com.atrainingtracker.databinding.FragmentDeviceListBinding
 
 class ListDeviceFragment : Fragment() {
@@ -72,12 +76,28 @@ class ListDeviceFragment : Fragment() {
 
         // Observer for the navigation event
         viewModel.navigateToEditDevice.observe(viewLifecycleOwner) { event ->
-            event.getContentIfNotHandled()?.let { deviceId ->
-                // Create an instance of the dialog fragment using its factory method
-                val editDeviceDialog = EditDeviceDialogFragment.newInstance(deviceId)
+            event.getContentIfNotHandled()?.let { navEvent ->
+                // Decide which fragment to show based on the device type
+                val editDeviceDialog: DialogFragment = when (navEvent.deviceType) {
+                    DeviceType.BIKE_POWER,
+                    DeviceType.BIKE_SPEED,
+                    DeviceType.BIKE_CADENCE,
+                    DeviceType.BIKE_SPEED_AND_CADENCE -> {
+                        EditBikeDeviceFragment.newInstance(navEvent.deviceId)
+                    }
 
-                // Show the dialog. Use parentFragmentManager to ensure it's managed by the Activity's fragment manager.
-                editDeviceDialog.show(parentFragmentManager, EditDeviceDialogFragment.TAG)
+                    DeviceType.RUN_SPEED -> { // Assuming you might have this
+                        EditRunDeviceFragment.newInstance(navEvent.deviceId)
+                    }
+
+                    else -> {
+                        // A fallback for generic or unsupported types
+                        EditRunDeviceFragment.newInstance(navEvent.deviceId)
+                    }
+                }
+
+                // Show the correct dialog. The tag can be generic.
+                editDeviceDialog.show(parentFragmentManager, "EditDeviceDialog")
             }
         }
     }

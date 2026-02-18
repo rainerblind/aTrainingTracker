@@ -8,6 +8,7 @@ import androidx.lifecycle.map
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager.DevicesDbHelper
+import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -66,6 +67,10 @@ class RawDeviceDataRepository private constructor(private val application: Appli
         return allDevices.map { list ->
             list.find {it.id == id}
         }
+    }
+
+    fun getDeviceType(deviceId: Long): DeviceType? {
+        return allDevices.value?.find { it.id == deviceId }?.deviceType
     }
 
     // TODO: get connection to BANALService and update mainValue and isAvailable...

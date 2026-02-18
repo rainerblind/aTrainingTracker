@@ -36,26 +36,21 @@ class EditBikeDeviceFragment : BaseEditDeviceFragment<BikeDeviceUiData>() {
     // override val layoutId: Int = R.layout.dialog_edit_device_generic
 
     override fun bindUi(data: BikeDeviceUiData) {
-        // --- Populate Common Views (shared across all devices) ---
         super.bindUi(data)
 
         // --- Configure Calibration Section (specific to Bike) ---
         val wheelCircumference = data.wheelCircumference
-        if (wheelCircumference == null) {
-            binding.groupCalibration.root.visibility = View.GONE
-        } else {
-            binding.groupCalibration.root.visibility = View.VISIBLE
-            binding.groupCalibration.layoutCalibrationFactor.hint = getString(R.string.devices_wheel_circumference)
-            binding.groupCalibration.etCalibrationFactor.setText(wheelCircumference)
+        binding.groupCalibration.root.visibility = View.VISIBLE
+        binding.groupCalibration.layoutCalibrationFactor.hint = getString(R.string.devices_wheel_circumference)
+        binding.groupCalibration.etCalibrationFactor.setText(wheelCircumference.toString())
 
-            setupWheelCircumferenceSpinner()
+        setupWheelCircumferenceSpinner()
 
-            setupEditCalibrationFactorButton(
-                CorrectCalibrationFactorBikeDialogFragment.newInstance(
-                    originalCalibrationFactor = binding.groupCalibration.etCalibrationFactor.text.toString()
-                )
+        setupEditCalibrationFactorButton(
+            CorrectCalibrationFactorBikeDialogFragment.newInstance(
+                originalCalibrationFactor = binding.groupCalibration.etCalibrationFactor.text.toString()
             )
-        }
+        )
 
         // Power features, etc. would be bound here as well
     }
