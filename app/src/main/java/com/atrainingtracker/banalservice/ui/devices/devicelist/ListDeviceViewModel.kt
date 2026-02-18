@@ -1,23 +1,21 @@
 package com.atrainingtracker.banalservice.ui.devices.devicelist
 
 import android.app.Application
-import androidx.activity.result.launch
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.map
-import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.ui.devices.DeviceUiData
-import com.atrainingtracker.banalservice.ui.devices.RawDeviceDataRepository
+import com.atrainingtracker.banalservice.ui.devices.DeviceDataRepository
 import com.atrainingtracker.trainingtracker.ui.util.Event
 
 
 data class EditDeviceNavigationEvent(val deviceId: Long, val deviceType: DeviceType)
 class ListDeviceViewModel(private val application: Application) : AndroidViewModel(application) {
 
-    private val repository = RawDeviceDataRepository.Companion.getInstance(application)
+    private val repository = DeviceDataRepository.Companion.getInstance(application)
 
     // the single source of truth: the raw device list from the repository.
     private val allDevices: LiveData<List<DeviceUiData>> = repository.allDevices

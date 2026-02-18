@@ -9,7 +9,7 @@ import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.ui.devices.BikePowerFeatures
 import com.atrainingtracker.banalservice.ui.devices.DeviceUiData
 import com.atrainingtracker.banalservice.ui.devices.PowerFeatureDisplay
-import com.atrainingtracker.banalservice.ui.devices.RawDeviceDataRepository
+import com.atrainingtracker.banalservice.ui.devices.DeviceDataRepository
 
 /**
  * ViewModel for the EditDeviceDialogFragment.
@@ -21,7 +21,7 @@ import com.atrainingtracker.banalservice.ui.devices.RawDeviceDataRepository
  */
 class EditDeviceViewModel(private val application: Application) : AndroidViewModel(application) {
 
-    private val repository = RawDeviceDataRepository.Companion.getInstance(application)
+    private val repository = DeviceDataRepository.Companion.getInstance(application)
 
 
     /**
