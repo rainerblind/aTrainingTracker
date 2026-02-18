@@ -9,7 +9,6 @@ import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.helpers.BatteryStatusHelper
 import com.atrainingtracker.banalservice.helpers.UIHelper
-import com.atrainingtracker.banalservice.ui.devices.RawDeviceData
 import com.atrainingtracker.banalservice.ui.devices.RawDeviceDataRepository
 import com.atrainingtracker.trainingtracker.ui.util.Event
 
