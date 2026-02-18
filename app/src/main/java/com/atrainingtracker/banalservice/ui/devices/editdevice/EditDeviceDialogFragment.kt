@@ -101,7 +101,7 @@ class EditDeviceDialogFragment : DialogFragment() {
     }
 
     /**
-     * Populates all the UI views with data from the [com.atrainingtracker.banalservice.ui.devices.RawDeviceData] object.
+     * Populates all the UI views with data from the [com.atrainingtracker.banalservice.ui.devices.DeviceRawData] object.
      */
     private fun populateUi(data: EditDeviceData) {
 

@@ -52,8 +52,8 @@ class RawDeviceDataRepository private constructor(private val application: Appli
     private val mapper by lazy {RawDeviceDataProvider(devicesDatabaseManager, equipmentDbHelper)}
 
 
-    private val _allDevices = MutableLiveData<List<RawDeviceData>>()
-    val allDevices: LiveData<List<RawDeviceData>> = _allDevices
+    private val _allDevices = MutableLiveData<List<DeviceUiData>>()
+    val allDevices: LiveData<List<DeviceUiData>> = _allDevices
 
     init {
         // Automatically load all devices when the repository is first created
@@ -62,26 +62,29 @@ class RawDeviceDataRepository private constructor(private val application: Appli
         }
     }
 
-    fun getDeviceById(id: Long): LiveData<RawDeviceData?> {
+    fun getDeviceById(id: Long): LiveData<DeviceUiData?> {
         return allDevices.map { list ->
             list.find {it.id == id}
         }
     }
 
+    // TODO: get connection to BANALService and update mainValue and isAvailable...
+
 
     /**
-     * Refreshes the data for a single device by its ID. It loads the data
-     * from the database and updates it in the main list.
+     * Refreshes the data for a single device by its ID. It loads the  raw data
+     * from the database, translates it and updates it in the main list.
      */
-    suspend fun refreshDevice(id: Long) {
+    suspend fun refreshDeviceFromDb(id: Long) {
         withContext(Dispatchers.IO) {
-            val refreshedDevice = devicesDatabaseManager.getDeviceCursor(id)?.use { cursor ->
+            val refreshedRawDeviceData = devicesDatabaseManager.getDeviceCursor(id)?.use { cursor ->
                 if (cursor.moveToFirst()) mapper.getDeviceData(cursor) else null
             }
 
-            if (refreshedDevice != null) {
+            if (refreshedRawDeviceData != null) {
                 val currentList = _allDevices.value ?: emptyList()
-                val updatedList = currentList.map { if (it.id == id) refreshedDevice else it }
+                val refreshedUiDeviceData = raw2UiDeviceData(refreshedRawDeviceData)
+                val updatedList = currentList.map { if (it.id == id) refreshedUiDeviceData else it }
                 _allDevices.postValue(updatedList)
             }
         }
@@ -92,36 +95,27 @@ class RawDeviceDataRepository private constructor(private val application: Appli
      */
     suspend fun loadAllDevices() {
         withContext(Dispatchers.IO) {
-            val deviceList = mutableListOf<RawDeviceData>()
+            val uiDeviceDataList = mutableListOf<DeviceUiData>()
             devicesDatabaseManager.getCursorForAllDevices()?.use { c ->
                 if (c.moveToFirst()) {
                     do {
-                        val data = mapper.getDeviceData(c)
-                        deviceList.add(data)
+                        val rawData = mapper.getDeviceData(c)
+                        uiDeviceDataList.add(raw2UiDeviceData(rawData))
                     } while (c.moveToNext())
                 }
             }
-            _allDevices.postValue(deviceList)
+            _allDevices.postValue(uiDeviceDataList)
         }
     }
 
     fun saveChanges(
         deviceId: Long,
-        paired: Boolean,
-        deviceName: String,
-        newCalibrationFactor: Double?
     ) {
         // Launch a coroutine to perform the database operation on a background thread
         repositoryScope.launch {
             withContext(Dispatchers.IO) {
                 val values = ContentValues().apply {
-                    put(DevicesDbHelper.PAIRED, if (paired) 1 else 0) // Use 1/0 for boolean
-                    put(DevicesDbHelper.NAME, deviceName)
-                    if (newCalibrationFactor != null) {
-                        put(DevicesDbHelper.CALIBRATION_FACTOR, newCalibrationFactor)
-                    } else {
-                        putNull(DevicesDbHelper.CALIBRATION_FACTOR)
-                    }
+                    // TODO: fill values...
                 }
 
                 devicesDatabaseManager.database.update(
@@ -131,23 +125,6 @@ class RawDeviceDataRepository private constructor(private val application: Appli
                     arrayOf(deviceId.toString())
                 )
             }
-
-            // After the database update is complete, update the LiveData in-memory.
-            // This runs on the main thread because repositoryScope is Dispatchers.Main.
-            val currentList = _allDevices.value ?: return@launch
-            val updatedList = currentList.map { device ->
-                if (device.id == deviceId) {
-                    // Create a new DeviceRawData object with the updated values
-                    device.copy(
-                        deviceName = deviceName,
-                        isPaired = paired,
-                        calibrationValue = newCalibrationFactor
-                    )
-                } else {
-                    device
-                }
-            }
-            _allDevices.value = updatedList
         }
     }
 }

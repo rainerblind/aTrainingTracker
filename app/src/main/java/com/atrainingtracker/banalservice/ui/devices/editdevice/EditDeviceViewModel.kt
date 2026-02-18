@@ -13,8 +13,9 @@ import com.atrainingtracker.banalservice.devices.BikePowerSensorsHelper
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.helpers.BatteryStatusHelper
 import com.atrainingtracker.banalservice.helpers.UIHelper
+import com.atrainingtracker.banalservice.ui.devices.BikePowerFeatures
+import com.atrainingtracker.banalservice.ui.devices.PowerFeatureDisplay
 import com.atrainingtracker.banalservice.ui.devices.RawDeviceDataRepository
-import com.atrainingtracker.banalservice.ui.devices.RawDeviceData
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 
 /**
@@ -29,9 +30,11 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
 
     private val repository = RawDeviceDataRepository.Companion.getInstance(application)
 
-    private val equipmentDbHelper by lazy { EquipmentDbHelper(application) }
-    private val devicesDatabaseManager by lazy { DevicesDatabaseManager.getInstance(application) }
 
+
+
+
+    //--- dealing with wheel sizes
     val wheelSizeNames: List<String> by lazy {
         application.resources.getStringArray(R.array.wheel_size_names).toList()
     }
@@ -39,128 +42,28 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
     val wheelSizeValues: List<String> by lazy {
         application.resources.getStringArray(R.array.wheel_size_values).toList()
     }
-    /**
-     * Gets the LiveData for a specific device from the repository and transforms it
-     * into display-ready [EditDeviceData]. The UI (Fragment) will observe this
-     * to get real-time updates.
-     *
-     * @param id The ID of the device to observe.
-     * @return LiveData holding the DeviceEditViewData, or null if not found.
-     */
-    fun getDevice(id: Long): LiveData<EditDeviceData?> {
-        val deviceRawData = repository.getDeviceById(id)
-
-        // Use Transformations.map to convert the raw data from the repository
-        // into the view data the fragment needs. This transformation will be
-        // re-evaluated every time the source data changes.
-        return deviceRawData.switchMap { rawData ->
-            // If the source data is null, we return a LiveData instance that just holds null.
-            if (rawData == null) {
-                MutableLiveData<EditDeviceData?>(null)
-            } else {
-                // If the source data is NOT null, we return a LiveData instance
-                // that holds the mapped DeviceEditViewData.
-                MutableLiveData(
-                    EditDeviceData(
-                        // Direct mapping
-                        id = rawData.id,
-                        deviceName = rawData.deviceName,
-                        manufacturer = rawData.manufacturer,
-                        lastSeen = rawData.lastSeen,
-                        isPaired = rawData.isPaired,
-
-                        // get the icon id from the UI helper
-                        deviceTypeIconRes = UIHelper.getIconId(
-                            rawData.deviceType,
-                            rawData.protocol
-                        ),
-
-                        onEquipmentResId = mapOnEquipment(rawData),
-
-                        // get the available equipment from the database
-                        availableEquipment = equipmentDbHelper.getEquipment(rawData.deviceType.sportType),
-                        linkedEquipment = rawData.linkedEquipment,
-
-                        // Transformed/Calculated data
-                        batteryStatusIconRes = BatteryStatusHelper.getBatteryStatusImageId(rawData.batteryPercentage),
-
-                        // Map nested data objects
-                        calibrationData = mapCalibrationData(rawData),
-                        powerFeatures = mapPowerFeatures(rawData)
-                    )
-                )
-            }
-        }
-    }
-
-    private fun mapOnEquipment(rawData: RawDeviceData): Int? {
-        return when (rawData.deviceType) {
-            DeviceType.RUN_SPEED -> R.string.onShoesText
-            DeviceType.BIKE_POWER, DeviceType.BIKE_SPEED, DeviceType.BIKE_SPEED_AND_CADENCE, DeviceType.BIKE_CADENCE -> R.string.onBikesText
-            else -> null
-        }
-    }
-
 
     /**
-     * Private helper to map raw data to the [CalibrationData] view object.
+     * Finds the index of a given circumference value in our master list.
+     * @param circumference The circumference in mm (e.g., 2105).
+     * @return The index in the list, or 0 if not found.
      */
-    private fun mapCalibrationData(rawData: RawDeviceData): CalibrationData? {
-
-        val bikePowerFeatures = BikePowerFeatures.fromFeatureFlags(rawData.powerFeaturesFlags)
-        val value_in_mm = rawData.calibrationValue?.let { (it * 1000).toInt().toString() } ?: "???"
-
-        return when (rawData.deviceType) {
-            DeviceType.RUN_SPEED ->
-                CalibrationData(
-                    calibrationFactorNameRes = R.string.devices_calibration_factor,
-                    calibrationFactorExplanationRes = R.string.devices_correct_calibration_explanation_run,
-                    correctTitleRes = R.string.devices_correct_calibration_factor_title_run,
-                    value = value_in_mm,
-                    showWheelSizeSpinner = false,
-                    roundToInt = false,
-                    initialDistanceForCorrection = 42.195
-                )
-            DeviceType.BIKE_SPEED, DeviceType.BIKE_SPEED_AND_CADENCE ->
-                CalibrationData(
-                    calibrationFactorNameRes = R.string.devices_wheel_circumference,
-                    calibrationFactorExplanationRes = R.string.devices_correct_calibration_explanation_bike,
-                    correctTitleRes = R.string.devices_correct_calibration_factor_title_bike,
-                    value = value_in_mm,
-                    showWheelSizeSpinner = true,
-                    roundToInt = true,
-                    initialDistanceForCorrection = 100.0
-                )
-            DeviceType.BIKE_POWER ->
-                if (bikePowerFeatures.wheelRevolutionDataSupported
-                    || bikePowerFeatures.wheelDistanceDataSupported
-                    || bikePowerFeatures.wheelSpeedDataSupported) {
-                    CalibrationData(
-                        calibrationFactorNameRes = R.string.devices_wheel_circumference,
-                        calibrationFactorExplanationRes = R.string.devices_correct_calibration_explanation_bike,
-                        correctTitleRes = R.string.devices_correct_calibration_factor_title_bike,
-                        value = value_in_mm,
-                        showWheelSizeSpinner = true,
-                        roundToInt = true,
-                        initialDistanceForCorrection = 100.0
-                    )
-                }
-                else {
-                    null
-                }
-            else -> null
-        }
+    @Deprecated("Probably, we don't need this")
+    fun getWheelSizePosition(circumference: Int?): Int {
+        if (circumference == null) return 0
+        val index = wheelSizeValues.indexOf(circumference.toString())
+        return if (index != -1) index else 0
     }
 
     /**
-     * Private helper to map raw data to the [BikePowerFeatures] view object.
+     * Gets the circumference value in mm for a given spinner position.
+     * @param position The selected index from the spinner.
+     * @return The circumference as an Int, or null if invalid.
      */
-    private fun mapPowerFeatures(rawData: RawDeviceData): BikePowerFeatures? {
-        if (rawData.deviceType == DeviceType.BIKE_POWER) {
-            return BikePowerFeatures.fromFeatureFlags(rawData.powerFeaturesFlags)
-        }
-        return null
+    fun getWheelCircumferenceForPosition(position: Int): Int? {
+        return wheelSizeValues.getOrNull(position)?.toIntOrNull()
     }
+
 
     /**
      * Converts a BikePowerFeatures object into a human-readable list of display-ready items,
@@ -310,63 +213,7 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
     }
 
 
-    /**
-     * Finds the index of a given circumference value in our master list.
-     * @param circumference The circumference in mm (e.g., 2105).
-     * @return The index in the list, or 0 if not found.
-     */
-    @Deprecated("Probably, we don't need this")
-    fun getWheelSizePosition(circumference: Int?): Int {
-        if (circumference == null) return 0
-        val index = wheelSizeValues.indexOf(circumference.toString())
-        return if (index != -1) index else 0
-    }
-
-    /**
-     * Gets the circumference value in mm for a given spinner position.
-     * @param position The selected index from the spinner.
-     * @return The circumference as an Int, or null if invalid.
-     */
-    fun getWheelCircumferenceForPosition(position: Int): Int? {
-        return wheelSizeValues.getOrNull(position)?.toIntOrNull()
-    }
-
-    fun saveChanges(deviceId: Long, paired: Boolean, deviceName: String, calibrationFactor: String, linkedEquipment: List<String>, doublePowerBalanceValues: Boolean, invertPowerBalanceValues: Boolean) {
-
-        val newCalibrationFactor = calibrationFactor.toDoubleOrNull()?.div(1000)
-
-        val currentDeviceData = repository.getDeviceById(deviceId).value
-
-        repository.saveChanges(deviceId, paired, deviceName, newCalibrationFactor)
-
-        equipmentDbHelper.setEquipmentLinks(deviceId.toInt(), linkedEquipment)
-        var powerFeatureFlags = currentDeviceData?.powerFeaturesFlags ?: 0
-        powerFeatureFlags = if (doublePowerBalanceValues) {
-            BikePowerSensorsHelper.addDoublePowerBalanceValues(powerFeatureFlags)
-        }
-        else {
-            BikePowerSensorsHelper.removeDoublePowerBalanceValues(powerFeatureFlags)
-        }
-        powerFeatureFlags = if (invertPowerBalanceValues) {
-            BikePowerSensorsHelper.addInvertPowerBalanceValues(powerFeatureFlags)
-        }
-        else {
-            BikePowerSensorsHelper.removeInvertPowerBalanceValues(powerFeatureFlags)
-        }
-        devicesDatabaseManager.putBikePowerSensorFlags(deviceId, powerFeatureFlags)
-
-        if (currentDeviceData != null) {
-            if (currentDeviceData.isPaired != paired) {
-                sendPairingChangedBroadcast(deviceId, paired)
-            }
-
-            if (currentDeviceData.calibrationValue != newCalibrationFactor) {
-                sendCalibrationChangedBroadcast(deviceId, newCalibrationFactor)
-            }
-        }
-
-    }
-
+    // TODO: move to the repository, where this stuff is stored...
     fun sendPairingChangedBroadcast(deviceId: Long, paired: Boolean) {
         val intent = Intent(BANALService.PAIRING_CHANGED)
             .putExtra(BANALService.DEVICE_ID, deviceId)

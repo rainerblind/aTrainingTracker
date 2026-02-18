@@ -22,6 +22,8 @@ import com.atrainingtracker.R;
 import com.dsi.ant.plugins.antplus.pcc.defines.BatteryStatus;
 
 public class BatteryStatusHelper {
+
+    @Deprecated // use fun within DeviceUiData instead.
     public static int getBatteryStatusImageId(int batteryStatusPercentage) {
         if (batteryStatusPercentage >= 80) {
             return R.drawable.stat_sys_battery_80;

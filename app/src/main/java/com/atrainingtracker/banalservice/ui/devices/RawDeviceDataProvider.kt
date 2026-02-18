@@ -8,7 +8,7 @@ import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 
 class RawDeviceDataProvider(val devicesDatabaseManager: DevicesDatabaseManager, val equipmentDbHelper: EquipmentDbHelper) {
-    fun getDeviceData(cursor: Cursor): RawDeviceData {
+    fun getDeviceData(cursor: Cursor): DeviceRawData {
         val id = cursor.getLong(cursor.getColumnIndex(DevicesDbHelper.C_ID))
         val deviceType = DeviceType.valueOf(cursor.getString(cursor.getColumnIndex(DevicesDbHelper.DEVICE_TYPE)))
         val protocol = Protocol.valueOf(cursor.getString(cursor.getColumnIndex(DevicesDbHelper.PROTOCOL)))
@@ -21,8 +21,10 @@ class RawDeviceDataProvider(val devicesDatabaseManager: DevicesDatabaseManager, 
 
         val powerFeaturesFlags = devicesDatabaseManager.getBikePowerSensorFlags(id)
         val linkedEquipment = equipmentDbHelper.getLinkedEquipmentFromDeviceId(id)
+        val availableEquipment = equipmentDbHelper.getEquipment(deviceType.sportType)
 
-        return RawDeviceData(
+
+        return DeviceRawData(
             id = id,
             protocol = protocol,
             deviceType = deviceType,
@@ -31,9 +33,12 @@ class RawDeviceDataProvider(val devicesDatabaseManager: DevicesDatabaseManager, 
             manufacturer = manufacturer,
             deviceName = deviceName,
             isPaired = isPaired,
+            isAvailable = false, // TODO: must be set from someone with access to the BANALService
             calibrationValue = calibrationValue,
             linkedEquipment = linkedEquipment,
-            powerFeaturesFlags = powerFeaturesFlags
+            availableEquipment = availableEquipment,
+            powerFeaturesFlags = powerFeaturesFlags,
+            mainValue = "TODO" // TODO: This should come from a live value in the raw data
         )
     }
 }
