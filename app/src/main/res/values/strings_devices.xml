@@ -37,14 +37,11 @@
     <string name="deviceNameText">device name</string>
     <string name="deviceTypeText">device type</string>
     <string name="manufacturerText">manufacturer</string>
-    <string name="onBikesText">on bikes</string>
-    <string name="onShoesText">on shoes</string>
-    <string name="wheelCircumferenceText">wheel circumference</string>
-    <string name="calibrationFactorText">calibration factor</string>
+    <string name="devices_on_equipment_text">on equipment</string>
+    <string name="devices_on_bikes_text">on bikes</string>
+    <string name="devices_on_shoes_text">on shoes</string>
     <string name="manufacturerValue" translatable="false">Garmin</string>
     <!--  somewhere else, todo: make one -->
-    <string name="calibration_factor">calibration factor</string>
-    <string name="wheel_circumference">wheel circumference</string>
     <string name="devices_calibration_factor">Calibration Factor</string>
     <string name="devices_wheel_circumference">Wheel Circumference</string>
     <string name="Set_calibration">Set %1$s</string>

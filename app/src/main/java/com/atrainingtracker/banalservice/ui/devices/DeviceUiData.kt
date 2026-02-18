@@ -39,6 +39,7 @@ sealed interface DeviceUiData {
     val deviceName: String
     val isAvailable: Boolean
     val isPaired: Boolean
+    val onEquipmentResId: Int
     val linkedEquipment: List<String>
     val availableEquipment: List<String>
 
@@ -77,6 +78,7 @@ data class GeneralDeviceUiData (
     override val deviceName: String,
     override val isPaired: Boolean,
     override val isAvailable: Boolean,
+    override val onEquipmentResId: Int,
     override val linkedEquipment: List<String>,
     override val availableEquipment: List<String>,
     override val mainValue: String,
@@ -92,6 +94,7 @@ data class GeneralDeviceUiData (
                 deviceName = rawData.deviceName,
                 isPaired = rawData.isPaired,
                 isAvailable = rawData.isAvailable,
+                onEquipmentResId = R.string.devices_on_equipment_text,
                 linkedEquipment = rawData.linkedEquipment,
                 availableEquipment = rawData.availableEquipment,
                 mainValue = rawData.mainValue
@@ -109,6 +112,7 @@ data class RunDeviceUiData (
     override val deviceName: String,
     override val isPaired: Boolean,
     override val isAvailable: Boolean,
+    override val onEquipmentResId: Int,
     override val linkedEquipment: List<String>,
     override val availableEquipment: List<String>,
     override val mainValue: String,
@@ -125,6 +129,7 @@ data class RunDeviceUiData (
                 deviceName = rawData.deviceName,
                 isPaired = rawData.isPaired,
                 isAvailable = rawData.isAvailable,
+                onEquipmentResId = R.string.devices_on_shoes_text,
                 linkedEquipment = rawData.linkedEquipment,
                 availableEquipment = rawData.availableEquipment,
                 mainValue = rawData.mainValue,
@@ -143,6 +148,7 @@ data class BikeDeviceUiData (
     override val deviceName: String,
     override val isAvailable: Boolean,
     override val isPaired: Boolean,
+    override val onEquipmentResId: Int,
     override val linkedEquipment: List<String>,
     override val availableEquipment: List<String>,
     override val mainValue: String,
@@ -159,6 +165,7 @@ data class BikeDeviceUiData (
                 deviceName = rawData.deviceName,
                 isPaired = rawData.isPaired,
                 isAvailable = rawData.isAvailable,
+                onEquipmentResId = R.string.devices_on_bikes_text,
                 linkedEquipment = rawData.linkedEquipment,
                 availableEquipment = rawData.availableEquipment,
                 mainValue = rawData.mainValue,
@@ -177,6 +184,7 @@ data class BikePowerWithWheelCircumferenceDeviceUiData (
     override val deviceName: String,
     override val isAvailable: Boolean,
     override val isPaired: Boolean,
+    override val onEquipmentResId: Int,
     override val linkedEquipment: List<String>,
     override val availableEquipment: List<String>,
     override val mainValue: String,
@@ -194,6 +202,7 @@ data class BikePowerWithWheelCircumferenceDeviceUiData (
                 deviceName = rawData.deviceName,
                 isPaired = rawData.isPaired,
                 isAvailable = rawData.isAvailable,
+                onEquipmentResId = R.string.devices_on_bikes_text,
                 linkedEquipment = rawData.linkedEquipment,
                 availableEquipment = rawData.availableEquipment,
                 mainValue = rawData.mainValue,
@@ -213,6 +222,7 @@ data class BikePowerWithoutWheelCircumferenceDeviceUiData (
     override val deviceName: String,
     override val isAvailable: Boolean,
     override val isPaired: Boolean,
+    override val onEquipmentResId: Int,
     override val linkedEquipment: List<String>,
     override val availableEquipment: List<String>,
     override val mainValue: String,
@@ -229,6 +239,7 @@ data class BikePowerWithoutWheelCircumferenceDeviceUiData (
                 deviceName = rawData.deviceName,
                 isPaired = rawData.isPaired,
                 isAvailable = rawData.isAvailable,
+                onEquipmentResId = R.string.devices_on_bikes_text,
                 linkedEquipment = rawData.linkedEquipment,
                 availableEquipment = rawData.availableEquipment,
                 mainValue = rawData.mainValue,

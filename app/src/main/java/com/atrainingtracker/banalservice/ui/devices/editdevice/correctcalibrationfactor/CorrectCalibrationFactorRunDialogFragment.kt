@@ -3,7 +3,7 @@ package com.atrainingtracker.banalservice.ui.devices.editdevice.correctcalibrati
 import androidx.core.os.bundleOf
 import com.atrainingtracker.R
 
-class CorrectRunCalibrationFactorDialogFragment : BaseCorrectCalibrationFactorDialogFragment() {
+class CorrectCalibrationFactorRunDialogFragment : CorrectCalibrationFactorBaseDialogFragment() {
 
     // --- CONCRETE IMPLEMENTATIONS FOR RUN SENSORS ---
     override val dialogTitleRes: Int = R.string.devices_calibration_factor
@@ -15,8 +15,8 @@ class CorrectRunCalibrationFactorDialogFragment : BaseCorrectCalibrationFactorDi
     companion object {
         const val TAG = "CorrectRunCalibrationFactorDialogFragment"
 
-        fun newInstance(originalCalibrationFactor: String): CorrectRunCalibrationFactorDialogFragment {
-            return CorrectRunCalibrationFactorDialogFragment().apply {
+        fun newInstance(originalCalibrationFactor: String): CorrectCalibrationFactorRunDialogFragment {
+            return CorrectCalibrationFactorRunDialogFragment().apply {
                 arguments = bundleOf(KEY_CALIBRATION_FACTOR_AS_STRING to originalCalibrationFactor)
             }
         }

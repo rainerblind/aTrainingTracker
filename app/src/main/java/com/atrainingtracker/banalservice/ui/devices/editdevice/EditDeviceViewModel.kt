@@ -4,20 +4,12 @@ import android.app.Application
 import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.switchMap
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BANALService
-import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
-import com.atrainingtracker.banalservice.devices.BikePowerSensorsHelper
-import com.atrainingtracker.banalservice.devices.DeviceType
-import com.atrainingtracker.banalservice.helpers.BatteryStatusHelper
-import com.atrainingtracker.banalservice.helpers.UIHelper
 import com.atrainingtracker.banalservice.ui.devices.BikePowerFeatures
 import com.atrainingtracker.banalservice.ui.devices.DeviceUiData
 import com.atrainingtracker.banalservice.ui.devices.PowerFeatureDisplay
 import com.atrainingtracker.banalservice.ui.devices.RawDeviceDataRepository
-import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 
 /**
  * ViewModel for the EditDeviceDialogFragment.
@@ -36,7 +28,7 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
      * Gets the LiveData for a specific device and transforms it into the appropriate
      * display-ready [DeviceUiData] object by observing the repository.
      */
-    fun getDevice(id: Long): LiveData<DeviceUiData?> {
+    fun getDeviceData(id: Long): LiveData<DeviceUiData?> {
         return repository.getDeviceById(id)
     }
 
@@ -143,6 +135,31 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
         }
 
         return displayList
+    }
+
+    fun saveChanges(deviceId: Long) {
+        // TODO: pass to repository...
+    }
+
+    fun cancelChanges(deviceId: Long) {
+        // TODO: implement this...
+    }
+
+    fun onDeviceNameChanged(deviceId: Long, name: String) {
+        // TODO: pass to repository...
+    }
+
+    fun onPairedChanged(deviceId: Long, paired: Boolean) {
+        // TODO: pass to repository...
+    }
+
+    fun onCalibrationFactorChanged(deviceId: Long, calibrationFactor: String) {
+        // TODO: pass to repository...
+    }
+
+
+    fun onWheelCircumferenceChanged(deviceId: Long, calibrationFactor: Double?) {
+        // TODO: pass to repository...
     }
 
 
