@@ -7,21 +7,15 @@ import android.widget.TextView
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.AutoCompleteTextView
-import androidx.annotation.LayoutRes
-import androidx.compose.ui.semantics.setText
-import androidx.compose.ui.semantics.text
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.observe
-import androidx.viewbinding.ViewBinding
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ui.devices.DeviceUiData
+import com.atrainingtracker.banalservice.ui.devices.DevicesViewModel
 import com.atrainingtracker.banalservice.ui.devices.editdevice.correctcalibrationfactor.CorrectCalibrationFactorBaseDialogFragment
 import com.atrainingtracker.databinding.DialogEditDeviceGenericBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.textfield.TextInputEditText
-import com.google.android.material.textfield.TextInputLayout
 
 /**
  * The base class for editing a device, following a modern state management pattern.
@@ -37,7 +31,7 @@ abstract class BaseEditDeviceFragment<T : DeviceUiData> : DialogFragment() {
     // --- COMMON MEMBERS ---
     private var _binding: DialogEditDeviceGenericBinding? = null
     protected val binding get() = _binding!! // Allow subclasses to access binding
-    protected val viewModel: EditDeviceViewModel by viewModels()
+    protected val viewModel: DevicesViewModel by viewModels()
 
     protected val deviceId: Long by lazy {
         requireArguments().getLong(ARG_DEVICE_ID)

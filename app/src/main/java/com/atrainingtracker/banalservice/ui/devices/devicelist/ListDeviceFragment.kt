@@ -10,6 +10,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.banalservice.ui.devices.DevicesViewModel
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditBikeDeviceFragment
 import com.atrainingtracker.banalservice.ui.devices.editdevice.BaseEditDeviceFragment
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditRunDeviceFragment
@@ -17,7 +18,7 @@ import com.atrainingtracker.databinding.FragmentDeviceListBinding
 
 class ListDeviceFragment : Fragment() {
 
-    private val viewModel: ListDeviceViewModel by viewModels()
+    private val viewModel: DevicesViewModel by viewModels()
 
 
     private lateinit var filterSpec: DeviceFilterSpec
