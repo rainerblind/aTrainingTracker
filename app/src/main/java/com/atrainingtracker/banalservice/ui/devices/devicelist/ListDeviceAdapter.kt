@@ -6,15 +6,16 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.ui.devices.DeviceUiData
 import com.atrainingtracker.databinding.ItemDeviceListBinding
 
 
 
 
 class ListDeviceAdapter(
-    private val onPairClick: (ListDeviceData) -> Unit,
-    private val onItemClick: (ListDeviceData) -> Unit
-) : ListAdapter<ListDeviceData, ListDeviceAdapter.DeviceViewHolder>(DeviceDiffCallback()) {
+    private val onPairClick: (DeviceUiData) -> Unit,
+    private val onItemClick: (DeviceUiData) -> Unit
+) : ListAdapter<DeviceUiData, ListDeviceAdapter.DeviceViewHolder>(DeviceDiffCallback()) {
 
     /**
      * Called when RecyclerView needs a new ViewHolder. It inflates the item layout.
@@ -45,9 +46,9 @@ class ListDeviceAdapter(
         RecyclerView.ViewHolder(binding.root) {
 
         fun bind(
-            device: ListDeviceData,
-            onPairClick: (ListDeviceData) -> Unit,
-            onItemClick: (ListDeviceData) -> Unit
+            device: DeviceUiData,
+            onPairClick: (DeviceUiData) -> Unit,
+            onItemClick: (DeviceUiData) -> Unit
         ) {
             // Bind all the data from the ListDeviceData object to the views
             binding.deviceName.text = device.deviceName
@@ -55,7 +56,7 @@ class ListDeviceAdapter(
             binding.deviceTypeIcon.setImageResource(device.deviceTypeIconRes)
             binding.batteryStatusIcon.setImageResource(device.batteryStatusIconRes)
             binding.mainValue.text = device.mainValue
-            binding.linkedEquipment.text = device.linkedEquipment
+            binding.linkedEquipment.text = device.linkedEquipment.joinToString(", ")
 
             // Set the button text and style based on the isPaired property
             if (device.isPaired) {
@@ -83,14 +84,14 @@ class ListDeviceAdapter(
      * The DiffUtil.ItemCallback implementation.
      * This is the magic that allows ListAdapter to efficiently update the list.
      */
-    class DeviceDiffCallback : DiffUtil.ItemCallback<ListDeviceData>() {
-        override fun areItemsTheSame(oldItem: ListDeviceData, newItem: ListDeviceData): Boolean {
+    class DeviceDiffCallback : DiffUtil.ItemCallback<DeviceUiData>() {
+        override fun areItemsTheSame(oldItem: DeviceUiData, newItem: DeviceUiData): Boolean {
             // IDs are unique, so this is the perfect way to check if two items
             // represent the same object.
             return oldItem.id == newItem.id
         }
 
-        override fun areContentsTheSame(oldItem: ListDeviceData, newItem: ListDeviceData): Boolean {
+        override fun areContentsTheSame(oldItem: DeviceUiData, newItem: DeviceUiData): Boolean {
             // Check if the content of the items has changed. If this returns false,
             // onBindViewHolder will be called to redraw the item.
             // The 'data class' automatically generates a correct .equals() for this.

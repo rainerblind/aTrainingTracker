@@ -32,6 +32,8 @@ data class DeviceRawData(
  */
 sealed interface DeviceUiData {
     val id: Long
+    val protocol: Protocol
+    val deviceType: DeviceType
     val deviceTypeIconRes: Int
     val lastSeen: String?
     val batteryStatusIconRes: Int
@@ -71,6 +73,8 @@ fun raw2UiDeviceData(rawData: DeviceRawData): DeviceUiData {
 
 data class GeneralDeviceUiData (
     override val id: Long,
+    override val protocol: Protocol,
+    override val deviceType: DeviceType,
     override val deviceTypeIconRes: Int,
     override val lastSeen: String?,
     override val batteryStatusIconRes: Int,
@@ -87,6 +91,8 @@ data class GeneralDeviceUiData (
         override fun fromRawData(rawData: DeviceRawData): GeneralDeviceUiData {
             return GeneralDeviceUiData(
                 id = rawData.id,
+                protocol = rawData.protocol,
+                deviceType = rawData.deviceType,
                 deviceTypeIconRes = getIconId(rawData.deviceType, rawData.protocol),
                 lastSeen = rawData.lastSeen,
                 batteryStatusIconRes = getBatteryStatusIconRes(rawData.batteryPercentage),
@@ -105,6 +111,8 @@ data class GeneralDeviceUiData (
 
 data class RunDeviceUiData (
     override val id: Long,
+    override val protocol: Protocol,
+    override val deviceType: DeviceType,
     override val deviceTypeIconRes: Int,
     override val lastSeen: String?,
     override val batteryStatusIconRes: Int,
@@ -122,6 +130,8 @@ data class RunDeviceUiData (
         override fun fromRawData(rawData: DeviceRawData): RunDeviceUiData {
             return RunDeviceUiData(
                 id = rawData.id,
+                protocol = rawData.protocol,
+                deviceType = rawData.deviceType,
                 deviceTypeIconRes = getIconId(rawData.deviceType, rawData.protocol),
                 lastSeen = rawData.lastSeen,
                 batteryStatusIconRes = getBatteryStatusIconRes(rawData.batteryPercentage),
@@ -141,6 +151,8 @@ data class RunDeviceUiData (
 
 data class BikeDeviceUiData (
     override val id: Long,
+    override val protocol: Protocol,
+    override val deviceType: DeviceType,
     override val deviceTypeIconRes: Int,
     override val lastSeen: String?,
     override val batteryStatusIconRes: Int,
@@ -158,6 +170,8 @@ data class BikeDeviceUiData (
         override fun fromRawData(rawData: DeviceRawData): BikeDeviceUiData {
             return BikeDeviceUiData(
                 id = rawData.id,
+                protocol = rawData.protocol,
+                deviceType = rawData.deviceType,
                 deviceTypeIconRes = getIconId(rawData.deviceType, rawData.protocol),
                 lastSeen = rawData.lastSeen,
                 batteryStatusIconRes = getBatteryStatusIconRes(rawData.batteryPercentage),
@@ -177,6 +191,8 @@ data class BikeDeviceUiData (
 
 data class BikePowerWithWheelCircumferenceDeviceUiData (
     override val id: Long,
+    override val protocol: Protocol,
+    override val deviceType: DeviceType,
     override val deviceTypeIconRes: Int,
     override val lastSeen: String?,
     override val batteryStatusIconRes: Int,
@@ -195,6 +211,8 @@ data class BikePowerWithWheelCircumferenceDeviceUiData (
         override fun fromRawData(rawData: DeviceRawData): BikePowerWithWheelCircumferenceDeviceUiData {
             return BikePowerWithWheelCircumferenceDeviceUiData(
                 id = rawData.id,
+                protocol = rawData.protocol,
+                deviceType = rawData.deviceType,
                 deviceTypeIconRes = getIconId(rawData.deviceType, rawData.protocol),
                 lastSeen = rawData.lastSeen,
                 batteryStatusIconRes = getBatteryStatusIconRes(rawData.batteryPercentage),
@@ -215,6 +233,8 @@ data class BikePowerWithWheelCircumferenceDeviceUiData (
 
 data class BikePowerWithoutWheelCircumferenceDeviceUiData (
     override val id: Long,
+    override val protocol: Protocol,
+    override val deviceType: DeviceType,
     override val deviceTypeIconRes: Int,
     override val lastSeen: String?,
     override val batteryStatusIconRes: Int,
@@ -232,6 +252,8 @@ data class BikePowerWithoutWheelCircumferenceDeviceUiData (
         override fun fromRawData(rawData: DeviceRawData): BikePowerWithoutWheelCircumferenceDeviceUiData {
             return BikePowerWithoutWheelCircumferenceDeviceUiData(
                 id = rawData.id,
+                protocol = rawData.protocol,
+                deviceType = rawData.deviceType,
                 deviceTypeIconRes = getIconId(rawData.deviceType, rawData.protocol),
                 lastSeen = rawData.lastSeen,
                 batteryStatusIconRes = getBatteryStatusIconRes(rawData.batteryPercentage),

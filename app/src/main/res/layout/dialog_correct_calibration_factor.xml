@@ -55,7 +55,7 @@
         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="@string/wheel_circumference">
+        android:hint="@string/devices_wheel_circumference">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/et_new_calibration_factor"

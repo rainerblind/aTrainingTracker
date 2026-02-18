@@ -29,6 +29,11 @@ import com.google.android.material.textfield.TextInputLayout
  */
 abstract class BaseEditDeviceFragment<T : DeviceUiData> : DialogFragment() {
 
+    companion object {
+        const val ARG_DEVICE_ID = "device_id"
+        const val TAG = "BaseEditDeviceFragment"
+    }
+
     // --- COMMON MEMBERS ---
     private var _binding: DialogEditDeviceGenericBinding? = null
     protected val binding get() = _binding!! // Allow subclasses to access binding
@@ -73,7 +78,7 @@ abstract class BaseEditDeviceFragment<T : DeviceUiData> : DialogFragment() {
         val dialogIcon = customTitleView.findViewById<ImageView>(R.id.dialog_icon)
         val dialogTitle = customTitleView.findViewById<TextView>(R.id.dialog_title)
 
-        viewModel.getDeviceData(deviceId).observe(viewLifecycleOwner) { deviceUiData ->
+        viewModel.getDeviceData(deviceId).observe(this) { deviceUiData ->
             if (deviceUiData != null) {
                 // Set common title
                 dialogIcon.setImageResource(deviceUiData.deviceTypeIconRes)
@@ -82,6 +87,9 @@ abstract class BaseEditDeviceFragment<T : DeviceUiData> : DialogFragment() {
                 // Let the subclass bind its specific views
                 @Suppress("UNCHECKED_CAST")
                 bindUi(deviceUiData as T)
+            }
+            else {
+                dismissAllowingStateLoss()
             }
         }
     }
@@ -190,9 +198,5 @@ abstract class BaseEditDeviceFragment<T : DeviceUiData> : DialogFragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
-    }
-
-    companion object {
-        const val ARG_DEVICE_ID = "device_id"
     }
 }
