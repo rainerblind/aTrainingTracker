@@ -14,6 +14,8 @@ import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.ui.devices.DeviceUiData
+import com.atrainingtracker.banalservice.ui.devices.PowerFeatureDisplay
 import com.atrainingtracker.banalservice.ui.devices.editdevice.correctcalibrationfactor.CorrectCalibrationFactorDialogFragment
 import com.atrainingtracker.databinding.DialogEditDeviceBaseBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -59,7 +61,7 @@ class EditDeviceDialogFragment : DialogFragment() {
     // To track which items are currently checked
     private lateinit var checkedItems: BooleanArray
 
-    private lateinit var deviceDataObserver: Observer<EditDeviceData?>
+    private lateinit var deviceDataObserver: Observer<DeviceUiData?>
 
     private var deviceId = -1L
 
@@ -95,7 +97,7 @@ class EditDeviceDialogFragment : DialogFragment() {
         }
 
         // Start observing the device data from the ViewModel
-        viewModel.getDevice(deviceId).observe(this, deviceDataObserver)
+        viewModel.getDeviceData(deviceId).observe(this, deviceDataObserver)
 
         return dialog
     }
@@ -103,7 +105,7 @@ class EditDeviceDialogFragment : DialogFragment() {
     /**
      * Populates all the UI views with data from the [com.atrainingtracker.banalservice.ui.devices.DeviceRawData] object.
      */
-    private fun populateUi(data: EditDeviceData) {
+    private fun populateUi(data: DeviceUiData) {
 
         // Custom title: Populate the custom title view
         dialogIcon.setImageResource(data.deviceTypeIconRes)
@@ -155,7 +157,7 @@ class EditDeviceDialogFragment : DialogFragment() {
         }
         else {
             binding.layoutEquipment.visibility = View.VISIBLE
-            val onEquipment = getString(data.onEquipmentResId ?: R.string.onBikesText)
+            val onEquipment = getString(data.onEquipmentResId ?: R.string.devices_on_bikes_text)
             binding.layoutEquipment.hint = onEquipment
 
             // 1. Prepare data for the multi-choice dialog
@@ -214,7 +216,7 @@ class EditDeviceDialogFragment : DialogFragment() {
         }
     }
 
-    fun setupEditCalibrationFactorButton(data: EditDeviceData) {
+    fun setupEditCalibrationFactorButton(data: DeviceUiData) {
         val button = binding.groupCalibration.bEditCalibrationFactor
         val etCalibrationFactor = binding.groupCalibration.etCalibrationFactor
 

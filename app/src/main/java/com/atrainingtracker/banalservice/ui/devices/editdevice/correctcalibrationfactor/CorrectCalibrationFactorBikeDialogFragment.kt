@@ -3,7 +3,7 @@ package com.atrainingtracker.banalservice.ui.devices.editdevice.correctcalibrati
 import androidx.core.os.bundleOf
 import com.atrainingtracker.R
 
-class CorrectBikeCalibrationFactorDialogFragment : BaseCorrectCalibrationFactorDialogFragment() {
+class CorrectCalibrationFactorBikeDialogFragment : CorrectCalibrationFactorBaseDialogFragment() {
 
     // --- CONCRETE IMPLEMENTATIONS FOR BIKE SENSORS ---
     override val dialogTitleRes: Int = R.string.devices_correct_calibration_factor_title_bike
@@ -15,8 +15,8 @@ class CorrectBikeCalibrationFactorDialogFragment : BaseCorrectCalibrationFactorD
     companion object {
         const val TAG = "CorrectBikeCalibrationFactorDialogFragment"
 
-        fun newInstance(originalCalibrationFactor: String): CorrectBikeCalibrationFactorDialogFragment {
-            return CorrectBikeCalibrationFactorDialogFragment().apply {
+        fun newInstance(originalCalibrationFactor: String): CorrectCalibrationFactorBikeDialogFragment {
+            return CorrectCalibrationFactorBikeDialogFragment().apply {
                 arguments = bundleOf(KEY_CALIBRATION_FACTOR_AS_STRING to originalCalibrationFactor)
             }
         }

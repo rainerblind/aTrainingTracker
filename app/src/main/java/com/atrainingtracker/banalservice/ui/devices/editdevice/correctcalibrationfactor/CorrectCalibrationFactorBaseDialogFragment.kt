@@ -18,7 +18,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
  * It contains all the common UI logic for calculating a new factor.
  * Subclasses must provide the specific configuration (titles, behavior, etc.).
  */
-abstract class BaseCorrectCalibrationFactorDialogFragment : DialogFragment() {
+abstract class CorrectCalibrationFactorBaseDialogFragment : DialogFragment() {
 
     private var _binding: DialogCorrectCalibrationFactorBinding? = null
     private val binding get() = _binding!!

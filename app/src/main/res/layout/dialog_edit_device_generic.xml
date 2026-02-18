@@ -122,7 +122,7 @@
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="@string/onBikesText">
+            android:hint="@string/devices_on_bikes_text">
 
             <AutoCompleteTextView
                 android:id="@+id/etEquipment"

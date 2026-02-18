@@ -23,13 +23,9 @@
     <string name="deviceNameText">Sensorname</string>
     <string name="deviceTypeText">Sensortyp</string>
     <string name="manufacturerText">Hersteller</string>
-    <string name="onBikesText">an Rädern</string>
-    <string name="onShoesText">an Schuhen</string>
-    <string name="wheelCircumferenceText">Radumfang</string>
-    <string name="calibrationFactorText">Kalibrierungsfaktor</string>
-    <!--  somewhere else, todo: make one -->
-    <string name="calibration_factor">Kalibrierungsfaktor</string>
-    <string name="wheel_circumference">Radumfang</string>
+    <string name="devices_on_equipment_text">an Ausrüstung</string>
+    <string name="devices_on_bikes_text">an Rädern</string>
+    <string name="devices_on_shoes_text">an Schuhen</string>
     <string name="devices_calibration_factor">Kalibrierungsfaktor</string>
     <string name="devices_wheel_circumference">Radumfang</string>
     <string name="Set_calibration">%1$s berechnen</string>
