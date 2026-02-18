@@ -22,15 +22,15 @@ import kotlinx.coroutines.withContext
  * It abstracts the data source (database) from the ViewModels.
  */
 
-class RawDeviceDataRepository private constructor(private val application: Application) {
+class DeviceDataRepository private constructor(private val application: Application) {
     companion object {
-        private val TAG = RawDeviceDataRepository::class.java.simpleName
+        private val TAG = DeviceDataRepository::class.java.simpleName
         private val DEBUG = BANALService.getDebug(true)
 
         // The single, volatile instance of the repository.
         // @Volatile guarantees that writes to this field are immediately visible to other threads.
         @Volatile
-        private var INSTANCE: RawDeviceDataRepository? = null
+        private var INSTANCE: DeviceDataRepository? = null
 
         /**
          * Gets the singleton instance of the DeviceDataRepository.
@@ -38,9 +38,9 @@ class RawDeviceDataRepository private constructor(private val application: Appli
          * @param application The application context, needed to create the instance for the first time.
          * @return The single instance of DeviceDataRepository.
          */
-        fun getInstance(application: Application): RawDeviceDataRepository {
+        fun getInstance(application: Application): DeviceDataRepository {
             return INSTANCE ?: synchronized(this) {
-                INSTANCE ?: RawDeviceDataRepository(application).also { INSTANCE = it }
+                INSTANCE ?: DeviceDataRepository(application).also { INSTANCE = it }
             }
         }
     }
