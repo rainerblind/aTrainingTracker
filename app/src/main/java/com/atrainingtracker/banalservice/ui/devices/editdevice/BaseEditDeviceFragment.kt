@@ -50,7 +50,7 @@ abstract class BaseEditDeviceFragment : DialogFragment() {
             .setView(binding!!.root)
             .setPositiveButton(R.string.OK) { _, _ ->
                 // The save action is now much simpler
-                viewModel.saveChanges(deviceId)
+                viewModel.saveChanges()
             }
             .setNegativeButton(R.string.cancel, null)
             .create()
