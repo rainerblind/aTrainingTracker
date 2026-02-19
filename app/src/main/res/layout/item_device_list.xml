@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<com.google.android.material.card.MaterialCardView
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -16,6 +15,7 @@
         android:layout_height="wrap_content"
         android:padding="8dp">
 
+        <!-- icon representing the device type -->
         <ImageView
             android:id="@+id/deviceTypeIcon"
             android:layout_width="48dp"
@@ -24,59 +24,70 @@
             app:layout_constraintTop_toTopOf="parent"
             tools:srcCompat="@drawable/ant_logo" />
 
+        <!-- Device Name -->
         <TextView
             android:id="@+id/deviceName"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
-            android:textAppearance="?attr/textAppearanceListItem"
+            style="@style/TextAppearance.MaterialComponents.Headline6"
+            android:maxLines="1"
+            android:ellipsize="end"
             app:layout_constraintEnd_toStartOf="@+id/mainValue"
             app:layout_constraintStart_toEndOf="@+id/deviceTypeIcon"
             app:layout_constraintTop_toTopOf="parent"
             tools:text="Garmin HRM-Pro" />
 
+        <!-- Manufacturer -->
         <TextView
             android:id="@+id/deviceManufacturer"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:textAppearance="?attr/textAppearanceListItemSecondary"
+            style="@style/TextAppearance.MaterialComponents.Body1"
             app:layout_constraintEnd_toEndOf="@+id/deviceName"
             app:layout_constraintStart_toStartOf="@+id/deviceName"
             app:layout_constraintTop_toBottomOf="@+id/deviceName"
             tools:text="Garmin" />
 
+        <!-- Equipment -->
         <TextView
             android:id="@+id/linkedEquipment"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:textSize="12sp"
+            style="@style/TextAppearance.MaterialComponents.Body2"
+            android:maxLines="1"
+            android:ellipsize="end"
             app:layout_constraintEnd_toEndOf="@+id/deviceManufacturer"
             app:layout_constraintStart_toStartOf="@+id/deviceManufacturer"
             app:layout_constraintTop_toBottomOf="@+id/deviceManufacturer"
             tools:text="Linked to: Bike, Treadmill" />
 
+        <!-- right side -->
         <!-- last seen -->
         <TextView
             android:id="@+id/lastSeen"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:textAppearance="?attr/textAppearanceCaption"
+            style="@style/TextAppearance.MaterialComponents.Body2"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             tools:text="2024-05-21" />
 
+        <!-- Main Value (hr, speed, ..) -->
         <TextView
             android:id="@+id/mainValue"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginEnd="8dp"
-            android:textAppearance="@style/TextAppearance.AppCompat.Large"
+            style="@style/TextAppearance.MaterialComponents.Subtitle1"
+            android:textStyle="bold"
             app:layout_constraintTop_toBottomOf="@id/lastSeen"
             app:layout_constraintBottom_toBottomOf="@id/batteryStatusIcon"
             app:layout_constraintEnd_toStartOf="@+id/batteryStatusIcon"
             tools:text="145" />
 
+        <!-- battery image -->
         <ImageView
             android:id="@+id/batteryStatusIcon"
             android:layout_width="24dp"
@@ -85,6 +96,7 @@
             app:layout_constraintEnd_toEndOf="parent"
             tools:srcCompat="@drawable/stat_sys_battery_unknown" />
 
+        <!-- pair button -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/buttonPair"
             style="?attr/materialButtonOutlinedStyle"
