@@ -42,6 +42,7 @@ data class DeviceUiData(
     val isPaired: Boolean,
     val linkedEquipment: List<String>,
     val availableEquipment: List<String>,
+    val powerFeaturesFlags: Int?,
     val mainValue: String,
 
     // derived from the raw data
@@ -93,6 +94,7 @@ fun raw2UiDeviceData(rawData: DeviceRawData): DeviceUiData {
         isAvailable = rawData.isAvailable,
         linkedEquipment = rawData.linkedEquipment,
         availableEquipment = rawData.availableEquipment,
+        powerFeaturesFlags = rawData.powerFeaturesFlags,
         mainValue = rawData.mainValue,
 
         deviceTypeIconRes = getIconId(rawData.deviceType, rawData.protocol),

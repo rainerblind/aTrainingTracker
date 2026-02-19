@@ -9,6 +9,7 @@ import androidx.lifecycle.map
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager.DevicesDbHelper
+import com.atrainingtracker.banalservice.devices.BikePowerSensorsHelper
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import kotlinx.coroutines.CoroutineScope
@@ -154,7 +155,7 @@ class DeviceDataRepository private constructor(private val application: Applicat
      *
      * @param finalState The DeviceUiData object containing the desired final state.
      */
-    fun updateDevice(finalState: DeviceUiData) {
+    suspend fun updateDevice(finalState: DeviceUiData) {
         // It's safer to run this logic on a background thread.
         withContext(Dispatchers.IO) {
             // We need to compare the finalState with the original state to see what changed.
@@ -164,8 +165,50 @@ class DeviceDataRepository private constructor(private val application: Applicat
                 return@withContext
             }
 
-            // TODO: update db
-            // TODO: update LiveData
+            // update the device in the main device database
+            val values = createContentValuesForUpdate(originalState, finalState)
+            if (values.size() > 0) {
+                devicesDatabaseManager.database.update(
+                    DevicesDbHelper.DEVICES,
+                    values,
+                    "${DevicesDbHelper.C_ID} = ?",
+                    arrayOf(finalState.id.toString())
+                )
+            }
+
+            // update linked equipment when necessary
+            if (originalState.linkedEquipment != finalState.linkedEquipment) {
+                equipmentDbHelper.setEquipmentLinks(
+                    finalState.id.toInt(),
+                    finalState.linkedEquipment
+                )
+            }
+
+            // Update power feature flags when necessary
+            if (originalState.powerFeatures != finalState.powerFeatures) {
+                var powerFeatureFlags = originalState.powerFeaturesFlags
+                powerFeatureFlags = if (finalState.powerFeatures!!.doublePowerBalanceValues) {
+                    powerFeatureFlags?.let { BikePowerSensorsHelper.addDoublePowerBalanceValues(it) }
+                } else {
+                    powerFeatureFlags?.let { BikePowerSensorsHelper.removeDoublePowerBalanceValues(it) }
+                }
+                if (finalState.powerFeatures!!.invertPowerBalanceValues) {
+                    powerFeatureFlags = powerFeatureFlags?.let { BikePowerSensorsHelper.addInvertPowerBalanceValues(it) }
+                }
+                else {
+                    powerFeatureFlags = powerFeatureFlags?.let {
+                        BikePowerSensorsHelper.removeInvertPowerBalanceValues(it)
+                    }
+                }
+                if (powerFeatureFlags != null) {
+                    devicesDatabaseManager.putBikePowerSensorFlags(finalState.id, powerFeatureFlags)
+                }
+            }
+
+            // Update the local LiveData to immediately reflect the change in the UI
+            val currentList = _allDevices.value ?: emptyList()
+            val updatedList = currentList.map { if (it.id == finalState.id) finalState else it }
+            _allDevices.postValue(updatedList)
 
             // send broadcasts
             if (originalState.wheelCircumference != finalState.wheelCircumference) {
@@ -176,6 +219,40 @@ class DeviceDataRepository private constructor(private val application: Applicat
             if (originalState.isPaired != finalState.isPaired) {
                 sendPairingChangedBroadcast(finalState.id, finalState.isPaired)
             }
+        }
+    }
+
+    /**
+     * A helper function to create a ContentValues object containing only the fields that have changed.
+     */
+    private fun createContentValuesForUpdate(original: DeviceUiData, final: DeviceUiData): ContentValues {
+        return ContentValues().apply {
+            if (original.deviceName != final.deviceName) {
+                put(DevicesDbHelper.NAME, final.deviceName)
+            }
+            if (original.isPaired != final.isPaired) {
+                put(DevicesDbHelper.PAIRED, if (final.isPaired) 1 else 0)
+            }
+
+            // This handles both wheel circumference and run factor by converting them to the base calibration value
+            val originalCalib = getAsCalibrationValue(original)
+            val finalCalib = getAsCalibrationValue(final)
+            if (originalCalib != finalCalib) {
+                put(DevicesDbHelper.CALIBRATION_FACTOR, finalCalib)
+            }
+
+        }
+    }
+
+    /**
+     * Helper to get the canonical calibration value (in meters or as a factor) from a DeviceUiData object.
+     */
+    private fun getAsCalibrationValue(data: DeviceUiData): Double? {
+        return when (data.deviceType) {
+            DeviceType.BIKE_SPEED, DeviceType.BIKE_SPEED_AND_CADENCE, DeviceType.BIKE_POWER ->
+                data.wheelCircumference?.div(1000.0)
+            DeviceType.RUN_SPEED -> data.calibrationFactor
+            else -> null
         }
     }
 

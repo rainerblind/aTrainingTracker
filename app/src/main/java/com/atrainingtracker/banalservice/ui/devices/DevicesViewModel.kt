@@ -16,6 +16,7 @@ import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceFilterSpec
 import com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceFilterType
 import com.atrainingtracker.trainingtracker.ui.util.Event
+import kotlinx.coroutines.launch
 
 
 data class EditDeviceNavigationEvent(val deviceId: Long, val deviceType: DeviceType)
@@ -243,10 +244,12 @@ class DevicesViewModel(private val application: Application) : AndroidViewModel(
      * Takes the final state from _uiState and passes it to the repository to be saved permanently.
      */
 
-    fun saveChanges(deviceId: Long) {
+    fun saveChanges() {
         val finalState = _uiState.value ?: return
 
-        repository.updateDevice(finalState)
+        viewModelScope.launch {
+            repository.updateDevice(finalState)
+        }
     }
 
 }

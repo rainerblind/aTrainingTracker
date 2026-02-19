@@ -8,7 +8,7 @@ import com.atrainingtracker.banalservice.ui.devices.DeviceUiData
  * Its primary purpose is to rely entirely on the implementation
  * provided by its parent, BaseEditDeviceFragment, while hiding specialized UI groups.
  */
-class EditGeneralDeviceFragment : BaseEditDeviceFragment<DeviceUiData>() {
+class EditGeneralDeviceFragment : BaseEditDeviceFragment() {
 
     companion object {
         const val TAG = "EditGeneralDeviceFragment"
