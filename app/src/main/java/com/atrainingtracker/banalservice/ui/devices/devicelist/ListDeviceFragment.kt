@@ -13,6 +13,7 @@ import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.ui.devices.DevicesViewModel
 import com.atrainingtracker.banalservice.ui.devices.editdevice.BaseEditBikeDeviceFragment
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditBikePowerDeviceFragment
+import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFragmentFactory
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditGeneralDeviceFragment
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditRunDeviceFragment
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditSimpleBikeDeviceFragment
@@ -80,18 +81,12 @@ class ListDeviceFragment : Fragment() {
         // Observer for the navigation event
         viewModel.navigateToEditDevice.observe(viewLifecycleOwner) { event ->
             event.getContentIfNotHandled()?.let { navEvent ->
-                // Decide which fragment to show based on the device type
-                val editDeviceDialog: DialogFragment = when (navEvent.deviceType) {
-                    DeviceType.RUN_SPEED -> EditRunDeviceFragment.newInstance(navEvent.deviceId)
-                    DeviceType.BIKE_SPEED,
-                    DeviceType.BIKE_SPEED_AND_CADENCE -> EditSimpleBikeDeviceFragment.newInstance(navEvent.deviceId)
-                    DeviceType.BIKE_POWER -> EditBikePowerDeviceFragment.newInstance(navEvent.deviceId)
-                    DeviceType.BIKE_CADENCE -> EditGeneralDeviceFragment.newInstance(navEvent.deviceId)
+                val editDeviceDialog = EditDeviceFragmentFactory.create(
+                    deviceId = navEvent.deviceId,
+                    deviceType = navEvent.deviceType
+                )
 
-                    else -> EditGeneralDeviceFragment.newInstance(navEvent.deviceId)
-                }
-
-                // Show the correct dialog. The tag can be generic.
+                // Show the dialog returned by the factory
                 editDeviceDialog.show(parentFragmentManager, "EditDeviceDialog")
             }
         }
