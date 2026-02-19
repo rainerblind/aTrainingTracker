@@ -1,5 +1,6 @@
 package com.atrainingtracker.banalservice.ui.devices
 
+import androidx.compose.animation.core.copy
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.BikePowerSensorsHelper
@@ -102,6 +103,31 @@ fun raw2UiDeviceData(rawData: DeviceRawData): DeviceUiData {
         // Since it is attached to a bike, we pass the correct onEquipmentResId to the GeneralDevice.
         DeviceType.BIKE_CADENCE -> GeneralDeviceUiData.fromRawData(rawData, R.string.devices_on_bikes_text)
         else -> GeneralDeviceUiData.fromRawData(rawData)
+    }
+}
+
+/**
+ * Creates a new instance of a DeviceUiData class with updated common properties.
+ * This is necessary because you cannot call .copy() on an interface.
+ */
+fun DeviceUiData.copyCommon(
+    deviceName: String = this.deviceName,
+    isPaired: Boolean = this.isPaired,
+    linkedEquipment: List<String> = this.linkedEquipment
+    // TODO: Add other common properties that can be changed?
+): DeviceUiData {
+    val newCommon = this.common.copy(
+        deviceName = deviceName,
+        isPaired = isPaired,
+        linkedEquipment = linkedEquipment
+    )
+
+    // Re-create the specific data class with the new common block
+    return when (this) {
+        is BikePowerDeviceUiData -> this.copy(common = newCommon)
+        is SimpleBikeDeviceUiData -> this.copy(common = newCommon)
+        is RunDeviceUiData -> this.copy(common = newCommon)
+        is GeneralDeviceUiData -> this.copy(common = newCommon)
     }
 }
 

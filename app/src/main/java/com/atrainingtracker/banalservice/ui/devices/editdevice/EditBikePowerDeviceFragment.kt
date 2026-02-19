@@ -46,10 +46,10 @@ class EditBikePowerDeviceFragment : BaseEditBikeDeviceFragment<BikePowerDeviceUi
 
         // 2. Set up listeners for the power feature checkboxes.
         binding.groupPower.cbDoublePowerBalanceValues.setOnCheckedChangeListener { _, isChecked ->
-            viewModel.onDoublePowerBalanceValuesChanged(deviceId, isChecked)
+            viewModel.onDoublePowerBalanceValuesChanged(isChecked)
         }
         binding.groupPower.cbInvertPowerBalanceValues.setOnCheckedChangeListener { _, isChecked ->
-            viewModel.onInvertPowerBalanceValuesChanged(deviceId, isChecked)
+            viewModel.onInvertPowerBalanceValuesChanged(isChecked)
         }
     }
 }
