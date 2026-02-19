@@ -95,8 +95,11 @@ fun createCommonUiData(rawData: DeviceRawData, onEquipmentResId: Int = R.string.
 fun raw2UiDeviceData(rawData: DeviceRawData): DeviceUiData {
     return when (rawData.deviceType) {
         DeviceType.RUN_SPEED -> RunDeviceUiData.fromRawData(rawData)
-        DeviceType.BIKE_SPEED, DeviceType.BIKE_SPEED_AND_CADENCE -> BikeDeviceUiData.fromRawData(rawData)
+        DeviceType.BIKE_SPEED,
+        DeviceType.BIKE_SPEED_AND_CADENCE -> SimpleBikeDeviceUiData.fromRawData(rawData)
         DeviceType.BIKE_POWER -> BikePowerDeviceUiData.fromRawData(rawData)
+        // for a bike cadence device, we do not need to set the wheel circumference.  Thus, it is indeed a GeneralDevice.
+        // Since it is attached to a bike, we pass the correct onEquipmentResId to the GeneralDevice.
         DeviceType.BIKE_CADENCE -> GeneralDeviceUiData.fromRawData(rawData, R.string.devices_on_bikes_text)
         else -> GeneralDeviceUiData.fromRawData(rawData)
     }
@@ -133,13 +136,20 @@ data class RunDeviceUiData(
     }
 }
 
-data class BikeDeviceUiData(
-    override val common: CommonDeviceUiData,
+
+// In order to handle the bike and power devices (wheel circumference) in a unified way, we need a common interface...
+sealed interface BikeDeviceUiData : DeviceUiData {
     val wheelCircumference: Int
-) : DeviceUiData {
-    companion object : UiDeviceDataFactory<BikeDeviceUiData> {
-        override fun fromRawData(rawData: DeviceRawData): BikeDeviceUiData {
-            return BikeDeviceUiData(
+}
+
+// This class represents a bike device that has wheel circumference but NO power features.
+data class SimpleBikeDeviceUiData(
+    override val common: CommonDeviceUiData,
+    override val wheelCircumference: Int
+) : BikeDeviceUiData { // It implements the new interface
+    companion object {
+        fun fromRawData(rawData: DeviceRawData): SimpleBikeDeviceUiData {
+            return SimpleBikeDeviceUiData(
                 common = createCommonUiData(rawData, R.string.devices_on_bikes_text),
                 wheelCircumference = (rawData.calibrationValue!! * 1000).toInt()
             )
@@ -149,11 +159,11 @@ data class BikeDeviceUiData(
 
 data class BikePowerDeviceUiData(
     override val common: CommonDeviceUiData,
-    val wheelCircumference: Int,
+    override val wheelCircumference: Int, // It also has this property
     val powerFeatures: BikePowerFeatures
-) : DeviceUiData {
-    companion object : UiDeviceDataFactory<BikePowerDeviceUiData> {
-        override fun fromRawData(rawData: DeviceRawData): BikePowerDeviceUiData {
+) : BikeDeviceUiData { // It implements the same interface
+    companion object {
+        fun fromRawData(rawData: DeviceRawData): BikePowerDeviceUiData {
             return BikePowerDeviceUiData(
                 common = createCommonUiData(rawData, R.string.devices_on_bikes_text),
                 wheelCircumference = (rawData.calibrationValue!! * 1000).toInt(),
