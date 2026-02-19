@@ -281,33 +281,7 @@ class DevicesViewModel(private val application: Application) : AndroidViewModel(
     fun saveChanges(deviceId: Long) {
         val finalState = _uiState.value ?: return
 
-        // You would now map the finalState and specializedData to a format the repository can save.
-        // TODO
-        // viewModelScope.launch {
-        //     repository.updateDevice(finalState, deviceId)
-        // }
+        repository.updateDevice(finalState)
     }
 
-
-
-
-
-    // TODO: move to the repository, where this stuff is stored...
-    fun sendPairingChangedBroadcast(deviceId: Long, paired: Boolean) {
-        val intent = Intent(BANALService.PAIRING_CHANGED)
-            .putExtra(BANALService.DEVICE_ID, deviceId)
-            .putExtra(BANALService.PAIRED, paired)
-            .setPackage(application.getPackageName())
-        application.sendBroadcast(intent)
-    }
-
-    fun sendCalibrationChangedBroadcast(deviceId: Long, newCalibrationFactor: Double?) {
-        if (newCalibrationFactor != null) {
-            val intent = Intent(BANALService.CALIBRATION_FACTOR_CHANGED)
-                .putExtra(BANALService.DEVICE_ID, deviceId)
-                .putExtra(BANALService.CALIBRATION_FACTOR, newCalibrationFactor)
-                .setPackage(application.getPackageName())
-            application.sendBroadcast(intent)
-        }
-    }
 }
