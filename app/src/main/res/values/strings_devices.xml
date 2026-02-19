@@ -45,6 +45,7 @@
     <string name="devices_on_equipment_text">on equipment</string>
     <string name="devices_on_bikes_text">on bikes</string>
     <string name="devices_on_shoes_text">on shoes</string>
+    <string name="devices_on_short_format">on: %1$s</string>
     <string name="manufacturerValue" translatable="false">Garmin</string>
     <!--  somewhere else, todo: make one -->
     <string name="devices_calibration_factor">Calibration Factor</string>

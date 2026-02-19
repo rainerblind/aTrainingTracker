@@ -29,6 +29,8 @@
     <string name="devices_on_equipment_text">an Ausrüstung</string>
     <string name="devices_on_bikes_text">an Rädern</string>
     <string name="devices_on_shoes_text">an Schuhen</string>
+    <string name="devices_on_short_format">on: %1$s</string>
+
     <string name="devices_calibration_factor">Kalibrierungsfaktor</string>
     <string name="devices_wheel_circumference">Radumfang</string>
     <string name="Set_calibration">%1$s berechnen</string>
