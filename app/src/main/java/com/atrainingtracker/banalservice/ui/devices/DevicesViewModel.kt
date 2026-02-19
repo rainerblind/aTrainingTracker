@@ -205,6 +205,15 @@ class DevicesViewModel(private val application: Application) : AndroidViewModel(
         // TODO: pass to repository...
     }
 
+    fun onDoublePowerBalanceValuesChanged(deviceId: Long, doublePowerBalanceValues: Boolean) {
+        // TODO: pass to repository...
+    }
+
+    fun onInvertPowerBalanceValuesChanged(deviceId: Long, invertPowerBalanceValues: Boolean) {
+        // TODO: pass to repository...
+    }
+
+
 
     // TODO: move to the repository, where this stuff is stored...
     fun sendPairingChangedBroadcast(deviceId: Long, paired: Boolean) {

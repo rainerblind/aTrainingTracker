@@ -1,41 +1,20 @@
 package com.atrainingtracker.banalservice.ui.devices.editdevice
 
-import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import androidx.core.widget.doOnTextChanged
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ui.devices.BikeDeviceUiData
-import com.atrainingtracker.banalservice.ui.devices.editdevice.correctcalibrationfactor.CorrectCalibrationFactorBaseDialogFragment
 import com.atrainingtracker.banalservice.ui.devices.editdevice.correctcalibrationfactor.CorrectCalibrationFactorBikeDialogFragment
-import com.atrainingtracker.databinding.DialogEditDeviceGenericBinding
 
 /**
  * A specialized DialogFragment for editing the details of a Bike device.
  * It inherits all common logic from [BaseEditDeviceFragment].
  */
-class EditBikeDeviceFragment : BaseEditDeviceFragment<BikeDeviceUiData>() {
+abstract class BaseEditBikeDeviceFragment<T : BikeDeviceUiData> : BaseEditDeviceFragment<T>() {
 
-    companion object {
-        const val TAG = "EditBikeDeviceFragment"
-
-        @JvmStatic
-        fun newInstance(deviceId: Long): EditBikeDeviceFragment {
-            return EditBikeDeviceFragment().apply {
-                arguments = Bundle().apply {
-                    putLong(ARG_DEVICE_ID, deviceId)
-                }
-            }
-        }
-    }
-
-    // --- IMPLEMENTING ABSTRACT MEMBERS ---
-
-    // override val layoutId: Int = R.layout.dialog_edit_device_generic
-
-    override fun bindUi(data: BikeDeviceUiData) {
+    override fun bindUi(data: T) {
         super.bindUi(data)
 
         // --- Configure Calibration Section (specific to Bike) ---

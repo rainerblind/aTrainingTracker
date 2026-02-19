@@ -11,9 +11,11 @@ import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.ui.devices.DevicesViewModel
-import com.atrainingtracker.banalservice.ui.devices.editdevice.EditBikeDeviceFragment
-import com.atrainingtracker.banalservice.ui.devices.editdevice.BaseEditDeviceFragment
+import com.atrainingtracker.banalservice.ui.devices.editdevice.BaseEditBikeDeviceFragment
+import com.atrainingtracker.banalservice.ui.devices.editdevice.EditBikePowerDeviceFragment
+import com.atrainingtracker.banalservice.ui.devices.editdevice.EditGeneralDeviceFragment
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditRunDeviceFragment
+import com.atrainingtracker.banalservice.ui.devices.editdevice.EditSimpleBikeDeviceFragment
 import com.atrainingtracker.databinding.FragmentDeviceListBinding
 
 class ListDeviceFragment : Fragment() {
@@ -80,21 +82,13 @@ class ListDeviceFragment : Fragment() {
             event.getContentIfNotHandled()?.let { navEvent ->
                 // Decide which fragment to show based on the device type
                 val editDeviceDialog: DialogFragment = when (navEvent.deviceType) {
-                    DeviceType.BIKE_POWER,
+                    DeviceType.RUN_SPEED -> EditRunDeviceFragment.newInstance(navEvent.deviceId)
                     DeviceType.BIKE_SPEED,
-                    DeviceType.BIKE_CADENCE,
-                    DeviceType.BIKE_SPEED_AND_CADENCE -> {
-                        EditBikeDeviceFragment.newInstance(navEvent.deviceId)
-                    }
+                    DeviceType.BIKE_SPEED_AND_CADENCE -> EditSimpleBikeDeviceFragment.newInstance(navEvent.deviceId)
+                    DeviceType.BIKE_POWER -> EditBikePowerDeviceFragment.newInstance(navEvent.deviceId)
+                    DeviceType.BIKE_CADENCE -> EditGeneralDeviceFragment.newInstance(navEvent.deviceId)
 
-                    DeviceType.RUN_SPEED -> { // Assuming you might have this
-                        EditRunDeviceFragment.newInstance(navEvent.deviceId)
-                    }
-
-                    else -> {
-                        // A fallback for generic or unsupported types
-                        EditRunDeviceFragment.newInstance(navEvent.deviceId)
-                    }
+                    else -> EditGeneralDeviceFragment.newInstance(navEvent.deviceId)
                 }
 
                 // Show the correct dialog. The tag can be generic.
