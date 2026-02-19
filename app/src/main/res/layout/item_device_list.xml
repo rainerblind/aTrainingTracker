@@ -55,24 +55,34 @@
             app:layout_constraintTop_toBottomOf="@+id/deviceManufacturer"
             tools:text="Linked to: Bike, Treadmill" />
 
+        <!-- last seen -->
+        <TextView
+            android:id="@+id/lastSeen"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textAppearance="?attr/textAppearanceCaption"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="2024-05-21" />
+
         <TextView
             android:id="@+id/mainValue"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginEnd="8dp"
             android:textAppearance="@style/TextAppearance.AppCompat.Large"
-            app:layout_constraintBottom_toBottomOf="@+id/deviceManufacturer"
+            app:layout_constraintTop_toBottomOf="@id/lastSeen"
+            app:layout_constraintBottom_toBottomOf="@id/batteryStatusIcon"
             app:layout_constraintEnd_toStartOf="@+id/batteryStatusIcon"
-            app:layout_constraintTop_toTopOf="@+id/deviceName"
             tools:text="145" />
 
         <ImageView
             android:id="@+id/batteryStatusIcon"
             android:layout_width="24dp"
             android:layout_height="24dp"
-            app:layout_constraintBottom_toBottomOf="@+id/mainValue"
+            app:layout_constraintTop_toBottomOf="@id/lastSeen"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/mainValue"
             tools:srcCompat="@drawable/stat_sys_battery_unknown" />
 
         <com.google.android.material.button.MaterialButton
