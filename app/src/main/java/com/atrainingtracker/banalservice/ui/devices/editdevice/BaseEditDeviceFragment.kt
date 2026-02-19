@@ -134,7 +134,7 @@ abstract class BaseEditDeviceFragment : DialogFragment() {
             updateEquipmentTextField(editText)
 
             editText.setOnClickListener {
-                showMultiChoiceEquipmentDialog(onEquipment, editText)
+                showMultiChoiceEquipmentDialog(onEquipment)
             }
         }
     }
@@ -144,16 +144,22 @@ abstract class BaseEditDeviceFragment : DialogFragment() {
         return equipmentNames.filterIndexed { index, _ -> checkedItems[index] }
     }
 
-    private fun showMultiChoiceEquipmentDialog(title: String, editText: AutoCompleteTextView) {
+    private fun showMultiChoiceEquipmentDialog(title: String) {
+        // Use a local copy of checkedItems for the dialog so cancellation works correctly.
+        val dialogCheckedItems = checkedItems.clone()
+
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(title)
-            .setMultiChoiceItems(equipmentNames, checkedItems) { _, which, isChecked ->
-                checkedItems[which] = isChecked
+            .setMultiChoiceItems(equipmentNames, dialogCheckedItems) { _, which, isChecked ->
+                dialogCheckedItems[which] = isChecked
             }
             .setPositiveButton(R.string.OK) { _, _ ->
-                updateEquipmentTextField(editText)
+                // When the user confirms, update the official checkedItems array
+                checkedItems = dialogCheckedItems
+                // And forward the change to the ViewModel
+                viewModel.onEquipmentChanged(getLinkedEquipment())
             }
-            .setNegativeButton(R.string.cancel, null)
+            .setNegativeButton(R.string.cancel, null) // Cancellation will discard dialogCheckedItems
             .show()
     }
 
