@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="devices_button_pair">Koppeln</string>
+    <string name="devices_button_unpair">Entkoppeln</string>
+
     <!-- device_choice_row -->
     <string name="DeviceChoiceRowDeviceNameText">Unbekannt</string>
 
