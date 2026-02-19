@@ -12,6 +12,9 @@
     <string name="searchingForDevice">suche nach %1$s %2$s Sensoren</string>
     <string name="searchingForRemoteDevice">suche nach ANT+ Herzfrequenz Sensoren</string>
 
+    <string name="devices_lastSeenText">Zum letzten mal gesehen</string>
+    <string name="devices_now">jetzt</string>
+
     <!-- dialog_set_calibration_factor -->
     <string name="devices_correct_calibration_factor_title_bike">Radumfang anpassen</string>
     <string name="devices_correct_calibration_factor_title_run">Kalibrierungsfaktor anpassen</string>
