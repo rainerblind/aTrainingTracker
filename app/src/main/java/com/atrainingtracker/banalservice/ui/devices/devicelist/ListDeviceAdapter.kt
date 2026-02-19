@@ -1,6 +1,7 @@
 package com.atrainingtracker.banalservice.ui.devices.devicelist
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -57,6 +58,23 @@ class ListDeviceAdapter(
             binding.batteryStatusIcon.setImageResource(device.batteryStatusIconRes)
             binding.mainValue.text = device.mainValue
             binding.linkedEquipment.text = device.linkedEquipment.joinToString(", ")
+
+            // show when device was seen the last time
+            if (device.lastSeen.isNullOrEmpty()) {
+                // If there's no date, hide the TextView completely
+                binding.lastSeen.visibility = View.GONE
+            } else {
+                // If there is a date, make it visible and set the formatted text
+                binding.lastSeen.visibility = View.VISIBLE
+                val lastSeenText = if (device.isAvailable) {
+                    itemView.context.getString(R.string.devices_now)
+                }
+                else {
+                    // Split the string by space and take the first part (the date)
+                    device.lastSeen.split(" ").firstOrNull() ?: device.lastSeen
+                }
+                binding.lastSeen.text = lastSeenText
+            }
 
             // Set the button text and style based on the isPaired property
             if (device.isPaired) {

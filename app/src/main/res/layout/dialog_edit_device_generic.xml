@@ -39,7 +39,7 @@
                         android:layout_height="wrap_content"
                         android:clickable="false"
                         android:focusable="false"
-                        android:hint="@string/lastSeenText"
+                        android:hint="@string/devices_lastSeenText"
                         android:singleLine="true"
                         tools:text="10. Feb 2026 14:32" />
                 </com.google.android.material.textfield.TextInputLayout>
