@@ -2,6 +2,7 @@ package com.atrainingtracker.banalservice.ui.devices
 
 import android.app.Application
 import android.content.ContentValues
+import android.content.Intent
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.map
@@ -142,6 +143,77 @@ class DeviceDataRepository private constructor(private val application: Applicat
                     arrayOf(deviceId.toString())
                 )
             }
+        }
+    }
+
+
+    /**
+     * Updates a device's properties based on the final UI state.
+     * This method translates the UI data into actions, like sending broadcasts to the BANALService.
+     * This function should be called from a coroutine scope (e.g., viewModelScope).
+     *
+     * @param finalState The DeviceUiData object containing the desired final state.
+     */
+    fun updateDevice(finalState: DeviceUiData) {
+        // It's safer to run this logic on a background thread.
+        withContext(Dispatchers.IO) {
+            // We need to compare the finalState with the original state to see what changed.
+            val originalState = getDeviceSnapshotById(finalState.id) ?: return@withContext
+
+            // 1. Check if the device name changed.
+            if (originalState.deviceName != finalState.deviceName) {
+                sendDeviceNameChangedBroadcast(finalState.id, finalState.deviceName)
+            }
+
+            // 2. Check if the paired status changed.
+            if (originalState.isPaired != finalState.isPaired) {
+                sendPairingChangedBroadcast(finalState.id, finalState.isPaired)
+            }
+
+            when (finalState) {
+                is SimpleBikeDeviceUiData -> {
+                    if (originalState.wheelCircumference != finalState.wheelCircumference) {
+                        sendCalibrationChangedBroadcast(finalState.id, finalState.wheelCircumference)
+                    }
+                }
+                is RunDeviceUiData -> {
+                    if (originalState.calibrationFactor != finalState.calibrationFactor) {
+                        sendCalibrationChangedBroadcast(finalState.id, finalState.calibrationFactor)
+                    }
+                }
+                else -> {}
+
+            }
+
+            // 3. Check if equipment links changed.
+            if (originalState.linkedEquipment != finalState.linkedEquipment) {
+                sendLinkedEquipmentChangedBroadcast(finalState.id, finalState.linkedEquipment)
+            }
+
+            // 4. Check for calibration changes (wheel circumference or run factor).
+            handleCalibrationChanges(originalState, finalState)
+
+            // 5. Check for power feature flag changes.
+            handlePowerFeatureChanges(originalState, finalState)
+        }
+    }
+
+
+    fun sendPairingChangedBroadcast(deviceId: Long, paired: Boolean) {
+        val intent = Intent(BANALService.PAIRING_CHANGED)
+            .putExtra(BANALService.DEVICE_ID, deviceId)
+            .putExtra(BANALService.PAIRED, paired)
+            .setPackage(application.getPackageName())
+        application.sendBroadcast(intent)
+    }
+
+    fun sendCalibrationChangedBroadcast(deviceId: Long, newCalibrationFactor: Double?) {
+        if (newCalibrationFactor != null) {
+            val intent = Intent(BANALService.CALIBRATION_FACTOR_CHANGED)
+                .putExtra(BANALService.DEVICE_ID, deviceId)
+                .putExtra(BANALService.CALIBRATION_FACTOR, newCalibrationFactor)
+                .setPackage(application.getPackageName())
+            application.sendBroadcast(intent)
         }
     }
 }
