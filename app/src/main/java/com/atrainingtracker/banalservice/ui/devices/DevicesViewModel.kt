@@ -188,16 +188,28 @@ class DevicesViewModel(private val application: Application) : AndroidViewModel(
         return displayList
     }
 
-
-
     // --- Event Handlers from the UI ---
 
-    fun onDeviceNameChanged(newName: String) {
-        updateState { it.copy(deviceName = newName) }
+    // called from the device list
+    // -> immediately update repo.
+    fun onPairedChanged(deviceId: Long, isPaired: Boolean) {
+        viewModelScope.launch {
+            // Find the current state of the device from the repository's cache
+            val currentState = repository.getDeviceSnapshotById(deviceId) ?: return@launch
+
+            // Create a new state with the isPaired property flipped
+            val newState = currentState.copy(isPaired = !currentState.isPaired)
+
+            // Tell the repository to save this new state. The repository will handle
+            // the database update, sending the broadcast, and updating the LiveData.
+            repository.updateDevice(newState)
+        }
     }
 
-    fun onPairedChanged(isPaired: Boolean) {
-        updateState { it.copy(isPaired = isPaired) }
+    // called from edit device dialog fragment
+    // -> update repository only onSave
+    fun onDeviceNameChanged(newName: String) {
+        updateState { it.copy(deviceName = newName) }
     }
 
     fun onEquipmentChanged(newEquipment: List<String>) {

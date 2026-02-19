@@ -55,7 +55,7 @@ class ListDeviceFragment : Fragment() {
     private fun setupRecyclerView() {
         deviceAdapter = ListDeviceAdapter(
             onPairClick = { device ->
-                // TODO: viewModel.setDevicePaired(device.id, !device.isPaired)
+                viewModel.onPairedChanged(device.id, !device.isPaired)
             },
             onItemClick = { device ->
                 viewModel.onDeviceSelected(device.id)
