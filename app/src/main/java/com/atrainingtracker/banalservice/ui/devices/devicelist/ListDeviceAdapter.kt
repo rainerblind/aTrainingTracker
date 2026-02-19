@@ -70,6 +70,7 @@ class ListDeviceAdapter(
             if (device.lastSeen.isNullOrEmpty()) {
                 // If there's no date, hide the TextView completely
                 binding.lastSeen.visibility = View.GONE
+                binding.batteryStatusIcon.visibility = View.GONE
             } else {
                 // If there is a date, make it visible and set the formatted text
                 binding.lastSeen.visibility = View.VISIBLE
