@@ -107,9 +107,6 @@
     <string name="no_user_name">no user name</string>
     <string name="no_password">no password</string>
     <string name="add_sensor">add sensor</string>
-    <string name="lastSeenText">last seen</string>
-    <string name="lastSeenDefaultValue" translatable="false">2014-10-18 09:10:11</string>
-    <string name="now">now</string>
 
     <string name="commute">commute</string>
     <string name="trainer_general">indoor trainer</string>

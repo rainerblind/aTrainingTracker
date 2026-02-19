@@ -96,8 +96,6 @@
     <string name="no_user_name">kein Benutzername</string>
     <string name="no_password">kein Passwort</string>
     <string name="add_sensor">Sensor hinzufügen</string>
-    <string name="lastSeenText">Zum letzten mal gesehen</string>
-    <string name="now">jetzt</string>
 
     <string name="commute">Pendeln</string>
     <string name="trainer_general">Indoor Trainer</string>

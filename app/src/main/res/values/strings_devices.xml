@@ -22,6 +22,11 @@
     <string name="searchingForDevice">searching for %1$s %2$s devices</string>
     <string name="searchingForRemoteDevice">searching for ANT+ Heart Rate devices</string>
 
+    <string name="devices_lastSeenText">last seen</string>
+    <string name="devices_lastSeenDefaultValue" translatable="false">2014-10-18 09:10:11</string>
+    <string name="devices_now">now</string>
+
+
     <!-- dialog_set_calibration_factor -->
     <string name="devices_correct_calibration_factor_title_bike">Correct wheel circumference</string>
     <string name="devices_correct_calibration_factor_title_run">Correct calibration factor</string>
