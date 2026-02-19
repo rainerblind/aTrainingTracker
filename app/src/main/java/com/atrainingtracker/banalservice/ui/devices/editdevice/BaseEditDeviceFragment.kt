@@ -21,7 +21,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
  * The base class for editing a device, following a modern state management pattern.
  * It observes a StateFlow from the ViewModel and updates the UI reactively.
  */
-abstract class BaseEditDeviceFragment<T : DeviceUiData> : DialogFragment() {
+abstract class BaseEditDeviceFragment : DialogFragment() {
 
     companion object {
         const val ARG_DEVICE_ID = "device_id"
@@ -78,7 +78,7 @@ abstract class BaseEditDeviceFragment<T : DeviceUiData> : DialogFragment() {
 
                 // Let the subclass bind its specific views
                 @Suppress("UNCHECKED_CAST")
-                bindUi(deviceUiData as T)
+                bindUi(deviceUiData as DeviceUiData)
             }
             else {
                 dismissAllowingStateLoss()
@@ -91,7 +91,7 @@ abstract class BaseEditDeviceFragment<T : DeviceUiData> : DialogFragment() {
      * This function now lives in the base class and is called automatically.
      * It binds all views that are common to every device type.
      */
-    open fun bindUi(data: T) {
+    open fun bindUi(data: DeviceUiData) {
         // Assuming your generic layout has these IDs
         binding.tvLastSeen.setText(data.lastSeen)
         binding.ivBatteryStatus.setImageResource(data.batteryStatusIconRes)

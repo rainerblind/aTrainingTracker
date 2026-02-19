@@ -2,7 +2,7 @@ package com.atrainingtracker.banalservice.ui.devices.editdevice
 
 
 import android.os.Bundle
-import com.atrainingtracker.banalservice.ui.devices.SimpleBikeDeviceUiData
+import com.atrainingtracker.banalservice.ui.devices.DeviceUiData
 
 /**
  * A concrete DialogFragment for editing a simple bike device (e.g., speed/cadence)
@@ -10,7 +10,7 @@ import com.atrainingtracker.banalservice.ui.devices.SimpleBikeDeviceUiData
  *
  * It inherits all its logic from [EditBikeDeviceFragment].
  */
-class EditSimpleBikeDeviceFragment : BaseEditBikeDeviceFragment<SimpleBikeDeviceUiData>() {
+class EditSimpleBikeDeviceFragment : BaseEditBikeDeviceFragment() {
 
     companion object {
         const val TAG = "EditSimpleBikeDeviceFragment"

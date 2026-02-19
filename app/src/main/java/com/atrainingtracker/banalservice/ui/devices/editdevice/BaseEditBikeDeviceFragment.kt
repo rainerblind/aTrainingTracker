@@ -5,16 +5,16 @@ import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import androidx.core.widget.doOnTextChanged
 import com.atrainingtracker.R
-import com.atrainingtracker.banalservice.ui.devices.BikeDeviceUiData
+import com.atrainingtracker.banalservice.ui.devices.DeviceUiData
 import com.atrainingtracker.banalservice.ui.devices.editdevice.correctcalibrationfactor.CorrectCalibrationFactorBikeDialogFragment
 
 /**
  * A specialized DialogFragment for editing the details of a Bike device.
  * It inherits all common logic from [BaseEditDeviceFragment].
  */
-abstract class BaseEditBikeDeviceFragment<T : BikeDeviceUiData> : BaseEditDeviceFragment<T>() {
+abstract class BaseEditBikeDeviceFragment : BaseEditDeviceFragment() {
 
-    override fun bindUi(data: T) {
+    override fun bindUi(data: DeviceUiData) {
         super.bindUi(data)
 
         // --- Configure Calibration Section (specific to Bike) ---

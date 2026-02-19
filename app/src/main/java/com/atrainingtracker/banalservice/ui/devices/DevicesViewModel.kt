@@ -192,68 +192,33 @@ class DevicesViewModel(private val application: Application) : AndroidViewModel(
     // --- Event Handlers from the UI ---
 
     fun onDeviceNameChanged(newName: String) {
-        updateState { currentState ->
-            // Create a new state object based on the old one, with the name changed.
-            currentState.copyCommon(deviceName = newName)
-        }
+        updateState { it.copy(deviceName = newName) }
     }
 
     fun onPairedChanged(isPaired: Boolean) {
-        updateState { currentState ->
-            currentState.copyCommon(isPaired = isPaired)
-        }
+        updateState { it.copy(isPaired = isPaired) }
     }
 
     fun onEquipmentChanged(newEquipment: List<String>) {
-        updateState { currentState ->
-            currentState.copyCommon(linkedEquipment = newEquipment)
-        }
+        updateState { it.copy(linkedEquipment = newEquipment) }
     }
 
 
     fun onCalibrationFactorChanged(calibrationValue: Double) {
         // TODO: add validation before updating the state?
-        updateState { currentState ->
-            when (currentState) {
-                is RunDeviceUiData -> currentState.copy(calibrationFactor = calibrationValue)
-                else -> currentState // No change for other types
-            }
-        }
+        updateState { it.copy(calibrationFactor = calibrationValue) }
     }
 
     fun onWheelCircumferenceChanged(wheelCircumference: Int) {
-        updateState { currentState ->
-            when (currentState) {
-                is SimpleBikeDeviceUiData -> currentState.copy(wheelCircumference = wheelCircumference)
-                is BikePowerDeviceUiData -> currentState.copy(wheelCircumference = wheelCircumference)
-                else -> currentState
-            }
-        }
-
+        updateState { it.copy(wheelCircumference = wheelCircumference) }
     }
 
     fun onDoublePowerBalanceValuesChanged(isDouble: Boolean) {
-        updateState { currentState ->
-            if (currentState is BikePowerDeviceUiData) {
-                currentState.copy(
-                    powerFeatures = currentState.powerFeatures.copy(doublePowerBalanceValues = isDouble)
-                )
-            } else {
-                currentState
-            }
-        }
+        updateState { it.copy(powerFeatures = it.powerFeatures!!.copy(doublePowerBalanceValues = isDouble)) }
     }
 
     fun onInvertPowerBalanceValuesChanged(isInverted: Boolean) {
-        updateState { currentState ->
-            if (currentState is BikePowerDeviceUiData) {
-                currentState.copy(
-                    powerFeatures = currentState.powerFeatures.copy(invertPowerBalanceValues = isInverted)
-                )
-            } else {
-                currentState
-            }
-        }
+        updateState { it.copy(powerFeatures = it.powerFeatures!!.copy(invertPowerBalanceValues = isInverted)) }
     }
 
     /**

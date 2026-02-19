@@ -27,176 +27,82 @@ data class DeviceRawData(
     val mainValue: String
 )
 
-// Data class holding all the common data for the UI
-data class CommonDeviceUiData(
+/**
+ * Common class for the UI stuff
+ */
+data class DeviceUiData(
+    // identical to the raw data
     val id: Long,
     val protocol: Protocol,
     val deviceType: DeviceType,
-    val deviceTypeIconRes: Int,
     val lastSeen: String?,
-    val batteryStatusIconRes: Int,
     val manufacturer: String,
     val deviceName: String,
     val isAvailable: Boolean,
     val isPaired: Boolean,
-    val onEquipmentResId: Int,
     val linkedEquipment: List<String>,
     val availableEquipment: List<String>,
-    val mainValue: String
+    val mainValue: String,
+
+    // derived from the raw data
+    val deviceTypeIconRes: Int,
+    val batteryStatusIconRes: Int,
+    val onEquipmentResId: Int,
+
+    // Specialized properties that can be null
+    val wheelCircumference: Int?,
+    val calibrationFactor: Double?,
+    val powerFeatures: BikePowerFeatures?
 )
 
+// --- THE NEW, SIMPLIFIED FACTORY ---
+fun raw2UiDeviceData(rawData: DeviceRawData): DeviceUiData {
+    // Determine the specialized values first
+    val wheelCircumference = when (rawData.deviceType) {
+        DeviceType.BIKE_SPEED, DeviceType.BIKE_SPEED_AND_CADENCE, DeviceType.BIKE_POWER ->
+            rawData.calibrationValue?.let { (it * 1000).toInt() }
+        else -> null
+    }
 
-/**
- * Base class for the device data for the UI
- */
-sealed interface DeviceUiData {
-    val common: CommonDeviceUiData
+    val calibrationFactor = when (rawData.deviceType) {
+        DeviceType.RUN_SPEED -> rawData.calibrationValue
+        else -> null
+    }
 
-    // Delegate properties for easy access.
-    val id: Long get() = common.id
-    val protocol: Protocol get() = common.protocol
-    val deviceType: DeviceType get() = common.deviceType
-    val deviceTypeIconRes: Int get() = common.deviceTypeIconRes
-    val lastSeen: String? get() = common.lastSeen
-    val batteryStatusIconRes: Int get() = common.batteryStatusIconRes
-    val manufacturer: String get() = common.manufacturer
-    val deviceName: String get() = common.deviceName
-    val isAvailable: Boolean get() = common.isAvailable
-    val isPaired: Boolean get() = common.isPaired
-    val onEquipmentResId: Int get() = common.onEquipmentResId
-    val linkedEquipment: List<String> get() = common.linkedEquipment
-    val availableEquipment: List<String> get() = common.availableEquipment
-    val mainValue: String get() = common.mainValue
-}
+    val powerFeatures = if (rawData.deviceType == DeviceType.BIKE_POWER) {
+        BikePowerFeatures.fromFeatureFlags(rawData.powerFeaturesFlags)
+    } else {
+        null
+    }
 
-interface UiDeviceDataFactory<T: DeviceUiData> {
-    fun fromRawData(rawData: DeviceRawData): T
-}
+    val onEquipmentResId = when (rawData.deviceType) {
+        DeviceType.BIKE_SPEED, DeviceType.BIKE_SPEED_AND_CADENCE, DeviceType.BIKE_CADENCE, DeviceType.BIKE_POWER -> R.string.devices_on_bikes_text
+        DeviceType.RUN_SPEED -> R.string.devices_on_shoes_text
+        else -> R.string.devices_on_equipment_text
+    }
 
-// Helper to create the common data part from raw data.
-fun createCommonUiData(rawData: DeviceRawData, onEquipmentResId: Int = R.string.devices_on_equipment_text): CommonDeviceUiData {
-    return CommonDeviceUiData(
+    // Now, construct the single DeviceUiData object
+    return DeviceUiData(
         id = rawData.id,
         protocol = rawData.protocol,
         deviceType = rawData.deviceType,
-        deviceTypeIconRes = getIconId(rawData.deviceType, rawData.protocol),
         lastSeen = rawData.lastSeen,
-        batteryStatusIconRes = getBatteryStatusIconRes(rawData.batteryPercentage),
         manufacturer = rawData.manufacturer,
         deviceName = rawData.deviceName,
         isPaired = rawData.isPaired,
         isAvailable = rawData.isAvailable,
-        onEquipmentResId = onEquipmentResId,
         linkedEquipment = rawData.linkedEquipment,
         availableEquipment = rawData.availableEquipment,
-        mainValue = rawData.mainValue
+        mainValue = rawData.mainValue,
+
+        deviceTypeIconRes = getIconId(rawData.deviceType, rawData.protocol),
+        batteryStatusIconRes = getBatteryStatusIconRes(rawData.batteryPercentage),
+        onEquipmentResId = onEquipmentResId,
+
+        wheelCircumference = wheelCircumference,
+        calibrationFactor = calibrationFactor,
+        powerFeatures = powerFeatures
     )
-}
-
-fun raw2UiDeviceData(rawData: DeviceRawData): DeviceUiData {
-    return when (rawData.deviceType) {
-        DeviceType.RUN_SPEED -> RunDeviceUiData.fromRawData(rawData)
-        DeviceType.BIKE_SPEED,
-        DeviceType.BIKE_SPEED_AND_CADENCE -> SimpleBikeDeviceUiData.fromRawData(rawData)
-        DeviceType.BIKE_POWER -> BikePowerDeviceUiData.fromRawData(rawData)
-        // for a bike cadence device, we do not need to set the wheel circumference.  Thus, it is indeed a GeneralDevice.
-        // Since it is attached to a bike, we pass the correct onEquipmentResId to the GeneralDevice.
-        DeviceType.BIKE_CADENCE -> GeneralDeviceUiData.fromRawData(rawData, R.string.devices_on_bikes_text)
-        else -> GeneralDeviceUiData.fromRawData(rawData)
-    }
-}
-
-/**
- * Creates a new instance of a DeviceUiData class with updated common properties.
- * This is necessary because you cannot call .copy() on an interface.
- */
-fun DeviceUiData.copyCommon(
-    deviceName: String = this.deviceName,
-    isPaired: Boolean = this.isPaired,
-    linkedEquipment: List<String> = this.linkedEquipment
-    // TODO: Add other common properties that can be changed?
-): DeviceUiData {
-    val newCommon = this.common.copy(
-        deviceName = deviceName,
-        isPaired = isPaired,
-        linkedEquipment = linkedEquipment
-    )
-
-    // Re-create the specific data class with the new common block
-    return when (this) {
-        is BikePowerDeviceUiData -> this.copy(common = newCommon)
-        is SimpleBikeDeviceUiData -> this.copy(common = newCommon)
-        is RunDeviceUiData -> this.copy(common = newCommon)
-        is GeneralDeviceUiData -> this.copy(common = newCommon)
-    }
-}
-
-data class GeneralDeviceUiData (
-    override val common: CommonDeviceUiData
-) : DeviceUiData {
-    companion object: UiDeviceDataFactory<GeneralDeviceUiData> {
-        override fun fromRawData(rawData: DeviceRawData): GeneralDeviceUiData {
-            return GeneralDeviceUiData(createCommonUiData(rawData, R.string.devices_on_equipment_text)
-            )
-        }
-
-        fun fromRawData(rawData: DeviceRawData, onEquipmentResId: Int): GeneralDeviceUiData {
-            return GeneralDeviceUiData(createCommonUiData(rawData, onEquipmentResId)
-            )
-        }
-
-    }
-}
-
-data class RunDeviceUiData(
-    override val common: CommonDeviceUiData,
-    val calibrationFactor: Double
-) : DeviceUiData {
-    companion object : UiDeviceDataFactory<RunDeviceUiData> {
-        override fun fromRawData(rawData: DeviceRawData): RunDeviceUiData {
-            return RunDeviceUiData(
-                common = createCommonUiData(rawData, R.string.devices_on_shoes_text),
-                calibrationFactor = rawData.calibrationValue!!
-            )
-        }
-    }
-}
-
-
-// In order to handle the bike and power devices (wheel circumference) in a unified way, we need a common interface...
-sealed interface BikeDeviceUiData : DeviceUiData {
-    val wheelCircumference: Int
-}
-
-// This class represents a bike device that has wheel circumference but NO power features.
-data class SimpleBikeDeviceUiData(
-    override val common: CommonDeviceUiData,
-    override val wheelCircumference: Int
-) : BikeDeviceUiData { // It implements the new interface
-    companion object {
-        fun fromRawData(rawData: DeviceRawData): SimpleBikeDeviceUiData {
-            return SimpleBikeDeviceUiData(
-                common = createCommonUiData(rawData, R.string.devices_on_bikes_text),
-                wheelCircumference = (rawData.calibrationValue!! * 1000).toInt()
-            )
-        }
-    }
-}
-
-data class BikePowerDeviceUiData(
-    override val common: CommonDeviceUiData,
-    override val wheelCircumference: Int, // It also has this property
-    val powerFeatures: BikePowerFeatures
-) : BikeDeviceUiData { // It implements the same interface
-    companion object {
-        fun fromRawData(rawData: DeviceRawData): BikePowerDeviceUiData {
-            return BikePowerDeviceUiData(
-                common = createCommonUiData(rawData, R.string.devices_on_bikes_text),
-                wheelCircumference = (rawData.calibrationValue!! * 1000).toInt(),
-                powerFeatures = BikePowerFeatures.fromFeatureFlags(rawData.powerFeaturesFlags)
-            )
-        }
-    }
 }
 
 /**

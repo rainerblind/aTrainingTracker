@@ -2,14 +2,14 @@ package com.atrainingtracker.banalservice.ui.devices.editdevice
 
 import android.os.Bundle
 import android.view.View
-import com.atrainingtracker.banalservice.ui.devices.BikePowerDeviceUiData
+import com.atrainingtracker.banalservice.ui.devices.DeviceUiData
 
 /**
  * A highly specialized DialogFragment for editing a Bike Power Meter.
  * It inherits all logic from [BaseEditBikeDeviceFragment] and adds the ability
  * to manage power-specific features.
  */
-class EditBikePowerDeviceFragment : BaseEditBikeDeviceFragment<BikePowerDeviceUiData>() {
+class EditBikePowerDeviceFragment : BaseEditBikeDeviceFragment() {
 
     companion object {
         const val TAG = "EditBikePowerDeviceFragment"
@@ -26,7 +26,7 @@ class EditBikePowerDeviceFragment : BaseEditBikeDeviceFragment<BikePowerDeviceUi
 
     // --- Overriding Methods ---
 
-    override fun bindUi(data: BikePowerDeviceUiData) {
+    override fun bindUi(data: DeviceUiData) {
         // 1. Call the parent to bind all common AND bike-specific views.
         super.bindUi(data)
 
@@ -36,7 +36,7 @@ class EditBikePowerDeviceFragment : BaseEditBikeDeviceFragment<BikePowerDeviceUi
 
         // 2. Now, handle the UI specific to a Bike Power Meter.
         binding.groupPower.root.visibility = View.VISIBLE
-        binding.groupPower.cbDoublePowerBalanceValues.isChecked = data.powerFeatures.doublePowerBalanceValues
+        binding.groupPower.cbDoublePowerBalanceValues.isChecked = data.powerFeatures!!.doublePowerBalanceValues
         binding.groupPower.cbInvertPowerBalanceValues.isChecked = data.powerFeatures.invertPowerBalanceValues
     }
 

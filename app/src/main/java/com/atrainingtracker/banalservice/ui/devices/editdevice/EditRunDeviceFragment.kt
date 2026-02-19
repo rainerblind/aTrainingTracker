@@ -4,14 +4,14 @@ import android.os.Bundle
 import android.view.View
 import androidx.core.widget.doOnTextChanged
 import com.atrainingtracker.R
-import com.atrainingtracker.banalservice.ui.devices.RunDeviceUiData
+import com.atrainingtracker.banalservice.ui.devices.DeviceUiData
 import com.atrainingtracker.banalservice.ui.devices.editdevice.correctcalibrationfactor.CorrectCalibrationFactorRunDialogFragment
 
 /**
  * A specialized DialogFragment for editing the details of a Running device.
  * It inherits all common logic from [BaseEditDeviceFragment].
  */
-class EditRunDeviceFragment : BaseEditDeviceFragment<RunDeviceUiData>() {
+class EditRunDeviceFragment : BaseEditDeviceFragment() {
 
     companion object {
         const val TAG = "EditRunDeviceFragment"
@@ -28,7 +28,7 @@ class EditRunDeviceFragment : BaseEditDeviceFragment<RunDeviceUiData>() {
 
     // --- Overriding Methods from Base Class ---
 
-    override fun bindUi(data: RunDeviceUiData) {
+    override fun bindUi(data: DeviceUiData) {
         // 1. Call the parent to bind all common views first.
         super.bindUi(data)
 

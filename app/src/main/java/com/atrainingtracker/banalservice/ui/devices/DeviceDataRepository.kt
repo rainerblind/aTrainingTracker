@@ -160,41 +160,22 @@ class DeviceDataRepository private constructor(private val application: Applicat
             // We need to compare the finalState with the original state to see what changed.
             val originalState = getDeviceSnapshotById(finalState.id) ?: return@withContext
 
-            // 1. Check if the device name changed.
-            if (originalState.deviceName != finalState.deviceName) {
-                sendDeviceNameChangedBroadcast(finalState.id, finalState.deviceName)
+            if (originalState == finalState) {
+                return@withContext
             }
 
-            // 2. Check if the paired status changed.
+            // TODO: update db
+            // TODO: update LiveData
+
+            // send broadcasts
+            if (originalState.wheelCircumference != finalState.wheelCircumference) {
+                sendCalibrationChangedBroadcast(finalState.id,
+                    finalState.wheelCircumference?.div(1000.0)
+                )
+            }
             if (originalState.isPaired != finalState.isPaired) {
                 sendPairingChangedBroadcast(finalState.id, finalState.isPaired)
             }
-
-            when (finalState) {
-                is SimpleBikeDeviceUiData -> {
-                    if (originalState.wheelCircumference != finalState.wheelCircumference) {
-                        sendCalibrationChangedBroadcast(finalState.id, finalState.wheelCircumference)
-                    }
-                }
-                is RunDeviceUiData -> {
-                    if (originalState.calibrationFactor != finalState.calibrationFactor) {
-                        sendCalibrationChangedBroadcast(finalState.id, finalState.calibrationFactor)
-                    }
-                }
-                else -> {}
-
-            }
-
-            // 3. Check if equipment links changed.
-            if (originalState.linkedEquipment != finalState.linkedEquipment) {
-                sendLinkedEquipmentChangedBroadcast(finalState.id, finalState.linkedEquipment)
-            }
-
-            // 4. Check for calibration changes (wheel circumference or run factor).
-            handleCalibrationChanges(originalState, finalState)
-
-            // 5. Check for power feature flag changes.
-            handlePowerFeatureChanges(originalState, finalState)
         }
     }
 
