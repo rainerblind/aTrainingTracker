@@ -52,13 +52,11 @@ abstract class BaseEditDeviceFragment<T : DeviceUiData> : DialogFragment() {
                 // The save action is now much simpler
                 viewModel.saveChanges(deviceId)
             }
-            .setNegativeButton(R.string.cancel, { _, _ ->
-                viewModel.cancelChanges(deviceId)
-            })
+            .setNegativeButton(R.string.cancel, null)
             .create()
 
         // Load the initial data when the dialog is created
-        viewModel.getDeviceData(deviceId)
+        viewModel.loadInitialDeviceData(deviceId)
 
         // Set up listeners for UI interaction
         setupEventListeners()
@@ -72,7 +70,7 @@ abstract class BaseEditDeviceFragment<T : DeviceUiData> : DialogFragment() {
         val dialogIcon = customTitleView.findViewById<ImageView>(R.id.dialog_icon)
         val dialogTitle = customTitleView.findViewById<TextView>(R.id.dialog_title)
 
-        viewModel.getDeviceData(deviceId).observe(this) { deviceUiData ->
+        viewModel.uiState.observe(this) { deviceUiData ->
             if (deviceUiData != null) {
                 // Set common title
                 dialogIcon.setImageResource(deviceUiData.deviceTypeIconRes)
@@ -98,7 +96,11 @@ abstract class BaseEditDeviceFragment<T : DeviceUiData> : DialogFragment() {
         binding.tvLastSeen.setText(data.lastSeen)
         binding.ivBatteryStatus.setImageResource(data.batteryStatusIconRes)
         binding.tvManufacturer.setText(data.manufacturer)
-        binding.etDeviceName.setText(data.deviceName)
+
+        // only update the name if it has changed
+        if (binding.etDeviceName.text.toString() != data.deviceName) {
+            binding.etDeviceName.setText(data.deviceName)
+        }
 
         // Handle equipment section automatically
         setupEquipmentSection(data, binding.etEquipment)
@@ -109,7 +111,7 @@ abstract class BaseEditDeviceFragment<T : DeviceUiData> : DialogFragment() {
      */
     open fun setupEventListeners() {
         binding.etDeviceName.doOnTextChanged { text, _, _, _ ->
-            viewModel.onDeviceNameChanged(deviceId, text.toString())
+            viewModel.onDeviceNameChanged(text.toString())
         }
     }
 

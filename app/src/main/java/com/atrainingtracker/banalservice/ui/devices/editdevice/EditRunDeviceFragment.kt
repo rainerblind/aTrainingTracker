@@ -36,7 +36,9 @@ class EditRunDeviceFragment : BaseEditDeviceFragment<RunDeviceUiData>() {
         // Make the calibration group visible and configure it for a run sensor.
         binding.groupCalibration.root.visibility = View.VISIBLE
         binding.groupCalibration.layoutCalibrationFactor.hint = getString(R.string.devices_calibration_factor)
-        binding.groupCalibration.etCalibrationFactor.setText(data.calibrationFactor.toString())
+        if (binding.groupCalibration.etCalibrationFactor.text.toString() != data.calibrationFactor.toString()) {
+            binding.groupCalibration.etCalibrationFactor.setText(data.calibrationFactor.toString())
+        }
 
         setupEditCalibrationFactorButton(
             CorrectCalibrationFactorRunDialogFragment.newInstance(
@@ -51,7 +53,7 @@ class EditRunDeviceFragment : BaseEditDeviceFragment<RunDeviceUiData>() {
 
         // 2. Set up listeners for run-specific views.
         binding.groupCalibration.etCalibrationFactor.doOnTextChanged { text, _, _, _ ->
-            viewModel.onCalibrationFactorChanged(deviceId, text.toString())
+            viewModel.onCalibrationFactorChanged(text.toString().toDouble())
         }
     }
 

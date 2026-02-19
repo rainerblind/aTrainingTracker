@@ -2,10 +2,13 @@ package com.atrainingtracker.banalservice.ui.devices
 
 import android.app.Application
 import android.content.Intent
+import androidx.activity.result.launch
+import androidx.compose.animation.core.copy
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.map
+import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.Protocol
@@ -32,14 +35,18 @@ class DevicesViewModel(private val application: Application) : AndroidViewModel(
     // the single source of truth: the raw device list from the repository.
     private val allDevices: LiveData<List<DeviceUiData>> = repository.allDevices
 
-    /**
-     * Gets the LiveData for a specific device and transforms it into the appropriate
-     * display-ready [DeviceUiData] object by observing the repository.
-     */
-    fun getDeviceData(id: Long): LiveData<DeviceUiData?> {
-        return repository.getDeviceById(id)
-    }
+    // The single source of truth for the UI. This holds the CURRENT state of the device being edited.
+    private val _uiState = MutableLiveData<DeviceUiData?>()
+    val uiState: LiveData<DeviceUiData?> = _uiState
 
+    /**
+     * Loads the initial device data from the repository and populates the initial UI state.
+     * This should be called once when the edit dialog is created.
+     */
+    fun loadInitialDeviceData(deviceId: Long) {
+        // No launch block is needed for this synchronous, main-safe call.
+        _uiState.value = repository.getDeviceSnapshotById(deviceId)
+    }
 
     private val _navigateToEditDevice = MutableLiveData<Event<EditDeviceNavigationEvent>>()
     val navigateToEditDevice: LiveData<Event<EditDeviceNavigationEvent>> = _navigateToEditDevice
@@ -180,38 +187,108 @@ class DevicesViewModel(private val application: Application) : AndroidViewModel(
         return displayList
     }
 
+
+
+    // --- Event Handlers from the UI ---
+
+    fun onDeviceNameChanged(newName: String) {
+        updateState { currentState ->
+            // Create a new state object based on the old one, with the name changed.
+            currentState.copyCommon(deviceName = newName)
+        }
+    }
+
+    fun onPairedChanged(isPaired: Boolean) {
+        updateState { currentState ->
+            currentState.copyCommon(isPaired = isPaired)
+        }
+    }
+
+    fun onEquipmentChanged(newEquipment: List<String>) {
+        updateState { currentState ->
+            currentState.copyCommon(linkedEquipment = newEquipment)
+        }
+    }
+
+
+    fun onCalibrationFactorChanged(calibrationValue: Double) {
+        // TODO: add validation before updating the state?
+        updateState { currentState ->
+            when (currentState) {
+                is RunDeviceUiData -> currentState.copy(calibrationFactor = calibrationValue)
+                else -> currentState // No change for other types
+            }
+        }
+    }
+
+    fun onWheelCircumferenceChanged(wheelCircumference: Int) {
+        updateState { currentState ->
+            when (currentState) {
+                is SimpleBikeDeviceUiData -> currentState.copy(wheelCircumference = wheelCircumference)
+                is BikePowerDeviceUiData -> currentState.copy(wheelCircumference = wheelCircumference)
+                else -> currentState
+            }
+        }
+
+    }
+
+    fun onDoublePowerBalanceValuesChanged(isDouble: Boolean) {
+        updateState { currentState ->
+            if (currentState is BikePowerDeviceUiData) {
+                currentState.copy(
+                    powerFeatures = currentState.powerFeatures.copy(doublePowerBalanceValues = isDouble)
+                )
+            } else {
+                currentState
+            }
+        }
+    }
+
+    fun onInvertPowerBalanceValuesChanged(isInverted: Boolean) {
+        updateState { currentState ->
+            if (currentState is BikePowerDeviceUiData) {
+                currentState.copy(
+                    powerFeatures = currentState.powerFeatures.copy(invertPowerBalanceValues = isInverted)
+                )
+            } else {
+                currentState
+            }
+        }
+    }
+
+    /**
+     * A generic helper function to safely update the state.
+     * It ensures we always work with a non-null state and posts the result.
+     */
+    private fun updateState(updateAction: (currentState: DeviceUiData) -> DeviceUiData) {
+        val currentState = _uiState.value
+        if (currentState != null) {
+            val newState = updateAction(currentState)
+
+            // Only update the LiveData if the new state is actually different from the old one.
+            // This avoids/breaks an infinite loop at its source.
+            if (newState != currentState) {
+                _uiState.value = newState
+            }
+        }
+    }
+
+
+    /**
+     * Takes the final state from _uiState and passes it to the repository to be saved permanently.
+     */
+
     fun saveChanges(deviceId: Long) {
-        // TODO: pass to repository...
-    }
+        val finalState = _uiState.value ?: return
 
-    fun cancelChanges(deviceId: Long) {
-        // TODO: implement this...
-    }
-
-    fun onDeviceNameChanged(deviceId: Long, name: String) {
-        // TODO: pass to repository...
-    }
-
-    fun onPairedChanged(deviceId: Long, paired: Boolean) {
-        // TODO: pass to repository...
-    }
-
-    fun onCalibrationFactorChanged(deviceId: Long, calibrationFactor: String) {
-        // TODO: pass to repository...
+        // You would now map the finalState and specializedData to a format the repository can save.
+        // TODO
+        // viewModelScope.launch {
+        //     repository.updateDevice(finalState, deviceId)
+        // }
     }
 
 
-    fun onWheelCircumferenceChanged(deviceId: Long, calibrationFactor: Double?) {
-        // TODO: pass to repository...
-    }
-
-    fun onDoublePowerBalanceValuesChanged(deviceId: Long, doublePowerBalanceValues: Boolean) {
-        // TODO: pass to repository...
-    }
-
-    fun onInvertPowerBalanceValuesChanged(deviceId: Long, invertPowerBalanceValues: Boolean) {
-        // TODO: pass to repository...
-    }
 
 
 

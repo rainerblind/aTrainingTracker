@@ -69,6 +69,18 @@ class DeviceDataRepository private constructor(private val application: Applicat
         }
     }
 
+    /**
+     * Gets a single, non-live snapshot of a device by its ID from the currently loaded list.
+     * This is useful for getting an initial value without establishing observation.
+     * @param id The ID of the device to find.
+     * @return The [DeviceUiData] object if found, otherwise null.
+     */
+    fun getDeviceSnapshotById(id: Long): DeviceUiData? {
+        // Access the current value of the LiveData and find the item.
+        // It's safe to do this on a background thread.
+        return allDevices.value?.find { it.id == id }
+    }
+
     fun getDeviceType(deviceId: Long): DeviceType? {
         return allDevices.value?.find { it.id == deviceId }?.deviceType
     }

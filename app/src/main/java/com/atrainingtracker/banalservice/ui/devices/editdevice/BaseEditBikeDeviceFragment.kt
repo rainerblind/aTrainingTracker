@@ -21,7 +21,9 @@ abstract class BaseEditBikeDeviceFragment<T : BikeDeviceUiData> : BaseEditDevice
         val wheelCircumference = data.wheelCircumference
         binding.groupCalibration.root.visibility = View.VISIBLE
         binding.groupCalibration.layoutCalibrationFactor.hint = getString(R.string.devices_wheel_circumference)
-        binding.groupCalibration.etCalibrationFactor.setText(wheelCircumference.toString())
+        if (binding.groupCalibration.etCalibrationFactor.text.toString() != wheelCircumference.toString()) {
+            binding.groupCalibration.etCalibrationFactor.setText(wheelCircumference.toString())
+        }
 
         setupWheelCircumferenceSpinner()
 
@@ -38,7 +40,7 @@ abstract class BaseEditBikeDeviceFragment<T : BikeDeviceUiData> : BaseEditDevice
         super.setupEventListeners()
 
         binding.groupCalibration.etCalibrationFactor.doOnTextChanged { text, _, _, _ ->
-            viewModel.onWheelCircumferenceChanged(deviceId, text.toString().toDoubleOrNull())
+            viewModel.onWheelCircumferenceChanged(text.toString().toInt())
         }
 
         // TODO: add listeners for specific views
