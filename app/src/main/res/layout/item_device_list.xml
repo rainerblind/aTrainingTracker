@@ -18,8 +18,8 @@
         <!-- icon representing the device type -->
         <ImageView
             android:id="@+id/deviceTypeIcon"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             tools:srcCompat="@drawable/ant_logo" />
@@ -54,12 +54,13 @@
             android:id="@+id/linkedEquipment"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            style="@style/TextAppearance.MaterialComponents.Body2"
+            android:padding="4dp"
+            style="@style/TextAppearance.MaterialComponents.Body1"
             android:maxLines="1"
             android:ellipsize="end"
             app:layout_constraintEnd_toEndOf="@+id/deviceManufacturer"
-            app:layout_constraintStart_toStartOf="@+id/deviceManufacturer"
-            app:layout_constraintTop_toBottomOf="@+id/deviceManufacturer"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/deviceTypeIcon"
             tools:text="Linked to: Bike, Treadmill" />
 
         <!-- right side -->

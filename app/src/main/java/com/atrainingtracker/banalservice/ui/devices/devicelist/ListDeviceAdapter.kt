@@ -57,7 +57,14 @@ class ListDeviceAdapter(
             binding.deviceTypeIcon.setImageResource(device.deviceTypeIconRes)
             binding.batteryStatusIcon.setImageResource(device.batteryStatusIconRes)
             binding.mainValue.text = device.mainValue
-            binding.linkedEquipment.text = device.linkedEquipment.joinToString(", ")
+            if (device.linkedEquipment.isEmpty()) {
+                binding.linkedEquipment.visibility = View.GONE
+            } else {
+                binding.linkedEquipment.text = itemView.context.getString(
+                    R.string.devices_on_short_format,
+                    device.linkedEquipment.joinToString(", ")
+                )
+            }
 
             // show when device was seen the last time
             if (device.lastSeen.isNullOrEmpty()) {
