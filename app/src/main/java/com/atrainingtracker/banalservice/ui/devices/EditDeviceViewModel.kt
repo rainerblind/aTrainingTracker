@@ -1,40 +1,26 @@
 package com.atrainingtracker.banalservice.ui.devices
 
 import android.app.Application
-import android.content.Intent
-import androidx.activity.result.launch
-import androidx.compose.animation.core.copy
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
-import com.atrainingtracker.banalservice.BANALService
-import com.atrainingtracker.banalservice.Protocol
-import com.atrainingtracker.banalservice.devices.DeviceType
-import com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceFilterSpec
-import com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceFilterType
-import com.atrainingtracker.trainingtracker.ui.util.Event
 import kotlinx.coroutines.launch
 
 
-data class EditDeviceNavigationEvent(val deviceId: Long, val deviceType: DeviceType)
 
 /**
- * ViewModel for the EditDeviceDialogFragment as well as the DeviceList.
+ * ViewModel for the EditDeviceDialogFragment
  *
  * It provides the UI with device data and handles user actions like saving.
  * It survives configuration changes and acts as the bridge to the data layer (Repository).
  *
  * @param application The application context, needed to get the repository instance.
  */
-class DevicesViewModel(private val application: Application) : AndroidViewModel(application) {
+class EditDeviceViewModel(private val application: Application) : AndroidViewModel(application) {
 
     private val repository = DeviceDataRepository.Companion.getInstance(application)
-
-    // the single source of truth: the raw device list from the repository.
-    private val allDevices: LiveData<List<DeviceUiData>> = repository.allDevices
 
     // The single source of truth for the UI. This holds the CURRENT state of the device being edited.
     private val _uiState = MutableLiveData<DeviceUiData?>()
@@ -48,41 +34,6 @@ class DevicesViewModel(private val application: Application) : AndroidViewModel(
         // No launch block is needed for this synchronous, main-safe call.
         _uiState.value = repository.getDeviceSnapshotById(deviceId)
     }
-
-    private val _navigateToEditDevice = MutableLiveData<Event<EditDeviceNavigationEvent>>()
-    val navigateToEditDevice: LiveData<Event<EditDeviceNavigationEvent>> = _navigateToEditDevice
-
-    fun onDeviceSelected(deviceId: Long) {
-        val deviceType = repository.getDeviceType(deviceId) // You'll need to create this simple method
-        if (deviceType != null) {
-            _navigateToEditDevice.postValue(Event(EditDeviceNavigationEvent(deviceId, deviceType)))
-        }
-    }
-
-    /**
-     * This is the key public method.
-     * Fragments will call this to get a LiveData stream tailored to their specific needs.
-     */
-    fun getFilteredDevices(spec: DeviceFilterSpec): LiveData<List<DeviceUiData>> {
-        // We apply another .map transformation to our already-transformed list.
-        // This returns a new LiveData stream that will re-filter whenever allListDevices changes.
-        return allDevices.map { devices ->
-            // First, apply the main filter based on the filter type.
-            val primaryFiltered = when (spec.filterType) {
-                DeviceFilterType.PAIRED -> devices.filter { it.isPaired }
-                DeviceFilterType.AVAILABLE -> devices.filter { it.isAvailable }
-                DeviceFilterType.ALL_KNOWN -> devices // No primary filter, return the whole list
-            }
-
-            // Then, apply secondary filters for protocol and device type to the result.
-            primaryFiltered.filter { device ->
-                val protocolMatch = spec.protocol == Protocol.ALL || device.protocol == spec.protocol
-                val deviceTypeMatch = spec.deviceType == DeviceType.ALL || device.deviceType == spec.deviceType
-                protocolMatch && deviceTypeMatch
-            }
-        }
-    }
-
 
 
     //--- dealing with wheel sizes
@@ -190,21 +141,6 @@ class DevicesViewModel(private val application: Application) : AndroidViewModel(
 
     // --- Event Handlers from the UI ---
 
-    // called from the device list
-    // -> immediately update repo.
-    fun onPairedChanged(deviceId: Long, isPaired: Boolean) {
-        viewModelScope.launch {
-            // Find the current state of the device from the repository's cache
-            val currentState = repository.getDeviceSnapshotById(deviceId) ?: return@launch
-
-            // Create a new state with the isPaired property flipped
-            val newState = currentState.copy(isPaired = !currentState.isPaired)
-
-            // Tell the repository to save this new state. The repository will handle
-            // the database update, sending the broadcast, and updating the LiveData.
-            repository.updateDevice(newState)
-        }
-    }
 
     // called from edit device dialog fragment
     // -> update repository only onSave
