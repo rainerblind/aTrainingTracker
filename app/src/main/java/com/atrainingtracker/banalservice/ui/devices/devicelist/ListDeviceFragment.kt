@@ -5,23 +5,15 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.atrainingtracker.banalservice.devices.DeviceType
-import com.atrainingtracker.banalservice.ui.devices.DevicesViewModel
-import com.atrainingtracker.banalservice.ui.devices.editdevice.BaseEditBikeDeviceFragment
-import com.atrainingtracker.banalservice.ui.devices.editdevice.EditBikePowerDeviceFragment
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFragmentFactory
-import com.atrainingtracker.banalservice.ui.devices.editdevice.EditGeneralDeviceFragment
-import com.atrainingtracker.banalservice.ui.devices.editdevice.EditRunDeviceFragment
-import com.atrainingtracker.banalservice.ui.devices.editdevice.EditSimpleBikeDeviceFragment
 import com.atrainingtracker.databinding.FragmentDeviceListBinding
 
 class ListDeviceFragment : Fragment() {
 
-    private val viewModel: DevicesViewModel by viewModels()
+    private val viewModel: DeviceListViewModel by viewModels()
 
 
     private lateinit var filterSpec: DeviceFilterSpec
