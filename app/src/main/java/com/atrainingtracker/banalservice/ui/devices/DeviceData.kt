@@ -26,245 +26,137 @@ data class DeviceRawData(
     val mainValue: String
 )
 
+// Data class holding all the common data for the UI
+data class CommonDeviceUiData(
+    val id: Long,
+    val protocol: Protocol,
+    val deviceType: DeviceType,
+    val deviceTypeIconRes: Int,
+    val lastSeen: String?,
+    val batteryStatusIconRes: Int,
+    val manufacturer: String,
+    val deviceName: String,
+    val isAvailable: Boolean,
+    val isPaired: Boolean,
+    val onEquipmentResId: Int,
+    val linkedEquipment: List<String>,
+    val availableEquipment: List<String>,
+    val mainValue: String
+)
+
 
 /**
  * Base class for the device data for the UI
  */
 sealed interface DeviceUiData {
-    val id: Long
-    val protocol: Protocol
-    val deviceType: DeviceType
-    val deviceTypeIconRes: Int
-    val lastSeen: String?
-    val batteryStatusIconRes: Int
-    val manufacturer: String
-    val deviceName: String
-    val isAvailable: Boolean
-    val isPaired: Boolean
-    val onEquipmentResId: Int
-    val linkedEquipment: List<String>
-    val availableEquipment: List<String>
+    val common: CommonDeviceUiData
 
-    val mainValue: String
+    // Delegate properties for easy access.
+    val id: Long get() = common.id
+    val protocol: Protocol get() = common.protocol
+    val deviceType: DeviceType get() = common.deviceType
+    val deviceTypeIconRes: Int get() = common.deviceTypeIconRes
+    val lastSeen: String? get() = common.lastSeen
+    val batteryStatusIconRes: Int get() = common.batteryStatusIconRes
+    val manufacturer: String get() = common.manufacturer
+    val deviceName: String get() = common.deviceName
+    val isAvailable: Boolean get() = common.isAvailable
+    val isPaired: Boolean get() = common.isPaired
+    val onEquipmentResId: Int get() = common.onEquipmentResId
+    val linkedEquipment: List<String> get() = common.linkedEquipment
+    val availableEquipment: List<String> get() = common.availableEquipment
+    val mainValue: String get() = common.mainValue
 }
 
 interface UiDeviceDataFactory<T: DeviceUiData> {
     fun fromRawData(rawData: DeviceRawData): T
 }
 
+// Helper to create the common data part from raw data.
+fun createCommonUiData(rawData: DeviceRawData, onEquipmentResId: Int = R.string.devices_on_equipment_text): CommonDeviceUiData {
+    return CommonDeviceUiData(
+        id = rawData.id,
+        protocol = rawData.protocol,
+        deviceType = rawData.deviceType,
+        deviceTypeIconRes = getIconId(rawData.deviceType, rawData.protocol),
+        lastSeen = rawData.lastSeen,
+        batteryStatusIconRes = getBatteryStatusIconRes(rawData.batteryPercentage),
+        manufacturer = rawData.manufacturer,
+        deviceName = rawData.deviceName,
+        isPaired = rawData.isPaired,
+        isAvailable = rawData.isAvailable,
+        onEquipmentResId = onEquipmentResId,
+        linkedEquipment = rawData.linkedEquipment,
+        availableEquipment = rawData.availableEquipment,
+        mainValue = rawData.mainValue
+    )
+}
+
 fun raw2UiDeviceData(rawData: DeviceRawData): DeviceUiData {
     return when (rawData.deviceType) {
         DeviceType.RUN_SPEED -> RunDeviceUiData.fromRawData(rawData)
         DeviceType.BIKE_SPEED, DeviceType.BIKE_SPEED_AND_CADENCE -> BikeDeviceUiData.fromRawData(rawData)
-        DeviceType.BIKE_POWER -> {
-            val bikePowerFeatures = BikePowerFeatures.fromFeatureFlags(rawData.powerFeaturesFlags)
-            if (bikePowerFeatures.wheelRevolutionDataSupported
-                || bikePowerFeatures.wheelDistanceDataSupported
-                || bikePowerFeatures.wheelSpeedDataSupported) {
-                BikePowerWithWheelCircumferenceDeviceUiData.fromRawData(rawData)
-            }
-            else {
-                BikePowerWithoutWheelCircumferenceDeviceUiData.fromRawData(rawData)
-            }
-        }
+        DeviceType.BIKE_POWER -> BikePowerDeviceUiData.fromRawData(rawData)
+        DeviceType.BIKE_CADENCE -> GeneralDeviceUiData.fromRawData(rawData, R.string.devices_on_bikes_text)
         else -> GeneralDeviceUiData.fromRawData(rawData)
     }
 }
 
 data class GeneralDeviceUiData (
-    override val id: Long,
-    override val protocol: Protocol,
-    override val deviceType: DeviceType,
-    override val deviceTypeIconRes: Int,
-    override val lastSeen: String?,
-    override val batteryStatusIconRes: Int,
-    override val manufacturer: String,
-    override val deviceName: String,
-    override val isPaired: Boolean,
-    override val isAvailable: Boolean,
-    override val onEquipmentResId: Int,
-    override val linkedEquipment: List<String>,
-    override val availableEquipment: List<String>,
-    override val mainValue: String,
+    override val common: CommonDeviceUiData
 ) : DeviceUiData {
     companion object: UiDeviceDataFactory<GeneralDeviceUiData> {
         override fun fromRawData(rawData: DeviceRawData): GeneralDeviceUiData {
-            return GeneralDeviceUiData(
-                id = rawData.id,
-                protocol = rawData.protocol,
-                deviceType = rawData.deviceType,
-                deviceTypeIconRes = getIconId(rawData.deviceType, rawData.protocol),
-                lastSeen = rawData.lastSeen,
-                batteryStatusIconRes = getBatteryStatusIconRes(rawData.batteryPercentage),
-                manufacturer = rawData.manufacturer,
-                deviceName = rawData.deviceName,
-                isPaired = rawData.isPaired,
-                isAvailable = rawData.isAvailable,
-                onEquipmentResId = R.string.devices_on_equipment_text,
-                linkedEquipment = rawData.linkedEquipment,
-                availableEquipment = rawData.availableEquipment,
-                mainValue = rawData.mainValue
+            return GeneralDeviceUiData(createCommonUiData(rawData, R.string.devices_on_equipment_text)
             )
         }
+
+        fun fromRawData(rawData: DeviceRawData, onEquipmentResId: Int): GeneralDeviceUiData {
+            return GeneralDeviceUiData(createCommonUiData(rawData, onEquipmentResId)
+            )
+        }
+
     }
 }
 
-data class RunDeviceUiData (
-    override val id: Long,
-    override val protocol: Protocol,
-    override val deviceType: DeviceType,
-    override val deviceTypeIconRes: Int,
-    override val lastSeen: String?,
-    override val batteryStatusIconRes: Int,
-    override val manufacturer: String,
-    override val deviceName: String,
-    override val isPaired: Boolean,
-    override val isAvailable: Boolean,
-    override val onEquipmentResId: Int,
-    override val linkedEquipment: List<String>,
-    override val availableEquipment: List<String>,
-    override val mainValue: String,
-    val calibrationFactor: Double  // calibration factor an abstract value
+data class RunDeviceUiData(
+    override val common: CommonDeviceUiData,
+    val calibrationFactor: Double
 ) : DeviceUiData {
-    companion object: UiDeviceDataFactory<RunDeviceUiData> {
+    companion object : UiDeviceDataFactory<RunDeviceUiData> {
         override fun fromRawData(rawData: DeviceRawData): RunDeviceUiData {
             return RunDeviceUiData(
-                id = rawData.id,
-                protocol = rawData.protocol,
-                deviceType = rawData.deviceType,
-                deviceTypeIconRes = getIconId(rawData.deviceType, rawData.protocol),
-                lastSeen = rawData.lastSeen,
-                batteryStatusIconRes = getBatteryStatusIconRes(rawData.batteryPercentage),
-                manufacturer = rawData.manufacturer,
-                deviceName = rawData.deviceName,
-                isPaired = rawData.isPaired,
-                isAvailable = rawData.isAvailable,
-                onEquipmentResId = R.string.devices_on_shoes_text,
-                linkedEquipment = rawData.linkedEquipment,
-                availableEquipment = rawData.availableEquipment,
-                mainValue = rawData.mainValue,
+                common = createCommonUiData(rawData, R.string.devices_on_shoes_text),
                 calibrationFactor = rawData.calibrationValue!!
             )
         }
     }
 }
 
-data class BikeDeviceUiData (
-    override val id: Long,
-    override val protocol: Protocol,
-    override val deviceType: DeviceType,
-    override val deviceTypeIconRes: Int,
-    override val lastSeen: String?,
-    override val batteryStatusIconRes: Int,
-    override val manufacturer: String,
-    override val deviceName: String,
-    override val isAvailable: Boolean,
-    override val isPaired: Boolean,
-    override val onEquipmentResId: Int,
-    override val linkedEquipment: List<String>,
-    override val availableEquipment: List<String>,
-    override val mainValue: String,
+data class BikeDeviceUiData(
+    override val common: CommonDeviceUiData,
     val wheelCircumference: Int
 ) : DeviceUiData {
-    companion object: UiDeviceDataFactory<BikeDeviceUiData> {
+    companion object : UiDeviceDataFactory<BikeDeviceUiData> {
         override fun fromRawData(rawData: DeviceRawData): BikeDeviceUiData {
             return BikeDeviceUiData(
-                id = rawData.id,
-                protocol = rawData.protocol,
-                deviceType = rawData.deviceType,
-                deviceTypeIconRes = getIconId(rawData.deviceType, rawData.protocol),
-                lastSeen = rawData.lastSeen,
-                batteryStatusIconRes = getBatteryStatusIconRes(rawData.batteryPercentage),
-                manufacturer = rawData.manufacturer,
-                deviceName = rawData.deviceName,
-                isPaired = rawData.isPaired,
-                isAvailable = rawData.isAvailable,
-                onEquipmentResId = R.string.devices_on_bikes_text,
-                linkedEquipment = rawData.linkedEquipment,
-                availableEquipment = rawData.availableEquipment,
-                mainValue = rawData.mainValue,
+                common = createCommonUiData(rawData, R.string.devices_on_bikes_text),
                 wheelCircumference = (rawData.calibrationValue!! * 1000).toInt()
             )
         }
     }
 }
 
-data class BikePowerWithWheelCircumferenceDeviceUiData (
-    override val id: Long,
-    override val protocol: Protocol,
-    override val deviceType: DeviceType,
-    override val deviceTypeIconRes: Int,
-    override val lastSeen: String?,
-    override val batteryStatusIconRes: Int,
-    override val manufacturer: String,
-    override val deviceName: String,
-    override val isAvailable: Boolean,
-    override val isPaired: Boolean,
-    override val onEquipmentResId: Int,
-    override val linkedEquipment: List<String>,
-    override val availableEquipment: List<String>,
-    override val mainValue: String,
+data class BikePowerDeviceUiData(
+    override val common: CommonDeviceUiData,
     val wheelCircumference: Int,
     val powerFeatures: BikePowerFeatures
 ) : DeviceUiData {
-    companion object: UiDeviceDataFactory<BikePowerWithWheelCircumferenceDeviceUiData> {
-        override fun fromRawData(rawData: DeviceRawData): BikePowerWithWheelCircumferenceDeviceUiData {
-            return BikePowerWithWheelCircumferenceDeviceUiData(
-                id = rawData.id,
-                protocol = rawData.protocol,
-                deviceType = rawData.deviceType,
-                deviceTypeIconRes = getIconId(rawData.deviceType, rawData.protocol),
-                lastSeen = rawData.lastSeen,
-                batteryStatusIconRes = getBatteryStatusIconRes(rawData.batteryPercentage),
-                manufacturer = rawData.manufacturer,
-                deviceName = rawData.deviceName,
-                isPaired = rawData.isPaired,
-                isAvailable = rawData.isAvailable,
-                onEquipmentResId = R.string.devices_on_bikes_text,
-                linkedEquipment = rawData.linkedEquipment,
-                availableEquipment = rawData.availableEquipment,
-                mainValue = rawData.mainValue,
+    companion object : UiDeviceDataFactory<BikePowerDeviceUiData> {
+        override fun fromRawData(rawData: DeviceRawData): BikePowerDeviceUiData {
+            return BikePowerDeviceUiData(
+                common = createCommonUiData(rawData, R.string.devices_on_bikes_text),
                 wheelCircumference = (rawData.calibrationValue!! * 1000).toInt(),
-                powerFeatures = BikePowerFeatures.fromFeatureFlags(rawData.powerFeaturesFlags)
-            )
-        }
-    }
-}
-
-data class BikePowerWithoutWheelCircumferenceDeviceUiData (
-    override val id: Long,
-    override val protocol: Protocol,
-    override val deviceType: DeviceType,
-    override val deviceTypeIconRes: Int,
-    override val lastSeen: String?,
-    override val batteryStatusIconRes: Int,
-    override val manufacturer: String,
-    override val deviceName: String,
-    override val isAvailable: Boolean,
-    override val isPaired: Boolean,
-    override val onEquipmentResId: Int,
-    override val linkedEquipment: List<String>,
-    override val availableEquipment: List<String>,
-    override val mainValue: String,
-    val powerFeatures: BikePowerFeatures
-) : DeviceUiData {
-    companion object: UiDeviceDataFactory<BikePowerWithoutWheelCircumferenceDeviceUiData> {
-        override fun fromRawData(rawData: DeviceRawData): BikePowerWithoutWheelCircumferenceDeviceUiData {
-            return BikePowerWithoutWheelCircumferenceDeviceUiData(
-                id = rawData.id,
-                protocol = rawData.protocol,
-                deviceType = rawData.deviceType,
-                deviceTypeIconRes = getIconId(rawData.deviceType, rawData.protocol),
-                lastSeen = rawData.lastSeen,
-                batteryStatusIconRes = getBatteryStatusIconRes(rawData.batteryPercentage),
-                manufacturer = rawData.manufacturer,
-                deviceName = rawData.deviceName,
-                isPaired = rawData.isPaired,
-                isAvailable = rawData.isAvailable,
-                onEquipmentResId = R.string.devices_on_bikes_text,
-                linkedEquipment = rawData.linkedEquipment,
-                availableEquipment = rawData.availableEquipment,
-                mainValue = rawData.mainValue,
                 powerFeatures = BikePowerFeatures.fromFeatureFlags(rawData.powerFeaturesFlags)
             )
         }
