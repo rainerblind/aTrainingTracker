@@ -626,6 +626,35 @@ public class DevicesDatabaseManager {
                 null);
     }
 
+    public long getSpeedAndLocationGPSDeviceId() {
+        return getSmartphoneDeviceId(DeviceType.SPEED_AND_LOCATION_GPS);
+    }
+
+    public long getSpeedAndLocationNetworkDeviceId() {
+        return getSmartphoneDeviceId(DeviceType.SPEED_AND_LOCATION_NETWORK);
+    }
+
+    public long getSpeedAndLocationGoogleFusedDeviceId() {
+        return getSmartphoneDeviceId(DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED);
+    }
+
+    protected long getSmartphoneDeviceId(DeviceType deviceType) {
+        Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
+                new String[]{DevicesDbHelper.C_ID},
+                DevicesDbHelper.PROTOCOL + "=? AND " + DevicesDbHelper.DEVICE_TYPE + "=?",
+                new String[]{Protocol.SMARTPHONE.name(), deviceType.name()},
+                null,
+                null,
+                null);
+        long deviceId = -1;
+        if (cursor.moveToFirst()) {
+            deviceId = cursor.getLong(cursor.getColumnIndex(DevicesDbHelper.C_ID));
+        }
+        cursor.close();
+
+        return  deviceId;
+    }
+
 
     public static class DeviceIdAndNameLists {
         public final LinkedList<Long> deviceIds;
