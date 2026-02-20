@@ -197,7 +197,7 @@ class DeviceDataRepository private constructor(private val application: Applicat
 
             if (refreshedRawDeviceData != null) {
                 val currentList = _allDevices.value ?: emptyList()
-                val refreshedUiDeviceData = raw2UiDeviceData(refreshedRawDeviceData)
+                val refreshedUiDeviceData = raw2UiDeviceData(refreshedRawDeviceData, application)
                 val updatedList = currentList.map { if (it.id == id) refreshedUiDeviceData else it }
                 _allDevices.postValue(updatedList)
             }
@@ -214,7 +214,7 @@ class DeviceDataRepository private constructor(private val application: Applicat
                 if (c.moveToFirst()) {
                     do {
                         val rawData = mapper.getDeviceData(c)
-                        uiDeviceDataList.add(raw2UiDeviceData(rawData))
+                        uiDeviceDataList.add(raw2UiDeviceData(rawData, application))
                     } while (c.moveToNext())
                 }
             }

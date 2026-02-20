@@ -1,5 +1,9 @@
 package com.atrainingtracker.banalservice.ui.devices
 
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.BatteryManager
 import androidx.compose.animation.core.copy
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.Protocol
@@ -57,7 +61,7 @@ data class DeviceUiData(
 )
 
 // --- THE NEW, SIMPLIFIED FACTORY ---
-fun raw2UiDeviceData(rawData: DeviceRawData): DeviceUiData {
+fun raw2UiDeviceData(rawData: DeviceRawData, context: Context): DeviceUiData {
     // Determine the specialized values first
     val wheelCircumference = when (rawData.deviceType) {
         DeviceType.BIKE_SPEED, DeviceType.BIKE_SPEED_AND_CADENCE, DeviceType.BIKE_POWER ->
@@ -82,6 +86,13 @@ fun raw2UiDeviceData(rawData: DeviceRawData): DeviceUiData {
         else -> R.string.devices_on_equipment_text
     }
 
+    // for smartphone devices, we get the battery percentage from the system
+    val batteryPercentage = when (rawData.protocol) {
+        Protocol.SMARTPHONE -> getSmartphoneBatteryPercentage(context)
+        else -> rawData.batteryPercentage
+    }
+
+
     // Now, construct the single DeviceUiData object
     return DeviceUiData(
         id = rawData.id,
@@ -98,13 +109,33 @@ fun raw2UiDeviceData(rawData: DeviceRawData): DeviceUiData {
         powerFeaturesFlags = rawData.powerFeaturesFlags,
 
         deviceTypeIconRes = getIconId(rawData.deviceType, rawData.protocol),
-        batteryStatusIconRes = getBatteryStatusIconRes(rawData.batteryPercentage),
+        batteryStatusIconRes = getBatteryStatusIconRes(batteryPercentage),
         onEquipmentResId = onEquipmentResId,
 
         wheelCircumference = wheelCircumference,
         calibrationFactor = calibrationFactor,
         powerFeatures = powerFeatures
     )
+}
+
+// Helper to get the smartphone battery percentage
+fun getSmartphoneBatteryPercentage(context: Context): Int {
+    // Create an IntentFilter for battery changed events.
+    val intentFilter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+    // Register a null receiver to get the sticky intent.
+    val batteryStatus: Intent? = context.registerReceiver(null, intentFilter)
+
+    // Get the current battery level and the scale.
+    val level: Int = batteryStatus?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
+    val scale: Int = batteryStatus?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
+
+    // If either value is invalid, return an error code (e.g., -1).
+    if (level == -1 || scale == -1 || scale == 0) {
+        return -1
+    }
+
+    // Calculate the percentage.
+    return (level / scale.toFloat() * 100).toInt()
 }
 
 /**
