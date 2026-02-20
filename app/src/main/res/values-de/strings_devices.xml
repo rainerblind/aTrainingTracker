@@ -4,16 +4,14 @@
     <string name="devices_button_unpair">Entkoppeln</string>
 
     <!-- device_choice_row -->
-    <string name="DeviceChoiceRowDeviceNameText">Unbekannt</string>
+    <string name="devices_unknown">Unbekannt</string>
 
-    <!-- device_list_row -->
-    <string name="DeviceListRowDeviceNameText">Unbekannt</string>
     <!-- device_list -->
-    <string name="myRemoteDevices">Meine Sensoren</string>
+    <string name="devices_myRemoteDevices">Meine Sensoren</string>
     <!-- <string name="knownDevices">known devices</string> -->
-    <string name="newDevices">Neue Sensoren</string>
-    <string name="searchingForDevice">suche nach %1$s %2$s Sensoren</string>
-    <string name="searchingForRemoteDevice">suche nach ANT+ Herzfrequenz Sensoren</string>
+    <string name="devices_newDevices">Neue Sensoren</string>
+    <string name="devices_searchingForDevice">suche nach %1$s %2$s Sensoren</string>
+    <string name="devicessearchingForRemoteDevice">suche nach ANT+ Herzfrequenz Sensoren</string>
 
     <string name="devices_lastSeenText">Zum letzten mal gesehen</string>
     <string name="devices_now">jetzt</string>
@@ -23,12 +21,12 @@
     <string name="devices_correct_calibration_factor_title_run">Kalibrierungsfaktor anpassen</string>
     <string name="devices_correct_calibration_explanation_bike">Hier kann der Radumfang für diesen Sensors korrigiert werden.  Diese Korrektur basieret auf einer mit dem aktuellen Radumfang gemessenen Strecke und deren korrektem Wert (z.B. die Länge eines Rennens).</string>
     <string name="devices_correct_calibration_explanation_run">Hier kann der Kalibrierungsfaktor für diesen Sensors korrigiert werden.  Diese Korrektur basiert auf einer mit den aktuellen Einstellungen gemessenen Strecke und deren korrektem Wert (z.B. die Länge eines Rennens).</string>
-    <string name="measuredDistanceText">gemessene Strecke:</string>
-    <string name="correctDistanceText">korrekte Strecke:</string>
+    <string name="devices_measuredDistanceText">gemessene Strecke:</string>
+    <string name="devices_correctDistanceText">korrekte Strecke:</string>
     <!-- edit_device_* -->
-    <string name="deviceNameText">Sensorname</string>
-    <string name="deviceTypeText">Sensortyp</string>
-    <string name="manufacturerText">Hersteller</string>
+    <string name="devices_deviceNameText">Sensorname</string>
+    <string name="devices_deviceTypeText">Sensortyp</string>
+    <string name="devices_manufacturerText">Hersteller</string>
     <string name="devices_on_equipment_text">an Ausrüstung</string>
     <string name="devices_on_bikes_text">an Rädern</string>
     <string name="devices_on_shoes_text">an Schuhen</string>
@@ -36,7 +34,7 @@
 
     <string name="devices_calibration_factor">Kalibrierungsfaktor</string>
     <string name="devices_wheel_circumference">Radumfang</string>
-    <string name="Set_calibration">%1$s berechnen</string>
+    <string name="devices_set_calibration">%1$s berechnen</string>
 
     <!--     <string name="textDeviceNumber">device Number</string> -->
     <!--     <string name="textPaired">paired</string> -->
@@ -47,19 +45,19 @@
     <!--     <string name="textEditDeviceOk">OK</string> -->
 
     <!-- edit_device_bike_cadence -->
-    <string name="editDeviceBikeCadenceDeviceNameValue">Garmin Frequenz</string>
-    <string name="editDeviceBikeCadenceDeviceTypeValue">Frequenz</string>
+    <string name="devices_editDeviceBikeCadenceDeviceNameValue">Garmin Frequenz</string>
+    <string name="devices_editDeviceBikeCadenceDeviceTypeValue">Frequenz</string>
 
     <!-- edit_device_bike -->
-    <string name="editDeviceBikeDeviceNameValue">Garmin Geschwindigkeit</string>
-    <string name="editDeviceBikeDeviceTypeValue">Rad Geschwindigkeit</string>
-    <string name="editDeviceBikeEditCalibrationFactorBasedOnDistance">Radumfang korrigieren</string>
+    <string name="devices_editDeviceBikeDeviceNameValue">Garmin Geschwindigkeit</string>
+    <string name="devices_editDeviceBikeDeviceTypeValue">Rad Geschwindigkeit</string>
+    <string name="devices_editDeviceBikeEditCalibrationFactorBasedOnDistance">Radumfang korrigieren</string>
     <!-- edit_device_run -->
-    <string name="editDeviceRunDeviceNameValue">Garmin Laufsensor</string>
-    <string name="editDeviceRunDeviceTypeValue">Laufsensor</string>
-    <string name="editDeviceRunEditCalibrationFactorBasedOnDistance">korrigieren</string>
+    <string name="devices_editDeviceRunDeviceNameValue">Garmin Laufsensor</string>
+    <string name="devices_editDeviceRunDeviceTypeValue">Laufsensor</string>
+    <string name="devices_editDeviceRunEditCalibrationFactorBasedOnDistance">korrigieren</string>
     <!-- edit_device_generic -->
-    <string name="editDeviceGenericDeviceNameValue">Generischer Sensor</string>
-    <string name="editDeviceGenericDeviceTypeValue">Generisch</string>
+    <string name="devices_editDeviceGenericDeviceNameValue">Generischer Sensor</string>
+    <string name="devices_editDeviceGenericDeviceTypeValue">Generisch</string>
 
 </resources>

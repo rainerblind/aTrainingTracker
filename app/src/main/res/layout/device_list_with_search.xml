@@ -38,7 +38,7 @@
             android:id="@+id/tvSearchingForRemoteDevice"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:text="@string/searchingForRemoteDevice"
+            android:text="@string/devicessearchingForRemoteDevice"
             android:textSize="20sp" />
     </LinearLayout>
 

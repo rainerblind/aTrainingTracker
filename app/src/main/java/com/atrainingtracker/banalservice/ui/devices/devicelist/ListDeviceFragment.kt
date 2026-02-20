@@ -46,7 +46,7 @@ class ListDeviceFragment : Fragment() {
         else {
             binding.llSearchLayout.visibility = View.VISIBLE
             binding.tvSearchingForRemoteDevice.text = getString(
-                R.string.searchingForDevice,
+                R.string.devices_searchingForDevice,
                 getString(UIHelper.getNameId(filterSpec.protocol)),
                 getString(UIHelper.getNameId(filterSpec.deviceType))
             )
