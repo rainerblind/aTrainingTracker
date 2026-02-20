@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Strings for the Devices Feature -->
+    <!-- TODO: check usages... -->
+    <!-- TODO: rename to start with devices_ -->
+
+    <string name="devices_button_pair">Pair</string>
+    <string name="devices_button_unpair">Unpair</string>
+
+    <!-- device_choice_row -->
+    <string name="devices_unknown">Unknown</string>
+
+    <!-- device_list_row -->
+    <string name="devices_no_main_value" translatable="false">(--)</string>
+    <string name="DeviceListRowEquipmentText" translatable="false" />
+
+    <!-- device_list -->
+    <string name="devices_myRemoteDevices">My Devices</string>
+    <!-- <string name="knownDevices">known devices</string> -->
+    <string name="devices_newDevices">New Devices</string>
+    <string name="devices_searchingForDevice">searching for %1$s %2$s devices</string>
+    <string name="devicessearchingForRemoteDevice">searching for ANT+ Heart Rate devices</string>
+
+    <string name="devices_lastSeenText">last seen</string>
+    <string name="devices_lastSeenDefaultValue" translatable="false">2014-10-18 09:10:11</string>
+    <string name="devices_now">now</string>
+
+
+    <!-- dialog_set_calibration_factor -->
+    <string name="devices_correct_calibration_factor_title_bike">Correct wheel circumference</string>
+    <string name="devices_correct_calibration_factor_title_run">Correct calibration factor</string>
+    <string name="devices_correct_calibration_explanation_bike">Here, you can correct the wheel circumference for this sensor.  The corrected wheel circumference is calculated based on the distance you measured with the current wheel circumference and the correct distance (e.g. you know the exact distance from race report).</string>
+    <string name="devices_correct_calibration_explanation_run">Here, you can correct the calibration factor for this sensor.  The corrected value is calculated based on the distance you measured with the current value and the correct distance (e.g. the distance of some race).</string>
+    <string name="devices_measuredDistanceText">measured distance:</string>
+    <string name="devices_correctDistanceText">correct distance:</string>
+    <string name="measuredDistanceValue" translatable="false">100</string>
+    <string name="trueDistanceValue" translatable="false">100</string>
+    <string name="calibrationFactor_Value" translatable="false">1.0</string>
+
+    <!-- edit_device_* -->
+    <string name="devices_deviceNameText">device name</string>
+    <string name="devices_deviceTypeText">device type</string>
+    <string name="devices_manufacturerText">manufacturer</string>
+    <string name="devices_on_equipment_text">on equipment</string>
+    <string name="devices_on_bikes_text">on bikes</string>
+    <string name="devices_on_shoes_text">on shoes</string>
+    <string name="devices_on_short_format">on: %1$s</string>
+    <string name="manufacturerValue" translatable="false">Garmin</string>
+    <!--  somewhere else, todo: make one -->
+    <string name="devices_calibration_factor">Calibration Factor</string>
+    <string name="devices_wheel_circumference">Wheel Circumference</string>
+    <string name="devices_set_calibration">Set %1$s</string>
+
+    <!--     <string name="textDeviceNumber">device Number</string> -->
+    <!--     <string name="textPaired">paired</string> -->
+    <!--     <string name="textCalibrationFactor">calibration factor</string> -->
+    <!--     <string name="textDeviceName">device name</string> -->
+    <!--     <string name="textDeviceOwner">device owner</string> -->
+    <!--     <string name="textEquipment">Equipment</string> -->
+    <!--     <string name="textEditDeviceOk">OK</string> -->
+
+    <!-- edit_device_bike_cadence -->
+    <string name="devices_editDeviceBikeCadenceDeviceNameValue">Garmin cadence</string>
+    <string name="devices_editDeviceBikeCadenceDeviceTypeValue">Cadence</string>
+
+    <!-- edit_device_bike -->
+    <string name="devices_editDeviceBikeDeviceNameValue">Garmin speed</string>
+    <string name="devices_editDeviceBikeDeviceTypeValue">Bike Speed</string>
+    <string name="devices_editDeviceBikeEditCalibrationFactorBasedOnDistance">correct wheel circumference</string>
+    <string name="editDeviceBikeCalibrationFactorValue" translatable="false">2.01</string>
+
+    <!-- edit_device_run -->
+    <string name="devices_editDeviceRunDeviceNameValue">Garmin run</string>
+    <string name="devices_editDeviceRunDeviceTypeValue">Run Speed</string>
+    <string name="devices_editDeviceRunEditCalibrationFactorBasedOnDistance">correct</string>
+    <string name="editDeviceRunCalibrationFactorValue" translatable="false">1.0</string>
+
+    <!-- edit_device_generic -->
+    <string name="devices_editDeviceGenericDeviceNameValue">Generic Device</string>
+    <string name="devices_editDeviceGenericDeviceTypeValue">Generic</string>
+
+</resources>

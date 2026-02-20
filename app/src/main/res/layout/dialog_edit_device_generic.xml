@@ -12,15 +12,6 @@
         android:orientation="vertical"
         android:padding="8dp">
 
-        <!-- Paired Checkbox -->
-        <CheckBox
-            android:id="@+id/cbPaired"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="@string/pairedText"
-            android:textAppearance="?android:attr/textAppearanceMedium" />
-
         <!-- Non-editable section with light blue background -->
         <LinearLayout
             android:layout_width="match_parent"
@@ -48,7 +39,7 @@
                         android:layout_height="wrap_content"
                         android:clickable="false"
                         android:focusable="false"
-                        android:hint="@string/lastSeenText"
+                        android:hint="@string/devices_lastSeenText"
                         android:singleLine="true"
                         tools:text="10. Feb 2026 14:32" />
                 </com.google.android.material.textfield.TextInputLayout>
@@ -81,7 +72,7 @@
                     android:layout_height="wrap_content"
                     android:clickable="false"
                     android:focusable="false"
-                    android:hint="@string/manufacturerText"
+                    android:hint="@string/devices_manufacturerText"
                     tools:text="Garmin" />
             </com.google.android.material.textfield.TextInputLayout>
         </LinearLayout>
@@ -98,7 +89,7 @@
                 android:id="@+id/etDeviceName"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/deviceNameText" />
+                android:hint="@string/devices_deviceNameText" />
         </com.google.android.material.textfield.TextInputLayout>
 
 
@@ -122,7 +113,7 @@
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="@string/onBikesText">
+            android:hint="@string/devices_on_bikes_text">
 
             <AutoCompleteTextView
                 android:id="@+id/etEquipment"

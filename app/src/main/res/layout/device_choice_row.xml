@@ -38,6 +38,6 @@
         android:layout_height="fill_parent"
         android:gravity="center_vertical"
         android:paddingLeft="5sp"
-        android:text="@string/DeviceChoiceRowDeviceNameText"
+        android:text="@string/devices_unknown"
         android:textAppearance="?android:attr/textAppearanceLarge" />
 </LinearLayout>
