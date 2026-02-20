@@ -8,6 +8,9 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.banalservice.helpers.UIHelper
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFragmentFactory
 import com.atrainingtracker.databinding.FragmentDeviceListBinding
 
@@ -34,6 +37,21 @@ class ListDeviceFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View {
         binding = FragmentDeviceListBinding.inflate(inflater, container, false)
+
+        // hide or show the search layout based on the filter spec
+        if (filterSpec.deviceType == DeviceType.ALL
+            || filterSpec.filterType != DeviceFilterType.AVAILABLE) {
+            binding.llSearchLayout.visibility = View.GONE
+        }
+        else {
+            binding.llSearchLayout.visibility = View.VISIBLE
+            binding.tvSearchingForRemoteDevice.text = getString(
+                R.string.searchingForDevice,
+                getString(UIHelper.getNameId(filterSpec.protocol)),
+                getString(UIHelper.getNameId(filterSpec.deviceType))
+            )
+        }
+
         return binding.root
     }
 
