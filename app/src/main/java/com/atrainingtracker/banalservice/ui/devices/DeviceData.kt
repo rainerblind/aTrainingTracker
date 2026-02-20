@@ -20,11 +20,11 @@ data class DeviceRawData(
     val deviceName: String,
     val isPaired: Boolean,
     val isAvailable: Boolean,
+    val mainValue: String?,
     val calibrationValue: Double?,
     val linkedEquipment: List<String>,
     val availableEquipment: List<String>,
-    val powerFeaturesFlags: Int?,
-    val mainValue: String
+    val powerFeaturesFlags: Int?
 )
 
 /**
@@ -38,12 +38,12 @@ data class DeviceUiData(
     val lastSeen: String?,
     val manufacturer: String,
     val deviceName: String,
-    val isAvailable: Boolean,
     val isPaired: Boolean,
+    val isAvailable: Boolean,
+    val mainValue: String?,
     val linkedEquipment: List<String>,
     val availableEquipment: List<String>,
     val powerFeaturesFlags: Int?,
-    val mainValue: String,
 
     // derived from the raw data
     val deviceTypeIconRes: Int,
@@ -92,10 +92,10 @@ fun raw2UiDeviceData(rawData: DeviceRawData): DeviceUiData {
         deviceName = rawData.deviceName,
         isPaired = rawData.isPaired,
         isAvailable = rawData.isAvailable,
+        mainValue = rawData.mainValue,
         linkedEquipment = rawData.linkedEquipment,
         availableEquipment = rawData.availableEquipment,
         powerFeaturesFlags = rawData.powerFeaturesFlags,
-        mainValue = rawData.mainValue,
 
         deviceTypeIconRes = getIconId(rawData.deviceType, rawData.protocol),
         batteryStatusIconRes = getBatteryStatusIconRes(rawData.batteryPercentage),
