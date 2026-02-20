@@ -237,7 +237,8 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
         if (BluetoothConstants.UUID_CHARACTERISTIC_BATTERY_LEVEL.equals(characteristic.getUuid())) {
             int batteryPercentage = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0);
             if (DEBUG) Log.i(TAG, "got battery percentage: " + batteryPercentage);
-            DevicesDatabaseManager.getInstance(mContext).setBatteryPercentage(getDeviceId(), batteryPercentage);
+            setBatteryPercentage(batteryPercentage);
+            // DevicesDatabaseManager.getInstance(mContext).setBatteryPercentage(getDeviceId(), batteryPercentage);
 
             //reread after some time
             mHandler.postDelayed(new Runnable() {
