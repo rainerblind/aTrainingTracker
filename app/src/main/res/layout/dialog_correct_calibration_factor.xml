@@ -24,7 +24,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="8dp"
-        android:hint="@string/measuredDistanceText">
+        android:hint="@string/devices_measuredDistanceText">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/et_measured_distance"
@@ -39,7 +39,7 @@
         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="@string/correctDistanceText">
+        android:hint="@string/devices_correctDistanceText">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/et_correct_distance"

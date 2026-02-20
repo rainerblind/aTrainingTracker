@@ -661,7 +661,7 @@ public class MainActivityWithNavigation
                 break;
 
             case R.id.drawer_my_sensors:
-                titleId = R.string.myRemoteDevices;
+                titleId = R.string.devices_myRemoteDevices;
                 mFragment = RemoteDevicesFragmentTabbedContainer.newInstance(Protocol.ALL, DeviceType.ALL);
                 tag = DeviceTypeChoiceFragment.TAG;
                 break;

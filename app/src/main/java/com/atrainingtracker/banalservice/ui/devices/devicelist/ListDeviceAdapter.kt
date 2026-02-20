@@ -74,7 +74,7 @@ class ListDeviceAdapter(
             binding.deviceTypeIcon.setImageResource(device.deviceTypeIconRes)
             binding.batteryStatusIcon.setImageResource(device.batteryStatusIconRes)
 
-            binding.mainValue.text = device.mainValue ?: itemView.context.getString(R.string.devices_no_value)
+            binding.mainValue.text = device.mainValue ?: itemView.context.getString(R.string.devices_no_main_value)
 
             if (device.linkedEquipment.isEmpty()) {
                 binding.linkedEquipment.visibility = View.GONE
@@ -126,7 +126,7 @@ class ListDeviceAdapter(
         fun updateFields(bundle: Bundle) {
             if (bundle.containsKey("KEY_MAIN_VALUE")) {
                 val mainValue = bundle.getString("KEY_MAIN_VALUE")
-                binding.mainValue.text = mainValue ?: itemView.context.getString(R.string.devices_no_value)
+                binding.mainValue.text = mainValue ?: itemView.context.getString(R.string.devices_no_main_value)
             }
         }
     }
