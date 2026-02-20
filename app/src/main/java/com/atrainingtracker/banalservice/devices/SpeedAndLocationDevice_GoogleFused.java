@@ -28,6 +28,7 @@ import android.util.Log;
 import androidx.core.app.ActivityCompat;
 
 import com.atrainingtracker.banalservice.BANALService;
+import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -53,6 +54,10 @@ public class SpeedAndLocationDevice_GoogleFused extends SpeedAndLocationDevice
         if (DEBUG) {
             Log.d(TAG, "constructor");
         }
+
+        // get the deviceId from the DevicesDatabaseManager
+        DevicesDatabaseManager devicesDatabaseManager = DevicesDatabaseManager.getInstance(mContext);
+        mDeviceId = devicesDatabaseManager.getSpeedAndLocationGoogleFusedDeviceId();
 
         mGoogleApiClient = new GoogleApiClient.Builder(context)
                 .addApi(LocationServices.API)
@@ -82,6 +87,9 @@ public class SpeedAndLocationDevice_GoogleFused extends SpeedAndLocationDevice
             return;
         }
         LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
+
+        // set last active
+        setLastActive();
     }
 
 
