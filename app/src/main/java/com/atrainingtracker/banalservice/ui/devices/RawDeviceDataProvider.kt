@@ -7,7 +7,7 @@ import com.atrainingtracker.banalservice.database.DevicesDatabaseManager.Devices
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 
-class DeviceDataProvider(val devicesDatabaseManager: DevicesDatabaseManager, val equipmentDbHelper: EquipmentDbHelper) {
+class RawDeviceDataProvider(val devicesDatabaseManager: DevicesDatabaseManager, val equipmentDbHelper: EquipmentDbHelper) {
     fun getDeviceData(cursor: Cursor): DeviceRawData {
         val id = cursor.getLong(cursor.getColumnIndex(DevicesDbHelper.C_ID))
         val deviceType = DeviceType.valueOf(cursor.getString(cursor.getColumnIndex(DevicesDbHelper.DEVICE_TYPE)))
@@ -21,6 +21,8 @@ class DeviceDataProvider(val devicesDatabaseManager: DevicesDatabaseManager, val
 
         val powerFeaturesFlags = devicesDatabaseManager.getBikePowerSensorFlags(id)
         val linkedEquipment = equipmentDbHelper.getLinkedEquipmentFromDeviceId(id)
+        val availableEquipment = equipmentDbHelper.getEquipment(deviceType.sportType)
+
 
         return DeviceRawData(
             id = id,
@@ -31,8 +33,11 @@ class DeviceDataProvider(val devicesDatabaseManager: DevicesDatabaseManager, val
             manufacturer = manufacturer,
             deviceName = deviceName,
             isPaired = isPaired,
+            isAvailable = false,
+            mainValue = null,
             calibrationValue = calibrationValue,
             linkedEquipment = linkedEquipment,
+            availableEquipment = availableEquipment,
             powerFeaturesFlags = powerFeaturesFlags
         )
     }
