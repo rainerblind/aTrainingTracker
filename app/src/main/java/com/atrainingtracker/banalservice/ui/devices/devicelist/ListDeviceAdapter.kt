@@ -1,5 +1,6 @@
 package com.atrainingtracker.banalservice.ui.devices.devicelist
 
+import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -37,6 +38,22 @@ class ListDeviceAdapter(
     override fun onBindViewHolder(holder: DeviceViewHolder, position: Int) {
         val device = getItem(position)
         holder.bind(device, onPairClick, onItemClick)
+    }
+
+    override fun onBindViewHolder(
+        holder: DeviceViewHolder,
+        position: Int,
+        payloads: MutableList<Any>
+    ) {
+        if (payloads.isEmpty()) {
+            // If there are no payloads, this is a full bind.
+            // Let the default onBindViewHolder handle it.
+            super.onBindViewHolder(holder, position, payloads)
+        } else {
+            // We have a payload, so we only update the specific views that changed.
+            val bundle = payloads[0] as Bundle
+            holder.updateFields(bundle)
+        }
     }
 
     /**
@@ -104,7 +121,13 @@ class ListDeviceAdapter(
             binding.buttonPair.setOnClickListener {
                 onPairClick(device)
             }
+        }
 
+        fun updateFields(bundle: Bundle) {
+            if (bundle.containsKey("KEY_MAIN_VALUE")) {
+                val mainValue = bundle.getString("KEY_MAIN_VALUE")
+                binding.mainValue.text = mainValue ?: itemView.context.getString(R.string.devices_no_value)
+            }
         }
     }
 
@@ -124,6 +147,17 @@ class ListDeviceAdapter(
             // onBindViewHolder will be called to redraw the item.
             // The 'data class' automatically generates a correct .equals() for this.
             return oldItem == newItem
+        }
+
+        override fun getChangePayload(oldItem: DeviceUiData, newItem: DeviceUiData): Bundle? {
+            // only check for updates of the mainValue
+            if (newItem.mainValue != oldItem.mainValue) {
+                val result = Bundle()
+                result.putString("KEY_MAIN_VALUE", newItem.mainValue)
+                return result
+            }
+
+            return null
         }
     }
 }
