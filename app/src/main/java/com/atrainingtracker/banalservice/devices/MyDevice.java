@@ -27,6 +27,7 @@ import android.util.Log;
 import androidx.core.content.ContextCompat;
 
 import com.atrainingtracker.banalservice.BANALService;
+import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 import com.atrainingtracker.banalservice.sensor.MyAccumulatorSensor;
 import com.atrainingtracker.banalservice.sensor.MySensor;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
@@ -46,6 +47,10 @@ public abstract class MyDevice {
     protected MySensorManager mMySensorManager;
     private final String TAG = "MyDevice";
     private boolean mSensorsRegistered = false;
+
+    protected final DevicesDatabaseManager mDevicesDatabaseManager;
+    protected long mDeviceId = -1;  // the id of the device within the database
+
     private final BroadcastReceiver resetAccumulatorsReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context arg0, Intent arg1) {
@@ -63,11 +68,21 @@ public abstract class MyDevice {
         mContext = context;
         mMySensorManager = mySensorManager;
         mDeviceType = deviceType;
+        mDevicesDatabaseManager = DevicesDatabaseManager.getInstance(mContext);
 
         ContextCompat.registerReceiver(mContext, resetAccumulatorsReceiver, resetAccumulatorsFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
 
         addSensors();
     }
+
+    protected void setLastActive() {
+        mDevicesDatabaseManager.setLastActive(mDeviceId);
+    }
+
+    protected void setBatteryPercentage(int percentage) {
+        mDevicesDatabaseManager.setBatteryPercentage(mDeviceId, percentage);
+    }
+
 
     public abstract String getName();
 
