@@ -83,6 +83,9 @@ public abstract class MyDevice {
         mDevicesDatabaseManager.setBatteryPercentage(mDeviceId, percentage);
     }
 
+    public long getDeviceId() {
+        return mDeviceId;
+    }
 
     public abstract String getName();
 
