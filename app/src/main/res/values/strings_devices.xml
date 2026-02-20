@@ -25,6 +25,7 @@
     <string name="devices_lastSeenText">last seen</string>
     <string name="devices_lastSeenDefaultValue" translatable="false">2014-10-18 09:10:11</string>
     <string name="devices_now">now</string>
+    <string name="devices_no_value" translatable="false">--</string>
 
 
     <!-- dialog_set_calibration_factor -->

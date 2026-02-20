@@ -56,7 +56,9 @@ class ListDeviceAdapter(
             binding.deviceManufacturer.text = device.manufacturer
             binding.deviceTypeIcon.setImageResource(device.deviceTypeIconRes)
             binding.batteryStatusIcon.setImageResource(device.batteryStatusIconRes)
-            binding.mainValue.text = device.mainValue
+
+            binding.mainValue.text = device.mainValue ?: itemView.context.getString(R.string.devices_no_value)
+
             if (device.linkedEquipment.isEmpty()) {
                 binding.linkedEquipment.visibility = View.GONE
             } else {

@@ -1,11 +1,17 @@
 package com.atrainingtracker.banalservice.ui.devices
 
 import android.app.Application
+import android.content.ComponentName
 import android.content.ContentValues
+import android.content.Context
 import android.content.Intent
+import android.content.ServiceConnection
+import android.os.IBinder
+import androidx.compose.animation.core.copy
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.map
+import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager.DevicesDbHelper
@@ -15,6 +21,8 @@ import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -49,10 +57,14 @@ class DeviceDataRepository private constructor(private val application: Applicat
 
     private val repositoryScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
-
+    // access to the databases
     private val devicesDatabaseManager by lazy { DevicesDatabaseManager.getInstance(application) }
     private val equipmentDbHelper by lazy { EquipmentDbHelper(application) }
     private val mapper by lazy {RawDeviceDataProvider(devicesDatabaseManager, equipmentDbHelper)}
+
+    // access to the BANALService
+    private var banalServiceComm: BANALService.BANALServiceComm? = null
+    private var isBoundToBanalService = false
 
 
     private val _allDevices = MutableLiveData<List<DeviceUiData>>()
@@ -62,6 +74,7 @@ class DeviceDataRepository private constructor(private val application: Applicat
         // Automatically load all devices when the repository is first created
         repositoryScope.launch {
             loadAllDevices()
+            bindToService()
         }
     }
 
@@ -87,7 +100,89 @@ class DeviceDataRepository private constructor(private val application: Applicat
         return allDevices.value?.find { it.id == deviceId }?.deviceType
     }
 
-    // TODO: get connection to BANALService and update mainValue and isAvailable...
+    // Connection to BANALService and update mainValue and isAvailable...
+    private val banalServiceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            // This is called when the connection to the service has been established.
+            // We get the BANALServiceComm binder instance.
+            banalServiceComm = service as? BANALService.BANALServiceComm
+            isBoundToBanalService = banalServiceComm != null
+            if (isBoundToBanalService) {
+                // Once connected, start observing the service for data
+                startObservingServiceData()
+            }
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            // This is called when the service connection is lost unexpectedly
+            isBoundToBanalService = false
+            banalServiceComm = null
+        }
+    }
+
+    // Methods to bind and unbind from the ViewModel
+    fun bindToService() {
+        if (!isBoundToBanalService) {
+            val intent = Intent(application, BANALService::class.java)
+            // BIND_AUTO_CREATE ensures the service is created if not already running
+            application.bindService(intent, banalServiceConnection, Context.BIND_AUTO_CREATE)
+        }
+    }
+
+    fun unbindFromService() {
+        if (isBoundToBanalService) {
+            application.unbindService(banalServiceConnection)
+            isBoundToBanalService = false
+            banalServiceComm = null
+        }
+    }
+
+    // Observing the BANALService: This function will be called once the service is connected.
+    private fun startObservingServiceData() {
+        repositoryScope.launch {
+            // Create a flow that emits every 1 second
+            flow {
+                while (true) {
+                    emit(Unit)     // Emit a signal to fetch data
+                    delay(1000) // Poll every second
+                }
+            }.collect {
+                // Get the current list of devices from the LiveData in memory.
+                val currentDevices = allDevices.value ?: emptyList()
+                if (currentDevices.isEmpty()) {
+                    // If the initial load from DB hasn't finished, wait for the next poll.
+                    return@collect
+                }
+
+                val activeDevices = banalServiceComm?.activeRemoteDevices ?: emptyList()
+
+                // --- Update allDevices based on the values we get from the BANALService
+                val mergedList = currentDevices.map { device ->
+                    val activeDevice = activeDevices.find { it.deviceId == device.id }
+
+                    if (activeDevice != null) {
+                        // Device is currently active and seen by the service
+                        device.copy(
+                            isAvailable = true, // Mark as available
+                            lastSeen = application.getString(R.string.devices_now),
+                            mainValue = activeDevice.mainSensorStringValue,
+
+                        )
+                    } else {
+                        // Device is not active, reset its live data
+                        device.copy(
+                            isAvailable = false,
+                            // lastSeen = device.lastSeen,  Note that we do not update lastSeen here.  When a device was seen and then is removed, we keep 'now'.  Otherwise, we would have to check the database again...
+                            mainValue = null
+                        )
+                    }
+                }
+
+                // Post the final, merged list to the LiveData that the ViewModel observes
+                _allDevices.postValue(mergedList)
+            }
+        }
+    }
 
 
     /**

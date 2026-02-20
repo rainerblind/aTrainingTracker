@@ -33,12 +33,12 @@ class RawDeviceDataProvider(val devicesDatabaseManager: DevicesDatabaseManager, 
             manufacturer = manufacturer,
             deviceName = deviceName,
             isPaired = isPaired,
-            isAvailable = false, // TODO: must be set from someone with access to the BANALService
+            isAvailable = false,
+            mainValue = null,
             calibrationValue = calibrationValue,
             linkedEquipment = linkedEquipment,
             availableEquipment = availableEquipment,
-            powerFeaturesFlags = powerFeaturesFlags,
-            mainValue = "TODO" // TODO: This should come from a live value in the raw data
+            powerFeaturesFlags = powerFeaturesFlags
         )
     }
 }
