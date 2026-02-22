@@ -91,9 +91,18 @@
             android:id="@+id/batteryStatusIcon"
             android:layout_width="24dp"
             android:layout_height="24dp"
-            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/availableIcon"
             app:layout_constraintTop_toBottomOf="@id/mainValue"
             tools:srcCompat="@drawable/stat_sys_battery_unknown" />
+
+        <!-- available / not available -->
+        <ImageView
+            android:id="@+id/availableIcon"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            app:layout_constraintTop_toBottomOf="@id/mainValue"
+            app:layout_constraintEnd_toEndOf="parent"
+            tools:srcCompat="@drawable/ic_device_not_available" />
 
 
         <!-- pair button -->
