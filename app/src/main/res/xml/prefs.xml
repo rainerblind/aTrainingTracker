@@ -368,36 +368,6 @@
                 <intent android:action="com.atrainingtracker.trainingtracker.smartwatch.pebble.ConfigPebbleViewsActivity" />
             </Preference>
         </PreferenceScreen>
-        <PreferenceScreen
-            android:icon="@drawable/ic_gps_fixed_black_48dp"
-            android:key="prefsLocationSources"
-            android:title="@string/prefsLocationSourceTitle">
-            <PreferenceCategory android:title="@string/prefsLocationSourceTitle">
-                <CheckBoxPreference
-                    android:defaultValue="true"
-                    android:key="locationSourceGPS"
-                    android:summary="@string/prefsLocationSourceGPSSummary"
-                    android:title="@string/prefsLocationSourceGPS" />
-                <CheckBoxPreference
-                    android:defaultValue="false"
-                    android:key="locationSourceGoogleFused"
-                    android:summary="@string/prefsLocationSourceGoogleFusedSummary"
-                    android:title="@string/prefsLocationSourceGoogleFused" />
-                <CheckBoxPreference
-                    android:defaultValue="false"
-                    android:key="locationSourceNetwork"
-                    android:summary="@string/prefsLocationSourceNetworkSummary"
-                    android:title="@string/prefsLocationSourceNetwork" />
-            </PreferenceCategory>
-
-            <PreferenceCategory android:title="@string/prefsAdvanced">
-                <CheckBoxPreference
-                    android:defaultValue="false"
-                    android:key="showAllLocationsSourcesOnMap"
-                    android:summary="@string/prefsShowAllLocationSourcesOnMapSummary"
-                    android:title="@string/prefsShowAllLocationSourcesOnMapTitle" />
-            </PreferenceCategory>
-        </PreferenceScreen>
 
         <PreferenceScreen
             android:key="fancyWorkoutNames"

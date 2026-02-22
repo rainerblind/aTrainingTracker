@@ -60,4 +60,10 @@
     <string name="devices_editDeviceGenericDeviceNameValue">Generischer Sensor</string>
     <string name="devices_editDeviceGenericDeviceTypeValue">Generisch</string>
 
+    <!-- smartphone devices -->
+    <string name="devices_location_GPS">GPS</string>
+    <string name="devices_location_Network">Netzwerk</string>
+    <string name="devices_location_GoogleFused">Google Fused</string>
+    <string name="devices_altitude_from_pressure">Luftdruck</string>
+
 </resources>

@@ -327,16 +327,6 @@
 
     <string name="prefsTrackingTitle">Aufzeichnung</string>
 
-    <string name="prefsLocationSourceTitle">Positionsdatenquellen</string>
-    <string name="prefsLocationSourceSummary">Wähle die Positionsdatenquellen (GPS, google fused, Netzwerk)</string>
-    <string name="prefsLocationSourceGPSSummary">Positionsdaten basierend auf GPS.</string>
-    <string name="prefsLocationSourceGoogleFused">google fused</string>
-    <string name="prefsLocationSourceGoogleFusedSummary">Positionsdaten durch zusammenführen der GPS und Netzwerkdaten.  Es kann vorkommen, dass zwischen den beiden Quellen gesprungen wird.</string>
-    <string name="prefsLocationSourceNetwork">Netzwerk</string>
-    <string name="prefsLocationSourceNetworkSummary">Position bestimmt anhand der verbundenen Basisstationen und verfügbaren WLANs.  Dazu wird eine Verbindung zum Internetz benötigt.</string>
-    <string name="prefsShowAllLocationSourcesOnMapTitle">Zeige alle Positionen</string>
-    <string name="prefsShowAllLocationSourcesOnMapSummary">Zeige alle aufgezeichneten Positionsdatenquellen auf der Karte an</string>
-
     <string name="prefsDisplayTitle">Display</string>
     <string name="prefsKeepScreenOnTitle">Display an lassen</string>
     <string name="prefsNoUnlockingTitle">Display entsperrt lassen</string>
@@ -689,7 +679,6 @@
     <string name="title_request_dropbox_token">Request Dropbox Access</string>
     <string name="message_request_dropbox_token">Willst du deine Trainingseinheiten bei Dropbox hochladen?\n(Wegen der geänderten Schnittstelle muss erneut gefragt werden.)</string>
 
-    <string name="AltitudeFromPressureDevice_name">Luftdruck</string>
     <string name="smartphone">Smartphone</string>
     <string name="no_sensor_available">Kein Sensor vorhanden</string>
     <string name="bestSensor">Bester</string>

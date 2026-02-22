@@ -26,6 +26,7 @@ import android.os.Bundle;
 import android.util.Log;
 
 import com.atrainingtracker.banalservice.BANALService;
+import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
 
 
@@ -41,6 +42,10 @@ public class SpeedAndLocationDevice_Network extends SpeedAndLocationDevice
         if (DEBUG) {
             Log.d(TAG, "constructor");
         }
+
+        // get the deviceId from the DevicesDatabaseManager
+        DevicesDatabaseManager devicesDatabaseManager = DevicesDatabaseManager.getInstance(mContext);
+        mDeviceId = devicesDatabaseManager.getSpeedAndLocationNetworkDeviceId();
 
         mLocationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
         mLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, SAMPLING_TIME, MIN_DISTANCE, this);
@@ -69,6 +74,9 @@ public class SpeedAndLocationDevice_Network extends SpeedAndLocationDevice
         if (provider.equals(LocationManager.NETWORK_PROVIDER)) {
             if (DEBUG) Log.d(TAG, "Network location provider enabled");
             mLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, SAMPLING_TIME, MIN_DISTANCE, this);
+
+            // set last active
+            setLastActive();
         }
     }
 
