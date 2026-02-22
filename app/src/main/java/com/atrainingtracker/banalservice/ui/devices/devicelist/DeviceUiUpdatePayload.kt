@@ -6,6 +6,7 @@ import com.atrainingtracker.banalservice.ui.devices.DeviceUiData
 sealed class DeviceUiUpdatePayload {
     data class AvailabilityChanged(val isAvailable: Boolean, val lastSeen: String?): DeviceUiUpdatePayload()
     data class MainValueChanged(val mainValue: String?): DeviceUiUpdatePayload()
+    data class AllSensorValuesChanged(val allValues: List<String>?): DeviceUiUpdatePayload()
 }
 
 /**
@@ -38,6 +39,11 @@ class DeviceDiffCallback : DiffUtil.ItemCallback<DeviceUiData>() {
         // mainValue
         if (oldItem.mainValue != newItem.mainValue) {
             payloads.add(DeviceUiUpdatePayload.MainValueChanged(newItem.mainValue))
+        }
+
+        // all sensor values
+        if (oldItem.allValues != newItem.allValues) {
+            payloads.add(DeviceUiUpdatePayload.AllSensorValuesChanged(newItem.allValues))
         }
 
         // If the list of payloads is not empty, return it.
