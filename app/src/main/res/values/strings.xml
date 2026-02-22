@@ -388,17 +388,6 @@
 
     <string name="prefsTrackingTitle">Tracking</string>
 
-    <string name="prefsLocationSourceTitle">Location Source</string>
-    <string name="prefsLocationSourceSummary">Choose location source (GPS, google fused, network)</string>
-    <string name="prefsLocationSourceGPS" translatable="false">GPS</string>
-    <string name="prefsLocationSourceGPSSummary">Location obtained from the GPS.</string>
-    <string name="prefsLocationSourceGoogleFused">google fused</string>
-    <string name="prefsLocationSourceGoogleFusedSummary">Merged location obtained from GPS and network; might jump between those two sources.</string>
-    <string name="prefsLocationSourceNetwork">network</string>
-    <string name="prefsLocationSourceNetworkSummary">Location obtained with the help of available base stations and WLANs; requires access to the internet.</string>
-    <string name="prefsShowAllLocationSourcesOnMapTitle">Show all locations</string>
-    <string name="prefsShowAllLocationSourcesOnMapSummary">Show all tracked location sources on the map</string>
-
     <string name="prefsDisplayTitle">Display</string>
     <string name="prefsKeepScreenOnTitle">keep screen on</string>
     <string name="prefsNoUnlockingTitle">keep screen unlocked</string>
@@ -775,7 +764,6 @@
     <string name="message_request_dropbox_token">Do you want to upload your workouts to Dropbox?\n(Due to the changed API, we have to ask again.)</string>
 
     <string name="gps" translatable="false">GPS</string>
-    <string name="AltitudeFromPressureDevice_name">Air Pressure</string>
     <string name="smartphone">Smartphone</string>
     <string name="no_sensor_available">no sensor available</string>
     <string name="bestSensor">best</string>

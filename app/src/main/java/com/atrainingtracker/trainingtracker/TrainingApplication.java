@@ -110,8 +110,6 @@ public class TrainingApplication extends Application {
     public static final String SP_CONFIGURE_PEBBLE_DISPLAY = "configurePebbleDisplays";
     public static final String FILE_EXPORT = "fileExport";
     public static final String CLOUD_UPLOAD = "cloudUpload";
-    public static final String LOCATION_SOURCES = "prefsLocationSources";
-    public static final String SHOW_ALL_LOCATION_SOURCES_ON_MAP = "showAllLocationsSourcesOnMap";
     //    protected static final String SP_DROPBOX_KEY       = "dropboxKey";
 //    protected static final String SP_DROPBOX_SECRET    = "dropboxSecret";
     public static final String SP_UPLOAD_TO_DROPBOX = "uploadToDropbox";
@@ -141,9 +139,6 @@ public class TrainingApplication extends Application {
     public static final String SP_TRAINING_PEAKS_REFRESH_TOKEN = "trainingPeaksRefreshToken";
     // public static final String SP_DISPLAY_UPDATE_TIME     = "displayUpdateTime";
     public static final String SP_LACTATE_THRESHOLD_POWER = "lactateThresholdPower";
-    public static final String SP_LOCATION_SOURCE_GPS = "locationSourceGPS";
-    public static final String SP_LOCATION_SOURCE_GOOGLE_FUSED = "locationSourceGoogleFused";
-    public static final String SP_LOCATION_SOURCE_NETWORK = "locationSourceNetwork";
     public static final String SP_EXPORT_TO_CSV = "exportToCSV";
     public static final String SP_EXPORT_TO_TCX = "exportToGarminTCX";
     public static final String SP_EXPORT_TO_GPX = "exportToGPX";
@@ -402,24 +397,23 @@ public class TrainingApplication extends Application {
         cSharedPreferences.edit().putBoolean(SP_CHECK_ANT_INSTALLATION, value).apply();
     }
 
-    public static boolean useLocationSourceGPS() {
-        return cSharedPreferences.getBoolean(SP_LOCATION_SOURCE_GPS, true);
-    }
-
-    public static boolean useLocationSourceGoogleFused() {
-        return cSharedPreferences.getBoolean(SP_LOCATION_SOURCE_GOOGLE_FUSED, false);
-    }
-
-    public static boolean useLocationSourceNetwork() {
-        return cSharedPreferences.getBoolean(SP_LOCATION_SOURCE_NETWORK, false);
-    }
-
     public static boolean trackLocation() {
-        return (useLocationSourceGPS() || useLocationSourceGoogleFused() || useLocationSourceNetwork());
-    }
+        // check the database if there is a location device paired.
+        DevicesDatabaseManager devicesDatabaseManager = DevicesDatabaseManager.getInstance(getAppContext());
+        long gpsDeviceId = devicesDatabaseManager.getSpeedAndLocationGPSDeviceId();
+        if (devicesDatabaseManager.isPaired(gpsDeviceId)) {
+            return true;
+        }
+        long googleFusedDeviceId = devicesDatabaseManager.getSpeedAndLocationGoogleFusedDeviceId();
+        if (devicesDatabaseManager.isPaired(googleFusedDeviceId)) {
+            return true;
+        }
+        long networkDeviceId = devicesDatabaseManager.getSpeedAndLocationNetworkDeviceId();
+        if (devicesDatabaseManager.isPaired(networkDeviceId)) {
+            return true;
+        }
 
-    public static boolean showAllLocationSourcesOnMap() {
-        return cSharedPreferences.getBoolean(SHOW_ALL_LOCATION_SOURCES_ON_MAP, false);
+        return false;
     }
 
     @NonNull

@@ -626,6 +626,35 @@ public class DevicesDatabaseManager {
                 null);
     }
 
+    public long getSpeedAndLocationGPSDeviceId() {
+        return getSmartphoneDeviceId(DeviceType.SPEED_AND_LOCATION_GPS);
+    }
+
+    public long getSpeedAndLocationNetworkDeviceId() {
+        return getSmartphoneDeviceId(DeviceType.SPEED_AND_LOCATION_NETWORK);
+    }
+
+    public long getSpeedAndLocationGoogleFusedDeviceId() {
+        return getSmartphoneDeviceId(DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED);
+    }
+
+    protected long getSmartphoneDeviceId(DeviceType deviceType) {
+        Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
+                new String[]{DevicesDbHelper.C_ID},
+                DevicesDbHelper.PROTOCOL + "=? AND " + DevicesDbHelper.DEVICE_TYPE + "=?",
+                new String[]{Protocol.SMARTPHONE.name(), deviceType.name()},
+                null,
+                null,
+                null);
+        long deviceId = -1;
+        if (cursor.moveToFirst()) {
+            deviceId = cursor.getLong(cursor.getColumnIndex(DevicesDbHelper.C_ID));
+        }
+        cursor.close();
+
+        return  deviceId;
+    }
+
 
     public static class DeviceIdAndNameLists {
         public final LinkedList<Long> deviceIds;
@@ -923,24 +952,24 @@ public class DevicesDatabaseManager {
             ContentValues contentValues = new ContentValues();
             contentValues.put(PROTOCOL, Protocol.SMARTPHONE.name());
             contentValues.put(DEVICE_TYPE, DeviceType.SPEED_AND_LOCATION_GPS.name());
-            contentValues.put(PAIRED, TrainingApplication.useLocationSourceGPS());
-            contentValues.put(NAME, mContext.getString(R.string.prefsLocationSourceGPS));
+            contentValues.put(PAIRED, true);
+            contentValues.put(NAME, mContext.getString(R.string.devices_location_GPS));
             contentValues.put(MANUFACTURER_NAME, Build.BRAND);
             db.insert(DEVICES, null, contentValues);
 
             contentValues = new ContentValues();
             contentValues.put(PROTOCOL, Protocol.SMARTPHONE.name());
             contentValues.put(DEVICE_TYPE, DeviceType.SPEED_AND_LOCATION_NETWORK.name());
-            contentValues.put(PAIRED, TrainingApplication.useLocationSourceNetwork());
-            contentValues.put(NAME, mContext.getString(R.string.prefsLocationSourceNetwork));
+            contentValues.put(PAIRED, false);
+            contentValues.put(NAME, mContext.getString(R.string.devices_location_Network));
             contentValues.put(MANUFACTURER_NAME, Build.BRAND);
             db.insert(DEVICES, null, contentValues);
 
             contentValues = new ContentValues();
             contentValues.put(PROTOCOL, Protocol.SMARTPHONE.name());
             contentValues.put(DEVICE_TYPE, DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED.name());
-            contentValues.put(PAIRED, TrainingApplication.useLocationSourceGoogleFused());
-            contentValues.put(NAME, mContext.getString(R.string.prefsLocationSourceGoogleFused));
+            contentValues.put(PAIRED, true);
+            contentValues.put(NAME, mContext.getString(R.string.devices_location_GoogleFused));
             contentValues.put(MANUFACTURER_NAME, Build.BRAND);
             db.insert(DEVICES, null, contentValues);
 
@@ -949,7 +978,7 @@ public class DevicesDatabaseManager {
                 contentValues.put(PROTOCOL, Protocol.SMARTPHONE.name());
                 contentValues.put(DEVICE_TYPE, DeviceType.ALTITUDE_FROM_PRESSURE.name());
                 contentValues.put(PAIRED, true);
-                contentValues.put(NAME, mContext.getString(R.string.AltitudeFromPressureDevice_name));
+                contentValues.put(NAME, mContext.getString(R.string.devices_altitude_from_pressure));
                 contentValues.put(MANUFACTURER_NAME, Build.BRAND);
                 db.insert(DEVICES, null, contentValues);
             }
