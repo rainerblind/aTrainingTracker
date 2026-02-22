@@ -73,6 +73,7 @@ class DeviceListViewModel(private val application: Application) : AndroidViewMod
         }
     }
 
-
-
+    fun deleteDevice(deviceId: Long) {
+        repository.deleteDevice(deviceId)
+    }
 }

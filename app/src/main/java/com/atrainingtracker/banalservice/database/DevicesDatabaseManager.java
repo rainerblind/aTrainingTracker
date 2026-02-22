@@ -29,6 +29,7 @@ import android.provider.BaseColumns;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
@@ -446,10 +447,12 @@ public class DevicesDatabaseManager {
         return DeviceType.valueOf(getString(deviceId, DevicesDbHelper.DEVICE_TYPE));
     }
 
+    @Nullable
     public String getManufacturerName(long deviceId) {
         return getString(deviceId, DevicesDbHelper.MANUFACTURER_NAME);
     }
 
+    @Nullable
     public String getDeviceName(long deviceId) {
         return getString(deviceId, DevicesDbHelper.NAME);
     }
@@ -516,6 +519,7 @@ public class DevicesDatabaseManager {
         return result;
     }
 
+    @Nullable
     private String getString(long deviceID, String key) {
         if (DEBUG) Log.i(TAG, "getString: deviceID=" + deviceID + ", key=" + key);
 
@@ -653,6 +657,27 @@ public class DevicesDatabaseManager {
         cursor.close();
 
         return  deviceId;
+    }
+
+    public int deleteDevice(long deviceId) {
+        if (DEBUG) Log.d(TAG, "deleteDevice: deviceId=" + deviceId);
+
+        SQLiteDatabase db = getDatabase();
+        int affectedRows = 0;
+        try {
+            affectedRows = db.delete(DevicesDbHelper.DEVICES,
+                    DevicesDbHelper.C_ID + "=?",
+                    new String[]{Long.toString(deviceId)});
+
+            if (affectedRows == 0) {
+                if (DEBUG) Log.w(TAG, "deleteDevice: No device found with ID " + deviceId + " to delete.");
+            }
+        } catch (SQLException e) {
+            Log.e(TAG, "Error while deleting device with ID " + deviceId, e);
+            return -1; // Return -1 to indicate an error
+        }
+
+        return affectedRows; // Return the number of rows deleted (should be 1 or 0)
     }
 
 

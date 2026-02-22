@@ -51,10 +51,6 @@ public class SpeedAndLocationDevice_Network extends SpeedAndLocationDevice
         mLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, SAMPLING_TIME, MIN_DISTANCE, this);
     }
 
-    @Override
-    public String getName() {
-        return "network";   // here, we do not use R.string to be compatible with the old (pre 3.8) way
-    }
 
     @Override
     public void shutDown() {

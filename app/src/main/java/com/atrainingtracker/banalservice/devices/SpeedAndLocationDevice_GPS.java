@@ -53,11 +53,6 @@ public class SpeedAndLocationDevice_GPS extends SpeedAndLocationDevice
     }
 
     @Override
-    public String getName() {
-        return "gps";   // here, we do not use R.string to be compatible with the old (pre 3.8) way
-    }
-
-    @Override
     public void shutDown() {
         mLocationManager.removeUpdates(this);
 
