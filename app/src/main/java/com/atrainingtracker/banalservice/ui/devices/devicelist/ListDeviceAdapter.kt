@@ -50,9 +50,24 @@ class ListDeviceAdapter(
             // Let the default onBindViewHolder handle it.
             super.onBindViewHolder(holder, position, payloads)
         } else {
-            // We have a payload, so we only update the specific views that changed.
-            val bundle = payloads[0] as Bundle
-            holder.updateFields(bundle)
+            // Payloads are present, so we can perform one or more partial updates.
+            // The payload from our DiffUtil is expected to be a List<DeviceUiUpdatePayload>.
+            payloads.forEach { payload ->
+                if (payload is List<*>) {
+                    // Iterate through the actual change events inside the list.
+                    payload.forEach { item ->
+                        when (item) {
+                            is DeviceUiUpdatePayload.AvailabilityChanged -> {
+                                holder.updateAvailability(item.isAvailable, item.lastSeen)
+                            }
+                            is DeviceUiUpdatePayload.MainValueChanged -> {
+                                holder.updateMainValue(item.mainValue)
+                            }
+                        }
+                    }
+                }
+            }
+
         }
     }
 
@@ -86,26 +101,7 @@ class ListDeviceAdapter(
             }
 
             // set the availability icon and last seen / activated
-            if (device.isAvailable) {
-                binding.availableIcon.setImageResource(R.drawable.ic_device_available)
-                binding.lastSeen.visibility = View.GONE
-            }
-            else {
-                binding.availableIcon.setImageResource(R.drawable.ic_device_not_available)
-
-                // show when device was seen the last time
-                if (device.lastSeen.isNullOrEmpty()) {
-                    // If there's no date, hide the TextView completely
-                    binding.lastSeen.visibility = View.GONE
-                }
-                else {
-                    // If there is a date, make it visible and set the formatted text
-                    binding.lastSeen.visibility = View.VISIBLE
-
-                    // Split the string by space and take the first part (the date)
-                    binding.lastSeen.text = device.lastSeen.split(" ").firstOrNull() ?: device.lastSeen
-                }
-            }
+            updateAvailability(device.isAvailable, device.lastSeen)
 
             // Set the button text and style based on the isPaired property
             if (device.isPaired) {
@@ -127,41 +123,31 @@ class ListDeviceAdapter(
             }
         }
 
-        fun updateFields(bundle: Bundle) {
-            if (bundle.containsKey("KEY_MAIN_VALUE")) {
-                val mainValue = bundle.getString("KEY_MAIN_VALUE")
-                binding.mainValue.text = mainValue ?: itemView.context.getString(R.string.devices_no_main_value)
+        fun updateMainValue(mainValue: String?) {
+            binding.mainValue.text = mainValue ?: itemView.context.getString(R.string.devices_no_main_value)
+        }
+
+        fun updateAvailability(isAvailable: Boolean, lastSeen: String?) {
+            if (isAvailable) {
+                binding.availableIcon.setImageResource(R.drawable.ic_device_available)
+                binding.lastSeen.visibility = View.GONE
             }
-        }
-    }
+            else {
+                binding.availableIcon.setImageResource(R.drawable.ic_device_not_available)
 
-    /**
-     * The DiffUtil.ItemCallback implementation.
-     * This is the magic that allows ListAdapter to efficiently update the list.
-     */
-    class DeviceDiffCallback : DiffUtil.ItemCallback<DeviceUiData>() {
-        override fun areItemsTheSame(oldItem: DeviceUiData, newItem: DeviceUiData): Boolean {
-            // IDs are unique, so this is the perfect way to check if two items
-            // represent the same object.
-            return oldItem.id == newItem.id
-        }
+                // show when device was seen the last time
+                if (lastSeen.isNullOrEmpty()) {
+                    // If there's no date, hide the TextView completely
+                    binding.lastSeen.visibility = View.GONE
+                }
+                else {
+                    // If there is a date, make it visible and set the formatted text
+                    binding.lastSeen.visibility = View.VISIBLE
 
-        override fun areContentsTheSame(oldItem: DeviceUiData, newItem: DeviceUiData): Boolean {
-            // Check if the content of the items has changed. If this returns false,
-            // onBindViewHolder will be called to redraw the item.
-            // The 'data class' automatically generates a correct .equals() for this.
-            return oldItem == newItem
-        }
-
-        override fun getChangePayload(oldItem: DeviceUiData, newItem: DeviceUiData): Bundle? {
-            // only check for updates of the mainValue
-            if (newItem.mainValue != oldItem.mainValue) {
-                val result = Bundle()
-                result.putString("KEY_MAIN_VALUE", newItem.mainValue)
-                return result
+                    // Split the string by space and take the first part (the date)
+                    binding.lastSeen.text = lastSeen.split(" ").firstOrNull() ?: lastSeen
+                }
             }
-
-            return null
         }
     }
 }
