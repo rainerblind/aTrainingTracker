@@ -85,21 +85,26 @@ class ListDeviceAdapter(
                 )
             }
 
-            // show when device was seen the last time
-            if (device.lastSeen.isNullOrEmpty()) {
-                // If there's no date, hide the TextView completely
+            // set the availability icon and last seen / activated
+            if (device.isAvailable) {
+                binding.availableIcon.setImageResource(R.drawable.ic_device_available)
                 binding.lastSeen.visibility = View.GONE
-            } else {
-                // If there is a date, make it visible and set the formatted text
-                binding.lastSeen.visibility = View.VISIBLE
-                val lastSeenText = if (device.isAvailable) {
-                    itemView.context.getString(R.string.devices_now)
+            }
+            else {
+                binding.availableIcon.setImageResource(R.drawable.ic_device_not_available)
+
+                // show when device was seen the last time
+                if (device.lastSeen.isNullOrEmpty()) {
+                    // If there's no date, hide the TextView completely
+                    binding.lastSeen.visibility = View.GONE
                 }
                 else {
+                    // If there is a date, make it visible and set the formatted text
+                    binding.lastSeen.visibility = View.VISIBLE
+
                     // Split the string by space and take the first part (the date)
-                    device.lastSeen.split(" ").firstOrNull() ?: device.lastSeen
+                    binding.lastSeen.text = device.lastSeen.split(" ").firstOrNull() ?: device.lastSeen
                 }
-                binding.lastSeen.text = lastSeenText
             }
 
             // Set the button text and style based on the isPaired property
