@@ -17,6 +17,7 @@ import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager.DevicesDbHelper
 import com.atrainingtracker.banalservice.devices.BikePowerSensorsHelper
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -154,7 +155,7 @@ class DeviceDataRepository private constructor(private val application: Applicat
                     return@collect
                 }
 
-                val activeDevices = banalServiceComm?.activeRemoteDevices ?: emptyList()
+                val activeDevices = banalServiceComm?.activeDevicesForUI ?: emptyList()
 
                 // --- Update allDevices based on the values we get from the BANALService
                 val mergedList = currentDevices.map { device ->
@@ -162,11 +163,13 @@ class DeviceDataRepository private constructor(private val application: Applicat
 
                     if (activeDevice != null) {
                         // Device is currently active and seen by the service
+                        val mainSensorData = activeDevice.mainSensorData
+                        val mainValue = mainSensorData.value + " " + application.getString(MyHelper.getUnitsId(mainSensorData.sensor))
+
                         device.copy(
                             isAvailable = true, // Mark as available
                             lastSeen = application.getString(R.string.devices_now),
-                            mainValue = activeDevice.mainSensorStringValue,
-
+                            mainValue = mainValue
                         )
                     } else {
                         // Device is not active, reset its live data
@@ -219,26 +222,6 @@ class DeviceDataRepository private constructor(private val application: Applicat
                 }
             }
             _allDevices.postValue(uiDeviceDataList)
-        }
-    }
-
-    fun saveChanges(
-        deviceId: Long,
-    ) {
-        // Launch a coroutine to perform the database operation on a background thread
-        repositoryScope.launch {
-            withContext(Dispatchers.IO) {
-                val values = ContentValues().apply {
-                    // TODO: fill values...
-                }
-
-                devicesDatabaseManager.database.update(
-                    DevicesDbHelper.DEVICES,
-                    values,
-                    "${DevicesDbHelper.C_ID} = ?",
-                    arrayOf(deviceId.toString())
-                )
-            }
         }
     }
 
