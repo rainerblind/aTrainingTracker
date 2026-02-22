@@ -25,6 +25,7 @@ import android.content.IntentFilter;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 
 import com.atrainingtracker.banalservice.BANALService;
@@ -89,7 +90,26 @@ public abstract class MyDevice {
         return mDeviceId;
     }
 
-    public abstract String getName();
+    // Note,  this will only work properly, when the device is in the database...
+    @Nullable
+    public String getName() {
+        return mDevicesDatabaseManager.getDeviceName(getDeviceId());
+    }
+
+    @Nullable
+    public String getManufacturerName() {
+        return mDevicesDatabaseManager.getManufacturerName(mDeviceId);
+    }
+
+    protected void setManufacturerName(String name) {
+        if (DEBUG) Log.i(TAG, "woho, we have a manufacturer: " + name);
+        mDevicesDatabaseManager.setManufacturerName(mDeviceId, name);
+    }
+
+    public boolean isPaired() {
+        return mDevicesDatabaseManager.isPaired(mDeviceId);
+    }
+
 
     protected abstract void addSensors();
 

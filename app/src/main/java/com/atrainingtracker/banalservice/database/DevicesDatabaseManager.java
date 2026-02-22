@@ -29,6 +29,7 @@ import android.provider.BaseColumns;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
@@ -446,10 +447,12 @@ public class DevicesDatabaseManager {
         return DeviceType.valueOf(getString(deviceId, DevicesDbHelper.DEVICE_TYPE));
     }
 
+    @Nullable
     public String getManufacturerName(long deviceId) {
         return getString(deviceId, DevicesDbHelper.MANUFACTURER_NAME);
     }
 
+    @Nullable
     public String getDeviceName(long deviceId) {
         return getString(deviceId, DevicesDbHelper.NAME);
     }
@@ -516,6 +519,7 @@ public class DevicesDatabaseManager {
         return result;
     }
 
+    @Nullable
     private String getString(long deviceID, String key) {
         if (DEBUG) Log.i(TAG, "getString: deviceID=" + deviceID + ", key=" + key);
 

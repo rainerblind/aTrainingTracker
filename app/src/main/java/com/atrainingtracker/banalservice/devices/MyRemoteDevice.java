@@ -29,9 +29,7 @@ import androidx.core.content.ContextCompat;
 
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.Protocol;
-import com.atrainingtracker.banalservice.sensor.MySensor;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
-import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 import com.atrainingtracker.banalservice.helpers.UIHelper;
 
 /**
@@ -64,10 +62,6 @@ public abstract class MyRemoteDevice extends MyDevice {
         ContextCompat.registerReceiver(context, mCalibrationFactorChangedReceiver, mCalibrationFactorChangedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
-    @Override
-    public String getName() {
-        return mDevicesDatabaseManager.getDeviceName(getDeviceId());
-    }
 
     abstract public Protocol getProtocol();
 
@@ -99,7 +93,7 @@ public abstract class MyRemoteDevice extends MyDevice {
         intent.putExtra(BANALService.PROTOCOL, getProtocol().name());
         intent.putExtra(BANALService.DEVICE_TYPE, getDeviceType().name());
         intent.putExtra(BANALService.DEVICE_ID, getDeviceId());
-        intent.putExtra(BANALService.DEVICE_NAME, getDeviceName());
+        intent.putExtra(BANALService.DEVICE_NAME, getName());
         return intent;
     }
 
@@ -121,23 +115,6 @@ public abstract class MyRemoteDevice extends MyDevice {
     }
 
     protected void onStopSearching() {
-    }
-
-    public String getManufacturerName() {
-        return mDevicesDatabaseManager.getManufacturerName(mDeviceId);
-    }
-
-    protected void setManufacturerName(String name) {
-        if (DEBUG) Log.i(TAG, "woho, we have a manufacturer: " + name);
-        mDevicesDatabaseManager.setManufacturerName(mDeviceId, name);
-    }
-
-    public String getDeviceName() {
-        return mDevicesDatabaseManager.getDeviceName(mDeviceId);
-    }
-
-    public boolean isPaired() {
-        return mDevicesDatabaseManager.isPaired(mDeviceId);
     }
 
 
