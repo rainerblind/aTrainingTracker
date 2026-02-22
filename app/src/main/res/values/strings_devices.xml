@@ -78,6 +78,9 @@
     <!-- edit_device_generic -->
     <string name="devices_editDeviceGenericDeviceNameValue">Generic Device</string>
     <string name="devices_editDeviceGenericDeviceTypeValue">Generic</string>
+    <string name="devices_select_wheel_size_prompt">Select wheel size…</string>
+    <string name="devices_last_seen_never">not yet</string>
+    <string name="devices_equipment_none" />
 
     <!-- smartphone devices -->
     <string name="devices_location_GPS">GPS</string>

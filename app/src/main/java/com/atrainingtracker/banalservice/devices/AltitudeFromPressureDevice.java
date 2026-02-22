@@ -75,7 +75,7 @@ public class AltitudeFromPressureDevice extends MyDevice
 
     @Override
     public String getName() {
-        return mContext.getString(R.string.AltitudeFromPressureDevice_name);
+        return mContext.getString(R.string.devices_altitude_from_pressure);
     }
 
     @Override
