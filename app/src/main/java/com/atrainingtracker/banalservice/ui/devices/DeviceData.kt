@@ -23,8 +23,6 @@ data class DeviceRawData(
     val manufacturer: String,
     val deviceName: String,
     val isPaired: Boolean,
-    val isAvailable: Boolean,
-    val mainValue: String?,
     val calibrationValue: Double?,
     val linkedEquipment: List<String>,
     val availableEquipment: List<String>,
@@ -43,8 +41,6 @@ data class DeviceUiData(
     val manufacturer: String,
     val deviceName: String,
     val isPaired: Boolean,
-    val isAvailable: Boolean,
-    val mainValue: String?,
     val linkedEquipment: List<String>,
     val availableEquipment: List<String>,
     val powerFeaturesFlags: Int?,
@@ -57,8 +53,13 @@ data class DeviceUiData(
     // Specialized properties that can be null
     val wheelCircumference: Int?,
     val calibrationFactor: Double?,
-    val powerFeatures: BikePowerFeatures?
-)
+    val powerFeatures: BikePowerFeatures?,
+
+    // stuff that we don't get from the database but from the devices itself.
+    val isAvailable: Boolean,
+    val mainValue: String?,
+    val allValues: List<String>?
+    )
 
 // --- THE NEW, SIMPLIFIED FACTORY ---
 fun raw2UiDeviceData(rawData: DeviceRawData, context: Context): DeviceUiData {
@@ -102,8 +103,6 @@ fun raw2UiDeviceData(rawData: DeviceRawData, context: Context): DeviceUiData {
         manufacturer = rawData.manufacturer,
         deviceName = rawData.deviceName,
         isPaired = rawData.isPaired,
-        isAvailable = rawData.isAvailable,
-        mainValue = rawData.mainValue,
         linkedEquipment = rawData.linkedEquipment,
         availableEquipment = rawData.availableEquipment,
         powerFeaturesFlags = rawData.powerFeaturesFlags,
@@ -114,8 +113,13 @@ fun raw2UiDeviceData(rawData: DeviceRawData, context: Context): DeviceUiData {
 
         wheelCircumference = wheelCircumference,
         calibrationFactor = calibrationFactor,
-        powerFeatures = powerFeatures
-    )
+        powerFeatures = powerFeatures,
+
+        // set by observing the devices
+        isAvailable = false,
+        mainValue = null,
+        allValues = null
+        )
 }
 
 // Helper to get the smartphone battery percentage

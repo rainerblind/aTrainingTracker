@@ -165,18 +165,21 @@ class DeviceDataRepository private constructor(private val application: Applicat
                         // Device is currently active and seen by the service
                         val mainSensorData = activeDevice.mainSensorData
                         val mainValue = mainSensorData.value + " " + application.getString(MyHelper.getUnitsId(mainSensorData.sensor))
+                        val allValues = activeDevice.allSensorData.map { application.getString(it.sensor.fullNameId) + ": " + it.value + " " + application.getString(MyHelper.getUnitsId(it.sensor)) }
 
                         device.copy(
                             isAvailable = true, // Mark as available
                             lastSeen = application.getString(R.string.devices_now),
-                            mainValue = mainValue
+                            mainValue = mainValue,
+                            allValues = allValues
                         )
                     } else {
                         // Device is not active, reset its live data
                         device.copy(
                             isAvailable = false,
                             // lastSeen = device.lastSeen,  Note that we do not update lastSeen here.  When a device was seen and then is removed, we keep 'now'.  Otherwise, we would have to check the database again...
-                            mainValue = null
+                            mainValue = null,
+                            allValues = null
                         )
                     }
                 }
