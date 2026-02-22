@@ -76,16 +76,34 @@ abstract class BaseEditDeviceFragment : DialogFragment() {
                 dialogIcon.setImageResource(deviceUiData.deviceTypeIconRes)
                 dialogTitle.text = getString(R.string.edit_device)
 
-                // Let the subclass bind its specific views
-                @Suppress("UNCHECKED_CAST")
-                bindUi(deviceUiData as DeviceUiData)
-            }
-            else {
+                bindUi(deviceUiData)
+            } else {
                 dismissAllowingStateLoss()
+            }
+        }
+
+        viewModel.deviceData.observe(this) { deviceUiData ->
+            if (deviceUiData != null) {
+                bindLiveSensorData(deviceUiData)
             }
         }
     }
 
+    fun bindLiveSensorData(data: DeviceUiData) {
+        if (data.isAvailable && data.mainValue != null) {
+            // Device is active, show the live data section
+            binding.liveDataLayout.visibility = View.VISIBLE
+
+            binding.liveDataMainValue.text = data.mainValue
+
+            // Join the list of all sensor values into a single string
+            binding.liveDataAllValues.text = data.allValues?.joinToString("\n") ?: ""
+            binding.liveDataAllValues.visibility = if (data.allValues.isNullOrEmpty()) View.GONE else View.VISIBLE
+        } else {
+            // Device is not active, hide the live data section
+            binding.liveDataLayout.visibility = View.GONE
+        }
+    }
 
     /**
      * This function now lives in the base class and is called automatically.

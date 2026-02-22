@@ -24,6 +24,7 @@
     <string name="devices_measuredDistanceText">gemessene Strecke:</string>
     <string name="devices_correctDistanceText">korrekte Strecke:</string>
     <!-- edit_device_* -->
+    <string name="devices_settings_header">Einstellungen</string>
     <string name="devices_deviceNameText">Sensorname</string>
     <string name="devices_deviceTypeText">Sensortyp</string>
     <string name="devices_manufacturerText">Hersteller</string>
@@ -68,4 +69,7 @@
     <string name="devices_location_Network">Netzwerk</string>
     <string name="devices_location_GoogleFused">Google Fused</string>
     <string name="devices_altitude_from_pressure">Luftdruck</string>
+
+    <!-- live sensor data -->
+    <string name="devices_live_sensor_data_header">Sensordaten</string>
 </resources>

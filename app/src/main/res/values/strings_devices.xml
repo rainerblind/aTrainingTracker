@@ -38,6 +38,7 @@
     <string name="calibrationFactor_Value" translatable="false">1.0</string>
 
     <!-- edit_device_* -->
+    <string name="devices_settings_header">settings</string>
     <string name="devices_deviceNameText">device name</string>
     <string name="devices_deviceTypeText">device type</string>
     <string name="devices_manufacturerText">manufacturer</string>
@@ -87,5 +88,8 @@
     <string name="devices_location_Network">Network</string>
     <string name="devices_location_GoogleFused">Google Fused</string>
     <string name="devices_altitude_from_pressure">Air Pressure</string>
+
+    <!-- live sensor data -->
+    <string name="devices_live_sensor_data_header">Sensor Data</string>
 
 </resources>

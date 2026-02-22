@@ -34,6 +34,7 @@ import com.atrainingtracker.banalservice.sensor.MySensor;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumMap;
 import java.util.List;
@@ -188,6 +189,15 @@ public abstract class MyDevice {
         return new SensorData(mainSensor.getStringValue(), mainSensor.getSensorType());
     }
 
+    public List<SensorData> getAllSensorData() {
+        List<SensorData> sensorDataList = new ArrayList<>();
+
+        for (MySensor sensor : getSensors()) {
+            sensorDataList.add(new SensorData(sensor.getStringValue(), sensor.getSensorType()));
+        }
+
+        return sensorDataList;
+    }
 
     public void shutDown() {
         if (DEBUG) Log.i(TAG, "shutDown(): " + mDeviceType.name());

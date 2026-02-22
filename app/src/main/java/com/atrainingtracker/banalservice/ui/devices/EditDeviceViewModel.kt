@@ -26,6 +26,8 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
     private val _uiState = MutableLiveData<DeviceUiData?>()
     val uiState: LiveData<DeviceUiData?> = _uiState
 
+    lateinit var deviceData : LiveData<DeviceUiData?>
+
     /**
      * Loads the initial device data from the repository and populates the initial UI state.
      * This should be called once when the edit dialog is created.
@@ -33,8 +35,8 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
     fun loadInitialDeviceData(deviceId: Long) {
         // No launch block is needed for this synchronous, main-safe call.
         _uiState.value = repository.getDeviceSnapshotById(deviceId)
+        deviceData = repository.getDeviceById(deviceId)
     }
-
 
     //--- dealing with wheel sizes
     val wheelSizeNames: List<String> by lazy {
