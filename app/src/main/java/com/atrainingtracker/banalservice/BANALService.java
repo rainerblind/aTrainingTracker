@@ -30,6 +30,7 @@ import android.util.Log;
 
 import com.atrainingtracker.banalservice.devices.DeviceManager;
 import com.atrainingtracker.banalservice.devices.DeviceType;
+import com.atrainingtracker.banalservice.devices.MyDevice;
 import com.atrainingtracker.banalservice.devices.MyRemoteDevice;
 import com.atrainingtracker.banalservice.sensor.MyAccumulatorSensor;
 import com.atrainingtracker.banalservice.sensor.MySensor;
@@ -617,6 +618,10 @@ public class BANALService
 
         public List<MyRemoteDevice> getActiveRemoteDevices() {
             return cDeviceManager.getActiveRemoteDevices();
+        }
+
+        public List<MyDevice> getActiveDevicesForUI() {
+            return cDeviceManager.getActiveDevicesForUI();
         }
 
         public ActivityType getActivityType() {

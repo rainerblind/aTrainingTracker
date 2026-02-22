@@ -42,9 +42,9 @@ public enum DeviceType {
     RUN_SPEED(SensorType.SPEED_mps, BSportType.RUN, 1),
     ENVIRONMENT(SensorType.TEMPERATURE, BSportType.UNKNOWN, 1),
 
-    SPEED_AND_LOCATION_GPS(SensorType.ACCURACY, BSportType.UNKNOWN, 1),
-    SPEED_AND_LOCATION_NETWORK(SensorType.ACCURACY, BSportType.UNKNOWN, 1),
-    SPEED_AND_LOCATION_GOOGLE_FUSED(SensorType.ACCURACY, BSportType.UNKNOWN, 1),
+    SPEED_AND_LOCATION_GPS(SensorType.SPEED_mps, BSportType.UNKNOWN, 1),
+    SPEED_AND_LOCATION_NETWORK(SensorType.SPEED_mps, BSportType.UNKNOWN, 1),
+    SPEED_AND_LOCATION_GOOGLE_FUSED(SensorType.SPEED_mps, BSportType.UNKNOWN, 1),
 
     ALTITUDE_FROM_PRESSURE(SensorType.ALTITUDE, BSportType.UNKNOWN, 1),
 
@@ -136,13 +136,17 @@ public enum DeviceType {
             case LINE_DISTANCE_m:
             case LATITUDE:
             case LONGITUDE:
-                deviceTypes.addAll(getEnabledLocationDevices());
+                deviceTypes.add(DeviceType.SPEED_AND_LOCATION_GPS);
+                deviceTypes.add(DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED);
+                deviceTypes.add(DeviceType.SPEED_AND_LOCATION_NETWORK);
                 break;
 
             // either from pressure of from location
             case ALTITUDE:
                 deviceTypes.add(DeviceType.ALTITUDE_FROM_PRESSURE);
-                deviceTypes.addAll(getEnabledLocationDevices());
+                deviceTypes.add(DeviceType.SPEED_AND_LOCATION_GPS);
+                deviceTypes.add(DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED);
+                deviceTypes.add(DeviceType.SPEED_AND_LOCATION_NETWORK);
                 break;
 
             case CADENCE:
@@ -167,7 +171,9 @@ public enum DeviceType {
                 deviceTypes.add(DeviceType.BIKE_SPEED_AND_CADENCE);
                 deviceTypes.add(DeviceType.BIKE_POWER);      // but not all
                 deviceTypes.add(DeviceType.RUN_SPEED);
-                deviceTypes.addAll(getEnabledLocationDevices());
+                deviceTypes.add(DeviceType.SPEED_AND_LOCATION_GPS);
+                deviceTypes.add(DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED);
+                deviceTypes.add(DeviceType.SPEED_AND_LOCATION_NETWORK);
                 break;
 
             // only HR
@@ -197,21 +203,6 @@ public enum DeviceType {
         }
 
         return deviceTypes;
-    }
-
-    private static List<DeviceType> getEnabledLocationDevices() {
-        LinkedList<DeviceType> enabledLocationDevices = new LinkedList<>();
-        if (TrainingApplication.useLocationSourceGPS()) {
-            enabledLocationDevices.add(DeviceType.SPEED_AND_LOCATION_GPS);
-        }
-        if (TrainingApplication.useLocationSourceNetwork()) {
-            enabledLocationDevices.add(DeviceType.SPEED_AND_LOCATION_NETWORK);
-        }
-        if (TrainingApplication.useLocationSourceGoogleFused()) {
-            enabledLocationDevices.add(DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED);
-        }
-
-        return enabledLocationDevices;
     }
 
     public SensorType getMainSensorType() {

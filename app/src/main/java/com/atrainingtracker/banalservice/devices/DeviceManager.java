@@ -84,7 +84,7 @@ public class DeviceManager {
     protected static MyRemoteDevice cMyRemoteDeviceCurrentlySearchingFor = null;
     protected Context mContext;
     protected ClockDevice mClockDevice;
-    protected MyDevice mSpeedAndLocationDevice_GPS, mSpeedAndLocationDevice_GoogleFused, mSpeedAndLocationDevice_Network;
+    protected SpeedAndLocationDevice mSpeedAndLocationDevice_GPS, mSpeedAndLocationDevice_GoogleFused, mSpeedAndLocationDevice_Network;
     protected AltitudeFromPressureDevice mAltitudeFromPressureDevice;
     protected VerticalSpeedAndSlopeDevice mVerticalSpeedAndSlopeDevice;
     protected boolean mHavePressureSensor = false;
@@ -416,6 +416,7 @@ public class DeviceManager {
 
                 BSportType bSportType = mBanalService.getUserSelectedBSportType();
 
+                // TODO: We should always search for BSportType.UNKNOWN devices!
                 if (!TrainingApplication.searchOnlyForSportSpecificDevices()                                       // either, the sport type is ignored
                         || bSportType == null || bSportType == UNKNOWN                                              // or the sport type is not yet defined
                         || bSportType == cMyRemoteDeviceCurrentlySearchingFor.getDeviceType().getSportType()) {     // or it is the correct sport type
@@ -507,6 +508,33 @@ public class DeviceManager {
                 result.add(remoteDevice);
             }
         }
+
+        return result;
+    }
+
+    public List<SpeedAndLocationDevice> getActiveSpeedAndLocationDevices() {
+        List<SpeedAndLocationDevice> result = new LinkedList<>();
+
+        if (mSpeedAndLocationDevice_GPS != null) {
+            result.add(mSpeedAndLocationDevice_GPS);
+        }
+
+        if (mSpeedAndLocationDevice_GoogleFused != null) {
+            result.add(mSpeedAndLocationDevice_GoogleFused);
+        }
+
+        if (mSpeedAndLocationDevice_Network != null) {
+            result.add(mSpeedAndLocationDevice_Network);
+        }
+
+        return result;
+    }
+
+    public List<MyDevice> getActiveDevicesForUI() {
+        List<MyDevice> result = new LinkedList<>();
+
+        result.addAll(getActiveRemoteDevices());
+        result.addAll(getActiveSpeedAndLocationDevices());
 
         return result;
     }
