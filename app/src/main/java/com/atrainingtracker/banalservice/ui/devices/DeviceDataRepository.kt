@@ -359,6 +359,13 @@ class DeviceDataRepository private constructor(private val application: Applicat
         }
     }
 
+    fun deleteDevice(deviceId: Long) {
+        repositoryScope.launch {
+            devicesDatabaseManager.deleteDevice(deviceId)
+            loadAllDevices()
+        }
+    }
+
 
     fun sendPairingChangedBroadcast(deviceId: Long, paired: Boolean) {
         val intent = Intent(BANALService.PAIRING_CHANGED)
