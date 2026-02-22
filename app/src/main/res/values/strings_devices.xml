@@ -95,4 +95,8 @@
     <!-- live sensor data -->
     <string name="devices_live_sensor_data_header">Sensor Data</string>
 
+    <!-- delete confirmation dialog -->
+    <string name="devices_dialog_delete_device_title">Really delete?</string>
+    <string name="devices_dialog_delete_device_message">Do your really want to delete the \'%1$s\' sensor?</string>
+
 </resources>

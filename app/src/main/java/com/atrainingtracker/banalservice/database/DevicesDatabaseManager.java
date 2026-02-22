@@ -659,6 +659,27 @@ public class DevicesDatabaseManager {
         return  deviceId;
     }
 
+    public int deleteDevice(long deviceId) {
+        if (DEBUG) Log.d(TAG, "deleteDevice: deviceId=" + deviceId);
+
+        SQLiteDatabase db = getDatabase();
+        int affectedRows = 0;
+        try {
+            affectedRows = db.delete(DevicesDbHelper.DEVICES,
+                    DevicesDbHelper.C_ID + "=?",
+                    new String[]{Long.toString(deviceId)});
+
+            if (affectedRows == 0) {
+                if (DEBUG) Log.w(TAG, "deleteDevice: No device found with ID " + deviceId + " to delete.");
+            }
+        } catch (SQLException e) {
+            Log.e(TAG, "Error while deleting device with ID " + deviceId, e);
+            return -1; // Return -1 to indicate an error
+        }
+
+        return affectedRows; // Return the number of rows deleted (should be 1 or 0)
+    }
+
 
     public static class DeviceIdAndNameLists {
         public final LinkedList<Long> deviceIds;

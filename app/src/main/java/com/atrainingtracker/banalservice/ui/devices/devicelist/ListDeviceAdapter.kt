@@ -1,7 +1,9 @@
 package com.atrainingtracker.banalservice.ui.devices.devicelist
 
 import android.os.Bundle
+import android.view.ContextMenu
 import android.view.LayoutInflater
+import android.view.MenuInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
@@ -16,7 +18,8 @@ import com.atrainingtracker.databinding.ItemDeviceListBinding
 
 class ListDeviceAdapter(
     private val onPairClick: (DeviceUiData) -> Unit,
-    private val onItemClick: (DeviceUiData) -> Unit
+    private val onItemClick: (DeviceUiData) -> Unit,
+    private val onLongClick: (DeviceUiData) -> Unit
 ) : ListAdapter<DeviceUiData, ListDeviceAdapter.DeviceViewHolder>(DeviceDiffCallback()) {
 
     /**
@@ -37,7 +40,7 @@ class ListDeviceAdapter(
      */
     override fun onBindViewHolder(holder: DeviceViewHolder, position: Int) {
         val device = getItem(position)
-        holder.bind(device, onPairClick, onItemClick)
+        holder.bind(device, onPairClick, onItemClick, onLongClick)
     }
 
     override fun onBindViewHolder(
@@ -76,12 +79,28 @@ class ListDeviceAdapter(
      * and binds the data to those views.
      */
     class DeviceViewHolder(private val binding: ItemDeviceListBinding) :
-        RecyclerView.ViewHolder(binding.root) {
+        RecyclerView.ViewHolder(binding.root),
+        View.OnCreateContextMenuListener {
+
+        init {
+            itemView.setOnCreateContextMenuListener(this)
+        }
+
+        override fun onCreateContextMenu(
+            menu: ContextMenu,
+            v: View,
+            menuInfo: ContextMenu.ContextMenuInfo?
+        ) {
+            // Inflate the menu resource. The Fragment will handle the click event.
+            val inflater = MenuInflater(v.context)
+            inflater.inflate(R.menu.menu_edit_device_context, menu)
+        }
 
         fun bind(
             device: DeviceUiData,
             onPairClick: (DeviceUiData) -> Unit,
-            onItemClick: (DeviceUiData) -> Unit
+            onItemClick: (DeviceUiData) -> Unit,
+            onLongClick: (DeviceUiData) -> Unit
         ) {
             // Bind all the data from the ListDeviceData object to the views
             binding.deviceName.text = device.deviceName
@@ -116,6 +135,12 @@ class ListDeviceAdapter(
             // adding the click listeners
             itemView.setOnClickListener {
                 onItemClick(device)
+            }
+
+            itemView.setOnLongClickListener {
+                onLongClick(device)
+                // Return false to allow the context menu creation to proceed
+                false
             }
 
             binding.buttonPair.setOnClickListener {
