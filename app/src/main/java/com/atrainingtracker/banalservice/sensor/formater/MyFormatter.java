@@ -18,7 +18,10 @@
 
 package com.atrainingtracker.banalservice.sensor.formater;
 
+import androidx.annotation.NonNull;
+
 public interface MyFormatter<T> {
     // TODO: add units???
+    @NonNull
     String format(T value);
 }
