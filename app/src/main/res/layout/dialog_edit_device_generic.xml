@@ -30,12 +30,13 @@
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/layout_last_seen"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content">
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/tvLastSeen"
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:clickable="false"
                         android:focusable="false"
@@ -43,11 +44,6 @@
                         android:singleLine="true"
                         tools:text="10. Feb 2026 14:32" />
                 </com.google.android.material.textfield.TextInputLayout>
-
-                <View
-                    android:layout_width="0dp"
-                    android:layout_height="0dp"
-                    android:layout_weight="1" />
 
                 <ImageView
                     android:id="@+id/ivBatteryStatus"
