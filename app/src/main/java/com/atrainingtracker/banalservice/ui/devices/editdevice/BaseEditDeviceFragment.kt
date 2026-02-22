@@ -139,22 +139,17 @@ abstract class BaseEditDeviceFragment : DialogFragment() {
 
     private fun setupEquipmentSection(data: DeviceUiData, editText: AutoCompleteTextView) {
         val layout = editText.parent.parent as? View
-        if (data.availableEquipment.isEmpty()) {
-            layout?.visibility = View.GONE
-        } else {
-            layout?.visibility = View.VISIBLE
-            val onEquipment = getString(data.onEquipmentResId)
-            (layout as? com.google.android.material.textfield.TextInputLayout)?.hint = onEquipment
+        val onEquipment = getString(data.onEquipmentResId)
+        (layout as? com.google.android.material.textfield.TextInputLayout)?.hint = onEquipment
 
-            equipmentNames = data.availableEquipment.toTypedArray()
-            val linkedEquipmentSet = data.linkedEquipment.toSet()
-            checkedItems = data.availableEquipment.map { linkedEquipmentSet.contains(it) }.toBooleanArray()
+        equipmentNames = data.availableEquipment.toTypedArray()
+        val linkedEquipmentSet = data.linkedEquipment.toSet()
+        checkedItems = data.availableEquipment.map { linkedEquipmentSet.contains(it) }.toBooleanArray()
 
-            updateEquipmentTextField(editText)
+        updateEquipmentTextField(editText)
 
-            editText.setOnClickListener {
-                showMultiChoiceEquipmentDialog(onEquipment)
-            }
+        editText.setOnClickListener {
+            showMultiChoiceEquipmentDialog(onEquipment)
         }
     }
 

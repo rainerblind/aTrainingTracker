@@ -141,7 +141,16 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
 
         SQLiteDatabase db = this.getReadableDatabase();
         Cursor cursor;
-        if (frameType == 0) {
+        if (sportType == BSportType.UNKNOWN) {
+            cursor = db.query(EQUIPMENT,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null);
+        }
+        else if (frameType == 0) {
             cursor = db.query(EQUIPMENT,
                     null,
                     SPORT_TYPE + "=?",
@@ -149,7 +158,8 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
                     null,
                     null,
                     null);
-        } else {
+        }
+        else {
             cursor = db.query(EQUIPMENT,
                     null,
                     FRAME_TYPE + "=? AND " + SPORT_TYPE + "=?",
