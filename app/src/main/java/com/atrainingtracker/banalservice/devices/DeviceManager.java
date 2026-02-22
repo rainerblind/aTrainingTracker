@@ -539,6 +539,10 @@ public class DeviceManager {
         return result;
     }
 
+    public List<Long> getIdsOfFoundDevices() {
+        return mFoundDevices;
+    }
+
     public List<Long> getDatabaseIdsOfActiveDevices() {
         List<Long> result = new LinkedList<Long>();
 

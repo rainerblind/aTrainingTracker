@@ -624,6 +624,10 @@ public class BANALService
             return cDeviceManager.getActiveDevicesForUI();
         }
 
+        public List<Long> getIdsOfFoundDevices() {
+            return cDeviceManager.getIdsOfFoundDevices();
+        }
+
         public ActivityType getActivityType() {
             return BANALService.this.getActivityType();
         }
