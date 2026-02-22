@@ -92,9 +92,10 @@ abstract class BaseEditDeviceFragment : DialogFragment() {
      * It binds all views that are common to every device type.
      */
     open fun bindUi(data: DeviceUiData) {
-        // Assuming your generic layout has these IDs
+
         binding.tvLastSeen.setText(data.lastSeen)
         binding.ivBatteryStatus.setImageResource(data.batteryStatusIconRes)
+        binding.availableIcon.setImageResource(if (data.isAvailable) R.drawable.ic_device_available else R.drawable.ic_device_not_available)
         binding.tvManufacturer.setText(data.manufacturer)
 
         // only update the name if it has changed
