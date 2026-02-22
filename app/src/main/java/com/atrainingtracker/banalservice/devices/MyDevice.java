@@ -24,6 +24,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 
 import com.atrainingtracker.banalservice.BANALService;
@@ -171,6 +172,22 @@ public abstract class MyDevice {
     protected boolean sensorsRegistered() {
         return mSensorsRegistered;
     }
+
+    public String getMainSensorStringValue() {
+        return getMainSensor().getStringValue();
+    }
+
+    protected MySensor getMainSensor() {
+        return getSensor(getDeviceType().getMainSensorType());
+    }
+
+    @NonNull
+    public SensorData getMainSensorData() {
+        MySensor mainSensor = getMainSensor();
+
+        return new SensorData(mainSensor.getStringValue(), mainSensor.getSensorType());
+    }
+
 
     public void shutDown() {
         if (DEBUG) Log.i(TAG, "shutDown(): " + mDeviceType.name());

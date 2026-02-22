@@ -71,13 +71,6 @@ public abstract class MyRemoteDevice extends MyDevice {
 
     abstract public Protocol getProtocol();
 
-    public String getMainSensorStringValue() {
-        return getMainSensor().getStringValue();
-    }
-
-    protected MySensor getMainSensor() {
-        return getSensor(getDeviceType().getMainSensorType());
-    }
 
     public abstract void startSearching();
 
