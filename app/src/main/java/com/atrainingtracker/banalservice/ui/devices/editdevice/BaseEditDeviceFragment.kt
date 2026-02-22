@@ -93,7 +93,7 @@ abstract class BaseEditDeviceFragment : DialogFragment() {
      */
     open fun bindUi(data: DeviceUiData) {
 
-        binding.tvLastSeen.setText(data.lastSeen)
+        binding.tvLastSeen.setText(if (data.lastSeen != null) data.lastSeen else getString(R.string.devices_last_seen_never))
         binding.ivBatteryStatus.setImageResource(data.batteryStatusIconRes)
         binding.availableIcon.setImageResource(if (data.isAvailable) R.drawable.ic_device_available else R.drawable.ic_device_not_available)
         binding.tvManufacturer.setText(data.manufacturer)
