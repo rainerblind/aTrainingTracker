@@ -5,6 +5,8 @@
 
     <!-- device_choice_row -->
     <string name="devices_unknown">Unbekannt</string>
+    <string name="devices_unknown_manufacturer">Unbekannter Hersteller</string>
+    <string name="devices_unknown_device">Kein Name</string>
 
     <!-- device_list -->
     <string name="devices_myRemoteDevices">Meine Sensoren</string>

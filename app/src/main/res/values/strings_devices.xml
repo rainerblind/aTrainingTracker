@@ -9,6 +9,9 @@
 
     <!-- device_choice_row -->
     <string name="devices_unknown">Unknown</string>
+    <string name="devices_unknown_manufacturer">unknown manufacturer</string>
+    <string name="devices_unknown_device">no name</string>
+
 
     <!-- device_list_row -->
     <string name="devices_no_main_value" translatable="false">(--)</string>

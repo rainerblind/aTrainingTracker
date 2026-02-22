@@ -74,12 +74,6 @@ public class SpeedAndLocationDevice_GoogleFused extends SpeedAndLocationDevice
     }
 
     @Override
-    public String getName() {
-        return "google_fused";   // here, we do not use R.string to be compatible with the old (pre 3.8) way
-    }
-
-
-    @Override
     public void onConnected(Bundle dataBundle) {
         if (DEBUG) Log.d(TAG, "onConnected()");
 
