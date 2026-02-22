@@ -167,7 +167,7 @@ abstract class BaseEditDeviceFragment : DialogFragment() {
     private fun updateEquipmentTextField(editText: AutoCompleteTextView) {
         val selectedEquipment = getLinkedEquipment()
         val displayText = if (selectedEquipment.isEmpty()) {
-            getString(R.string.none)
+            getString(R.string.devices_equipment_none)
         } else {
             selectedEquipment.joinToString(", ")
         }

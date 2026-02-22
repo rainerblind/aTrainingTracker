@@ -55,7 +55,7 @@ abstract class BaseEditBikeDeviceFragment : BaseEditDeviceFragment() {
         spinner.visibility = View.VISIBLE
 
         val wheelSizeNames = viewModel.wheelSizeNames.toMutableList()
-        wheelSizeNames[0] = requireContext().getString(R.string.select_wheel_size_prompt)
+        wheelSizeNames[0] = requireContext().getString(R.string.devices_select_wheel_size_prompt)
 
         val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_dropdown_item, wheelSizeNames)
         spinner.adapter = adapter

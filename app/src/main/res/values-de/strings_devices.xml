@@ -59,11 +59,13 @@
     <!-- edit_device_generic -->
     <string name="devices_editDeviceGenericDeviceNameValue">Generischer Sensor</string>
     <string name="devices_editDeviceGenericDeviceTypeValue">Generisch</string>
+    <string name="devices_select_wheel_size_prompt">Radgröße wählen…</string>
+    <string name="devices_last_seen_never">noch nicht</string>
+    <string name="devices_equipment_none" />
 
     <!-- smartphone devices -->
     <string name="devices_location_GPS">GPS</string>
     <string name="devices_location_Network">Netzwerk</string>
     <string name="devices_location_GoogleFused">Google Fused</string>
     <string name="devices_altitude_from_pressure">Luftdruck</string>
-
 </resources>
