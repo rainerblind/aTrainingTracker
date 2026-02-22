@@ -5,6 +5,8 @@
 
     <!-- device_choice_row -->
     <string name="devices_unknown">Unbekannt</string>
+    <string name="devices_unknown_manufacturer">Unbekannter Hersteller</string>
+    <string name="devices_unknown_device">Kein Name</string>
 
     <!-- device_list -->
     <string name="devices_myRemoteDevices">Meine Sensoren</string>
@@ -24,6 +26,7 @@
     <string name="devices_measuredDistanceText">gemessene Strecke:</string>
     <string name="devices_correctDistanceText">korrekte Strecke:</string>
     <!-- edit_device_* -->
+    <string name="devices_settings_header">Einstellungen</string>
     <string name="devices_deviceNameText">Sensorname</string>
     <string name="devices_deviceTypeText">Sensortyp</string>
     <string name="devices_manufacturerText">Hersteller</string>
@@ -59,11 +62,21 @@
     <!-- edit_device_generic -->
     <string name="devices_editDeviceGenericDeviceNameValue">Generischer Sensor</string>
     <string name="devices_editDeviceGenericDeviceTypeValue">Generisch</string>
+    <string name="devices_select_wheel_size_prompt">Radgröße wählen…</string>
+    <string name="devices_last_seen_never">noch nicht</string>
+    <string name="devices_equipment_none" />
 
     <!-- smartphone devices -->
     <string name="devices_location_GPS">GPS</string>
     <string name="devices_location_Network">Netzwerk</string>
     <string name="devices_location_GoogleFused">Google Fused</string>
     <string name="devices_altitude_from_pressure">Luftdruck</string>
+
+    <!-- live sensor data -->
+    <string name="devices_live_sensor_data_header">Sensordaten</string>
+
+    <!-- delete confirmation dialog -->
+    <string name="devices_dialog_delete_device_title">Wirklich löschen?</string>
+    <string name="devices_dialog_delete_device_message">Willst Du den Sensor \'%1$s\' wirklich löschen?</string>
 
 </resources>

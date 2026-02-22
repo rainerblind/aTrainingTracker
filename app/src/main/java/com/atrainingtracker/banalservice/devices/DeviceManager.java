@@ -437,7 +437,7 @@ public class DeviceManager {
     }
 
     public String getNameOfSearchingDevice() {
-        return cMyRemoteDeviceCurrentlySearchingFor == null ? null : cMyRemoteDeviceCurrentlySearchingFor.getDeviceName();
+        return cMyRemoteDeviceCurrentlySearchingFor == null ? null : cMyRemoteDeviceCurrentlySearchingFor.getName();
     }
 
     public void startSearchForPairedDevices() {
@@ -539,6 +539,10 @@ public class DeviceManager {
         return result;
     }
 
+    public List<Long> getIdsOfFoundDevices() {
+        return mFoundDevices;
+    }
+
     public List<Long> getDatabaseIdsOfActiveDevices() {
         List<Long> result = new LinkedList<Long>();
 
@@ -561,7 +565,7 @@ public class DeviceManager {
             if ((protocol == Protocol.ALL || remoteDevice.getProtocol() == protocol)
                     && (deviceType == DeviceType.ALL || remoteDevice.getDeviceType() == deviceType)
                     && remoteDevice.isReceivingData()) {
-                if (DEBUG) Log.i(TAG, "adding " + remoteDevice.getDeviceName());
+                if (DEBUG) Log.i(TAG, "adding " + remoteDevice.getName());
                 availableDevicesList.add(remoteDevice.getDeviceId());
             }
         }

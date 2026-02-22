@@ -76,25 +76,44 @@ abstract class BaseEditDeviceFragment : DialogFragment() {
                 dialogIcon.setImageResource(deviceUiData.deviceTypeIconRes)
                 dialogTitle.text = getString(R.string.edit_device)
 
-                // Let the subclass bind its specific views
-                @Suppress("UNCHECKED_CAST")
-                bindUi(deviceUiData as DeviceUiData)
-            }
-            else {
+                bindUi(deviceUiData)
+            } else {
                 dismissAllowingStateLoss()
+            }
+        }
+
+        viewModel.deviceData.observe(this) { deviceUiData ->
+            if (deviceUiData != null) {
+                bindLiveSensorData(deviceUiData)
             }
         }
     }
 
+    fun bindLiveSensorData(data: DeviceUiData) {
+        if (data.isAvailable && data.mainValue != null) {
+            // Device is active, show the live data section
+            binding.liveDataLayout.visibility = View.VISIBLE
+
+            binding.liveDataMainValue.text = data.mainValue
+
+            // Join the list of all sensor values into a single string
+            binding.liveDataAllValues.text = data.allValues?.joinToString("\n") ?: ""
+            binding.liveDataAllValues.visibility = if (data.allValues.isNullOrEmpty()) View.GONE else View.VISIBLE
+        } else {
+            // Device is not active, hide the live data section
+            binding.liveDataLayout.visibility = View.GONE
+        }
+    }
 
     /**
      * This function now lives in the base class and is called automatically.
      * It binds all views that are common to every device type.
      */
     open fun bindUi(data: DeviceUiData) {
-        // Assuming your generic layout has these IDs
-        binding.tvLastSeen.setText(data.lastSeen)
+
+        binding.tvLastSeen.setText(if (data.lastSeen != null) data.lastSeen else getString(R.string.devices_last_seen_never))
         binding.ivBatteryStatus.setImageResource(data.batteryStatusIconRes)
+        binding.availableIcon.setImageResource(if (data.isAvailable) R.drawable.ic_device_available else R.drawable.ic_device_not_available)
         binding.tvManufacturer.setText(data.manufacturer)
 
         // only update the name if it has changed
@@ -120,22 +139,17 @@ abstract class BaseEditDeviceFragment : DialogFragment() {
 
     private fun setupEquipmentSection(data: DeviceUiData, editText: AutoCompleteTextView) {
         val layout = editText.parent.parent as? View
-        if (data.availableEquipment.isEmpty()) {
-            layout?.visibility = View.GONE
-        } else {
-            layout?.visibility = View.VISIBLE
-            val onEquipment = getString(data.onEquipmentResId)
-            (layout as? com.google.android.material.textfield.TextInputLayout)?.hint = onEquipment
+        val onEquipment = getString(data.onEquipmentResId)
+        (layout as? com.google.android.material.textfield.TextInputLayout)?.hint = onEquipment
 
-            equipmentNames = data.availableEquipment.toTypedArray()
-            val linkedEquipmentSet = data.linkedEquipment.toSet()
-            checkedItems = data.availableEquipment.map { linkedEquipmentSet.contains(it) }.toBooleanArray()
+        equipmentNames = data.availableEquipment.toTypedArray()
+        val linkedEquipmentSet = data.linkedEquipment.toSet()
+        checkedItems = data.availableEquipment.map { linkedEquipmentSet.contains(it) }.toBooleanArray()
 
-            updateEquipmentTextField(editText)
+        updateEquipmentTextField(editText)
 
-            editText.setOnClickListener {
-                showMultiChoiceEquipmentDialog(onEquipment)
-            }
+        editText.setOnClickListener {
+            showMultiChoiceEquipmentDialog(onEquipment)
         }
     }
 
@@ -166,7 +180,7 @@ abstract class BaseEditDeviceFragment : DialogFragment() {
     private fun updateEquipmentTextField(editText: AutoCompleteTextView) {
         val selectedEquipment = getLinkedEquipment()
         val displayText = if (selectedEquipment.isEmpty()) {
-            getString(R.string.none)
+            getString(R.string.devices_equipment_none)
         } else {
             selectedEquipment.joinToString(", ")
         }

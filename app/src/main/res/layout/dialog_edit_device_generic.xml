@@ -30,12 +30,13 @@
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/layout_last_seen"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content">
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/tvLastSeen"
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:clickable="false"
                         android:focusable="false"
@@ -44,11 +45,6 @@
                         tools:text="10. Feb 2026 14:32" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <View
-                    android:layout_width="0dp"
-                    android:layout_height="0dp"
-                    android:layout_weight="1" />
-
                 <ImageView
                     android:id="@+id/ivBatteryStatus"
                     android:layout_width="wrap_content"
@@ -56,6 +52,16 @@
                     android:layout_marginStart="8dp"
                     tools:ignore="ContentDescription"
                     tools:src="@drawable/stat_sys_battery_unknown" />
+
+                <!-- available / not available -->
+                <ImageView
+                    android:id="@+id/availableIcon"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    tools:ignore="ContentDescription"
+                    tools:srcCompat="@drawable/ic_device_not_available" />
+
             </LinearLayout>
 
             <!-- Manufacturer (Read-Only) -->
@@ -76,6 +82,51 @@
                     tools:text="Garmin" />
             </com.google.android.material.textfield.TextInputLayout>
         </LinearLayout>
+
+        <!-- ============================================= -->
+        <!--   Live Data Section                           -->
+        <!-- ============================================= -->
+        <LinearLayout    android:id="@+id/liveDataLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="16dp"
+            android:visibility="gone"
+            tools:visibility="visible"> <!-- Use tools:visibility for preview -->
+
+            <TextView
+                style="?android:attr/listSeparatorTextViewStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/devices_live_sensor_data_header" />
+
+            <TextView
+                android:id="@+id/liveDataMainValue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="8dp"
+                style="@style/TextAppearance.MaterialComponents.Headline6"
+                tools:text="180 W" />
+
+            <TextView
+                android:id="@+id/liveDataAllValues"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="4dp"
+                style="@style/TextAppearance.MaterialComponents.Body1"
+                tools:text="Cadence: 90 rpm\nSpeed: 25.4 km/h" />
+
+        </LinearLayout>
+
+
+        <TextView
+            android:layout_marginTop="16dp"
+            style="?android:attr/listSeparatorTextViewStyle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/devices_settings_header" />
 
         <!-- Device Name (Editable) -->
         <com.google.android.material.textfield.TextInputLayout

@@ -917,8 +917,5 @@
     <string name="drawer__training">Training</string>
     <string name="drawer__maps">Karten</string>
 
-    <!-- edit device -->
-    <string name="select_wheel_size_prompt">Radgröße wählen…</string>
-
 
 </resources>

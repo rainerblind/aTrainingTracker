@@ -170,6 +170,7 @@
     <string name="units_none" translatable="false" />
     <string name="units_percent" translatable="false">%</string>
     <string name="units_degree" translatable="false">°</string>
+    <string name="units_rpm" translatable="false">/min</string>
 
     <string name="value_unit_float_string">%1$.2f %2$s</string>
     <!-- TODO: correct??? -->
@@ -1014,10 +1015,5 @@
     <!-- drawer -->
     <string name="drawer__training">Training</string>
     <string name="drawer__maps">Maps</string>
-
-    <!-- edit device -->
-    <string name="select_wheel_size_prompt">Select wheel size…</string>
-    <string name="none" />
-
 
 </resources>

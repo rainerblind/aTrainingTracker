@@ -3,6 +3,7 @@ package com.atrainingtracker.banalservice.ui.devices.devicelist
 
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
@@ -11,8 +12,10 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.helpers.UIHelper
+import com.atrainingtracker.banalservice.ui.devices.DeviceUiData
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFragmentFactory
 import com.atrainingtracker.databinding.FragmentDeviceListBinding
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 class ListDeviceFragment : Fragment() {
 
@@ -21,7 +24,8 @@ class ListDeviceFragment : Fragment() {
 
     private lateinit var filterSpec: DeviceFilterSpec
     private lateinit var binding: FragmentDeviceListBinding
-    private lateinit var deviceAdapter: ListDeviceAdapter
+    private lateinit var listDeviceAdapter: ListDeviceAdapter
+    private var longClickedDevice: DeviceUiData? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,20 +64,25 @@ class ListDeviceFragment : Fragment() {
 
         setupRecyclerView()
         observeViewModel()
+
+        registerForContextMenu(binding.recyclerViewDevices)
     }
 
     private fun setupRecyclerView() {
-        deviceAdapter = ListDeviceAdapter(
+        listDeviceAdapter = ListDeviceAdapter(
             onPairClick = { device ->
                 viewModel.onPairedChanged(device.id, !device.isPaired)
             },
             onItemClick = { device ->
                 viewModel.onDeviceSelected(device.id)
+            },
+            onLongClick = { device ->
+                longClickedDevice = device
             }
         )
         binding.recyclerViewDevices.apply {
             layoutManager = LinearLayoutManager(context)
-            adapter = deviceAdapter
+            adapter = listDeviceAdapter
         }
     }
 
@@ -82,7 +91,7 @@ class ListDeviceFragment : Fragment() {
         viewModel.getFilteredDevices(filterSpec).observe(viewLifecycleOwner) { devices ->
             // The LiveData provides a list that is already perfectly filtered.
             // Just submit it to the adapter.
-            deviceAdapter.submitList(devices)
+            listDeviceAdapter.submitList(devices)
 
             // Optional: Show a "no devices" message if the list is empty
             binding.textViewEmptyList.visibility = if (devices.isEmpty()) View.VISIBLE else View.GONE
@@ -100,6 +109,34 @@ class ListDeviceFragment : Fragment() {
                 editDeviceDialog.show(parentFragmentManager, "EditDeviceDialog")
             }
         }
+    }
+
+    override fun onContextItemSelected(item: MenuItem): Boolean {
+        // Get the stored device directly
+        val deviceToDelete = longClickedDevice ?: return super.onContextItemSelected(item)
+
+        return when (item.itemId) {
+            R.id.action_delete_device -> {
+                // Show a confirmation dialog before deleting
+                showDeleteConfirmationDialog(deviceToDelete)
+                true // We have handled this menu item click
+            }
+            else -> super.onContextItemSelected(item)
+        }
+    }
+
+    private fun showDeleteConfirmationDialog(device: DeviceUiData) {
+        // Use MaterialAlertDialogBuilder for modern styling
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.devices_dialog_delete_device_title)
+            .setMessage(getString(R.string.devices_dialog_delete_device_message, device.deviceName))
+            .setNegativeButton(R.string.cancel) { dialog, _ ->
+                dialog.dismiss()
+            }
+            .setPositiveButton(R.string.delete) { _, _ ->
+                viewModel.deleteDevice(device.id)
+            }
+            .show()
     }
 
     companion object {

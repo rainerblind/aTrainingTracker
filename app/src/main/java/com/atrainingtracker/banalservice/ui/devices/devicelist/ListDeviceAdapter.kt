@@ -1,7 +1,9 @@
 package com.atrainingtracker.banalservice.ui.devices.devicelist
 
 import android.os.Bundle
+import android.view.ContextMenu
 import android.view.LayoutInflater
+import android.view.MenuInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
@@ -16,7 +18,8 @@ import com.atrainingtracker.databinding.ItemDeviceListBinding
 
 class ListDeviceAdapter(
     private val onPairClick: (DeviceUiData) -> Unit,
-    private val onItemClick: (DeviceUiData) -> Unit
+    private val onItemClick: (DeviceUiData) -> Unit,
+    private val onLongClick: (DeviceUiData) -> Unit
 ) : ListAdapter<DeviceUiData, ListDeviceAdapter.DeviceViewHolder>(DeviceDiffCallback()) {
 
     /**
@@ -37,7 +40,7 @@ class ListDeviceAdapter(
      */
     override fun onBindViewHolder(holder: DeviceViewHolder, position: Int) {
         val device = getItem(position)
-        holder.bind(device, onPairClick, onItemClick)
+        holder.bind(device, onPairClick, onItemClick, onLongClick)
     }
 
     override fun onBindViewHolder(
@@ -50,9 +53,24 @@ class ListDeviceAdapter(
             // Let the default onBindViewHolder handle it.
             super.onBindViewHolder(holder, position, payloads)
         } else {
-            // We have a payload, so we only update the specific views that changed.
-            val bundle = payloads[0] as Bundle
-            holder.updateFields(bundle)
+            // Payloads are present, so we can perform one or more partial updates.
+            // The payload from our DiffUtil is expected to be a List<DeviceUiUpdatePayload>.
+            payloads.forEach { payload ->
+                if (payload is List<*>) {
+                    // Iterate through the actual change events inside the list.
+                    payload.forEach { item ->
+                        when (item) {
+                            is DeviceUiUpdatePayload.AvailabilityChanged -> {
+                                holder.updateAvailability(item.isAvailable, item.lastSeen)
+                            }
+                            is DeviceUiUpdatePayload.MainValueChanged -> {
+                                holder.updateMainValue(item.mainValue)
+                            }
+                        }
+                    }
+                }
+            }
+
         }
     }
 
@@ -61,12 +79,28 @@ class ListDeviceAdapter(
      * and binds the data to those views.
      */
     class DeviceViewHolder(private val binding: ItemDeviceListBinding) :
-        RecyclerView.ViewHolder(binding.root) {
+        RecyclerView.ViewHolder(binding.root),
+        View.OnCreateContextMenuListener {
+
+        init {
+            itemView.setOnCreateContextMenuListener(this)
+        }
+
+        override fun onCreateContextMenu(
+            menu: ContextMenu,
+            v: View,
+            menuInfo: ContextMenu.ContextMenuInfo?
+        ) {
+            // Inflate the menu resource. The Fragment will handle the click event.
+            val inflater = MenuInflater(v.context)
+            inflater.inflate(R.menu.menu_edit_device_context, menu)
+        }
 
         fun bind(
             device: DeviceUiData,
             onPairClick: (DeviceUiData) -> Unit,
-            onItemClick: (DeviceUiData) -> Unit
+            onItemClick: (DeviceUiData) -> Unit,
+            onLongClick: (DeviceUiData) -> Unit
         ) {
             // Bind all the data from the ListDeviceData object to the views
             binding.deviceName.text = device.deviceName
@@ -74,7 +108,7 @@ class ListDeviceAdapter(
             binding.deviceTypeIcon.setImageResource(device.deviceTypeIconRes)
             binding.batteryStatusIcon.setImageResource(device.batteryStatusIconRes)
 
-            binding.mainValue.text = device.mainValue ?: itemView.context.getString(R.string.devices_no_main_value)
+            updateMainValue(device.mainValue)
 
             if (device.linkedEquipment.isEmpty()) {
                 binding.linkedEquipment.visibility = View.GONE
@@ -85,22 +119,8 @@ class ListDeviceAdapter(
                 )
             }
 
-            // show when device was seen the last time
-            if (device.lastSeen.isNullOrEmpty()) {
-                // If there's no date, hide the TextView completely
-                binding.lastSeen.visibility = View.GONE
-            } else {
-                // If there is a date, make it visible and set the formatted text
-                binding.lastSeen.visibility = View.VISIBLE
-                val lastSeenText = if (device.isAvailable) {
-                    itemView.context.getString(R.string.devices_now)
-                }
-                else {
-                    // Split the string by space and take the first part (the date)
-                    device.lastSeen.split(" ").firstOrNull() ?: device.lastSeen
-                }
-                binding.lastSeen.text = lastSeenText
-            }
+            // set the availability icon and last seen / activated
+            updateAvailability(device.isAvailable, device.lastSeen)
 
             // Set the button text and style based on the isPaired property
             if (device.isPaired) {
@@ -117,46 +137,45 @@ class ListDeviceAdapter(
                 onItemClick(device)
             }
 
+            itemView.setOnLongClickListener {
+                onLongClick(device)
+                // Return false to allow the context menu creation to proceed
+                false
+            }
+
             binding.buttonPair.setOnClickListener {
                 onPairClick(device)
             }
         }
 
-        fun updateFields(bundle: Bundle) {
-            if (bundle.containsKey("KEY_MAIN_VALUE")) {
-                val mainValue = bundle.getString("KEY_MAIN_VALUE")
-                binding.mainValue.text = mainValue ?: itemView.context.getString(R.string.devices_no_main_value)
+        fun updateMainValue(mainValue: String?) {
+            binding.mainValue.text = itemView.context.getString(
+                R.string.devices_main_value_format,
+                mainValue ?: itemView.context.getString(R.string.devices_no_main_value)
+            )
+        }
+
+        fun updateAvailability(isAvailable: Boolean, lastSeen: String?) {
+            if (isAvailable) {
+                binding.availableIcon.setImageResource(R.drawable.ic_device_available)
+                binding.lastSeen.visibility = View.GONE
             }
-        }
-    }
+            else {
+                binding.availableIcon.setImageResource(R.drawable.ic_device_not_available)
 
-    /**
-     * The DiffUtil.ItemCallback implementation.
-     * This is the magic that allows ListAdapter to efficiently update the list.
-     */
-    class DeviceDiffCallback : DiffUtil.ItemCallback<DeviceUiData>() {
-        override fun areItemsTheSame(oldItem: DeviceUiData, newItem: DeviceUiData): Boolean {
-            // IDs are unique, so this is the perfect way to check if two items
-            // represent the same object.
-            return oldItem.id == newItem.id
-        }
+                // show when device was seen the last time
+                if (lastSeen.isNullOrEmpty()) {
+                    // If there's no date, hide the TextView completely
+                    binding.lastSeen.visibility = View.GONE
+                }
+                else {
+                    // If there is a date, make it visible and set the formatted text
+                    binding.lastSeen.visibility = View.VISIBLE
 
-        override fun areContentsTheSame(oldItem: DeviceUiData, newItem: DeviceUiData): Boolean {
-            // Check if the content of the items has changed. If this returns false,
-            // onBindViewHolder will be called to redraw the item.
-            // The 'data class' automatically generates a correct .equals() for this.
-            return oldItem == newItem
-        }
-
-        override fun getChangePayload(oldItem: DeviceUiData, newItem: DeviceUiData): Bundle? {
-            // only check for updates of the mainValue
-            if (newItem.mainValue != oldItem.mainValue) {
-                val result = Bundle()
-                result.putString("KEY_MAIN_VALUE", newItem.mainValue)
-                return result
+                    // Split the string by space and take the first part (the date)
+                    binding.lastSeen.text = lastSeen.split(" ").firstOrNull() ?: lastSeen
+                }
             }
-
-            return null
         }
     }
 }

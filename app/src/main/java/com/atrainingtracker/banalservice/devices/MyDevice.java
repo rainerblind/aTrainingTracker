@@ -25,6 +25,7 @@ import android.content.IntentFilter;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 
 import com.atrainingtracker.banalservice.BANALService;
@@ -34,6 +35,7 @@ import com.atrainingtracker.banalservice.sensor.MySensor;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumMap;
 import java.util.List;
@@ -88,7 +90,26 @@ public abstract class MyDevice {
         return mDeviceId;
     }
 
-    public abstract String getName();
+    // Note,  this will only work properly, when the device is in the database...
+    @Nullable
+    public String getName() {
+        return mDevicesDatabaseManager.getDeviceName(getDeviceId());
+    }
+
+    @Nullable
+    public String getManufacturerName() {
+        return mDevicesDatabaseManager.getManufacturerName(mDeviceId);
+    }
+
+    protected void setManufacturerName(String name) {
+        if (DEBUG) Log.i(TAG, "woho, we have a manufacturer: " + name);
+        mDevicesDatabaseManager.setManufacturerName(mDeviceId, name);
+    }
+
+    public boolean isPaired() {
+        return mDevicesDatabaseManager.isPaired(mDeviceId);
+    }
+
 
     protected abstract void addSensors();
 
@@ -188,6 +209,15 @@ public abstract class MyDevice {
         return new SensorData(mainSensor.getStringValue(), mainSensor.getSensorType());
     }
 
+    public List<SensorData> getAllSensorData() {
+        List<SensorData> sensorDataList = new ArrayList<>();
+
+        for (MySensor sensor : getSensors()) {
+            sensorDataList.add(new SensorData(sensor.getStringValue(), sensor.getSensorType()));
+        }
+
+        return sensorDataList;
+    }
 
     public void shutDown() {
         if (DEBUG) Log.i(TAG, "shutDown(): " + mDeviceType.name());

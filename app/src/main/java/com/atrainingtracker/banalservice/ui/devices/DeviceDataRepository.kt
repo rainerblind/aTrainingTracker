@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
+import android.util.Log
 import androidx.compose.animation.core.copy
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -141,48 +142,72 @@ class DeviceDataRepository private constructor(private val application: Applicat
     // Observing the BANALService: This function will be called once the service is connected.
     private fun startObservingServiceData() {
         repositoryScope.launch {
-            // Create a flow that emits every 1 second
             flow {
                 while (true) {
-                    emit(Unit)     // Emit a signal to fetch data
-                    delay(1000) // Poll every second
+                    emit(Unit)
+                    delay(1000)
                 }
             }.collect {
-                // Get the current list of devices from the LiveData in memory.
-                val currentDevices = allDevices.value ?: emptyList()
-                if (currentDevices.isEmpty()) {
-                    // If the initial load from DB hasn't finished, wait for the next poll.
-                    return@collect
+                val currentKnownDevices = allDevices.value ?: emptyList()
+                if (banalServiceComm == null) return@collect // Service not bound yet
+
+                // --- DETECT NEWLY DISCOVERED DEVICES ---
+                val foundDeviceIds = banalServiceComm?.getIdsOfFoundDevices() ?: emptyList()
+                val newDeviceFound = foundDeviceIds.any { foundId ->
+                    currentKnownDevices.none { knownDevice -> knownDevice.id == foundId }
                 }
 
+                if (newDeviceFound) {
+                    // A new device was added to the DB. Reload our list to include it.
+                    Log.d(TAG, "New device(s) detected via getIdsOfFoundDevices, reloading from database.")
+                    loadAllDevices()
+                    return@collect // Exit this cycle; the next one will have the updated list.
+                }
+
+                // --- MERGE LOGIC ---
                 val activeDevices = banalServiceComm?.activeDevicesForUI ?: emptyList()
 
-                // --- Update allDevices based on the values we get from the BANALService
-                val mergedList = currentDevices.map { device ->
-                    val activeDevice = activeDevices.find { it.deviceId == device.id }
+                val mergedList = currentKnownDevices.map { knownDevice ->
+                    val activeDevice = activeDevices.find { it.deviceId == knownDevice.id }
+                    val isFound = foundDeviceIds.contains(knownDevice.id)
 
                     if (activeDevice != null) {
-                        // Device is currently active and seen by the service
+                        // SCENARIO A: Device is KNOWN and ACTIVELY sending data.
                         val mainSensorData = activeDevice.mainSensorData
                         val mainValue = mainSensorData.value + " " + application.getString(MyHelper.getUnitsId(mainSensorData.sensor))
-
-                        device.copy(
-                            isAvailable = true, // Mark as available
+                        val allValues = activeDevice.allSensorData.map {
+                            application.getString(it.sensor.fullNameId) + ": " + it.value + " " + application.getString(MyHelper.getUnitsId(it.sensor))
+                        }
+                        knownDevice.copy(
+                            isAvailable = true,
                             lastSeen = application.getString(R.string.devices_now),
-                            mainValue = mainValue
+                            mainValue = mainValue,
+                            allValues = allValues
                         )
-                    } else {
-                        // Device is not active, reset its live data
-                        device.copy(
+                    }
+                    else if (isFound) {
+                        // SCENARIO B: Device is KNOWN and was FOUND recently, but is not active right now.
+                        // We mark it as available but without live data.
+                        knownDevice.copy(
+                            isAvailable = true,
+                            lastSeen = application.getString(R.string.devices_now),
+                            mainValue = null, // No active data
+                            allValues = null  // No active data
+                        )
+                    }
+                    else {
+                        // SCENARIO C: Device is KNOWN but is neither ACTIVE nor FOUND. Mark as unavailable.
+                        knownDevice.copy(
                             isAvailable = false,
-                            // lastSeen = device.lastSeen,  Note that we do not update lastSeen here.  When a device was seen and then is removed, we keep 'now'.  Otherwise, we would have to check the database again...
-                            mainValue = null
-                        )
+                            mainValue = null,
+                            allValues = null)
                     }
                 }
 
-                // Post the final, merged list to the LiveData that the ViewModel observes
-                _allDevices.postValue(mergedList)
+                // Only post an update if the list has actually changed.
+                if (mergedList != currentKnownDevices) {
+                    _allDevices.postValue(mergedList)
+                }
             }
         }
     }
@@ -331,6 +356,13 @@ class DeviceDataRepository private constructor(private val application: Applicat
                 data.wheelCircumference?.div(1000.0)
             DeviceType.RUN_SPEED -> data.calibrationFactor
             else -> null
+        }
+    }
+
+    fun deleteDevice(deviceId: Long) {
+        repositoryScope.launch {
+            devicesDatabaseManager.deleteDevice(deviceId)
+            loadAllDevices()
         }
     }
 
