@@ -14,7 +14,8 @@
 
 
     <!-- device_list_row -->
-    <string name="devices_no_main_value" translatable="false">(--)</string>
+    <string name="devices_main_value_format" translatable="false">(%1$s)</string>
+    <string name="devices_no_main_value" translatable="false">--</string>
     <string name="DeviceListRowEquipmentText" translatable="false" />
 
     <!-- device_list -->
