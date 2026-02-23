@@ -12,7 +12,7 @@ import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.viewModels
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ui.devices.DeviceUiData
-import com.atrainingtracker.banalservice.ui.devices.EditDeviceViewModel
+import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceViewModel
 import com.atrainingtracker.banalservice.ui.devices.editdevice.correctcalibrationfactor.CorrectCalibrationFactorBaseDialogFragment
 import com.atrainingtracker.databinding.DialogEditDeviceGenericBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
