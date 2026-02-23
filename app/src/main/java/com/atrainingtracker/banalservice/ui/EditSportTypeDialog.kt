@@ -8,9 +8,11 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
 import android.widget.TextView
+import androidx.compose.foundation.layout.width
 import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
 import com.atrainingtracker.R
@@ -46,6 +48,25 @@ class EditSportTypeDialog : DialogFragment() {
     private var editableSection: View? = null
     private var layoutMinSpeed: TextInputLayout? = null
     private var layoutMaxSpeed: TextInputLayout? = null
+
+    override fun onStart() {
+        super.onStart()
+
+        // make the dialog a bit wider
+        dialog?.window?.let { window ->
+            // Get the current layout parameters
+            val layoutParams = WindowManager.LayoutParams()
+            layoutParams.copyFrom(window.attributes)
+
+            // Set the width to a percentage of the screen width.
+            // 90% is a good starting point.
+            val displayMetrics = requireContext().resources.displayMetrics
+            layoutParams.width = (displayMetrics.widthPixels * 0.90).toInt()
+
+            // Apply the new layout parameters
+            window.attributes = layoutParams
+        }
+    }
 
     // Override onCreateView to provide a custom layout
     override fun onCreateView(
