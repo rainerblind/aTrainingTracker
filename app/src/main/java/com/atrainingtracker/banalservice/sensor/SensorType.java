@@ -49,7 +49,7 @@ public enum SensorType
     // BEARING_gps            (R.string.bearing,                R.string.bearing_short,                R.string.units_degree,          SensorValueType.DOUBLE,  new DefaultNumberFormatter()),
     // BEARING_network        (R.string.bearing,                R.string.bearing_short,                R.string.units_degree,          SensorValueType.DOUBLE,  new DefaultNumberFormatter()),
     // BEARING_google_fused   (R.string.bearing,                R.string.bearing_short,                R.string.units_degree,          SensorValueType.DOUBLE,  new DefaultNumberFormatter()),
-    CADENCE(R.string.cadence, R.string.cadence_short, R.string.units_none, SensorValueType.DOUBLE, new CadenceFormatter(), true),
+    CADENCE(R.string.cadence, R.string.cadence_short, R.string.units_rpm, SensorValueType.DOUBLE, new CadenceFormatter(), true),
     CALORIES(R.string.calories, R.string.calories_short, R.string.units_calories, SensorValueType.INTEGER, new IntegerFormatter(), false),
     DESCENT(R.string.descent, R.string.descent_short, R.string.units_distance_basic, SensorValueType.DOUBLE, new DefaultNumberFormatter(), true),
     DISTANCE_m(R.string.distance, R.string.distance_short, R.string.units_distance_basic, SensorValueType.DOUBLE, new DistanceFormatter(), false),

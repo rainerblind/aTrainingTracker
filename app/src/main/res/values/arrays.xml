@@ -190,5 +190,37 @@
         <item>@string/units_samples</item>
     </string-array>
 
+    <!-- Display names for the wheel circumference spinner -->
+    <string-array name="wheel_size_names">
+        <item>Custom</item>
+        <item>700 x 28</item>
+        <item>700 x 25</item>
+        <item>700 x 23</item>
+        <item>700 x 20</item>
+        <item>26 x 2.125"</item>
+        <item>26 x 1.9"</item>
+        <item>26 x 1.5"</item>
+        <item>26 x 1.25"</item>
+        <item>26 x 1.0"</item>
+    </string-array>
+
+    <!--
+     Corresponding circumference values in millimeters.
+     MUST be in the same order as wheel_size_names.
+     The first item can be empty or 0 for "Custom".
+    -->
+    <string-array name="wheel_size_values">
+        <item>2100</item>
+        <item>2136</item>
+        <item>2105</item>
+        <item>2097</item>
+        <item>2086</item>
+        <item>2070</item>
+        <item>2055</item>
+        <item>1985</item>
+        <item>1953</item>
+        <item>1913</item>
+    </string-array>
+
 
 </resources>

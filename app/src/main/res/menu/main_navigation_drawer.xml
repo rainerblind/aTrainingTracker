@@ -71,7 +71,7 @@
                 <item
                     android:id="@+id/drawer_my_sensors"
                     android:icon="@drawable/ic_my_paired_devices"
-                    android:title="@string/myRemoteDevices" />
+                    android:title="@string/devices_myRemoteDevices" />
             </group>
         </menu>
     </item>

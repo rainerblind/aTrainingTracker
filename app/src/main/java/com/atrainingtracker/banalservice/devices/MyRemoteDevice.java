@@ -29,9 +29,7 @@ import androidx.core.content.ContextCompat;
 
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.Protocol;
-import com.atrainingtracker.banalservice.sensor.MySensor;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
-import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 import com.atrainingtracker.banalservice.helpers.UIHelper;
 
 /**
@@ -41,9 +39,7 @@ public abstract class MyRemoteDevice extends MyDevice {
     private static final boolean DEBUG = BANALService.getDebug(false);
     protected final IntentFilter mCalibrationFactorChangedFilter = new IntentFilter(BANALService.CALIBRATION_FACTOR_CHANGED);
     protected double mCalibrationFactor = 1;
-    long mDeviceId = -1;  // the id of the device within the database
     private final String TAG = "MyRemoteDevice";
-    private final DevicesDatabaseManager mDevicesDatabaseManager;
     private final BroadcastReceiver mCalibrationFactorChangedReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
             long deviceId = intent.getLongExtra(BANALService.DEVICE_ID, -1);
@@ -60,32 +56,15 @@ public abstract class MyRemoteDevice extends MyDevice {
         super(context, mySensorManager, deviceType);
         if (DEBUG) Log.i(TAG, "MyRemoteDevice()");
 
-        mDevicesDatabaseManager = DevicesDatabaseManager.getInstance(mContext);
-
         mDeviceId = deviceId;
 
         mCalibrationFactor = mDevicesDatabaseManager.getCalibrationFactor(deviceId);
         ContextCompat.registerReceiver(context, mCalibrationFactorChangedReceiver, mCalibrationFactorChangedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
-    @Override
-    public String getName() {
-        return mDevicesDatabaseManager.getDeviceName(getDeviceId());
-    }
 
     abstract public Protocol getProtocol();
 
-    public long getDeviceId() {
-        return mDeviceId;
-    }
-
-    public String getMainSensorStringValue() {
-        return getMainSensor().getStringValue();
-    }
-
-    protected MySensor getMainSensor() {
-        return getSensor(getDeviceType().getMainSensorType());
-    }
 
     public abstract void startSearching();
 
@@ -114,7 +93,7 @@ public abstract class MyRemoteDevice extends MyDevice {
         intent.putExtra(BANALService.PROTOCOL, getProtocol().name());
         intent.putExtra(BANALService.DEVICE_TYPE, getDeviceType().name());
         intent.putExtra(BANALService.DEVICE_ID, getDeviceId());
-        intent.putExtra(BANALService.DEVICE_NAME, getDeviceName());
+        intent.putExtra(BANALService.DEVICE_NAME, getName());
         return intent;
     }
 
@@ -138,30 +117,6 @@ public abstract class MyRemoteDevice extends MyDevice {
     protected void onStopSearching() {
     }
 
-    public String getManufacturerName() {
-        return mDevicesDatabaseManager.getManufacturerName(mDeviceId);
-    }
-
-    protected void setManufacturerName(String name) {
-        if (DEBUG) Log.i(TAG, "woho, we have a manufacturer: " + name);
-        mDevicesDatabaseManager.setManufacturerName(mDeviceId, name);
-    }
-
-    public String getDeviceName() {
-        return mDevicesDatabaseManager.getDeviceName(mDeviceId);
-    }
-
-    public boolean isPaired() {
-        return mDevicesDatabaseManager.isPaired(mDeviceId);
-    }
-
-    protected void setLastActive() {
-        mDevicesDatabaseManager.setLastActive(mDeviceId);
-    }
-
-    protected void setBatteryPercentage(int percentage) {
-        mDevicesDatabaseManager.setBatteryPercentage(mDeviceId, percentage);
-    }
 
     @Override
     public String toString() {

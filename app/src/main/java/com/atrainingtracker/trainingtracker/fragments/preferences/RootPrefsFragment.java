@@ -50,7 +50,7 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
     @Nullable
     private ListPreference mUnitPref;
     @Nullable
-    private Preference mTrainingZonesPref, mExport, mPebble, mLocationSources, mCloudUpload;
+    private Preference mTrainingZonesPref, mExport, mPebble, mCloudUpload;
 
     private SharedPreferences mSharedPreferences;
     private SettingsDataStore mSettingsDataStore;
@@ -79,8 +79,6 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
         mExport = this.getPreferenceScreen().findPreference(TrainingApplication.FILE_EXPORT);
         mCloudUpload = this.getPreferenceScreen().findPreference(TrainingApplication.CLOUD_UPLOAD);
         mPebble = this.getPreferenceScreen().findPreference(TrainingApplication.PEBBLE_SCREEN);
-        mLocationSources = this.getPreferenceScreen().findPreference(TrainingApplication.LOCATION_SOURCES);
-
     }
 
     @Override
@@ -100,7 +98,6 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
 
         mUnitPref.setSummary(TrainingApplication.getUnit().getNameId());
         mPebble.setSummary(pebbleSummary());
-        mLocationSources.setSummary(locationSourcesSummary());
 
         updateTrainingZonesSummary();
 
@@ -176,14 +173,6 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
 
         if (TrainingApplication.SP_NUMBER_OF_SEARCH_TRIES.equals(key)) {
             mSearchRoundsPref.setSummary(TrainingApplication.getNumberOfSearchTries() + "");
-        }
-
-
-        if (TrainingApplication.SP_LOCATION_SOURCE_GPS.equals(key)
-                || TrainingApplication.SP_LOCATION_SOURCE_GOOGLE_FUSED.equals(key)
-                || TrainingApplication.SP_LOCATION_SOURCE_NETWORK.equals(key)) {
-            mLocationSources.setSummary(locationSourcesSummary());
-            getActivity().onContentChanged();
         }
     }
 
@@ -262,28 +251,4 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
             return getString(R.string.prefsDoNotUsePebble);
         }
     }
-
-    @NonNull
-    protected String locationSourcesSummary() {
-        String locationSources = null;
-
-        if (TrainingApplication.useLocationSourceGPS()) {
-            locationSources = getString(R.string.prefsLocationSourceGPS);
-        }
-        if (TrainingApplication.useLocationSourceGoogleFused()) {
-            locationSources = incString(locationSources);
-            locationSources += getString(R.string.prefsLocationSourceGoogleFused);
-        }
-        if (TrainingApplication.useLocationSourceNetwork()) {
-            locationSources = incString(locationSources);
-            locationSources += getString(R.string.prefsLocationSourceNetwork);
-        }
-
-        if (locationSources == null) {
-            locationSources = getString(R.string.prefsLocationSourceSummary);
-        }
-
-        return locationSources;
-    }
-
 }

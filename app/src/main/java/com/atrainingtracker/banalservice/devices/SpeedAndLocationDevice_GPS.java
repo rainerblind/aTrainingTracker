@@ -26,6 +26,7 @@ import android.os.Bundle;
 import android.util.Log;
 
 import com.atrainingtracker.banalservice.BANALService;
+import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
 
 
@@ -43,13 +44,12 @@ public class SpeedAndLocationDevice_GPS extends SpeedAndLocationDevice
             Log.d(TAG, "constructor");
         }
 
+        // get the deviceId from the DevicesDatabaseManager
+        DevicesDatabaseManager devicesDatabaseManager = DevicesDatabaseManager.getInstance(mContext);
+        mDeviceId = devicesDatabaseManager.getSpeedAndLocationGPSDeviceId();
+
         mLocationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
         mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, SAMPLING_TIME, MIN_DISTANCE, this);
-    }
-
-    @Override
-    public String getName() {
-        return "gps";   // here, we do not use R.string to be compatible with the old (pre 3.8) way
     }
 
     @Override
@@ -70,6 +70,9 @@ public class SpeedAndLocationDevice_GPS extends SpeedAndLocationDevice
         if (provider.equals(LocationManager.GPS_PROVIDER)) {
             if (DEBUG) Log.d(TAG, "GPS location provider enabled");
             mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, SAMPLING_TIME, MIN_DISTANCE, this);
+
+            // set last active
+            setLastActive();
         }
     }
 

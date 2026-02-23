@@ -107,9 +107,6 @@
     <string name="no_user_name">no user name</string>
     <string name="no_password">no password</string>
     <string name="add_sensor">add sensor</string>
-    <string name="lastSeenText">last seen</string>
-    <string name="lastSeenDefaultValue" translatable="false">2014-10-18 09:10:11</string>
-    <string name="now">now</string>
 
     <string name="commute">commute</string>
     <string name="trainer_general">indoor trainer</string>
@@ -162,6 +159,7 @@
     <string name="units_distance_metric" translatable="false">km</string>
     <string name="units_distance_imperial" translatable="false">mile</string>
     <string name="units_distance_unknown" translatable="false">na</string>
+    <string name="units_distance_mm" translatable="false">mm</string>
     <string name="units_cadence" translatable="false">1/min</string>
     <string name="units_calories" translatable="false">kcal</string>
     <string name="units_heart_rate" translatable="false">bpm</string>
@@ -172,6 +170,7 @@
     <string name="units_none" translatable="false" />
     <string name="units_percent" translatable="false">%</string>
     <string name="units_degree" translatable="false">°</string>
+    <string name="units_rpm" translatable="false">/min</string>
 
     <string name="value_unit_float_string">%1$.2f %2$s</string>
     <!-- TODO: correct??? -->
@@ -321,6 +320,7 @@
     <string name="sport_type_MTB">MTB</string>
     <string name="sport_type_bike">bike</string>
     <string name="sport_type_other">other</string>
+    <string name="sport_type_file_mapping_format" translatable="false">%1$s, %2$s</string>
 
     <!-- <string name="ready_to_train">ready to %1$s</string> -->
     <!-- <string name="rock">rock</string> -->
@@ -328,7 +328,7 @@
     <!-- <string name="run">run</string>   -->
 
     <!-- Bike Power Features -->
-    <string name="featuresText">features</string>
+    <string name="bike_power__features">features</string>
     <string name="bike_power__instantaneous_power">&#8226; Instantaneous Power</string>
     <string name="bike_power__pedal_power_balance">&#8226; Pedal Power Balance</string>
     <string name="bike_power__accumulated_torque">&#8226; Accumulated Torque</string>
@@ -345,9 +345,9 @@
     <string name="bike_power__torque_effectiveness">&#8226; Torque Effectiveness</string>
     <string name="bike_power__torque_data">&#8226; Torque</string>
 
-    <string name="pedalPowerBalanceCorrection">Pedal power balance correction</string>
-    <string name="doublePowerBalanceValues">Double measured values</string>
-    <string name="invertPowerBalanceValues">Invert measured values. I.e., swap left and right</string>
+    <string name="bike_power__pedal_power_balance_correction">Pedal power balance correction</string>
+    <string name="bike_power__double_power_balance_values">Double measured values</string>
+    <string name="bike_power__invert_power_balance_values">Invert measured values. I.e., swap left and right</string>
 
     <!-- Manifest -->
     <string name="app_name" translatable="false">a Training Tracker</string>
@@ -389,17 +389,6 @@
     <string name="prefsMaxMTBSpeedTitle">max MTB speed</string>
 
     <string name="prefsTrackingTitle">Tracking</string>
-
-    <string name="prefsLocationSourceTitle">Location Source</string>
-    <string name="prefsLocationSourceSummary">Choose location source (GPS, google fused, network)</string>
-    <string name="prefsLocationSourceGPS" translatable="false">GPS</string>
-    <string name="prefsLocationSourceGPSSummary">Location obtained from the GPS.</string>
-    <string name="prefsLocationSourceGoogleFused">google fused</string>
-    <string name="prefsLocationSourceGoogleFusedSummary">Merged location obtained from GPS and network; might jump between those two sources.</string>
-    <string name="prefsLocationSourceNetwork">network</string>
-    <string name="prefsLocationSourceNetworkSummary">Location obtained with the help of available base stations and WLANs; requires access to the internet.</string>
-    <string name="prefsShowAllLocationSourcesOnMapTitle">Show all locations</string>
-    <string name="prefsShowAllLocationSourcesOnMapSummary">Show all tracked location sources on the map</string>
 
     <string name="prefsDisplayTitle">Display</string>
     <string name="prefsKeepScreenOnTitle">keep screen on</string>
@@ -487,72 +476,6 @@
     <string name="LocationNameText">Home</string>
     <string name="LocationAltitudeText">123 m</string>
 
-    <!-- device_choice_row -->
-    <string name="DeviceChoiceRowDeviceNameText">Unknown</string>
-
-    <!-- device_list_row -->
-    <string name="DeviceListRowDeviceNameText">Unknown</string>
-    <string name="DeviceListRowMainValueText" translatable="false">(--)</string>
-    <string name="DeviceListRowEquipmentText" translatable="false" />
-
-    <!-- device_list -->
-    <string name="myRemoteDevices">My Devices</string>
-    <!-- <string name="knownDevices">known devices</string> -->
-    <string name="newDevices">New Devices</string>
-    <string name="searchingForDevice">searching for %1$s %2$s devices</string>
-    <string name="searchingForRemoteDevice">searching for ANT+ Heart Rate devices</string>
-
-    <!-- dialog_set_calibration_factor -->
-    <string name="measuredDistanceText">measured:</string>
-    <string name="trueDistanceText">true:</string>
-    <string name="measuredDistanceValue" translatable="false">1.0</string>
-    <string name="trueDistanceValue" translatable="false">1.0</string>
-    <string name="calibrationFactor_Text">calibration factor:</string>
-    <string name="calibrationFactor_Value" translatable="false">1.0</string>
-
-    <!-- edit_device_* -->
-    <string name="deviceNameText">device name</string>
-    <string name="deviceTypeText">device type</string>
-    <string name="manufacturerText">manufacturer</string>
-    <string name="onBikesText">on bikes</string>
-    <string name="onShoesText">on shoes</string>
-    <string name="wheelCircumferenceText">wheel circumference</string>
-    <string name="calibrationFactorText">calibration factor</string>
-    <string name="manufacturerValue" translatable="false">Garmin</string>
-    <!--  somewhere else, todo: make one -->
-    <string name="calibration_factor">calibration factor</string>
-    <string name="wheel_circumference">wheel circumference</string>
-    <string name="Calibration_Factor">Calibration Factor</string>
-    <string name="Wheel_Circumference">Wheel Circumference</string>
-    <string name="Set_calibration">Set %1$s</string>
-
-    <!--     <string name="textDeviceNumber">device Number</string> -->
-    <!--     <string name="textPaired">paired</string> -->
-    <!--     <string name="textCalibrationFactor">calibration factor</string> -->
-    <!--     <string name="textDeviceName">device name</string> -->
-    <!--     <string name="textDeviceOwner">device owner</string> -->
-    <!--     <string name="textEquipment">Equipment</string> -->
-    <!--     <string name="textEditDeviceOk">OK</string> -->
-
-    <!-- edit_device_bike_cadence -->
-    <string name="editDeviceBikeCadenceDeviceNameValue">Garmin cadence</string>
-    <string name="editDeviceBikeCadenceDeviceTypeValue">Cadence</string>
-
-    <!-- edit_device_bike -->
-    <string name="editDeviceBikeDeviceNameValue">Garmin speed</string>
-    <string name="editDeviceBikeDeviceTypeValue">Bike Speed</string>
-    <string name="editDeviceBikeEditCalibrationFactorBasedOnDistance">calculate wheel circumference</string>
-    <string name="editDeviceBikeCalibrationFactorValue" translatable="false">2.01</string>
-
-    <!-- edit_device_run -->
-    <string name="editDeviceRunDeviceNameValue">Garmin run</string>
-    <string name="editDeviceRunDeviceTypeValue">Run Speed</string>
-    <string name="editDeviceRunEditCalibrationFactorBasedOnDistance">calculate calibration factor</string>
-    <string name="editDeviceRunCalibrationFactorValue" translatable="false">1.0</string>
-
-    <!-- edit_device_generic -->
-    <string name="editDeviceGenericDeviceNameValue">Generic Device</string>
-    <string name="editDeviceGenericDeviceTypeValue">Generic</string>
 
 
     <!-- update_workout -->
@@ -843,7 +766,6 @@
     <string name="message_request_dropbox_token">Do you want to upload your workouts to Dropbox?\n(Due to the changed API, we have to ask again.)</string>
 
     <string name="gps" translatable="false">GPS</string>
-    <string name="AltitudeFromPressureDevice_name">Air Pressure</string>
     <string name="smartphone">Smartphone</string>
     <string name="no_sensor_available">no sensor available</string>
     <string name="bestSensor">best</string>
@@ -1094,6 +1016,5 @@
     <!-- drawer -->
     <string name="drawer__training">Training</string>
     <string name="drawer__maps">Maps</string>
-
 
 </resources>

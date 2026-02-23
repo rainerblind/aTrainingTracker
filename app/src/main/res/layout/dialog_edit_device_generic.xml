@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="8dp">
+
+        <!-- Non-editable section with light blue background -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/my_light_blue"
+            android:orientation="vertical"
+            android:padding="8dp">
+
+            <!-- Last Seen and Battery Row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/layout_last_seen"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/tvLastSeen"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:clickable="false"
+                        android:focusable="false"
+                        android:hint="@string/devices_lastSeenText"
+                        android:singleLine="true"
+                        tools:text="10. Feb 2026 14:32" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <ImageView
+                    android:id="@+id/ivBatteryStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    tools:ignore="ContentDescription"
+                    tools:src="@drawable/stat_sys_battery_unknown" />
+
+                <!-- available / not available -->
+                <ImageView
+                    android:id="@+id/availableIcon"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    tools:ignore="ContentDescription"
+                    tools:srcCompat="@drawable/ic_device_not_available" />
+
+            </LinearLayout>
+
+            <!-- Manufacturer (Read-Only) -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/layout_manufacturer"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/tvManufacturer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:clickable="false"
+                    android:focusable="false"
+                    android:hint="@string/devices_manufacturerText"
+                    tools:text="Garmin" />
+            </com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
+
+        <!-- ============================================= -->
+        <!--   Live Data Section                           -->
+        <!-- ============================================= -->
+        <LinearLayout    android:id="@+id/liveDataLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="16dp"
+            android:visibility="gone"
+            tools:visibility="visible"> <!-- Use tools:visibility for preview -->
+
+            <TextView
+                style="?android:attr/listSeparatorTextViewStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/devices_live_sensor_data_header" />
+
+            <TextView
+                android:id="@+id/liveDataMainValue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="8dp"
+                style="@style/TextAppearance.MaterialComponents.Headline6"
+                tools:text="180 W" />
+
+            <TextView
+                android:id="@+id/liveDataAllValues"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="4dp"
+                style="@style/TextAppearance.MaterialComponents.Body1"
+                tools:text="Cadence: 90 rpm\nSpeed: 25.4 km/h" />
+
+        </LinearLayout>
+
+
+        <TextView
+            android:layout_marginTop="16dp"
+            style="?android:attr/listSeparatorTextViewStyle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/devices_settings_header" />
+
+        <!-- Device Name (Editable) -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/layout_device_name"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etDeviceName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/devices_deviceNameText" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+
+        <!-- MODULAR PART 1: Calibration section (wheel circumference) -->
+        <include
+            android:id="@+id/group_calibration"
+            layout="@layout/dialog_part_calibration"
+            android:visibility="gone"
+            tools:visibility="visible" />
+
+        <!-- MODULAR PART 2: Bike Power features section -->
+        <include
+            android:id="@+id/group_power"
+            layout="@layout/dialog_part_power_features"
+            android:visibility="gone"
+            tools:visibility="visible" />
+
+        <!-- Equipment Selection -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/layoutEquipment"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/devices_on_bikes_text">
+
+            <AutoCompleteTextView
+                android:id="@+id/etEquipment"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:focusable="false"
+                android:clickable="true"
+                android:cursorVisible="false"
+                android:inputType="none" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+    </LinearLayout>
+</ScrollView>
