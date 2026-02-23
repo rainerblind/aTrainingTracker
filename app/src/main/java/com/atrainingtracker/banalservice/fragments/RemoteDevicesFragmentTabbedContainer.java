@@ -45,6 +45,7 @@ import com.atrainingtracker.banalservice.dialogs.InstallANTShitDialog;
 import com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceFilterSpec;
 import com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceFilterType;
 import com.atrainingtracker.banalservice.ui.devices.devicelist.ListDeviceFragment;
+import com.atrainingtracker.banalservice.ui.devices.devicetypechoice.DeviceTypeChoiceArrayAdapter;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -150,7 +151,7 @@ public class RemoteDevicesFragmentTabbedContainer extends Fragment {
             });
 
             final ArrayList<DeviceType> deviceTypeList = new ArrayList<>(Arrays.asList(DeviceType.getRemoteDeviceTypes(mProtocol)));
-            dialogBuilder.setAdapter(new DeviceChoiceArrayAdapter(getActivity(), R.layout.device_choice_row, deviceTypeList, mProtocol),
+            dialogBuilder.setAdapter(new DeviceTypeChoiceArrayAdapter(getActivity(), deviceTypeList, mProtocol),
                     new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
