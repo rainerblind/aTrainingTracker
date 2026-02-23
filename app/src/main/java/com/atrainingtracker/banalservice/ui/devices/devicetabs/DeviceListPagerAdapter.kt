@@ -8,6 +8,7 @@ import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.banalservice.helpers.UIHelper
 import com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceFilterSpec
 import com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceFilterType
 import com.atrainingtracker.banalservice.ui.devices.devicelist.ListDeviceFragment
@@ -40,11 +41,20 @@ class DeviceListPagerAdapter(
     }
 
     fun getPageTitle(position: Int): CharSequence? {
-        return when (filters[position]) {
-            DeviceFilterType.AVAILABLE -> context.getString(R.string.available_devices)
-            DeviceFilterType.PAIRED -> context.getString(R.string.paired_devices)
-            DeviceFilterType.ALL_KNOWN -> context.getString(R.string.known_devices)
-            else -> null
+        return if (deviceType == DeviceType.ALL) {
+            when (filters[position]) {
+                DeviceFilterType.AVAILABLE -> context.getString(R.string.devices_all_available_devices)
+                DeviceFilterType.PAIRED -> context.getString(R.string.devices_all_paired_devices)
+                DeviceFilterType.ALL_KNOWN -> context.getString(R.string.devices_all_known_devices)
+            }
+        }
+        else {
+            val deviceTypeName = context.getString(UIHelper.getNameId(deviceType))
+            when (filters[position]) {
+                DeviceFilterType.AVAILABLE -> context.getString(R.string.devices_available_devices_format, deviceTypeName)
+                DeviceFilterType.PAIRED -> context.getString(R.string.devices_paired_devices_format, deviceTypeName)
+                DeviceFilterType.ALL_KNOWN -> context.getString(R.string.devices_known_devices_format, deviceTypeName)
+            }
         }
     }
 }

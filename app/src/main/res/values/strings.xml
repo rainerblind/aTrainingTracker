@@ -628,9 +628,6 @@
     <string name="paused_bike"> a ride</string>
     <string name="paused_other">training</string>
     <string name="export_status">Export Status</string>
-    <string name="available_devices">available devices</string>
-    <string name="paired_devices">paired devices</string>
-    <string name="known_devices">known devices</string>
     <string name="enable_bluetooth">Enable</string>
     <string name="bluetooth_disabled_on_device">Bluetooth is currently disabled on this device.  In order to pair a Bluetooth device, you have to enable Bluetooth.  \nDo you want to enable Bluetooth?</string>
     <string name="LocationsActivityLabel">Locations</string>
