@@ -100,54 +100,34 @@
 
         <!-- 4. File Export Mappings -->
         <TextView
-            android:id="@+id/st_tvTcx"
+            android:id="@+id/st_tv_file_mapping"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
             android:layout_marginStart="21dp"
-            android:background="@drawable/chip_background"
-            android:paddingStart="8dp"
+            android:layout_marginTop="4dp"
             android:paddingTop="2dp"
-            android:paddingEnd="8dp"
             android:paddingBottom="2dp"
             android:textAppearance="?attr/textAppearanceBody2"
             android:textColor="?android:attr/textColorSecondary"
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/st_tvStrava"
-            app:layout_constraintBottom_toBottomOf="parent"
-            tools:text="TCX: Biking" />
-
-        <TextView
-            android:id="@+id/st_tvGc"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:background="@drawable/chip_background"
-            android:paddingStart="8dp"
-            android:paddingTop="2dp"
-            android:paddingEnd="8dp"
-            android:paddingBottom="2dp"
-            android:textAppearance="?attr/textAppearanceBody2"
-            android:textColor="?android:attr/textColorSecondary"
-            app:layout_constraintStart_toEndOf="@id/st_tvTcx"
-            app:layout_constraintTop_toTopOf="@id/st_tvTcx"
-            app:layout_constraintBottom_toBottomOf="@id/st_tvTcx"
-            tools:text="GC: Other" />
+            tools:text="TCX: Biking, GC: Other" />
 
         <ImageView
             android:id="@+id/st_ivLock"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:src="@android:drawable/ic_lock_lock"
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
+            android:contentDescription="@string/item_is_fixed_and_cannot_be_deleted"
+            android:src="@android:drawable/ic_lock_lock"
             android:visibility="gone"
-            app:layout_constraintBottom_toBottomOf="@+id/st_tvGc"
+            app:layout_constraintBottom_toBottomOf="@+id/st_tv_file_mapping"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="@+id/st_tvStrava"
-            android:contentDescription="@string/item_is_fixed_and_cannot_be_deleted"
             app:tint="?android:attr/textColorSecondary"
-            tools:visibility="visible"/>
+            tools:visibility="visible" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
