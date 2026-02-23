@@ -1,4 +1,4 @@
-package com.atrainingtracker.banalservice.ui.devices.devicetypechoice
+package com.atrainingtracker.banalservice.ui.devices.devicetabs
 
 import android.content.Context
 import android.view.LayoutInflater
@@ -7,9 +7,6 @@ import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.compose.ui.layout.layout
-import androidx.compose.ui.semantics.text
-
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType

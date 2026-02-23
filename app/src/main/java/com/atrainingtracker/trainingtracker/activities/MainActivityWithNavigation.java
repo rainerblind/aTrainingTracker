@@ -45,7 +45,6 @@ import android.os.IBinder;
 
 import com.atrainingtracker.banalservice.ui.SportTypeListFragment;
 import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedContainerFragment;
-import com.atrainingtracker.banalservice.ui.devices.devicetypechoice.DeviceTypeChoiceFragment;
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFragmentFactory;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
 import com.atrainingtracker.trainingtracker.segments.StarredSegmentsTabbedContainer;
@@ -131,7 +130,6 @@ public class MainActivityWithNavigation
         extends AppCompatActivity
         implements
         NavigationView.OnNavigationItemSelectedListener,
-        DeviceTypeChoiceFragment.OnDeviceTypeSelectedListener,
         RemoteDevicesSettingsInterface,
         BANALService.GetBanalServiceInterface,
         PreferenceFragmentCompat.OnPreferenceStartScreenCallback,
@@ -811,18 +809,6 @@ public class MainActivityWithNavigation
         Intent segmentDetailsIntent = new Intent(this, SegmentDetailsActivity.class);
         segmentDetailsIntent.putExtras(bundle);
         startActivity(segmentDetailsIntent);
-    }
-
-    @Override
-    public void onDeviceTypeSelected(@NonNull DeviceType deviceType, @NonNull Protocol protocol) {
-        if (DEBUG)
-            Log.i(TAG, "onDeviceTypeSelected(" + deviceType.name() + "), mProtocol=" + protocol);
-
-        DevicesTabbedContainerFragment fragment = DevicesTabbedContainerFragment.newInstance(protocol, deviceType);
-        FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
-        fragmentTransaction.replace(R.id.content, fragment, DevicesTabbedContainerFragment.TAG);
-        fragmentTransaction.addToBackStack(null);
-        fragmentTransaction.commit();
     }
 
 
