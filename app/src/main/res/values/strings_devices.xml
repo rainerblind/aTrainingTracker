@@ -14,6 +14,15 @@
 
     <string name="devices_all">All</string>
 
+    <!-- tab title -->
+    <string name="devices_available_devices_format">available %1$s devices</string>
+    <string name="devices_paired_devices_format">paired %1$s devices</string>
+    <string name="devices_known_devices_format">known %1$s devices</string>
+    <string name="devices_all_available_devices">all available devices</string>
+    <string name="devices_all_paired_devices">all paired devices</string>
+    <string name="devices_all_known_devices">all known devices</string>
+
+
 
     <!-- device_list_row -->
     <string name="devices_main_value_format" translatable="false">(%1$s)</string>
