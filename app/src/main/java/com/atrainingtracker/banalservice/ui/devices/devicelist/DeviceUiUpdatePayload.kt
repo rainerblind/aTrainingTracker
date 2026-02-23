@@ -1,7 +1,7 @@
 package com.atrainingtracker.banalservice.ui.devices.devicelist
 
 import androidx.recyclerview.widget.DiffUtil
-import com.atrainingtracker.banalservice.ui.devices.DeviceUiData
+import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 
 sealed class DeviceUiUpdatePayload {
     data class AvailabilityChanged(val isAvailable: Boolean, val lastSeen: String?): DeviceUiUpdatePayload()

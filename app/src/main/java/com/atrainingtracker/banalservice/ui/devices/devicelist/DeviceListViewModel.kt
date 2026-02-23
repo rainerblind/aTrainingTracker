@@ -8,8 +8,8 @@ import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
-import com.atrainingtracker.banalservice.ui.devices.DeviceDataRepository
-import com.atrainingtracker.banalservice.ui.devices.DeviceUiData
+import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
+import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.trainingtracker.ui.util.Event
 import kotlinx.coroutines.launch
 

@@ -6,10 +6,10 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
-import com.atrainingtracker.banalservice.ui.devices.BikePowerFeatures
-import com.atrainingtracker.banalservice.ui.devices.DeviceDataRepository
-import com.atrainingtracker.banalservice.ui.devices.DeviceUiData
-import com.atrainingtracker.banalservice.ui.devices.PowerFeatureDisplay
+import com.atrainingtracker.banalservice.ui.devices.devicedata.BikePowerFeatures
+import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
+import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
+import com.atrainingtracker.banalservice.ui.devices.devicedata.PowerFeatureDisplay
 import kotlinx.coroutines.launch
 
 /**
@@ -76,7 +76,7 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
      * including a flag to de-emphasize less common features. This keeps the conversion     * logic centralized in the repository.
      *
      * @param features The BikePowerFeatures object from the device data.
-     * @return A list of [com.atrainingtracker.banalservice.ui.devices.PowerFeatureDisplay] objects representing the supported features.
+     * @return A list of [PowerFeatureDisplay] objects representing the supported features.
      */
     fun getPowerFeaturesForDisplay(features: BikePowerFeatures?): List<PowerFeatureDisplay> {
         if (features == null) {
