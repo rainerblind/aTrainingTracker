@@ -320,6 +320,7 @@
     <string name="sport_type_MTB">MTB</string>
     <string name="sport_type_bike">bike</string>
     <string name="sport_type_other">other</string>
+    <string name="sport_type_file_mapping_format" translatable="false">%1$s, %2$s</string>
 
     <!-- <string name="ready_to_train">ready to %1$s</string> -->
     <!-- <string name="rock">rock</string> -->
