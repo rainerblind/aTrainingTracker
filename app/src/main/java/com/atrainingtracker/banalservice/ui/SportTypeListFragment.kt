@@ -87,8 +87,7 @@ class SportTypeListFragment : ListFragment() {
             R.id.st_tvName,
             R.id.st_tvSpeed,
             R.id.st_tvStrava,
-            R.id.st_tvTcx,
-            R.id.st_tvGc,
+            R.id.st_tv_file_mapping,
             R.id.st_ivLock
         )
 
@@ -107,7 +106,7 @@ class SportTypeListFragment : ListFragment() {
                     view.visibility = if (canDelete) View.GONE else View.VISIBLE
                     true
                 }
-                R.id.st_tvName, R.id.st_tvSpeed, R.id.st_tvStrava, R.id.st_tvTcx, R.id.st_tvGc -> {
+                R.id.st_tvName, R.id.st_tvSpeed, R.id.st_tvStrava, R.id.st_tv_file_mapping -> {
                     val tv = view as TextView
                     when (view.id) {
                         R.id.st_tvName -> {
@@ -176,16 +175,14 @@ class SportTypeListFragment : ListFragment() {
                             }
                         }
 
-                        R.id.st_tvTcx -> {
-                            val tcxType =
+                        R.id.st_tv_file_mapping -> {
+                            var tcxType =
                                 cursor.getString(cursor.getColumnIndexOrThrow(SportType.TCX_NAME))
-                            tv.text = getString(R.string.mapping_format_tcx, tcxType)
-                        }
-
-                        R.id.st_tvGc -> {
-                            val gcType =
+                            tcxType = getString(R.string.mapping_format_tcx, tcxType)
+                            var gcType =
                                 cursor.getString(cursor.getColumnIndexOrThrow(SportType.GOLDEN_CHEETAH_NAME))
-                            tv.text = getString(R.string.mapping_format_gc, gcType)
+                            gcType = getString(R.string.mapping_format_gc, gcType)
+                            tv.text = getString(R.string.sport_type_file_mapping_format, tcxType, gcType)
                         }
                     }
                     true

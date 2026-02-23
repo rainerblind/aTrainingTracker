@@ -122,12 +122,10 @@ class TrackOnMapAftermathActivity : AppCompatActivity(), OnMapReadyCallback {
         googleMap ?: return // Don't proceed if the map isn't ready
         if (DEBUG) Log.i(TAG, "showTrackOnMap for workoutID=$workoutId")
 
-        // showing all location sources (when the user wants it)
-        if (TrainingApplication.showAllLocationSourcesOnMap()) {
-            trackOnMapHelper.showTrackOnMap(this, null, googleMap, workoutId, Roughness.ALL, TrackOnMapHelper.TrackType.GPS, false, false)
-            trackOnMapHelper.showTrackOnMap(this, null, googleMap, workoutId, Roughness.ALL, TrackOnMapHelper.TrackType.NETWORK, false, false)
-            trackOnMapHelper.showTrackOnMap(this, null, googleMap, workoutId, Roughness.ALL, TrackOnMapHelper.TrackType.FUSED, false, false)
-        }
+        // showing all location sources
+        trackOnMapHelper.showTrackOnMap(this, null, googleMap, workoutId, Roughness.ALL, TrackOnMapHelper.TrackType.GPS, false, false)
+        trackOnMapHelper.showTrackOnMap(this, null, googleMap, workoutId, Roughness.ALL, TrackOnMapHelper.TrackType.NETWORK, false, false)
+        trackOnMapHelper.showTrackOnMap(this, null, googleMap, workoutId, Roughness.ALL, TrackOnMapHelper.TrackType.FUSED, false, false)
 
         // Draw the main track
         trackOnMapHelper.showTrackOnMap(this, null, googleMap, workoutId, Roughness.ALL, TrackOnMapHelper.TrackType.BEST, zoomToShowTrack, true);

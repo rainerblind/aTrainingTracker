@@ -96,8 +96,6 @@
     <string name="no_user_name">kein Benutzername</string>
     <string name="no_password">kein Passwort</string>
     <string name="add_sensor">Sensor hinzufügen</string>
-    <string name="lastSeenText">Zum letzten mal gesehen</string>
-    <string name="now">jetzt</string>
 
     <string name="commute">Pendeln</string>
     <string name="trainer_general">Indoor Trainer</string>
@@ -268,7 +266,7 @@
     <!-- <string name="run">run</string>   -->
 
     <!-- Bike Power Features -->
-    <string name="featuresText">Enthaltene Sensoren</string>
+    <string name="bike_power__features">Enthaltene Sensoren</string>
     <string name="bike_power__instantaneous_power">&#8226; Aktuelle Leistung</string>
     <string name="bike_power__pedal_power_balance">&#8226; Pedal Power Balance</string>
     <string name="bike_power__accumulated_torque">&#8226; Summierte Kraft</string>
@@ -285,9 +283,9 @@
     <string name="bike_power__torque_effectiveness">&#8226; Effizienz</string>
     <string name="bike_power__torque_data">&#8226; Kraft</string>
 
-    <string name="pedalPowerBalanceCorrection">Korrektur für Power Balance</string>
-    <string name="doublePowerBalanceValues">Verdopple die gemessenen Werte</string>
-    <string name="invertPowerBalanceValues">Invertiere die gemessenen Werte.  D.h., vertausche rechts und links</string>
+    <string name="bike_power__pedal_power_balance_correction">Korrektur für Power Balance</string>
+    <string name="bike_power__double_power_balance_values">Verdopple die gemessenen Werte</string>
+    <string name="bike_power__invert_power_balance_values">Invertiere die gemessenen Werte.  D.h., vertausche rechts und links</string>
 
     <string name="slope">Steigung</string>
     <string name="slope_short">Steigung</string>
@@ -328,16 +326,6 @@
     <string name="prefsMaxMTBSpeedTitle">max Geschwindigkeit MTB</string>
 
     <string name="prefsTrackingTitle">Aufzeichnung</string>
-
-    <string name="prefsLocationSourceTitle">Positionsdatenquellen</string>
-    <string name="prefsLocationSourceSummary">Wähle die Positionsdatenquellen (GPS, google fused, Netzwerk)</string>
-    <string name="prefsLocationSourceGPSSummary">Positionsdaten basierend auf GPS.</string>
-    <string name="prefsLocationSourceGoogleFused">google fused</string>
-    <string name="prefsLocationSourceGoogleFusedSummary">Positionsdaten durch zusammenführen der GPS und Netzwerkdaten.  Es kann vorkommen, dass zwischen den beiden Quellen gesprungen wird.</string>
-    <string name="prefsLocationSourceNetwork">Netzwerk</string>
-    <string name="prefsLocationSourceNetworkSummary">Position bestimmt anhand der verbundenen Basisstationen und verfügbaren WLANs.  Dazu wird eine Verbindung zum Internetz benötigt.</string>
-    <string name="prefsShowAllLocationSourcesOnMapTitle">Zeige alle Positionen</string>
-    <string name="prefsShowAllLocationSourcesOnMapSummary">Zeige alle aufgezeichneten Positionsdatenquellen auf der Karte an</string>
 
     <string name="prefsDisplayTitle">Display</string>
     <string name="prefsKeepScreenOnTitle">Display an lassen</string>
@@ -417,60 +405,6 @@
     <string name="LocationNameText">zu Hause</string>
     <string name="LocationAltitudeText">123 m</string>
 
-    <!-- device_choice_row -->
-    <string name="DeviceChoiceRowDeviceNameText">Unbekannt</string>
-
-    <!-- device_list_row -->
-    <string name="DeviceListRowDeviceNameText">Unbekannt</string>
-    <!-- device_list -->
-    <string name="myRemoteDevices">Meine Sensoren</string>
-    <!-- <string name="knownDevices">known devices</string> -->
-    <string name="newDevices">Neue Sensoren</string>
-    <string name="searchingForDevice">suche nach %1$s %2$s Sensoren</string>
-    <string name="searchingForRemoteDevice">suche nach ANT+ Herzfrequenz Sensoren</string>
-
-    <!-- dialog_set_calibration_factor -->
-    <string name="measuredDistanceText">gemessene Distanz:</string>
-    <string name="trueDistanceText">korrekte Distanz:</string>
-    <string name="calibrationFactor_Text">Kalibrierungsfaktor:</string>
-    <!-- edit_device_* -->
-    <string name="deviceNameText">Sensorname</string>
-    <string name="deviceTypeText">Sensortyp</string>
-    <string name="manufacturerText">Hersteller</string>
-    <string name="onBikesText">an Rädern</string>
-    <string name="onShoesText">an Schuhen</string>
-    <string name="wheelCircumferenceText">Radumfang</string>
-    <string name="calibrationFactorText">Kalibrierungsfaktor</string>
-    <!--  somewhere else, todo: make one -->
-    <string name="calibration_factor">Kalibrierungsfaktor</string>
-    <string name="wheel_circumference">Radumfang</string>
-    <string name="Calibration_Factor">Kalibrierungsfaktor</string>
-    <string name="Wheel_Circumference">Radumfang</string>
-    <string name="Set_calibration">%1$s berechnen</string>
-
-    <!--     <string name="textDeviceNumber">device Number</string> -->
-    <!--     <string name="textPaired">paired</string> -->
-    <!--     <string name="textCalibrationFactor">calibration factor</string> -->
-    <!--     <string name="textDeviceName">device name</string> -->
-    <!--     <string name="textDeviceOwner">device owner</string> -->
-    <!--     <string name="textEquipment">Equipment</string> -->
-    <!--     <string name="textEditDeviceOk">OK</string> -->
-
-    <!-- edit_device_bike_cadence -->
-    <string name="editDeviceBikeCadenceDeviceNameValue">Garmin Frequenz</string>
-    <string name="editDeviceBikeCadenceDeviceTypeValue">Frequenz</string>
-
-    <!-- edit_device_bike -->
-    <string name="editDeviceBikeDeviceNameValue">Garmin Geschwindigkeit</string>
-    <string name="editDeviceBikeDeviceTypeValue">Rad Geschwindigkeit</string>
-    <string name="editDeviceBikeEditCalibrationFactorBasedOnDistance">Radumfang berechnen</string>
-    <!-- edit_device_run -->
-    <string name="editDeviceRunDeviceNameValue">Garmin Laufsensor</string>
-    <string name="editDeviceRunDeviceTypeValue">Laufsensor</string>
-    <string name="editDeviceRunEditCalibrationFactorBasedOnDistance">berechnen</string>
-    <!-- edit_device_generic -->
-    <string name="editDeviceGenericDeviceNameValue">Generischer Sensor</string>
-    <string name="editDeviceGenericDeviceTypeValue">Generisch</string>
 
 
     <!-- update_workout -->
@@ -745,7 +679,6 @@
     <string name="title_request_dropbox_token">Request Dropbox Access</string>
     <string name="message_request_dropbox_token">Willst du deine Trainingseinheiten bei Dropbox hochladen?\n(Wegen der geänderten Schnittstelle muss erneut gefragt werden.)</string>
 
-    <string name="AltitudeFromPressureDevice_name">Luftdruck</string>
     <string name="smartphone">Smartphone</string>
     <string name="no_sensor_available">Kein Sensor vorhanden</string>
     <string name="bestSensor">Bester</string>
@@ -983,5 +916,6 @@
     <!-- drawer -->
     <string name="drawer__training">Training</string>
     <string name="drawer__maps">Karten</string>
+
 
 </resources>

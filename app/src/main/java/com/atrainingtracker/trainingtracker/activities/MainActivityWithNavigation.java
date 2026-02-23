@@ -44,6 +44,7 @@ import android.os.Handler;
 import android.os.IBinder;
 
 import com.atrainingtracker.banalservice.ui.SportTypeListFragment;
+import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFragmentFactory;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
 import com.atrainingtracker.trainingtracker.segments.StarredSegmentsTabbedContainer;
 import com.atrainingtracker.trainingtracker.tracker.TrackerService;
@@ -54,6 +55,7 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.OnApplyWindowInsetsListener;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
 import androidx.core.view.GravityCompat;
@@ -83,8 +85,6 @@ import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 import com.atrainingtracker.banalservice.dialogs.InstallANTShitDialog;
 import com.atrainingtracker.banalservice.filters.FilterData;
 import com.atrainingtracker.banalservice.fragments.DeviceTypeChoiceFragment;
-import com.atrainingtracker.banalservice.fragments.EditDeviceDialogFragment;
-import com.atrainingtracker.banalservice.fragments.RemoteDevicesFragment;
 import com.atrainingtracker.banalservice.fragments.RemoteDevicesFragmentTabbedContainer;
 import com.atrainingtracker.banalservice.helpers.BatteryStatusHelper;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
@@ -132,7 +132,6 @@ public class MainActivityWithNavigation
         implements
         NavigationView.OnNavigationItemSelectedListener,
         DeviceTypeChoiceFragment.OnDeviceTypeSelectedListener,
-        RemoteDevicesFragment.OnRemoteDeviceSelectedListener,
         RemoteDevicesSettingsInterface,
         BANALService.GetBanalServiceInterface,
         PreferenceFragmentCompat.OnPreferenceStartScreenCallback,
@@ -662,7 +661,7 @@ public class MainActivityWithNavigation
                 break;
 
             case R.id.drawer_my_sensors:
-                titleId = R.string.myRemoteDevices;
+                titleId = R.string.devices_myRemoteDevices;
                 mFragment = RemoteDevicesFragmentTabbedContainer.newInstance(Protocol.ALL, DeviceType.ALL);
                 tag = DeviceTypeChoiceFragment.TAG;
                 break;
@@ -792,8 +791,11 @@ public class MainActivityWithNavigation
             builder.setItems(stringList.toArray(new String[stringList.size()]), new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
-                    EditDeviceDialogFragment editDeviceDialogFragment = EditDeviceDialogFragment.newInstance(criticalBatteryDevices.get(which).deviceId);
-                    editDeviceDialogFragment.show(getSupportFragmentManager(), EditDeviceDialogFragment.TAG);
+                    long deviceId = criticalBatteryDevices.get(which).deviceId;
+                    DevicesDatabaseManager devicesDatabaseManager = DevicesDatabaseManager.getInstance(getApplicationContext());
+                    DeviceType deviceType = devicesDatabaseManager.getDeviceType(deviceId);
+                    DialogFragment editDeviceDialogFragment = EditDeviceFragmentFactory.create(deviceId, deviceType);
+                    editDeviceDialogFragment.show(getSupportFragmentManager(), "EditDeviceDialogFragment");
                 }
             });
             builder.create().show();
@@ -823,11 +825,6 @@ public class MainActivityWithNavigation
         fragmentTransaction.commit();
     }
 
-    @Override
-    public void onRemoteDeviceSelected(long deviceId) {
-        EditDeviceDialogFragment editDeviceDialogFragment = EditDeviceDialogFragment.newInstance(deviceId);
-        editDeviceDialogFragment.show(getSupportFragmentManager(), EditDeviceDialogFragment.TAG);
-    }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // the connection to the BANALService

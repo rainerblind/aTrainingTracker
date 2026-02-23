@@ -23,6 +23,8 @@ import com.atrainingtracker.banalservice.devices.DeviceType;
 import com.atrainingtracker.banalservice.Protocol;
 
 public class UIHelper {
+
+    @Deprecated // use fun of DeviceUiData instead.
     public static int getIconId(DeviceType deviceType, Protocol protocol) {
         // TODO: must also depend on the protocol
         // TODO: remove this functionality from DeviceType!

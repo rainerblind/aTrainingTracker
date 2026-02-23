@@ -34,6 +34,7 @@ import com.atrainingtracker.banalservice.helpers.UIHelper;
 
 import java.util.List;
 
+@Deprecated
 public class DeviceChoiceArrayAdapter extends ArrayAdapter<DeviceType> {
     Context mContext;
     Protocol mProtocol;

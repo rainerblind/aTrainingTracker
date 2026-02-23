@@ -78,14 +78,13 @@ import static com.atrainingtracker.banalservice.BSportType.UNKNOWN;
 import androidx.core.content.ContextCompat;
 
 
-public class DeviceManager
-        implements OnSharedPreferenceChangeListener {
+public class DeviceManager {
     private static final String TAG = "DeviceManager";
     private static final boolean DEBUG = BANALService.getDebug(false);
     protected static MyRemoteDevice cMyRemoteDeviceCurrentlySearchingFor = null;
     protected Context mContext;
     protected ClockDevice mClockDevice;
-    protected MyDevice mSpeedAndLocationDevice_GPS, mSpeedAndLocationDevice_GoogleFused, mSpeedAndLocationDevice_Network;
+    protected SpeedAndLocationDevice mSpeedAndLocationDevice_GPS, mSpeedAndLocationDevice_GoogleFused, mSpeedAndLocationDevice_Network;
     protected AltitudeFromPressureDevice mAltitudeFromPressureDevice;
     protected VerticalSpeedAndSlopeDevice mVerticalSpeedAndSlopeDevice;
     protected boolean mHavePressureSensor = false;
@@ -248,7 +247,6 @@ public class DeviceManager
             startSearchForNewRemoteDevices(protocol, deviceType);
         }
     };
-    private final SharedPreferences mSharedPreferences;
 
     /**
      * Constructor
@@ -259,9 +257,6 @@ public class DeviceManager
 
         mDevicesDatabaseManager = DevicesDatabaseManager.getInstance(mContext);
 
-        mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(mContext);
-        mSharedPreferences.registerOnSharedPreferenceChangeListener(this);
-
         mSensorManager = mySensorManager;
 
         mHavePressureSensor = HavePressureSensor.havePressureSensor(mContext);
@@ -271,21 +266,25 @@ public class DeviceManager
             mAltitudeFromPressureDevice = new AltitudeFromPressureDevice(mContext, mSensorManager);
         }
 
-
-        if (TrainingApplication.useLocationSourceGPS()
+        // create the location devices when they are paired.
+        DevicesDatabaseManager devicesDatabaseManager = DevicesDatabaseManager.getInstance(mContext);
+        long gpsDeviceId = devicesDatabaseManager.getSpeedAndLocationGPSDeviceId();
+        if (devicesDatabaseManager.isPaired(gpsDeviceId)
                 && TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
             if (DEBUG) Log.i(TAG, "creating GPS location device");
             mSpeedAndLocationDevice_GPS = new SpeedAndLocationDevice_GPS(mContext, mSensorManager);
         }
 
-        if (TrainingApplication.useLocationSourceGoogleFused()
+        long fusedDeviceId = devicesDatabaseManager.getSpeedAndLocationGoogleFusedDeviceId();
+        if(devicesDatabaseManager.isPaired(fusedDeviceId)
                 && TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)
                 && GooglePlayServicesUtil.isGooglePlayServicesAvailable(mContext) == ConnectionResult.SUCCESS) {
             if (DEBUG) Log.i(TAG, "creating google fused location device");
             mSpeedAndLocationDevice_GoogleFused = new SpeedAndLocationDevice_GoogleFused(mContext, mSensorManager);
         }
 
-        if (TrainingApplication.useLocationSourceNetwork()
+        long networkDeviceId = devicesDatabaseManager.getSpeedAndLocationNetworkDeviceId();
+        if (devicesDatabaseManager.isPaired(networkDeviceId)
                 && TrainingApplication.havePermission(Manifest.permission.ACCESS_COARSE_LOCATION)) {
             if (DEBUG) Log.i(TAG, "creating network location device");
             mSpeedAndLocationDevice_Network = new SpeedAndLocationDevice_Network(mContext, mSensorManager);
@@ -308,49 +307,6 @@ public class DeviceManager
         return cMyRemoteDeviceCurrentlySearchingFor != null;
     }
 
-    @Override
-    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
-        if (DEBUG) Log.i(TAG, "onSharedPreferenceChanged: " + key);
-        if (TrainingApplication.SP_LOCATION_SOURCE_GPS.equals(key)) {
-            if (mSharedPreferences.getBoolean(key, true)) { // create
-                if (mSpeedAndLocationDevice_GPS == null     // if it does not exist
-                        && TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)) {  // and we have the permission to do so
-                    mSpeedAndLocationDevice_GPS = new SpeedAndLocationDevice_GPS(mContext, mSensorManager);
-                }
-            } else {                                           // destroy
-                if (mSpeedAndLocationDevice_GPS != null) {   // if it exists
-                    mSpeedAndLocationDevice_GPS.shutDown();
-                    mSpeedAndLocationDevice_GPS = null;
-                }
-            }
-        } else if (TrainingApplication.SP_LOCATION_SOURCE_GOOGLE_FUSED.equals(key)) {
-            if (mSharedPreferences.getBoolean(key, true)) { // create
-                if (mSpeedAndLocationDevice_GoogleFused == null // if it does not exist
-                        && TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)) { // and we have the permission to do so
-                    mSpeedAndLocationDevice_GoogleFused = new SpeedAndLocationDevice_GoogleFused(mContext, mSensorManager);
-                }
-            } else {                                           // destroy
-                if (mSpeedAndLocationDevice_GoogleFused != null) {   // if it exists
-                    mSpeedAndLocationDevice_GoogleFused.shutDown();
-                    mSpeedAndLocationDevice_GoogleFused = null;
-                }
-            }
-        } else if (TrainingApplication.SP_LOCATION_SOURCE_NETWORK.equals(key)) {
-            if (mSharedPreferences.getBoolean(key, true)) { // create
-                if (mSpeedAndLocationDevice_Network == null  // if it does not exist
-                        && TrainingApplication.havePermission(Manifest.permission.ACCESS_COARSE_LOCATION)) {  // and we have the permission to do so
-                    mSpeedAndLocationDevice_Network = new SpeedAndLocationDevice_Network(mContext, mSensorManager);
-                }
-            } else {                                           // destroy
-                if (mSpeedAndLocationDevice_Network != null) {   // if it exists
-                    mSpeedAndLocationDevice_Network.shutDown();
-                    mSpeedAndLocationDevice_Network = null;
-                }
-            }
-
-        }
-    }
-
     public void shutDown() {
         if (DEBUG) Log.d(TAG, "shutDown()");
 
@@ -368,11 +324,56 @@ public class DeviceManager
         // mContext.unregisterReceiver(mStartSearchingReceiver);
         mContext.unregisterReceiver(mStartSearchingForNewDevicesReceiver);
         mContext.unregisterReceiver(mStopSearchingForNewDevicesReceiver);
-
-        mSharedPreferences.unregisterOnSharedPreferenceChangeListener(this);
     }
 
     private void pairingChanged(long deviceId, boolean paired) {
+        // first, check for the location devices.
+        DevicesDatabaseManager devicesDatabaseManager = DevicesDatabaseManager.getInstance(mContext);
+        long gpsDeviceId = devicesDatabaseManager.getSpeedAndLocationGPSDeviceId();
+        if (deviceId == gpsDeviceId) {
+            if (paired && mSpeedAndLocationDevice_GPS == null // paired and not yet there -> create (if we have the permission)
+                    && TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
+                mSpeedAndLocationDevice_GPS = new SpeedAndLocationDevice_GPS(mContext, mSensorManager);
+            }
+            else {                                           // destroy
+                if (mSpeedAndLocationDevice_GPS != null) {   // if it exists
+                    mSpeedAndLocationDevice_GPS.shutDown();
+                    mSpeedAndLocationDevice_GPS = null;
+                }
+            }
+            return;
+        }
+
+        long fusedDeviceId = devicesDatabaseManager.getSpeedAndLocationGoogleFusedDeviceId();
+        if (deviceId == fusedDeviceId) {
+            if (paired && mSpeedAndLocationDevice_GoogleFused == null // if it does not exist
+                    && TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)) { // and we have the permission to do so
+                mSpeedAndLocationDevice_GoogleFused = new SpeedAndLocationDevice_GoogleFused(mContext, mSensorManager);
+            }
+            else {                                           // destroy
+                if (mSpeedAndLocationDevice_GoogleFused != null) {   // if it exists
+                    mSpeedAndLocationDevice_GoogleFused.shutDown();
+                    mSpeedAndLocationDevice_GoogleFused = null;
+                }
+            }
+            return;
+        }
+        long networkDeviceId = devicesDatabaseManager.getSpeedAndLocationNetworkDeviceId();
+        if (deviceId == networkDeviceId) {
+            if (paired && mSpeedAndLocationDevice_Network == null  // if it does not exist
+                    && TrainingApplication.havePermission(Manifest.permission.ACCESS_COARSE_LOCATION)) {  // and we have the permission to do so
+                mSpeedAndLocationDevice_Network = new SpeedAndLocationDevice_Network(mContext, mSensorManager);
+            }
+            else {                                           // destroy
+                if (mSpeedAndLocationDevice_Network != null) {   // if it exists
+                    mSpeedAndLocationDevice_Network.shutDown();
+                    mSpeedAndLocationDevice_Network = null;
+                }
+            }
+            return;
+        }
+
+
         if (mMyRemoteDevices.containsKey(deviceId)) {
             if (paired) {  // mMyRemoteDevices should contain only paired devices, so this should never ever happen!
                 Log.d(TAG, "BUG: an already paired device became paired");
@@ -415,6 +416,7 @@ public class DeviceManager
 
                 BSportType bSportType = mBanalService.getUserSelectedBSportType();
 
+                // TODO: We should always search for BSportType.UNKNOWN devices!
                 if (!TrainingApplication.searchOnlyForSportSpecificDevices()                                       // either, the sport type is ignored
                         || bSportType == null || bSportType == UNKNOWN                                              // or the sport type is not yet defined
                         || bSportType == cMyRemoteDeviceCurrentlySearchingFor.getDeviceType().getSportType()) {     // or it is the correct sport type
@@ -435,7 +437,7 @@ public class DeviceManager
     }
 
     public String getNameOfSearchingDevice() {
-        return cMyRemoteDeviceCurrentlySearchingFor == null ? null : cMyRemoteDeviceCurrentlySearchingFor.getDeviceName();
+        return cMyRemoteDeviceCurrentlySearchingFor == null ? null : cMyRemoteDeviceCurrentlySearchingFor.getName();
     }
 
     public void startSearchForPairedDevices() {
@@ -510,6 +512,37 @@ public class DeviceManager
         return result;
     }
 
+    public List<SpeedAndLocationDevice> getActiveSpeedAndLocationDevices() {
+        List<SpeedAndLocationDevice> result = new LinkedList<>();
+
+        if (mSpeedAndLocationDevice_GPS != null) {
+            result.add(mSpeedAndLocationDevice_GPS);
+        }
+
+        if (mSpeedAndLocationDevice_GoogleFused != null) {
+            result.add(mSpeedAndLocationDevice_GoogleFused);
+        }
+
+        if (mSpeedAndLocationDevice_Network != null) {
+            result.add(mSpeedAndLocationDevice_Network);
+        }
+
+        return result;
+    }
+
+    public List<MyDevice> getActiveDevicesForUI() {
+        List<MyDevice> result = new LinkedList<>();
+
+        result.addAll(getActiveRemoteDevices());
+        result.addAll(getActiveSpeedAndLocationDevices());
+
+        return result;
+    }
+
+    public List<Long> getIdsOfFoundDevices() {
+        return mFoundDevices;
+    }
+
     public List<Long> getDatabaseIdsOfActiveDevices() {
         List<Long> result = new LinkedList<Long>();
 
@@ -532,7 +565,7 @@ public class DeviceManager
             if ((protocol == Protocol.ALL || remoteDevice.getProtocol() == protocol)
                     && (deviceType == DeviceType.ALL || remoteDevice.getDeviceType() == deviceType)
                     && remoteDevice.isReceivingData()) {
-                if (DEBUG) Log.i(TAG, "adding " + remoteDevice.getDeviceName());
+                if (DEBUG) Log.i(TAG, "adding " + remoteDevice.getName());
                 availableDevicesList.add(remoteDevice.getDeviceId());
             }
         }

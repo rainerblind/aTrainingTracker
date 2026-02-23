@@ -29,6 +29,7 @@ import android.provider.BaseColumns;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
@@ -79,6 +80,28 @@ public class DevicesDatabaseManager {
         return cDevicesDbHelper.getWritableDatabase();
     }
     // --- End of Singleton Pattern ---
+
+    public Cursor getDeviceCursor(long deviceId) {
+        return getDatabase().query(DevicesDbHelper.DEVICES,
+                null,
+                DevicesDbHelper.C_ID + "=?",
+                new String[]{Long.toString(deviceId)},
+                null,
+                null,
+                null);
+    }
+
+    public Cursor getCursorForAllDevices() {
+        return getDatabase().query(
+                DevicesDbHelper.DEVICES,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+    }
 
     public boolean isANTDeviceInDB(DeviceType deviceType, int antDeviceNumber) {
         if (DEBUG) Log.d(TAG, "isANTDeviceInDB");
@@ -424,10 +447,12 @@ public class DevicesDatabaseManager {
         return DeviceType.valueOf(getString(deviceId, DevicesDbHelper.DEVICE_TYPE));
     }
 
+    @Nullable
     public String getManufacturerName(long deviceId) {
         return getString(deviceId, DevicesDbHelper.MANUFACTURER_NAME);
     }
 
+    @Nullable
     public String getDeviceName(long deviceId) {
         return getString(deviceId, DevicesDbHelper.NAME);
     }
@@ -494,6 +519,7 @@ public class DevicesDatabaseManager {
         return result;
     }
 
+    @Nullable
     private String getString(long deviceID, String key) {
         if (DEBUG) Log.i(TAG, "getString: deviceID=" + deviceID + ", key=" + key);
 
@@ -602,6 +628,56 @@ public class DevicesDatabaseManager {
                 null,
                 null,
                 null);
+    }
+
+    public long getSpeedAndLocationGPSDeviceId() {
+        return getSmartphoneDeviceId(DeviceType.SPEED_AND_LOCATION_GPS);
+    }
+
+    public long getSpeedAndLocationNetworkDeviceId() {
+        return getSmartphoneDeviceId(DeviceType.SPEED_AND_LOCATION_NETWORK);
+    }
+
+    public long getSpeedAndLocationGoogleFusedDeviceId() {
+        return getSmartphoneDeviceId(DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED);
+    }
+
+    protected long getSmartphoneDeviceId(DeviceType deviceType) {
+        Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
+                new String[]{DevicesDbHelper.C_ID},
+                DevicesDbHelper.PROTOCOL + "=? AND " + DevicesDbHelper.DEVICE_TYPE + "=?",
+                new String[]{Protocol.SMARTPHONE.name(), deviceType.name()},
+                null,
+                null,
+                null);
+        long deviceId = -1;
+        if (cursor.moveToFirst()) {
+            deviceId = cursor.getLong(cursor.getColumnIndex(DevicesDbHelper.C_ID));
+        }
+        cursor.close();
+
+        return  deviceId;
+    }
+
+    public int deleteDevice(long deviceId) {
+        if (DEBUG) Log.d(TAG, "deleteDevice: deviceId=" + deviceId);
+
+        SQLiteDatabase db = getDatabase();
+        int affectedRows = 0;
+        try {
+            affectedRows = db.delete(DevicesDbHelper.DEVICES,
+                    DevicesDbHelper.C_ID + "=?",
+                    new String[]{Long.toString(deviceId)});
+
+            if (affectedRows == 0) {
+                if (DEBUG) Log.w(TAG, "deleteDevice: No device found with ID " + deviceId + " to delete.");
+            }
+        } catch (SQLException e) {
+            Log.e(TAG, "Error while deleting device with ID " + deviceId, e);
+            return -1; // Return -1 to indicate an error
+        }
+
+        return affectedRows; // Return the number of rows deleted (should be 1 or 0)
     }
 
 
@@ -901,24 +977,24 @@ public class DevicesDatabaseManager {
             ContentValues contentValues = new ContentValues();
             contentValues.put(PROTOCOL, Protocol.SMARTPHONE.name());
             contentValues.put(DEVICE_TYPE, DeviceType.SPEED_AND_LOCATION_GPS.name());
-            contentValues.put(PAIRED, TrainingApplication.useLocationSourceGPS());
-            contentValues.put(NAME, mContext.getString(R.string.prefsLocationSourceGPS));
+            contentValues.put(PAIRED, true);
+            contentValues.put(NAME, mContext.getString(R.string.devices_location_GPS));
             contentValues.put(MANUFACTURER_NAME, Build.BRAND);
             db.insert(DEVICES, null, contentValues);
 
             contentValues = new ContentValues();
             contentValues.put(PROTOCOL, Protocol.SMARTPHONE.name());
             contentValues.put(DEVICE_TYPE, DeviceType.SPEED_AND_LOCATION_NETWORK.name());
-            contentValues.put(PAIRED, TrainingApplication.useLocationSourceNetwork());
-            contentValues.put(NAME, mContext.getString(R.string.prefsLocationSourceNetwork));
+            contentValues.put(PAIRED, false);
+            contentValues.put(NAME, mContext.getString(R.string.devices_location_Network));
             contentValues.put(MANUFACTURER_NAME, Build.BRAND);
             db.insert(DEVICES, null, contentValues);
 
             contentValues = new ContentValues();
             contentValues.put(PROTOCOL, Protocol.SMARTPHONE.name());
             contentValues.put(DEVICE_TYPE, DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED.name());
-            contentValues.put(PAIRED, TrainingApplication.useLocationSourceGoogleFused());
-            contentValues.put(NAME, mContext.getString(R.string.prefsLocationSourceGoogleFused));
+            contentValues.put(PAIRED, true);
+            contentValues.put(NAME, mContext.getString(R.string.devices_location_GoogleFused));
             contentValues.put(MANUFACTURER_NAME, Build.BRAND);
             db.insert(DEVICES, null, contentValues);
 
@@ -927,7 +1003,7 @@ public class DevicesDatabaseManager {
                 contentValues.put(PROTOCOL, Protocol.SMARTPHONE.name());
                 contentValues.put(DEVICE_TYPE, DeviceType.ALTITUDE_FROM_PRESSURE.name());
                 contentValues.put(PAIRED, true);
-                contentValues.put(NAME, mContext.getString(R.string.AltitudeFromPressureDevice_name));
+                contentValues.put(NAME, mContext.getString(R.string.devices_altitude_from_pressure));
                 contentValues.put(MANUFACTURER_NAME, Build.BRAND);
                 db.insert(DEVICES, null, contentValues);
             }

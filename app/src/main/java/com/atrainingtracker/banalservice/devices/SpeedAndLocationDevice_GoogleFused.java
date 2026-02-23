@@ -28,6 +28,7 @@ import android.util.Log;
 import androidx.core.app.ActivityCompat;
 
 import com.atrainingtracker.banalservice.BANALService;
+import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -54,6 +55,10 @@ public class SpeedAndLocationDevice_GoogleFused extends SpeedAndLocationDevice
             Log.d(TAG, "constructor");
         }
 
+        // get the deviceId from the DevicesDatabaseManager
+        DevicesDatabaseManager devicesDatabaseManager = DevicesDatabaseManager.getInstance(mContext);
+        mDeviceId = devicesDatabaseManager.getSpeedAndLocationGoogleFusedDeviceId();
+
         mGoogleApiClient = new GoogleApiClient.Builder(context)
                 .addApi(LocationServices.API)
                 .addConnectionCallbacks(this)
@@ -69,12 +74,6 @@ public class SpeedAndLocationDevice_GoogleFused extends SpeedAndLocationDevice
     }
 
     @Override
-    public String getName() {
-        return "google_fused";   // here, we do not use R.string to be compatible with the old (pre 3.8) way
-    }
-
-
-    @Override
     public void onConnected(Bundle dataBundle) {
         if (DEBUG) Log.d(TAG, "onConnected()");
 
@@ -82,6 +81,9 @@ public class SpeedAndLocationDevice_GoogleFused extends SpeedAndLocationDevice
             return;
         }
         LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
+
+        // set last active
+        setLastActive();
     }
 
 

@@ -34,6 +34,8 @@ import java.util.LinkedList;
 import java.util.List;
 
 // code taken from http://v4all123.blogspot.de/2013/09/spinner-with-multiple-selection-in.html
+
+@Deprecated
 public class MultiSelectionSpinner extends AppCompatSpinner implements
         OnMultiChoiceClickListener {
     @Nullable
