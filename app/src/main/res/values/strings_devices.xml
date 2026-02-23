@@ -12,6 +12,8 @@
     <string name="devices_unknown_manufacturer">unknown manufacturer</string>
     <string name="devices_unknown_device">no name</string>
 
+    <string name="devices_all">All</string>
+
 
     <!-- device_list_row -->
     <string name="devices_main_value_format" translatable="false">(%1$s)</string>

@@ -8,6 +8,9 @@
     <string name="devices_unknown_manufacturer">Unbekannter Hersteller</string>
     <string name="devices_unknown_device">Kein Name</string>
 
+    <string name="devices_all">Alle</string>
+
+
     <!-- device_list -->
     <string name="devices_myRemoteDevices">Meine Sensoren</string>
     <!-- <string name="knownDevices">known devices</string> -->

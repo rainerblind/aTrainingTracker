@@ -65,13 +65,12 @@ class DevicesTabbedContainerFragment : Fragment() {
 
         val deviceTypeList = DeviceType.getRemoteDeviceTypes(viewModel.protocol).toList()
 
-        AlertDialog.Builder(requireContext()).apply {
+        val dialog = AlertDialog.Builder(requireContext()).apply {
             setIcon(viewModel.protocol.getIconId())
             setTitle(R.string.select_device_type)
-            setNegativeButton(R.string.Cancel) { dialog, _ ->
-                dialog.dismiss()
-                // Navigate back if the user cancels the selection
-                requireActivity().supportFragmentManager.popBackStack()
+            setPositiveButton(R.string.devices_all){ _dialog, _ ->
+                _dialog.dismiss()
+                viewModel.onDeviceTypeSelected(DeviceType.ALL)
             }
             val adapter = DeviceTypeChoiceArrayAdapter(requireActivity(), deviceTypeList, viewModel.protocol)
             setAdapter(adapter) { dialog, which ->
@@ -79,7 +78,13 @@ class DevicesTabbedContainerFragment : Fragment() {
                 viewModel.onDeviceTypeSelected(deviceTypeList[which])
                 dialog.dismiss()
             }
-        }.create().show() // Use create().show() to be able to tag it later if needed.
+        }.create()
+
+        dialog.setOnCancelListener {
+            requireActivity().onBackPressedDispatcher.onBackPressed()
+        }
+
+        dialog.show()
     }
 
     private fun setupViewPagerAndTabs(deviceType: DeviceType) {
