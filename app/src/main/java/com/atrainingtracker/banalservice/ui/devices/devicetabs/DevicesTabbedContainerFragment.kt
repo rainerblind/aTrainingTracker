@@ -16,7 +16,7 @@ import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.dialogs.InstallANTShitDialog
-import com.atrainingtracker.banalservice.ui.devices.devicetypechoice.DeviceTypeChoiceArrayAdapter
+import com.atrainingtracker.banalservice.ui.devices.devicetabs.DeviceTypeChoiceArrayAdapter
 import com.atrainingtracker.databinding.FragmentTabbedDevicesBinding // Import generated ViewBinding class
 import com.google.android.material.tabs.TabLayoutMediator
 
