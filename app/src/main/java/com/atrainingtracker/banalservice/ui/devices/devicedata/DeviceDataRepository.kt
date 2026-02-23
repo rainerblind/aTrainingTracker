@@ -1,4 +1,4 @@
-package com.atrainingtracker.banalservice.ui.devices
+package com.atrainingtracker.banalservice.ui.devices.devicedata
 
 import android.app.Application
 import android.content.ComponentName
@@ -8,16 +8,15 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
 import android.util.Log
-import androidx.compose.animation.core.copy
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.map
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
-import com.atrainingtracker.banalservice.database.DevicesDatabaseManager.DevicesDbHelper
 import com.atrainingtracker.banalservice.devices.BikePowerSensorsHelper
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.banalservice.ui.devices.devicedata.RawDeviceDataProvider
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import kotlinx.coroutines.CoroutineScope
@@ -27,7 +26,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
 
 /**
  * A repository that acts as a single source of truth for workout data.
@@ -62,7 +60,7 @@ class DeviceDataRepository private constructor(private val application: Applicat
     // access to the databases
     private val devicesDatabaseManager by lazy { DevicesDatabaseManager.getInstance(application) }
     private val equipmentDbHelper by lazy { EquipmentDbHelper(application) }
-    private val mapper by lazy {RawDeviceDataProvider(devicesDatabaseManager, equipmentDbHelper)}
+    private val mapper by lazy { RawDeviceDataProvider(devicesDatabaseManager, equipmentDbHelper) }
 
     // access to the BANALService
     private var banalServiceComm: BANALService.BANALServiceComm? = null
@@ -176,7 +174,8 @@ class DeviceDataRepository private constructor(private val application: Applicat
                         val mainSensorData = activeDevice.mainSensorData
                         val mainValue = mainSensorData.value + " " + application.getString(MyHelper.getUnitsId(mainSensorData.sensor))
                         val allValues = activeDevice.allSensorData.map {
-                            application.getString(it.sensor.fullNameId) + ": " + it.value + " " + application.getString(MyHelper.getUnitsId(it.sensor))
+                            application.getString(it.sensor.fullNameId) + ": " + it.value + " " + application.getString(
+                                MyHelper.getUnitsId(it.sensor))
                         }
                         knownDevice.copy(
                             isAvailable = true,
@@ -272,9 +271,9 @@ class DeviceDataRepository private constructor(private val application: Applicat
             val values = createContentValuesForUpdate(originalState, finalState)
             if (values.size() > 0) {
                 devicesDatabaseManager.database.update(
-                    DevicesDbHelper.DEVICES,
+                    DevicesDatabaseManager.DevicesDbHelper.DEVICES,
                     values,
-                    "${DevicesDbHelper.C_ID} = ?",
+                    "${DevicesDatabaseManager.DevicesDbHelper.C_ID} = ?",
                     arrayOf(finalState.id.toString())
                 )
             }
@@ -293,12 +292,17 @@ class DeviceDataRepository private constructor(private val application: Applicat
                 powerFeatureFlags = if (finalState.powerFeatures!!.doublePowerBalanceValues) {
                     powerFeatureFlags?.let { BikePowerSensorsHelper.addDoublePowerBalanceValues(it) }
                 } else {
-                    powerFeatureFlags?.let { BikePowerSensorsHelper.removeDoublePowerBalanceValues(it) }
+                    powerFeatureFlags?.let {
+                        BikePowerSensorsHelper.removeDoublePowerBalanceValues(
+                            it
+                        )
+                    }
                 }
                 if (finalState.powerFeatures!!.invertPowerBalanceValues) {
-                    powerFeatureFlags = powerFeatureFlags?.let { BikePowerSensorsHelper.addInvertPowerBalanceValues(it) }
-                }
-                else {
+                    powerFeatureFlags = powerFeatureFlags?.let {
+                        BikePowerSensorsHelper.addInvertPowerBalanceValues(it)
+                    }
+                } else {
                     powerFeatureFlags = powerFeatureFlags?.let {
                         BikePowerSensorsHelper.removeInvertPowerBalanceValues(it)
                     }
@@ -315,7 +319,8 @@ class DeviceDataRepository private constructor(private val application: Applicat
 
             // send broadcasts
             if (originalState.wheelCircumference != finalState.wheelCircumference) {
-                sendCalibrationChangedBroadcast(finalState.id,
+                sendCalibrationChangedBroadcast(
+                    finalState.id,
                     finalState.wheelCircumference?.div(1000.0)
                 )
             }
@@ -331,17 +336,17 @@ class DeviceDataRepository private constructor(private val application: Applicat
     private fun createContentValuesForUpdate(original: DeviceUiData, final: DeviceUiData): ContentValues {
         return ContentValues().apply {
             if (original.deviceName != final.deviceName) {
-                put(DevicesDbHelper.NAME, final.deviceName)
+                put(DevicesDatabaseManager.DevicesDbHelper.NAME, final.deviceName)
             }
             if (original.isPaired != final.isPaired) {
-                put(DevicesDbHelper.PAIRED, if (final.isPaired) 1 else 0)
+                put(DevicesDatabaseManager.DevicesDbHelper.PAIRED, if (final.isPaired) 1 else 0)
             }
 
             // This handles both wheel circumference and run factor by converting them to the base calibration value
             val originalCalib = getAsCalibrationValue(original)
             val finalCalib = getAsCalibrationValue(final)
             if (originalCalib != finalCalib) {
-                put(DevicesDbHelper.CALIBRATION_FACTOR, finalCalib)
+                put(DevicesDatabaseManager.DevicesDbHelper.CALIBRATION_FACTOR, finalCalib)
             }
 
         }

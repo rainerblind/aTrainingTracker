@@ -1,10 +1,9 @@
-package com.atrainingtracker.banalservice.ui.devices
+package com.atrainingtracker.banalservice.ui.devices.devicedata
 
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
-import androidx.compose.animation.core.copy
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.BikePowerSensorsHelper
