@@ -689,8 +689,8 @@
     <string name="filter_average">Durchschnitt (gesamte Einheit)</string>
     <string name="filter_exponential_smoothing">Exponentielle Glättung</string>
     <string name="filter_moving_average">Gleitender Durchschnitt</string>
-    <string name="filter_exponential_smoothing_format">"Exponentielle Glättung mit α=%1$f"</string>
-    <string name="filter_exponential_smoothing_short_format">Exp α=%1$f</string>
+    <string name="filter_exponential_smoothing_format">"Exponentielle Glättung mit α=%1.2f"</string>
+    <string name="filter_exponential_smoothing_short_format">Exp α=%1.1f</string>
     <string name="configSensor">Sensor:</string>
     <string name="configSource">Quelle:</string>
     <string name="configSmoothing">Glättung:</string>

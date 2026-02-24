@@ -783,8 +783,8 @@
     <string name="filter_exponential_smoothing">exponential smoothing</string>
     <string name="filter_moving_average">moving average</string>
     <string name="filter_moving_average_short" translatable="false">Ø</string>
-    <string name="filter_exponential_smoothing_format">exponential smoothing with α=%1$f</string>
-    <string name="filter_exponential_smoothing_short_format">exp α=%1$f</string>
+    <string name="filter_exponential_smoothing_format">exponential smoothing with α=%1.2f</string>
+    <string name="filter_exponential_smoothing_short_format">exp α=%1.1f</string>
     <string name="configSensor">Sensor:</string>
     <string name="configSource">Source:</string>
     <string name="configSmoothing">Smoothing:</string>
