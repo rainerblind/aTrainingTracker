@@ -49,6 +49,7 @@ import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFragmen
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
 import com.atrainingtracker.trainingtracker.segments.StarredSegmentsTabbedContainer;
 import com.atrainingtracker.trainingtracker.tracker.TrackerService;
+import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TabbedContainerFragment;
 import com.google.android.material.navigation.NavigationView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -615,8 +616,9 @@ public class MainActivityWithNavigation
 
         switch (mSelectedFragmentId) {
             case R.id.drawer_start_tracking:
-                mFragment = StartAndTrackingFragmentTabbedContainer.newInstance(getActivityType(), StartAndTrackingFragmentTabbedContainer.CONTROL_ITEM);
-                tag = StartAndTrackingFragmentTabbedContainer.TAG;
+                // mFragment = StartAndTrackingFragmentTabbedContainerClassic.newInstance(getActivityType(), StartAndTrackingFragmentTabbedContainerClassic.CONTROL_ITEM);
+                mFragment = TabbedContainerFragment.newInstance(getActivityType(), 1);
+                tag = StartAndTrackingFragmentTabbedContainerClassic.TAG;
                 break;
 
             case R.id.drawer_map:

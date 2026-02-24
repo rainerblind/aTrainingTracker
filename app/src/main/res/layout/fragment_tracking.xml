@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/swiperefresh"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!--
+    This is the host for our modern, declarative UI.
+    Note the full package path: androidx.compose.ui.platform.ComposeView is required here.
+    -->
+    <androidx.compose.ui.platform.ComposeView
+        android:id="@+id/compose_tracking_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+</androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
