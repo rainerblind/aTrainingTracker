@@ -450,9 +450,10 @@
     <string name="ValueAndUnitFormat">(%1$s %2$s)</string>
 
     <!-- others -->
-    <string name="equipment_all">Alle</string>
-    <string name="equipment_all_bikes">Alle Räder</string>
-    <string name="equipment_all_shoes">Alle Schuhe</string>
+    <string name="equipment_none">- Keins -</string>
+    <string name="equipment_all">+ Alle+ </string>
+    <string name="equipment_all_bikes">+ Alle Räder+ </string>
+    <string name="equipment_all_shoes">+ Alle Schuhe+ </string>
     <string name="equipment_type_bike">Rad</string>
     <string name="equipment_type_shoe">Schuhe</string>
 
@@ -913,8 +914,5 @@
     <!-- drawer -->
     <string name="drawer__training">Training</string>
     <string name="drawer__maps">Karten</string>
-
-
-    <string name="no_equipment">- Keins -</string>
 
 </resources>
