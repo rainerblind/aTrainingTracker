@@ -5,7 +5,7 @@ import android.view.View
 import android.widget.TextView
 import android.graphics.Typeface
 import com.atrainingtracker.banalservice.Protocol
-import com.atrainingtracker.banalservice.ui.devices.DeviceUiData
+import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 
 /**
  * A highly specialized DialogFragment for editing a Bike Power Meter.

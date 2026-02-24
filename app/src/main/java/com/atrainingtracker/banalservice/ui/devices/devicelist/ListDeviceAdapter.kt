@@ -1,16 +1,14 @@
 package com.atrainingtracker.banalservice.ui.devices.devicelist
 
-import android.os.Bundle
 import android.view.ContextMenu
 import android.view.LayoutInflater
 import android.view.MenuInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.atrainingtracker.R
-import com.atrainingtracker.banalservice.ui.devices.DeviceUiData
+import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.databinding.ItemDeviceListBinding
 
 

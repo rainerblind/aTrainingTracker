@@ -8,6 +8,16 @@
     <string name="devices_unknown_manufacturer">Unbekannter Hersteller</string>
     <string name="devices_unknown_device">Kein Name</string>
 
+    <string name="devices_all">Alle</string>
+
+    <!-- tab title -->
+    <string name="devices_available_devices_format">Sichtbare %1$s Sensoren</string>
+    <string name="devices_paired_devices_format">Gekoppelte %1$s Sensoren</string>
+    <string name="devices_known_devices_format">Bekannte %1$s Sensoren</string>
+    <string name="devices_all_available_devices">Alle sichtbaren Sensoren</string>
+    <string name="devices_all_paired_devices">Alle gekoppelten Sensoren</string>
+    <string name="devices_all_known_devices">Alle bekannten Sensoren</string>
+
     <!-- device_list -->
     <string name="devices_myRemoteDevices">Meine Sensoren</string>
     <!-- <string name="knownDevices">known devices</string> -->
