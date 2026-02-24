@@ -1205,7 +1205,7 @@ public class TrainingApplication extends Application {
 
         channel = new NotificationChannel(NOTIFICATION_CHANNEL__EXPORT,
                 getString(R.string.notification_channel_name__export),
-                NotificationManager.IMPORTANCE_DEFAULT);
+                NotificationManager.IMPORTANCE_LOW);
         channel.setDescription(getString(R.string.notification_channel_description__export));
         notificationManager.createNotificationChannel(channel);
     }
