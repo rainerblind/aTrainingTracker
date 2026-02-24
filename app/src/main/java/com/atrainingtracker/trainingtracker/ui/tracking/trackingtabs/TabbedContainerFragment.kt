@@ -6,10 +6,12 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.observe
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ActivityType
+import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.fragments.ControlTrackingFragment
 import com.atrainingtracker.trainingtracker.fragments.TrackingFragmentClassic
@@ -68,6 +70,12 @@ class TabbedContainerFragment : Fragment() {
                 pagerAdapter.updateTrackingViews(trackingViews)
             }
         }
+
+        // Observe TrackingMode to update the tab title ---
+        viewModel.trackingMode.observe(viewLifecycleOwner) { state ->
+            // When the state changes, just update the title of the first tab.
+            tabLayout.getTabAt(0)?.text = pagerAdapter.getPageTitle(0)
+        }
     }
 
     private class TrackingPagerAdapter(
@@ -75,6 +83,9 @@ class TabbedContainerFragment : Fragment() {
         private var activityType: ActivityType
     ) : FragmentStateAdapter(fragment) {
         private var trackingViews: List<TrackingViewInfo> = emptyList()
+        private val viewModel: TabbedContainerViewModel by lazy {
+            ViewModelProvider(fragment).get(TabbedContainerViewModel::class.java)
+        }
 
         fun setActivityType(newActivityType: ActivityType) {
             this.activityType = newActivityType
@@ -89,15 +100,10 @@ class TabbedContainerFragment : Fragment() {
 
         fun getPageTitle(position: Int): CharSequence {
             return if (position == 0) {
-                // TODO: The tracking state should also come from the repository's LiveData in the future.
-                if (TrainingApplication.isTracking()) {
-                    if (TrainingApplication.isPaused()) {
-                        return fragment.getString(R.string.Paused);
-                    } else {
-                        return fragment.getString(R.string.Tracking);
-                    }
-                } else {
-                    return fragment.getString(R.string.tab_start);
+                when (viewModel.trackingMode.value) {
+                    TrackingMode.PAUSED -> fragment.getString(R.string.Paused)
+                    TrackingMode.TRACKING -> fragment.getString(R.string.Tracking)
+                    else -> fragment.getString(R.string.tab_start) // STOPPED or null
                 }
             } else {
                 trackingViews[position - 1].name

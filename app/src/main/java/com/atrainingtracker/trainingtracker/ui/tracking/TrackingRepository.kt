@@ -1,9 +1,18 @@
 package com.atrainingtracker.trainingtracker.ui.tracking
 
+import android.annotation.SuppressLint
 import android.app.Application
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.atrainingtracker.banalservice.ActivityType
+import com.atrainingtracker.banalservice.BANALService
+import com.atrainingtracker.trainingtracker.TrackingMode
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager
 
 // Data class for holding tab info, can be moved to a more common location later.
@@ -16,13 +25,34 @@ data class TrackingViewInfo(val id: Int, val name: String)
  */
 class TrackingRepository private constructor(private val application: Application) {
 
-    // --- ActivityType Management ---
     private val _activityType = MutableLiveData<ActivityType>()
     val activityType: LiveData<ActivityType> = _activityType
+
+    private val _trackingMode = MutableLiveData<TrackingMode>()
+    val trackingMode: LiveData<TrackingMode> = _trackingMode
+
+    // The receiver now lives in the repository
+    private val trackingStateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val newTrackingMode = TrainingApplication.getTrackingMode()
+            if (_trackingMode.value != newTrackingMode) {
+                _trackingMode.postValue(newTrackingMode)
+            }
+        }
+    }
 
     init {
         // Set a default value when the repository is created
         _activityType.postValue(ActivityType.getDefaultActivityType())
+
+        _trackingMode.postValue(TrackingMode.WAITING_FOR_BANAL_SERVICE)
+
+        // Register the receiver to listen for changes from the TrainingApplication
+        application.registerReceiver(
+            trackingStateReceiver,
+            IntentFilter(TrainingApplication.TRACKING_STATE_CHANGED),
+            Context.RECEIVER_NOT_EXPORTED // Specify that it only receives broadcasts from this app
+        )
     }
 
 
