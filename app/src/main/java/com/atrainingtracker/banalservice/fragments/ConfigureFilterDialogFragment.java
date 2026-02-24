@@ -76,36 +76,6 @@ public class ConfigureFilterDialogFragment
         return configureFilterDialogFragment;
     }
 
-    public static String getFilterSummary(Context context, FilterType filterType, double filterConstant) {
-        switch (filterType) {
-            case INSTANTANEOUS: // instantaneous
-                return context.getString(R.string.filter_instantaneous);
-
-            case AVERAGE: // average (entire workout)
-                return context.getString(R.string.filter_average);
-
-            case MOVING_AVERAGE_TIME:
-                if (filterConstant % 60 == 0) { // 5 min moving average
-                    return (int) (filterConstant / 60) + " " + context.getString(R.string.units_minutes) + " " + context.getString(R.string.filter_moving_average);
-                } else { // 5 sec moving average
-                    return (int) filterConstant + " " + context.getString(R.string.units_seconds) + " " + context.getString(R.string.filter_moving_average);
-                }
-
-            case MOVING_AVERAGE_NUMBER: // 5 samples moving average
-                return filterConstant + " " + context.getString(R.string.units_samples) + " " + context.getString(R.string.filter_moving_average);
-
-            case EXPONENTIAL_SMOOTHING:  // exponential smoothing with \alpha = 0.9
-                return context.getString(R.string.filter_exponential_smoothing_format, filterConstant);
-
-            case MAX_VALUE:
-                return context.getString(R.string.max);
-
-            default:
-                return null;
-        }
-
-    }
-
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

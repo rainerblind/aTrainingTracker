@@ -310,7 +310,7 @@ public class EditFieldDialog extends DialogFragment {
 
             final TrackingViewsDatabaseManager.FilterInfo filterInfo = TrackingViewsDatabaseManager.getInstance(getContext()).getFilterInfo(mRowId);
 
-            button.setText(ConfigureFilterDialogFragment.getFilterSummary(getContext(), filterInfo.filterType, filterInfo.filterConstant));
+            button.setText(filterInfo.filterType.getSummary(getContext(), filterInfo.filterConstant));
 
             button.setOnClickListener(new View.OnClickListener() {
                 @Override
