@@ -14,9 +14,22 @@ import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager
+import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
 
 // Data class for holding tab info, can be moved to a more common location later.
 data class TrackingViewInfo(val id: Int, val name: String)
+
+
+/**
+ * Represents a single lap event, holding the data needed for the summary dialog.
+ * Using a data class makes the event self-contained and easy to pass around.
+ */
+data class LapEvent(
+    val lapNumber: Int,
+    val lapTime: String?,
+    val lapDistance: String?,
+    val lapSpeed: String?
+)
 
 /**
  * A singleton repository that acts as the single source of truth for all tracking-related data.
@@ -28,6 +41,7 @@ class TrackingRepository private constructor(private val application: Applicatio
     private val _activityType = MutableLiveData<ActivityType>()
     val activityType: LiveData<ActivityType> = _activityType
 
+    // -- Tracking mode
     private val _trackingMode = MutableLiveData<TrackingMode>()
     val trackingMode: LiveData<TrackingMode> = _trackingMode
 
@@ -37,6 +51,26 @@ class TrackingRepository private constructor(private val application: Applicatio
             val newTrackingMode = TrainingApplication.getTrackingMode()
             if (_trackingMode.value != newTrackingMode) {
                 _trackingMode.postValue(newTrackingMode)
+            }
+        }
+    }
+
+    // -- Lap Event
+    private val _lapEvent = SingleLiveEvent<LapEvent>()
+    val lapEvent: LiveData<LapEvent> = _lapEvent
+
+    // --- NEW: Receiver for Lap Summary ---
+    private val lapSummaryReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            intent?.let {
+                val lapEvent = LapEvent(
+                    lapNumber = it.getIntExtra(BANALService.PREV_LAP_NR, 0),
+                    lapTime = it.getStringExtra(BANALService.PREV_LAP_TIME_STRING),
+                    lapDistance = it.getStringExtra(BANALService.PREV_LAP_DISTANCE_STRING),
+                    lapSpeed = it.getStringExtra(BANALService.PREV_LAP_SPEED_STRING)
+                )
+                // Post the new event to the LiveData
+                _lapEvent.postValue(lapEvent)
             }
         }
     }
@@ -53,6 +87,11 @@ class TrackingRepository private constructor(private val application: Applicatio
             IntentFilter(TrainingApplication.TRACKING_STATE_CHANGED),
             Context.RECEIVER_NOT_EXPORTED // Specify that it only receives broadcasts from this app
         )
+
+        application.registerReceiver(
+            lapSummaryReceiver,
+            IntentFilter(BANALService.LAP_SUMMARY),
+            Context.RECEIVER_NOT_EXPORTED)
     }
 
 
