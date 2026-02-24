@@ -49,7 +49,6 @@ import android.widget.TextView;
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
-import com.atrainingtracker.banalservice.fragments.ConfigureFilterDialogFragment;
 import com.atrainingtracker.trainingtracker.activities.ConfigViewsActivity;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
@@ -397,7 +396,7 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
 
         FragmentManager fragmentManager = getActivity().getSupportFragmentManager();
         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-        fragmentTransaction.replace(R.id.content, TrackingFragment.newInstance(mViewId, TrackingFragment.Mode.PREVIEW, mActivityType));
+        fragmentTransaction.replace(R.id.content, TrackingFragmentClassic.newInstance(mViewId, TrackingFragmentClassic.Mode.PREVIEW, mActivityType));
         fragmentTransaction.addToBackStack(null);
         fragmentTransaction.commit();
     }

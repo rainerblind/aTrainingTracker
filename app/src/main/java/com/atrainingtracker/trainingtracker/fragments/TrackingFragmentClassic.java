@@ -65,7 +65,7 @@ import java.util.TreeMap;
 
 import static com.atrainingtracker.trainingtracker.dialogs.EditFieldDialog.TRACKING_VIEW_CHANGED_INTENT;
 
-public class TrackingFragment extends BaseTrackingFragment {
+public class TrackingFragmentClassic extends BaseTrackingFragment {
     public static final String TAG = "TrackingFragment";
     public static final String VIEW_ID = "VIEW_ID";
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
@@ -108,8 +108,8 @@ public class TrackingFragment extends BaseTrackingFragment {
     };
 
     @NonNull
-    public static TrackingFragment newInstance(long viewId, @NonNull ActivityType activityType) {
-        TrackingFragment trackingFragment = new TrackingFragment();
+    public static TrackingFragmentClassic newInstance(int viewId, @NonNull ActivityType activityType) {
+        TrackingFragmentClassic trackingFragment = new TrackingFragmentClassic();
 
         Bundle args = new Bundle();
         args.putLong(VIEW_ID, viewId);
@@ -128,10 +128,10 @@ public class TrackingFragment extends BaseTrackingFragment {
     //}
 
     @NonNull
-    public static TrackingFragment newInstance(long viewId, @NonNull Mode mode, @NonNull ActivityType activityType) {
+    public static TrackingFragmentClassic newInstance(long viewId, @NonNull Mode mode, @NonNull ActivityType activityType) {
         if (DEBUG) Log.i(TAG, "newInstance viewId=" + viewId + ", mode=" + mode);
 
-        TrackingFragment trackingFragment = new TrackingFragment();
+        TrackingFragmentClassic trackingFragment = new TrackingFragmentClassic();
 
         Bundle args = new Bundle();
         args.putLong(VIEW_ID, viewId);
@@ -202,7 +202,7 @@ public class TrackingFragment extends BaseTrackingFragment {
 
         mLayoutInflater = inflater;
 
-        View view = inflater.inflate(R.layout.tracking_fragment, container, false);
+        View view = inflater.inflate(R.layout.deprecated_tracking_fragment, container, false);
 
         mButtonLap = view.findViewById(R.id.buttonLap);
 

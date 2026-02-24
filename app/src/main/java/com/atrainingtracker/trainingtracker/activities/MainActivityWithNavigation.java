@@ -91,7 +91,7 @@ import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManage
 import com.atrainingtracker.trainingtracker.dialogs.EnableBluetoothDialog;
 import com.atrainingtracker.trainingtracker.dialogs.GPSDisabledDialog;
 import com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialog;
-import com.atrainingtracker.trainingtracker.fragments.StartAndTrackingFragmentTabbedContainer;
+import com.atrainingtracker.trainingtracker.fragments.StartAndTrackingFragmentTabbedContainerClassic;
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesListFragment;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.MyLocationsFragment;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapTrackingFragment;
@@ -133,7 +133,7 @@ public class MainActivityWithNavigation
         RemoteDevicesSettingsInterface,
         BANALService.GetBanalServiceInterface,
         PreferenceFragmentCompat.OnPreferenceStartScreenCallback,
-        StartAndTrackingFragmentTabbedContainer.UpdateActivityTypeInterface,
+        StartAndTrackingFragmentTabbedContainerClassic.UpdateActivityTypeInterface,
         StarredSegmentsListFragment.StartSegmentDetailsActivityInterface,
         StartOrResumeInterface {
     public static final String SELECTED_FRAGMENT_ID = "SELECTED_FRAGMENT_ID";
@@ -725,7 +725,7 @@ public class MainActivityWithNavigation
     @Override
     public void updateActivityType(int selectedItem) {
         FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
-        fragmentTransaction.replace(R.id.content, StartAndTrackingFragmentTabbedContainer.newInstance(getActivityType(), selectedItem));
+        fragmentTransaction.replace(R.id.content, StartAndTrackingFragmentTabbedContainerClassic.newInstance(getActivityType(), selectedItem));
         // if (addToBackStack) { fragmentTransaction.addToBackStack(null); }
         fragmentTransaction.commit();
     }
