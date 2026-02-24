@@ -310,7 +310,7 @@ class EditWorkoutActivity : AppCompatActivity() {
 
                 // First, get the selected equipment
                 val selectedEquipment = parent?.getItemAtPosition(position) as? String
-                val noEquipmentString = getString(R.string.no_equipment)
+                val noEquipmentString = getString(R.string.equipment_none)
 
                 // This is the "Show all equipment" item
                 if (selectedEquipment == getString(R.string.equipment_all)
@@ -417,7 +417,7 @@ class EditWorkoutActivity : AppCompatActivity() {
         }
 
         // Add the "No Equipment" option to the top of the list
-        val noEquipmentString = getString(R.string.no_equipment) // Create this string resource
+        val noEquipmentString = getString(R.string.equipment_none) // Create this string resource
         if (!equipmentList.contains(noEquipmentString)) {
             equipmentList.add(0, noEquipmentString)
         }
