@@ -12,6 +12,7 @@ import android.widget.Toast
 import androidx.core.widget.doOnTextChanged
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.layout.add
 import androidx.lifecycle.ViewModelProvider
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
@@ -309,6 +310,7 @@ class EditWorkoutActivity : AppCompatActivity() {
 
                 // First, get the selected equipment
                 val selectedEquipment = parent?.getItemAtPosition(position) as? String
+                val noEquipmentString = getString(R.string.no_equipment)
 
                 // This is the "Show all equipment" item
                 if (selectedEquipment == getString(R.string.equipment_all)
@@ -316,7 +318,12 @@ class EditWorkoutActivity : AppCompatActivity() {
                     || selectedEquipment == getString(R.string.equipment_all_bikes)) {  // -> user selected 'show all equipment/shoes/bikes'
                     setupEquipmentSpinner(newEquipmentData,true)         // Rebuild the spinner with all items
                     spinnerEquipment.performClick() // Open the spinner for the user to select again
-                } else {
+                }
+                else if (selectedEquipment == noEquipmentString) {
+                    // User selected "No Equipment", so we update the ViewModel with null.
+                    viewModel.updateEquipmentName(null)
+                }
+                else {
                     // A regular equipment was selected  -> update the view model
                     viewModel.updateEquipmentName(selectedEquipment)
                 }
@@ -409,6 +416,12 @@ class EditWorkoutActivity : AppCompatActivity() {
             equipmentList.add(getString(allEquipmentId))
         }
 
+        // Add the "No Equipment" option to the top of the list
+        val noEquipmentString = getString(R.string.no_equipment) // Create this string resource
+        if (!equipmentList.contains(noEquipmentString)) {
+            equipmentList.add(0, noEquipmentString)
+        }
+
         // change visibility depending the the list of equipment
         if (equipmentList.isEmpty()) {
             spinnerEquipment.visibility = View.GONE
@@ -427,7 +440,9 @@ class EditWorkoutActivity : AppCompatActivity() {
         spinnerEquipment.adapter = equipmentAdapter
 
         // Set the current selection after the adapter has been set
-        val selectionIndex = equipmentList.indexOf(newEquipmentName).takeIf { it >= 0 } ?: 0
+        val currentEquipment = newEquipmentName ?: noEquipmentString // If current is null, select "No Equipment"
+        // val selectionIndex = equipmentList.indexOf(newEquipmentName).takeIf { it >= 0 } ?: 0
+        val selectionIndex = equipmentList.indexOf(currentEquipment)
         spinnerEquipment.setSelection(selectionIndex)
     }
 
