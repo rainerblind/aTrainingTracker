@@ -617,7 +617,7 @@ public class MainActivityWithNavigation
         switch (mSelectedFragmentId) {
             case R.id.drawer_start_tracking:
                 // mFragment = StartAndTrackingFragmentTabbedContainerClassic.newInstance(getActivityType(), StartAndTrackingFragmentTabbedContainerClassic.CONTROL_ITEM);
-                mFragment = TabbedContainerFragment.newInstance(getActivityType(), 0);
+                mFragment = TabbedContainerFragment.newInstance();
                 tag = StartAndTrackingFragmentTabbedContainerClassic.TAG;
                 break;
 

@@ -4,58 +4,34 @@ package com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.MediatorLiveData
+import androidx.lifecycle.liveData
+
+import androidx.lifecycle.switchMap
 import com.atrainingtracker.banalservice.ActivityType
-import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager
+import com.atrainingtracker.trainingtracker.ui.tracking.TrackingRepository
+import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewInfo
+import kotlinx.coroutines.Dispatchers
 
-// Data class to hold the necessary info for each tab/page
-data class TrackingViewInfo(val id: Int, val name: String)
+/**
+ * ViewModel for the tabbed container.
+ * It no longer owns data but instead gets it from the TrackingRepository.
+ */
+class TabbedContainerViewModel(
+    application: Application,
+    private val trackingRepository: TrackingRepository
+) : AndroidViewModel(application) {
 
-class TabbedContainerViewModel(application: Application) : AndroidViewModel(application) {
+    // Simply expose the ActivityType from the repository
+    val activityType: LiveData<ActivityType> = trackingRepository.activityType
 
-    // Holds the list of tracking views (e.g., "Page 1", "Page 2") loaded from the DB
-    private val _trackingViews = MutableLiveData<List<TrackingViewInfo>>()
-    val trackingViews: LiveData<List<TrackingViewInfo>> = _trackingViews
-
-    // Holds the currently selected page index
-    private val _selectedPage = MutableLiveData<Int>()
-    val selectedPage: LiveData<Int> = _selectedPage
-
-    /**
-     * Loads the list of available tracking views for a given activity type from the database.
-     */
-    fun loadTrackingViews(activityType: ActivityType) {
-        val context = getApplication<Application>().applicationContext
-        val dbManager = TrackingViewsDatabaseManager.getInstance(context)
-        val viewList = mutableListOf<TrackingViewInfo>()
-
-        val cursor = dbManager.database.query(
-            TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEWS_TABLE,
-            arrayOf(
-                TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID,
-                TrackingViewsDatabaseManager.TrackingViewsDbHelper.NAME
-            ),
-            "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.ACTIVITY_TYPE}=?",
-            arrayOf(activityType.name),
-            null,
-            null,
-            "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.LAYOUT_NR} ASC"
-        )
-
-        cursor.use {
-            while (it.moveToNext()) {
-                val id = it.getInt(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID))
-                val name = it.getString(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.NAME))
-                viewList.add(TrackingViewInfo(id, name))
-            }
+    // When the activityType from the repository changes, this switchMap will automatically
+    // re-fetch the list of tracking views from the repository.
+    val trackingViews: LiveData<List<TrackingViewInfo>> = activityType.switchMap { currentActivityType ->
+        liveData(Dispatchers.IO) {
+            val views = trackingRepository.getTrackingViews(currentActivityType)
+            // Once the data is fetched, emit() posts the value to the LiveData on the main thread
+            emit(views)
         }
-        _trackingViews.postValue(viewList)
-    }
-
-    /**
-     * Sets the currently selected page.
-     */
-    fun setSelectedPage(position: Int) {
-        _selectedPage.value = position
     }
 }
