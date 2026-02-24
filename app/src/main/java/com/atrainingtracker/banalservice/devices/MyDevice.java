@@ -203,17 +203,17 @@ public abstract class MyDevice {
     }
 
     @NonNull
-    public SensorData getMainSensorData() {
+    public SimpleSensorData getMainSensorData() {
         MySensor mainSensor = getMainSensor();
 
-        return new SensorData(mainSensor.getStringValue(), mainSensor.getSensorType());
+        return new SimpleSensorData(mainSensor.getStringValue(), mainSensor.getSensorType());
     }
 
-    public List<SensorData> getAllSensorData() {
-        List<SensorData> sensorDataList = new ArrayList<>();
+    public List<SimpleSensorData> getAllSensorData() {
+        List<SimpleSensorData> sensorDataList = new ArrayList<>();
 
         for (MySensor sensor : getSensors()) {
-            sensorDataList.add(new SensorData(sensor.getStringValue(), sensor.getSensorType()));
+            sensorDataList.add(new SimpleSensorData(sensor.getStringValue(), sensor.getSensorType()));
         }
 
         return sensorDataList;
