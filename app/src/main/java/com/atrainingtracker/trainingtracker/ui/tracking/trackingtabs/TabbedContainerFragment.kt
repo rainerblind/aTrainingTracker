@@ -10,20 +10,23 @@ import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ActivityType
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.fragments.ControlTrackingFragment
 import com.atrainingtracker.trainingtracker.fragments.TrackingFragmentClassic
+import com.google.android.material.tabs.TabLayout
+import com.google.android.material.tabs.TabLayoutMediator
 
 class TabbedContainerFragment : Fragment() {
 
     private lateinit var viewModel: TabbedContainerViewModel
     private lateinit var viewPager: ViewPager2
+    private lateinit var tabLayout: TabLayout
     private lateinit var pagerAdapter: TrackingPagerAdapter
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        // Inflate a new layout for ViewPager2
         return inflater.inflate(R.layout.fragment_tabbed_container, container, false)
     }
 
@@ -31,14 +34,21 @@ class TabbedContainerFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         viewModel = ViewModelProvider(this).get(TabbedContainerViewModel::class.java)
 
-        // Assume a default or passed-in ActivityType for now
         val activityType = arguments?.getSerializable("ACTIVITY_TYPE") as? ActivityType ?: ActivityType.getDefaultActivityType()
 
-        viewPager = view.findViewById(R.id.pager) // Ensure your XML has a ViewPager2 with this ID
+        // Initialize views
         pagerAdapter = TrackingPagerAdapter(this, activityType)
+        viewPager = view.findViewById(R.id.pager)
+        tabLayout = view.findViewById(R.id.tab_layout)
         viewPager.adapter = pagerAdapter
 
-        // Observe changes to the list of tracking views
+        TabLayoutMediator(tabLayout, viewPager) { tab, position ->
+            // This lambda is called for each tab to set its title.
+            // We get the title from our adapter.
+            tab.text = pagerAdapter.getPageTitle(position)
+        }.attach() // This is the magic call that links them.
+
+        // Observe changes to the list of tracking views from the ViewModel
         viewModel.trackingViews.observe(viewLifecycleOwner) { trackingViews ->
             pagerAdapter.updateTrackingViews(trackingViews)
         }
@@ -47,15 +57,30 @@ class TabbedContainerFragment : Fragment() {
         viewModel.loadTrackingViews(activityType)
     }
 
-    private class TrackingPagerAdapter(fragment: Fragment, private val activityType: ActivityType) : FragmentStateAdapter(fragment) {
+    private class TrackingPagerAdapter(private val fragment: Fragment, private val activityType: ActivityType) : FragmentStateAdapter(fragment) {
         private var trackingViews: List<TrackingViewInfo> = emptyList()
 
         fun updateTrackingViews(newViews: List<TrackingViewInfo>) {
             this.trackingViews = newViews
-            notifyDataSetChanged() // Reload the ViewPager with the new data
+            notifyDataSetChanged()
         }
 
-        // The first page is always the control fragment, followed by the tracking pages
+        fun getPageTitle(position: Int): CharSequence {
+            return if (position == 0) {
+                if (TrainingApplication.isTracking()) {
+                    if (TrainingApplication.isPaused()) {
+                        return fragment.getString(R.string.Paused);
+                    } else {
+                        return fragment.getString(R.string.Tracking);
+                    }
+                } else {
+                    return fragment.getString(R.string.tab_start);
+                }
+            } else {
+                trackingViews[position - 1].name
+            }
+        }
+
         override fun getItemCount(): Int = 1 + trackingViews.size
 
         override fun createFragment(position: Int): Fragment {
@@ -63,7 +88,6 @@ class TabbedContainerFragment : Fragment() {
                 ControlTrackingFragment()
             } else {
                 val viewInfo = trackingViews[position - 1]
-                // This will be replaced with our new modern TrackingFragment
                 TrackingFragmentClassic.newInstance(viewInfo.id, activityType)
             }
         }
