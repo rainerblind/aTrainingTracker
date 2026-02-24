@@ -117,6 +117,8 @@ class TabbedContainerFragment : Fragment() {
     }
 
     companion object {
+        @JvmField
+        val TAG = "TabbedContainerFragment"
         @JvmStatic
         fun newInstance(): TabbedContainerFragment {
             return TabbedContainerFragment()
