@@ -45,8 +45,8 @@ class TrackingRepository private constructor(private val application: Applicatio
     private val _trackingMode = MutableLiveData<TrackingMode>()
     val trackingMode: LiveData<TrackingMode> = _trackingMode
 
-    // The receiver now lives in the repository
-    private val trackingStateReceiver = object : BroadcastReceiver() {
+    // The receiver for the tracking mode
+    private val trackingModeReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val newTrackingMode = TrainingApplication.getTrackingMode()
             if (_trackingMode.value != newTrackingMode) {
@@ -59,7 +59,7 @@ class TrackingRepository private constructor(private val application: Applicatio
     private val _lapEvent = SingleLiveEvent<LapEvent>()
     val lapEvent: LiveData<LapEvent> = _lapEvent
 
-    // --- NEW: Receiver for Lap Summary ---
+    // the receiver for Lap Summary Event
     private val lapSummaryReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             intent?.let {
@@ -83,11 +83,12 @@ class TrackingRepository private constructor(private val application: Applicatio
 
         // Register the receiver to listen for changes from the TrainingApplication
         application.registerReceiver(
-            trackingStateReceiver,
+            trackingModeReceiver,
             IntentFilter(TrainingApplication.TRACKING_STATE_CHANGED),
             Context.RECEIVER_NOT_EXPORTED // Specify that it only receives broadcasts from this app
         )
 
+        // Register the receiver to listen for changes from the BANALService
         application.registerReceiver(
             lapSummaryReceiver,
             IntentFilter(BANALService.LAP_SUMMARY),
