@@ -13,6 +13,7 @@ import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.fragments.ControlTrackingFragment
 import com.atrainingtracker.trainingtracker.fragments.TrackingFragmentClassic
+import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewInfo
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 
@@ -24,7 +25,8 @@ class TabbedContainerFragment : Fragment() {
     private lateinit var pagerAdapter: TrackingPagerAdapter
 
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
+        inflater: LayoutInflater,
+        container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
         return inflater.inflate(R.layout.fragment_tabbed_container, container, false)
@@ -32,33 +34,53 @@ class TabbedContainerFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        viewModel = ViewModelProvider(this).get(TabbedContainerViewModel::class.java)
 
-        val activityType = arguments?.getSerializable("ACTIVITY_TYPE") as? ActivityType ?: ActivityType.getDefaultActivityType()
+        val factory = TabbedContainerViewModelFactory(requireActivity().application)
+        viewModel = ViewModelProvider(this, factory).get(TabbedContainerViewModel::class.java)
 
-        // Initialize views
-        pagerAdapter = TrackingPagerAdapter(this, activityType)
         viewPager = view.findViewById(R.id.pager)
         tabLayout = view.findViewById(R.id.tab_layout)
-        viewPager.adapter = pagerAdapter
 
-        TabLayoutMediator(tabLayout, viewPager) { tab, position ->
-            // This lambda is called for each tab to set its title.
-            // We get the title from our adapter.
-            tab.text = pagerAdapter.getPageTitle(position)
-        }.attach() // This is the magic call that links them.
+        // Observe the ActivityType from the ViewModel (which gets it from the repository)
+        viewModel.activityType.observe(viewLifecycleOwner) { activityType ->
+            // This observer will be triggered on initial load and whenever the activity type changes.
+            if (!::pagerAdapter.isInitialized) {
+                // First-time setup
+                pagerAdapter = TrackingPagerAdapter(this, activityType)
+                viewPager.adapter = pagerAdapter
 
-        // Observe changes to the list of tracking views from the ViewModel
-        viewModel.trackingViews.observe(viewLifecycleOwner) { trackingViews ->
-            pagerAdapter.updateTrackingViews(trackingViews)
+                // Link the TabLayout and the ViewPager2 *after* the adapter is set.
+                TabLayoutMediator(tabLayout, viewPager) { tab, position ->
+                    tab.text = pagerAdapter.getPageTitle(position)
+                }.attach()
+            } else {
+                // If the adapter already exists, just update its activityType.
+                // The trackingViews observer below will handle updating the actual pages.
+                pagerAdapter.setActivityType(activityType)
+            }
         }
 
-        // Load the initial data
-        viewModel.loadTrackingViews(activityType)
+        // Observe the list of tracking views from the ViewModel.
+        // The ViewModel's `switchMap` ensures this LiveData automatically updates
+        // when the `activityType` changes.
+        viewModel.trackingViews.observe(viewLifecycleOwner) { trackingViews ->
+            if (::pagerAdapter.isInitialized) {
+                pagerAdapter.updateTrackingViews(trackingViews)
+            }
+        }
     }
 
-    private class TrackingPagerAdapter(private val fragment: Fragment, private val activityType: ActivityType) : FragmentStateAdapter(fragment) {
+    private class TrackingPagerAdapter(
+        private val fragment: Fragment,
+        private var activityType: ActivityType
+    ) : FragmentStateAdapter(fragment) {
         private var trackingViews: List<TrackingViewInfo> = emptyList()
+
+        fun setActivityType(newActivityType: ActivityType) {
+            this.activityType = newActivityType
+            // The logic to update pages is handled by the trackingViews observer,
+            // which will call updateTrackingViews.
+        }
 
         fun updateTrackingViews(newViews: List<TrackingViewInfo>) {
             this.trackingViews = newViews
@@ -67,6 +89,7 @@ class TabbedContainerFragment : Fragment() {
 
         fun getPageTitle(position: Int): CharSequence {
             return if (position == 0) {
+                // TODO: The tracking state should also come from the repository's LiveData in the future.
                 if (TrainingApplication.isTracking()) {
                     if (TrainingApplication.isPaused()) {
                         return fragment.getString(R.string.Paused);
@@ -95,13 +118,8 @@ class TabbedContainerFragment : Fragment() {
 
     companion object {
         @JvmStatic
-        fun newInstance(activityType: ActivityType, selectedItem: Int): TabbedContainerFragment {
-            val fragment = TabbedContainerFragment()
-            fragment.arguments = Bundle().apply {
-                putSerializable("ACTIVITY_TYPE", activityType)
-                putInt("SELECTED_ITEM", selectedItem)
-            }
-            return fragment
+        fun newInstance(): TabbedContainerFragment {
+            return TabbedContainerFragment()
         }
     }
 }
