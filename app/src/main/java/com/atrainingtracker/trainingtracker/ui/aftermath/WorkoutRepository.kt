@@ -123,8 +123,8 @@ class WorkoutRepository private constructor(private val application: Application
 
 
 
-    val saveFinishedEvent = MutableLiveData<Pair<Long, Boolean>>()
-    val deleteFinishedEvent = MutableLiveData<Pair<Long, Boolean>>()
+    val saveFinishedEvent = SingleLiveEvent<Pair<Long, Boolean>>()
+    val deleteFinishedEvent = SingleLiveEvent<Pair<Long, Boolean>>()
 
 
     private val workoutUpdateReceiver = object : BroadcastReceiver() {
