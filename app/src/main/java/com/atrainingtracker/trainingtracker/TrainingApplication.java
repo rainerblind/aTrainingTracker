@@ -1081,6 +1081,7 @@ public class TrainingApplication extends Application {
         Toast.makeText(context, "TODO: " + text, Toast.LENGTH_SHORT).show();
     }
 
+    // TODO: Note that here notifyTrackingStateChanged is not called!
     public void setTracking() {
         cTrackingMode = TrackingMode.TRACKING;
     }
