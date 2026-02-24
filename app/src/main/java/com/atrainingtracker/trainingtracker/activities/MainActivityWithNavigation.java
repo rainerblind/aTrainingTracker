@@ -44,6 +44,7 @@ import android.os.Handler;
 import android.os.IBinder;
 
 import com.atrainingtracker.banalservice.ui.SportTypeListFragment;
+import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedContainerFragment;
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFragmentFactory;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
 import com.atrainingtracker.trainingtracker.segments.StarredSegmentsTabbedContainer;
@@ -84,8 +85,6 @@ import com.atrainingtracker.banalservice.Protocol;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 import com.atrainingtracker.banalservice.dialogs.InstallANTShitDialog;
 import com.atrainingtracker.banalservice.filters.FilterData;
-import com.atrainingtracker.banalservice.fragments.DeviceTypeChoiceFragment;
-import com.atrainingtracker.banalservice.fragments.RemoteDevicesFragmentTabbedContainer;
 import com.atrainingtracker.banalservice.helpers.BatteryStatusHelper;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
@@ -131,7 +130,6 @@ public class MainActivityWithNavigation
         extends AppCompatActivity
         implements
         NavigationView.OnNavigationItemSelectedListener,
-        DeviceTypeChoiceFragment.OnDeviceTypeSelectedListener,
         RemoteDevicesSettingsInterface,
         BANALService.GetBanalServiceInterface,
         PreferenceFragmentCompat.OnPreferenceStartScreenCallback,
@@ -648,22 +646,22 @@ public class MainActivityWithNavigation
                 // Log.i(TAG, "MissingDependencyPackageName=" + AntPluginPcc.getMissingDependencyPackageName());
                 // Log.i(TAG, "PATH_ANTPLUS_PLUGIN_PKG=" + AntPluginPcc.PATH_ANTPLUS_PLUGINS_PKG);
 
-                mFragment = RemoteDevicesFragmentTabbedContainer.newInstance(Protocol.ANT_PLUS);
-                tag = DeviceTypeChoiceFragment.TAG;
+                mFragment = DevicesTabbedContainerFragment.newInstance(Protocol.ANT_PLUS, null);
+                tag = DevicesTabbedContainerFragment.TAG;
                 break;
 
             case R.id.drawer_pairing_BTLE:
                 titleId = R.string.pairing_bluetooth;
                 // fragment = DeviceTypeChoiceFragment.newInstance(Protocol.BLUETOOTH_LE);
                 // tag = DeviceTypeChoiceFragment.TAG;
-                mFragment = RemoteDevicesFragmentTabbedContainer.newInstance(Protocol.BLUETOOTH_LE);
-                tag = DeviceTypeChoiceFragment.TAG;
+                mFragment = DevicesTabbedContainerFragment.newInstance(Protocol.BLUETOOTH_LE, null);
+                tag = DevicesTabbedContainerFragment.TAG;
                 break;
 
             case R.id.drawer_my_sensors:
                 titleId = R.string.devices_myRemoteDevices;
-                mFragment = RemoteDevicesFragmentTabbedContainer.newInstance(Protocol.ALL, DeviceType.ALL);
-                tag = DeviceTypeChoiceFragment.TAG;
+                mFragment = DevicesTabbedContainerFragment.newInstance(Protocol.ALL, DeviceType.ALL);
+                tag = DevicesTabbedContainerFragment.TAG;
                 break;
 
             case R.id.drawer_my_locations:
@@ -811,18 +809,6 @@ public class MainActivityWithNavigation
         Intent segmentDetailsIntent = new Intent(this, SegmentDetailsActivity.class);
         segmentDetailsIntent.putExtras(bundle);
         startActivity(segmentDetailsIntent);
-    }
-
-    @Override
-    public void onDeviceTypeSelected(@NonNull DeviceType deviceType, @NonNull Protocol protocol) {
-        if (DEBUG)
-            Log.i(TAG, "onDeviceTypeSelected(" + deviceType.name() + "), mProtocol=" + protocol);
-
-        RemoteDevicesFragmentTabbedContainer fragment = RemoteDevicesFragmentTabbedContainer.newInstance(protocol, deviceType);
-        FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
-        fragmentTransaction.replace(R.id.content, fragment, RemoteDevicesFragmentTabbedContainer.TAG);
-        fragmentTransaction.addToBackStack(null);
-        fragmentTransaction.commit();
     }
 
 

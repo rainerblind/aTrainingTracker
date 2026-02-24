@@ -2,7 +2,6 @@ package com.atrainingtracker.banalservice.ui.devices.editdevice
 
 
 import android.os.Bundle
-import com.atrainingtracker.banalservice.ui.devices.DeviceUiData
 
 /**
  * A concrete DialogFragment for editing a simple bike device (e.g., speed/cadence)
