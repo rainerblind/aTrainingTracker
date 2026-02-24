@@ -54,6 +54,7 @@ import java.util.Set;
 import static com.atrainingtracker.trainingtracker.TrainingApplication.REQUEST_NEW_LAP;
 import static com.atrainingtracker.trainingtracker.TrainingApplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES;
 
+import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 
 public class BANALService
@@ -400,6 +401,7 @@ public class BANALService
         return cDeviceManager.getMainSensorStringValue(deviceID);
     }
 
+    @NonNull
     protected ActivityType getActivityType() {
         if (DEBUG) Log.d(TAG, "getActivityType");
 
@@ -628,6 +630,7 @@ public class BANALService
             return cDeviceManager.getIdsOfFoundDevices();
         }
 
+        @NonNull
         public ActivityType getActivityType() {
             return BANALService.this.getActivityType();
         }

@@ -1,12 +1,13 @@
 package com.atrainingtracker.trainingtracker.ui.tracking
 
-import android.annotation.SuppressLint
 import android.app.Application
 import android.content.BroadcastReceiver
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.os.Build
+import android.content.ServiceConnection
+import android.os.IBinder
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.atrainingtracker.banalservice.ActivityType
@@ -15,6 +16,12 @@ import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.launch
 
 // Data class for holding tab info, can be moved to a more common location later.
 data class TrackingViewInfo(val id: Int, val name: String)
@@ -38,8 +45,17 @@ data class LapEvent(
  */
 class TrackingRepository private constructor(private val application: Application) {
 
+    private val repositoryScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+
+    // access to the BANALService
+    private var banalServiceComm: BANALService.BANALServiceComm? = null
+    private var isBoundToBanalService = false
+
+
     private val _activityType = MutableLiveData<ActivityType>()
     val activityType: LiveData<ActivityType> = _activityType
+    // Note that we get the LiveData by observing the BANALServiceComm.activityType
+
 
     // -- Tracking mode
     private val _trackingMode = MutableLiveData<TrackingMode>()
@@ -93,7 +109,73 @@ class TrackingRepository private constructor(private val application: Applicatio
             lapSummaryReceiver,
             IntentFilter(BANALService.LAP_SUMMARY),
             Context.RECEIVER_NOT_EXPORTED)
+
+
+        repositoryScope.launch {
+            // connect to the BANALService
+            bindToBANALService()
+        }
     }
+
+    // Connection to BANALService and then observe it regularly.
+    private val banalServiceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            // This is called when the connection to the service has been established.
+            // We get the BANALServiceComm binder instance.
+            banalServiceComm = service as? BANALService.BANALServiceComm
+            isBoundToBanalService = banalServiceComm != null
+            if (isBoundToBanalService) {
+                // Once connected, start observing the service for data
+                startObservingBANALService()
+            }
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            // This is called when the service connection is lost unexpectedly
+            isBoundToBanalService = false
+            banalServiceComm = null
+        }
+    }
+
+    // Methods to bind and unbind to the BANALService
+    fun bindToBANALService() {
+        if (!isBoundToBanalService) {
+            val intent = Intent(application, BANALService::class.java)
+            // BIND_AUTO_CREATE ensures the service is created if not already running
+            application.bindService(intent, banalServiceConnection, Context.BIND_AUTO_CREATE)
+        }
+    }
+
+    fun unbindFromBANALService() {
+        if (isBoundToBanalService) {
+            application.unbindService(banalServiceConnection)
+            isBoundToBanalService = false
+            banalServiceComm = null
+        }
+    }
+
+    // Observing the BANALService: This function will be called once the service is connected.
+    private fun startObservingBANALService() {
+        repositoryScope.launch {
+            flow {
+                while (true) {
+                    emit(Unit)
+                    delay(1000)
+                }
+            }.collect {
+                if (banalServiceComm == null) return@collect // Service not bound yet
+
+                // --- ACTIVITY TYPE ---
+                val newActivityType = banalServiceComm?.activityType
+                if (_activityType.value != newActivityType) {
+                    _activityType.postValue(newActivityType)
+                }
+
+                // TODO: other LiveData for tracking.
+            }
+        }
+    }
+
 
 
     // --- Tracking Views ---
