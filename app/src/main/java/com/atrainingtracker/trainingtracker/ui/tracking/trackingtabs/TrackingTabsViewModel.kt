@@ -9,6 +9,7 @@ import androidx.lifecycle.liveData
 import androidx.lifecycle.switchMap
 import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.trainingtracker.TrackingMode
+import com.atrainingtracker.trainingtracker.ui.tracking.LapEvent
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewInfo
 import kotlinx.coroutines.Dispatchers
@@ -25,6 +26,7 @@ class TrackingTabsViewModel(
     // Simply expose the ActivityType and TrackingMode from the repository
     val activityType: LiveData<ActivityType> = trackingRepository.activityType
     val trackingMode: LiveData<TrackingMode> = trackingRepository.trackingMode
+    val lapEvent: LiveData<LapEvent> = trackingRepository.lapEvent
 
     // When the activityType from the repository changes, this switchMap will automatically
     // re-fetch the list of tracking views from the repository.
