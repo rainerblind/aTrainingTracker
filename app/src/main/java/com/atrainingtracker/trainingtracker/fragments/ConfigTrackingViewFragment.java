@@ -290,7 +290,7 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
                 tvFilterTitle.setVisibility(View.VISIBLE);
                 tvFilterValue.setVisibility(View.VISIBLE);
 
-                tvFilterValue.setText(ConfigureFilterDialogFragment.getFilterSummary(getContext(), viewInfo.filterType(), viewInfo.filterConstant()));
+                tvFilterValue.setText(viewInfo.filterType().getSummary(getContext(), viewInfo.filterConstant()));
             } else {
                 tvFilterTitle.setVisibility(View.GONE);
                 tvFilterValue.setVisibility(View.GONE);
