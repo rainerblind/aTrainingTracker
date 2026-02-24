@@ -6,22 +6,20 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.observe
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.trainingtracker.TrackingMode
-import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.fragments.ControlTrackingFragment
 import com.atrainingtracker.trainingtracker.fragments.TrackingFragmentClassic
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewInfo
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 
-class TabbedContainerFragment : Fragment() {
+class TrackingTabsFragment : Fragment() {
 
-    private lateinit var viewModel: TabbedContainerViewModel
+    private lateinit var viewModel: TrackingTabsViewModel
     private lateinit var viewPager: ViewPager2
     private lateinit var tabLayout: TabLayout
     private lateinit var pagerAdapter: TrackingPagerAdapter
@@ -37,8 +35,8 @@ class TabbedContainerFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val factory = TabbedContainerViewModelFactory(requireActivity().application)
-        viewModel = ViewModelProvider(this, factory).get(TabbedContainerViewModel::class.java)
+        val factory = TrackingTabsViewModelFactory(requireActivity().application)
+        viewModel = ViewModelProvider(this, factory).get(TrackingTabsViewModel::class.java)
 
         viewPager = view.findViewById(R.id.pager)
         tabLayout = view.findViewById(R.id.tab_layout)
@@ -83,8 +81,8 @@ class TabbedContainerFragment : Fragment() {
         private var activityType: ActivityType
     ) : FragmentStateAdapter(fragment) {
         private var trackingViews: List<TrackingViewInfo> = emptyList()
-        private val viewModel: TabbedContainerViewModel by lazy {
-            ViewModelProvider(fragment).get(TabbedContainerViewModel::class.java)
+        private val viewModel: TrackingTabsViewModel by lazy {
+            ViewModelProvider(fragment).get(TrackingTabsViewModel::class.java)
         }
 
         fun setActivityType(newActivityType: ActivityType) {
@@ -126,8 +124,8 @@ class TabbedContainerFragment : Fragment() {
         @JvmField
         val TAG = "TabbedContainerFragment"
         @JvmStatic
-        fun newInstance(): TabbedContainerFragment {
-            return TabbedContainerFragment()
+        fun newInstance(): TrackingTabsFragment {
+            return TrackingTabsFragment()
         }
     }
 }
