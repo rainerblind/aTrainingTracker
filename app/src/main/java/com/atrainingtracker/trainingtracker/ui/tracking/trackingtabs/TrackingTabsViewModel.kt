@@ -4,7 +4,6 @@ package com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
-import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.liveData
 
 import androidx.lifecycle.switchMap
@@ -18,7 +17,7 @@ import kotlinx.coroutines.Dispatchers
  * ViewModel for the tabbed container.
  * It no longer owns data but instead gets it from the TrackingRepository.
  */
-class TabbedContainerViewModel(
+class TrackingTabsViewModel(
     application: Application,
     private val trackingRepository: TrackingRepository
 ) : AndroidViewModel(application) {
