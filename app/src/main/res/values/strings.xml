@@ -1014,4 +1014,6 @@
     <string name="drawer__training">Training</string>
     <string name="drawer__maps">Maps</string>
 
+    <string name="no_equipment">- none -</string>
+
 </resources>

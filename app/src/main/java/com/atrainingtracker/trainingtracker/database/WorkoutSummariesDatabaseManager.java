@@ -83,7 +83,12 @@ public class WorkoutSummariesDatabaseManager {
 
         ContentValues values = new ContentValues();
         values.put(WorkoutSummaries.SPORT_ID, sportId);
-        values.put(WorkoutSummaries.EQUIPMENT_ID, equipmentId);
+        if (equipmentId == -1) {  // when the equipmentId is -1, the link to the equipment is removed.
+            values.putNull(WorkoutSummaries.EQUIPMENT_ID);
+        }
+        else {
+            values.put(WorkoutSummaries.EQUIPMENT_ID, equipmentId);
+        }
 
         updateValues(workoutId, values);
     }

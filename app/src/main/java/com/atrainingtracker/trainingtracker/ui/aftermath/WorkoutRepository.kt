@@ -374,7 +374,6 @@ class WorkoutRepository private constructor(private val application: Application
 
 
     fun updateEquipmentName(workoutId: Long, newEquipmentName: String?) {
-        if (newEquipmentName == null) return
         val currentList = _allWorkouts.value ?: return
         val workoutToUpdate = currentList.find { it.id == workoutId } ?: return
         if (newEquipmentName == workoutToUpdate.equipmentData.equipmentName) return
