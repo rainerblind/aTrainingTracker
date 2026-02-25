@@ -1,5 +1,6 @@
 package com.atrainingtracker.trainingtracker.ui.tracking
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -32,8 +33,9 @@ enum class ViewSize {
 @Composable
 fun SensorFieldView(
     fieldState: SensorFieldState,
+    modifier: Modifier = Modifier,
     size: ViewSize = ViewSize.NORMAL,
-    modifier: Modifier = Modifier
+    border: BorderStroke? = null
 ) {
     // Determine text styles based on the size parameter.
     val valueStyle: TextStyle
@@ -76,7 +78,8 @@ fun SensorFieldView(
     Card(
         modifier = modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.cardColors(containerColor = fieldState.zoneColor)
+        colors = CardDefaults.cardColors(containerColor = fieldState.zoneColor),
+        border = border
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)

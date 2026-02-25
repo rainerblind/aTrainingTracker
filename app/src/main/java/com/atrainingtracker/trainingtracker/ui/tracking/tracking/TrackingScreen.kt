@@ -1,5 +1,7 @@
 package com.atrainingtracker.trainingtracker.ui.tracking.tracking
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
@@ -9,7 +11,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.ui.theme.DefaultBackgroundColor
 import com.atrainingtracker.trainingtracker.ui.theme.Zone1
@@ -54,6 +58,7 @@ fun TrackingScreen(state: TrackingScreenState) {
                         modifier = Modifier
                             .weight(1f), // Distribute width equally among all columns in this row
                             // .fillMaxHeight(),
+                        border = BorderStroke(width = 1.dp, color = Color.Gray),
                         fieldState = fieldState
                     )
                 }
