@@ -12,6 +12,10 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.banalservice.BANALService
+import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
+import com.atrainingtracker.banalservice.filters.FilterType
+import com.atrainingtracker.banalservice.filters.FilteredSensorData
+import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager
@@ -20,6 +24,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 
@@ -39,6 +46,21 @@ data class LapEvent(
 )
 
 /**
+ * A data class to hold the complete configuration for a single sensor field,
+ * as loaded from the TrackingViewsDatabaseManager.
+ */
+data class SensorFieldConfig(
+    val viewId: Int,
+    val rowNr: Int,
+    val colNr: Int,
+    val size: ViewSize,
+    val sensorType: SensorType,
+    val filterType: FilterType,
+    val filterConstant: Double,
+    val deviceName: String? = null
+)
+
+/**
  * A singleton repository that acts as the single source of truth for all tracking-related data.
  * It connects to the BANALService and the local database to provide a clean data source
  * for all ViewModels.
@@ -55,6 +77,10 @@ class TrackingRepository private constructor(private val application: Applicatio
     private val _activityType = MutableLiveData<ActivityType>()
     val activityType: LiveData<ActivityType> = _activityType
     // Note that we get the LiveData by observing the BANALServiceComm.activityType
+
+    private val _allFilteredSensorData = MutableStateFlow<List<FilteredSensorData<*>>>(emptyList())
+    val allFilteredSensorData: StateFlow<List<FilteredSensorData<*>>> = _allFilteredSensorData.asStateFlow()
+    // Note that we get the filtered sensor data from the BANALServiceComm
 
 
     // -- Tracking mode
@@ -171,7 +197,12 @@ class TrackingRepository private constructor(private val application: Applicatio
                     _activityType.postValue(newActivityType)
                 }
 
-                // TODO: other LiveData for tracking.
+                // -- filtered sensor data --
+                val newSensorData = banalServiceComm?.allFilteredSensorData
+                if (newSensorData != null) {
+                    // Update the StateFlow using the .value property
+                    _allFilteredSensorData.value = newSensorData
+                }
             }
         }
     }
@@ -209,6 +240,73 @@ class TrackingRepository private constructor(private val application: Applicatio
             }
         }
         return viewList
+    }
+
+    /**
+     * Loads the detailed configuration for all sensor fields for a specific viewId (Tab).
+     * This reads from the ROWS_TABLE and is used by the TrackingViewModel to build the Compose UI.
+     */
+    fun getSensorFieldConfigsForView(viewId: Int): List<SensorFieldConfig> {
+        val dbManager = TrackingViewsDatabaseManager.getInstance(application)
+        val devicesDbManager = DevicesDatabaseManager.getInstance(application)
+
+        val fieldList = mutableListOf<SensorFieldConfig>()
+
+
+        // Query the ROWS_TABLE for all rows belonging to the given viewId
+        val cursor = dbManager.database.query(
+            TrackingViewsDatabaseManager.TrackingViewsDbHelper.ROWS_TABLE,
+            null, // Get all columns
+            "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEW_ID}=?",
+            arrayOf(viewId.toString()),
+            null,
+            null,
+            "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.ROW_NR} ASC, ${TrackingViewsDatabaseManager.TrackingViewsDbHelper.COL_NR} ASC"
+        )
+
+        cursor.use { c ->
+            if (c.moveToFirst()) {
+                // Pre-fetch column indices for efficiency inside the loop
+                val rowNrIndex = c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.ROW_NR)
+                val colNrIndex = c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.COL_NR)
+                val sensorTypeIndex = c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SENSOR_TYPE)
+                val filterTypeIndex = c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.FILTER_TYPE)
+                val filterConstantIndex = c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.FILTER_CONSTANT)
+                val viewSizeIndex = c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEW_SIZE)
+                val deviceIdIndex = c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SOURCE_DEVICE_ID)
+
+                do {
+                    val sizeString = c.getString(viewSizeIndex)
+                    val viewSize = try {
+                        ViewSize.valueOf(sizeString)
+                    } catch (e: IllegalArgumentException) {
+                        ViewSize.NORMAL // Fallback for invalid or null data
+                    }
+
+                    val sourceDeviceId = c.getLong(deviceIdIndex)
+                    val deviceName = if (sourceDeviceId > 0) {
+                        devicesDbManager.getDeviceName(sourceDeviceId)
+                    }
+                    else {
+                        null
+                    }
+
+                    fieldList.add(
+                        SensorFieldConfig(
+                            viewId = viewId,
+                            rowNr = c.getInt(rowNrIndex),
+                            colNr = c.getInt(colNrIndex),
+                            size = viewSize, // Use the directly parsed enum value
+                            sensorType = SensorType.valueOf(c.getString(sensorTypeIndex)),
+                            filterType = FilterType.valueOf(c.getString(filterTypeIndex)),
+                            filterConstant = c.getDouble(filterConstantIndex),
+                            deviceName = deviceName
+                        )
+                    )
+                } while (c.moveToNext())
+            }
+        }
+        return fieldList
     }
 
 

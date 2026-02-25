@@ -140,6 +140,7 @@ private fun SensorFieldViewPreview(
     @PreviewParameter(ViewSizeProvider::class) size: ViewSize
 ) {
     val mockSensorFieldState = SensorFieldState(
+        configHash = 1,
         viewId = 0,
         rowNr = 1,
         colNr = 1,
@@ -159,6 +160,7 @@ private fun SensorFieldViewPreview(
 @Composable
 private fun SensorFieldViewZonePreview() {
     val mockSensorFieldStateInZone = SensorFieldState(
+        configHash = 2,
         viewId = 2,
         rowNr = 1,
         colNr = 2,
