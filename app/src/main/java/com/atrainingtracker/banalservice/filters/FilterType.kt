@@ -56,6 +56,7 @@ enum class FilterType {
      * @param filterConstant The numeric constant associated with the filter (e.g., time, samples, alpha).
      * @return A short string describing the filter, e.g., "5 min avg."
      */
+    // TODO: when this is no longer set in front of the sensor type, we must remove the whitespace.
     fun getShortSummary(context: Context, filterConstant: Double): String {
         return when (this) {
             INSTANTANEOUS -> context.getString(R.string.filter_instantaneous_short)

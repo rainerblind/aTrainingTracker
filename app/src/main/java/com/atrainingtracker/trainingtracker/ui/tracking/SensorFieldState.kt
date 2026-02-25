@@ -7,8 +7,12 @@ import androidx.compose.ui.graphics.Color
  * This is the "model" that the Composables will be fed. It contains no business logic.
  */
 data class SensorFieldState(
+    // A unique, stable identifier for this specific field configuration.
+    // Used to efficiently find and update this state from new sensor data.
+    val configHash: Int,
+
     // The configuration info, needed for actions like long-press to edit.
-    val viewId: Long,
+    val viewId: Int,
     val rowNr: Int,
     val colNr: Int,
 
