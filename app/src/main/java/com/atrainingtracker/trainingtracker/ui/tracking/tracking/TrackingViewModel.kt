@@ -80,13 +80,23 @@ class TrackingViewModel(
                             config.deviceName
                         )
 
+                    // calculate the 'filter description' (including the device name when available.  When not, it represents the best sensor)
+                    var filterDescription = config.filterType.getShortSummary(application, config.filterConstant)
+                    if (config.deviceName != null) {
+                        filterDescription = if (filterDescription.isNotEmpty()) {
+                            config.deviceName + ": " + filterDescription
+                        } else {
+                            config.deviceName
+                        }
+                    }
+
                     SensorFieldState(
                         configHash = uniqueHash, // Store the unique ID
                         viewId = config.viewId,
                         rowNr = config.rowNr,
                         colNr = config.colNr,
                         label = application.getString(config.sensorType.shortNameId),
-                        filterDescription = config.filterType.getShortSummary(application, config.filterConstant),
+                        filterDescription = filterDescription,
                         value = "--", // Default value
                         units = application.getString(MyHelper.getShortUnitsId(config.sensorType)),
                         zoneColor = defaultZoneColor // Default color
