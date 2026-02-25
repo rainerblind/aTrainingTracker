@@ -56,28 +56,27 @@ enum class FilterType {
      * @param filterConstant The numeric constant associated with the filter (e.g., time, samples, alpha).
      * @return A short string describing the filter, e.g., "5 min avg."
      */
-    // TODO: when this is no longer set in front of the sensor type, we must remove the whitespace.
     fun getShortSummary(context: Context, filterConstant: Double): String {
         return when (this) {
             INSTANTANEOUS -> context.getString(R.string.filter_instantaneous_short)
 
-            AVERAGE -> context.getString(R.string.filter_average_short) + " "
+            AVERAGE -> context.getString(R.string.filter_average_short)
 
             MOVING_AVERAGE_TIME -> {
                 if (filterConstant % 60 == 0.0) { // 5 min moving average
-                    "${filterConstant.toInt() / 60} ${context.getString(R.string.units_minutes)} ${context.getString(R.string.filter_moving_average_short)} "
+                    "${filterConstant.toInt() / 60} ${context.getString(R.string.units_minutes)} ${context.getString(R.string.filter_moving_average_short)}"
                 } else { // 5 sec moving average
-                    "${filterConstant.toInt()} ${context.getString(R.string.units_seconds)} ${context.getString(R.string.filter_moving_average_short)} "
+                    "${filterConstant.toInt()} ${context.getString(R.string.units_seconds)} ${context.getString(R.string.filter_moving_average_short)}"
                 }
             }
 
             MOVING_AVERAGE_NUMBER -> // 5 samples moving average
-                "${filterConstant.toInt()} ${context.getString(R.string.units_samples)} ${context.getString(R.string.filter_moving_average_short)} "
+                "${filterConstant.toInt()} ${context.getString(R.string.units_samples)} ${context.getString(R.string.filter_moving_average_short)}"
 
             EXPONENTIAL_SMOOTHING -> // exponential smoothing with α = 0.9
-                context.getString(R.string.filter_exponential_smoothing_short_format, filterConstant) + " "
+                context.getString(R.string.filter_exponential_smoothing_short_format, filterConstant)
 
-            MAX_VALUE -> context.getString(R.string.max) + " "
+            MAX_VALUE -> context.getString(R.string.max)
         }
     }
 }
