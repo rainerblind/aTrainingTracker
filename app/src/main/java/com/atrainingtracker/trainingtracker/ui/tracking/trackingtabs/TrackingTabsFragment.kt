@@ -13,9 +13,9 @@ import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.dialogs.LapSummaryDialog
 import com.atrainingtracker.trainingtracker.fragments.ControlTrackingFragment
-import com.atrainingtracker.trainingtracker.fragments.TrackingFragmentClassic
 import com.atrainingtracker.trainingtracker.ui.tracking.LapEvent
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewInfo
+import com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingFragment
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 
@@ -138,7 +138,7 @@ class TrackingTabsFragment : Fragment() {
                 ControlTrackingFragment()
             } else {
                 val viewInfo = trackingViews[position - 1]
-                TrackingFragmentClassic.newInstance(viewInfo.id, activityType)
+                TrackingFragment.newInstance(viewInfo.id)
             }
         }
     }
