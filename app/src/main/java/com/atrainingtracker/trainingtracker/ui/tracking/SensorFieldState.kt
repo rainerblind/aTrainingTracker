@@ -12,7 +12,7 @@ data class SensorFieldState(
     val configHash: Int,
 
     // The configuration info, needed for actions like long-press to edit.
-    val viewId: Int,
+    val sensorFieldId: Long,
     val rowNr: Int,
     val colNr: Int,
 
