@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.banalservice.sensor;
 
+import android.content.Context;
 import android.os.Parcel;
 import android.os.Parcelable;
 
@@ -137,7 +138,9 @@ public enum SensorType
     public int getShortNameId() {
         return shortNameId;
     }
-
+    public String getShortName(Context context) {
+        return context.getString(shortNameId);
+    }
     public int getUnitId() {
         return unitId;
     }
