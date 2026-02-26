@@ -23,6 +23,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 enum class ViewSize {
     XSMALL, SMALL, NORMAL, LARGE, XLARGE
@@ -47,17 +48,29 @@ fun SensorFieldView(
     val filterStyle: TextStyle
     when (fieldState.viewSize) {
         ViewSize.XSMALL -> {
+        // --- MANUALLY DECREASE FONT SIZE ---
+            valueStyle = MaterialTheme.typography.headlineSmall.copy(
+                fontSize = 20.sp // Manually set a much smaller font size
+            )
+            unitStyle = MaterialTheme.typography.bodySmall.copy(
+                fontSize = 10.sp
+            )
+            labelStyle = MaterialTheme.typography.bodySmall
+            filterStyle = MaterialTheme.typography.labelSmall
+        }
+
+        ViewSize.SMALL -> {
             valueStyle = MaterialTheme.typography.headlineMedium
             unitStyle = MaterialTheme.typography.bodySmall
             labelStyle = MaterialTheme.typography.bodyMedium
             filterStyle = MaterialTheme.typography.bodySmall
         }
-        ViewSize.SMALL -> {
-            valueStyle = MaterialTheme.typography.headlineLarge
-            unitStyle = MaterialTheme.typography.bodyMedium
-            labelStyle = MaterialTheme.typography.bodyLarge
-            filterStyle = MaterialTheme.typography.bodySmall
-        }
+        // ViewSize.SMALL -> {
+        //    valueStyle = MaterialTheme.typography.headlineLarge
+        //    unitStyle = MaterialTheme.typography.bodyMedium
+        //    labelStyle = MaterialTheme.typography.bodyLarge
+        //    filterStyle = MaterialTheme.typography.bodySmall
+        //}
         ViewSize.NORMAL -> {
             valueStyle = MaterialTheme.typography.displaySmall
             unitStyle = MaterialTheme.typography.bodyLarge
@@ -71,11 +84,23 @@ fun SensorFieldView(
             filterStyle = MaterialTheme.typography.bodyMedium
         }
         ViewSize.XLARGE -> {
-            valueStyle = MaterialTheme.typography.displayLarge
-            unitStyle = MaterialTheme.typography.headlineMedium
+            // --- MANUALLY INCREASE FONT SIZE BEYOND THEME DEFAULTS ---
+            valueStyle = MaterialTheme.typography.displayLarge.copy(
+                fontSize = 80.sp // Manually set a much larger font size
+            )
+            unitStyle = MaterialTheme.typography.headlineMedium.copy(
+                fontSize = 36.sp // Also increase the unit size
+            )
             labelStyle = MaterialTheme.typography.headlineSmall
             filterStyle = MaterialTheme.typography.bodyLarge
         }
+
+        //ViewSize.XLARGE -> {
+        //    valueStyle = MaterialTheme.typography.displayLarge
+        //    unitStyle = MaterialTheme.typography.headlineMedium
+        //    labelStyle = MaterialTheme.typography.headlineSmall
+        //    filterStyle = MaterialTheme.typography.bodyLarge
+        //}
     }
 
     Card(
