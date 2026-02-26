@@ -55,7 +55,7 @@ data class SensorFieldConfig(
     val sensorFieldId: Long,
     val rowNr: Int,
     val colNr: Int,
-    val size: ViewSize,
+    val viewSize: ViewSize,
     val sensorType: SensorType,
     val filterType: FilterType,
     val filterConstant: Double,
@@ -299,7 +299,7 @@ class TrackingRepository private constructor(private val application: Applicatio
                             sensorFieldId = c.getLong(sensorFieldIndex),
                             rowNr = c.getInt(rowNrIndex),
                             colNr = c.getInt(colNrIndex),
-                            size = viewSize, // Use the directly parsed enum value
+                            viewSize = viewSize, // Use the directly parsed enum value
                             sensorType = SensorType.valueOf(c.getString(sensorTypeIndex)),
                             filterType = FilterType.valueOf(c.getString(filterTypeIndex)),
                             filterConstant = c.getDouble(filterConstantIndex),
