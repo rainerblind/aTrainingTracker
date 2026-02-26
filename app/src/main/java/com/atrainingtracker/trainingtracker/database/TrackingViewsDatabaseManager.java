@@ -115,6 +115,17 @@ public class TrackingViewsDatabaseManager {
                 new String[]{viewId + ""});
     }
 
+    public void updateSensorFilter(int sensorFieldId, FilterType filterType, double filterConstant) {
+        ContentValues values = new ContentValues();
+        values.put(TrackingViewsDbHelper.FILTER_TYPE, filterType.name());
+        values.put(TrackingViewsDbHelper.FILTER_CONSTANT, filterConstant);
+
+        getDatabase().update(TrackingViewsDbHelper.ROWS_TABLE,
+                values,
+                TrackingViewsDbHelper.ROW_ID + "=" + sensorFieldId,
+                null);
+    }
+
     @Deprecated // use ViewSize now!
     public void updateTextSizeOfRow(long rowId, int textSize) {
         ContentValues values = new ContentValues();

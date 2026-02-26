@@ -439,9 +439,23 @@ class TrackingRepository private constructor(private val application: Applicatio
         }
 
         // Increment the value to notify collectors that the data has changed.
-        // This is done on the main thread to ensure proper flow mechanics.
         withContext(Dispatchers.Main) {
             configUpdateTrigger.value++
+        }
+    }
+
+    /**
+     * Updates the filter configuration for a specific sensor field in the database
+     * and triggers a refresh for any active observers.
+     */
+    suspend fun updateSensorFilter(rowId: Long, filterType: FilterType, filterConstant: Double) {
+        withContext(Dispatchers.IO) {
+            viewsDbManager.updateSensorFilter(rowId.toInt(), filterType, filterConstant)
+
+            //  Pull the trigger to notify collectors that the data has changed.
+            withContext(Dispatchers.Main) {
+                configUpdateTrigger.value++
+            }
         }
     }
 
