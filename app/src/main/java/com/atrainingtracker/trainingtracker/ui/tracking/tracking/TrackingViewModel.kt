@@ -92,7 +92,7 @@ class TrackingViewModel(
 
                     SensorFieldState(
                         configHash = uniqueHash, // Store the unique ID
-                        viewId = config.viewId,
+                        sensorFieldId = config.sensorFieldId,
                         rowNr = config.rowNr,
                         colNr = config.colNr,
                         label = application.getString(config.sensorType.shortNameId),
