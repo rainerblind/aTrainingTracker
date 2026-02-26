@@ -148,7 +148,7 @@ private fun SensorFieldViewPreview(
         rowNr = 1,
         colNr = 1,
         label = "Pace",
-        filterDescription = "5 s avg",
+        filterDescription = "GPS: 5 s avg",
         value = "5:32",
         units = "/km",
         zoneColor = MaterialTheme.colorScheme.surfaceVariant
