@@ -103,6 +103,19 @@ public class TrackingViewsDatabaseManager {
     // some high level methods
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
+    public void updateSensorView(int viewId, SensorType sensorType, ViewSize viewSize, int sourceDeviceId) {
+        ContentValues values = new ContentValues();
+        values.put(TrackingViewsDbHelper.SENSOR_TYPE, sensorType.name());
+        values.put(TrackingViewsDbHelper.VIEW_SIZE, viewSize.name());
+        values.put(TrackingViewsDbHelper.SOURCE_DEVICE_ID, sourceDeviceId);
+
+        getDatabase().update(TrackingViewsDbHelper.VIEWS_TABLE,
+                values,
+                TrackingViewsDbHelper.C_ID + "=?",
+                new String[]{viewId + ""});
+    }
+
+    @Deprecated // use ViewSize now!
     public void updateTextSizeOfRow(long rowId, int textSize) {
         ContentValues values = new ContentValues();
         values.put(TrackingViewsDbHelper.TEXT_SIZE, textSize);
