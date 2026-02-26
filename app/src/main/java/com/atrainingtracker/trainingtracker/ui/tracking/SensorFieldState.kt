@@ -16,6 +16,8 @@ data class SensorFieldState(
     val rowNr: Int,
     val colNr: Int,
 
+    val viewSize: ViewSize,
+
     // The main label for the field (e.g., "Pace", "Heart Rate").
     val label: String,
 
