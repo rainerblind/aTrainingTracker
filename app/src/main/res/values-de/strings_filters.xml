@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="filter_configure_smoothing">Glättung anpassen</string>
+
+    <string name="filter_instantaneous">keine Glättung</string>
+    <string name="filter_average">Durchschnitt (gesamte Einheit)</string>
+    <string name="filter_exponential_smoothing">Exponentielle Glättung</string>
+    <string name="filter_moving_average">Gleitender Durchschnitt</string>
+    <string name="filter_exponential_smoothing_format">"Exponentielle Glättung mit α=%1.2f"</string>
+    <string name="filter_exponential_smoothing_short_format">Exp α=%1.1f</string>
+
+    <string name="filter_details__instantaneous">Der aktuelle Wert wird angezeigt.</string>
+    <string name="filter_details__average">Der Durchschnitt von der gesamten Einheit wird angezeigt.</string>
+    <string name="filter_details__max">Der maximale Wert der Einheit wird angezeigt.</string>
+    <string name="filter_details__moving_average_time">Der Durchschnitt der letzten %1$d %2$s wird angezeigt.</string>
+    <string name="filter_details__moving_average_number">Der Durchschnitt der letzten %1$d Messungen wird angezeigt.</string>
+    <string name="filter_details__exponential_smoothing">Exponentielle Glättung mit 0 &lt; α &#8804; 1.  Wert_angezeigt = α Wert_gemessen + (1-α) Wert_angezeigt_alt.  Je kleiner α, desto glatter werden die angezeigten Werte.  D.h. bei α=1 wird der aktuell gemessene Wert angezeigt, mit α in der Nähe von 0 werden die Werte sehr stark geglättet.</string>
+
+
+</resources>
