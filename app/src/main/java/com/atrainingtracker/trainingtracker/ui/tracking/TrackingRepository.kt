@@ -31,7 +31,9 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 
 // Data class for holding tab info, can be moved to a more common location later.
-data class TrackingViewInfo(val id: Int, val name: String)
+data class TrackingViewInfo(
+    val tabViewId: Int,
+    val name: String)
 
 
 /**
@@ -246,7 +248,7 @@ class TrackingRepository private constructor(private val application: Applicatio
      * Loads the detailed configuration for all sensor fields for a specific viewId (Tab).
      * This reads from the ROWS_TABLE and is used by the TrackingViewModel to build the Compose UI.
      */
-    fun getSensorFieldConfigsForView(viewId: Int): List<SensorFieldConfig> {
+    fun getSensorFieldConfigsForView(tabViewId: Long): List<SensorFieldConfig> {
         val dbManager = TrackingViewsDatabaseManager.getInstance(application)
         val devicesDbManager = DevicesDatabaseManager.getInstance(application)
 
@@ -258,7 +260,7 @@ class TrackingRepository private constructor(private val application: Applicatio
             TrackingViewsDatabaseManager.TrackingViewsDbHelper.ROWS_TABLE,
             null, // Get all columns
             "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEW_ID}=?",
-            arrayOf(viewId.toString()),
+            arrayOf(tabViewId.toString()),
             null,
             null,
             "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.ROW_NR} ASC, ${TrackingViewsDatabaseManager.TrackingViewsDbHelper.COL_NR} ASC"
