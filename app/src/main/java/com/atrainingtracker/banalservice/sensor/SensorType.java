@@ -131,16 +131,25 @@ public enum SensorType
         return TrainingApplication.getAppContext().getString(fullNameId);
     }
 
+    @Deprecated // use getFullName(Context context) instead
     public int getFullNameId() {
         return fullNameId;
     }
 
+    public String getFullName(Context context) {
+        return context.getString(fullNameId);
+    }
+
+    @Deprecated // use getShortName(Context context) instead
     public int getShortNameId() {
         return shortNameId;
     }
+
     public String getShortName(Context context) {
         return context.getString(shortNameId);
     }
+
+    @Deprecated // since the unit depends on the metric/imperial settings, use methods of MyHelper instead.
     public int getUnitId() {
         return unitId;
     }

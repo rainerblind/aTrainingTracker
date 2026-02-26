@@ -1,12 +1,14 @@
 package com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield
 
 import android.app.Application
+import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ActivityType
+import com.atrainingtracker.banalservice.filters.FilterType
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize
@@ -16,7 +18,7 @@ import kotlinx.coroutines.launch
 // This class will hold all the state for our dialog
 data class EditDialogUiState(
     val selectedSensorType: SensorType? = null,
-    val availableSensorTypes: List<SensorType> = emptyList(),
+    val availableSensorTypesForCurrentActivityType: List<SensorType> = emptyList(),
     val selectedDeviceId: Long = -1,
     val availableDevices: List<Pair<Long, String>> = emptyList(),
     val selectedViewSize: ViewSize = ViewSize.NORMAL,
@@ -34,18 +36,25 @@ class EditSensorFieldViewModel(
     private val _uiState = MutableStateFlow(EditDialogUiState())
     val uiState: StateFlow<EditDialogUiState> = _uiState.asStateFlow()
 
+    // This flow will ONLY be used to receive updates from the database.
+    private val configFromRepoFlow = repository.getSensorFieldConfig(sensorFieldId).filterNotNull()
+
     init {
+        // 1. Load the INITIAL state once.
         loadInitialState()
+        // 2. Start a SEPARATE observer that ONLY updates the filter summary.
+        observeFilterChanges()
     }
 
     private fun loadInitialState() {
         viewModelScope.launch {
-            val config = repository.getSensorFieldConfig(sensorFieldId) ?: return@launch
+            // Fetch the config just once to populate the dialog initially.
+            val config = configFromRepoFlow.firstOrNull() ?: return@launch
             val context = getApplication<Application>().applicationContext
 
             _uiState.value = EditDialogUiState(
                 selectedSensorType = config.sensorType,
-                availableSensorTypes = ActivityType.getSensorTypeArray(activityType, context).toList(),
+                availableSensorTypesForCurrentActivityType = ActivityType.getSensorTypeArray(activityType, context).toList(),
                 selectedDeviceId = config.sourceDeviceId,
                 availableDevices = getFullDeviceList(config.sensorType),
                 selectedViewSize = config.viewSize,
@@ -54,12 +63,27 @@ class EditSensorFieldViewModel(
         }
     }
 
+    private fun observeFilterChanges() {
+        viewModelScope.launch {
+            // updating the filter summary when the database changes.
+            configFromRepoFlow.collect { updatedConfig ->
+                val newFilterSummary = updatedConfig.filterType.getSummary(getApplication(), updatedConfig.filterConstant)
+
+                // We use 'update' to safely modify only the field we care about,
+                // preserving all other user-made changes.
+                _uiState.update { currentState ->
+                    currentState.copy(filterSummary = newFilterSummary)
+                }
+            }
+        }
+    }
+
     fun onSensorTypeChanged(newSensorType: SensorType) {
         viewModelScope.launch {
             _uiState.update {
                 it.copy(
                     selectedSensorType = newSensorType,
-                    selectedDeviceId = -1,
+                    selectedDeviceId = -1, // Reset device selection
                     availableDevices = getFullDeviceList(newSensorType)
                 )
             }
@@ -80,7 +104,6 @@ class EditSensorFieldViewModel(
 
         viewModelScope.launch {
             repository.updateSensorFieldConfig(
-                // Corrected: Pass the Long rowId
                 sensorFieldId,
                 sensorType,
                 currentState.selectedViewSize,
@@ -90,7 +113,7 @@ class EditSensorFieldViewModel(
     }
 
     private suspend fun getFullDeviceList(sensorType: SensorType): List<Pair<Long, String>> {
-        val deviceLists = repository.getDeviceLists(sensorType)
+        val deviceLists = repository.getDeviceLists(sensorType) ?: return listOf(-1L to getApplication<Application>().getString(R.string.bestSensor))
         val context = getApplication<Application>().applicationContext
         val devices = deviceLists.deviceIds.zip(deviceLists.names).toMutableList()
         devices.add(0, -1L to context.getString(R.string.bestSensor))

@@ -349,6 +349,48 @@ class TrackingRepository private constructor(private val application: Applicatio
         return fieldList
     }
 
+    fun getSensorFieldConfig(sensorFieldId: Long): Flow<SensorFieldConfig?> {
+        // This flow is now driven by the same trigger as the list-based flow.
+        return configUpdateTrigger.map {
+            // When the trigger changes, this block re-executes.
+            fetchSingleSensorFieldConfig(sensorFieldId)
+        }.flowOn(Dispatchers.IO)
+    }
+
+    // --- Renamed the original suspend function to be a private helper ---
+    private suspend fun fetchSingleSensorFieldConfig(sensorFieldId: Long): SensorFieldConfig? {
+        return withContext(Dispatchers.IO) {
+            val cursor = viewsDbManager.database.query(
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.ROWS_TABLE,
+                null,
+                "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.ROW_ID}=?",
+                arrayOf(sensorFieldId.toString()), null, null, null
+            )
+            cursor.use { c ->
+                if (c.moveToFirst()) {
+                    val sizeString = c.getString(c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEW_SIZE))
+                    val viewSize = try { ViewSize.valueOf(sizeString) } catch (e: IllegalArgumentException) { ViewSize.NORMAL }
+                    val sourceDeviceId = c.getLong(c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SOURCE_DEVICE_ID))
+                    val deviceName = if (sourceDeviceId > 0) devicesDbManager.getDeviceName(sourceDeviceId) else null
+                    return@withContext SensorFieldConfig(
+                        sensorFieldId = sensorFieldId,
+                        rowNr = c.getInt(c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.ROW_NR)),
+                        colNr = c.getInt(c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.COL_NR)),
+                        viewSize = viewSize,
+                        sensorType = SensorType.valueOf(c.getString(c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SENSOR_TYPE))),
+                        filterType = FilterType.valueOf(c.getString(c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.FILTER_TYPE))),
+                        filterConstant = c.getDouble(c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.FILTER_CONSTANT)),
+                        sourceDeviceId = sourceDeviceId,
+                        sourceDeviceName = deviceName
+                    )
+                } else {
+                    return@withContext null // Return null if not found
+                }
+            }
+        }
+    }
+
+    /*
     suspend fun getSensorFieldConfig(sensorFieldId: Long): SensorFieldConfig? {
         return withContext(Dispatchers.IO) {
 
@@ -412,8 +454,9 @@ class TrackingRepository private constructor(private val application: Applicatio
             return@withContext null // Return null if not found
         }
     }
+    */
 
-    suspend fun getDeviceLists(sensorType: SensorType): DevicesDatabaseManager.DeviceIdAndNameLists {
+    suspend fun getDeviceLists(sensorType: SensorType): DevicesDatabaseManager.DeviceIdAndNameLists? {
         return withContext(Dispatchers.IO) {
             devicesDbManager.getDeviceIdAndNameLists(sensorType)
         }
