@@ -57,9 +57,9 @@ import java.util.LinkedList;
  * Created by rainer on 05.01.17.
  */
 
-
-public class EditFieldDialog extends DialogFragment {
-    public static final String TAG = EditFieldDialog.class.getName();
+@Deprecated
+public class EditFieldDialogClassic extends DialogFragment {
+    public static final String TAG = EditFieldDialogClassic.class.getName();
     public static final String TRACKING_VIEW_CHANGED_INTENT = "TRACKING_VIEW_CHANGED_INTENT";
     protected static final Integer[] TEXT_SIZES = {20, 25, 30, 35, 40, 45, 50, 60, 70, 80};
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
@@ -110,10 +110,10 @@ public class EditFieldDialog extends DialogFragment {
     }
 
     @NonNull
-    public static EditFieldDialog newInstance(@NonNull ActivityType activityType, @NonNull TrackingViewsDatabaseManager.ViewInfo viewInfo) {
+    public static EditFieldDialogClassic newInstance(@NonNull ActivityType activityType, @NonNull TrackingViewsDatabaseManager.ViewInfo viewInfo) {
         if (DEBUG) Log.i(TAG, "newInstance");
 
-        EditFieldDialog fragment = new EditFieldDialog();
+        EditFieldDialogClassic fragment = new EditFieldDialogClassic();
 
         Bundle args = new Bundle();
         args.putString(ACTIVITY_TYPE, activityType.name());

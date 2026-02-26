@@ -48,14 +48,13 @@ import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 import com.atrainingtracker.banalservice.filters.FilterData;
-import com.atrainingtracker.banalservice.filters.FilterType;
 import com.atrainingtracker.banalservice.filters.FilteredSensorData;
 import com.atrainingtracker.trainingtracker.activities.ConfigTrackingViewsActivity;
 import com.atrainingtracker.trainingtracker.activities.ConfigViewsActivity;
 import com.atrainingtracker.trainingtracker.MyHelper;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
-import com.atrainingtracker.trainingtracker.dialogs.EditFieldDialog;
+import com.atrainingtracker.trainingtracker.dialogs.EditFieldDialogClassic;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapTrackingAndFollowingFragment;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapTrackingFragment;
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore;
@@ -63,7 +62,7 @@ import com.atrainingtracker.trainingtracker.settings.SettingsDataStore;
 import java.util.HashMap;
 import java.util.TreeMap;
 
-import static com.atrainingtracker.trainingtracker.dialogs.EditFieldDialog.TRACKING_VIEW_CHANGED_INTENT;
+import static com.atrainingtracker.trainingtracker.dialogs.EditFieldDialogClassic.TRACKING_VIEW_CHANGED_INTENT;
 
 public class TrackingFragmentClassic extends BaseTrackingFragment {
     public static final String TAG = "TrackingFragment";
@@ -408,8 +407,8 @@ public class TrackingFragmentClassic extends BaseTrackingFragment {
     }
 
     private void showEditFieldDialog(@NonNull TrackingViewsDatabaseManager.ViewInfo viewInfo) {
-        EditFieldDialog editFieldDialog = EditFieldDialog.newInstance(mActivityType, viewInfo);
-        editFieldDialog.show(getFragmentManager(), EditFieldDialog.TAG);
+        EditFieldDialogClassic editFieldDialogClassic = EditFieldDialogClassic.newInstance(mActivityType, viewInfo);
+        editFieldDialogClassic.show(getFragmentManager(), EditFieldDialogClassic.TAG);
     }
 
 
