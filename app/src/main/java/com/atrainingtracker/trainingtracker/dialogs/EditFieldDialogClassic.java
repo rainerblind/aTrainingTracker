@@ -44,7 +44,7 @@ import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.ActivityType;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
-import com.atrainingtracker.banalservice.fragments.ConfigureFilterDialogFragment;
+import com.atrainingtracker.banalservice.fragments.ConfigureFilterDialogFragmentClassic;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.views.DeviceIdAndNameArrayAdapter;
 import com.atrainingtracker.trainingtracker.views.SensorArrayAdapter;
@@ -68,7 +68,7 @@ public class EditFieldDialogClassic extends DialogFragment {
     private static final String SENSOR_TYPE = "SENSOR_TYPE";
     private static final String DEVICE_ID = "DEVICE_ID";
     private static final String TEXT_SIZE = "TEXT_SIZE";
-    protected final IntentFilter mFilterChangedFilter = new IntentFilter(ConfigureFilterDialogFragment.FILTERS_CHANGED_INTENT);
+    protected final IntentFilter mFilterChangedFilter = new IntentFilter(ConfigureFilterDialogFragmentClassic.FILTERS_CHANGED_INTENT);
     private ActivityType mActivityType;
     private View mMainView;
     private long mRowId;
@@ -315,8 +315,8 @@ public class EditFieldDialogClassic extends DialogFragment {
             button.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    ConfigureFilterDialogFragment configureFilterDialogFragment = ConfigureFilterDialogFragment.newInstance(mRowId, filterInfo.filterType, filterInfo.filterConstant);
-                    configureFilterDialogFragment.show(getFragmentManager(), ConfigureFilterDialogFragment.TAG);
+                    ConfigureFilterDialogFragmentClassic configureFilterDialogFragment = ConfigureFilterDialogFragmentClassic.newInstance(mRowId, filterInfo.filterType, filterInfo.filterConstant);
+                    configureFilterDialogFragment.show(getFragmentManager(), ConfigureFilterDialogFragmentClassic.TAG);
                 }
             });
         } else {

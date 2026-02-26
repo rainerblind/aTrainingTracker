@@ -13,7 +13,7 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.atrainingtracker.banalservice.fragments.ConfigureFilterDialogFragment
+import com.atrainingtracker.banalservice.fragments.ConfigureFilterDialogFragmentClassic
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.theme.aTrainingTrackerTheme // Import your Compose theme
 import com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldDialog
@@ -84,13 +84,13 @@ class TrackingFragment : Fragment() {
 
                                     if (filterInfo != null) {
                                         val filterDialog =
-                                            ConfigureFilterDialogFragment.newInstance(
+                                            ConfigureFilterDialogFragmentClassic.newInstance(
                                                 currentId,
                                                 filterInfo.filterType, filterInfo.filterConstant
                                             )
                                         filterDialog.show(
                                             parentFragmentManager,
-                                            ConfigureFilterDialogFragment.TAG
+                                            ConfigureFilterDialogFragmentClassic.TAG
                                         )
                                     }
                                     // Also dismiss the Compose dialog.
