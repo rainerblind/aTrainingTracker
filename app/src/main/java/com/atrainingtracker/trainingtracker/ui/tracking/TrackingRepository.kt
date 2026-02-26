@@ -32,7 +32,7 @@ import kotlinx.coroutines.launch
 
 // Data class for holding tab info, can be moved to a more common location later.
 data class TrackingViewInfo(
-    val tabViewId: Int,
+    val tabViewId: Long,
     val name: String)
 
 
@@ -236,7 +236,7 @@ class TrackingRepository private constructor(private val application: Applicatio
         cursor.use {
             if (it.moveToFirst()) {
                 do {
-                    val id = it.getInt(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID))
+                    val id = it.getLong(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID))
                     val name = it.getString(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.NAME))
                     viewList.add(TrackingViewInfo(id, name))
                 } while (it.moveToNext())
