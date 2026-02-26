@@ -590,6 +590,7 @@ public class TrackingViewsDatabaseManager {
         }
     }
 
+    @Deprecated
     public record ViewInfo(long viewId, long rowId, int rowNr, int colNr, SensorType sensorType,
                            int textSize, long sourceDeviceId, FilterType filterType,
                            double filterConstant) {
