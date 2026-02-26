@@ -1,20 +1,15 @@
 package com.atrainingtracker.trainingtracker.ui.tracking.tracking
 
+import android.util.Log
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.ui.theme.DefaultBackgroundColor
 import com.atrainingtracker.trainingtracker.ui.theme.Zone1
 import com.atrainingtracker.trainingtracker.ui.theme.aTrainingTrackerTheme
@@ -29,7 +24,10 @@ import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldView
  * @param state The current state of the screen, containing the list of fields.
  */
 @Composable
-fun TrackingScreen(state: TrackingScreenState) {
+fun TrackingScreen(
+    state: TrackingScreenState,
+    onFieldLongClick: (fieldState: SensorFieldState) -> Unit
+) {
     // Group all fields by their row number. This returns a Map<Int, List<SensorFieldState>>.
     val fieldsByRow = state.fields.groupBy { it.rowNr }
 
@@ -41,6 +39,7 @@ fun TrackingScreen(state: TrackingScreenState) {
         // Create a Row for each group of fields.
         sortedRows.forEach { rowNr ->
             val fieldsInRow = fieldsByRow[rowNr] ?: emptyList()
+            Log.i("TrackingScreen", "Row $rowNr has ${fieldsInRow.size} fields.")
 
             // Each Row in the column will take up a proportional amount of the vertical space.
             Row(
@@ -59,6 +58,7 @@ fun TrackingScreen(state: TrackingScreenState) {
                             .weight(1f), // Distribute width equally among all columns in this row
                             // .fillMaxHeight(),
                         border = BorderStroke(width = 1.dp, color = Color.Gray),
+                        onLongClick = { onFieldLongClick(fieldState) },
                         fieldState = fieldState
                     )
                 }
@@ -98,6 +98,12 @@ fun TrackingScreenPreview() {
                 zoneColor = DefaultBackgroundColor
             )
         )
-        TrackingScreen(state = TrackingScreenState(fields = previewFields))
+        TrackingScreen(
+            state = TrackingScreenState(fields = previewFields),
+            onFieldLongClick = { field ->
+                // In a preview, we can just log it or do nothing.
+                println("Long clicked on: ${field.label}")
+            }
+        )
     }
 }

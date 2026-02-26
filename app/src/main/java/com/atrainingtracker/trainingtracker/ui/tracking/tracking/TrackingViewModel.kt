@@ -2,25 +2,24 @@ package com.atrainingtracker.trainingtracker.ui.tracking.tracking
 
 import android.app.Application
 import android.content.SharedPreferences
-import androidx.compose.foundation.layout.size
+import android.util.Log
 import androidx.compose.ui.graphics.Color
 import androidx.core.content.ContextCompat
-import androidx.core.text.color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.asFlow
-import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
 import androidx.preference.PreferenceManager
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.banalservice.BSportType
-import com.atrainingtracker.banalservice.filters.FilteredSensorData
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingRepository
+import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,7 +28,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Objects
-import kotlin.collections.find
 
 /**
  * The state for the entire tracking screen, containing a list of all sensor fields.
@@ -45,13 +43,16 @@ data class TrackingScreenState(
  */
 class TrackingViewModel(
     private val application: Application,
-    private val trackingRepository: TrackingRepository,
-    private val viewId: Int
+    val trackingRepository: TrackingRepository,
+    private val viewId: Long
 ) : ViewModel() {
 
     // --- The StateFlow to hold and expose the UI state ---
     private val _uiState = MutableStateFlow(TrackingScreenState())
     val uiState: StateFlow<TrackingScreenState> = _uiState.asStateFlow()
+
+    private val _activityType = MutableStateFlow<ActivityType?>(null)
+    val activityType: StateFlow<ActivityType?> = _activityType.asStateFlow()
 
     private val sharedPreferences: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(application)
     private val defaultZoneColor = Color(ContextCompat.getColor(application, R.color.color_background))
@@ -66,12 +67,29 @@ class TrackingViewModel(
     )
 
     init {
+        // Load both the main UI state and the activity type
+        loadSensorFieldStates()
+        loadActivityType()
+    }
+
+    private fun loadActivityType() {
+        viewModelScope.launch {
+            // Use the new repository function to get the activity type
+            _activityType.value = trackingRepository.getActivityTypeForView(viewId)
+        }
+    }
+
+    // This function for loading the main screen content remains the same
+    private fun loadSensorFieldStates() {
+
         viewModelScope.launch {
             // --- Step 1: Create the initial, static state for all fields ---
             val initialFieldStates = withContext(Dispatchers.IO) {
                 val fieldConfigurations = trackingRepository.getSensorFieldConfigsForView(viewId)
 
                 fieldConfigurations.map { config ->
+                    Log.i("TrackingViewModel", "Requested sensor views: ${config.sensorType}, ${config.filterType}, ${config.filterConstant}, ${config.sourceDeviceName}" )
+
                     val uniqueHash =
                         Objects.hash(
                             config.sensorType,
@@ -116,7 +134,10 @@ class TrackingViewModel(
                 val updatedFields = currentFields.associateBy { it.configHash }.toMutableMap()
                 var hasChanged = false
 
+                Log.i("TrackingViewModel", "##################################################################################")
                 for (sensorData in allSensorData) {
+                    Log.i("TrackingViewModel", "Available sensor views: ${sensorData.sensorType}, ${sensorData.filterType}, ${sensorData.filterConstant}, ${sensorData.deviceName}: ${sensorData.value}" )
+
                     val uniqueHash = Objects.hash(
                         sensorData.sensorType,
                         sensorData.filterType,
@@ -188,6 +209,22 @@ class TrackingViewModel(
             else -> null
         }
     }
+
+    /**
+     * Saves the updated configuration for a sensor field and triggers a UI refresh.
+     */
+    fun saveFieldChanges(
+        sensorViewId: Long,
+        newSensorType: SensorType,
+        newViewSize: ViewSize,
+        newSourceDeviceId: Long
+    ) {
+        viewModelScope.launch {
+            // Delegate the database write operation to the repository
+            trackingRepository.updateSensorFieldConfig(sensorViewId, newSensorType, newViewSize,  newSourceDeviceId)
+
+        }
+    }
 }
 
 /**
@@ -195,7 +232,7 @@ class TrackingViewModel(
  */
 class TrackingViewModelFactory(
     private val application: Application,
-    private val viewId: Int
+    private val viewId: Long
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {

@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.ServiceConnection
 import android.os.IBinder
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.atrainingtracker.banalservice.ActivityType
@@ -29,6 +30,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 // Data class for holding tab info, can be moved to a more common location later.
 data class TrackingViewInfo(
@@ -71,6 +73,11 @@ data class SensorFieldConfig(
 class TrackingRepository private constructor(private val application: Application) {
 
     private val repositoryScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+
+    private val viewsDbManager = TrackingViewsDatabaseManager.getInstance(application)
+    // Add a member for the DevicesDatabaseManager
+    private val devicesDbManager = DevicesDatabaseManager.getInstance(application)
+
 
     // access to the BANALService
     private var banalServiceComm: BANALService.BANALServiceComm? = null
@@ -146,6 +153,15 @@ class TrackingRepository private constructor(private val application: Applicatio
         }
     }
 
+    /**
+     * Retrieves the ActivityType associated with a specific view definition.
+     */
+    suspend fun getActivityTypeForView(tabViewId: Long): ActivityType? {
+        return withContext(Dispatchers.IO) {
+            viewsDbManager.getActivityTypeForTab(tabViewId)
+        }
+    }
+
     // Connection to BANALService and then observe it regularly.
     private val banalServiceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
@@ -197,7 +213,7 @@ class TrackingRepository private constructor(private val application: Applicatio
                 // --- ACTIVITY TYPE ---
                 val newActivityType = banalServiceComm?.activityType
                 if (_activityType.value != newActivityType) {
-                    _activityType.postValue(newActivityType)
+                    _activityType.postValue(newActivityType!!)
                 }
 
                 // -- filtered sensor data --
@@ -250,6 +266,8 @@ class TrackingRepository private constructor(private val application: Applicatio
      * This reads from the ROWS_TABLE and is used by the TrackingViewModel to build the Compose UI.
      */
     fun getSensorFieldConfigsForView(tabViewId: Long): List<SensorFieldConfig> {
+        Log.i("TrackingRepository", "getSensorFieldConfigsForView called for tabViewId: $tabViewId")
+
         val dbManager = TrackingViewsDatabaseManager.getInstance(application)
         val devicesDbManager = DevicesDatabaseManager.getInstance(application)
 
@@ -294,6 +312,7 @@ class TrackingRepository private constructor(private val application: Applicatio
                     else {
                         null
                     }
+                    Log.i("TrackingRepository", "Source device ID: $sourceDeviceId, Name: $deviceName")
 
                     fieldList.add(
                         SensorFieldConfig(
@@ -312,6 +331,101 @@ class TrackingRepository private constructor(private val application: Applicatio
             }
         }
         return fieldList
+    }
+
+    fun getSensorFieldConfig(sensorFieldId: Long): SensorFieldConfig {
+        val dbManager = TrackingViewsDatabaseManager.getInstance(application)
+        val devicesDbManager = DevicesDatabaseManager.getInstance(application)
+
+        val cursor = dbManager.database.query(
+            TrackingViewsDatabaseManager.TrackingViewsDbHelper.ROWS_TABLE,
+            null, // Get all columns
+            "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.ROW_ID}=?",
+            arrayOf(sensorFieldId.toString()),
+            null,
+            null,
+            null)
+
+        cursor.use { c ->
+            if (c.moveToFirst()) {
+                val sizeString =
+                    c.getString(c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEW_SIZE))
+                val viewSize = try {
+                    ViewSize.valueOf(sizeString)
+                } catch (e: IllegalArgumentException) {
+                    ViewSize.NORMAL // Fallback for invalid or null data
+                }
+
+                val sourceDeviceId =
+                    c.getLong(c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SOURCE_DEVICE_ID))
+                val deviceName = if (sourceDeviceId > 0) {
+                    devicesDbManager.getDeviceName(sourceDeviceId)
+                } else {
+                    null
+                }
+
+                return SensorFieldConfig(
+                    sensorFieldId = sensorFieldId,
+                    rowNr = c.getInt(c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.ROW_NR)),
+                    colNr = c.getInt(c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.COL_NR)),
+                    viewSize = viewSize, // Use the directly parsed enum value
+                    sensorType = SensorType.valueOf(
+                        c.getString(
+                            c.getColumnIndexOrThrow(
+                                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SENSOR_TYPE
+                            )
+                        )
+                    ),
+                    filterType = FilterType.valueOf(
+                        c.getString(
+                            c.getColumnIndexOrThrow(
+                                TrackingViewsDatabaseManager.TrackingViewsDbHelper.FILTER_TYPE
+                            )
+                        )
+                    ),
+                    filterConstant = c.getDouble(
+                        c.getColumnIndexOrThrow(
+                            TrackingViewsDatabaseManager.TrackingViewsDbHelper.FILTER_CONSTANT
+                        )
+                    ),
+                    sourceDeviceId = sourceDeviceId,
+                    sourceDeviceName = deviceName
+                )
+            }
+        }
+        return TODO("Provide the return value")
+    }
+
+    suspend fun getDeviceLists(sensorType: SensorType): DevicesDatabaseManager.DeviceIdAndNameLists {
+        return withContext(Dispatchers.IO) {
+            devicesDbManager.getDeviceIdAndNameLists(sensorType)
+        }
+    }
+
+
+
+    /**
+     * Updates the configuration of a specific sensor field in the database.
+     * This should be called from a coroutine.
+     */
+    suspend fun updateSensorFieldConfig(
+        sensorViewId: Long,
+        newSensorType: SensorType,
+        newViewSize: ViewSize,
+        newSourceDeviceId: Long
+    ) {
+        withContext(Dispatchers.IO) {
+            val dbManager = TrackingViewsDatabaseManager.getInstance(application)
+            dbManager.updateSensorView(sensorViewId.toInt(), newSensorType, newViewSize,
+                newSourceDeviceId.toInt()
+            )
+
+            // After saving, we must inform the rest of the app that the view has changed
+            // so that the data can be reloaded correctly.
+            // TODO: still necessary???
+            val intent = Intent("TRACKING_VIEW_CHANGED_INTENT").setPackage(application.packageName)
+            application.sendBroadcast(intent)
+        }
     }
 
 
