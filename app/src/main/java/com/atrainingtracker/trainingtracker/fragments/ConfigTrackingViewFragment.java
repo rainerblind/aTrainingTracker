@@ -56,7 +56,7 @@ import com.atrainingtracker.trainingtracker.dialogs.EditFieldDialogClassic;
 
 import java.util.TreeMap;
 
-import static com.atrainingtracker.banalservice.fragments.ConfigureFilterDialogFragment.FILTERS_CHANGED_INTENT;
+import static com.atrainingtracker.banalservice.fragments.ConfigureFilterDialogFragmentClassic.FILTERS_CHANGED_INTENT;
 import static com.atrainingtracker.trainingtracker.dialogs.EditFieldDialogClassic.TRACKING_VIEW_CHANGED_INTENT;
 
 

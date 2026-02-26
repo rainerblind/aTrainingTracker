@@ -21,7 +21,6 @@ package com.atrainingtracker.banalservice.fragments;
 import androidx.appcompat.app.AlertDialog;
 import android.app.Dialog;
 import android.content.ContentValues;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.database.SQLException;
@@ -48,9 +47,10 @@ import com.atrainingtracker.banalservice.filters.FilterType;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager.TrackingViewsDbHelper;
 
-public class ConfigureFilterDialogFragment
+@Deprecated
+public class ConfigureFilterDialogFragmentClassic
         extends DialogFragment {
-    public static final String TAG = ConfigureFilterDialogFragment.class.getName();
+    public static final String TAG = ConfigureFilterDialogFragmentClassic.class.getName();
     public static final String FILTERS_CHANGED_INTENT = "FILTERS_CHANGED_INTENT";
     private static final boolean DEBUG = BANALService.getDebug(false);
     long mRowId;
@@ -64,8 +64,8 @@ public class ConfigureFilterDialogFragment
     View mDivider;
     TextView mTvFilterDetails;
 
-    public static ConfigureFilterDialogFragment newInstance(long rowId, FilterType filterType, double filterConstant) {
-        ConfigureFilterDialogFragment configureFilterDialogFragment = new ConfigureFilterDialogFragment();
+    public static ConfigureFilterDialogFragmentClassic newInstance(long rowId, FilterType filterType, double filterConstant) {
+        ConfigureFilterDialogFragmentClassic configureFilterDialogFragment = new ConfigureFilterDialogFragmentClassic();
 
         Bundle args = new Bundle();
         args.putLong(TrackingViewsDbHelper.ROW_ID, rowId);
@@ -135,7 +135,7 @@ public class ConfigureFilterDialogFragment
         });
         builder.setNegativeButton(getString(R.string.Cancel), new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int id) {
-                ConfigureFilterDialogFragment.this.getDialog().cancel();
+                ConfigureFilterDialogFragmentClassic.this.getDialog().cancel();
             }
         });
         return builder.create();
