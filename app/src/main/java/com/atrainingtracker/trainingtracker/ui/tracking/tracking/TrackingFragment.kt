@@ -54,7 +54,7 @@ class TrackingFragment : Fragment() {
          * with the required viewId.
          */
         @JvmStatic
-        fun newInstance(tabViewId: Int) =
+        fun newInstance(tabViewId: Long) =
             TrackingFragment().apply {
                 arguments = Bundle().apply {
                     putLong(ARG_TAB_VIEW_ID, tabViewId)
