@@ -488,8 +488,11 @@ public class BANALService
         if (DEBUG) Log.d(TAG, "onCreate");
 
         cSensorManager = new MySensorManager(this);
-        cFilterManager = new FilterManager(this, cDeviceManager, cSensorManager);
         cDeviceManager = new DeviceManager(this, cSensorManager);
+        cFilterManager = new FilterManager(this, cDeviceManager, cSensorManager);
+
+        // when there is a FilterManager, we can create the devices that need filtered data.
+        cDeviceManager.createVerticalSpeedAndSlopeDevice();
 
         ContextCompat.registerReceiver(this, mStartSearchForPairedDevices, new IntentFilter(REQUEST_START_SEARCH_FOR_PAIRED_DEVICES), ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mNewLapReceiver, new IntentFilter(REQUEST_NEW_LAP), ContextCompat.RECEIVER_NOT_EXPORTED);
