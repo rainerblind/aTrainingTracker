@@ -19,10 +19,10 @@ class TrackingFragment : Fragment() {
         super.onCreate(savedInstanceState)
 
         // Get the viewId from the fragment's arguments
-        val viewId = arguments?.getInt(ARG_VIEW_ID) ?: 0
+        val tabViewId = arguments?.getLong(ARG_TAB_VIEW_ID) ?: 0
 
         // Create the ViewModel using our custom factory
-        val factory = TrackingViewModelFactory(requireActivity().application, viewId)
+        val factory = TrackingViewModelFactory(requireActivity().application, tabViewId)
         viewModel = ViewModelProvider(this, factory)[TrackingViewModel::class.java]
     }
 
@@ -47,17 +47,17 @@ class TrackingFragment : Fragment() {
     }
 
     companion object {
-        private const val ARG_VIEW_ID = "view_id"
+        private const val ARG_TAB_VIEW_ID = "tab_view_id"
 
         /**
          * A factory method to create a new instance of this fragment
          * with the required viewId.
          */
         @JvmStatic
-        fun newInstance(viewId: Int) =
+        fun newInstance(tabViewId: Int) =
             TrackingFragment().apply {
                 arguments = Bundle().apply {
-                    putInt(ARG_VIEW_ID, viewId)
+                    putInt(ARG_TAB_VIEW_ID, tabViewId)
                 }
             }
     }
