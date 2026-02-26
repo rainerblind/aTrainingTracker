@@ -109,9 +109,9 @@ public class TrackingViewsDatabaseManager {
         values.put(TrackingViewsDbHelper.VIEW_SIZE, viewSize.name());
         values.put(TrackingViewsDbHelper.SOURCE_DEVICE_ID, sourceDeviceId);
 
-        getDatabase().update(TrackingViewsDbHelper.VIEWS_TABLE,
+        getDatabase().update(TrackingViewsDbHelper.ROWS_TABLE,
                 values,
-                TrackingViewsDbHelper.C_ID + "=?",
+                TrackingViewsDbHelper.ROW_ID + "=?",
                 new String[]{viewId + ""});
     }
 

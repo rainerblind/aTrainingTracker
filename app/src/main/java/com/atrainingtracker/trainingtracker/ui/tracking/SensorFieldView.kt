@@ -1,6 +1,8 @@
 package com.atrainingtracker.trainingtracker.ui.tracking
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -30,12 +32,14 @@ enum class ViewSize {
  * A Composable that displays a single sensor field.
  * It is a "dumb" component that simply renders the FieldState it's given.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SensorFieldView(
     fieldState: SensorFieldState,
     modifier: Modifier = Modifier,
     size: ViewSize = ViewSize.NORMAL,
-    border: BorderStroke? = null
+    border: BorderStroke? = null,
+    onLongClick: () -> Unit = {}
 ) {
     // Determine text styles based on the size parameter.
     val valueStyle: TextStyle
@@ -76,7 +80,11 @@ fun SensorFieldView(
     }
 
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().
+        combinedClickable(
+            onClick = {},
+            onLongClick = onLongClick
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(containerColor = fieldState.zoneColor),
         border = border

@@ -18,4 +18,4 @@ val Zone2 = Color(0xFF4CAF50) // Green 500
 val Zone3 = Color(0xFFFFEB3B) // Yellow 500
 val Zone4 = Color(0xFFF57C00) // Orange 700
 val Zone5 = Color(0xFFD32F2F) // Red 700
-val DefaultBackgroundColor = Color(0xFF212121) // Grey 900
+val DefaultBackgroundColor = Color(0xFFFFFFFF)

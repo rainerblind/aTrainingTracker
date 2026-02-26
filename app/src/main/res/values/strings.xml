@@ -1014,4 +1014,8 @@
     <!-- drawer -->
     <string name="drawer__training">Training</string>
     <string name="drawer__maps">Maps</string>
+    <string name="source">Source</string>
+    <string name="sensor">Sensor</string>
+    <string name="text_size">Size</string>
+    <string name="filter">Filter</string>
 </resources>

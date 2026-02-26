@@ -138,7 +138,7 @@ class TrackingTabsFragment : Fragment() {
                 ControlTrackingFragment()
             } else {
                 val viewInfo = trackingViews[position - 1]
-                TrackingFragment.newInstance(viewInfo.id)
+                TrackingFragment.newInstance(viewInfo.tabViewId)
             }
         }
     }
