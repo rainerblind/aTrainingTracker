@@ -82,8 +82,8 @@ class TrackingFragment : Fragment() {
                                 onConfigureFilter = {
                                     // 2. Instead of showing the old fragment, just set the state
                                     showConfigureFilterDialogForId = currentId
-                                    // Dismiss the edit dialog
-                                    editingSensorFieldId = null
+                                    // Do not dismiss the edit dialog
+                                    // editingSensorFieldId = null
                                 }
                             )
                         }

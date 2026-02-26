@@ -41,17 +41,17 @@ fun EditSensorFieldDialog(
                 // --- Sensor Type Spinner ---
                 Spinner(
                     label = stringResource(R.string.sensor),
-                    items = uiState.availableSensorTypes.map { it.getShortName(context) },
-                    selectedItem = uiState.selectedSensorType?.getShortName(context) ?: "",
+                    items = uiState.availableSensorTypesForCurrentActivityType.map { it.getFullName(context) },  //note that this depend on the activity type
+                    selectedItem = uiState.selectedSensorType?.getFullName(context) ?: "",
                     onItemSelected = { index ->
-                        viewModel.onSensorTypeChanged(uiState.availableSensorTypes[index])
+                        viewModel.onSensorTypeChanged(uiState.availableSensorTypesForCurrentActivityType[index])
                     }
                 )
 
                 Spacer(Modifier.height(8.dp))
 
-                // --- Device Source Spinner ---
-                val deviceList = uiState.availableDevices
+                // --- Source Device Spinner ---
+                val deviceList = uiState.availableDevices  // TODO: much more complex since the possible devices depend on the sensor type!
                 if (deviceList.isNotEmpty()) {
                     Spinner(
                         label = stringResource(R.string.source),
@@ -81,7 +81,7 @@ fun EditSensorFieldDialog(
                 Spacer(Modifier.height(16.dp))
 
                 // --- Configure Filter Button ---
-                if (uiState.selectedSensorType?.filteringPossible == true) {
+                 if (uiState.selectedSensorType?.filteringPossible == true) {
                     OutlinedButton(
                         onClick = onConfigureFilter,
                         modifier = Modifier.fillMaxWidth()
