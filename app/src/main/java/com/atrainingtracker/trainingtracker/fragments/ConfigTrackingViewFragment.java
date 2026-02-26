@@ -52,12 +52,12 @@ import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 import com.atrainingtracker.trainingtracker.activities.ConfigViewsActivity;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
-import com.atrainingtracker.trainingtracker.dialogs.EditFieldDialog;
+import com.atrainingtracker.trainingtracker.dialogs.EditFieldDialogClassic;
 
 import java.util.TreeMap;
 
 import static com.atrainingtracker.banalservice.fragments.ConfigureFilterDialogFragment.FILTERS_CHANGED_INTENT;
-import static com.atrainingtracker.trainingtracker.dialogs.EditFieldDialog.TRACKING_VIEW_CHANGED_INTENT;
+import static com.atrainingtracker.trainingtracker.dialogs.EditFieldDialogClassic.TRACKING_VIEW_CHANGED_INTENT;
 
 
 public class ConfigTrackingViewFragment extends ConfigViewFragment {
@@ -386,8 +386,8 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
     }
 
     private void showEditFieldDialog(@NonNull TrackingViewsDatabaseManager.ViewInfo viewInfo) {
-        EditFieldDialog editFieldDialog = EditFieldDialog.newInstance(mActivityType, viewInfo);
-        editFieldDialog.show(getFragmentManager(), EditFieldDialog.TAG);
+        EditFieldDialogClassic editFieldDialogClassic = EditFieldDialogClassic.newInstance(mActivityType, viewInfo);
+        editFieldDialogClassic.show(getFragmentManager(), EditFieldDialogClassic.TAG);
     }
 
     protected void showPreview() {
