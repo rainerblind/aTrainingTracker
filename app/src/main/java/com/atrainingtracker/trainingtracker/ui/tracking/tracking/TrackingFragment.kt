@@ -57,7 +57,7 @@ class TrackingFragment : Fragment() {
         fun newInstance(tabViewId: Int) =
             TrackingFragment().apply {
                 arguments = Bundle().apply {
-                    putInt(ARG_TAB_VIEW_ID, tabViewId)
+                    putLong(ARG_TAB_VIEW_ID, tabViewId)
                 }
             }
     }
