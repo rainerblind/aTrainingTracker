@@ -59,7 +59,8 @@ data class SensorFieldConfig(
     val sensorType: SensorType,
     val filterType: FilterType,
     val filterConstant: Double,
-    val deviceName: String? = null
+    val sourceDeviceId: Long,
+    val sourceDeviceName: String? = null
 )
 
 /**
@@ -303,7 +304,8 @@ class TrackingRepository private constructor(private val application: Applicatio
                             sensorType = SensorType.valueOf(c.getString(sensorTypeIndex)),
                             filterType = FilterType.valueOf(c.getString(filterTypeIndex)),
                             filterConstant = c.getDouble(filterConstantIndex),
-                            deviceName = deviceName
+                            sourceDeviceId = sourceDeviceId,
+                            sourceDeviceName = deviceName
                         )
                     )
                 } while (c.moveToNext())

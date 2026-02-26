@@ -77,16 +77,16 @@ class TrackingViewModel(
                             config.sensorType,
                             config.filterType,
                             config.filterConstant,
-                            config.deviceName
+                            config.sourceDeviceName
                         )
 
                     // calculate the 'filter description' (including the device name when available.  When not, it represents the best sensor)
                     var filterDescription = config.filterType.getShortSummary(application, config.filterConstant)
-                    if (config.deviceName != null) {
+                    if (config.sourceDeviceName != null) {
                         filterDescription = if (filterDescription.isNotEmpty()) {
-                            config.deviceName + ": " + filterDescription
+                            config.sourceDeviceName + ": " + filterDescription
                         } else {
-                            config.deviceName
+                            config.sourceDeviceName
                         }
                     }
 
