@@ -125,7 +125,7 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
         if (DEBUG) Log.d(TAG, "onCreateView, mViewId=" + mViewId);
 
         mLayoutInflater = inflater;
-        mActivityType = mTrackingViewsDatabaseManager.getActivityType(mViewId);
+        mActivityType = mTrackingViewsDatabaseManager.getActivityTypeForTab(mViewId);
 
         View view = inflater.inflate(R.layout.config_tracking_view, container, false);
         mLLSensors = view.findViewById(R.id.linearLayoutSensors);

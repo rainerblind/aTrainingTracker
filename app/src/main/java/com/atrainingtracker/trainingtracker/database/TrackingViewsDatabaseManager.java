@@ -188,14 +188,14 @@ public class TrackingViewsDatabaseManager {
     }
 
     @NonNull
-    public ActivityType getActivityType(long viewId) {
+    public ActivityType getActivityTypeForTab(long tabViewId) {
 
         ActivityType activityType = ActivityType.getDefaultActivityType();
 
         Cursor cursor = getDatabase().query(TrackingViewsDbHelper.VIEWS_TABLE,
                 null,
                 TrackingViewsDbHelper.C_ID + "=?",
-                new String[]{viewId + ""},
+                new String[]{tabViewId + ""},
                 null,
                 null,
                 null);
@@ -467,7 +467,7 @@ public class TrackingViewsDatabaseManager {
 
     public void addEmptyView(long viewId, boolean addAfterLayout) {
         int layoutNr = getLayoutNr(viewId);
-        ActivityType activityType = getActivityType(viewId);
+        ActivityType activityType = getActivityTypeForTab(viewId);
         int newLayoutNr = layoutNr;
         if (addAfterLayout) {
             newLayoutNr = layoutNr + 1;
