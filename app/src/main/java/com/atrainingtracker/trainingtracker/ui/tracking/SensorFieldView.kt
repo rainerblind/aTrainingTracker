@@ -37,7 +37,6 @@ enum class ViewSize {
 fun SensorFieldView(
     fieldState: SensorFieldState,
     modifier: Modifier = Modifier,
-    size: ViewSize = ViewSize.NORMAL,
     border: BorderStroke? = null,
     onLongClick: () -> Unit = {}
 ) {
@@ -46,7 +45,7 @@ fun SensorFieldView(
     val unitStyle: TextStyle
     val labelStyle: TextStyle
     val filterStyle: TextStyle
-    when (size) {
+    when (fieldState.viewSize) {
         ViewSize.XSMALL -> {
             valueStyle = MaterialTheme.typography.headlineMedium
             unitStyle = MaterialTheme.typography.bodySmall
@@ -155,6 +154,7 @@ private fun SensorFieldViewPreview(
         sensorFieldId = 0,
         rowNr = 1,
         colNr = 1,
+        viewSize = size,
         label = "Pace",
         filterDescription = "GPS: 5 s avg",
         value = "5:32",
@@ -163,7 +163,7 @@ private fun SensorFieldViewPreview(
     )
 
     MaterialTheme {
-        SensorFieldView(fieldState = mockSensorFieldState, size = size)
+        SensorFieldView(fieldState = mockSensorFieldState)
     }
 }
 
@@ -175,6 +175,7 @@ private fun SensorFieldViewZonePreview() {
         sensorFieldId = 2,
         rowNr = 1,
         colNr = 2,
+        viewSize = ViewSize.NORMAL,
         label = "Heart Rate",
         filterDescription = "Inst.",
         value = "175",
@@ -183,6 +184,6 @@ private fun SensorFieldViewZonePreview() {
     )
 
     MaterialTheme {
-        SensorFieldView(fieldState = mockSensorFieldStateInZone, size = ViewSize.NORMAL)
+        SensorFieldView(fieldState = mockSensorFieldStateInZone)
     }
 }

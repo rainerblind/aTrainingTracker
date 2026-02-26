@@ -113,6 +113,7 @@ class TrackingViewModel(
                         sensorFieldId = config.sensorFieldId,
                         rowNr = config.rowNr,
                         colNr = config.colNr,
+                        viewSize = config.viewSize,
                         label = application.getString(config.sensorType.shortNameId),
                         filterDescription = filterDescription,
                         value = "--", // Default value
