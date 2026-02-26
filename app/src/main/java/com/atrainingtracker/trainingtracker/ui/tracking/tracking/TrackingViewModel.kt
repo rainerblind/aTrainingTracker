@@ -13,6 +13,7 @@ import androidx.preference.PreferenceManager
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.filters.FilteredSensorData
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
@@ -79,117 +80,105 @@ class TrackingViewModel(
         }
     }
 
-    // This function for loading the main screen content remains the same
     private fun loadSensorFieldStates() {
-
         viewModelScope.launch {
-            // --- Step 1: Create the initial, static state for all fields ---
-            val initialFieldStates = withContext(Dispatchers.IO) {
-                val fieldConfigurations = trackingRepository.getSensorFieldConfigsForView(viewId)
+            // 1. COLLECT THE FLOW for configuration changes
+            trackingRepository.getSensorFieldConfigsForView(viewId)
+                .combine(trackingRepository.allFilteredSensorData) { configs, allSensorData ->
+                    // This whole block will re-execute whenever configs OR sensor data change
 
-                fieldConfigurations.map { config ->
-                    Log.i("TrackingViewModel", "Requested sensor views: ${config.sensorType}, ${config.filterType}, ${config.filterConstant}, ${config.sourceDeviceName}" )
-
-                    val uniqueHash =
-                        Objects.hash(
-                            config.sensorType,
-                            config.filterType,
-                            config.filterConstant,
-                            config.sourceDeviceName
-                        )
-
-                    // calculate the 'filter description' (including the device name when available.  When not, it represents the best sensor)
-                    var filterDescription = config.filterType.getShortSummary(application, config.filterConstant)
-                    if (config.sourceDeviceName != null) {
-                        filterDescription = if (filterDescription.isNotEmpty()) {
-                            config.sourceDeviceName + ": " + filterDescription
-                        } else {
-                            config.sourceDeviceName
+                    // --- Step 1: Create the base state from the latest configurations ---
+                    val baseFields = configs.map { config ->
+                        val uniqueHash = Objects.hash(config.sensorType, config.filterType, config.filterConstant, config.sourceDeviceName)
+                        var filterDescription = config.filterType.getShortSummary(application, config.filterConstant)
+                        if (config.sourceDeviceName != null) {
+                            filterDescription = if (filterDescription.isNotEmpty()) {
+                                "${config.sourceDeviceName}: $filterDescription"
+                            } else {
+                                config.sourceDeviceName
+                            }
                         }
+
+                        SensorFieldState(
+                            configHash = uniqueHash,
+                            sensorFieldId = config.sensorFieldId,
+                            rowNr = config.rowNr,
+                            colNr = config.colNr,
+                            viewSize = config.viewSize,
+                            label = application.getString(config.sensorType.shortNameId),
+                            filterDescription = filterDescription,
+                            value = "--",
+                            units = application.getString(MyHelper.getShortUnitsId(config.sensorType)),
+                            zoneColor = defaultZoneColor
+                        )
                     }
 
-                    SensorFieldState(
-                        configHash = uniqueHash, // Store the unique ID
-                        sensorFieldId = config.sensorFieldId,
-                        rowNr = config.rowNr,
-                        colNr = config.colNr,
-                        viewSize = config.viewSize,
-                        label = application.getString(config.sensorType.shortNameId),
-                        filterDescription = filterDescription,
-                        value = "--", // Default value
-                        units = application.getString(MyHelper.getShortUnitsId(config.sensorType)),
-                        zoneColor = defaultZoneColor // Default color
-                    )
+                    // --- Step 2: Apply live sensor data to the base state ---
+                    val activity = trackingRepository.activityType.value ?: return@combine baseFields // Use the LiveData value
+                    val fieldsWithLiveData = applySensorData(baseFields, allSensorData, activity)
+
+                    // Return the fully updated list
+                    fieldsWithLiveData
+                }
+                .collect { updatedFields ->
+                    // 2. EMIT the new state to the UI
+                    _uiState.value = TrackingScreenState(fields = updatedFields)
+                }
+        }
+    }
+
+    // Helper function to keep the logic clean
+    private fun applySensorData(
+        currentFields: List<SensorFieldState>,
+        allSensorData: List<FilteredSensorData<*>>,
+        activityType: ActivityType
+    ): List<SensorFieldState> {
+        val updatedFields = currentFields.associateBy { it.configHash }.toMutableMap()
+        var hasChanged = false
+
+        for (sensorData in allSensorData) {
+            val uniqueHash = Objects.hash(sensorData.sensorType, sensorData.filterType, sensorData.filterConstant, sensorData.deviceName)
+            val fieldToUpdate = updatedFields[uniqueHash]
+
+            if (fieldToUpdate != null) {
+                val newFormattedValue = sensorData.stringValue
+                val newZoneColor = calculateZoneColor(sensorData, activityType)
+
+                if (fieldToUpdate.value != newFormattedValue || fieldToUpdate.zoneColor != newZoneColor) {
+                    updatedFields[uniqueHash] = fieldToUpdate.copy(value = newFormattedValue, zoneColor = newZoneColor)
+                    hasChanged = true
                 }
             }
-            _uiState.value = TrackingScreenState(fields = initialFieldStates)
-
-
-            // --- Step 2: Reactively update ONLY the value and color ---
-            trackingRepository.allFilteredSensorData.combine(trackingRepository.activityType.asFlow()) { allSensorData, activityType ->
-
-                if (activityType == null) return@combine
-
-                val currentFields = _uiState.value.fields
-                // Use a map for O(1) lookups, which is much faster than indexOfFirst (O(n))
-                val updatedFields = currentFields.associateBy { it.configHash }.toMutableMap()
-                var hasChanged = false
-
-                Log.i("TrackingViewModel", "##################################################################################")
-                for (sensorData in allSensorData) {
-                    Log.i("TrackingViewModel", "Available sensor views: ${sensorData.sensorType}, ${sensorData.filterType}, ${sensorData.filterConstant}, ${sensorData.deviceName}: ${sensorData.value}" )
-
-                    val uniqueHash = Objects.hash(
-                        sensorData.sensorType,
-                        sensorData.filterType,
-                        sensorData.filterConstant,
-                        sensorData.deviceName
-                    )
-
-                    val fieldToUpdate = updatedFields[uniqueHash]
-                    if (fieldToUpdate != null) {
-                        val currentValue = sensorData.value
-                        val newFormattedValue = sensorData.stringValue
-                        var newZoneColor = fieldToUpdate.zoneColor
-
-                        val zoneType = getZoneType(sensorData.sensorType, activityType.sportType)
-                        if (zoneType != null && currentValue is Number) {
-                            val z1Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 1)
-                            val z2Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 2)
-                            val z3Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 3)
-                            val z4Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 4)
-
-                            val numericValue = currentValue.toDouble()
-
-                            newZoneColor = when {
-                                numericValue <= z1Max -> zoneColors[0]
-                                numericValue <= z2Max -> zoneColors[1]
-                                numericValue <= z3Max -> zoneColors[2]
-                                numericValue <= z4Max -> zoneColors[3]
-                                else -> zoneColors[4]
-                            }
-                        } else {
-                            newZoneColor = defaultZoneColor
-                        }
-
-                        if (fieldToUpdate.value != newFormattedValue || fieldToUpdate.zoneColor != newZoneColor) {
-                            // Update the entry in our temporary map
-                            updatedFields[uniqueHash] = fieldToUpdate.copy(
-                                value = newFormattedValue,
-                                zoneColor = newZoneColor
-                            )
-                            hasChanged = true
-                        }
-                    }
-                }
-
-                if (hasChanged) {
-                    // Convert the map's values back to a list
-                    _uiState.value = TrackingScreenState(fields = updatedFields.values.toList())
-                }
-
-            }.collect {} // Keep the flow active by collecting with an empty lambda
         }
+
+        // Only return a new list if something actually changed to avoid unnecessary recompositions
+        return if (hasChanged) updatedFields.values.toList() else currentFields
+    }
+
+    // Helper function for zone color calculation
+    private fun calculateZoneColor(
+        sensorData: FilteredSensorData<*>,
+        activityType: ActivityType
+    ): Color {
+        val currentValue = sensorData.value
+        val zoneType = getZoneType(sensorData.sensorType, activityType.sportType)
+
+        if (zoneType != null && currentValue is Number) {
+            val z1Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 1)
+            val z2Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 2)
+            val z3Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 3)
+            val z4Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 4)
+            val numericValue = currentValue.toDouble()
+
+            return when {
+                numericValue <= z1Max -> zoneColors[0]
+                numericValue <= z2Max -> zoneColors[1]
+                numericValue <= z3Max -> zoneColors[2]
+                numericValue <= z4Max -> zoneColors[3]
+                else -> zoneColors[4]
+            }
+        }
+        return defaultZoneColor
     }
 
     /**
@@ -208,22 +197,6 @@ class TrackingViewModel(
                 else -> null
             }
             else -> null
-        }
-    }
-
-    /**
-     * Saves the updated configuration for a sensor field and triggers a UI refresh.
-     */
-    fun saveFieldChanges(
-        sensorViewId: Long,
-        newSensorType: SensorType,
-        newViewSize: ViewSize,
-        newSourceDeviceId: Long
-    ) {
-        viewModelScope.launch {
-            // Delegate the database write operation to the repository
-            trackingRepository.updateSensorFieldConfig(sensorViewId, newSensorType, newViewSize,  newSourceDeviceId)
-
         }
     }
 }
