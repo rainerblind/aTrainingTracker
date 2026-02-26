@@ -1,7 +1,6 @@
 package com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield
 
 import android.app.Application
-import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -18,7 +17,6 @@ import kotlinx.coroutines.launch
 data class EditDialogUiState(
     val selectedSensorType: SensorType? = null,
     val availableSensorTypes: List<SensorType> = emptyList(),
-    // Corrected: Store the device ID (Long), not the name (String)
     val selectedDeviceId: Long = -1,
     val availableDevices: List<Pair<Long, String>> = emptyList(),
     val selectedViewSize: ViewSize = ViewSize.NORMAL,
@@ -61,7 +59,6 @@ class EditSensorFieldViewModel(
             _uiState.update {
                 it.copy(
                     selectedSensorType = newSensorType,
-                    // Corrected: Reset the ID to 0L for "Best Sensor"
                     selectedDeviceId = -1,
                     availableDevices = getFullDeviceList(newSensorType)
                 )
@@ -69,7 +66,6 @@ class EditSensorFieldViewModel(
         }
     }
 
-    // Corrected: The changed device is identified by its Long ID
     fun onDeviceChanged(newDeviceId: Long) {
         _uiState.update { it.copy(selectedDeviceId = newDeviceId) }
     }
@@ -90,18 +86,13 @@ class EditSensorFieldViewModel(
                 currentState.selectedViewSize,
                 currentState.selectedDeviceId
             )
-            // Notify that the view has changed
-            val intent = Intent("TRACKING_VIEW_CHANGED_INTENT").setPackage(getApplication<Application>().packageName)
-            getApplication<Application>().sendBroadcast(intent)
         }
     }
 
     private suspend fun getFullDeviceList(sensorType: SensorType): List<Pair<Long, String>> {
         val deviceLists = repository.getDeviceLists(sensorType)
         val context = getApplication<Application>().applicationContext
-        // Corrected: Combine the two lists from DeviceIdAndNameLists
         val devices = deviceLists.deviceIds.zip(deviceLists.names).toMutableList()
-        // Corrected: Add the "Best Sensor" option with ID 0L
         devices.add(0, -1L to context.getString(R.string.bestSensor))
         return devices
     }
