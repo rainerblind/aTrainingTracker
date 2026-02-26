@@ -70,8 +70,11 @@ fun ConfigureFilterDialog(
                     FilterType.MOVING_AVERAGE_TIME, FilterType.MOVING_AVERAGE_NUMBER -> {
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             OutlinedTextField(
-                                value = uiState.filterConstant.toString(),
-                                onValueChange = { viewModel.onFilterConstantChanged(it.toDoubleOrNull() ?: 1.0) },
+                                value = uiState.filterConstant.toInt().toString(),
+                                onValueChange = { textValue ->
+                                    // Parse the text to an Int, then convert to Double for the ViewModel
+                                    val intValue = textValue.filter { it.isDigit() }.toIntOrNull() ?: 1
+                                    viewModel.onFilterConstantChanged(intValue.toDouble())},
                                 label = { Text(stringResource(R.string.filter_value)) },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 modifier = Modifier.weight(1f)
