@@ -144,7 +144,7 @@ private fun SensorFieldViewPreview(
 ) {
     val mockSensorFieldState = SensorFieldState(
         configHash = 1,
-        viewId = 0,
+        sensorFieldId = 0,
         rowNr = 1,
         colNr = 1,
         label = "Pace",
@@ -164,7 +164,7 @@ private fun SensorFieldViewPreview(
 private fun SensorFieldViewZonePreview() {
     val mockSensorFieldStateInZone = SensorFieldState(
         configHash = 2,
-        viewId = 2,
+        sensorFieldId = 2,
         rowNr = 1,
         colNr = 2,
         label = "Heart Rate",

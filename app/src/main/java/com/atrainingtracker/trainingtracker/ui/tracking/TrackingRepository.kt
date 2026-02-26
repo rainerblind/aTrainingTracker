@@ -50,7 +50,7 @@ data class LapEvent(
  * as loaded from the TrackingViewsDatabaseManager.
  */
 data class SensorFieldConfig(
-    val viewId: Int,
+    val sensorFieldId: Long,
     val rowNr: Int,
     val colNr: Int,
     val size: ViewSize,
@@ -267,6 +267,7 @@ class TrackingRepository private constructor(private val application: Applicatio
         cursor.use { c ->
             if (c.moveToFirst()) {
                 // Pre-fetch column indices for efficiency inside the loop
+                val sensorFieldIndex = c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.ROW_ID)
                 val rowNrIndex = c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.ROW_NR)
                 val colNrIndex = c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.COL_NR)
                 val sensorTypeIndex = c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SENSOR_TYPE)
@@ -293,7 +294,7 @@ class TrackingRepository private constructor(private val application: Applicatio
 
                     fieldList.add(
                         SensorFieldConfig(
-                            viewId = viewId,
+                            sensorFieldId = c.getLong(sensorFieldIndex),
                             rowNr = c.getInt(rowNrIndex),
                             colNr = c.getInt(colNrIndex),
                             size = viewSize, // Use the directly parsed enum value

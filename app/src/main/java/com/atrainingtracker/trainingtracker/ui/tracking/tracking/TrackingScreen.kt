@@ -75,25 +75,25 @@ fun TrackingScreenPreview() {
         val previewFields = listOf(
             // Row 0, Col 0
             SensorFieldState(
-                configHash = 1, viewId = 1, rowNr = 0, colNr = 0, label = "Pace",
+                configHash = 1, sensorFieldId = 1, rowNr = 0, colNr = 0, label = "Pace",
                 filterDescription = "10s", value = "5:31", units = "/km",
                 zoneColor = DefaultBackgroundColor
             ),
             // Row 0, Col 1
             SensorFieldState(
-                configHash = 4, viewId = 1, rowNr = 0, colNr = 1, label = "Distance",
+                configHash = 4, sensorFieldId = 1, rowNr = 0, colNr = 1, label = "Distance",
                 filterDescription = "Total", value = "10.34", units = "km",
                 zoneColor = DefaultBackgroundColor
             ),
             // Row 1, Col 0
             SensorFieldState(
-                configHash = 2, viewId = 1, rowNr = 1, colNr = 0, label = "Heart Rate",
+                configHash = 2, sensorFieldId = 1, rowNr = 1, colNr = 0, label = "Heart Rate",
                 filterDescription = "inst.", value = "145", units = "bpm",
                 zoneColor = Zone1
             ),
             // Row 2, Col 0
             SensorFieldState(
-                configHash = 3, viewId = 1, rowNr = 2, colNr = 0, label = "Power",
+                configHash = 3, sensorFieldId = 1, rowNr = 2, colNr = 0, label = "Power",
                 filterDescription = "3s", value = "280", units = "W",
                 zoneColor = DefaultBackgroundColor
             )
