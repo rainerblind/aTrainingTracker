@@ -60,7 +60,7 @@ fun EditSensorFieldDialog(
                     Spinner(
                         label = stringResource(R.string.source),
                         items = deviceList.map { it.second }, // Names
-                        selectedItem = deviceList.find { it.first == uiState.selectedDeviceId }?.second ?: "",
+                        selectedItem = deviceList.find { it.first == uiState.selectedDeviceId }?.second ?: stringResource(R.string.bestSensor),
                         onItemSelected = { index ->
                             viewModel.onDeviceChanged(deviceList[index].first)
                         }
