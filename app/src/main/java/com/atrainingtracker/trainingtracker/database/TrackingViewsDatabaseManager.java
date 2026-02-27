@@ -103,11 +103,15 @@ public class TrackingViewsDatabaseManager {
     // some high level methods
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    public void updateSensorView(int viewId, SensorType sensorType, ViewSize viewSize, int sourceDeviceId) {
+    public void updateSensorView(int viewId, SensorType sensorType, ViewSize viewSize, @Nullable Long sourceDeviceId) {
         ContentValues values = new ContentValues();
         values.put(TrackingViewsDbHelper.SENSOR_TYPE, sensorType.name());
         values.put(TrackingViewsDbHelper.VIEW_SIZE, viewSize.name());
-        values.put(TrackingViewsDbHelper.SOURCE_DEVICE_ID, sourceDeviceId);
+        if (sourceDeviceId == null || sourceDeviceId < 0) {
+            values.putNull(TrackingViewsDbHelper.SOURCE_DEVICE_ID);
+        } else {
+            values.put(TrackingViewsDbHelper.SOURCE_DEVICE_ID, sourceDeviceId);
+        }
 
         getDatabase().update(TrackingViewsDbHelper.ROWS_TABLE,
                 values,

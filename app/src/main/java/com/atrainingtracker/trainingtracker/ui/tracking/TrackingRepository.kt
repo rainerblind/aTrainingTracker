@@ -406,12 +406,12 @@ class TrackingRepository private constructor(private val application: Applicatio
         sensorViewId: Long,
         newSensorType: SensorType,
         newViewSize: ViewSize,
-        newSourceDeviceId: Long
+        newSourceDeviceId: Long?
     ) {
         withContext(Dispatchers.IO) {
             val dbManager = TrackingViewsDatabaseManager.getInstance(application)
             dbManager.updateSensorView(sensorViewId.toInt(), newSensorType, newViewSize,
-                newSourceDeviceId.toInt()
+                newSourceDeviceId
             )
         }
 
