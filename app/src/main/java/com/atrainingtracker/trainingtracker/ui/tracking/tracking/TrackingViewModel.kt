@@ -133,26 +133,39 @@ class TrackingViewModel(
         allSensorData: List<FilteredSensorData<*>>,
         activityType: ActivityType
     ): List<SensorFieldState> {
-        val updatedFields = currentFields.associateBy { it.configHash }.toMutableMap()
+        // 1. Group fields by their hash. Now we have a map of Hash -> List<SensorFieldState>.
+        val fieldsByHash = currentFields.groupBy { it.configHash }
+        val updatedFields = currentFields.toMutableList() // Start with a mutable copy of the original list
         var hasChanged = false
 
+        // Iterate through all the live data coming from the service
         for (sensorData in allSensorData) {
             val uniqueHash = Objects.hash(sensorData.sensorType, sensorData.filterType, sensorData.filterConstant, sensorData.deviceName)
-            val fieldToUpdate = updatedFields[uniqueHash]
+            Log.i("TrackingViewModel", "Processing sensor data: ${sensorData.sensorType}, ${sensorData.filterConstant}, ${sensorData.deviceName}: ${sensorData.stringValue}")
 
-            if (fieldToUpdate != null) {
+            // 2. Find all fields that match this hash.
+            val fieldsToUpdate = fieldsByHash[uniqueHash]
+
+            if (fieldsToUpdate != null) {
                 val newFormattedValue = sensorData.stringValue
                 val newZoneColor = calculateZoneColor(sensorData, activityType)
 
-                if (fieldToUpdate.value != newFormattedValue || fieldToUpdate.zoneColor != newZoneColor) {
-                    updatedFields[uniqueHash] = fieldToUpdate.copy(value = newFormattedValue, zoneColor = newZoneColor)
-                    hasChanged = true
+                // 3. Iterate through every field that needs this update.
+                for (fieldToUpdate in fieldsToUpdate) {
+                    // Check if this specific instance needs an update to avoid unnecessary changes.
+                    if (fieldToUpdate.value != newFormattedValue || fieldToUpdate.zoneColor != newZoneColor) {
+                        val index = updatedFields.indexOf(fieldToUpdate)
+                        if (index != -1) {
+                            updatedFields[index] = fieldToUpdate.copy(value = newFormattedValue, zoneColor = newZoneColor)
+                            hasChanged = true
+                        }
+                    }
                 }
             }
         }
 
         // Only return a new list if something actually changed to avoid unnecessary recompositions
-        return if (hasChanged) updatedFields.values.toList() else currentFields
+        return if (hasChanged) updatedFields else currentFields
     }
 
     // Helper function for zone color calculation
