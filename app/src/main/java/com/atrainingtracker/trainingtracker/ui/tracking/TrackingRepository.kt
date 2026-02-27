@@ -39,7 +39,10 @@ import okhttp3.Dispatcher
 // Data class for holding tab info, can be moved to a more common location later.
 data class TrackingViewInfo(
     val tabViewId: Long,
-    val name: String)
+    val name: String,
+    val showMap: Boolean,
+    val showLapButton: Boolean
+)
 
 
 /**
@@ -247,7 +250,9 @@ class TrackingRepository private constructor(private val application: Applicatio
             TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEWS_TABLE,
             arrayOf(
                 TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID,
-                TrackingViewsDatabaseManager.TrackingViewsDbHelper.NAME
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.NAME,
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_MAP,
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LAP_BUTTON
             ),
             "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.ACTIVITY_TYPE}=?",
             arrayOf(activityType.name),
@@ -261,7 +266,10 @@ class TrackingRepository private constructor(private val application: Applicatio
                 do {
                     val id = it.getLong(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID))
                     val name = it.getString(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.NAME))
-                    viewList.add(TrackingViewInfo(id, name))
+                    val showMap = it.getInt(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_MAP)) == 1
+                    val showLapButton = it.getInt(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LAP_BUTTON)) == 1
+
+                    viewList.add(TrackingViewInfo(id, name, showMap, showLapButton))
                 } while (it.moveToNext())
             }
         }
