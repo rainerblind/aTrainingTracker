@@ -191,32 +191,3 @@ private fun UnitSpinner(selectedUnit: String, onUnitSelected: (String) -> Unit, 
         }
     }
 }
-
-// Helper extension functions to get display names and details from resources
-private fun FilterType.getDisplayName(context: Context): String {
-    val id = when (this) {
-        FilterType.INSTANTANEOUS -> R.string.filter_instantaneous
-        FilterType.AVERAGE -> R.string.filter_average
-        FilterType.MOVING_AVERAGE_TIME, FilterType.MOVING_AVERAGE_NUMBER -> R.string.filter_moving_average
-        FilterType.EXPONENTIAL_SMOOTHING -> R.string.filter_exponential_smoothing
-        FilterType.MAX_VALUE -> R.string.filter_max
-    }
-    return context.getString(id)
-}
-
-private fun FilterType.getDetails(context: Context, constant: Double): String {
-    return when (this) {
-        FilterType.INSTANTANEOUS -> context.getString(R.string.filter_details__instantaneous)
-        FilterType.AVERAGE -> context.getString(R.string.filter_details__average)
-        FilterType.MAX_VALUE -> context.getString(R.string.filter_details__max)
-        FilterType.EXPONENTIAL_SMOOTHING -> context.getString(R.string.filter_details__exponential_smoothing)
-        FilterType.MOVING_AVERAGE_NUMBER -> context.getString(R.string.filter_details__moving_average_number, constant.toInt())
-        FilterType.MOVING_AVERAGE_TIME -> {
-            if (constant < 60) {
-                context.getString(R.string.filter_details__moving_average_time, constant.toInt(), context.getString(R.string.units_seconds_long))
-            } else {
-                context.getString(R.string.filter_details__moving_average_time, (constant / 60).toInt(), context.getString(R.string.units_minutes_long))
-            }
-        }
-    }
-}
