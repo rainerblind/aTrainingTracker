@@ -14,12 +14,9 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.atrainingtracker.banalservice.fragments.ConfigureFilterDialogFragmentClassic
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.theme.aTrainingTrackerTheme // Import your Compose theme
-import com.atrainingtracker.trainingtracker.ui.tracking.configfilter.ConfigureFilterDialog
-import com.atrainingtracker.trainingtracker.ui.tracking.configfilter.ConfigureFilterViewModel
-import com.atrainingtracker.trainingtracker.ui.tracking.configfilter.ConfigureFilterViewModelFactory
+import com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.ConfigureFilterDialog
 import com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldDialog
 import com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModel
 import com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModelFactory
@@ -52,7 +49,7 @@ class TrackingFragment : Fragment() {
 
                     // States to hold the ID of the field and filter to edit. Null means no dialog.
                     var editingSensorFieldId: Long? by remember { mutableStateOf(null) }
-                    var showConfigureFilterDialogForId: Long? by remember { mutableStateOf(null) }
+
 
                     // -- Main Tracking Screen
                     TrackingScreen(
@@ -76,6 +73,8 @@ class TrackingFragment : Fragment() {
                                 )
                             )
 
+                            var showConfigureFilterDialogForId: Long? by remember { mutableStateOf(null) }
+
                             EditSensorFieldDialog(
                                 viewModel = editViewModel,
                                 onDismissRequest = { editingSensorFieldId = null },
@@ -86,40 +85,18 @@ class TrackingFragment : Fragment() {
                                     // editingSensorFieldId = null
                                 }
                             )
-                        }
-                    }
 
-                    // -- Configure Filter Dialog
-                    showConfigureFilterDialogForId?.let { currentId ->
-                        // Fetch the initial data needed for the dialog
-                        val filterInfo = remember(currentId) {
-                            TrackingViewsDatabaseManager.getInstance(context).getFilterInfo(currentId)
-                        }
-
-                        if (filterInfo != null) {
-                            val configureViewModel: ConfigureFilterViewModel = viewModel(
-                                key = "configure_dialog_$currentId",
-                                factory = ConfigureFilterViewModelFactory(
-                                    repository = viewModel.trackingRepository,
-                                    sensorViewId = currentId,
-                                    initialFilterType = filterInfo.filterType,
-                                    initialFilterConstant = filterInfo.filterConstant
+                            // -- Configure Filter Dialog
+                            showConfigureFilterDialogForId?.let { currentId ->
+                                ConfigureFilterDialog(
+                                    viewModel = editViewModel,
+                                    onDismissRequest = {
+                                        editViewModel.onFilterEditCancel()
+                                        showConfigureFilterDialogForId = null },
+                                    onSave = {
+                                        showConfigureFilterDialogForId = null
+                                    }
                                 )
-                            )
-
-                            ConfigureFilterDialog(
-                                viewModel = configureViewModel,
-                                onDismissRequest = { showConfigureFilterDialogForId = null },
-                                onSave = {
-                                    // 6. SIMPLIFIED: Just call the ViewModel's save method and dismiss.
-                                    configureViewModel.saveFilterChanges()
-                                    showConfigureFilterDialogForId = null
-                                }
-                            )
-                        } else {
-                            // If for some reason filterInfo is null, just dismiss the dialog state
-                            LaunchedEffect(currentId) {
-                                showConfigureFilterDialogForId = null
                             }
                         }
                     }

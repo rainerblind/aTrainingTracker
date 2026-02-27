@@ -1,6 +1,5 @@
-package com.atrainingtracker.trainingtracker.ui.tracking.configfilter
+package com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield
 
-import android.content.Context
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
@@ -20,7 +19,7 @@ import com.atrainingtracker.banalservice.filters.FilterType
 
 @Composable
 fun ConfigureFilterDialog(
-    viewModel: ConfigureFilterViewModel,
+    viewModel: EditSensorFieldViewModel,
     onDismissRequest: () -> Unit,
     onSave: () -> Unit
 ) {
