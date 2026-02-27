@@ -1,5 +1,6 @@
 package com.atrainingtracker.trainingtracker.ui.tracking
 
+import android.content.Context
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
@@ -24,9 +25,26 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.atrainingtracker.R
 
 enum class ViewSize {
     XSMALL, SMALL, NORMAL, LARGE, XLARGE, HUGE, XHUGE
+}
+
+/**
+ * Returns the localized display name for a ViewSize from string resources.
+ */
+fun ViewSize.getDisplayName(context: Context): String {
+    val resourceId = when (this) {
+        ViewSize.XSMALL -> R.string.view_size_xsmall
+        ViewSize.SMALL -> R.string.view_size_small
+        ViewSize.NORMAL -> R.string.view_size_normal
+        ViewSize.LARGE -> R.string.view_size_large
+        ViewSize.XLARGE -> R.string.view_size_xlarge
+        ViewSize.HUGE -> R.string.view_size_huge
+        ViewSize.XHUGE -> R.string.view_size_xhuge
+    }
+    return context.getString(resourceId)
 }
 
 /**
@@ -115,11 +133,12 @@ fun SensorFieldView(
     }
 
     Card(
-        modifier = modifier.fillMaxWidth().
-        combinedClickable(
-            onClick = {},
-            onLongClick = onLongClick
-        ),
+        modifier = modifier
+            .fillMaxWidth()
+            .combinedClickable(
+                onClick = {},
+                onLongClick = onLongClick
+            ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(containerColor = fieldState.zoneColor),
         border = border

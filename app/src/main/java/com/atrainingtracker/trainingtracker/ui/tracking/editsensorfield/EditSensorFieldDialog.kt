@@ -12,6 +12,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.tracking.getDisplayName
 
 
 @Composable
@@ -73,8 +74,8 @@ fun EditSensorFieldDialog(
                 // --- View Size Spinner ---
                 Spinner(
                     label = stringResource(R.string.text_size),
-                    items = uiState.availableViewSizes.map { it.name },
-                    selectedItem = uiState.selectedViewSize.name,
+                    items = uiState.availableViewSizes.map { it.getDisplayName(context) },
+                    selectedItem = uiState.selectedViewSize.getDisplayName(context),
                     onItemSelected = { index ->
                         viewModel.onViewSizeChanged(uiState.availableViewSizes[index])
                     }
