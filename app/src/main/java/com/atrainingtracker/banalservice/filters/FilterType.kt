@@ -79,4 +79,34 @@ enum class FilterType {
             MAX_VALUE -> context.getString(R.string.max)
         }
     }
+
+    fun getDisplayName(context: Context): String {
+        val id = when (this) {
+            INSTANTANEOUS -> R.string.filter_instantaneous
+            AVERAGE -> R.string.filter_average
+            MOVING_AVERAGE_TIME, FilterType.MOVING_AVERAGE_NUMBER -> R.string.filter_moving_average
+            EXPONENTIAL_SMOOTHING -> R.string.filter_exponential_smoothing
+            MAX_VALUE -> R.string.filter_max
+        }
+        return context.getString(id)
+    }
+
+    fun getDetails(context: Context, constant: Double): String {
+        return when (this) {
+            INSTANTANEOUS -> context.getString(R.string.filter_details__instantaneous)
+            AVERAGE -> context.getString(R.string.filter_details__average)
+            MAX_VALUE -> context.getString(R.string.filter_details__max)
+            EXPONENTIAL_SMOOTHING -> context.getString(R.string.filter_details__exponential_smoothing)
+            MOVING_AVERAGE_NUMBER -> context.getString(R.string.filter_details__moving_average_number, constant.toInt())
+            MOVING_AVERAGE_TIME -> {
+                if (constant < 60) {
+                    context.getString(R.string.filter_details__moving_average_time, constant.toInt(), context.getString(R.string.units_seconds_long))
+                } else {
+                    context.getString(R.string.filter_details__moving_average_time, (constant / 60).toInt(), context.getString(R.string.units_minutes_long))
+                }
+            }
+        }
+    }
+
+
 }
