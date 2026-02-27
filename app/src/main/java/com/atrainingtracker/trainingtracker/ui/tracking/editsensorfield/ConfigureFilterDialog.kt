@@ -89,7 +89,12 @@ fun ConfigureFilterDialog(
                     FilterType.EXPONENTIAL_SMOOTHING -> {
                         OutlinedTextField(
                             value = uiState.filterConstant.toString(),
-                            onValueChange = { viewModel.onFilterConstantChanged(it.toDoubleOrNull() ?: 0.1) },
+                            onValueChange = { textValue ->
+                                // ensure that the filter constant is between 0 and 1.
+                                val parsedValue = textValue.toDoubleOrNull() ?: 0.0
+                                val clampedValue = parsedValue.coerceIn(0.0, 1.0)
+                                viewModel.onFilterConstantChanged(clampedValue)
+                            },
                             label = { Text(stringResource(R.string.filter_value)) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             modifier = Modifier.fillMaxWidth()
