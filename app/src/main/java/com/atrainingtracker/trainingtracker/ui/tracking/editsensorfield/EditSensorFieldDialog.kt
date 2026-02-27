@@ -51,8 +51,12 @@ fun EditSensorFieldDialog(
                 Spacer(Modifier.height(8.dp))
 
                 // --- Source Device Spinner ---
-                val deviceList = uiState.availableDevices  // TODO: much more complex since the possible devices depend on the sensor type!
-                if (deviceList.isNotEmpty()) {
+                val deviceList = uiState.availableDevices
+                if (deviceList.size == 1 && deviceList[0].first == -1L) {  // when there is only the 'best' sensor available, there is no choice.
+                    // Handle case with no external sensors (e.g., Time)
+                    // we do not show the source device spinner.
+                }
+                else {
                     Spinner(
                         label = stringResource(R.string.source),
                         items = deviceList.map { it.second }, // Names
@@ -61,12 +65,10 @@ fun EditSensorFieldDialog(
                             viewModel.onDeviceChanged(deviceList[index].first)
                         }
                     )
-                } else {
-                    // Handle case with no external sensors (e.g., Time)
-                    Text(stringResource(R.string.smartphone))
+
+                    Spacer(Modifier.height(8.dp))
                 }
 
-                Spacer(Modifier.height(8.dp))
 
                 // --- View Size Spinner ---
                 Spinner(
@@ -88,6 +90,9 @@ fun EditSensorFieldDialog(
                     ) {
                         Text("${stringResource(R.string.filter)}: ${uiState.filterSummary}")
                     }
+                }
+                else {
+                    // TODO: set filter to instantaneous.
                 }
 
                 Spacer(Modifier.height(16.dp))
