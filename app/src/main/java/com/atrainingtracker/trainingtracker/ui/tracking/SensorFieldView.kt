@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 enum class ViewSize {
-    XSMALL, SMALL, NORMAL, LARGE, XLARGE
+    XSMALL, SMALL, NORMAL, LARGE, XLARGE, HUGE, XHUGE
 }
 
 /**
@@ -65,12 +65,6 @@ fun SensorFieldView(
             labelStyle = MaterialTheme.typography.bodyMedium
             filterStyle = MaterialTheme.typography.bodySmall
         }
-        // ViewSize.SMALL -> {
-        //    valueStyle = MaterialTheme.typography.headlineLarge
-        //    unitStyle = MaterialTheme.typography.bodyMedium
-        //    labelStyle = MaterialTheme.typography.bodyLarge
-        //    filterStyle = MaterialTheme.typography.bodySmall
-        //}
         ViewSize.NORMAL -> {
             valueStyle = MaterialTheme.typography.displaySmall
             unitStyle = MaterialTheme.typography.bodyLarge
@@ -84,23 +78,40 @@ fun SensorFieldView(
             filterStyle = MaterialTheme.typography.bodyMedium
         }
         ViewSize.XLARGE -> {
-            // --- MANUALLY INCREASE FONT SIZE BEYOND THEME DEFAULTS ---
             valueStyle = MaterialTheme.typography.displayLarge.copy(
-                fontSize = 80.sp // Manually set a much larger font size
+                fontSize = 50.sp // Manually set a much larger font size
             )
             unitStyle = MaterialTheme.typography.headlineMedium.copy(
-                fontSize = 36.sp // Also increase the unit size
+                fontSize = 32.sp // Also increase the unit size
             )
             labelStyle = MaterialTheme.typography.headlineSmall
             filterStyle = MaterialTheme.typography.bodyLarge
         }
+        ViewSize.HUGE -> {
+            valueStyle = MaterialTheme.typography.displayLarge.copy(
+                fontSize = 76.sp // Significantly larger
+            )
+            unitStyle = MaterialTheme.typography.headlineMedium.copy(
+                fontSize = 40.sp
+            )
+            labelStyle = MaterialTheme.typography.headlineSmall.copy(
+                fontSize = 28.sp
+            )
+            filterStyle = MaterialTheme.typography.bodyLarge
+        }
+        ViewSize.XHUGE -> {
+            valueStyle = MaterialTheme.typography.displayLarge.copy(
+                fontSize = 100.sp // Very large "Jumbotron" size
+            )
+            unitStyle = MaterialTheme.typography.headlineLarge.copy(
+                fontSize = 48.sp
+            )
+            labelStyle = MaterialTheme.typography.headlineMedium.copy(
+                fontSize = 32.sp
+            )
+            filterStyle = MaterialTheme.typography.titleMedium
+        }
 
-        //ViewSize.XLARGE -> {
-        //    valueStyle = MaterialTheme.typography.displayLarge
-        //    unitStyle = MaterialTheme.typography.headlineMedium
-        //    labelStyle = MaterialTheme.typography.headlineSmall
-        //    filterStyle = MaterialTheme.typography.bodyLarge
-        //}
     }
 
     Card(
