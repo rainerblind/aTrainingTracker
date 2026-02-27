@@ -86,47 +86,53 @@ fun TrackingScreen(
         }
     }
      */
-    // The main layout is a Column that stacks the grid, map, and button.
-    Column(Modifier.fillMaxSize()) {
-        // This inner Column holds the dynamic grid and will expand to fill available space.
-        Column(modifier = Modifier.fillMaxWidth()) {
-            // Group all fields by their row number. This returns a Map<Int, List<SensorFieldState>>.
-            val fieldsByRow = state.fields.groupBy { it.rowNr }
 
-            // Get the sorted row numbers to ensure the layout is in the correct order.
-            val sortedRows = fieldsByRow.keys.sorted()
+    Box(modifier = Modifier.fillMaxSize()) {
+        // The main layout is a Column that stacks the grid, map, and button.
+        Column(Modifier.fillMaxSize()) {
+            // This inner Column holds the dynamic grid and will expand to fill available space.
+            Column(modifier = Modifier.fillMaxWidth()) {
+                // Group all fields by their row number. This returns a Map<Int, List<SensorFieldState>>.
+                val fieldsByRow = state.fields.groupBy { it.rowNr }
 
-            // Create a Row for each group of fields.
-            sortedRows.forEach { rowNr ->
-                val fieldsInRow = fieldsByRow[rowNr]?.sortedBy { it.colNr } ?: emptyList()
+                // Get the sorted row numbers to ensure the layout is in the correct order.
+                val sortedRows = fieldsByRow.keys.sorted()
 
-                // Each Row in the column will take up a proportional amount of the vertical space.
-                Row {
-                    // Add each SensorFieldView to the Row.
-                    fieldsInRow.forEach { fieldState ->
-                        SensorFieldView(
-                            modifier = Modifier
-                                .weight(1f), // Distribute width equally among all columns in this row
-                            onLongClick = { onFieldLongClick(fieldState) },
-                            fieldState = fieldState
-                        )
+                // Create a Row for each group of fields.
+                sortedRows.forEach { rowNr ->
+                    val fieldsInRow = fieldsByRow[rowNr]?.sortedBy { it.colNr } ?: emptyList()
+
+                    // Each Row in the column will take up a proportional amount of the vertical space.
+                    Row {
+                        // Add each SensorFieldView to the Row.
+                        fieldsInRow.forEach { fieldState ->
+                            SensorFieldView(
+                                modifier = Modifier
+                                    .weight(1f), // Distribute width equally among all columns in this row
+                                onLongClick = { onFieldLongClick(fieldState) },
+                                fieldState = fieldState
+                            )
+                        }
                     }
+                }
+            }
+
+            // Conditionally display the map which will expand.
+            if (showMap) {
+                // This Box will expand to fill the remaining space
+                Box(modifier = Modifier.weight(1f)) {
+                    mapContent() // Invoke the passed-in composable
                 }
             }
         }
 
-        // Conditionally show the Map placeholder below the grid.
-        if (showMap) {
-            mapContent()
-        } else if (showLapButton) {
-            // 2. If there's NO map but there IS a lap button,
-            // add a weighted Spacer to push the button to the bottom.
-            Spacer(modifier = Modifier.weight(1f))
-        }
-
-        // Conditionally show the Lap Button at the very bottom.
+        // 2. Conditionally show the Lap Button, now aligned to the bottom of the parent Box.
+        // This makes it "float" on top of the content in the Column above.
         if (showLapButton) {
-            LapButton(onClick = onLapButtonClick)
+            LapButton(
+                modifier = Modifier.align(Alignment.BottomCenter), // Align to bottom of the Box
+                onClick = onLapButtonClick
+            )
         }
     }
 }
@@ -153,10 +159,14 @@ private fun MapPlaceholder(modifier: Modifier = Modifier) {
  * A styled button for triggering a new lap.
  */
 @Composable
-private fun LapButton(onClick: () -> Unit) {
+private fun LapButton(
+    modifier: Modifier = Modifier, // 3. Accept a modifier
+    onClick: () -> Unit
+) {
     Button(
         onClick = onClick,
-        modifier = Modifier
+        // Combine the passed-in modifier with the existing ones.
+        modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
