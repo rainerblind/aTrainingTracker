@@ -89,6 +89,9 @@ public class FilterManager {
     public void createFilter(FilterData filterData) {
         if (DEBUG) Log.i(TAG, "createFilter: " + filterData.getHashKey());
 
+        // When it is not possible to filter, we simply return
+        if (!filterData.sensorType.filteringPossible) return;
+
         // if the requested filter is already there, we simply return
         if (myFilterMap.containsKey(filterData.getHashKey())) {
             if (DEBUG) Log.i(TAG, "filter already there");
