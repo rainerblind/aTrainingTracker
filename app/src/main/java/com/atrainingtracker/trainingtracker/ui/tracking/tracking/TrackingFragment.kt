@@ -77,7 +77,9 @@ class TrackingFragment : Fragment() {
 
                             EditSensorFieldDialog(
                                 viewModel = editViewModel,
-                                onDismissRequest = { editingSensorFieldId = null },
+                                onDismissRequest = {
+                                    editViewModel.loadInitialState()
+                                    editingSensorFieldId = null },
                                 onConfigureFilter = {
                                     // 2. Instead of showing the old fragment, just set the state
                                     showConfigureFilterDialogForId = currentId

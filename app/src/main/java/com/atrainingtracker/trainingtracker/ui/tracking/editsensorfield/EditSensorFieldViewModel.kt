@@ -49,7 +49,7 @@ class EditSensorFieldViewModel(
         loadInitialState()
     }
 
-    private fun loadInitialState() {
+    fun loadInitialState() {
         viewModelScope.launch {
             // Fetch the config just once to populate the dialog initially.
             initialConfig = configFromRepoFlow.firstOrNull() ?: return@launch
@@ -186,7 +186,6 @@ class EditSensorFieldViewModel(
             state.selectedFilterType
         }
     }
-
 
     fun saveChanges() {
         val currentState = _uiState.value
