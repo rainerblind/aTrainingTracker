@@ -10,6 +10,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.banalservice.filters.FilterType
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldConfig
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize
 import kotlinx.coroutines.flow.*
@@ -23,7 +24,10 @@ data class EditDialogUiState(
     val availableDevices: List<Pair<Long, String>> = emptyList(),
     val selectedViewSize: ViewSize = ViewSize.NORMAL,
     val availableViewSizes: List<ViewSize> = ViewSize.values().toList(),
-    val filterSummary: String = ""
+    val filterSummary: String = "",
+    val selectedFilterType: FilterType = FilterType.INSTANTANEOUS,
+    val filterConstant: Double = 1.0,
+    val movingAverageUnit: String = "sec" // "sec", "min", or "samples"
 )
 
 class EditSensorFieldViewModel(
@@ -38,65 +42,151 @@ class EditSensorFieldViewModel(
 
     // This flow will ONLY be used to receive updates from the database.
     private val configFromRepoFlow = repository.getSensorFieldConfig(sensorFieldId).filterNotNull()
+    lateinit var initialConfig: SensorFieldConfig
 
     init {
-        // 1. Load the INITIAL state once.
+        // Load the initial state once.
         loadInitialState()
-        // 2. Start a SEPARATE observer that ONLY updates the filter summary.
-        observeFilterChanges()
     }
 
     private fun loadInitialState() {
         viewModelScope.launch {
             // Fetch the config just once to populate the dialog initially.
-            val config = configFromRepoFlow.firstOrNull() ?: return@launch
+            initialConfig = configFromRepoFlow.firstOrNull() ?: return@launch
             val context = getApplication<Application>().applicationContext
 
-            _uiState.value = EditDialogUiState(
-                selectedSensorType = config.sensorType,
-                availableSensorTypesForCurrentActivityType = ActivityType.getSensorTypeArray(activityType, context).toList(),
-                selectedDeviceId = config.sourceDeviceId,
-                availableDevices = getFullDeviceList(config.sensorType),
-                selectedViewSize = config.viewSize,
-                filterSummary = config.filterType.getSummary(context, config.filterConstant)
-            )
-        }
-    }
+            var initialUnit = "sec"
+            var displayConstant = initialConfig.filterConstant
 
-    private fun observeFilterChanges() {
-        viewModelScope.launch {
-            // updating the filter summary when the database changes.
-            configFromRepoFlow.collect { updatedConfig ->
-                val newFilterSummary = updatedConfig.filterType.getSummary(getApplication(), updatedConfig.filterConstant)
-
-                // We use 'update' to safely modify only the field we care about,
-                // preserving all other user-made changes.
-                _uiState.update { currentState ->
-                    currentState.copy(filterSummary = newFilterSummary)
+            if (initialConfig.filterType == FilterType.MOVING_AVERAGE_TIME) {
+                if (initialConfig.filterConstant >= 60 && initialConfig.filterConstant % 60 == 0.0) {
+                    initialUnit = "min"
+                    displayConstant = initialConfig.filterConstant / 60
                 }
+            } else if (initialConfig.filterType == FilterType.MOVING_AVERAGE_NUMBER) {
+                initialUnit = "samples"
             }
+
+            _uiState.value = EditDialogUiState(
+                selectedSensorType = initialConfig.sensorType,
+                availableSensorTypesForCurrentActivityType = ActivityType.getSensorTypeArray(activityType, context).toList(),
+                selectedDeviceId = initialConfig.sourceDeviceId,
+                availableDevices = getFullDeviceList(initialConfig.sensorType),
+                selectedViewSize = initialConfig.viewSize,
+                filterSummary = initialConfig.filterType.getSummary(context, initialConfig.filterConstant),
+                selectedFilterType = initialConfig.filterType,
+                filterConstant = displayConstant,
+                movingAverageUnit = initialUnit
+            )
         }
     }
 
     fun onSensorTypeChanged(newSensorType: SensorType) {
         viewModelScope.launch {
+            val context = getApplication<Application>().applicationContext
+
             _uiState.update {
                 it.copy(
+                    // update the selected sensor type
                     selectedSensorType = newSensorType,
-                    selectedDeviceId = -1, // Reset device selection
-                    availableDevices = getFullDeviceList(newSensorType)
+                    // but also:
+                    // set 'Best' device as source
+                    selectedDeviceId = -1,
+                    availableDevices = getFullDeviceList(newSensorType),
+                    // set filter to instantaneous
+                    filterSummary = FilterType.INSTANTANEOUS.getSummary(context, 1.0),
+                    selectedFilterType = FilterType.INSTANTANEOUS,
+                    filterConstant = 1.0
                 )
             }
         }
     }
 
     fun onDeviceChanged(newDeviceId: Long) {
-        _uiState.update { it.copy(selectedDeviceId = newDeviceId) }
+        val context = getApplication<Application>().applicationContext
+
+        _uiState.update {
+            it.copy(
+                selectedDeviceId = newDeviceId
+            )
+        }
     }
 
     fun onViewSizeChanged(newViewSize: ViewSize) {
         _uiState.update { it.copy(selectedViewSize = newViewSize) }
     }
+
+    fun onFilterTypeChanged(newFilterType: FilterType) {
+        _uiState.update {
+            it.copy(
+                selectedFilterType = newFilterType,
+                filterSummary = newFilterType.getSummary(getApplication<Application>().applicationContext, it.filterConstant)
+            )
+        }
+    }
+
+    fun onFilterConstantChanged(newConstant: Double) {
+        _uiState.update {
+            it.copy(
+                filterConstant = newConstant,
+                filterSummary = it.selectedFilterType.getSummary(getApplication<Application>().applicationContext, newConstant)
+            )
+        }
+    }
+
+    fun onUnitChanged(newUnit: String) {
+        _uiState.update {
+            it.copy(
+                movingAverageUnit = newUnit,
+                filterSummary = it.selectedFilterType.getSummary(getApplication<Application>().applicationContext, it.filterConstant)
+            )
+        }
+    }
+
+    fun onFilterEditCancel() {
+        val context = getApplication<Application>().applicationContext
+
+        _uiState.update {
+            // when the sensor type and the source device is unchanged
+            if (it.selectedSensorType == initialConfig.sensorType &&
+                it.selectedDeviceId == initialConfig.sourceDeviceId) {
+                // then copy the filter stuff rom the initial config
+                it.copy(
+                    filterSummary = initialConfig.filterType.getSummary(context, initialConfig.filterConstant),
+                    selectedFilterType = FilterType.INSTANTANEOUS,
+                    filterConstant = 1.0
+                )
+
+            }
+            else {
+                // otherwise, set it to the instantaneous filter
+                it.copy(
+                    filterSummary = FilterType.INSTANTANEOUS.getSummary(context, 1.0),
+                    selectedFilterType = FilterType.INSTANTANEOUS,
+                    filterConstant = 1.0
+                )
+            }
+        }
+    }
+
+    private fun getFinalFilterConstant(): Double {
+        val state = _uiState.value
+        return if (state.selectedFilterType == FilterType.MOVING_AVERAGE_TIME && state.movingAverageUnit == "min") {
+            state.filterConstant * 60
+        } else {
+            state.filterConstant
+        }
+    }
+
+    private fun getFinalFilterType(): FilterType {
+        val state = _uiState.value
+        return if (state.selectedFilterType == FilterType.MOVING_AVERAGE_TIME && state.movingAverageUnit == "samples") {
+            FilterType.MOVING_AVERAGE_NUMBER
+        } else {
+            state.selectedFilterType
+        }
+    }
+
 
     fun saveChanges() {
         val currentState = _uiState.value
@@ -109,6 +199,13 @@ class EditSensorFieldViewModel(
                 currentState.selectedViewSize,
                 currentState.selectedDeviceId
             )
+            // TODO: make one fun ...
+            repository.updateSensorFilter(
+                rowId = sensorFieldId,
+                filterType = getFinalFilterType(),
+                filterConstant = getFinalFilterConstant()
+            )
+
         }
     }
 
