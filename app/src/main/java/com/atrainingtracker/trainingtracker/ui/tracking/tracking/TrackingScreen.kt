@@ -170,7 +170,10 @@ private fun LapButton(
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
-        Text(stringResource(id = R.string.Lap))
+        Text(
+            text = stringResource(id = R.string.Lap),
+            style = MaterialTheme.typography.displayMedium
+        )
     }
 }
 
