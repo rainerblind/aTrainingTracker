@@ -89,8 +89,11 @@ public class FilterManager {
     public void createFilter(FilterData filterData) {
         if (DEBUG) Log.i(TAG, "createFilter: " + filterData.getHashKey());
 
-        // When it is not possible to filter, we simply return
-        if (!filterData.sensorType.filteringPossible) return;
+        // When it is not possible to filter, we set the filter type to instantaneous
+        // This is necessary to avoid NullPointerExceptions later on ...
+        if (!filterData.sensorType.filteringPossible) {
+            filterData.filterType = FilterType.INSTANTANEOUS;
+        }
 
         // if the requested filter is already there, we simply return
         if (myFilterMap.containsKey(filterData.getHashKey())) {
