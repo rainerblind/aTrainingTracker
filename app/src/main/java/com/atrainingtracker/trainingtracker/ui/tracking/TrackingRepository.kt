@@ -8,7 +8,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.ServiceConnection
 import android.os.IBinder
-import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.atrainingtracker.banalservice.ActivityType
@@ -283,13 +282,11 @@ class TrackingRepository private constructor(private val application: Applicatio
         // The flow now collects from the trigger.
         return configUpdateTrigger.map {
             // When the trigger changes, this 'map' block re-executes.
-            Log.d("TrackingRepository", "Config update triggered. Refetching configs for tab: $tabViewId")
             fetchSensorFieldConfigs(tabViewId)
         }.flowOn(Dispatchers.IO)
     }
 
     private fun fetchSensorFieldConfigs(tabViewId: Long): List<SensorFieldConfig> {
-        Log.i("TrackingRepository", "getSensorFieldConfigsForView called for tabViewId: $tabViewId")
 
         val dbManager = TrackingViewsDatabaseManager.getInstance(application)
         val devicesDbManager = DevicesDatabaseManager.getInstance(application)
@@ -335,7 +332,6 @@ class TrackingRepository private constructor(private val application: Applicatio
                     else {
                         null
                     }
-                    Log.i("TrackingRepository", "Source device ID: $sourceDeviceId, Name: $deviceName")
 
                     fieldList.add(
                         SensorFieldConfig(

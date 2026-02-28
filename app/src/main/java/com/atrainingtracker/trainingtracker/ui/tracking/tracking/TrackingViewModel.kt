@@ -2,7 +2,6 @@ package com.atrainingtracker.trainingtracker.ui.tracking.tracking
 
 import android.app.Application
 import android.content.SharedPreferences
-import android.util.Log
 import androidx.compose.ui.graphics.Color
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
@@ -137,7 +136,6 @@ class TrackingViewModel(
         // Iterate through all the live data coming from the service
         for (sensorData in allSensorData) {
             val uniqueHash = Objects.hash(sensorData.sensorType, sensorData.filterType, sensorData.filterConstant, sensorData.deviceName)
-            Log.i("TrackingViewModel", "Processing sensor data: ${sensorData.sensorType}, ${sensorData.filterConstant}, ${sensorData.deviceName}: ${sensorData.stringValue}")
 
             // 2. Find all fields that match this hash.
             val fieldsToUpdate = fieldsByHash[uniqueHash]
