@@ -1,14 +1,11 @@
 package com.atrainingtracker.trainingtracker.ui.tracking.tracking
 
-import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -20,10 +17,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.atrainingtracker.trainingtracker.TrainingApplication
-import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapTrackingAndFollowingFragment
-import com.atrainingtracker.trainingtracker.ui.theme.aTrainingTrackerTheme // Import your Compose theme
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.ConfigureFilterDialog
 import com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldDialog
 import com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModel
@@ -58,7 +53,7 @@ class TrackingFragment : Fragment() {
         // Create a ComposeView and set its content
         return ComposeView(requireContext()).apply {
             setContent {
-                aTrainingTrackerTheme {
+                ATrainingTrackerTheme {
                     val uiState by viewModel.uiState.collectAsState()
                     val activityType by viewModel.activityType.collectAsState()
 
