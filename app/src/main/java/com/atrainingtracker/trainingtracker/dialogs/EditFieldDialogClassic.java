@@ -44,7 +44,7 @@ import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.ActivityType;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
-import com.atrainingtracker.banalservice.fragments.ConfigureFilterDialogFragment;
+import com.atrainingtracker.banalservice.fragments.ConfigureFilterDialogFragmentClassic;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.views.DeviceIdAndNameArrayAdapter;
 import com.atrainingtracker.trainingtracker.views.SensorArrayAdapter;
@@ -57,9 +57,9 @@ import java.util.LinkedList;
  * Created by rainer on 05.01.17.
  */
 
-
-public class EditFieldDialog extends DialogFragment {
-    public static final String TAG = EditFieldDialog.class.getName();
+@Deprecated
+public class EditFieldDialogClassic extends DialogFragment {
+    public static final String TAG = EditFieldDialogClassic.class.getName();
     public static final String TRACKING_VIEW_CHANGED_INTENT = "TRACKING_VIEW_CHANGED_INTENT";
     protected static final Integer[] TEXT_SIZES = {20, 25, 30, 35, 40, 45, 50, 60, 70, 80};
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
@@ -68,7 +68,7 @@ public class EditFieldDialog extends DialogFragment {
     private static final String SENSOR_TYPE = "SENSOR_TYPE";
     private static final String DEVICE_ID = "DEVICE_ID";
     private static final String TEXT_SIZE = "TEXT_SIZE";
-    protected final IntentFilter mFilterChangedFilter = new IntentFilter(ConfigureFilterDialogFragment.FILTERS_CHANGED_INTENT);
+    protected final IntentFilter mFilterChangedFilter = new IntentFilter(ConfigureFilterDialogFragmentClassic.FILTERS_CHANGED_INTENT);
     private ActivityType mActivityType;
     private View mMainView;
     private long mRowId;
@@ -110,10 +110,10 @@ public class EditFieldDialog extends DialogFragment {
     }
 
     @NonNull
-    public static EditFieldDialog newInstance(@NonNull ActivityType activityType, @NonNull TrackingViewsDatabaseManager.ViewInfo viewInfo) {
+    public static EditFieldDialogClassic newInstance(@NonNull ActivityType activityType, @NonNull TrackingViewsDatabaseManager.ViewInfo viewInfo) {
         if (DEBUG) Log.i(TAG, "newInstance");
 
-        EditFieldDialog fragment = new EditFieldDialog();
+        EditFieldDialogClassic fragment = new EditFieldDialogClassic();
 
         Bundle args = new Bundle();
         args.putString(ACTIVITY_TYPE, activityType.name());
@@ -310,13 +310,13 @@ public class EditFieldDialog extends DialogFragment {
 
             final TrackingViewsDatabaseManager.FilterInfo filterInfo = TrackingViewsDatabaseManager.getInstance(getContext()).getFilterInfo(mRowId);
 
-            button.setText(ConfigureFilterDialogFragment.getFilterSummary(getContext(), filterInfo.filterType, filterInfo.filterConstant));
+            button.setText(filterInfo.filterType.getSummary(getContext(), filterInfo.filterConstant));
 
             button.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    ConfigureFilterDialogFragment configureFilterDialogFragment = ConfigureFilterDialogFragment.newInstance(mRowId, filterInfo.filterType, filterInfo.filterConstant);
-                    configureFilterDialogFragment.show(getFragmentManager(), ConfigureFilterDialogFragment.TAG);
+                    ConfigureFilterDialogFragmentClassic configureFilterDialogFragment = ConfigureFilterDialogFragmentClassic.newInstance(mRowId, filterInfo.filterType, filterInfo.filterConstant);
+                    configureFilterDialogFragment.show(getFragmentManager(), ConfigureFilterDialogFragmentClassic.TAG);
                 }
             });
         } else {

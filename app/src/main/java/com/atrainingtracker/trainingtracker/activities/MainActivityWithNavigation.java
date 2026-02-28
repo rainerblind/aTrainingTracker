@@ -49,6 +49,7 @@ import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFragmen
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
 import com.atrainingtracker.trainingtracker.segments.StarredSegmentsTabbedContainer;
 import com.atrainingtracker.trainingtracker.tracker.TrackerService;
+import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsFragment;
 import com.google.android.material.navigation.NavigationView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -91,7 +92,6 @@ import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManage
 import com.atrainingtracker.trainingtracker.dialogs.EnableBluetoothDialog;
 import com.atrainingtracker.trainingtracker.dialogs.GPSDisabledDialog;
 import com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialog;
-import com.atrainingtracker.trainingtracker.fragments.StartAndTrackingFragmentTabbedContainer;
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesListFragment;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.MyLocationsFragment;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapTrackingFragment;
@@ -133,7 +133,6 @@ public class MainActivityWithNavigation
         RemoteDevicesSettingsInterface,
         BANALService.GetBanalServiceInterface,
         PreferenceFragmentCompat.OnPreferenceStartScreenCallback,
-        StartAndTrackingFragmentTabbedContainer.UpdateActivityTypeInterface,
         StarredSegmentsListFragment.StartSegmentDetailsActivityInterface,
         StartOrResumeInterface {
     public static final String SELECTED_FRAGMENT_ID = "SELECTED_FRAGMENT_ID";
@@ -615,8 +614,8 @@ public class MainActivityWithNavigation
 
         switch (mSelectedFragmentId) {
             case R.id.drawer_start_tracking:
-                mFragment = StartAndTrackingFragmentTabbedContainer.newInstance(getActivityType(), StartAndTrackingFragmentTabbedContainer.CONTROL_ITEM);
-                tag = StartAndTrackingFragmentTabbedContainer.TAG;
+                mFragment = TrackingTabsFragment.newInstance();
+                tag = TrackingTabsFragment.TAG;
                 break;
 
             case R.id.drawer_map:
@@ -720,14 +719,6 @@ public class MainActivityWithNavigation
         } else {
             return mBanalServiceComm.getActivityType();
         }
-    }
-
-    @Override
-    public void updateActivityType(int selectedItem) {
-        FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
-        fragmentTransaction.replace(R.id.content, StartAndTrackingFragmentTabbedContainer.newInstance(getActivityType(), selectedItem));
-        // if (addToBackStack) { fragmentTransaction.addToBackStack(null); }
-        fragmentTransaction.commit();
     }
 
     @Override

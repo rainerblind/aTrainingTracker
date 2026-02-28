@@ -36,7 +36,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 
-import static com.atrainingtracker.trainingtracker.dialogs.EditFieldDialog.TRACKING_VIEW_CHANGED_INTENT;
+import static com.atrainingtracker.trainingtracker.dialogs.EditFieldDialogClassic.TRACKING_VIEW_CHANGED_INTENT;
 
 import androidx.core.content.ContextCompat;
 
@@ -88,6 +88,12 @@ public class FilterManager {
 
     public void createFilter(FilterData filterData) {
         if (DEBUG) Log.i(TAG, "createFilter: " + filterData.getHashKey());
+
+        // When it is not possible to filter, we set the filter type to instantaneous
+        // This is necessary to avoid NullPointerExceptions later on ...
+        if (!filterData.sensorType.filteringPossible) {
+            filterData.filterType = FilterType.INSTANTANEOUS;
+        }
 
         // if the requested filter is already there, we simply return
         if (myFilterMap.containsKey(filterData.getHashKey())) {

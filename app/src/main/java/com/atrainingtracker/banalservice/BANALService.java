@@ -54,6 +54,7 @@ import java.util.Set;
 import static com.atrainingtracker.trainingtracker.TrainingApplication.REQUEST_NEW_LAP;
 import static com.atrainingtracker.trainingtracker.TrainingApplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES;
 
+import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 
 public class BANALService
@@ -400,6 +401,7 @@ public class BANALService
         return cDeviceManager.getMainSensorStringValue(deviceID);
     }
 
+    @NonNull
     protected ActivityType getActivityType() {
         if (DEBUG) Log.d(TAG, "getActivityType");
 
@@ -486,8 +488,11 @@ public class BANALService
         if (DEBUG) Log.d(TAG, "onCreate");
 
         cSensorManager = new MySensorManager(this);
-        cFilterManager = new FilterManager(this, cDeviceManager, cSensorManager);
         cDeviceManager = new DeviceManager(this, cSensorManager);
+        cFilterManager = new FilterManager(this, cDeviceManager, cSensorManager);
+
+        // when there is a FilterManager, we can create the devices that need filtered data.
+        cDeviceManager.createVerticalSpeedAndSlopeDevice();
 
         ContextCompat.registerReceiver(this, mStartSearchForPairedDevices, new IntentFilter(REQUEST_START_SEARCH_FOR_PAIRED_DEVICES), ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mNewLapReceiver, new IntentFilter(REQUEST_NEW_LAP), ContextCompat.RECEIVER_NOT_EXPORTED);
@@ -628,6 +633,7 @@ public class BANALService
             return cDeviceManager.getIdsOfFoundDevices();
         }
 
+        @NonNull
         public ActivityType getActivityType() {
             return BANALService.this.getActivityType();
         }

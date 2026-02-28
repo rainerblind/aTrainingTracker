@@ -48,14 +48,13 @@ import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 import com.atrainingtracker.banalservice.filters.FilterData;
-import com.atrainingtracker.banalservice.filters.FilterType;
 import com.atrainingtracker.banalservice.filters.FilteredSensorData;
 import com.atrainingtracker.trainingtracker.activities.ConfigTrackingViewsActivity;
 import com.atrainingtracker.trainingtracker.activities.ConfigViewsActivity;
 import com.atrainingtracker.trainingtracker.MyHelper;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
-import com.atrainingtracker.trainingtracker.dialogs.EditFieldDialog;
+import com.atrainingtracker.trainingtracker.dialogs.EditFieldDialogClassic;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapTrackingAndFollowingFragment;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapTrackingFragment;
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore;
@@ -63,9 +62,9 @@ import com.atrainingtracker.trainingtracker.settings.SettingsDataStore;
 import java.util.HashMap;
 import java.util.TreeMap;
 
-import static com.atrainingtracker.trainingtracker.dialogs.EditFieldDialog.TRACKING_VIEW_CHANGED_INTENT;
+import static com.atrainingtracker.trainingtracker.dialogs.EditFieldDialogClassic.TRACKING_VIEW_CHANGED_INTENT;
 
-public class TrackingFragment extends BaseTrackingFragment {
+public class TrackingFragmentClassic extends BaseTrackingFragment {
     public static final String TAG = "TrackingFragment";
     public static final String VIEW_ID = "VIEW_ID";
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
@@ -108,8 +107,8 @@ public class TrackingFragment extends BaseTrackingFragment {
     };
 
     @NonNull
-    public static TrackingFragment newInstance(long viewId, @NonNull ActivityType activityType) {
-        TrackingFragment trackingFragment = new TrackingFragment();
+    public static TrackingFragmentClassic newInstance(int viewId, @NonNull ActivityType activityType) {
+        TrackingFragmentClassic trackingFragment = new TrackingFragmentClassic();
 
         Bundle args = new Bundle();
         args.putLong(VIEW_ID, viewId);
@@ -128,10 +127,10 @@ public class TrackingFragment extends BaseTrackingFragment {
     //}
 
     @NonNull
-    public static TrackingFragment newInstance(long viewId, @NonNull Mode mode, @NonNull ActivityType activityType) {
+    public static TrackingFragmentClassic newInstance(long viewId, @NonNull Mode mode, @NonNull ActivityType activityType) {
         if (DEBUG) Log.i(TAG, "newInstance viewId=" + viewId + ", mode=" + mode);
 
-        TrackingFragment trackingFragment = new TrackingFragment();
+        TrackingFragmentClassic trackingFragment = new TrackingFragmentClassic();
 
         Bundle args = new Bundle();
         args.putLong(VIEW_ID, viewId);
@@ -140,37 +139,6 @@ public class TrackingFragment extends BaseTrackingFragment {
         trackingFragment.setArguments(args);
 
         return trackingFragment;
-    }
-
-    @NonNull
-    public static String getShortFilterSummary(@NonNull Context context, @NonNull FilterType filterType, double filterConstant) {
-        switch (filterType) {
-            case INSTANTANEOUS: // instantaneous
-                return context.getString(R.string.filter_instantaneous_short);
-
-            case AVERAGE: // average (entire workout)
-                return context.getString(R.string.filter_average_short) + " ";
-
-            case MOVING_AVERAGE_TIME:
-                if (filterConstant % 60 == 0) { // 5 min moving average
-                    return (int) (filterConstant / 60) + " " + context.getString(R.string.units_minutes) + " " + context.getString(R.string.filter_moving_average_short) + " ";
-                } else { // 5 sec moving average
-                    return (int) filterConstant + " " + context.getString(R.string.units_seconds) + " " + context.getString(R.string.filter_moving_average_short) + " ";
-                }
-
-            case MOVING_AVERAGE_NUMBER: // 5 samples moving average
-                return filterConstant + " " + context.getString(R.string.units_samples) + " " + context.getString(R.string.filter_moving_average_short) + " ";
-
-            case EXPONENTIAL_SMOOTHING:  // exponential smoothing with \alpha = 0.9
-                return context.getString(R.string.filter_exponential_smoothing_short_format, filterConstant) + " ";
-
-            case MAX_VALUE:
-                return context.getString(R.string.max) + " ";
-
-            default:
-                return "";
-        }
-
     }
 
     @Override
@@ -202,7 +170,7 @@ public class TrackingFragment extends BaseTrackingFragment {
 
         mLayoutInflater = inflater;
 
-        View view = inflater.inflate(R.layout.tracking_fragment, container, false);
+        View view = inflater.inflate(R.layout.deprecated_tracking_fragment, container, false);
 
         mButtonLap = view.findViewById(R.id.buttonLap);
 
@@ -414,7 +382,7 @@ public class TrackingFragment extends BaseTrackingFragment {
             TextView tv = new TextView(getContext());
             // tv.setBackgroundColor(getResources().getColor(R.color.my_white));
             tv.setTextSize(TEXT_SIZE_TITLE);
-            String filterSummary = getShortFilterSummary(getContext(), viewInfo.filterType(), viewInfo.filterConstant());
+            String filterSummary = viewInfo.filterType().getShortSummary(getContext(), viewInfo.filterConstant());
             if (deviceName == null) {
                 tv.setText(filterSummary + getString(sensorType.getFullNameId()) + ":");
             } else {
@@ -439,8 +407,8 @@ public class TrackingFragment extends BaseTrackingFragment {
     }
 
     private void showEditFieldDialog(@NonNull TrackingViewsDatabaseManager.ViewInfo viewInfo) {
-        EditFieldDialog editFieldDialog = EditFieldDialog.newInstance(mActivityType, viewInfo);
-        editFieldDialog.show(getFragmentManager(), EditFieldDialog.TAG);
+        EditFieldDialogClassic editFieldDialogClassic = EditFieldDialogClassic.newInstance(mActivityType, viewInfo);
+        editFieldDialogClassic.show(getFragmentManager(), EditFieldDialogClassic.TAG);
     }
 
 

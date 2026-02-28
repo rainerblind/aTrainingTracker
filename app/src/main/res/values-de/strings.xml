@@ -680,27 +680,13 @@
     <string name="smartphone">Smartphone</string>
     <string name="no_sensor_available">Kein Sensor vorhanden</string>
     <string name="bestSensor">Bester</string>
-    <string name="configure_filter">Glättung anpassen</string>
-
 
     <string name="units_seconds_long">Sekunden</string>
     <string name="units_minutes_long">Minuten</string>
-    <string name="filter_instantaneous">keine Glättung</string>
-    <string name="filter_average">Durchschnitt (gesamte Einheit)</string>
-    <string name="filter_exponential_smoothing">Exponentielle Glättung</string>
-    <string name="filter_moving_average">Gleitender Durchschnitt</string>
-    <string name="filter_exponential_smoothing_format">"Exponentielle Glättung mit α=%1$f"</string>
-    <string name="filter_exponential_smoothing_short_format">Exp α=%1$f</string>
     <string name="configSensor">Sensor:</string>
     <string name="configSource">Quelle:</string>
     <string name="configSmoothing">Glättung:</string>
     <string name="configSize">Größe:</string>
-    <string name="filter_details__instantaneous">Der aktuelle Wert wird angezeigt.</string>
-    <string name="filter_details__average">Der Durchschnitt von der gesamten Einheit wird angezeigt.</string>
-    <string name="filter_details__max">Der maximale Wert der Einheit wird angezeigt.</string>
-    <string name="filter_details__moving_average_time">Der Durchschnitt der letzten %1$d %2$s wird angezeigt.</string>
-    <string name="filter_details__moving_average_number">Der Durchschnitt der letzten %1$d Messungen wird angezeigt.</string>
-    <string name="filter_details__exponential_smoothing">Exponentielle Glättung mit 0 &lt; α &#8804; 1.  Wert_angezeigt = α Wert_gemessen + (1-α) Wert_angezeigt_alt.  Je kleiner α, desto glatter werden die angezeigten Werte.  D.h. bei α=1 wird der aktuell gemessene Wert angezeigt, mit α in der Nähe von 0 werden die Werte sehr stark geglättet.</string>
     <string name="privacy_policy">Datenschutz</string>
     <string name="notification_channel_name__tracking">Tracking</string>
     <string name="notification_channel_description__tracking">Benachrichtigungen während der Aufzeichnugn von Einheiten</string>
@@ -914,5 +900,11 @@
     <!-- drawer -->
     <string name="drawer__training">Training</string>
     <string name="drawer__maps">Karten</string>
+
+    <!-- sensor view settings -->
+    <string name="source">Quelle</string>
+    <string name="sensor">Sensor</string>
+    <string name="text_size">Größe</string>
+    <string name="filter">Glättung</string>
 
 </resources>

@@ -55,9 +55,9 @@ import java.util.LinkedList;
 /**
  * Created by rainer on 20.01.16.
  */
-public class StartAndTrackingFragmentTabbedContainer extends Fragment {
+public class StartAndTrackingFragmentTabbedContainerClassic extends Fragment {
 
-    public static final String TAG = StartAndTrackingFragmentTabbedContainer.class.getSimpleName();
+    public static final String TAG = StartAndTrackingFragmentTabbedContainerClassic.class.getSimpleName();
     public static final String ACTIVITY_TYPE = "ACTIVITY_TYPE";
     public static final String SELECTED_ITEM = "SELECTED_ITEM";
     public static final int CONTROL_ITEM = 0;
@@ -130,10 +130,10 @@ public class StartAndTrackingFragmentTabbedContainer extends Fragment {
     };
 
     @NonNull
-    public static StartAndTrackingFragmentTabbedContainer newInstance(@NonNull ActivityType activityType, int selectedItem) {
+    public static StartAndTrackingFragmentTabbedContainerClassic newInstance(@NonNull ActivityType activityType, int selectedItem) {
         if (DEBUG) Log.i(TAG, "newInstance");
 
-        StartAndTrackingFragmentTabbedContainer startAndTrackingFragmentTabbedContainer = new StartAndTrackingFragmentTabbedContainer();
+        StartAndTrackingFragmentTabbedContainerClassic startAndTrackingFragmentTabbedContainer = new StartAndTrackingFragmentTabbedContainerClassic();
 
         Bundle args = new Bundle();
         args.putString(ACTIVITY_TYPE, activityType.name());
@@ -370,9 +370,9 @@ public class StartAndTrackingFragmentTabbedContainer extends Fragment {
             if (position == 0) {
                 return new ControlTrackingFragment();
             } else if (position < getCount()) {
-                return TrackingFragment.newInstance(mViewIdList.get(position - 1), mActivityType);
+                return TrackingFragmentClassic.newInstance(mViewIdList.get(position - 1), mActivityType);
             } else {
-                return TrackingFragment.newInstance(mViewIdList.getLast(), mActivityType);
+                return TrackingFragmentClassic.newInstance(mViewIdList.getLast(), mActivityType);
             }
         }
 

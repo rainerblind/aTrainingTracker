@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="filter_configure_smoothing">Configure Smoothing</string>
+
+    <string name="filter_instantaneous">instantaneous</string>
+    <string name="filter_instantaneous_short" translatable="false" />
+    <string name="filter_average">average (entire workout)</string>
+    <string name="filter_average_short" translatable="false">Ø</string>
+    <string name="filter_exponential_smoothing">exponential smoothing</string>
+    <string name="filter_moving_average">moving average</string>
+    <string name="filter_moving_average_short" translatable="false">Ø</string>
+    <string name="filter_exponential_smoothing_format">exponential smoothing with α=%1.2f</string>
+    <string name="filter_exponential_smoothing_short_format">exp α=%1.1f</string>
+
+    <string name="filter_details__instantaneous">Show the current value.</string>
+    <string name="filter_details__average">Show the average value of the entire workout.</string>
+    <string name="filter_details__max">Show the maximal value of the workout.</string>
+    <string name="filter_details__moving_average_time">Show the average of the last %1$d %2$s.</string>
+    <string name="filter_details__moving_average_number">Show the average value of the last %1$d received values.</string>
+    <string name="filter_details__exponential_smoothing">Exponential smoothing with 0 &lt; α &#8804; 1. Displayed_value = α measured_value + (1-α) display_value_old. The smaller α, the smoother the displayed value. I.e., α=1 gives the current measurement, α close to 0 results in super smooth displayed values.</string>
+
+    <string name="filter_unit">Unit</string>
+    <string name="filter_type">Smoothing Type</string>
+    <string name="filter_value">Value</string>
+
+
+</resources>

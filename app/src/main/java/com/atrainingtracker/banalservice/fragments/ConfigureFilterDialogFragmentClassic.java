@@ -21,7 +21,6 @@ package com.atrainingtracker.banalservice.fragments;
 import androidx.appcompat.app.AlertDialog;
 import android.app.Dialog;
 import android.content.ContentValues;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.database.SQLException;
@@ -48,9 +47,10 @@ import com.atrainingtracker.banalservice.filters.FilterType;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager.TrackingViewsDbHelper;
 
-public class ConfigureFilterDialogFragment
+@Deprecated
+public class ConfigureFilterDialogFragmentClassic
         extends DialogFragment {
-    public static final String TAG = ConfigureFilterDialogFragment.class.getName();
+    public static final String TAG = ConfigureFilterDialogFragmentClassic.class.getName();
     public static final String FILTERS_CHANGED_INTENT = "FILTERS_CHANGED_INTENT";
     private static final boolean DEBUG = BANALService.getDebug(false);
     long mRowId;
@@ -64,8 +64,8 @@ public class ConfigureFilterDialogFragment
     View mDivider;
     TextView mTvFilterDetails;
 
-    public static ConfigureFilterDialogFragment newInstance(long rowId, FilterType filterType, double filterConstant) {
-        ConfigureFilterDialogFragment configureFilterDialogFragment = new ConfigureFilterDialogFragment();
+    public static ConfigureFilterDialogFragmentClassic newInstance(long rowId, FilterType filterType, double filterConstant) {
+        ConfigureFilterDialogFragmentClassic configureFilterDialogFragment = new ConfigureFilterDialogFragmentClassic();
 
         Bundle args = new Bundle();
         args.putLong(TrackingViewsDbHelper.ROW_ID, rowId);
@@ -74,36 +74,6 @@ public class ConfigureFilterDialogFragment
         configureFilterDialogFragment.setArguments(args);
 
         return configureFilterDialogFragment;
-    }
-
-    public static String getFilterSummary(Context context, FilterType filterType, double filterConstant) {
-        switch (filterType) {
-            case INSTANTANEOUS: // instantaneous
-                return context.getString(R.string.filter_instantaneous);
-
-            case AVERAGE: // average (entire workout)
-                return context.getString(R.string.filter_average);
-
-            case MOVING_AVERAGE_TIME:
-                if (filterConstant % 60 == 0) { // 5 min moving average
-                    return (int) (filterConstant / 60) + " " + context.getString(R.string.units_minutes) + " " + context.getString(R.string.filter_moving_average);
-                } else { // 5 sec moving average
-                    return (int) filterConstant + " " + context.getString(R.string.units_seconds) + " " + context.getString(R.string.filter_moving_average);
-                }
-
-            case MOVING_AVERAGE_NUMBER: // 5 samples moving average
-                return filterConstant + " " + context.getString(R.string.units_samples) + " " + context.getString(R.string.filter_moving_average);
-
-            case EXPONENTIAL_SMOOTHING:  // exponential smoothing with \alpha = 0.9
-                return context.getString(R.string.filter_exponential_smoothing_format, filterConstant);
-
-            case MAX_VALUE:
-                return context.getString(R.string.max);
-
-            default:
-                return null;
-        }
-
     }
 
     @Override
@@ -124,7 +94,7 @@ public class ConfigureFilterDialogFragment
 
         TextView title = new TextView(getActivity());
         // You Can Customise your Title here
-        title.setText(R.string.configure_filter);
+        title.setText(R.string.filter_configure_smoothing);
 //        title.setBackgroundColor(getResources().getColor(R.color.my_blue));
         title.setPadding(10, 10, 10, 10);
         title.setGravity(Gravity.CENTER);
@@ -165,7 +135,7 @@ public class ConfigureFilterDialogFragment
         });
         builder.setNegativeButton(getString(R.string.Cancel), new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int id) {
-                ConfigureFilterDialogFragment.this.getDialog().cancel();
+                ConfigureFilterDialogFragmentClassic.this.getDialog().cancel();
             }
         });
         return builder.create();
