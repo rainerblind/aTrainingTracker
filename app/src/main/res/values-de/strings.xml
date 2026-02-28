@@ -220,7 +220,7 @@
     <string name="power">Leistung</string>
     <string name="power_short">Leistung</string>
     <string name="speed">Geschwindigkeit</string>
-    <string name="speed_short">spd</string>
+    <string name="speed_short">Geschw.</string>
     <string name="current_sensors">Aktuelle Sensoren</string>
     <string name="current_sensors_short">Akt. Sensoren</string>
     <string name="strides">Schritte</string>
