@@ -12,7 +12,7 @@ import androidx.viewpager2.widget.ViewPager2
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.trainingtracker.TrackingMode
-import com.atrainingtracker.trainingtracker.dialogs.LapSummaryDialog
+import com.atrainingtracker.trainingtracker.dialogs.LapSummaryDialogClassic
 import com.atrainingtracker.trainingtracker.fragments.ControlTrackingFragment
 import com.atrainingtracker.trainingtracker.ui.tracking.LapEvent
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewInfo
@@ -127,14 +127,14 @@ class TrackingTabsFragment : Fragment() {
     private fun showLapSummaryDialog(lapEvent: LapEvent) {
         if (!isAdded) return // Ensure fragment is still attached to the activity
 
-        val lapSummaryDialog = LapSummaryDialog.newInstance(
+        val lapSummaryDialog = LapSummaryDialogClassic.newInstance(
             lapEvent.lapNumber,
             lapEvent.lapTime,
             lapEvent.lapDistance,
             lapEvent.lapSpeed
         )
         // Use childFragmentManager for dialogs shown from within a Fragment
-        lapSummaryDialog.show(childFragmentManager, LapSummaryDialog.TAG)
+        lapSummaryDialog.show(childFragmentManager, LapSummaryDialogClassic.TAG)
     }
 
     private class TrackingPagerAdapter(

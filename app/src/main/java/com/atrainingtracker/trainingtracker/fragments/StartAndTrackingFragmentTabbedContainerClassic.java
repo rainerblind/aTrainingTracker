@@ -47,7 +47,7 @@ import com.atrainingtracker.trainingtracker.tracker.TrackerService;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager.TrackingViewsDbHelper;
-import com.atrainingtracker.trainingtracker.dialogs.LapSummaryDialog;
+import com.atrainingtracker.trainingtracker.dialogs.LapSummaryDialogClassic;
 import com.atrainingtracker.trainingtracker.interfaces.RemoteDevicesSettingsInterface;
 
 import java.util.LinkedList;
@@ -343,8 +343,8 @@ public class StartAndTrackingFragmentTabbedContainerClassic extends Fragment {
             return;
         }  // the control tracking fragment is in the foreground, so we do not show this dialog/info
 
-        LapSummaryDialog lapSummaryDialog = LapSummaryDialog.newInstance(lapNr, lapTime, lapDistance, lapSpeed);
-        lapSummaryDialog.show(getFragmentManager(), LapSummaryDialog.TAG);
+        LapSummaryDialogClassic lapSummaryDialogClassic = LapSummaryDialogClassic.newInstance(lapNr, lapTime, lapDistance, lapSpeed);
+        lapSummaryDialogClassic.show(getFragmentManager(), LapSummaryDialogClassic.TAG);
     }
 
     public interface UpdateActivityTypeInterface {
