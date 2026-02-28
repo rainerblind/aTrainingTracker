@@ -75,12 +75,6 @@ class TrackingFragment : Fragment() {
                             // 2. When a field is long-clicked, just update the state.
                             editingSensorFieldId = fieldState.sensorFieldId
                         },
-                        onLapButtonClick = {
-                            requireActivity().sendBroadcast(
-                                Intent(TrainingApplication.REQUEST_NEW_LAP)
-                                    .setPackage(requireActivity().packageName)
-                            )
-                        },
                         // We are now passing the AndroidView composable INTO the TrackingScreen.
                         mapContent = {
                             if (showMap) { // Double-check just in case

@@ -37,4 +37,9 @@ class TrackingTabsViewModel(
             emit(views)
         }
     }
+
+    fun onLapButtonClick() {
+        // -> request a new lap.
+        trackingRepository.requestNewLap()
+    }
 }

@@ -44,7 +44,6 @@ fun TrackingScreen(
     showMap: Boolean,
     showLapButton: Boolean,
     onFieldLongClick: (fieldState: SensorFieldState) -> Unit,
-    onLapButtonClick: () -> Unit,
     mapContent: @Composable () -> Unit
 ) {
 
@@ -92,19 +91,10 @@ fun TrackingScreen(
                 }
             }
 
-            // Add a Spacer at the bottom of the main content column if both the map and lap button are visible.
+            // Add a Spacer at the bottom of the main content when the lap button is shown for this tab.
             if (showLapButton) {
                 Spacer(modifier = Modifier.height(LapButtonHeight))
             }
-        }
-
-        // Conditionally show the Lap Button, now aligned to the bottom of the parent Box.
-        // This makes it "float" on top of the content in the Column above.
-        if (showLapButton) {
-            LapButton(
-                modifier = Modifier.align(Alignment.BottomCenter), // Align to bottom of the Box
-                onClick = onLapButtonClick
-            )
         }
     }
 }
@@ -123,28 +113,6 @@ private fun MapPlaceholder(modifier: Modifier = Modifier) {
         Text(
             text = "Map Area",
             color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-/**
- * A styled button for triggering a new lap.
- */
-@Composable
-private fun LapButton(
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    Button(
-        onClick = onClick,
-        modifier = modifier
-            .fillMaxWidth()
-            .height(LapButtonHeight)
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-    ) {
-        Text(
-            text = stringResource(id = R.string.Lap),
-            style = MaterialTheme.typography.displayMedium
         )
     }
 }
@@ -196,7 +164,6 @@ fun TrackingScreenPreview() {
                 // In a preview, we can just log it or do nothing.
                 println("Long clicked on: ${field.label}")
             },
-            onLapButtonClick = { },
             mapContent = {
                 MapPlaceholder()
             }
