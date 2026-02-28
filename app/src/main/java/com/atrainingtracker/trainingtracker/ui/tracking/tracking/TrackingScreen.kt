@@ -44,53 +44,49 @@ fun TrackingScreen(
 ) {
 
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        // The main layout is a Column that stacks the grid, map, and button.
-        Column(Modifier.fillMaxSize()) {
-            // This inner Column holds the dynamic grid and will expand to fill available space.
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState())
-            ) {
-                // Group all fields by their row number. This returns a Map<Int, List<SensorFieldState>>.
-                val fieldsByRow = state.fields.groupBy { it.rowNr }
+    Column(Modifier.fillMaxSize()) {
+        // This inner Column holds the dynamic grid and will expand to fill available space.
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+        ) {
+            // Group all fields by their row number. This returns a Map<Int, List<SensorFieldState>>.
+            val fieldsByRow = state.fields.groupBy { it.rowNr }
 
-                // Get the sorted row numbers to ensure the layout is in the correct order.
-                val sortedRows = fieldsByRow.keys.sorted()
+            // Get the sorted row numbers to ensure the layout is in the correct order.
+            val sortedRows = fieldsByRow.keys.sorted()
 
-                // Create a Row for each group of fields.
-                sortedRows.forEach { rowNr ->
-                    val fieldsInRow = fieldsByRow[rowNr]?.sortedBy { it.colNr } ?: emptyList()
+            // Create a Row for each group of fields.
+            sortedRows.forEach { rowNr ->
+                val fieldsInRow = fieldsByRow[rowNr]?.sortedBy { it.colNr } ?: emptyList()
 
-                    // Each Row in the column will take up a proportional amount of the vertical space.
-                    Row {
-                        // Add each SensorFieldView to the Row.
-                        fieldsInRow.forEach { fieldState ->
-                            SensorFieldView(
-                                modifier = Modifier
-                                    .weight(1f), // Distribute width equally among all columns in this row
-                                onLongClick = { onFieldLongClick(fieldState) },
-                                fieldState = fieldState
-                            )
-                        }
+                // Each Row in the column will take up a proportional amount of the vertical space.
+                Row {
+                    // Add each SensorFieldView to the Row.
+                    fieldsInRow.forEach { fieldState ->
+                        SensorFieldView(
+                            modifier = Modifier
+                                .weight(1f), // Distribute width equally among all columns in this row
+                            onLongClick = { onFieldLongClick(fieldState) },
+                            fieldState = fieldState
+                        )
                     }
                 }
             }
+        }
 
-            // Conditionally display the map which will expand.
-            if (showMap) {
-                // This Box will expand to fill the remaining space
-                Box(modifier = Modifier.weight(1f)) {
-                    mapContent() // Invoke the passed-in composable
-                }
+        // Conditionally display the map which will expand.
+        if (showMap) {
+            // This Box will expand to fill the remaining space
+            Box(modifier = Modifier.weight(1f)) {
+                mapContent() // Invoke the passed-in composable
             }
+        }
 
-            // Add a Spacer at the bottom of the main content when the lap button is shown for this tab.
-            if (showLapButton) {
-                Spacer(modifier = Modifier.height(LapButtonHeight))
-            }
+        // Add a Spacer at the bottom of the main content when the lap button is shown for this tab.
+        if (showLapButton) {
+            Spacer(modifier = Modifier.height(LapButtonHeight))
         }
     }
 }
