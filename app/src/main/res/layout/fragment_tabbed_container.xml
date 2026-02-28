@@ -43,4 +43,10 @@
         android:textAppearance="@style/TextAppearance.Material3.DisplayMedium"
         android:visibility="visible" />
 
+    <!-- A ComposeView to host our Compose dialog -->
+    <androidx.compose.ui.platform.ComposeView
+        android:id="@+id/compose_view_dialog_host"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

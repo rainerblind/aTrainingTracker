@@ -5,6 +5,10 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.viewpager2.adapter.FragmentStateAdapter
@@ -12,9 +16,10 @@ import androidx.viewpager2.widget.ViewPager2
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.trainingtracker.TrackingMode
-import com.atrainingtracker.trainingtracker.dialogs.LapSummaryDialog
 import com.atrainingtracker.trainingtracker.fragments.ControlTrackingFragment
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.tracking.LapEvent
+import com.atrainingtracker.trainingtracker.ui.tracking.LapSummaryDialog
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewInfo
 import com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingFragment
 import com.google.android.material.tabs.TabLayout
@@ -27,6 +32,9 @@ class TrackingTabsFragment : Fragment() {
     private lateinit var tabLayout: TabLayout
     private lateinit var pagerAdapter: TrackingPagerAdapter
     private lateinit var lapButton: Button
+
+    private var showLapDialog by mutableStateOf(false)
+    private var currentLapEvent by mutableStateOf<LapEvent?>(null)
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -49,6 +57,28 @@ class TrackingTabsFragment : Fragment() {
         lapButton.setOnClickListener {
             // simply inform the view model that the button was clicked.
             viewModel.onLapButtonClick()
+        }
+
+        val composeView = view.findViewById<ComposeView>(R.id.compose_view_dialog_host)
+        composeView.setContent {
+            ATrainingTrackerTheme {
+                if (showLapDialog) {
+                    val event = currentLapEvent
+                    if (event != null) {
+                        LapSummaryDialog(
+                            lapNr = event.lapNumber,
+                            lapTime = event.lapTime,
+                            lapDistance = event.lapDistance,
+                            lapSpeed = event.lapSpeed,
+                            onDismissRequest = {
+                                // Hide the dialog and clear the event
+                                showLapDialog = false
+                                currentLapEvent = null
+                            }
+                        )
+                    }
+                }
+            }
         }
 
         // Observe the ActivityType from the ViewModel (which gets it from the repository)
@@ -97,7 +127,8 @@ class TrackingTabsFragment : Fragment() {
         viewModel.lapEvent.observe(viewLifecycleOwner) { lapEvent ->
             // Check that the control tab isn't active and that we have a valid event
             if (viewPager.currentItem != 0 && lapEvent != null) {
-                showLapSummaryDialog(lapEvent)
+                currentLapEvent = lapEvent
+                showLapDialog = true
             }
         }
     }
@@ -123,24 +154,11 @@ class TrackingTabsFragment : Fragment() {
         }
     }
 
-    // --- Helper method to show the dialog ---
-    private fun showLapSummaryDialog(lapEvent: LapEvent) {
-        if (!isAdded) return // Ensure fragment is still attached to the activity
-
-        val lapSummaryDialog = LapSummaryDialog.newInstance(
-            lapEvent.lapNumber,
-            lapEvent.lapTime,
-            lapEvent.lapDistance,
-            lapEvent.lapSpeed
-        )
-        // Use childFragmentManager for dialogs shown from within a Fragment
-        lapSummaryDialog.show(childFragmentManager, LapSummaryDialog.TAG)
-    }
-
     private class TrackingPagerAdapter(
         private val fragment: Fragment,
         private var activityType: ActivityType
     ) : FragmentStateAdapter(fragment) {
+
         private var trackingViews: List<TrackingViewInfo> = emptyList()
         private val viewModel: TrackingTabsViewModel by lazy {
             ViewModelProvider(fragment).get(TrackingTabsViewModel::class.java)
