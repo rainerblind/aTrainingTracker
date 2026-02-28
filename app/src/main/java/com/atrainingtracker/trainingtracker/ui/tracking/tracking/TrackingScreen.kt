@@ -1,5 +1,6 @@
 package com.atrainingtracker.trainingtracker.ui.tracking.tracking
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -69,6 +70,7 @@ fun TrackingScreen(
                             modifier = Modifier
                                 .weight(1f), // Distribute width equally among all columns in this row
                             onLongClick = { onFieldLongClick(fieldState) },
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                             fieldState = fieldState
                         )
                     }
