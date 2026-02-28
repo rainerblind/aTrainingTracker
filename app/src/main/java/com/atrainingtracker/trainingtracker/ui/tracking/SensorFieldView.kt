@@ -32,7 +32,7 @@ enum class ViewSize {
 }
 
 /**
- * Returns the localized display name for a ViewSize from string resources.
+ * An extension function that returns the localized display name for a ViewSize from string resources.
  */
 fun ViewSize.getDisplayName(context: Context): String {
     val resourceId = when (this) {

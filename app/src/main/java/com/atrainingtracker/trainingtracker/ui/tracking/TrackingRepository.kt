@@ -44,7 +44,6 @@ data class TrackingViewInfo(
     val showLapButton: Boolean
 )
 
-
 /**
  * Represents a single lap event, holding the data needed for the summary dialog.
  * Using a data class makes the event self-contained and easy to pass around.

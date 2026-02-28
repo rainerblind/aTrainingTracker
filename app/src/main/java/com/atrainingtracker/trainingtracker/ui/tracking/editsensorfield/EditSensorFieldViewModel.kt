@@ -93,6 +93,7 @@ class EditSensorFieldViewModel(
                     // but also:
                     // set 'Best' device as source
                     selectedDeviceId = -1,
+                    selectedDeviceName = context.getString(R.string.bestSensor),
                     availableDevices = getFullDeviceList(newSensorType),
                     // set filter to instantaneous
                     filterSummary = FilterType.INSTANTANEOUS.getSummary(context, 1.0),
@@ -152,7 +153,7 @@ class EditSensorFieldViewModel(
             // when the sensor type and the source device is unchanged
             if (it.selectedSensorType == initialConfig.sensorType &&
                 it.selectedDeviceId == initialConfig.sourceDeviceId) {
-                // then copy the filter stuff rom the initial config
+                // then copy the filter stuff from the initial config
                 it.copy(
                     filterSummary = initialConfig.filterType.getSummary(context, initialConfig.filterConstant),
                     selectedFilterType = FilterType.INSTANTANEOUS,

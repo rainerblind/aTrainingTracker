@@ -106,7 +106,7 @@ fun ConfigureFilterDialog(
 
                 Spacer(Modifier.height(16.dp))
 
-                // This text now gets its values from the ViewModel's state
+                // A text to explain the filter configuration in some detail.
                 val finalConstant = if (uiState.selectedFilterType == FilterType.MOVING_AVERAGE_TIME && uiState.movingAverageUnit == "min") {
                     uiState.filterConstant * 60
                 } else {
@@ -122,15 +122,11 @@ fun ConfigureFilterDialog(
 
                 // Action Buttons
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = onDismissRequest) {
+                    TextButton(onClick = onDismissRequest) { // Simply call the onDismissRequest lambda passed from the Fragment.
                         Text(stringResource(R.string.Cancel))
                     }
                     Spacer(Modifier.width(8.dp))
-                    Button(onClick = {
-                        // 3. CORRECTED: Simply call the onSave lambda passed from the Fragment.
-                        // The Fragment will then call viewModel.saveFilterChanges().
-                        onSave()
-                    }) {
+                    Button(onClick = onSave) {  // Simply call the onSave lambda passed from the Fragment.
                         Text(stringResource(R.string.OK))
                     }
                 }

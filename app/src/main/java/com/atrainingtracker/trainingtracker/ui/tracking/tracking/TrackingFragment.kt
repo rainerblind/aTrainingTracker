@@ -72,7 +72,7 @@ class TrackingFragment : Fragment() {
                         showMap = showMap,
                         showLapButton = showLapButton,
                         onFieldLongClick = { fieldState ->
-                            // 2. When a field is long-clicked, just update the state.
+                            // When a field is long-clicked, just update the state.
                             editingSensorFieldId = fieldState.sensorFieldId
                         },
                         // We are now passing the AndroidView composable INTO the TrackingScreen.

@@ -54,8 +54,7 @@ fun EditSensorFieldDialog(
                 // --- Source Device Spinner ---
                 val deviceList = uiState.availableDevices
                 if (deviceList.size == 1 && deviceList[0].first == -1L) {  // when there is only the 'best' sensor available, there is no choice.
-                    // Handle case with no external sensors (e.g., Time)
-                    // we do not show the source device spinner.
+                    // Thus, we do not show the source device spinner.
                 }
                 else {
                     Spinner(
@@ -83,7 +82,7 @@ fun EditSensorFieldDialog(
 
                 Spacer(Modifier.height(16.dp))
 
-                // --- Configure Filter Button ---
+                // --- Optionally: Configure Filter Button ---
                  if (uiState.selectedSensorType?.filteringPossible == true) {
                     OutlinedButton(
                         onClick = onConfigureFilter,
@@ -91,9 +90,6 @@ fun EditSensorFieldDialog(
                     ) {
                         Text("${stringResource(R.string.filter)}: ${uiState.filterSummary}")
                     }
-                }
-                else {
-                    // TODO: set filter to instantaneous.
                 }
 
                 Spacer(Modifier.height(16.dp))

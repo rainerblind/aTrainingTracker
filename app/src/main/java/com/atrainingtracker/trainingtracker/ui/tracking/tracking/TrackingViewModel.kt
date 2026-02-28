@@ -7,7 +7,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.asFlow
 import androidx.lifecycle.viewModelScope
 import androidx.preference.PreferenceManager
 import com.atrainingtracker.R
@@ -20,14 +19,11 @@ import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingRepository
-import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.util.Objects
 
 /**
@@ -82,7 +78,7 @@ class TrackingViewModel(
 
     private fun loadSensorFieldStates() {
         viewModelScope.launch {
-            // 1. COLLECT THE FLOW for configuration changes
+            //  Collect the flow for configuration changes
             trackingRepository.getSensorFieldConfigsForView(viewId)
                 .combine(trackingRepository.allFilteredSensorData) { configs, allSensorData ->
                     // This whole block will re-execute whenever configs OR sensor data change
@@ -121,7 +117,7 @@ class TrackingViewModel(
                     fieldsWithLiveData
                 }
                 .collect { updatedFields ->
-                    // 2. EMIT the new state to the UI
+                    // Emit the new state to the UI
                     _uiState.value = TrackingScreenState(fields = updatedFields)
                 }
         }
@@ -195,8 +191,7 @@ class TrackingViewModel(
     }
 
     /**
-     * Translates the getZoneType logic from TrackingFragmentClassic into a helper function.
-     * Determines which zone configuration to use based on the sensor and the current sport.
+     * Simple helper function to determines which zone configuration to use based on the sensor type and the current sport.
      */
     private fun getZoneType(sensorType: SensorType, sportType: BSportType): SettingsDataStore.ZoneType? {
         return when (sensorType) {
