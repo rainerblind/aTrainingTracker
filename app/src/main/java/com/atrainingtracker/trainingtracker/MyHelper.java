@@ -174,6 +174,8 @@ public class MyHelper {
         };
     }
 
+    // TODO: replace with getSpeedUnitName(Context context)
+    // TODO: globally!
     public static int getSpeedUnitNameId() {
         return switch (TrainingApplication.getUnit()) {
             case METRIC -> R.string.units_speed_metric;

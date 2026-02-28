@@ -49,16 +49,15 @@ import android.widget.TextView;
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
-import com.atrainingtracker.banalservice.fragments.ConfigureFilterDialogFragment;
 import com.atrainingtracker.trainingtracker.activities.ConfigViewsActivity;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
-import com.atrainingtracker.trainingtracker.dialogs.EditFieldDialog;
+import com.atrainingtracker.trainingtracker.dialogs.EditFieldDialogClassic;
 
 import java.util.TreeMap;
 
-import static com.atrainingtracker.banalservice.fragments.ConfigureFilterDialogFragment.FILTERS_CHANGED_INTENT;
-import static com.atrainingtracker.trainingtracker.dialogs.EditFieldDialog.TRACKING_VIEW_CHANGED_INTENT;
+import static com.atrainingtracker.banalservice.fragments.ConfigureFilterDialogFragmentClassic.FILTERS_CHANGED_INTENT;
+import static com.atrainingtracker.trainingtracker.dialogs.EditFieldDialogClassic.TRACKING_VIEW_CHANGED_INTENT;
 
 
 public class ConfigTrackingViewFragment extends ConfigViewFragment {
@@ -126,7 +125,7 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
         if (DEBUG) Log.d(TAG, "onCreateView, mViewId=" + mViewId);
 
         mLayoutInflater = inflater;
-        mActivityType = mTrackingViewsDatabaseManager.getActivityType(mViewId);
+        mActivityType = mTrackingViewsDatabaseManager.getActivityTypeForTab(mViewId);
 
         View view = inflater.inflate(R.layout.config_tracking_view, container, false);
         mLLSensors = view.findViewById(R.id.linearLayoutSensors);
@@ -290,7 +289,7 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
                 tvFilterTitle.setVisibility(View.VISIBLE);
                 tvFilterValue.setVisibility(View.VISIBLE);
 
-                tvFilterValue.setText(ConfigureFilterDialogFragment.getFilterSummary(getContext(), viewInfo.filterType(), viewInfo.filterConstant()));
+                tvFilterValue.setText(viewInfo.filterType().getSummary(getContext(), viewInfo.filterConstant()));
             } else {
                 tvFilterTitle.setVisibility(View.GONE);
                 tvFilterValue.setVisibility(View.GONE);
@@ -387,8 +386,8 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
     }
 
     private void showEditFieldDialog(@NonNull TrackingViewsDatabaseManager.ViewInfo viewInfo) {
-        EditFieldDialog editFieldDialog = EditFieldDialog.newInstance(mActivityType, viewInfo);
-        editFieldDialog.show(getFragmentManager(), EditFieldDialog.TAG);
+        EditFieldDialogClassic editFieldDialogClassic = EditFieldDialogClassic.newInstance(mActivityType, viewInfo);
+        editFieldDialogClassic.show(getFragmentManager(), EditFieldDialogClassic.TAG);
     }
 
     protected void showPreview() {
@@ -397,7 +396,7 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
 
         FragmentManager fragmentManager = getActivity().getSupportFragmentManager();
         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-        fragmentTransaction.replace(R.id.content, TrackingFragment.newInstance(mViewId, TrackingFragment.Mode.PREVIEW, mActivityType));
+        fragmentTransaction.replace(R.id.content, TrackingFragmentClassic.newInstance(mViewId, TrackingFragmentClassic.Mode.PREVIEW, mActivityType));
         fragmentTransaction.addToBackStack(null);
         fragmentTransaction.commit();
     }

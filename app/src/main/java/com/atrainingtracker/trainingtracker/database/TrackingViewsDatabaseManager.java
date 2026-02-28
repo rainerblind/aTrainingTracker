@@ -37,6 +37,7 @@ import com.atrainingtracker.banalservice.filters.FilterData;
 import com.atrainingtracker.banalservice.filters.FilterType;
 import com.atrainingtracker.banalservice.helpers.HavePressureSensor;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
+import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize;
 
 import java.util.EnumMap;
 import java.util.LinkedList;
@@ -102,6 +103,32 @@ public class TrackingViewsDatabaseManager {
     // some high level methods
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
+    public void updateSensorView(
+            long sensorFieldId,
+            SensorType sensorType,
+            ViewSize viewSize,
+            @Nullable Long sourceDeviceId,
+            FilterType filterType,
+            double filterConstant
+    ) {
+        ContentValues values = new ContentValues();
+        values.put(TrackingViewsDbHelper.SENSOR_TYPE, sensorType.name());
+        values.put(TrackingViewsDbHelper.VIEW_SIZE, viewSize.name());
+        if (sourceDeviceId == null || sourceDeviceId < 0) {
+            values.putNull(TrackingViewsDbHelper.SOURCE_DEVICE_ID);
+        } else {
+            values.put(TrackingViewsDbHelper.SOURCE_DEVICE_ID, sourceDeviceId);
+        }
+        values.put(TrackingViewsDbHelper.FILTER_TYPE, filterType.name());
+        values.put(TrackingViewsDbHelper.FILTER_CONSTANT, filterConstant);
+
+        getDatabase().update(TrackingViewsDbHelper.ROWS_TABLE,
+                values,
+                TrackingViewsDbHelper.ROW_ID + "=?",
+                new String[]{sensorFieldId + ""});
+    }
+
+    @Deprecated // use ViewSize now!
     public void updateTextSizeOfRow(long rowId, int textSize) {
         ContentValues values = new ContentValues();
         values.put(TrackingViewsDbHelper.TEXT_SIZE, textSize);
@@ -187,14 +214,14 @@ public class TrackingViewsDatabaseManager {
     }
 
     @NonNull
-    public ActivityType getActivityType(long viewId) {
+    public ActivityType getActivityTypeForTab(long tabViewId) {
 
         ActivityType activityType = ActivityType.getDefaultActivityType();
 
         Cursor cursor = getDatabase().query(TrackingViewsDbHelper.VIEWS_TABLE,
                 null,
                 TrackingViewsDbHelper.C_ID + "=?",
-                new String[]{viewId + ""},
+                new String[]{tabViewId + ""},
                 null,
                 null,
                 null);
@@ -466,7 +493,7 @@ public class TrackingViewsDatabaseManager {
 
     public void addEmptyView(long viewId, boolean addAfterLayout) {
         int layoutNr = getLayoutNr(viewId);
-        ActivityType activityType = getActivityType(viewId);
+        ActivityType activityType = getActivityTypeForTab(viewId);
         int newLayoutNr = layoutNr;
         if (addAfterLayout) {
             newLayoutNr = layoutNr + 1;
@@ -589,6 +616,7 @@ public class TrackingViewsDatabaseManager {
         }
     }
 
+    @Deprecated
     public record ViewInfo(long viewId, long rowId, int rowNr, int colNr, SensorType sensorType,
                            int textSize, long sourceDeviceId, FilterType filterType,
                            double filterConstant) {
@@ -605,12 +633,13 @@ public class TrackingViewsDatabaseManager {
         // public static final int DB_VERSION = 4;       // upgraded to version 4 at 3.1.2017
         // public static final int DB_VERSION = 5;       // upgraded to version 5 at 14.03.2018
         // public static final int DB_VERSION = 6;       // upgraded to version 6 at 17.04.2018
-        public static final int DB_VERSION = 7;          // upgraded to version 7 at 15.10.2019
-        public static final String VIEWS_TABLE = "ViewsTable";
-        public static final String ROWS_TABLE = "LayoutRowsTable";
+        // public static final int DB_VERSION = 7;       // upgraded to version 7 at 15.10.2019
+        public static final int DB_VERSION = 8;  // upgraded to version 8 at 25.02.2026
+        public static final String VIEWS_TABLE = "ViewsTable";                // the table for the different 'tabs'
+        public static final String ROWS_TABLE = "LayoutRowsTable";            // the table for the sensor fields within each tab
         public static final String C_ID = BaseColumns._ID;
-        public static final String VIEW_ID = "ViewId";
-        public static final String ROW_ID = "RowId";
+        public static final String VIEW_ID = "ViewId";                        // for each sensor field, the id of the tab where it is embedded
+        public static final String ROW_ID = "RowId";                          // the ID of each sensor field.  Due to historic reasons, the name is misleading.
         // new in version 4
         public static final String ROW_NR = "RowNr";
         public static final String COL_NR = "ColNr";
@@ -625,14 +654,15 @@ public class TrackingViewsDatabaseManager {
         public static final String SHOW_MAP = "ShowMap";
         // public static final String VIEW_ID       = "ViewID";
         public static final String SENSOR_TYPE = "SensorType";
-        public static final String TEXT_SIZE = "TextSize";
+        public static final String TEXT_SIZE = "TextSize";        // no longer needed in version 8
+        public static final String VIEW_SIZE = "ViewSize";        // new in version 8
         public static final String SOURCE_DEVICE_ID = "SourceDeviceId";  // new in version 5
         public static final String FILTER_TYPE = "FilterType";      // new in version 6
         public static final String FILTER_CONSTANT = "FilterConstant";  // new in version 6  // TODO: add and use these
-        protected static final int SMALL = 20;
-        protected static final int MEDIUM = 25;
-        protected static final int LARGE = 30;
-        protected static final int HUGE = 40;
+        // protected static final int SMALL = 20;                 removed in version 8
+        // protected static final int MEDIUM = 25;                removed in version 8
+        // protected static final int LARGE = 30;                 removed in version 8
+        // protected static final int HUGE = 40;                  removed in version 8
 
         // new in V7 -> fullscreen and day/night
         protected static final String FULL_SCREEN = "FullScreen";
@@ -706,6 +736,7 @@ public class TrackingViewsDatabaseManager {
                 + SOURCE_DEVICE_ID + " int)";
         // TODO: same as for PebbleDbHelper: switch to next/previous id structure?
         // NO! when inserting a new view, we just have to add 1 to all following layout_nrs, similar for deleting.
+        @Deprecated
         protected static final String CREATE_LAYOUTS_TABLE_V6 = "create table " + ROWS_TABLE + " ("
                 + ROW_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                 + VIEW_ID + " int, "
@@ -713,6 +744,18 @@ public class TrackingViewsDatabaseManager {
                 + COL_NR + " int, "
                 + SENSOR_TYPE + " text, "
                 + TEXT_SIZE + " int, "
+                + SOURCE_DEVICE_ID + " int, "
+                + FILTER_TYPE + " text, "
+                + FILTER_CONSTANT + " real)";
+
+        protected static final String CREATE_LAYOUTS_TABLE_V8 = "create table " + ROWS_TABLE + " ("
+                + ROW_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + VIEW_ID + " int, "
+                + ROW_NR + " int, "
+                + COL_NR + " int, "
+                + SENSOR_TYPE + " text, "
+                + TEXT_SIZE + " int, "
+                + VIEW_SIZE + " text, "
                 + SOURCE_DEVICE_ID + " int, "
                 + FILTER_TYPE + " text, "
                 + FILTER_CONSTANT + " real)";
@@ -736,10 +779,10 @@ public class TrackingViewsDatabaseManager {
         @Override
         public void onCreate(@NonNull SQLiteDatabase db) {
             db.execSQL(CREATE_VIEWS_TABLE_V7);
-            db.execSQL(CREATE_LAYOUTS_TABLE_V6);
+            db.execSQL(CREATE_LAYOUTS_TABLE_V8);
 
             if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_VIEWS_TABLE_V7);
-            if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_LAYOUTS_TABLE_V6);
+            if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_LAYOUTS_TABLE_V8);
 
 
             if (DEBUG) Log.d(TAG, "filling db");
@@ -797,7 +840,8 @@ public class TrackingViewsDatabaseManager {
                 values.put(ROW_NR, rowData.row);
                 values.put(COL_NR, rowData.col);
                 values.put(SENSOR_TYPE, rowData.sensorType.name());
-                values.put(TEXT_SIZE, rowData.textSize);
+                values.put(TEXT_SIZE, 0);                              // no longer needed in version 8
+                values.put(VIEW_SIZE, rowData.viewSize().name());
                 values.put(FILTER_TYPE, FilterType.INSTANTANEOUS.name());
                 values.put(FILTER_CONSTANT, 1);
                 db.insert(ROWS_TABLE, null, values);
@@ -872,6 +916,29 @@ public class TrackingViewsDatabaseManager {
                 contentValues.put(NIGHT, 0);
                 db.update(VIEWS_TABLE, contentValues, null, null);
             }
+
+            if (oldVersion < 8) {
+                Log.i(TAG, "Upgrading database from version 7 to 8");
+                // 1. Add the new VIEW_SIZE column to the ROWS_TABLE
+                addColumn(db, ROWS_TABLE, VIEW_SIZE, "text");
+
+                // 2. Use a CASE statement to populate the new column based on the old TEXT_SIZE value
+                // This is efficient as it's a single SQL command.
+                db.execSQL("UPDATE " + ROWS_TABLE + " SET " + VIEW_SIZE + " = " +
+                        "CASE " + TEXT_SIZE + " " +
+                        "WHEN 20 THEN 'XSMALL' " +
+                        "WHEN 25 THEN 'XSMALL' " +
+                        "WHEN 30 THEN 'SMALL' " +
+                        "WHEN 35 THEN 'SMALL' " +
+                        "WHEN 40 THEN 'NORMAL' " +
+                        "WHEN 45 THEN 'NORMAL' " +
+                        "WHEN 50 THEN 'LARGE' " +
+                        "WHEN 60 THEN 'LARGE' " +
+                        "WHEN 70 THEN 'XLARGE' " +
+                        "WHEN 80 THEN 'XLARGE' " +
+                        "ELSE 'NORMAL' END;"); // Default to 'NORMAL' for any unexpected values.
+                Log.i(TAG, "Successfully migrated TEXT_SIZE (int) to VIEW_SIZE (text).");
+            }
         }
 
         @NonNull
@@ -882,95 +949,95 @@ public class TrackingViewsDatabaseManager {
 
             // GENERIC
             rowDataList = new LinkedList<>();
-            rowDataList.add(new RowData(SensorType.TIME_ACTIVE, SMALL, 1, 1));
-            rowDataList.add(new RowData(SensorType.TIME_OF_DAY, SMALL, 1, 2));
-            rowDataList.add(new RowData(SensorType.SPEED_mps, LARGE, 2, 1));
-            rowDataList.add(new RowData(SensorType.DISTANCE_m, MEDIUM, 3, 1));
+            rowDataList.add(new RowData(SensorType.TIME_ACTIVE, ViewSize.SMALL, 1, 1));
+            rowDataList.add(new RowData(SensorType.TIME_OF_DAY, ViewSize.SMALL, 1, 2));
+            rowDataList.add(new RowData(SensorType.SPEED_mps, ViewSize.LARGE, 2, 1));
+            rowDataList.add(new RowData(SensorType.DISTANCE_m, ViewSize.NORMAL, 3, 1));
             if (mHavePressureSensor) {
-                rowDataList.add(new RowData(SensorType.ALTITUDE, MEDIUM, 3, 2));
+                rowDataList.add(new RowData(SensorType.ALTITUDE, ViewSize.NORMAL, 3, 2));
             }
             viewMap.put(ActivityType.GENERIC, rowDataList);
 
             // GENERIC_HR
             rowDataList = new LinkedList<>();
-            rowDataList.add(new RowData(SensorType.TIME_ACTIVE, SMALL, 1, 1));
-            rowDataList.add(new RowData(SensorType.TIME_OF_DAY, SMALL, 1, 2));
-            rowDataList.add(new RowData(SensorType.HR, LARGE, 2, 1));
-            rowDataList.add(new RowData(SensorType.SPEED_mps, MEDIUM, 3, 1));
-            rowDataList.add(new RowData(SensorType.DISTANCE_m, MEDIUM, 4, 1));
+            rowDataList.add(new RowData(SensorType.TIME_ACTIVE, ViewSize.SMALL, 1, 1));
+            rowDataList.add(new RowData(SensorType.TIME_OF_DAY, ViewSize.SMALL, 1, 2));
+            rowDataList.add(new RowData(SensorType.HR, ViewSize.LARGE, 2, 1));
+            rowDataList.add(new RowData(SensorType.SPEED_mps, ViewSize.NORMAL, 3, 1));
+            rowDataList.add(new RowData(SensorType.DISTANCE_m, ViewSize.NORMAL, 4, 1));
             if (mHavePressureSensor) {
-                rowDataList.add(new RowData(SensorType.ALTITUDE, MEDIUM, 4, 2));
+                rowDataList.add(new RowData(SensorType.ALTITUDE, ViewSize.NORMAL, 4, 2));
             }
             viewMap.put(ActivityType.GENERIC_HR, rowDataList);
 
             // RUN_SPEED_AND_CADENCE
             rowDataList = new LinkedList<>();
-            rowDataList.add(new RowData(SensorType.TIME_ACTIVE, SMALL, 1, 1));
-            rowDataList.add(new RowData(SensorType.TIME_OF_DAY, SMALL, 1, 2));
-            rowDataList.add(new RowData(SensorType.HR, LARGE, 2, 1));
-            rowDataList.add(new RowData(SensorType.PACE_spm, LARGE, 3, 1));
-            rowDataList.add(new RowData(SensorType.CADENCE, LARGE, 4, 1));
-            rowDataList.add(new RowData(SensorType.DISTANCE_m, MEDIUM, 5, 1));
+            rowDataList.add(new RowData(SensorType.TIME_ACTIVE, ViewSize.SMALL, 1, 1));
+            rowDataList.add(new RowData(SensorType.TIME_OF_DAY, ViewSize.SMALL, 1, 2));
+            rowDataList.add(new RowData(SensorType.HR, ViewSize.LARGE, 2, 1));
+            rowDataList.add(new RowData(SensorType.PACE_spm, ViewSize.SMALL, 3, 1));
+            rowDataList.add(new RowData(SensorType.CADENCE, ViewSize.LARGE, 4, 1));
+            rowDataList.add(new RowData(SensorType.DISTANCE_m, ViewSize.NORMAL, 5, 1));
             if (mHavePressureSensor) {
-                rowDataList.add(new RowData(SensorType.ALTITUDE, MEDIUM, 5, 2));
+                rowDataList.add(new RowData(SensorType.ALTITUDE, ViewSize.NORMAL, 5, 2));
             }
             viewMap.put(ActivityType.RUN_SPEED_AND_CADENCE, rowDataList);
 
             // RUN_SPEED
             rowDataList = new LinkedList<>();
-            rowDataList.add(new RowData(SensorType.TIME_ACTIVE, SMALL, 1, 1));
-            rowDataList.add(new RowData(SensorType.TIME_OF_DAY, SMALL, 1, 2));
-            rowDataList.add(new RowData(SensorType.HR, LARGE, 2, 1));
-            rowDataList.add(new RowData(SensorType.PACE_spm, LARGE, 3, 1));
-            rowDataList.add(new RowData(SensorType.DISTANCE_m, MEDIUM, 5, 1));
+            rowDataList.add(new RowData(SensorType.TIME_ACTIVE, ViewSize.SMALL, 1, 1));
+            rowDataList.add(new RowData(SensorType.TIME_OF_DAY, ViewSize.SMALL, 1, 2));
+            rowDataList.add(new RowData(SensorType.HR, ViewSize.LARGE, 2, 1));
+            rowDataList.add(new RowData(SensorType.PACE_spm, ViewSize.LARGE, 3, 1));
+            rowDataList.add(new RowData(SensorType.DISTANCE_m, ViewSize.NORMAL, 5, 1));
             if (mHavePressureSensor) {
-                rowDataList.add(new RowData(SensorType.ALTITUDE, MEDIUM, 5, 2));
+                rowDataList.add(new RowData(SensorType.ALTITUDE, ViewSize.NORMAL, 5, 2));
             }
             viewMap.put(ActivityType.RUN_SPEED, rowDataList);
 
             // BIKE_SPEED
             rowDataList = new LinkedList<>();
-            rowDataList.add(new RowData(SensorType.TIME_ACTIVE, SMALL, 1, 1));
-            rowDataList.add(new RowData(SensorType.TIME_OF_DAY, SMALL, 1, 2));
-            rowDataList.add(new RowData(SensorType.HR, LARGE, 2, 1));
-            rowDataList.add(new RowData(SensorType.SPEED_mps, LARGE, 3, 1));
-            rowDataList.add(new RowData(SensorType.DISTANCE_m, MEDIUM, 5, 1));
+            rowDataList.add(new RowData(SensorType.TIME_ACTIVE, ViewSize.SMALL, 1, 1));
+            rowDataList.add(new RowData(SensorType.TIME_OF_DAY, ViewSize.SMALL, 1, 2));
+            rowDataList.add(new RowData(SensorType.HR, ViewSize.LARGE, 2, 1));
+            rowDataList.add(new RowData(SensorType.SPEED_mps, ViewSize.LARGE, 3, 1));
+            rowDataList.add(new RowData(SensorType.DISTANCE_m, ViewSize.NORMAL, 5, 1));
             if (mHavePressureSensor) {
-                rowDataList.add(new RowData(SensorType.ALTITUDE, MEDIUM, 5, 2));
+                rowDataList.add(new RowData(SensorType.ALTITUDE, ViewSize.NORMAL, 5, 2));
             }
             viewMap.put(ActivityType.BIKE_SPEED, rowDataList);
 
             // BIKE_SPEED_AND_CADENCE
             rowDataList = new LinkedList<>();
-            rowDataList.add(new RowData(SensorType.TIME_ACTIVE, SMALL, 1, 1));
-            rowDataList.add(new RowData(SensorType.TIME_OF_DAY, SMALL, 1, 2));
-            rowDataList.add(new RowData(SensorType.HR, LARGE, 2, 1));
-            rowDataList.add(new RowData(SensorType.SPEED_mps, LARGE, 3, 1));
-            rowDataList.add(new RowData(SensorType.CADENCE, LARGE, 4, 1));
-            rowDataList.add(new RowData(SensorType.DISTANCE_m, MEDIUM, 5, 1));
+            rowDataList.add(new RowData(SensorType.TIME_ACTIVE, ViewSize.SMALL, 1, 1));
+            rowDataList.add(new RowData(SensorType.TIME_OF_DAY, ViewSize.SMALL, 1, 2));
+            rowDataList.add(new RowData(SensorType.HR, ViewSize.LARGE, 2, 1));
+            rowDataList.add(new RowData(SensorType.SPEED_mps, ViewSize.LARGE, 3, 1));
+            rowDataList.add(new RowData(SensorType.CADENCE, ViewSize.LARGE, 4, 1));
+            rowDataList.add(new RowData(SensorType.DISTANCE_m, ViewSize.NORMAL, 5, 1));
             if (mHavePressureSensor) {
-                rowDataList.add(new RowData(SensorType.ALTITUDE, MEDIUM, 5, 2));
+                rowDataList.add(new RowData(SensorType.ALTITUDE, ViewSize.NORMAL, 5, 2));
             }
             viewMap.put(ActivityType.BIKE_SPEED_AND_CADENCE, rowDataList);
 
             // BIKE_POWER
             rowDataList = new LinkedList<>();
-            rowDataList.add(new RowData(SensorType.TIME_ACTIVE, SMALL, 1, 1));
-            rowDataList.add(new RowData(SensorType.TIME_OF_DAY, SMALL, 1, 2));
-            rowDataList.add(new RowData(SensorType.POWER, HUGE, 2, 1));
-            rowDataList.add(new RowData(SensorType.HR, LARGE, 3, 1));
-            rowDataList.add(new RowData(SensorType.CADENCE, LARGE, 3, 2));
-            rowDataList.add(new RowData(SensorType.DISTANCE_m, SMALL, 4, 1));
-            rowDataList.add(new RowData(SensorType.SPEED_mps, MEDIUM, 4, 2));
+            rowDataList.add(new RowData(SensorType.TIME_ACTIVE, ViewSize.SMALL, 1, 1));
+            rowDataList.add(new RowData(SensorType.TIME_OF_DAY, ViewSize.SMALL, 1, 2));
+            rowDataList.add(new RowData(SensorType.HR, ViewSize.LARGE, 2, 1));
+            rowDataList.add(new RowData(SensorType.POWER, ViewSize.XLARGE, 3, 1));
+            rowDataList.add(new RowData(SensorType.CADENCE, ViewSize.LARGE, 4, 1));
+            rowDataList.add(new RowData(SensorType.DISTANCE_m, ViewSize.NORMAL, 5, 1));
+            rowDataList.add(new RowData(SensorType.SPEED_mps, ViewSize.NORMAL, 5, 2));
             if (mHavePressureSensor) {
-                rowDataList.add(new RowData(SensorType.ALTITUDE, SMALL, 4, 3));
+                rowDataList.add(new RowData(SensorType.ALTITUDE, ViewSize.SMALL, 5, 3));
             }
             viewMap.put(ActivityType.BIKE_POWER, rowDataList);
 
             return viewMap;
         }
 
-        protected record RowData(SensorType sensorType, int textSize, int row, int col) {
+        protected record RowData(SensorType sensorType, ViewSize viewSize, int row, int col) {
 
         }
 
