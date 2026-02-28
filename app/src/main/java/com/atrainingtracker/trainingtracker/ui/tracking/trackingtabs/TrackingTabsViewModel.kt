@@ -15,9 +15,8 @@ import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewInfo
 import kotlinx.coroutines.Dispatchers
 
 /**
- * ViewModel for the tabbed container.
- * It no longer owns data but instead gets it from the TrackingRepository.
- */
+ * ViewModel for the tabbed container of tracking views.
+  */
 class TrackingTabsViewModel(
     application: Application,
     private val trackingRepository: TrackingRepository
