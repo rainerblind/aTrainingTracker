@@ -42,8 +42,9 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
  * Created by rainer on 05.01.17.
  */
 
-public class LapSummaryDialog extends DialogFragment {
-    public static final String TAG = LapSummaryDialog.class.getName();
+@Deprecated
+public class LapSummaryDialogClassic extends DialogFragment {
+    public static final String TAG = LapSummaryDialogClassic.class.getName();
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
 
@@ -63,10 +64,10 @@ public class LapSummaryDialog extends DialogFragment {
     private String mLapSpeed;
 
     @NonNull
-    public static LapSummaryDialog newInstance(int lapNr, String lapTime, String lapDistance, String lapSpeed) {
+    public static LapSummaryDialogClassic newInstance(int lapNr, String lapTime, String lapDistance, String lapSpeed) {
         if (DEBUG) Log.i(TAG, "newInstance");
 
-        LapSummaryDialog fragment = new LapSummaryDialog();
+        LapSummaryDialogClassic fragment = new LapSummaryDialogClassic();
 
         Bundle args = new Bundle();
         args.putInt(LAP_NR, lapNr);
