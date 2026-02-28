@@ -20,7 +20,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.ui.theme.DefaultBackgroundColor
 import com.atrainingtracker.trainingtracker.ui.theme.Zone1
-import com.atrainingtracker.trainingtracker.ui.theme.aTrainingTrackerTheme
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldView
 import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize
@@ -115,7 +115,7 @@ private fun MapPlaceholder(modifier: Modifier = Modifier) {
 @Preview(showBackground = true, backgroundColor = 0xFF212121)
 @Composable
 fun TrackingScreenPreview() {
-    aTrainingTrackerTheme {
+    ATrainingTrackerTheme {
         val previewFields = listOf(
             // Row 0, Col 0
             SensorFieldState(
