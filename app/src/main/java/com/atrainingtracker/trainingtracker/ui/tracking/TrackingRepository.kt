@@ -14,6 +14,7 @@ import androidx.lifecycle.MutableLiveData
 import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
+import com.atrainingtracker.banalservice.filters.FilterData
 import com.atrainingtracker.banalservice.filters.FilterType
 import com.atrainingtracker.banalservice.filters.FilteredSensorData
 import com.atrainingtracker.banalservice.sensor.SensorType
@@ -413,42 +414,38 @@ class TrackingRepository private constructor(private val application: Applicatio
 
     /**
      * Updates the configuration of a specific sensor field in the database.
-     * This should be called from a coroutine.
      */
     suspend fun updateSensorFieldConfig(
-        sensorViewId: Long,
+        sensorFieldId: Long,
         newSensorType: SensorType,
         newViewSize: ViewSize,
-        newSourceDeviceId: Long?
+        newSourceDeviceId: Long?,
+        newSourceDeviceName: String?,
+        newFilterType: FilterType,
+        newFilterConstant: Double
     ) {
         withContext(Dispatchers.IO) {
-            val dbManager = TrackingViewsDatabaseManager.getInstance(application)
-            dbManager.updateSensorView(sensorViewId.toInt(), newSensorType, newViewSize,
-                newSourceDeviceId
+
+            // write the new config to the database
+            viewsDbManager.updateSensorView(
+                sensorFieldId,
+                newSensorType,
+                newViewSize,
+                newSourceDeviceId,
+                newFilterType,
+                newFilterConstant
             )
         }
 
-        // Increment the value to notify collectors that the data has changed.
+        // request the BANALService to create this new filter
+        val filterData = FilterData(newSourceDeviceName, newSensorType, newFilterType, newFilterConstant)
+        if (banalServiceComm != null) banalServiceComm?.createFilter(filterData)
+
+        // notify collectors that the data has changed by incrementing the value
         withContext(Dispatchers.Main) {
             configUpdateTrigger.value++
         }
     }
-
-    /**
-     * Updates the filter configuration for a specific sensor field in the database
-     * and triggers a refresh for any active observers.
-     */
-    suspend fun updateSensorFilter(rowId: Long, filterType: FilterType, filterConstant: Double) {
-        withContext(Dispatchers.IO) {
-            viewsDbManager.updateSensorFilter(rowId.toInt(), filterType, filterConstant)
-
-            //  Pull the trigger to notify collectors that the data has changed.
-            withContext(Dispatchers.Main) {
-                configUpdateTrigger.value++
-            }
-        }
-    }
-
 
     companion object {
         @Volatile

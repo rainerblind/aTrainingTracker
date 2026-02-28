@@ -1,7 +1,6 @@
 package com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield
 
 import android.app.Application
-import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -21,6 +20,7 @@ data class EditDialogUiState(
     val selectedSensorType: SensorType? = null,
     val availableSensorTypesForCurrentActivityType: List<SensorType> = emptyList(),
     val selectedDeviceId: Long = -1,
+    val selectedDeviceName: String? = null,
     val availableDevices: List<Pair<Long, String>> = emptyList(),
     val selectedViewSize: ViewSize = ViewSize.NORMAL,
     val availableViewSizes: List<ViewSize> = ViewSize.values().toList(),
@@ -71,6 +71,7 @@ class EditSensorFieldViewModel(
                 selectedSensorType = initialConfig.sensorType,
                 availableSensorTypesForCurrentActivityType = ActivityType.getSensorTypeArray(activityType, context).toList(),
                 selectedDeviceId = initialConfig.sourceDeviceId,
+                selectedDeviceName = initialConfig.sourceDeviceName,
                 availableDevices = getFullDeviceList(initialConfig.sensorType),
                 selectedViewSize = initialConfig.viewSize,
                 filterSummary = initialConfig.filterType.getSummary(context, initialConfig.filterConstant),
@@ -102,12 +103,13 @@ class EditSensorFieldViewModel(
         }
     }
 
-    fun onDeviceChanged(newDeviceId: Long) {
+    fun onDeviceChanged(newDeviceId: Long, newDeviceName: String) {
         val context = getApplication<Application>().applicationContext
 
         _uiState.update {
             it.copy(
-                selectedDeviceId = newDeviceId
+                selectedDeviceId = newDeviceId,
+                selectedDeviceName = newDeviceName
             )
         }
     }
@@ -193,18 +195,14 @@ class EditSensorFieldViewModel(
 
         viewModelScope.launch {
             repository.updateSensorFieldConfig(
-                sensorFieldId,
-                sensorType,
-                currentState.selectedViewSize,
-                currentState.selectedDeviceId
+                sensorFieldId = sensorFieldId,
+                newSensorType = sensorType,
+                newViewSize =  currentState.selectedViewSize,
+                newSourceDeviceId = currentState.selectedDeviceId,
+                newSourceDeviceName = currentState.selectedDeviceName,
+                newFilterType = getFinalFilterType(),
+                newFilterConstant = getFinalFilterConstant()
             )
-            // TODO: make one fun ...
-            repository.updateSensorFilter(
-                rowId = sensorFieldId,
-                filterType = getFinalFilterType(),
-                filterConstant = getFinalFilterConstant()
-            )
-
         }
     }
 

@@ -103,7 +103,14 @@ public class TrackingViewsDatabaseManager {
     // some high level methods
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    public void updateSensorView(int viewId, SensorType sensorType, ViewSize viewSize, @Nullable Long sourceDeviceId) {
+    public void updateSensorView(
+            long sensorFieldId,
+            SensorType sensorType,
+            ViewSize viewSize,
+            @Nullable Long sourceDeviceId,
+            FilterType filterType,
+            double filterConstant
+    ) {
         ContentValues values = new ContentValues();
         values.put(TrackingViewsDbHelper.SENSOR_TYPE, sensorType.name());
         values.put(TrackingViewsDbHelper.VIEW_SIZE, viewSize.name());
@@ -112,22 +119,13 @@ public class TrackingViewsDatabaseManager {
         } else {
             values.put(TrackingViewsDbHelper.SOURCE_DEVICE_ID, sourceDeviceId);
         }
-
-        getDatabase().update(TrackingViewsDbHelper.ROWS_TABLE,
-                values,
-                TrackingViewsDbHelper.ROW_ID + "=?",
-                new String[]{viewId + ""});
-    }
-
-    public void updateSensorFilter(int sensorFieldId, FilterType filterType, double filterConstant) {
-        ContentValues values = new ContentValues();
         values.put(TrackingViewsDbHelper.FILTER_TYPE, filterType.name());
         values.put(TrackingViewsDbHelper.FILTER_CONSTANT, filterConstant);
 
         getDatabase().update(TrackingViewsDbHelper.ROWS_TABLE,
                 values,
-                TrackingViewsDbHelper.ROW_ID + "=" + sensorFieldId,
-                null);
+                TrackingViewsDbHelper.ROW_ID + "=?",
+                new String[]{sensorFieldId + ""});
     }
 
     @Deprecated // use ViewSize now!
