@@ -1,13 +1,10 @@
 package com.atrainingtracker.trainingtracker.ui.tracking.tracking
 
-import android.util.Log
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,7 +15,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -29,7 +25,9 @@ import com.atrainingtracker.trainingtracker.ui.theme.aTrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldView
 import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize
-import kotlin.text.uppercase
+
+// height of the lap button.  Necessary to add spacer with same height when there also the map is shown.
+private val LapButtonHeight = 88.dp
 
 /**
  * The main screen that displays a grid of sensor fields.
@@ -47,45 +45,7 @@ fun TrackingScreen(
     onLapButtonClick: () -> Unit,
     mapContent: @Composable () -> Unit
 ) {
-    // Group all fields by their row number. This returns a Map<Int, List<SensorFieldState>>.
-    val fieldsByRow = state.fields.groupBy { it.rowNr }
 
-    // Get the sorted row numbers to ensure the layout is in the correct order.
-    val sortedRows = fieldsByRow.keys.sorted()
-
-    /*
-    // The main layout is a Column that fills the entire screen.
-    Column(Modifier.fillMaxWidth()) {
-        // Create a Row for each group of fields.
-        sortedRows.forEach { rowNr ->
-            val fieldsInRow = fieldsByRow[rowNr] ?: emptyList()
-            Log.i("TrackingScreen", "Row $rowNr has ${fieldsInRow.size} fields.")
-
-            // Each Row in the column will take up a proportional amount of the vertical space.
-            Row(
-                modifier = Modifier
-                    // .weight(1f) // Distribute height equally among all rows
-                    // .height(IntrinsicSize.Min) // Ensure content within the row can fill the height
-            ) {
-                // Sort fields by column number to ensure correct horizontal order.
-                val sortedFields = fieldsInRow.sortedBy { it.colNr }
-
-                // Add each SensorFieldView to the Row.
-                sortedFields.forEach { fieldState ->
-                    // Each field in the row takes up a proportional amount of the horizontal space.
-                    SensorFieldView(
-                        modifier = Modifier
-                            .weight(1f), // Distribute width equally among all columns in this row
-                            // .fillMaxHeight(),
-                        border = BorderStroke(width = 1.dp, color = Color.Gray),
-                        onLongClick = { onFieldLongClick(fieldState) },
-                        fieldState = fieldState
-                    )
-                }
-            }
-        }
-    }
-     */
 
     Box(modifier = Modifier.fillMaxSize()) {
         // The main layout is a Column that stacks the grid, map, and button.
@@ -124,9 +84,14 @@ fun TrackingScreen(
                     mapContent() // Invoke the passed-in composable
                 }
             }
+
+            // Add a Spacer at the bottom of the main content column if both the map and lap button are visible.
+            if (showMap && showLapButton) {
+                Spacer(modifier = Modifier.height(LapButtonHeight))
+            }
         }
 
-        // 2. Conditionally show the Lap Button, now aligned to the bottom of the parent Box.
+        // Conditionally show the Lap Button, now aligned to the bottom of the parent Box.
         // This makes it "float" on top of the content in the Column above.
         if (showLapButton) {
             LapButton(
@@ -160,14 +125,14 @@ private fun MapPlaceholder(modifier: Modifier = Modifier) {
  */
 @Composable
 private fun LapButton(
-    modifier: Modifier = Modifier, // 3. Accept a modifier
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     Button(
         onClick = onClick,
-        // Combine the passed-in modifier with the existing ones.
         modifier = modifier
             .fillMaxWidth()
+            .height(LapButtonHeight)
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         Text(
