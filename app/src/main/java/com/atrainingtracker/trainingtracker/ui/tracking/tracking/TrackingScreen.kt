@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -51,7 +53,12 @@ fun TrackingScreen(
         // The main layout is a Column that stacks the grid, map, and button.
         Column(Modifier.fillMaxSize()) {
             // This inner Column holds the dynamic grid and will expand to fill available space.
-            Column(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+            ) {
                 // Group all fields by their row number. This returns a Map<Int, List<SensorFieldState>>.
                 val fieldsByRow = state.fields.groupBy { it.rowNr }
 
@@ -86,7 +93,7 @@ fun TrackingScreen(
             }
 
             // Add a Spacer at the bottom of the main content column if both the map and lap button are visible.
-            if (showMap && showLapButton) {
+            if (showLapButton) {
                 Spacer(modifier = Modifier.height(LapButtonHeight))
             }
         }
