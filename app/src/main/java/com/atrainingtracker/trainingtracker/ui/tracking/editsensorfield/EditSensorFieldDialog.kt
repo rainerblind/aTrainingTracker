@@ -63,7 +63,7 @@ fun EditSensorFieldDialog(
                         items = deviceList.map { it.second }, // Names
                         selectedItem = deviceList.find { it.first == uiState.selectedDeviceId }?.second ?: stringResource(R.string.bestSensor),
                         onItemSelected = { index ->
-                            viewModel.onDeviceChanged(deviceList[index].first)
+                            viewModel.onDeviceChanged(deviceList[index].first, deviceList[index].second)
                         }
                     )
 
