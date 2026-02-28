@@ -34,7 +34,6 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.Dispatcher
 
 // Data class for holding tab info, can be moved to a more common location later.
 data class TrackingViewInfo(
@@ -404,6 +403,12 @@ class TrackingRepository private constructor(private val application: Applicatio
         }
     }
 
+    fun requestNewLap() {
+        application.sendBroadcast(
+            Intent(TrainingApplication.REQUEST_NEW_LAP)
+                .setPackage(application.packageName)
+        )
+    }
 
 
     /**

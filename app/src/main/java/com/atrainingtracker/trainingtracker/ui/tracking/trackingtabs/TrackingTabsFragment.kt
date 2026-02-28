@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.viewpager2.adapter.FragmentStateAdapter
@@ -25,6 +26,7 @@ class TrackingTabsFragment : Fragment() {
     private lateinit var viewPager: ViewPager2
     private lateinit var tabLayout: TabLayout
     private lateinit var pagerAdapter: TrackingPagerAdapter
+    private lateinit var lapButton: Button
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -43,6 +45,12 @@ class TrackingTabsFragment : Fragment() {
         viewPager = view.findViewById(R.id.pager)
         tabLayout = view.findViewById(R.id.tab_layout)
 
+        lapButton = view.findViewById(R.id.fab_lap_button)
+        lapButton.setOnClickListener {
+            // simply inform the view model that the button was clicked.
+            viewModel.onLapButtonClick()
+        }
+
         // Observe the ActivityType from the ViewModel (which gets it from the repository)
         viewModel.activityType.observe(viewLifecycleOwner) { activityType ->
             // This observer will be triggered on initial load and whenever the activity type changes.
@@ -55,6 +63,14 @@ class TrackingTabsFragment : Fragment() {
                 TabLayoutMediator(tabLayout, viewPager) { tab, position ->
                     tab.text = pagerAdapter.getPageTitle(position)
                 }.attach()
+
+                // Add a page change callback to control button visibility
+                viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+                    override fun onPageSelected(position: Int) {
+                        super.onPageSelected(position)
+                        updateLapButtonVisibility()
+                    }
+                })
             } else {
                 // If the adapter already exists, just update its activityType.
                 // The trackingViews observer below will handle updating the actual pages.
@@ -68,6 +84,7 @@ class TrackingTabsFragment : Fragment() {
         viewModel.trackingViews.observe(viewLifecycleOwner) { trackingViews ->
             if (::pagerAdapter.isInitialized) {
                 pagerAdapter.updateTrackingViews(trackingViews)
+                updateLapButtonVisibility()  // when the trackingViews change (due to a change of the activity type), it must be reevaluated whether to show the button
             }
         }
 
@@ -81,6 +98,27 @@ class TrackingTabsFragment : Fragment() {
             // Check that the control tab isn't active and that we have a valid event
             if (viewPager.currentItem != 0 && lapEvent != null) {
                 showLapSummaryDialog(lapEvent)
+            }
+        }
+    }
+
+    private fun updateLapButtonVisibility() {
+        if (!isAdded || !::pagerAdapter.isInitialized) {
+            lapButton.visibility = View.GONE
+            return
+        }
+
+        val currentPosition = viewPager.currentItem
+
+        if (currentPosition == 0) {
+            // Never show for the "Control" tab
+            lapButton.visibility = View.GONE
+        }
+        else {
+            if (pagerAdapter.getTrackingViewInfo(currentPosition)?.showLapButton == true) {
+                lapButton.visibility = View.VISIBLE
+            } else {
+                lapButton.visibility = View.GONE
             }
         }
     }
@@ -128,6 +166,15 @@ class TrackingTabsFragment : Fragment() {
                 }
             } else {
                 trackingViews[position - 1].name
+            }
+        }
+
+        fun getTrackingViewInfo(position: Int): TrackingViewInfo? {
+            val viewIndex = position - 1
+            return if (viewIndex >= 0 && viewIndex < trackingViews.size) {
+                trackingViews[viewIndex]
+            } else {
+                null
             }
         }
 
