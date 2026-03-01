@@ -7,10 +7,17 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -56,8 +63,9 @@ fun ViewSize.getDisplayName(context: Context): String {
 fun SensorFieldView(
     fieldState: SensorFieldState,
     modifier: Modifier = Modifier,
-    border: BorderStroke? = null,
-    onLongClick: () -> Unit = {}
+    screenMode: ScreenMode,
+    onEdit: () -> Unit = {},
+    onDelete: () -> Unit = {}
 ) {
     // Determine text styles based on the size parameter.
     val valueStyle: TextStyle
@@ -136,12 +144,21 @@ fun SensorFieldView(
         modifier = modifier
             .fillMaxWidth()
             .combinedClickable(
-                onClick = {},
-                onLongClick = onLongClick
+                // Implement correct click behavior based on screen mode
+                onClick = {
+                    if (screenMode == ScreenMode.CONFIGURATION) {
+                        onEdit()
+                    }
+                },
+                onLongClick = {
+                    if (screenMode == ScreenMode.TRACKING) {
+                        onEdit()
+                    }
+                }
             ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(containerColor = fieldState.zoneColor),
-        border = border ?: BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
@@ -186,6 +203,26 @@ fun SensorFieldView(
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
+
+            // Conditionally add the delete button at the bottom in configuration mode
+            if (screenMode == ScreenMode.CONFIGURATION) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    IconButton(
+                        onClick = onDelete,
+                        modifier = Modifier.size(24.dp) // Make the button compact
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Delete Field", // For accessibility
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -199,6 +236,7 @@ private class ViewSizeProvider : PreviewParameterProvider<ViewSize> {
     override val values = ViewSize.values().asSequence()
 }
 
+// Modify preview to pass the new required parameter
 @Preview(showBackground = true, widthDp = 320)
 @Composable
 private fun SensorFieldViewPreview(
@@ -218,9 +256,39 @@ private fun SensorFieldViewPreview(
     )
 
     MaterialTheme {
-        SensorFieldView(fieldState = mockSensorFieldState)
+        SensorFieldView(
+            fieldState = mockSensorFieldState,
+            screenMode = ScreenMode.TRACKING // Default preview to tracking mode
+        )
     }
 }
+
+// Add a specific preview for the configuration mode to see the delete button
+@Preview(showBackground = true, widthDp = 320)
+@Composable
+private fun SensorFieldViewConfigPreview() {
+    val mockSensorFieldState = SensorFieldState(
+        configHash = 1,
+        sensorFieldId = 0,
+        rowNr = 1,
+        colNr = 1,
+        viewSize = ViewSize.NORMAL,
+        label = "Pace",
+        filterDescription = "GPS: 5 s avg",
+        value = "5:32",
+        units = "/km",
+        zoneColor = MaterialTheme.colorScheme.surfaceVariant
+    )
+
+    MaterialTheme {
+        SensorFieldView(
+            fieldState = mockSensorFieldState,
+            screenMode = ScreenMode.CONFIGURATION, // Set mode to CONFIGURATION
+            onDelete = {} // Provide dummy lambda
+        )
+    }
+}
+
 
 @Preview(showBackground = true, widthDp = 320)
 @Composable
@@ -239,6 +307,9 @@ private fun SensorFieldViewZonePreview() {
     )
 
     MaterialTheme {
-        SensorFieldView(fieldState = mockSensorFieldStateInZone)
+        SensorFieldView(
+            fieldState = mockSensorFieldStateInZone,
+            screenMode = ScreenMode.TRACKING // Default preview to tracking mode
+        )
     }
 }
