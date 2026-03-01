@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.ui.theme.DefaultBackgroundColor
 import com.atrainingtracker.trainingtracker.ui.theme.Zone1
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldView
 import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize
@@ -36,8 +37,10 @@ import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize
 fun TrackingScreen(
     state: TrackingScreenState,
     showMap: Boolean,
-    onFieldLongClick: (fieldState: SensorFieldState) -> Unit,
-    mapContent: @Composable () -> Unit
+    mapContent: @Composable () -> Unit,
+    screenMode: ScreenMode,
+    onEditField: (fieldState: SensorFieldState) -> Unit = {},
+    onDeleteField: (fieldState: SensorFieldState) -> Unit = {}
 ) {
 
 
@@ -63,11 +66,12 @@ fun TrackingScreen(
                     // Add each SensorFieldView to the Row.
                     fieldsInRow.forEach { fieldState ->
                         SensorFieldView(
+                            fieldState = fieldState,
                             modifier = Modifier
                                 .weight(1f), // Distribute width equally among all columns in this row
-                            onLongClick = { onFieldLongClick(fieldState) },
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                            fieldState = fieldState
+                            screenMode,
+                            onEdit = { onEditField(fieldState) },
+                            onDelete = { onDeleteField(fieldState) }
                         )
                     }
                 }
@@ -144,9 +148,14 @@ fun TrackingScreenPreview() {
         TrackingScreen(
             state = TrackingScreenState(fields = previewFields),
             showMap = true,
-            onFieldLongClick = { field ->
+            screenMode = ScreenMode.CONFIGURATION,
+            onEditField = { field ->
                 // In a preview, we can just log it or do nothing.
-                println("Long clicked on: ${field.label}")
+                println("Edit clicked on: ${field.label}")
+            },
+            onDeleteField = { field ->
+                // In a preview, we can just log it or do nothing.
+                println("Delete clicked on: ${field.label}")
             },
             mapContent = {
                 MapPlaceholder()
