@@ -25,9 +25,6 @@ import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldView
 import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize
 
-// height of the lap button.  Necessary to add spacer with same height when there also the map is shown.
-private val LapButtonHeight = 88.dp
-
 /**
  * The main screen that displays a grid of sensor fields.
  * It groups fields by their 'rowNr' and then lays them out horizontally
@@ -39,7 +36,6 @@ private val LapButtonHeight = 88.dp
 fun TrackingScreen(
     state: TrackingScreenState,
     showMap: Boolean,
-    showLapButton: Boolean,
     onFieldLongClick: (fieldState: SensorFieldState) -> Unit,
     mapContent: @Composable () -> Unit
 ) {
@@ -84,11 +80,6 @@ fun TrackingScreen(
             Box(modifier = Modifier.weight(1f)) {
                 mapContent() // Invoke the passed-in composable
             }
-        }
-
-        // Add a Spacer at the bottom of the main content when the lap button is shown for this tab.
-        if (showLapButton) {
-            Spacer(modifier = Modifier.height(LapButtonHeight))
         }
     }
 }
@@ -153,7 +144,6 @@ fun TrackingScreenPreview() {
         TrackingScreen(
             state = TrackingScreenState(fields = previewFields),
             showMap = true,
-            showLapButton = true,
             onFieldLongClick = { field ->
                 // In a preview, we can just log it or do nothing.
                 println("Long clicked on: ${field.label}")

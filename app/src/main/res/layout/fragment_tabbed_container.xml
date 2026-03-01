@@ -24,24 +24,24 @@
             android:layout_height="0dp"
             android:layout_weight="1" />
 
-    </LinearLayout>
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/fab_lap_button"
+            style="@style/Widget.Material3.Button.ElevatedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|center_horizontal"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:backgroundTint="?attr/colorPrimary"
+            app:icon="@drawable/ic_lap_add"
+            app:iconTint="?attr/colorOnPrimary"
+            app:iconSize="42dp"
+            android:text="@string/Lap"
+            android:textColor="?attr/colorOnPrimary"
+            android:textAppearance="@style/TextAppearance.Material3.DisplayMedium"
+            android:visibility="visible" />
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/fab_lap_button"
-        style="@style/Widget.Material3.Button.ElevatedButton"
-        android:layout_width="match_parent"
-        android:layout_height="88.dp"
-        android:layout_gravity="bottom|center_horizontal"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:backgroundTint="?attr/colorPrimary"
-        app:icon="@drawable/ic_lap_add"
-        app:iconTint="?attr/colorOnPrimary"
-        app:iconSize="42dp"
-        android:text="@string/Lap"
-        android:textColor="?attr/colorOnPrimary"
-        android:textAppearance="@style/TextAppearance.Material3.DisplayMedium"
-        android:visibility="visible" />
+    </LinearLayout>
 
     <!-- A ComposeView to host our Compose dialog -->
     <androidx.compose.ui.platform.ComposeView

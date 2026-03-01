@@ -203,7 +203,7 @@ class TrackingTabsFragment : Fragment() {
                 ControlTrackingFragment()
             } else {
                 val viewInfo = trackingViews[position - 1]
-                TrackingFragment.newInstance(viewInfo.tabViewId, viewInfo.showMap, viewInfo.showLapButton)
+                TrackingFragment.newInstance(viewInfo.tabViewId, viewInfo.showMap)
             }
         }
     }

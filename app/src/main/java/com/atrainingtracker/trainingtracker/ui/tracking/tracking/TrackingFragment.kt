@@ -31,7 +31,6 @@ class TrackingFragment : Fragment() {
     private var mapFragment: TrackOnMapTrackingAndFollowingFragment? = null
 
     private var showMap: Boolean = false
-    private var showLapButton: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,7 +38,6 @@ class TrackingFragment : Fragment() {
         // Get the viewId from the fragment's arguments
         val tabViewId = arguments?.getLong(ARG_TAB_VIEW_ID) ?: 0
         showMap = arguments?.getBoolean(ARG_SHOW_MAP) ?: false
-        showLapButton = arguments?.getBoolean(ARG_SHOW_LAP_BUTTON) ?: false
 
         // Create the ViewModel using our custom factory
         val factory = TrackingViewModelFactory(requireActivity().application, tabViewId)
@@ -65,7 +63,6 @@ class TrackingFragment : Fragment() {
                     TrackingScreen(
                         state = uiState,
                         showMap = showMap,
-                        showLapButton = showLapButton,
                         onFieldLongClick = { fieldState ->
                             // When a field is long-clicked, just update the state.
                             editingSensorFieldId = fieldState.sensorFieldId
@@ -148,12 +145,11 @@ class TrackingFragment : Fragment() {
          * with the required viewId.
          */
         @JvmStatic
-        fun newInstance(tabViewId: Long, showMap: Boolean, showLapButton: Boolean) =
+        fun newInstance(tabViewId: Long, showMap: Boolean) =
             TrackingFragment().apply {
                 arguments = Bundle().apply {
                     putLong(ARG_TAB_VIEW_ID, tabViewId)
                     putBoolean(ARG_SHOW_MAP, showMap)
-                    putBoolean(ARG_SHOW_LAP_BUTTON, showLapButton)
                 }
             }
     }
