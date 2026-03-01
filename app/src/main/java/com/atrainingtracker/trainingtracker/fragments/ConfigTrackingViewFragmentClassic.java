@@ -59,8 +59,8 @@ import java.util.TreeMap;
 import static com.atrainingtracker.banalservice.fragments.ConfigureFilterDialogFragmentClassic.FILTERS_CHANGED_INTENT;
 import static com.atrainingtracker.trainingtracker.dialogs.EditFieldDialogClassic.TRACKING_VIEW_CHANGED_INTENT;
 
-
-public class ConfigTrackingViewFragment extends ConfigViewFragment {
+@Deprecated
+public class ConfigTrackingViewFragmentClassic extends ConfigViewFragment {
     protected static final SensorType SENSOR_TYPE_DEFAULT = SensorType.SPEED_mps;
     protected static final int TEXT_SIZE_DEFAULT = 30;
 
@@ -70,7 +70,7 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
 
     // public static final String VIEW_ID = "VIEW_ID";
     // public static final String NAME    = "NAME";
-    private static final String TAG = ConfigTrackingViewFragment.class.getName();
+    private static final String TAG = ConfigTrackingViewFragmentClassic.class.getName();
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
     // protected ActivityType mActivityType;
     // protected long mViewId;
@@ -90,10 +90,10 @@ public class ConfigTrackingViewFragment extends ConfigViewFragment {
     };
 
     @NonNull
-    public static ConfigTrackingViewFragment newInstance(long viewId) {
+    public static ConfigTrackingViewFragmentClassic newInstance(long viewId) {
         if (DEBUG) Log.i(TAG, "newInstance(" + viewId + ")");
 
-        ConfigTrackingViewFragment fragment = new ConfigTrackingViewFragment();
+        ConfigTrackingViewFragmentClassic fragment = new ConfigTrackingViewFragmentClassic();
 
         Bundle args = new Bundle();
         args.putLong(ConfigViewsActivity.VIEW_ID, viewId);

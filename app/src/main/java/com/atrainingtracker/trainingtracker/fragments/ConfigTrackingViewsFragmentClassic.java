@@ -34,16 +34,17 @@ import java.util.Objects;
 /**
  * Created by rainer on 20.01.16.
  */
+@Deprecated
 
-public class ConfigTrackingViewsFragment extends ConfigViewsFragment {
+public class ConfigTrackingViewsFragmentClassic extends ConfigViewsFragment {
 
-    public static final String TAG = ConfigTrackingViewsFragment.class.getSimpleName();
+    public static final String TAG = ConfigTrackingViewsFragmentClassic.class.getSimpleName();
     private static final boolean DEBUG = TrainingApplication.getDebug(true);
 
     @NonNull
-    public static ConfigTrackingViewsFragment newInstance(ActivityType activityType, long viewId) {
+    public static ConfigTrackingViewsFragmentClassic newInstance(ActivityType activityType, long viewId) {
 
-        ConfigTrackingViewsFragment fragment = new ConfigTrackingViewsFragment();
+        ConfigTrackingViewsFragmentClassic fragment = new ConfigTrackingViewsFragmentClassic();
 
         Bundle args = new Bundle();
         args.putString(ConfigViewsActivity.ACTIVITY_TYPE, Objects.requireNonNullElseGet(activityType, ActivityType::getDefaultActivityType).name());
@@ -85,7 +86,7 @@ public class ConfigTrackingViewsFragment extends ConfigViewsFragment {
     @NonNull
     @Override
     protected Fragment getNewChildFragment(long viewId) {
-        return ConfigTrackingViewFragment.newInstance(viewId);
+        return ConfigTrackingViewFragmentClassic.newInstance(viewId);
     }
 
 }
