@@ -183,12 +183,12 @@ public class TrackingViewsDatabaseManager {
         updateBoolean(viewId, TrackingViewsDbHelper.SHOW_LAP_BUTTON, showLapButton);
     }
 
-    public void deleteRow(long rowId) {
-        if (DEBUG) Log.i(TAG, "deleteRow(" + rowId + ")");
+    public void deleteSensorField(long sensorFieldId) {
+        if (DEBUG) Log.i(TAG, "deleteSensorField(" + sensorFieldId + ")");
 
         getDatabase().delete(TrackingViewsDbHelper.ROWS_TABLE,
-                TrackingViewsDbHelper.ROW_ID + "=?",
-                new String[]{rowId + ""});
+                TrackingViewsDbHelper.ROW_ID + "=?", // note that due to historic reasons, whe ID of a sensor field is called ROW_ID :(
+                new String[]{sensorFieldId + ""});
     }
 
     @Nullable

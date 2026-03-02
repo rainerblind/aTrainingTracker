@@ -310,7 +310,7 @@ public class ConfigTrackingViewFragmentClassic extends ConfigViewFragment {
             deleteButton.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
                     if (DEBUG) Log.i(TAG, "delete button pressed");
-                    mTrackingViewsDatabaseManager.deleteRow(viewInfo.rowId());
+                    mTrackingViewsDatabaseManager.deleteSensorField(viewInfo.rowId());
 
                     mViewInfoMap.get(viewInfo.rowNr()).remove(viewInfo.colNr());
                     addSensorFields();
