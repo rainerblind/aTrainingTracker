@@ -1,5 +1,6 @@
 package com.atrainingtracker.trainingtracker.ui.tracking.tracking
 
+import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -57,20 +58,19 @@ fun SensorGridScreen(
     mapContent: @Composable () -> Unit = {}
 ) {
     Column(Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.weight(1f)) {
-            // In CONFIGURATION mode, use the slightly more complex grid builder.
-            // In TRACKING mode, use the simple, efficient renderer.
-            if (screenMode == ScreenMode.CONFIGURATION) {
-                ConfigGrid(state = state, gridActions = gridActions)
-            } else {
-                TrackingGrid(state = state, gridActions = gridActions)
-            }
+        // In CONFIGURATION mode, use the slightly more complex grid builder.
+        // In TRACKING mode, use the simple, efficient renderer.
+        if (screenMode == ScreenMode.CONFIGURATION) {
+            ConfigGrid(state = state, gridActions = gridActions)
+        } else {
+            TrackingGrid(state = state, gridActions = gridActions)
+        }
 
-            // Conditionally display the map
-            if (showMap) {
-                Box(modifier = Modifier.weight(1f)) {
-                    mapContent()
-                }
+        // Conditionally display the map
+        if (showMap) {
+            Log.i("SensorGridScreen", "Map is visible")
+            Box(modifier = Modifier.weight(1f)) {
+                mapContent()
             }
         }
     }
@@ -83,7 +83,7 @@ fun SensorGridScreen(
 private fun TrackingGrid(state: TrackingScreenState, gridActions: GridActions) {
     Column(
         modifier = Modifier
-            .fillMaxSize()
+            .fillMaxWidth()
             .verticalScroll(rememberScrollState())
     ) {
         val fieldsByRow = state.fields.groupBy { it.rowNr }
@@ -115,7 +115,7 @@ private fun ConfigGrid(state: TrackingScreenState, gridActions: GridActions) {
 
     Column(
         modifier = Modifier
-            .fillMaxSize()
+            .fillMaxWidth()
             .verticalScroll(rememberScrollState())
             .padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
