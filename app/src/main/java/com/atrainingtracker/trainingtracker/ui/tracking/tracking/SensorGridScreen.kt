@@ -58,13 +58,53 @@ fun SensorGridScreen(
     mapContent: @Composable () -> Unit = {}
 ) {
     Column(Modifier.fillMaxSize()) {
-        // In CONFIGURATION mode, use the slightly more complex grid builder.
-        // In TRACKING mode, use the simple, efficient renderer.
-        if (screenMode == ScreenMode.CONFIGURATION) {
-            ConfigGrid(state = state, gridActions = gridActions)
-        } else {
-            TrackingGrid(state = state, gridActions = gridActions)
+        val fieldsByRow = state.fields.groupBy { it.rowNr }
+        val sortedRows = fieldsByRow.keys.sorted()
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // --- ADD ROW AT TOP ---
+            if (screenMode == ScreenMode.CONFIGURATION) {
+                RowAdder(onClick = { gridActions.onAddRow(0) })
+            }
+
+            sortedRows.forEach { rowNr ->
+                val fieldsInThisRow = fieldsByRow[rowNr]?.sortedBy { it.colNr } ?: emptyList()
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.height(IntrinsicSize.Min) // Important for vertical adder alignment
+                ) {
+                    // --- ADD COL AT START OF ROW ---
+                    if (screenMode == ScreenMode.CONFIGURATION) {
+                        ColAdder(onClick = { gridActions.onAddCol(rowNr, 0) })
+                    }
+
+                    fieldsInThisRow.forEach { fieldState ->
+                        Box(modifier = Modifier.weight(1f)) {
+                            SensorFieldView(
+                                fieldState = fieldState,
+                                screenMode = screenMode,
+                                onEdit = { gridActions.onEditField(fieldState) },
+                                onDelete = { gridActions.onDeleteField(fieldState) }
+                            )
+                        }
+                        // --- ADD COL BETWEEN FIELDS ---
+                        if (screenMode == ScreenMode.CONFIGURATION) {
+                            ColAdder(onClick = { gridActions.onAddCol(rowNr,fieldState.colNr + 1) } )
+                        }
+                    }
+                }
+                // --- ADD ROW BETWEEN ROWS ---
+                if (screenMode == ScreenMode.CONFIGURATION) {
+                    RowAdder(onClick = { gridActions.onAddRow(rowNr + 1) })
+                }
+            }
         }
+
 
         // Conditionally display the map
         if (showMap) {
@@ -72,81 +112,6 @@ fun SensorGridScreen(
             Box(modifier = Modifier.weight(1f)) {
                 mapContent()
             }
-        }
-    }
-}
-
-/**
- * Renders the simple grid for TRACKING mode.
- */
-@Composable
-private fun TrackingGrid(state: TrackingScreenState, gridActions: GridActions) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .verticalScroll(rememberScrollState())
-    ) {
-        val fieldsByRow = state.fields.groupBy { it.rowNr }
-        val sortedRows = fieldsByRow.keys.sorted()
-
-        sortedRows.forEach { rowNr ->
-            val fieldsInRow = fieldsByRow[rowNr]?.sortedBy { it.colNr } ?: emptyList()
-            Row {
-                fieldsInRow.forEach { fieldState ->
-                    SensorFieldView(
-                        modifier = Modifier.weight(1f),
-                        fieldState = fieldState,
-                        screenMode = ScreenMode.TRACKING,
-                        onEdit = { gridActions.onEditField(fieldState) }
-                    )
-                }
-            }
-        }
-    }
-}
-
-/**
- * Renders the advanced, editable grid for CONFIGURATION mode.
- */
-@Composable
-private fun ConfigGrid(state: TrackingScreenState, gridActions: GridActions) {
-    val fieldsByRow = state.fields.groupBy { it.rowNr }
-    val sortedRows = fieldsByRow.keys.sorted()
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .verticalScroll(rememberScrollState())
-            .padding(8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        // --- ADD ROW AT TOP ---
-        RowAdder(onClick = { gridActions.onAddRow(0) })
-
-        sortedRows.forEach { rowNr ->
-            val fieldsInThisRow = fieldsByRow[rowNr]?.sortedBy { it.colNr } ?: emptyList()
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.height(IntrinsicSize.Min) // Important for vertical adder alignment
-            ) {
-                // --- ADD COL AT START OF ROW ---
-                ColAdder(onClick = { gridActions.onAddCol(rowNr, 0) })
-
-                fieldsInThisRow.forEach { fieldState ->
-                    Box(modifier = Modifier.weight(1f)) {
-                        SensorFieldView(
-                            fieldState = fieldState,
-                            screenMode = ScreenMode.CONFIGURATION,
-                            onEdit = { gridActions.onEditField(fieldState) },
-                            onDelete = { gridActions.onDeleteField(fieldState) }
-                        )
-                    }
-                    // --- ADD COL BETWEEN FIELDS ---
-                    ColAdder(onClick = { gridActions.onAddCol(rowNr, fieldState.colNr + 1) })
-                }
-            }
-            // --- ADD ROW BETWEEN ROWS ---
-            RowAdder(onClick = { gridActions.onAddRow(rowNr + 1) })
         }
     }
 }
