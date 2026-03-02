@@ -2,6 +2,9 @@ package com.atrainingtracker.trainingtracker.ui.tracking.tracking
 
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.Menu
+import android.view.MenuInflater
+import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
@@ -17,9 +20,11 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapTrackingAndFollowingFragment
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
+import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
 import com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.ConfigureFilterDialog
 import com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldDialog
 import com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModel
@@ -31,18 +36,47 @@ class TrackingFragment : Fragment() {
 
     private var mapFragment: TrackOnMapTrackingAndFollowingFragment? = null
 
+    private var tabViewId: Long = -1L
     private var showMap: Boolean = false
+
+    private var screenMode by mutableStateOf(ScreenMode.TRACKING)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        setHasOptionsMenu(true)
+
         // Get the viewId from the fragment's arguments
-        val tabViewId = arguments?.getLong(ARG_TAB_VIEW_ID) ?: 0
-        showMap = arguments?.getBoolean(ARG_SHOW_MAP) ?: false
+        arguments?.let {
+            tabViewId = it.getLong(ARG_TAB_VIEW_ID) ?: 0
+            showMap = it.getBoolean(ARG_SHOW_MAP) ?: false
+        }
 
         // Create the ViewModel using our custom factory
         val factory = TrackingViewModelFactory(requireActivity().application, tabViewId)
         viewModel = ViewModelProvider(this, factory)[TrackingViewModel::class.java]
+    }
+
+    // Inflate the menu
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+        inflater.inflate(R.menu.menu_tracking_fragment, menu)
+        super.onCreateOptionsMenu(menu, inflater)
+    }
+
+    // Handle menu item clicks
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_configure -> {
+                // Toggle the screen mode
+                screenMode = if (screenMode == ScreenMode.TRACKING) {
+                    ScreenMode.CONFIGURATION
+                } else {
+                    ScreenMode.TRACKING
+                }
+                true // Consume the event
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
     }
 
     override fun onCreateView(
@@ -59,18 +93,32 @@ class TrackingFragment : Fragment() {
                     // States to hold the ID of the field and filter to edit. Null means no dialog.
                     var editingSensorFieldId: Long? by remember { mutableStateOf(null) }
 
+                    // Create the GridActions object
+                    val gridActions = object : GridActions {
+                        override fun onEditField(fieldState: SensorFieldState) {
+                            // TODO: Call viewModel to show edit dialog
+                            // viewModel.onEditField(fieldState)
+                        }
+                        override fun onDeleteField(fieldState: SensorFieldState) {
+                            // TODO: Call viewModel to delete field
+                            // viewModel.onDeleteField(fieldState)
+                        }
+                        override fun onAddRow(atRow: Int) {
+                            // TODO: Call viewModel to add a row
+                            // viewModel.onAddRow(atRow)
+                        }
+                        override fun onAddCol(atRow: Int, atCol: Int) {
+                            // TODO: Call viewModel to add a column
+                            // viewModel.onAddCol(atRow, atCol)
+                        }
+                    }
 
-                    // -- Main Tracking Screen
-                    TrackingScreen(
+                    // 6. Pass the current screenMode to the SensorGridScreen
+                    SensorGridScreen(
                         state = uiState,
+                        screenMode = screenMode,
+                        gridActions = gridActions, // Pass the actions object
                         showMap = showMap,
-                        screenMode = ScreenMode.TRACKING,  // TODO: Make this configurable
-                        onEditField = { fieldState ->
-                            // When a field is long-clicked, just update the state.
-                            editingSensorFieldId = fieldState.sensorFieldId
-                        },
-                        onDeleteField = { fieldState -> {}},  // TODO: Implement this
-                        // We are now passing the AndroidView composable INTO the TrackingScreen.
                         mapContent = {
                             if (showMap) { // Double-check just in case
                                 AndroidView(
@@ -90,49 +138,6 @@ class TrackingFragment : Fragment() {
                             }
                         }
                     )
-
-                    // -- Edit Sensor Field Dialog
-                    editingSensorFieldId?.let { currentId ->
-                        activityType?.let { currentActivityType ->
-                            val editViewModel: EditSensorFieldViewModel = viewModel(
-                                key = "edit_dialog_$currentId",
-                                factory = EditSensorFieldViewModelFactory(
-                                    application = requireActivity().application,
-                                    sensorFieldId = currentId,
-                                    activityType = currentActivityType,
-                                    repository = viewModel.trackingRepository
-                                )
-                            )
-
-                            var showConfigureFilterDialogForId: Long? by remember { mutableStateOf(null) }
-
-                            EditSensorFieldDialog(
-                                viewModel = editViewModel,
-                                onDismissRequest = {
-                                    editViewModel.loadInitialState()
-                                    editingSensorFieldId = null },
-                                onConfigureFilter = {
-                                    // 2. Instead of showing the old fragment, just set the state
-                                    showConfigureFilterDialogForId = currentId
-                                    // Do not dismiss the edit dialog
-                                    // editingSensorFieldId = null
-                                }
-                            )
-
-                            // -- Configure Filter Dialog
-                            showConfigureFilterDialogForId?.let { currentId ->
-                                ConfigureFilterDialog(
-                                    viewModel = editViewModel,
-                                    onDismissRequest = {
-                                        editViewModel.onFilterEditCancel()
-                                        showConfigureFilterDialogForId = null },
-                                    onSave = {
-                                        showConfigureFilterDialogForId = null
-                                    }
-                                )
-                            }
-                        }
-                    }
                 }
             }
         }
@@ -141,7 +146,6 @@ class TrackingFragment : Fragment() {
     companion object {
         private const val ARG_TAB_VIEW_ID = "tab_view_id"
         private const val ARG_SHOW_MAP = "show_map"
-        private const val ARG_SHOW_LAP_BUTTON = "show_lap_button"
 
         /**
          * A factory method to create a new instance of this fragment

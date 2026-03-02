@@ -65,8 +65,8 @@ fun SensorGridScreen(
                 TrackingGrid(state = state, gridActions = gridActions)
             }
 
-            // Conditionally display the map (only in TRACKING mode)
-            if (screenMode == ScreenMode.TRACKING && showMap) {
+            // Conditionally display the map
+            if (showMap) {
                 Box(modifier = Modifier.weight(1f)) {
                     mapContent()
                 }

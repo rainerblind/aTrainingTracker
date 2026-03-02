@@ -289,7 +289,7 @@ public class TrackingFragmentClassic extends BaseTrackingFragment {
         super.onCreateOptionsMenu(menu, inflater);
         if (DEBUG) Log.d(TAG, "onCreateOptionsMenu");
 
-        inflater.inflate(R.menu.tracking_menu, menu);
+        inflater.inflate(R.menu.deprecated_tracking_menu, menu);
     }
 
     @Override

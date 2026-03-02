@@ -906,5 +906,6 @@
     <string name="sensor">Sensor</string>
     <string name="text_size">Größe</string>
     <string name="filter">Glättung</string>
+    <string name="configure">Configure</string>
 
 </resources>
