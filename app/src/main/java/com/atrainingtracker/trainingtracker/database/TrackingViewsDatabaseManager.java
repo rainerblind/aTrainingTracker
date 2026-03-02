@@ -46,7 +46,7 @@ import java.util.TreeMap;
 
 
 public class TrackingViewsDatabaseManager {
-    private static final String TAG = TrackingViewsDatabaseManager.class.getName();
+    private static final String TAG = "TrackingViewsDatabaseManager";
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
     // singleton pattern
@@ -127,6 +127,50 @@ public class TrackingViewsDatabaseManager {
                 TrackingViewsDbHelper.ROW_ID + "=?",
                 new String[]{sensorFieldId + ""});
     }
+
+    public void insertSensorFiledAt(
+            long tabViewId,
+            int rowNr,
+            int colNr,                        // -1 means new row
+            SensorType sensorType,
+            ViewSize viewSize,
+            @Nullable Long sourceDeviceId,    // null means none = best
+            FilterType filterType,
+            double filterConstant) {
+
+        Log.i(TAG, "insertSensorFiledAt(" + tabViewId + ", " + rowNr + ", " + colNr + ", " + sensorType.name());
+
+        String sql;
+        if (colNr == -1) {  // new row -> add 1 to all rows with a larger rowNr
+            sql = "UPDATE " + TrackingViewsDbHelper.ROWS_TABLE +
+                    " SET " + TrackingViewsDbHelper.ROW_NR + "=" + TrackingViewsDbHelper.ROW_NR + "+1" +
+                    " WHERE " + TrackingViewsDbHelper.ROW_NR + " >= " + rowNr;
+        }
+        else {  // new col -> add 1 to all cols with a larger colNr and the same rowNr
+            sql = "UPDATE " + TrackingViewsDbHelper.ROWS_TABLE +
+                    " SET " + TrackingViewsDbHelper.COL_NR + "=" + TrackingViewsDbHelper.COL_NR + "+1" +
+                    " WHERE " + TrackingViewsDbHelper.COL_NR + " >= " + colNr + " AND " + TrackingViewsDbHelper.ROW_NR + "=" + rowNr;
+        }
+
+        Log.i(TAG, sql);
+        getDatabase().execSQL(sql);
+
+        ContentValues values = new ContentValues();
+        values.put(TrackingViewsDbHelper.VIEW_ID, tabViewId);
+        values.put(TrackingViewsDbHelper.ROW_NR, rowNr);
+        values.put(TrackingViewsDbHelper.COL_NR, colNr);
+        values.put(TrackingViewsDbHelper.SENSOR_TYPE, sensorType.name());
+        values.put(TrackingViewsDbHelper.VIEW_SIZE, viewSize.name());
+        if (sourceDeviceId != null && sourceDeviceId >= 0) {
+            values.put(TrackingViewsDbHelper.SOURCE_DEVICE_ID, sourceDeviceId);
+        }
+        values.put(TrackingViewsDbHelper.FILTER_TYPE, filterType.name());
+        values.put(TrackingViewsDbHelper.FILTER_CONSTANT, filterConstant);
+
+        getDatabase().insert(TrackingViewsDbHelper.ROWS_TABLE, null, values);
+    }
+
+
 
     @Deprecated // use ViewSize now!
     public void updateTextSizeOfRow(long rowId, int textSize) {

@@ -17,9 +17,9 @@ import com.atrainingtracker.trainingtracker.ui.tracking.getDisplayName
 
 @Composable
 fun EditSensorFieldDialog(
+    title: String,
     viewModel: EditSensorFieldViewModel,
-    onDismissRequest: () -> Unit,
-    onConfigureFilter: () -> Unit
+    onDismissRequest: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
@@ -34,7 +34,7 @@ fun EditSensorFieldDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = stringResource(R.string.edit_field),
+                    text = title,
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
@@ -85,7 +85,7 @@ fun EditSensorFieldDialog(
                 // --- Optionally: Configure Filter Button ---
                  if (uiState.selectedSensorType?.filteringPossible == true) {
                     OutlinedButton(
-                        onClick = onConfigureFilter,
+                        onClick = { viewModel.onConfigureFilterClicked() },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("${stringResource(R.string.filter)}: ${uiState.filterSummary}")
@@ -112,6 +112,17 @@ fun EditSensorFieldDialog(
                 }
             }
         }
+    }
+
+    // when necessary, also show the ConfigFilterDialog.
+    if (uiState.showFilterConfigDialog) {
+        ConfigureFilterDialog(
+            viewModel = viewModel,
+            onDismissRequest = { viewModel.onFilterConfigDismissed() },
+            onSave = {
+                viewModel.onSaveFilterConfig()
+            }
+        )
     }
 }
 

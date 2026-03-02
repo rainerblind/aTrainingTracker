@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.ServiceConnection
 import android.os.IBinder
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.atrainingtracker.banalservice.ActivityType
@@ -92,7 +93,7 @@ class TrackingRepository private constructor(private val application: Applicatio
     private var isBoundToBanalService = false
 
 
-    private val _activityType = MutableLiveData<ActivityType>()
+    private val _activityType = MutableLiveData<ActivityType>(ActivityType.getDefaultActivityType())
     val activityType: LiveData<ActivityType> = _activityType
     // Note that we get the LiveData by observing the BANALServiceComm.activityType
 
@@ -164,9 +165,10 @@ class TrackingRepository private constructor(private val application: Applicatio
     /**
      * Retrieves the ActivityType associated with a specific view definition.
      */
-    suspend fun getActivityTypeForView(tabViewId: Long): ActivityType? {
+    suspend fun getActivityTypeForView(tabViewId: Long): ActivityType {
         return withContext(Dispatchers.IO) {
-            viewsDbManager.getActivityTypeForTab(tabViewId)
+            val activityType = viewsDbManager.getActivityTypeForTab(tabViewId)
+            activityType
         }
     }
 
@@ -437,6 +439,41 @@ class TrackingRepository private constructor(private val application: Applicatio
         if (banalServiceComm != null) banalServiceComm?.createFilter(filterData)
 
         // notify collectors that the data has changed by incrementing the value
+        withContext(Dispatchers.Main) {
+            configUpdateTrigger.value++
+        }
+    }
+
+    suspend fun insertSensorFieldConfig(
+        tabViewId: Long,
+        rowNr: Int,
+        colNr: Int,
+        newSensorType: SensorType,
+        newViewSize: ViewSize,
+        newSourceDeviceId: Long?,
+        newSourceDeviceName: String?,
+        newFilterType: FilterType,
+        newFilterConstant: Double
+    ) {
+        Log.i("TrackingRepository", "insertSensorFieldConfig: $tabViewId, $rowNr, $colNr")
+
+        withContext(Dispatchers.IO) {
+            viewsDbManager.insertSensorFiledAt(
+                tabViewId,
+                rowNr,
+                colNr,
+                newSensorType,
+                newViewSize,
+                newSourceDeviceId,
+                newFilterType,
+                newFilterConstant)
+        }
+
+        // request the BANALService to create this new filter
+        val filterData = FilterData(newSourceDeviceName, newSensorType, newFilterType, newFilterConstant)
+        if (banalServiceComm != null) banalServiceComm?.createFilter(filterData)
+
+        // trigger recreation of UI
         withContext(Dispatchers.Main) {
             configUpdateTrigger.value++
         }

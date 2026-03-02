@@ -67,23 +67,30 @@ fun SensorGridScreen(
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // --- ADD ROW AT TOP ---
-            if (screenMode == ScreenMode.CONFIGURATION) {
-                RowAdder(onClick = { gridActions.onAddRow(0) })
-            }
-
+            var maxRowNr = 0
             sortedRows.forEach { rowNr ->
+                maxRowNr = rowNr
+                // Log.i("SensorGridScreen", "Row $rowNr")
+                // --- ADD field BETWEEN ROWS ---
+                if (screenMode == ScreenMode.CONFIGURATION) {
+                    // Text(text="RowAdder $rowNr")
+                    RowAdder(onClick = { gridActions.onAddRow(rowNr) })
+                }
+
                 val fieldsInThisRow = fieldsByRow[rowNr]?.sortedBy { it.colNr } ?: emptyList()
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.height(IntrinsicSize.Min) // Important for vertical adder alignment
                 ) {
-                    // --- ADD COL AT START OF ROW ---
-                    if (screenMode == ScreenMode.CONFIGURATION) {
-                        ColAdder(onClick = { gridActions.onAddCol(rowNr, 0) })
-                    }
 
+                    var maxColNr = 0
                     fieldsInThisRow.forEach { fieldState ->
+                        // --- ADD Field BETWEEN FIELDS ---
+                        if (screenMode == ScreenMode.CONFIGURATION) {
+                            // Text(text="ColAdder $rowNr ${fieldState.colNr}")
+                            ColAdder(onClick = { gridActions.onAddCol(rowNr,fieldState.colNr) } )
+                        }
+                        maxColNr = fieldState.colNr
                         Box(modifier = Modifier.weight(1f)) {
                             SensorFieldView(
                                 fieldState = fieldState,
@@ -92,23 +99,26 @@ fun SensorGridScreen(
                                 onDelete = { gridActions.onDeleteField(fieldState) }
                             )
                         }
-                        // --- ADD COL BETWEEN FIELDS ---
-                        if (screenMode == ScreenMode.CONFIGURATION) {
-                            ColAdder(onClick = { gridActions.onAddCol(rowNr,fieldState.colNr + 1) } )
-                        }
                     }
+                    // --- ADD Field AT END OF the ROW ---
+                    if (screenMode == ScreenMode.CONFIGURATION) {
+                        // Text(text="ColAdder $rowNr $maxColNr+1")
+                        ColAdder(onClick = { gridActions.onAddCol(rowNr, maxColNr + 1) })
+                    }
+
                 }
-                // --- ADD ROW BETWEEN ROWS ---
-                if (screenMode == ScreenMode.CONFIGURATION) {
-                    RowAdder(onClick = { gridActions.onAddRow(rowNr + 1) })
-                }
+            }
+            // -- ADD Field as a new row
+            if (screenMode == ScreenMode.CONFIGURATION) {
+                // Text(text="RowAdder $maxRowNr+1")
+                RowAdder(onClick = { gridActions.onAddRow(maxRowNr + 1) })
             }
         }
 
 
         // Conditionally display the map
         if (showMap) {
-            Log.i("SensorGridScreen", "Map is visible")
+            // Log.i("SensorGridScreen", "Map is visible")
             Box(modifier = Modifier.weight(1f)) {
                 mapContent()
             }

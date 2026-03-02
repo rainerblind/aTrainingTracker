@@ -1,6 +1,7 @@
 package com.atrainingtracker.trainingtracker.ui.tracking.tracking
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuInflater
@@ -12,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
@@ -25,9 +25,7 @@ import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapTra
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
-import com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.ConfigureFilterDialog
 import com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldDialog
-import com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModel
 import com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModelFactory
 
 class TrackingFragment : Fragment() {
@@ -90,25 +88,71 @@ class TrackingFragment : Fragment() {
                     val uiState by viewModel.uiState.collectAsState()
                     val activityType by viewModel.activityType.collectAsState()
 
-                    // States to hold the ID of the field and filter to edit. Null means no dialog.
-                    var editingSensorFieldId: Long? by remember { mutableStateOf(null) }
+                    val editingFieldId by viewModel.editingFieldId.collectAsState()
+                    val pendingAddition by viewModel.pendingAddition.collectAsState()
+
+                    // If editingFieldId is not null, the Dialog is added to the UI composition.
+                    editingFieldId?.let { fieldId ->
+                        EditSensorFieldDialog(
+                            title = context.getString(R.string.edit_field),
+                            viewModel = viewModel(
+                                factory = EditSensorFieldViewModelFactory(
+                                    application = requireActivity().application,
+                                    sensorFieldId = fieldId,
+                                    activityType = activityType,
+                                    repository = viewModel.trackingRepository,
+                                    tabViewId = tabViewId,
+                                    rowNr = -1,
+                                    colNr = -1
+                                ),
+                                // Crucial: Use the fieldId as a key so a new ViewModel
+                                // is created if you switch from editing field A to field B
+                                key = fieldId.toString()
+                            ),
+                            onDismissRequest = {
+                                // Tell the TrackingViewModel to reset the state to null
+                                viewModel.onDismissEditDialog()
+                            }
+                        )
+                    }
+
+                    // Show the EditSensorFieldDialog to add a new sensor field
+                    pendingAddition?.let { params ->
+                        Log.i(TAG, "pendingAddition: $params ($tabViewId)")
+                        EditSensorFieldDialog(
+                            title = context.getString(R.string.add_sensor),
+                            viewModel = viewModel(
+                                factory = EditSensorFieldViewModelFactory(
+                                    application = requireActivity().application,
+                                    repository = viewModel.trackingRepository,
+                                    activityType = activityType,
+                                    sensorFieldId = -1L, // Signal NEW mode
+                                    tabViewId = tabViewId,
+                                    rowNr = params.row,
+                                    colNr = params.col,
+                                ),
+                                key = "$tabViewId, ${params.row}, ${params.col}"
+                            ),
+                            onDismissRequest = { viewModel.onDismissAddition() }
+                        )
+                    }
 
                     // Create the GridActions object
                     val gridActions = object : GridActions {
                         override fun onEditField(fieldState: SensorFieldState) {
-                            // TODO: Call viewModel to show edit dialog
-                            // viewModel.onEditField(fieldState)
+                            // simply forward this to the viewModel to show edit dialog
+                            viewModel.onEditField(fieldState)
                         }
                         override fun onDeleteField(fieldState: SensorFieldState) {
                             viewModel.onDeleteSensorField(fieldState.sensorFieldId)
                         }
                         override fun onAddRow(atRow: Int) {
-                            // TODO: Call viewModel to add a row
-                            // viewModel.onAddRow(atRow)
+                            Log.i(TAG, "onAddRow($atRow)")
+                            viewModel.onAddRow(atRow)
                         }
                         override fun onAddCol(atRow: Int, atCol: Int) {
-                            // TODO: Call viewModel to add a column
-                            // viewModel.onAddCol(atRow, atCol)
+                            Log.i(TAG, "onAddCol($atRow, $atCol)")
+                            viewModel.onAddCol(atRow, atCol)
                         }
                     }
 
@@ -143,6 +187,7 @@ class TrackingFragment : Fragment() {
     }
 
     companion object {
+        private const val TAG = "TrackingFragment"
         private const val ARG_TAB_VIEW_ID = "tab_view_id"
         private const val ARG_SHOW_MAP = "show_map"
 

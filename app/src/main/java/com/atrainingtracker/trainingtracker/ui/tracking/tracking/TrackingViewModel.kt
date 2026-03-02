@@ -47,8 +47,16 @@ class TrackingViewModel(
     private val _uiState = MutableStateFlow(TrackingScreenState())
     val uiState: StateFlow<TrackingScreenState> = _uiState.asStateFlow()
 
-    private val _activityType = MutableStateFlow<ActivityType?>(null)
-    val activityType: StateFlow<ActivityType?> = _activityType.asStateFlow()
+    private val _activityType = MutableStateFlow<ActivityType>(ActivityType.getDefaultActivityType())
+    val activityType: StateFlow<ActivityType> = _activityType.asStateFlow()
+
+    // Holds the ID of the field being edited. Null means no dialog is shown.
+    private val _editingFieldId = MutableStateFlow<Long?>(null)
+    val editingFieldId: StateFlow<Long?> = _editingFieldId.asStateFlow()
+
+    data class AdditionParams(val row: Int, val col: Int)
+    private val _pendingAddition = MutableStateFlow<AdditionParams?>(null)
+    val pendingAddition = _pendingAddition.asStateFlow()
 
     private val sharedPreferences: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(application)
     private val defaultZoneColor = Color(ContextCompat.getColor(application, R.color.color_background))
@@ -206,9 +214,29 @@ class TrackingViewModel(
         }
     }
 
-    /*******************
+    /***********************************************************************************************
      * Functions for configuration
-     */
+     **********************************************************************************************/
+    fun onEditField(fieldState: SensorFieldState) {
+        _editingFieldId.value = fieldState.sensorFieldId
+    }
+
+    fun onDismissEditDialog() {
+        _editingFieldId.value = null
+    }
+
+    fun onAddRow(atRow: Int) {
+        _pendingAddition.value = AdditionParams(row = atRow, col = -1)
+    }
+
+    fun onAddCol(atRow: Int, atCol: Int) {
+        _pendingAddition.value = AdditionParams(row = atRow, col = atCol)
+    }
+
+    fun onDismissAddition() {
+        _pendingAddition.value = null
+    }
+
     fun onDeleteSensorField(sensorFieldId: Long) {
         viewModelScope.launch {
             trackingRepository.deleteSensorField(sensorFieldId)
