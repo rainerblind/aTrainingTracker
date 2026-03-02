@@ -442,6 +442,19 @@ class TrackingRepository private constructor(private val application: Applicatio
         }
     }
 
+    suspend fun deleteSensorField(sensorFieldId: Long) {
+        // delete from DB
+        withContext(Dispatchers.IO) {
+            viewsDbManager.deleteSensorField(sensorFieldId)
+        }
+
+        // trigger recreation of UI
+        withContext(Dispatchers.Main) {
+            configUpdateTrigger.value++
+        }
+    }
+
+
     companion object {
         @Volatile
         private var INSTANCE: TrackingRepository? = null

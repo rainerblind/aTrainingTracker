@@ -100,8 +100,7 @@ class TrackingFragment : Fragment() {
                             // viewModel.onEditField(fieldState)
                         }
                         override fun onDeleteField(fieldState: SensorFieldState) {
-                            // TODO: Call viewModel to delete field
-                            // viewModel.onDeleteField(fieldState)
+                            viewModel.onDeleteSensorField(fieldState.sensorFieldId)
                         }
                         override fun onAddRow(atRow: Int) {
                             // TODO: Call viewModel to add a row

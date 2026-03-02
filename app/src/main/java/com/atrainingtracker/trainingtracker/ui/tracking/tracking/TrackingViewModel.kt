@@ -205,6 +205,16 @@ class TrackingViewModel(
             else -> null
         }
     }
+
+    /*******************
+     * Functions for configuration
+     */
+    fun onDeleteSensorField(sensorFieldId: Long) {
+        viewModelScope.launch {
+            trackingRepository.deleteSensorField(sensorFieldId)
+        }
+    }
+
 }
 
 /**
