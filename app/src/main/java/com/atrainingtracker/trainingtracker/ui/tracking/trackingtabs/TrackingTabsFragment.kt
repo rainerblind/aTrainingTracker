@@ -8,7 +8,8 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
-import androidx.activity.result.launch
+import android.widget.EditText
+import android.widget.CheckBox
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -216,24 +217,24 @@ class TrackingTabsFragment : Fragment() {
             val isFirstTab = position == 0
 
             if (mode == ScreenMode.CONFIGURATION && !isFirstTab) {
-                // 1. Inflate your custom layout
+                // Inflate your custom layout
                 val configView = layoutInflater.inflate(R.layout.layout_tab_config, null)
                 val viewInfo = pagerAdapter.getTrackingViewInfo(position) ?: return@TabLayoutMediator
 
-                // 2. Bind UI Elements
-                val nameEdit = configView.findViewById<android.widget.EditText>(R.id.edit_tab_name)
-                val cbMap = configView.findViewById<android.widget.CheckBox>(R.id.cb_show_map)
-                val cbLap = configView.findViewById<android.widget.CheckBox>(R.id.cb_show_lap)
-                val btnBefore = configView.findViewById<android.widget.ImageButton>(R.id.btn_add_before)
-                val btnAfter = configView.findViewById<android.widget.ImageButton>(R.id.btn_add_after)
-                val btnDelete = configView.findViewById<android.widget.ImageButton>(R.id.btn_delete_tab)
+                // Bind UI Elements
+                val nameEdit = configView.findViewById<EditText>(R.id.edit_tab_name)
+                val cbMap = configView.findViewById<CheckBox>(R.id.cb_show_map)
+                val cbLap = configView.findViewById<CheckBox>(R.id.cb_show_lap)
+                val btnBefore = configView.findViewById<Button>(R.id.btn_add_before)
+                val btnAfter = configView.findViewById<Button>(R.id.btn_add_after)
+                val btnDelete = configView.findViewById<Button>(R.id.btn_delete_tab)
 
-                // 3. Set values
+                // Set values
                 nameEdit.setText(viewInfo.name)
                 cbMap.isChecked = viewInfo.showMap
                 cbLap.isChecked = viewInfo.showLapButton
 
-                // 4. Set Listeners
+                // Set Listeners
                 nameEdit.addTextChangedListener(object : android.text.TextWatcher {
                     override fun afterTextChanged(s: android.text.Editable?) {
                         viewModel.onUpdateTabName(viewInfo.tabViewId, s.toString())
