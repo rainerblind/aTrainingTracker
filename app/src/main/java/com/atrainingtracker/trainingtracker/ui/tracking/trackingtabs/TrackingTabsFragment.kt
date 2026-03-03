@@ -94,8 +94,6 @@ class TrackingTabsFragment : Fragment() {
         viewPager = view.findViewById(R.id.pager)
         tabLayout = view.findViewById(R.id.tab_layout)
 
-        val tabDivider = view.findViewById<View>(R.id.tab_divider)
-
         lapButton = view.findViewById(R.id.fab_lap_button)
         lapButton.setOnClickListener {
             // simply inform the view model that the button was clicked.
@@ -185,14 +183,6 @@ class TrackingTabsFragment : Fragment() {
             viewModel.screenMode.collect { mode ->
                 // Force the menu to update (shows/hides toggle icon)
                 requireActivity().invalidateOptionsMenu()
-
-                // Visual separation: Change divider color when in Config mode
-                tabDivider.setBackgroundColor(
-                    if (mode == ScreenMode.CONFIGURATION)
-                        requireContext().getColor(android.R.color.holo_red_dark)
-                    else
-                        requireContext().getColor(android.R.color.darker_gray)
-                )
 
                 // Re-attach mediator to refresh all tabs with either Text or CustomView
                 attachTabLayoutMediator(mode)
