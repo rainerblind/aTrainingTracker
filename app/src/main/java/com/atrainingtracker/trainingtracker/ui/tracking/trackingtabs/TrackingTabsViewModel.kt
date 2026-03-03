@@ -4,6 +4,8 @@ package com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.liveData
 
 import androidx.lifecycle.switchMap
@@ -40,5 +42,15 @@ class TrackingTabsViewModel(
     fun onLapButtonClick() {
         // -> request a new lap.
         trackingRepository.requestNewLap()
+    }
+}
+
+class TrackingTabsViewModelFactory(private val application: Application) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(TrackingTabsViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return TrackingTabsViewModel(application, TrackingRepository.getInstance(application)) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
