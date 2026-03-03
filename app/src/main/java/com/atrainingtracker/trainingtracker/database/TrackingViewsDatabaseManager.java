@@ -75,7 +75,7 @@ public class TrackingViewsDatabaseManager {
 
 
 
-    public void updateNameOfView(long viewId, String name) {
+    public void updateNameOfTabView(long viewId, String name) {
         ContentValues values = new ContentValues();
         values.put(TrackingViewsDbHelper.NAME, name);
 
@@ -517,7 +517,7 @@ public class TrackingViewsDatabaseManager {
                 new String[]{sourceDeviceId + ""});
     }
 
-    public void deleteView(long viewId) {
+    public void deleteTabView(long viewId) {
 
         SQLiteDatabase db = getDatabase();
         int layoutNr = getLayoutNr(viewId);
@@ -535,7 +535,7 @@ public class TrackingViewsDatabaseManager {
         db.execSQL(execsql);
     }
 
-    public void addEmptyView(long viewId, boolean addAfterLayout) {
+    public void addEmptyTabView(long viewId, boolean addAfterLayout) {
         int layoutNr = getLayoutNr(viewId);
         ActivityType activityType = getActivityTypeForTab(viewId);
         int newLayoutNr = layoutNr;

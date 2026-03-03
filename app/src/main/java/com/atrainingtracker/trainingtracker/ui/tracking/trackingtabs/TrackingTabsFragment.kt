@@ -252,13 +252,11 @@ class TrackingTabsFragment : Fragment() {
             composeView.visibility = View.GONE
             return
         }
+        composeView.visibility = View.VISIBLE
 
         composeView.setContent {
             ATrainingTrackerTheme {
-                // 2. Collect the screen mode state within the Composable scope
-                val screenMode by viewModel.screenMode.collectAsState()
 
-                composeView.visibility = View.VISIBLE
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -291,13 +289,13 @@ class TrackingTabsFragment : Fragment() {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Checkbox(
                                 checked = viewInfo.showMap,
-                                onCheckedChange = { viewModel.onUpdateTabSettings(viewInfo.tabViewId, it, viewInfo.showLapButton) }
+                                onCheckedChange = { viewModel.onUpdateShowMap(viewInfo.tabViewId, it) }
                             )
                             Text(stringResource(R.string.showMap), style = MaterialTheme.typography.labelSmall)
 
                             Checkbox(
                                 checked = viewInfo.showLapButton,
-                                onCheckedChange = { viewModel.onUpdateTabSettings(viewInfo.tabViewId, viewInfo.showMap, it) }
+                                onCheckedChange = { viewModel.onUpdateShowLapButton(viewInfo.tabViewId, it) }
                             )
                             Text(stringResource(R.string.showLapButton), style = MaterialTheme.typography.labelSmall)
 

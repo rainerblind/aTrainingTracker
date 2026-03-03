@@ -2,6 +2,7 @@ package com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs
 
 
 import android.app.Application
+import androidx.activity.result.launch
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
@@ -9,6 +10,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.liveData
 
 import androidx.lifecycle.switchMap
+import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.ui.tracking.LapEvent
@@ -17,6 +19,7 @@ import com.atrainingtracker.trainingtracker.ui.tracking.TrackingRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
 /**
  * ViewModel for the tabbed container of tracking views.
@@ -48,19 +51,39 @@ class TrackingTabsViewModel(
     }
 
     fun onUpdateTabName(tabViewId: Long, newName: String) {
-        // TODO: pass to repository
+        // Only update if the name actually changed to prevent loop cycles
+        viewModelScope.launch {
+            val currentViews = trackingViews.value
+            val currentName = currentViews?.find { it.tabViewId == tabViewId }?.name
+
+            if (newName != currentName) {
+                trackingRepository.updateTabName(tabViewId, newName)
+            }
+        }
     }
 
-    fun onUpdateTabSettings(tabViewId: Long, showMap: Boolean, showLapButton: Boolean) {
-        // TODO: pass to repository
+    fun onUpdateShowLapButton(tabViewId: Long, showLapButton: Boolean) {
+        viewModelScope.launch {
+            trackingRepository.updateShowLapButton(tabViewId,showLapButton)
+        }
+    }
+
+    fun onUpdateShowMap(tabViewId: Long, showMap: Boolean) {
+        viewModelScope.launch {
+            trackingRepository.updateShowMap(tabViewId,showMap)
+        }
     }
 
     fun onAddTabRelative(tabViewId: Long, after: Boolean) {
-        // TODO: pass to repository
+        viewModelScope.launch {
+            trackingRepository.addEmptyTabView(tabViewId, after)
+        }
     }
 
     fun onDeleteTab(tabViewId: Long) {
-        // TODO: pass to repository
+        viewModelScope.launch {
+            trackingRepository.deleteTab(tabViewId)
+        }
     }
 
 

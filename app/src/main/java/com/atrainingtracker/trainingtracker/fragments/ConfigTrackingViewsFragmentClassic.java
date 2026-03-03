@@ -73,7 +73,7 @@ public class ConfigTrackingViewsFragmentClassic extends ConfigViewsFragment {
 
     @Override
     protected void deleteView(long viewId) {
-        TrackingViewsDatabaseManager.getInstance(getContext()).deleteView(viewId);
+        TrackingViewsDatabaseManager.getInstance(getContext()).deleteTabView(viewId);
     }
 
     @Override

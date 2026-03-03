@@ -249,7 +249,7 @@ public class ConfigTrackingViewFragmentClassic extends ConfigViewFragment {
 
     @Override
     protected void updateNameOfView(String name) {
-        mTrackingViewsDatabaseManager.updateNameOfView(mViewId, name);
+        mTrackingViewsDatabaseManager.updateNameOfTabView(mViewId, name);
     }
 
 

@@ -429,7 +429,7 @@ class TrackingRepository private constructor(private val application: Applicatio
         )
     }
 
-
+    // -- Configuring Sensor Fields
     /**
      * Updates the configuration of a specific sensor field in the database.
      */
@@ -511,6 +511,52 @@ class TrackingRepository private constructor(private val application: Applicatio
             configUpdateTrigger.value++
         }
     }
+
+    //-- Configure Tabs
+    suspend fun updateTabName(tabViewId: Long, name: String) {
+        withContext(Dispatchers.IO) {
+            viewsDbManager.updateNameOfTabView(tabViewId, name)
+        }
+
+        // TODO: trigger recreation of UI
+    }
+
+    suspend fun updateShowMap(tabViewId: Long, showMap: Boolean) {
+        withContext(Dispatchers.IO) {
+            viewsDbManager.updateShowMap(tabViewId, showMap)
+        }
+
+        // TODO: trigger recreation of UI
+    }
+
+    suspend fun updateShowLapButton(tabViewId: Long, showLapButton: Boolean) {
+        withContext(Dispatchers.IO) {
+            viewsDbManager.updateShowLapButton(tabViewId, showLapButton)
+        }
+
+        // TODO: trigger recreation of UI
+    }
+
+    suspend fun addEmptyTabView(tabViewId: Long, addAfter: Boolean) {
+        withContext(Dispatchers.IO) {
+            viewsDbManager.addEmptyTabView(tabViewId, addAfter)
+        }
+
+        // TODO: trigger recreation of UI
+    }
+
+    suspend fun deleteTab(tabViewId: Long) {
+        withContext(Dispatchers.IO) {
+            viewsDbManager.deleteTabView(tabViewId)
+        }
+
+        // trigger recreation of UI
+        withContext(Dispatchers.Main) {
+            configUpdateTrigger.value++
+        }
+    }
+
+
 
 
     companion object {
