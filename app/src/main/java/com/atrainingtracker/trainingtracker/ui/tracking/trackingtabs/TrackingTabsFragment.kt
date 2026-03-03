@@ -198,16 +198,27 @@ class TrackingTabsFragment : Fragment() {
         viewModel.trackingViews.observe(viewLifecycleOwner) { trackingViews ->
             if (::pagerAdapter.isInitialized) {
                 pagerAdapter.updateTrackingViews(trackingViews)
-                updateLapButtonVisibility()  // when the trackingViews change (due to a change of the activity type), it must be reevaluated whether to show the button
 
-                // --- ADD THIS: Manually update tab titles to reflect name changes ---
+                attachTabLayoutMediator()
+
+                // Manually refresh titles for the TabLayout
                 if (::tabLayout.isInitialized) {
                     for (i in 0 until tabLayout.tabCount) {
                         tabLayout.getTabAt(i)?.text = pagerAdapter.getPageTitle(i)
                     }
                 }
+                updateLapButtonVisibility()
 
-                updateConfigHeader(configHeader)
+                // check if the number of tabs has changed
+                val newTabCount = trackingViews.size
+                val currentTabCount = tabLayout.tabCount
+
+                if (newTabCount != currentTabCount) {
+                    viewPager.post {
+                        // This forces the ViewPager to re-evaluate the fragments
+                        pagerAdapter.notifyDataSetChanged()
+                    }
+                }
             }
         }
 
