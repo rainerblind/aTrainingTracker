@@ -206,6 +206,8 @@ class TrackingTabsFragment : Fragment() {
                         tabLayout.getTabAt(i)?.text = pagerAdapter.getPageTitle(i)
                     }
                 }
+
+                updateConfigHeader(configHeader)
             }
         }
 
