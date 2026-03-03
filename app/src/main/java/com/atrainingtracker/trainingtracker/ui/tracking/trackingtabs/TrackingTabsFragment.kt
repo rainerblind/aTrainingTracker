@@ -2,6 +2,9 @@ package com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs
 
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.Menu
+import android.view.MenuInflater
+import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
@@ -35,6 +38,39 @@ class TrackingTabsFragment : Fragment() {
 
     private var showLapDialog by mutableStateOf(false)
     private var currentLapEvent by mutableStateOf<LapEvent?>(null)
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setHasOptionsMenu(true)
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+        inflater.inflate(R.menu.menu_tracking_tabs, menu) // Use a menu that has the toggle
+        super.onCreateOptionsMenu(menu, inflater)
+    }
+
+    /*
+    override fun onPrepareOptionsMenu(menu: Menu) {
+        super.onPrepareOptionsMenu(menu)
+
+        // Do not show the configure button if we are on the first (control tracking) tab
+        val currentTab = viewPager.currentItem
+        val isFirstTab = currentTab == 0
+        menu.findItem(R.id.action_configure)?.apply {
+            isVisible = !isFirstTab
+        }
+    }
+     */
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_configure -> {
+                viewModel.toggleScreenMode()
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,

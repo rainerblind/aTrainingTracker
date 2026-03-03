@@ -12,9 +12,11 @@ import androidx.lifecycle.switchMap
 import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.ui.tracking.LapEvent
+import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewInfo
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * ViewModel for the tabbed container of tracking views.
@@ -29,6 +31,8 @@ class TrackingTabsViewModel(
     val trackingMode: LiveData<TrackingMode> = trackingRepository.trackingMode
     val lapEvent: LiveData<LapEvent> = trackingRepository.lapEvent
 
+    val screenMode: StateFlow<ScreenMode> = trackingRepository.screenMode
+
     // When the activityType from the repository changes, this switchMap will automatically
     // re-fetch the list of tracking views from the repository.
     val trackingViews: LiveData<List<TrackingViewInfo>> = activityType.switchMap { currentActivityType ->
@@ -37,6 +41,10 @@ class TrackingTabsViewModel(
             // Once the data is fetched, emit() posts the value to the LiveData on the main thread
             emit(views)
         }
+    }
+
+    fun toggleScreenMode() {
+        trackingRepository.toggleScreenMode()
     }
 
     fun onLapButtonClick() {

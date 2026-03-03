@@ -37,12 +37,8 @@ class TrackingFragment : Fragment() {
     private var tabViewId: Long = -1L
     private var showMap: Boolean = false
 
-    private var screenMode by mutableStateOf(ScreenMode.TRACKING)
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        setHasOptionsMenu(true)
 
         // Get the viewId from the fragment's arguments
         arguments?.let {
@@ -55,28 +51,6 @@ class TrackingFragment : Fragment() {
         viewModel = ViewModelProvider(this, factory)[TrackingViewModel::class.java]
     }
 
-    // Inflate the menu
-    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
-        inflater.inflate(R.menu.menu_tracking_fragment, menu)
-        super.onCreateOptionsMenu(menu, inflater)
-    }
-
-    // Handle menu item clicks
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_configure -> {
-                // Toggle the screen mode
-                screenMode = if (screenMode == ScreenMode.TRACKING) {
-                    ScreenMode.CONFIGURATION
-                } else {
-                    ScreenMode.TRACKING
-                }
-                true // Consume the event
-            }
-            else -> super.onOptionsItemSelected(item)
-        }
-    }
-
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -87,6 +61,8 @@ class TrackingFragment : Fragment() {
                 ATrainingTrackerTheme {
                     val uiState by viewModel.uiState.collectAsState()
                     val activityType by viewModel.activityType.collectAsState()
+
+                    val screenMode by viewModel.screenMode.collectAsState()
 
                     val editingFieldId by viewModel.editingFieldId.collectAsState()
                     val pendingAddition by viewModel.pendingAddition.collectAsState()

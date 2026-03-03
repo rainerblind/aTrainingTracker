@@ -71,6 +71,14 @@ data class SensorFieldConfig(
     val sourceDeviceName: String? = null
 )
 
+enum class ScreenMode {
+    /** The screen is used for actively tracking a workout. Long-clicks are handled. */
+    TRACKING,
+    /** The screen is used for configuring the layout. Normal clicks are handled for editing. */
+    CONFIGURATION
+}
+
+
 /**
  * A singleton repository that acts as the single source of truth for all tracking-related data.
  * It connects to the BANALService and the local database to provide a clean data source
@@ -115,6 +123,22 @@ class TrackingRepository private constructor(private val application: Applicatio
             }
         }
     }
+
+    // -- screen mode
+    private val _screenMode = MutableStateFlow(ScreenMode.TRACKING)
+    val screenMode: StateFlow<ScreenMode> = _screenMode.asStateFlow()
+
+    fun toggleScreenMode() {
+        _screenMode.value = if (_screenMode.value == ScreenMode.TRACKING) {
+            ScreenMode.CONFIGURATION
+        } else {
+            ScreenMode.TRACKING
+        }
+    }
+
+    fun setTrackingScreenMode() {
+        _screenMode.value = ScreenMode.TRACKING
+        }
 
     // -- Lap Event
     private val _lapEvent = SingleLiveEvent<LapEvent>()
