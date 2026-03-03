@@ -261,9 +261,18 @@ class TrackingRepository private constructor(private val application: Applicatio
 
     // --- Tracking Views ---
     /**
+     * A flow that emits the list of tracking views whenever the config changes.
+     */
+    fun getTrackingViewsFlow(activityType: ActivityType): Flow<List<TrackingViewInfo>> {
+        return configUpdateTrigger.map {
+            getTrackingViews(activityType)
+        }.flowOn(Dispatchers.IO)
+    }
+
+    /**
      * Loads the list of available tracking views for a given activity type from the database.
      */
-    fun getTrackingViews(activityType: ActivityType): List<TrackingViewInfo> {
+    private fun getTrackingViews(activityType: ActivityType): List<TrackingViewInfo> {
         val dbManager = TrackingViewsDatabaseManager.getInstance(application)
         val viewList = mutableListOf<TrackingViewInfo>()
 
@@ -518,7 +527,10 @@ class TrackingRepository private constructor(private val application: Applicatio
             viewsDbManager.updateNameOfTabView(tabViewId, name)
         }
 
-        // TODO: trigger recreation of UI
+        // trigger recreation of UI
+        withContext(Dispatchers.Main) {
+            configUpdateTrigger.value++
+        }
     }
 
     suspend fun updateShowMap(tabViewId: Long, showMap: Boolean) {
@@ -526,7 +538,10 @@ class TrackingRepository private constructor(private val application: Applicatio
             viewsDbManager.updateShowMap(tabViewId, showMap)
         }
 
-        // TODO: trigger recreation of UI
+        // trigger recreation of UI
+        withContext(Dispatchers.Main) {
+            configUpdateTrigger.value++
+        }
     }
 
     suspend fun updateShowLapButton(tabViewId: Long, showLapButton: Boolean) {
@@ -534,7 +549,10 @@ class TrackingRepository private constructor(private val application: Applicatio
             viewsDbManager.updateShowLapButton(tabViewId, showLapButton)
         }
 
-        // TODO: trigger recreation of UI
+        // trigger recreation of UI
+        withContext(Dispatchers.Main) {
+            configUpdateTrigger.value++
+        }
     }
 
     suspend fun addEmptyTabView(tabViewId: Long, addAfter: Boolean) {
@@ -542,7 +560,10 @@ class TrackingRepository private constructor(private val application: Applicatio
             viewsDbManager.addEmptyTabView(tabViewId, addAfter)
         }
 
-        // TODO: trigger recreation of UI
+        // trigger recreation of UI
+        withContext(Dispatchers.Main) {
+            configUpdateTrigger.value++
+        }
     }
 
     suspend fun deleteTab(tabViewId: Long) {

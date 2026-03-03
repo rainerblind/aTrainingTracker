@@ -7,6 +7,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.asFlow
+import androidx.lifecycle.asLiveData
 import androidx.lifecycle.liveData
 
 import androidx.lifecycle.switchMap
@@ -18,7 +20,9 @@ import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewInfo
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 
 /**
@@ -36,15 +40,17 @@ class TrackingTabsViewModel(
 
     val screenMode: StateFlow<ScreenMode> = trackingRepository.screenMode
 
-    // When the activityType from the repository changes, this switchMap will automatically
-    // re-fetch the list of tracking views from the repository.
-    val trackingViews: LiveData<List<TrackingViewInfo>> = activityType.switchMap { currentActivityType ->
-        liveData(Dispatchers.IO) {
-            val views = trackingRepository.getTrackingViews(currentActivityType)
-            // Once the data is fetched, emit() posts the value to the LiveData on the main thread
-            emit(views)
+    // 1. Combine ActivityType and Trigger into a single reactive LiveData
+    // This ensures that tabs refresh whenever:
+    // a) The user changes the activity type (Running -> Cycling)
+    // b) The user renames/adds/deletes a tab (configUpdateTrigger increments)
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val trackingViews: LiveData<List<TrackingViewInfo>> = activityType.asFlow()
+        .flatMapLatest { currentActivityType ->
+            // Use the flow from the repository which already listens to configUpdateTrigger
+            trackingRepository.getTrackingViewsFlow(currentActivityType)
         }
-    }
+        .asLiveData(viewModelScope.coroutineContext + Dispatchers.Default)
 
     fun toggleScreenMode() {
         trackingRepository.toggleScreenMode()
