@@ -21,9 +21,17 @@ import com.atrainingtracker.trainingtracker.ui.tracking.TrackingRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
+
+// helper class to navigate the fragment container after adding or deletion of a tab
+sealed class TabNavigationEvent {
+    data class NavigateTo(val index: Int) : TabNavigationEvent()
+    object RefreshOnly : TabNavigationEvent()
+}
 
 /**
  * ViewModel for the tabbed container of tracking views.
@@ -39,6 +47,9 @@ class TrackingTabsViewModel(
     val lapEvent: LiveData<LapEvent> = trackingRepository.lapEvent
 
     val screenMode: StateFlow<ScreenMode> = trackingRepository.screenMode
+
+    private val _navigationEvent = MutableSharedFlow<TabNavigationEvent>()
+    val navigationEvent = _navigationEvent.asSharedFlow()
 
     // 1. Combine ActivityType and Trigger into a single reactive LiveData
     // This ensures that tabs refresh whenever:
@@ -82,13 +93,26 @@ class TrackingTabsViewModel(
 
     fun onAddTabRelative(tabViewId: Long, after: Boolean) {
         viewModelScope.launch {
+            // 1. Get current index to calculate new index
+            val currentIndex = trackingViews.value?.indexOfFirst { it.tabViewId == tabViewId } ?: 0
+
+            // 2. Perform the database update
             trackingRepository.addEmptyTabView(tabViewId, after)
+
+            // 3. Calculate target: if 'after', target is current + 1. If 'before', target is current.
+            val targetIndex = if (after) currentIndex + 1 else currentIndex
+            _navigationEvent.emit(TabNavigationEvent.NavigateTo(targetIndex))
         }
     }
 
     fun onDeleteTab(tabViewId: Long) {
         viewModelScope.launch {
+            val currentIndex = trackingViews.value?.indexOfFirst { it.tabViewId == tabViewId } ?: 0
             trackingRepository.deleteTab(tabViewId)
+
+            // After deletion, stay at the same index (which is now the next tab)
+            // but clamp it to the new size in the Fragment.
+            _navigationEvent.emit(TabNavigationEvent.NavigateTo(currentIndex))
         }
     }
 

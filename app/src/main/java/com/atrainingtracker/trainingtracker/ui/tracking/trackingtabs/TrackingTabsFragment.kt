@@ -192,32 +192,49 @@ class TrackingTabsFragment : Fragment() {
             attachTabLayoutMediator()
         }
 
-        // Observe the list of tracking views from the ViewModel.
-        // The ViewModel's `switchMap` ensures this LiveData automatically updates
-        // when the `activityType` changes.
+        lifecycleScope.launchWhenStarted {
+            viewModel.navigationEvent.collect { tabNavigationEvent ->
+                when (tabNavigationEvent) {
+                    is TabNavigationEvent.NavigateTo -> {
+                        // Wait for the ViewPager to finish its layout pass
+                        viewPager.post {
+                            // Ensure the adapter is aware of the new count
+                            pagerAdapter.notifyDataSetChanged()
+                            // Re-sync the tabs
+                            attachTabLayoutMediator()
+
+                            val target = tabNavigationEvent.index.coerceIn(0, (pagerAdapter.itemCount - 1).coerceAtLeast(0))
+
+                            viewPager.setCurrentItem(target + 1, true)  // (!) Note that we have ot add one due to the fact that we also have the control tracking fragmeng.
+
+                            // Force header update for the new position
+                            updateConfigHeader(configHeader)
+                        }
+                    }
+                    TabNavigationEvent.RefreshOnly -> {
+                        attachTabLayoutMediator()
+                    }
+                }
+            }
+        }
+
         viewModel.trackingViews.observe(viewLifecycleOwner) { trackingViews ->
             if (::pagerAdapter.isInitialized) {
                 pagerAdapter.updateTrackingViews(trackingViews)
 
-                attachTabLayoutMediator()
-
-                // Manually refresh titles for the TabLayout
+                // For renames/settings, we don't want to jump pages, just refresh visuals
                 if (::tabLayout.isInitialized) {
                     for (i in 0 until tabLayout.tabCount) {
                         tabLayout.getTabAt(i)?.text = pagerAdapter.getPageTitle(i)
                     }
                 }
                 updateLapButtonVisibility()
+                updateConfigHeader(configHeader)
 
-                // check if the number of tabs has changed
-                val newTabCount = trackingViews.size
-                val currentTabCount = tabLayout.tabCount
-
-                if (newTabCount != currentTabCount) {
-                    viewPager.post {
-                        // This forces the ViewPager to re-evaluate the fragments
-                        pagerAdapter.notifyDataSetChanged()
-                    }
+                // Only notify changed if the count is the same (renames)
+                // structural changes are handled by the navigationEvent above
+                if (trackingViews.size == tabLayout.tabCount) {
+                    pagerAdapter.notifyDataSetChanged()
                 }
             }
         }
