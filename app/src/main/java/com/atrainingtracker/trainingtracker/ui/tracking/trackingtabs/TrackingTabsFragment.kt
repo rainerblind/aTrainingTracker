@@ -23,6 +23,7 @@ import com.atrainingtracker.trainingtracker.fragments.ControlTrackingFragment
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.tracking.LapEvent
 import com.atrainingtracker.trainingtracker.ui.tracking.LapSummaryDialog
+import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewInfo
 import com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingFragment
 import com.google.android.material.tabs.TabLayout
@@ -116,6 +117,21 @@ class TrackingTabsFragment : Fragment() {
                 }
             }
         }
+
+        // --- BACK BUTTON HANDLING ---
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : androidx.activity.OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                // If we are in Configuration mode, just exit the mode instead of closing the app
+                if (viewModel.screenMode.value == ScreenMode.CONFIGURATION) {
+                    viewModel.toggleScreenMode()
+                    requireActivity().invalidateOptionsMenu()
+                } else {
+                    // If we are in Tracking mode, disable this callback and let the activity handle it (close app/go back)
+                    isEnabled = false
+                    requireActivity().onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        })
 
         // Observe the ActivityType from the ViewModel (which gets it from the repository)
         viewModel.activityType.observe(viewLifecycleOwner) { activityType ->

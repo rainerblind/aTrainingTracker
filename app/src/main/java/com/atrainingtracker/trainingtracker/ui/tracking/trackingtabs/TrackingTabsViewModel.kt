@@ -47,6 +47,7 @@ class TrackingTabsViewModel(
         trackingRepository.toggleScreenMode()
     }
 
+
     fun onLapButtonClick() {
         // -> request a new lap.
         trackingRepository.requestNewLap()

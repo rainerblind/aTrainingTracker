@@ -136,9 +136,6 @@ class TrackingRepository private constructor(private val application: Applicatio
         }
     }
 
-    fun setTrackingScreenMode() {
-        _screenMode.value = ScreenMode.TRACKING
-        }
 
     // -- Lap Event
     private val _lapEvent = SingleLiveEvent<LapEvent>()
