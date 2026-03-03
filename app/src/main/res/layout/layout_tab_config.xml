@@ -60,8 +60,9 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
-            app:icon="@android:drawable/ic_menu_delete"
-            app:iconTint="@android:color/holo_red_light" />
+            app:icon="@drawable/ic_delete"
+            app:iconSize="24dp"/>
+
     </LinearLayout>
 
     <!-- Add AFTER button -->
