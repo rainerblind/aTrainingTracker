@@ -250,6 +250,10 @@ class TrackingTabsFragment : Fragment() {
                     viewModel.onUpdateTabSettings(viewInfo.tabViewId, cbMap.isChecked, isChecked)
                 }
 
+                // Only show "Add After" if this is the last tab in the ViewPager
+                val isLastTab = position == (pagerAdapter.itemCount - 1)
+                btnAfter.visibility = if (isLastTab) View.VISIBLE else View.GONE
+
                 btnBefore.setOnClickListener { viewModel.onAddTabRelative(viewInfo.tabViewId, false) }
                 btnAfter.setOnClickListener { viewModel.onAddTabRelative(viewInfo.tabViewId, true) }
                 btnDelete.setOnClickListener { viewModel.onDeleteTab(viewInfo.tabViewId) }
