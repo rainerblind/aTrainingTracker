@@ -521,13 +521,15 @@ class TrackingRepository private constructor(private val application: Applicatio
         }
     }
 
-    //-- Configure Tabs
+    /*******************************************************************
+     * Configure Tabs
+    **/
     suspend fun updateTabName(tabViewId: Long, name: String) {
         withContext(Dispatchers.IO) {
             viewsDbManager.updateNameOfTabView(tabViewId, name)
         }
 
-        // trigger recreation of UI
+       // trigger recreation of UI
         withContext(Dispatchers.Main) {
             configUpdateTrigger.value++
         }

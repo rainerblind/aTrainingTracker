@@ -11,6 +11,7 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
 import android.widget.CheckBox
+import androidx.activity.OnBackPressedCallback
 import androidx.compose.animation.core.copy
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -29,6 +30,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -57,6 +59,7 @@ import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.res.stringResource
 
 class TrackingTabsFragment : Fragment() {
@@ -150,7 +153,7 @@ class TrackingTabsFragment : Fragment() {
         }
 
         // --- BACK BUTTON HANDLING ---
-        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : androidx.activity.OnBackPressedCallback(true) {
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 // If we are in Configuration mode, just exit the mode instead of closing the app
                 if (viewModel.screenMode.value == ScreenMode.CONFIGURATION) {
@@ -196,6 +199,13 @@ class TrackingTabsFragment : Fragment() {
             if (::pagerAdapter.isInitialized) {
                 pagerAdapter.updateTrackingViews(trackingViews)
                 updateLapButtonVisibility()  // when the trackingViews change (due to a change of the activity type), it must be reevaluated whether to show the button
+
+                // --- ADD THIS: Manually update tab titles to reflect name changes ---
+                if (::tabLayout.isInitialized) {
+                    for (i in 0 until tabLayout.tabCount) {
+                        tabLayout.getTabAt(i)?.text = pagerAdapter.getPageTitle(i)
+                    }
+                }
             }
         }
 
@@ -236,8 +246,7 @@ class TrackingTabsFragment : Fragment() {
     }
 
     private fun updateConfigHeader(composeView: ComposeView) {
-        // 1. Safety check: If the adapter isn't ready yet, we can't get view info.
-        if (!::pagerAdapter.isInitialized) {
+        if (!::pagerAdapter.isInitialized || !::viewPager.isInitialized) {
             composeView.visibility = View.GONE
             return
         }
@@ -245,77 +254,77 @@ class TrackingTabsFragment : Fragment() {
         val position = viewPager.currentItem
         val isFirstTab = position == 0
         val viewInfo = pagerAdapter.getTrackingViewInfo(position)
-        Log.i(TAG, "updateConfigHeader: $position, $isFirstTab, $viewInfo")
 
-        // Final check: if we aren't in config mode or it's the first tab, hide and exit
         if (viewModel.screenMode.value != ScreenMode.CONFIGURATION || isFirstTab || viewInfo == null) {
             composeView.visibility = View.GONE
             return
         }
-        composeView.visibility = View.VISIBLE
 
+        composeView.visibility = View.VISIBLE
         composeView.setContent {
             ATrainingTrackerTheme {
+                // Call the actual Composable here
+                TabConfigContent(viewInfo)
+            }
+        }
+    }
 
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                        .padding(8.dp)
-                ) {
-                    // 1. Title Row (Full Width)
-                    OutlinedTextField(
-                        value = viewInfo.name,
-                        onValueChange = { viewModel.onUpdateTabName(viewInfo.tabViewId, it) },
-                        label = { Text(stringResource(R.string.tab_name)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+    @Composable
+    private fun TabConfigContent(viewInfo: TrackingViewInfo) {
+        // 'remember' now works because this is a @Composable.
+        // We use viewInfo.tabViewId as a key so that when you swipe tabs, the local state resets.
+        var localName by remember(viewInfo.tabViewId) { mutableStateOf(viewInfo.name) }
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                .padding(8.dp)
+        ) {
+            OutlinedTextField(
+                value = localName,
+                onValueChange = {
+                    localName = it
+                    viewModel.onUpdateTabName(viewInfo.tabViewId, it)
+                },
+                label = { Text(stringResource(R.string.tab_name)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+
+            Spacer(Modifier.height(4.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                IconButton(onClick = { viewModel.onAddTabRelative(viewInfo.tabViewId, false) }) {
+                    Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(
+                        checked = viewInfo.showMap,
+                        onCheckedChange = { viewModel.onUpdateShowMap(viewInfo.tabViewId, it) }
                     )
+                    Text(stringResource(R.string.showMap), style = MaterialTheme.typography.labelSmall)
 
-                    Spacer(Modifier.height(4.dp))
+                    Checkbox(
+                        checked = viewInfo.showLapButton,
+                        onCheckedChange = { viewModel.onUpdateShowLapButton(viewInfo.tabViewId, it) }
+                    )
+                    Text(stringResource(R.string.showLapButton), style = MaterialTheme.typography.labelSmall)
 
-                    // 2. Action Row
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        // Add Before
-                        IconButton(onClick = { viewModel.onAddTabRelative(viewInfo.tabViewId, false) }) {
-                            Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        }
+                    Spacer(Modifier.width(8.dp))
 
-                        // Settings & Delete
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(
-                                checked = viewInfo.showMap,
-                                onCheckedChange = { viewModel.onUpdateShowMap(viewInfo.tabViewId, it) }
-                            )
-                            Text(stringResource(R.string.showMap), style = MaterialTheme.typography.labelSmall)
-
-                            Checkbox(
-                                checked = viewInfo.showLapButton,
-                                onCheckedChange = { viewModel.onUpdateShowLapButton(viewInfo.tabViewId, it) }
-                            )
-                            Text(stringResource(R.string.showLapButton), style = MaterialTheme.typography.labelSmall)
-
-                            Spacer(Modifier.width(8.dp))
-
-                            // EXACT same icon/tint as SensorFieldView
-                            IconButton(onClick = { viewModel.onDeleteTab(viewInfo.tabViewId) }) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_delete),
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-
-                        // Add After
-                        IconButton(onClick = { viewModel.onAddTabRelative(viewInfo.tabViewId, true) }) {
-                            Icon(Icons.Default.Add, contentDescription = "Add After", tint = MaterialTheme.colorScheme.primary)
-                        }
+                    IconButton(onClick = { viewModel.onDeleteTab(viewInfo.tabViewId) }) {
+                        Icon(painterResource(id = R.drawable.ic_delete), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
+                }
+
+                IconButton(onClick = { viewModel.onAddTabRelative(viewInfo.tabViewId, true) }) {
+                    Icon(Icons.Default.Add, contentDescription = "Add After", tint = MaterialTheme.colorScheme.primary)
                 }
             }
         }
