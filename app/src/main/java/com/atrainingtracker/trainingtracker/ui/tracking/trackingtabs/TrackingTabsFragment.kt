@@ -1,6 +1,7 @@
 package com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuInflater
@@ -10,10 +11,33 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
 import android.widget.CheckBox
+import androidx.compose.animation.core.copy
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
@@ -32,6 +56,8 @@ import com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingFragmen
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.res.stringResource
 
 class TrackingTabsFragment : Fragment() {
 
@@ -92,7 +118,8 @@ class TrackingTabsFragment : Fragment() {
         viewModel = ViewModelProvider(this, factory).get(TrackingTabsViewModel::class.java)
 
         viewPager = view.findViewById(R.id.pager)
-        tabLayout = view.findViewById(R.id.tab_layout)
+        tabLayout = view.findViewById(R.id.tab_layout) // Now this won't fail
+        val configHeader = view.findViewById<ComposeView>(R.id.tab_config_header)
 
         lapButton = view.findViewById(R.id.fab_lap_button)
         lapButton.setOnClickListener {
@@ -159,7 +186,7 @@ class TrackingTabsFragment : Fragment() {
             }
 
             // Trigger an initial refresh of the tabs now that the adapter exists
-            attachTabLayoutMediator(viewModel.screenMode.value)
+            attachTabLayoutMediator()
         }
 
         // Observe the list of tracking views from the ViewModel.
@@ -172,10 +199,11 @@ class TrackingTabsFragment : Fragment() {
             }
         }
 
-        // Observe TrackingMode to update the tab title ---
-        viewModel.trackingMode.observe(viewLifecycleOwner) { state ->
-            // When the state changes, just update the title of the first tab.
-            tabLayout.getTabAt(0)?.text = pagerAdapter.getPageTitle(0)
+        // Observe TrackingMode to update the tab text
+        viewModel.trackingMode.observe(viewLifecycleOwner) { _ ->
+            if (::tabLayout.isInitialized && ::pagerAdapter.isInitialized) {
+                tabLayout.getTabAt(0)?.text = pagerAdapter.getPageTitle(0)
+            }
         }
 
         // Observe ScreenMode to swap between Tracking and Configuration UI
@@ -184,10 +212,19 @@ class TrackingTabsFragment : Fragment() {
                 // Force the menu to update (shows/hides toggle icon)
                 requireActivity().invalidateOptionsMenu()
 
-                // Re-attach mediator to refresh all tabs with either Text or CustomView
-                attachTabLayoutMediator(mode)
+                configHeader.visibility = if (mode == ScreenMode.CONFIGURATION) View.VISIBLE else View.GONE
+
+                // Refresh the Compose content whenever mode or selection changes
+                updateConfigHeader(configHeader)
             }
         }
+
+        // Ensure the header updates when the user swipes between tabs
+        viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) {
+                updateConfigHeader(configHeader)
+            }
+        })
 
         viewModel.lapEvent.observe(viewLifecycleOwner) { lapEvent ->
             // Check that the control tab isn't active and that we have a valid event
@@ -198,62 +235,104 @@ class TrackingTabsFragment : Fragment() {
         }
     }
 
-    private fun attachTabLayoutMediator(mode: ScreenMode) {
-        // SAFETY CHECK: Prevent crash if adapter isn't ready yet
-        if (viewPager.adapter == null) return
+    private fun updateConfigHeader(composeView: ComposeView) {
+        // 1. Safety check: If the adapter isn't ready yet, we can't get view info.
+        if (!::pagerAdapter.isInitialized) {
+            composeView.visibility = View.GONE
+            return
+        }
 
-        // We must re-create the mediator whenever we change modes
-        TabLayoutMediator(tabLayout, viewPager) { tab, position ->
-            val isFirstTab = position == 0
+        val position = viewPager.currentItem
+        val isFirstTab = position == 0
+        val viewInfo = pagerAdapter.getTrackingViewInfo(position)
+        Log.i(TAG, "updateConfigHeader: $position, $isFirstTab, $viewInfo")
 
-            if (mode == ScreenMode.CONFIGURATION && !isFirstTab) {
-                // Inflate your custom layout
-                val configView = layoutInflater.inflate(R.layout.layout_tab_config, null)
-                val viewInfo = pagerAdapter.getTrackingViewInfo(position) ?: return@TabLayoutMediator
+        // Final check: if we aren't in config mode or it's the first tab, hide and exit
+        if (viewModel.screenMode.value != ScreenMode.CONFIGURATION || isFirstTab || viewInfo == null) {
+            composeView.visibility = View.GONE
+            return
+        }
 
-                // Bind UI Elements
-                val nameEdit = configView.findViewById<EditText>(R.id.edit_tab_name)
-                val cbMap = configView.findViewById<CheckBox>(R.id.cb_show_map)
-                val cbLap = configView.findViewById<CheckBox>(R.id.cb_show_lap)
-                val btnBefore = configView.findViewById<Button>(R.id.btn_add_before)
-                val btnAfter = configView.findViewById<Button>(R.id.btn_add_after)
-                val btnDelete = configView.findViewById<Button>(R.id.btn_delete_tab)
+        composeView.setContent {
+            ATrainingTrackerTheme {
+                // 2. Collect the screen mode state within the Composable scope
+                val screenMode by viewModel.screenMode.collectAsState()
 
-                // Set values
-                nameEdit.setText(viewInfo.name)
-                cbMap.isChecked = viewInfo.showMap
-                cbLap.isChecked = viewInfo.showLapButton
+                composeView.visibility = View.VISIBLE
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                        .padding(8.dp)
+                ) {
+                    // 1. Title Row (Full Width)
+                    OutlinedTextField(
+                        value = viewInfo.name,
+                        onValueChange = { viewModel.onUpdateTabName(viewInfo.tabViewId, it) },
+                        label = { Text(stringResource(R.string.tab_name)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
 
-                // Set Listeners
-                nameEdit.addTextChangedListener(object : android.text.TextWatcher {
-                    override fun afterTextChanged(s: android.text.Editable?) {
-                        viewModel.onUpdateTabName(viewInfo.tabViewId, s.toString())
+                    Spacer(Modifier.height(4.dp))
+
+                    // 2. Action Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        // Add Before
+                        IconButton(onClick = { viewModel.onAddTabRelative(viewInfo.tabViewId, false) }) {
+                            Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        }
+
+                        // Settings & Delete
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(
+                                checked = viewInfo.showMap,
+                                onCheckedChange = { viewModel.onUpdateTabSettings(viewInfo.tabViewId, it, viewInfo.showLapButton) }
+                            )
+                            Text(stringResource(R.string.showMap), style = MaterialTheme.typography.labelSmall)
+
+                            Checkbox(
+                                checked = viewInfo.showLapButton,
+                                onCheckedChange = { viewModel.onUpdateTabSettings(viewInfo.tabViewId, viewInfo.showMap, it) }
+                            )
+                            Text(stringResource(R.string.showLapButton), style = MaterialTheme.typography.labelSmall)
+
+                            Spacer(Modifier.width(8.dp))
+
+                            // EXACT same icon/tint as SensorFieldView
+                            IconButton(onClick = { viewModel.onDeleteTab(viewInfo.tabViewId) }) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_delete),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        // Add After
+                        IconButton(onClick = { viewModel.onAddTabRelative(viewInfo.tabViewId, true) }) {
+                            Icon(Icons.Default.Add, contentDescription = "Add After", tint = MaterialTheme.colorScheme.primary)
+                        }
                     }
-                    override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-                    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-                })
-
-                cbMap.setOnCheckedChangeListener { _, isChecked ->
-                    viewModel.onUpdateTabSettings(viewInfo.tabViewId, isChecked, cbLap.isChecked)
                 }
-                cbLap.setOnCheckedChangeListener { _, isChecked ->
-                    viewModel.onUpdateTabSettings(viewInfo.tabViewId, cbMap.isChecked, isChecked)
-                }
-
-                // Only show "Add After" if this is the last tab in the ViewPager
-                val isLastTab = position == (pagerAdapter.itemCount - 1)
-                btnAfter.visibility = if (isLastTab) View.VISIBLE else View.GONE
-
-                btnBefore.setOnClickListener { viewModel.onAddTabRelative(viewInfo.tabViewId, false) }
-                btnAfter.setOnClickListener { viewModel.onAddTabRelative(viewInfo.tabViewId, true) }
-                btnDelete.setOnClickListener { viewModel.onDeleteTab(viewInfo.tabViewId) }
-
-                tab.customView = configView
-            } else {
-                // Standard Text Tab
-                tab.text = pagerAdapter.getPageTitle(position)
-                tab.customView = null
             }
+        }
+    }
+
+    private fun attachTabLayoutMediator() {
+        // SAFETY CHECK: Prevent crash if adapter isn't ready yet
+        if (!::tabLayout.isInitialized || !::viewPager.isInitialized ||viewPager.adapter == null) {
+            return
+        }
+
+        TabLayoutMediator(tabLayout, viewPager) { tab, position ->
+            // Standard Text Tab
+            tab.text = pagerAdapter.getPageTitle(position)
+            tab.customView = null
         }.attach()
     }
 
@@ -300,7 +379,7 @@ class TrackingTabsFragment : Fragment() {
 
             // Trigger the fragment to re-attach the mediator to show the new tabs
             (fragment as? TrackingTabsFragment)?.let {
-                it.attachTabLayoutMediator(it.viewModel.screenMode.value)
+                it.attachTabLayoutMediator()
             }
         }
 
@@ -346,3 +425,4 @@ class TrackingTabsFragment : Fragment() {
         }
     }
 }
+

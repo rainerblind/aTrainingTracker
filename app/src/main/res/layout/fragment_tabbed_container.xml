@@ -16,7 +16,16 @@
             android:id="@+id/tab_layout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:tabMode="scrollable" />
+            app:tabMode="scrollable"
+            app:tabIndicatorHeight="3dp"
+            app:tabGravity="fill" />
+
+        <!-- Composable for configuring the tab -->
+        <androidx.compose.ui.platform.ComposeView
+            android:id="@+id/tab_config_header"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone" />
 
         <androidx.viewpager2.widget.ViewPager2
             android:id="@+id/pager"
