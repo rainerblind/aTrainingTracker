@@ -47,6 +47,22 @@ class TrackingTabsViewModel(
         trackingRepository.toggleScreenMode()
     }
 
+    fun onUpdateTabName(tabViewId: Long, newName: String) {
+        // TODO: pass to repository
+    }
+
+    fun onUpdateTabSettings(tabViewId: Long, showMap: Boolean, showLapButton: Boolean) {
+        // TODO: pass to repository
+    }
+
+    fun onAddTabRelative(tabViewId: Long, after: Boolean) {
+        // TODO: pass to repository
+    }
+
+    fun onDeleteTab(tabViewId: Long) {
+        // TODO: pass to repository
+    }
+
 
     fun onLapButtonClick() {
         // -> request a new lap.

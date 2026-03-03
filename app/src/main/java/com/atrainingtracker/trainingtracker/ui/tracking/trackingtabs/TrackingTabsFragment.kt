@@ -8,12 +8,14 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import androidx.activity.result.launch
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.atrainingtracker.R
@@ -28,6 +30,7 @@ import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewInfo
 import com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingFragment
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
+import kotlinx.coroutines.launch
 
 class TrackingTabsFragment : Fragment() {
 
@@ -90,6 +93,8 @@ class TrackingTabsFragment : Fragment() {
         viewPager = view.findViewById(R.id.pager)
         tabLayout = view.findViewById(R.id.tab_layout)
 
+        val tabDivider = view.findViewById<View>(R.id.tab_divider)
+
         lapButton = view.findViewById(R.id.fab_lap_button)
         lapButton.setOnClickListener {
             // simply inform the view model that the button was clicked.
@@ -141,11 +146,6 @@ class TrackingTabsFragment : Fragment() {
                 pagerAdapter = TrackingPagerAdapter(this, activityType)
                 viewPager.adapter = pagerAdapter
 
-                // Link the TabLayout and the ViewPager2 *after* the adapter is set.
-                TabLayoutMediator(tabLayout, viewPager) { tab, position ->
-                    tab.text = pagerAdapter.getPageTitle(position)
-                }.attach()
-
                 // Add a page change callback to control button visibility
                 viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
                     override fun onPageSelected(position: Int) {
@@ -158,6 +158,9 @@ class TrackingTabsFragment : Fragment() {
                 // The trackingViews observer below will handle updating the actual pages.
                 pagerAdapter.setActivityType(activityType)
             }
+
+            // Trigger an initial refresh of the tabs now that the adapter exists
+            attachTabLayoutMediator(viewModel.screenMode.value)
         }
 
         // Observe the list of tracking views from the ViewModel.
@@ -176,6 +179,25 @@ class TrackingTabsFragment : Fragment() {
             tabLayout.getTabAt(0)?.text = pagerAdapter.getPageTitle(0)
         }
 
+        // Observe ScreenMode to swap between Tracking and Configuration UI
+        lifecycleScope.launch {
+            viewModel.screenMode.collect { mode ->
+                // Force the menu to update (shows/hides toggle icon)
+                requireActivity().invalidateOptionsMenu()
+
+                // Visual separation: Change divider color when in Config mode
+                tabDivider.setBackgroundColor(
+                    if (mode == ScreenMode.CONFIGURATION)
+                        requireContext().getColor(android.R.color.holo_red_dark)
+                    else
+                        requireContext().getColor(android.R.color.darker_gray)
+                )
+
+                // Re-attach mediator to refresh all tabs with either Text or CustomView
+                attachTabLayoutMediator(mode)
+            }
+        }
+
         viewModel.lapEvent.observe(viewLifecycleOwner) { lapEvent ->
             // Check that the control tab isn't active and that we have a valid event
             if (viewPager.currentItem != 0 && lapEvent != null) {
@@ -183,6 +205,61 @@ class TrackingTabsFragment : Fragment() {
                 showLapDialog = true
             }
         }
+    }
+
+    private fun attachTabLayoutMediator(mode: ScreenMode) {
+        // SAFETY CHECK: Prevent crash if adapter isn't ready yet
+        if (viewPager.adapter == null) return
+
+        // We must re-create the mediator whenever we change modes
+        TabLayoutMediator(tabLayout, viewPager) { tab, position ->
+            val isFirstTab = position == 0
+
+            if (mode == ScreenMode.CONFIGURATION && !isFirstTab) {
+                // 1. Inflate your custom layout
+                val configView = layoutInflater.inflate(R.layout.layout_tab_config, null)
+                val viewInfo = pagerAdapter.getTrackingViewInfo(position) ?: return@TabLayoutMediator
+
+                // 2. Bind UI Elements
+                val nameEdit = configView.findViewById<android.widget.EditText>(R.id.edit_tab_name)
+                val cbMap = configView.findViewById<android.widget.CheckBox>(R.id.cb_show_map)
+                val cbLap = configView.findViewById<android.widget.CheckBox>(R.id.cb_show_lap)
+                val btnBefore = configView.findViewById<android.widget.ImageButton>(R.id.btn_add_before)
+                val btnAfter = configView.findViewById<android.widget.ImageButton>(R.id.btn_add_after)
+                val btnDelete = configView.findViewById<android.widget.ImageButton>(R.id.btn_delete_tab)
+
+                // 3. Set values
+                nameEdit.setText(viewInfo.name)
+                cbMap.isChecked = viewInfo.showMap
+                cbLap.isChecked = viewInfo.showLapButton
+
+                // 4. Set Listeners
+                nameEdit.addTextChangedListener(object : android.text.TextWatcher {
+                    override fun afterTextChanged(s: android.text.Editable?) {
+                        viewModel.onUpdateTabName(viewInfo.tabViewId, s.toString())
+                    }
+                    override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+                })
+
+                cbMap.setOnCheckedChangeListener { _, isChecked ->
+                    viewModel.onUpdateTabSettings(viewInfo.tabViewId, isChecked, cbLap.isChecked)
+                }
+                cbLap.setOnCheckedChangeListener { _, isChecked ->
+                    viewModel.onUpdateTabSettings(viewInfo.tabViewId, cbMap.isChecked, isChecked)
+                }
+
+                btnBefore.setOnClickListener { viewModel.onAddTabRelative(viewInfo.tabViewId, false) }
+                btnAfter.setOnClickListener { viewModel.onAddTabRelative(viewInfo.tabViewId, true) }
+                btnDelete.setOnClickListener { viewModel.onDeleteTab(viewInfo.tabViewId) }
+
+                tab.customView = configView
+            } else {
+                // Standard Text Tab
+                tab.text = pagerAdapter.getPageTitle(position)
+                tab.customView = null
+            }
+        }.attach()
     }
 
     private fun updateLapButtonVisibility() {
@@ -225,6 +302,11 @@ class TrackingTabsFragment : Fragment() {
         fun updateTrackingViews(newViews: List<TrackingViewInfo>) {
             this.trackingViews = newViews
             notifyDataSetChanged()
+
+            // Trigger the fragment to re-attach the mediator to show the new tabs
+            (fragment as? TrackingTabsFragment)?.let {
+                it.attachTabLayoutMediator(it.viewModel.screenMode.value)
+            }
         }
 
         fun getPageTitle(position: Int): CharSequence {

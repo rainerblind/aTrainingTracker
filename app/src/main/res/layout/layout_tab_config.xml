@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:padding="4dp">
+
+    <!-- Add BEFORE button (Very Left) -->
+    <ImageButton
+        android:id="@+id/btn_add_before"
+        android:layout_width="32dp"
+        android:layout_height="match_parent"
+        android:src="@android:drawable/ic_menu_add"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Add before"
+        android:tint="@android:color/white" />
+
+    <!-- Center Column: Stacked items -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="start"
+        android:layout_marginHorizontal="8dp">
+
+        <EditText
+            android:id="@+id/edit_tab_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:minWidth="100dp"
+            android:textSize="14sp"
+            android:hint="@string/tab_name"
+            android:inputType="textShortMessage"
+            android:gravity="center"
+            android:background="@android:color/transparent"
+            android:textColor="@android:color/white"
+            android:paddingBottom="4dp" />
+
+        <CheckBox
+            android:id="@+id/cb_show_map"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:text="@string/showMap"
+            android:textSize="12sp"
+            android:textColor="@android:color/white" />
+
+        <CheckBox
+            android:id="@+id/cb_show_lap"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:text="@string/showLapButton"
+            android:textSize="12sp"
+            android:textColor="@android:color/white" />
+
+        <ImageButton
+            android:id="@+id/btn_delete_tab"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:layout_gravity="center_horizontal"
+            android:src="@android:drawable/ic_menu_delete"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Delete tab"
+            app:tint="@android:color/holo_red_light" />
+    </LinearLayout>
+
+    <!-- Add AFTER button (Very Right) -->
+    <ImageButton
+        android:id="@+id/btn_add_after"
+        android:layout_width="32dp"
+        android:layout_height="match_parent"
+        android:src="@android:drawable/ic_menu_add"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Add after"
+        android:tint="@android:color/white" />
+
+</LinearLayout>
