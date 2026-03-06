@@ -65,6 +65,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.RecyclerView
+import androidx.viewpager2.adapter.FragmentViewHolder
 
 class TrackingTabsFragment : Fragment() {
 
@@ -393,6 +394,21 @@ class TrackingTabsFragment : Fragment() {
 
             // Trigger the fragment to re-attach the mediator to show the new tabs
             fragment.attachTabLayoutMediator()
+        }
+
+        override fun onBindViewHolder(
+            holder: FragmentViewHolder,
+            position: Int,
+            payloads: MutableList<Any>
+        ) {
+            if (position > 0) { // Skip the Control tab
+                val fragment = fragment.childFragmentManager.findFragmentByTag("f" + holder.itemId) as? TrackingFragment
+                val viewInfo = trackingViews[position - 1]
+
+                // Push the new value into the existing fragment
+                fragment?.updateShowMap(viewInfo.showMap)
+            }
+            super.onBindViewHolder(holder, position, payloads)
         }
 
         fun getPageTitle(position: Int): CharSequence {

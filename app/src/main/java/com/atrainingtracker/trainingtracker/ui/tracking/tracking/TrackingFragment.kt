@@ -35,7 +35,8 @@ class TrackingFragment : Fragment() {
     private var mapFragment: TrackOnMapTrackingAndFollowingFragment? = null
 
     private var tabViewId: Long = -1L
-    private var showMap: Boolean = false
+
+    private var showMapState by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,12 +44,18 @@ class TrackingFragment : Fragment() {
         // Get the viewId from the fragment's arguments
         arguments?.let {
             tabViewId = it.getLong(ARG_TAB_VIEW_ID) ?: 0
-            showMap = it.getBoolean(ARG_SHOW_MAP) ?: false
+            showMapState = it.getBoolean(ARG_SHOW_MAP) ?: false
         }
 
         // Create the ViewModel using our custom factory
         val factory = TrackingViewModelFactory(requireActivity().application, tabViewId)
         viewModel = ViewModelProvider(this, factory)[TrackingViewModel::class.java]
+    }
+
+    fun updateShowMap(show: Boolean) {
+        if (showMapState != show) {
+            showMapState = show
+        }
     }
 
     override fun onCreateView(
@@ -137,9 +144,9 @@ class TrackingFragment : Fragment() {
                         state = uiState,
                         screenMode = screenMode,
                         gridActions = gridActions, // Pass the actions object
-                        showMap = showMap,
+                        showMap = showMapState,
                         mapContent = {
-                            if (showMap) { // Double-check just in case
+                            if (showMapState) { // Double-check just in case
                                 AndroidView(
                                     factory = { context ->
                                         val frameLayout = FrameLayout(context).apply { id = View.generateViewId() }
