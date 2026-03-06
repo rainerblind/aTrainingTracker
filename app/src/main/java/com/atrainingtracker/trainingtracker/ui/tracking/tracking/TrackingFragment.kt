@@ -133,6 +133,14 @@ class TrackingFragment : Fragment() {
                             Log.i(TAG, "onAddCol($atRow, $atCol)")
                             viewModel.onAddCol(atRow, atCol)
                         }
+                        override fun onToggleDragMode(isDragging: Boolean) {
+                            if (isDragging) viewModel.onDragStarted() else viewModel.onDragEnded()
+                        }
+
+                        override fun onMoveField(field: SensorFieldState, toRow: Int, toCol: Int) {
+                            viewModel.onMoveSensorField(field.sensorFieldId, toRow, toCol)
+                            // Note: onMoveSensorField in ViewModel should also set isDragging = false
+                        }
                     }
 
                     // 6. Pass the current screenMode to the SensorGridScreen

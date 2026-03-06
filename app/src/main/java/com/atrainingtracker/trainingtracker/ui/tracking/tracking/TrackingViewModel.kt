@@ -73,6 +73,15 @@ class TrackingViewModel(
         Color(ContextCompat.getColor(application, R.color.zone_5))
     )
 
+    // Drag and Drop functionality
+    private var isDragging = false
+
+    fun onDragStarted() { isDragging = true }
+    fun onDragEnded() { isDragging = false }
+
+
+    ////////////////////////////////
+
     init {
         // Load both the main UI state and the activity type
         loadSensorFieldStates()
@@ -127,8 +136,10 @@ class TrackingViewModel(
                     fieldsWithLiveData
                 }
                 .collect { updatedFields ->
-                    // Emit the new state to the UI
-                    _uiState.value = TrackingScreenState(fields = updatedFields)
+                    if (!isDragging) {
+                        // Emit the new state to the UI
+                        _uiState.value = TrackingScreenState(fields = updatedFields)
+                    }
                 }
         }
     }
@@ -245,6 +256,11 @@ class TrackingViewModel(
             trackingRepository.deleteSensorField(sensorFieldId)
         }
     }
+
+    fun onMoveSensorField(sensorFieldId: Long, toRow: Int, toCol: Int) {
+        // TODO
+    }
+
 
 }
 

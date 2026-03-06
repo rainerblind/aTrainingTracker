@@ -1,5 +1,6 @@
 package com.atrainingtracker.trainingtracker.ui.tracking.tracking
 
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -16,8 +17,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.tooling.preview.Preview
 import com.atrainingtracker.trainingtracker.ui.theme.DefaultBackgroundColor
 import com.atrainingtracker.trainingtracker.ui.theme.Zone1
@@ -32,6 +39,8 @@ interface GridActions {
     fun onDeleteField(fieldState: SensorFieldState)
     fun onAddRow(atRow: Int)
     fun onAddCol(atRow: Int, atCol: Int)
+    fun onMoveField(field: SensorFieldState, toRow: Int, toCol: Int)
+    fun onToggleDragMode(isDragging: Boolean)
 }
 
 /**
@@ -46,6 +55,14 @@ fun SensorGridScreen(
     showMap: Boolean = false,
     mapContent: @Composable () -> Unit = {}
 ) {
+    // CRITICAL: This state survives recompositions of 'state'
+    var draggedFieldId by remember { mutableStateOf<Long?>(null) }
+
+    // Find the currently dragged field from the latest state by ID
+    val currentlyDraggedField = remember(draggedFieldId, state.fields) {
+        state.fields.find { it.sensorFieldId == draggedFieldId }
+    }
+
     Column(Modifier.fillMaxSize()) {
         val fieldsByRow = state.fields.groupBy { it.rowNr }
         val sortedRows = fieldsByRow.keys.sorted()
@@ -61,7 +78,16 @@ fun SensorGridScreen(
                 maxRowNr = rowNr
                 // --- ADD field BETWEEN ROWS ---
                 if (screenMode == ScreenMode.CONFIGURATION) {
-                    RowAdder(onClick = { gridActions.onAddRow(rowNr) })
+                    RowAdder(
+                        isTarget = draggedFieldId != null,
+                        onClick = { gridActions.onAddRow(rowNr) },
+                        onDrop = {
+                            currentlyDraggedField?.let {
+                                gridActions.onMoveField(it, rowNr, toCol = -1)
+                            }
+                            draggedFieldId = null // Reset after drop
+                        }
+                    )
                 }
 
                 val fieldsInThisRow = fieldsByRow[rowNr]?.sortedBy { it.colNr } ?: emptyList()
@@ -74,10 +100,43 @@ fun SensorGridScreen(
                     fieldsInThisRow.forEach { fieldState ->
                         // --- ADD Field BETWEEN FIELDS ---
                         if (screenMode == ScreenMode.CONFIGURATION) {
-                            ColAdder(onClick = { gridActions.onAddCol(rowNr,fieldState.colNr) } )
+                            ColAdder(
+                                isTarget = draggedFieldId != null,
+                                onClick = { gridActions.onAddCol(rowNr,fieldState.colNr) },
+                                onDrop = {
+                                    currentlyDraggedField?.let {
+                                        gridActions.onMoveField(it, rowNr, fieldState.colNr)
+                                    }
+                                    draggedFieldId = null // Reset after drop
+                                }
+                            )
                         }
                         maxColNr = fieldState.colNr
-                        Box(modifier = Modifier.weight(1f)) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .then(
+                                    if (screenMode == ScreenMode.CONFIGURATION) Modifier.pointerInput(
+                                        fieldState.sensorFieldId
+                                    ) {
+                                        detectDragGesturesAfterLongPress(
+                                            onDragStart = {
+                                                draggedFieldId = fieldState.sensorFieldId
+                                                gridActions.onToggleDragMode(true) // Signal ViewModel to pause updates
+                                            },
+                                            onDrag = { change, _ -> change.consume() },
+                                            onDragEnd = {
+                                                // If the user just lets go without hitting an Adder, we reset
+                                                draggedFieldId = null
+                                                gridActions.onToggleDragMode(false) // Signal ViewModel to resume updates
+                                            },
+                                            onDragCancel = {
+                                                draggedFieldId = null
+                                                gridActions.onToggleDragMode(false) // Signal ViewModel to resume updates
+                                            }
+                                        )
+                                    } else Modifier)
+                        ) {
                             SensorFieldView(
                                 fieldState = fieldState,
                                 screenMode = screenMode,
@@ -88,14 +147,32 @@ fun SensorGridScreen(
                     }
                     // --- ADD Field AT END OF the ROW ---
                     if (screenMode == ScreenMode.CONFIGURATION) {
-                        ColAdder(onClick = { gridActions.onAddCol(rowNr, maxColNr + 1) })
+                        ColAdder(
+                            isTarget = draggedFieldId != null,
+                            onClick = { gridActions.onAddCol(rowNr, maxColNr + 1) },
+                            onDrop = {
+                                currentlyDraggedField?.let {
+                                    gridActions.onMoveField(it, rowNr, maxColNr + 1)
+                                }
+                                draggedFieldId = null // Reset after drop
+                            }
+                        )
                     }
 
                 }
             }
             // -- ADD Field as a new row
             if (screenMode == ScreenMode.CONFIGURATION) {
-                RowAdder(onClick = { gridActions.onAddRow(maxRowNr + 1) })
+                RowAdder(
+                    isTarget = draggedFieldId != null,
+                    onClick = { gridActions.onAddRow(maxRowNr + 1) },
+                    onDrop = {
+                        currentlyDraggedField?.let {
+                            gridActions.onMoveField(it, maxRowNr + 1 , -1)
+                        }
+                        draggedFieldId = null // Reset after drop
+                    }
+                )
             }
         }
 
@@ -110,24 +187,49 @@ fun SensorGridScreen(
 }
 
 @Composable
-private fun RowAdder(onClick: () -> Unit) {
-    IconButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-        Icon(
-            imageVector = Icons.Default.Add,
-            contentDescription = "Add Row",
-            tint = MaterialTheme.colorScheme.primary
-        )
+private fun RowAdder(isTarget: Boolean, onClick: () -> Unit, onDrop: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (isTarget) Modifier.pointerInput(Unit) {// In a production app, use a more robust bounds check.
+                // For simplicity, we trigger onDrop if the drag ends over this view.
+                awaitPointerEventScope {
+                    val event = awaitPointerEvent()
+                    if (event.type == PointerEventType.Release) onDrop()
+                }
+            } else Modifier),
+        contentAlignment = Alignment.Center
+    ) {
+        IconButton(onClick = onClick) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = "Add/Move Row",
+                tint = if (isTarget) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+            )
+        }
     }
 }
 
 @Composable
-private fun ColAdder(onClick: () -> Unit) {
-    IconButton(onClick = onClick, modifier = Modifier.fillMaxHeight()) {
-        Icon(
-            imageVector = Icons.Default.Add,
-            contentDescription = "Add Column",
-            tint = MaterialTheme.colorScheme.primary
-        )
+private fun ColAdder(isTarget: Boolean, onClick: () -> Unit, onDrop: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxHeight()
+            .then(if (isTarget) Modifier.pointerInput(Unit) {
+                awaitPointerEventScope {
+                    val event = awaitPointerEvent()
+                    if (event.type == PointerEventType.Release) onDrop()
+                }
+            } else Modifier),
+        contentAlignment = Alignment.Center
+    ) {
+        IconButton(onClick = onClick) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = "Add/Move Column",
+                tint = if (isTarget) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+            )
+        }
     }
 }
 
@@ -147,6 +249,8 @@ fun SensorGridScreenConfigPreview() {
             override fun onDeleteField(fieldState: SensorFieldState) {}
             override fun onAddRow(atRow: Int) {}
             override fun onAddCol(atRow: Int, atCol: Int) {}
+            override fun onMoveField(field: SensorFieldState, toRow: Int, toCol: Int) {}
+            override fun onToggleDragMode(isDragging: Boolean) {}
         }
         SensorGridScreen(
             state = TrackingScreenState(fields = previewFields),
@@ -171,6 +275,8 @@ fun SensorGridScreenTrackingPreview() {
             override fun onDeleteField(fieldState: SensorFieldState) {}
             override fun onAddRow(atRow: Int) {}
             override fun onAddCol(atRow: Int, atCol: Int) {}
+            override fun onMoveField(field: SensorFieldState, toRow: Int, toCol: Int) {}
+            override fun onToggleDragMode(isDragging: Boolean) {}
         }
         SensorGridScreen(
             state = TrackingScreenState(fields = previewFields),
