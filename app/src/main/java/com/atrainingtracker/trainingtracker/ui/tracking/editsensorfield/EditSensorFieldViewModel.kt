@@ -1,6 +1,7 @@
 package com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -24,6 +25,7 @@ data class EditDialogUiState(
     val availableDevices: List<Pair<Long, String>> = emptyList(),
     val selectedViewSize: ViewSize = ViewSize.NORMAL,
     val availableViewSizes: List<ViewSize> = ViewSize.values().toList(),
+    val showFilterConfigDialog: Boolean = false,
     val filterSummary: String = "",
     val selectedFilterType: FilterType = FilterType.INSTANTANEOUS,
     val filterConstant: Double = 1.0,
@@ -32,9 +34,12 @@ data class EditDialogUiState(
 
 class EditSensorFieldViewModel(
     application: Application,
+    private val repository: TrackingRepository,
     private val activityType: ActivityType,
-    private val sensorFieldId: Long,
-    private val repository: TrackingRepository
+    private val sensorFieldId: Long, // use -1L to signal "New Mode
+    private val tabViewId: Long,
+    private val rowNr: Int,
+    private val colNr: Int,          // -1 for new row
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(EditDialogUiState())
@@ -44,9 +49,47 @@ class EditSensorFieldViewModel(
     private val configFromRepoFlow = repository.getSensorFieldConfig(sensorFieldId).filterNotNull()
     lateinit var initialConfig: SensorFieldConfig
 
+    private val isNewField = sensorFieldId == -1L
+
     init {
-        // Load the initial state once.
-        loadInitialState()
+        Log.i("EditSensorFieldViewModel", "init(): $sensorFieldId, $tabViewId, $rowNr, $colNr")
+        if (isNewField) {
+            setupDefaultState()
+        } else {
+            loadInitialState()
+        }
+    }
+
+    private fun setupDefaultState() {
+        val context = getApplication<Application>().applicationContext
+        // Use a default sensor type (e.g., first available)
+        val defaultSensor = SensorType.SPEED_mps
+
+        // Create a MOCK initialConfig for the "Add" scenario.
+        // This ensures that functions like onFilterConfigDismissed don't crash.
+        initialConfig = SensorFieldConfig(
+            sensorFieldId = -1,
+            rowNr = 0,
+            colNr = 0,
+            sensorType = defaultSensor,
+            sourceDeviceId = -1,
+            sourceDeviceName = context.getString(R.string.bestSensor),
+            viewSize = ViewSize.NORMAL,
+            filterType = FilterType.INSTANTANEOUS,
+            filterConstant = 1.0
+        )
+
+        _uiState.update {
+            it.copy(
+                selectedSensorType = defaultSensor,
+                availableSensorTypesForCurrentActivityType = ActivityType.getSensorTypeArray(activityType, context).toList(),
+                selectedDeviceId = -1,
+                selectedDeviceName = context.getString(R.string.bestSensor),
+                availableDevices = emptyList(), // Will be updated by side-effect if needed
+                selectedViewSize = ViewSize.NORMAL,
+                filterSummary = FilterType.INSTANTANEOUS.getSummary(context, 1.0)
+            )
+        }
     }
 
     fun loadInitialState() {
@@ -146,7 +189,11 @@ class EditSensorFieldViewModel(
         }
     }
 
-    fun onFilterEditCancel() {
+    fun onConfigureFilterClicked() {
+        _uiState.update { it.copy(showFilterConfigDialog = true) }
+    }
+
+    fun onFilterConfigDismissed() {
         val context = getApplication<Application>().applicationContext
 
         _uiState.update {
@@ -155,6 +202,7 @@ class EditSensorFieldViewModel(
                 it.selectedDeviceId == initialConfig.sourceDeviceId) {
                 // then copy the filter stuff from the initial config
                 it.copy(
+                    showFilterConfigDialog = false,
                     filterSummary = initialConfig.filterType.getSummary(context, initialConfig.filterConstant),
                     selectedFilterType = FilterType.INSTANTANEOUS,
                     filterConstant = 1.0
@@ -164,12 +212,19 @@ class EditSensorFieldViewModel(
             else {
                 // otherwise, set it to the instantaneous filter
                 it.copy(
+                    showFilterConfigDialog = false,
                     filterSummary = FilterType.INSTANTANEOUS.getSummary(context, 1.0),
                     selectedFilterType = FilterType.INSTANTANEOUS,
                     filterConstant = 1.0
                 )
             }
         }
+    }
+
+    fun onSaveFilterConfig() {
+        // nothing to do here.
+        // except for removing the ConfigureFilterDialog.
+        _uiState.update { it.copy(showFilterConfigDialog = false) }
     }
 
     private fun getFinalFilterConstant(): Double {
@@ -191,19 +246,34 @@ class EditSensorFieldViewModel(
     }
 
     fun saveChanges() {
+        Log.i("EditSensorFieldViewModel", "saveChanges(): $tabViewId, $rowNr, $colNr")
         val currentState = _uiState.value
         val sensorType = currentState.selectedSensorType ?: return
 
         viewModelScope.launch {
-            repository.updateSensorFieldConfig(
-                sensorFieldId = sensorFieldId,
-                newSensorType = sensorType,
-                newViewSize =  currentState.selectedViewSize,
-                newSourceDeviceId = currentState.selectedDeviceId,
-                newSourceDeviceName = currentState.selectedDeviceName,
-                newFilterType = getFinalFilterType(),
-                newFilterConstant = getFinalFilterConstant()
-            )
+            if (isNewField) {
+                 repository.insertSensorFieldConfig(
+                    tabViewId = tabViewId,
+                    rowNr = rowNr,
+                    colNr = colNr,
+                    newSensorType = sensorType,
+                    newViewSize = currentState.selectedViewSize,
+                    newSourceDeviceId = currentState.selectedDeviceId,
+                    newSourceDeviceName = currentState.selectedDeviceName,
+                    newFilterType = getFinalFilterType(),
+                    newFilterConstant = getFinalFilterConstant()
+                )
+            } else {
+                repository.updateSensorFieldConfig(
+                    sensorFieldId = sensorFieldId,
+                    newSensorType = sensorType,
+                    newViewSize = currentState.selectedViewSize,
+                    newSourceDeviceId = currentState.selectedDeviceId,
+                    newSourceDeviceName = currentState.selectedDeviceName,
+                    newFilterType = getFinalFilterType(),
+                    newFilterConstant = getFinalFilterConstant()
+                )
+            }
         }
     }
 
@@ -218,14 +288,17 @@ class EditSensorFieldViewModel(
 
 class EditSensorFieldViewModelFactory(
     private val application: Application,
+    private val repository: TrackingRepository,
     private val activityType: ActivityType,
-    private val sensorFieldId: Long,
-    private val repository: TrackingRepository
+    private val sensorFieldId: Long,  // -1 means "New Mode"
+    private val tabViewId: Long,
+    private val rowNr: Int,
+    private val colNr: Int  // -1 means new row
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(EditSensorFieldViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return EditSensorFieldViewModel(application, activityType, sensorFieldId, repository) as T
+            return EditSensorFieldViewModel(application, repository, activityType, sensorFieldId, tabViewId, rowNr, colNr) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

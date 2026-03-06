@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.ServiceConnection
 import android.os.IBinder
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.atrainingtracker.banalservice.ActivityType
@@ -70,6 +71,14 @@ data class SensorFieldConfig(
     val sourceDeviceName: String? = null
 )
 
+enum class ScreenMode {
+    /** The screen is used for actively tracking a workout. Long-clicks are handled. */
+    TRACKING,
+    /** The screen is used for configuring the layout. Normal clicks are handled for editing. */
+    CONFIGURATION
+}
+
+
 /**
  * A singleton repository that acts as the single source of truth for all tracking-related data.
  * It connects to the BANALService and the local database to provide a clean data source
@@ -92,7 +101,7 @@ class TrackingRepository private constructor(private val application: Applicatio
     private var isBoundToBanalService = false
 
 
-    private val _activityType = MutableLiveData<ActivityType>()
+    private val _activityType = MutableLiveData<ActivityType>(ActivityType.getDefaultActivityType())
     val activityType: LiveData<ActivityType> = _activityType
     // Note that we get the LiveData by observing the BANALServiceComm.activityType
 
@@ -114,6 +123,19 @@ class TrackingRepository private constructor(private val application: Applicatio
             }
         }
     }
+
+    // -- screen mode
+    private val _screenMode = MutableStateFlow(ScreenMode.TRACKING)
+    val screenMode: StateFlow<ScreenMode> = _screenMode.asStateFlow()
+
+    fun toggleScreenMode() {
+        _screenMode.value = if (_screenMode.value == ScreenMode.TRACKING) {
+            ScreenMode.CONFIGURATION
+        } else {
+            ScreenMode.TRACKING
+        }
+    }
+
 
     // -- Lap Event
     private val _lapEvent = SingleLiveEvent<LapEvent>()
@@ -164,9 +186,10 @@ class TrackingRepository private constructor(private val application: Applicatio
     /**
      * Retrieves the ActivityType associated with a specific view definition.
      */
-    suspend fun getActivityTypeForView(tabViewId: Long): ActivityType? {
+    suspend fun getActivityTypeForView(tabViewId: Long): ActivityType {
         return withContext(Dispatchers.IO) {
-            viewsDbManager.getActivityTypeForTab(tabViewId)
+            val activityType = viewsDbManager.getActivityTypeForTab(tabViewId)
+            activityType
         }
     }
 
@@ -238,9 +261,18 @@ class TrackingRepository private constructor(private val application: Applicatio
 
     // --- Tracking Views ---
     /**
+     * A flow that emits the list of tracking views whenever the config changes.
+     */
+    fun getTrackingViewsFlow(activityType: ActivityType): Flow<List<TrackingViewInfo>> {
+        return configUpdateTrigger.map {
+            getTrackingViews(activityType)
+        }.flowOn(Dispatchers.IO)
+    }
+
+    /**
      * Loads the list of available tracking views for a given activity type from the database.
      */
-    fun getTrackingViews(activityType: ActivityType): List<TrackingViewInfo> {
+    private fun getTrackingViews(activityType: ActivityType): List<TrackingViewInfo> {
         val dbManager = TrackingViewsDatabaseManager.getInstance(application)
         val viewList = mutableListOf<TrackingViewInfo>()
 
@@ -406,7 +438,7 @@ class TrackingRepository private constructor(private val application: Applicatio
         )
     }
 
-
+    // -- Configuring Sensor Fields
     /**
      * Updates the configuration of a specific sensor field in the database.
      */
@@ -441,6 +473,114 @@ class TrackingRepository private constructor(private val application: Applicatio
             configUpdateTrigger.value++
         }
     }
+
+    suspend fun insertSensorFieldConfig(
+        tabViewId: Long,
+        rowNr: Int,
+        colNr: Int,
+        newSensorType: SensorType,
+        newViewSize: ViewSize,
+        newSourceDeviceId: Long?,
+        newSourceDeviceName: String?,
+        newFilterType: FilterType,
+        newFilterConstant: Double
+    ) {
+        Log.i("TrackingRepository", "insertSensorFieldConfig: $tabViewId, $rowNr, $colNr")
+
+        withContext(Dispatchers.IO) {
+            viewsDbManager.insertSensorFiledAt(
+                tabViewId,
+                rowNr,
+                colNr,
+                newSensorType,
+                newViewSize,
+                newSourceDeviceId,
+                newFilterType,
+                newFilterConstant)
+        }
+
+        // request the BANALService to create this new filter
+        val filterData = FilterData(newSourceDeviceName, newSensorType, newFilterType, newFilterConstant)
+        if (banalServiceComm != null) banalServiceComm?.createFilter(filterData)
+
+        // trigger recreation of UI
+        withContext(Dispatchers.Main) {
+            configUpdateTrigger.value++
+        }
+    }
+
+    suspend fun deleteSensorField(sensorFieldId: Long) {
+        // delete from DB
+        withContext(Dispatchers.IO) {
+            viewsDbManager.deleteSensorField(sensorFieldId)
+        }
+
+        // trigger recreation of UI
+        withContext(Dispatchers.Main) {
+            configUpdateTrigger.value++
+        }
+    }
+
+    /*******************************************************************
+     * Configure Tabs
+    **/
+    suspend fun updateTabName(tabViewId: Long, name: String) {
+        withContext(Dispatchers.IO) {
+            viewsDbManager.updateNameOfTabView(tabViewId, name)
+        }
+
+       // trigger recreation of UI
+        withContext(Dispatchers.Main) {
+            configUpdateTrigger.value++
+        }
+    }
+
+    suspend fun updateShowMap(tabViewId: Long, showMap: Boolean) {
+        withContext(Dispatchers.IO) {
+            viewsDbManager.updateShowMap(tabViewId, showMap)
+        }
+
+        // trigger recreation of UI
+        withContext(Dispatchers.Main) {
+            configUpdateTrigger.value++
+        }
+    }
+
+    suspend fun updateShowLapButton(tabViewId: Long, showLapButton: Boolean) {
+        withContext(Dispatchers.IO) {
+            viewsDbManager.updateShowLapButton(tabViewId, showLapButton)
+        }
+
+        // trigger recreation of UI
+        withContext(Dispatchers.Main) {
+            configUpdateTrigger.value++
+        }
+    }
+
+    suspend fun addEmptyTabView(tabViewId: Long, addAfter: Boolean) {
+        withContext(Dispatchers.IO) {
+            viewsDbManager.addEmptyTabView(tabViewId, addAfter)
+        }
+
+        // trigger recreation of UI
+        withContext(Dispatchers.Main) {
+            configUpdateTrigger.value++
+        }
+    }
+
+    suspend fun deleteTab(tabViewId: Long) {
+        withContext(Dispatchers.IO) {
+            viewsDbManager.deleteTabView(tabViewId)
+        }
+
+        // trigger recreation of UI
+        withContext(Dispatchers.Main) {
+            configUpdateTrigger.value++
+        }
+    }
+
+
+
 
     companion object {
         @Volatile

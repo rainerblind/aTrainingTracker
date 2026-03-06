@@ -46,7 +46,7 @@ import java.util.TreeMap;
 
 
 public class TrackingViewsDatabaseManager {
-    private static final String TAG = TrackingViewsDatabaseManager.class.getName();
+    private static final String TAG = "TrackingViewsDatabaseManager";
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
     // singleton pattern
@@ -75,7 +75,7 @@ public class TrackingViewsDatabaseManager {
 
 
 
-    public void updateNameOfView(long viewId, String name) {
+    public void updateNameOfTabView(long viewId, String name) {
         ContentValues values = new ContentValues();
         values.put(TrackingViewsDbHelper.NAME, name);
 
@@ -127,6 +127,50 @@ public class TrackingViewsDatabaseManager {
                 TrackingViewsDbHelper.ROW_ID + "=?",
                 new String[]{sensorFieldId + ""});
     }
+
+    public void insertSensorFiledAt(
+            long tabViewId,
+            int rowNr,
+            int colNr,                        // -1 means new row
+            SensorType sensorType,
+            ViewSize viewSize,
+            @Nullable Long sourceDeviceId,    // null means none = best
+            FilterType filterType,
+            double filterConstant) {
+
+        Log.i(TAG, "insertSensorFiledAt(" + tabViewId + ", " + rowNr + ", " + colNr + ", " + sensorType.name());
+
+        String sql;
+        if (colNr == -1) {  // new row -> add 1 to all rows with a larger rowNr
+            sql = "UPDATE " + TrackingViewsDbHelper.ROWS_TABLE +
+                    " SET " + TrackingViewsDbHelper.ROW_NR + "=" + TrackingViewsDbHelper.ROW_NR + "+1" +
+                    " WHERE " + TrackingViewsDbHelper.ROW_NR + " >= " + rowNr;
+        }
+        else {  // new col -> add 1 to all cols with a larger colNr and the same rowNr
+            sql = "UPDATE " + TrackingViewsDbHelper.ROWS_TABLE +
+                    " SET " + TrackingViewsDbHelper.COL_NR + "=" + TrackingViewsDbHelper.COL_NR + "+1" +
+                    " WHERE " + TrackingViewsDbHelper.COL_NR + " >= " + colNr + " AND " + TrackingViewsDbHelper.ROW_NR + "=" + rowNr;
+        }
+
+        Log.i(TAG, sql);
+        getDatabase().execSQL(sql);
+
+        ContentValues values = new ContentValues();
+        values.put(TrackingViewsDbHelper.VIEW_ID, tabViewId);
+        values.put(TrackingViewsDbHelper.ROW_NR, rowNr);
+        values.put(TrackingViewsDbHelper.COL_NR, colNr);
+        values.put(TrackingViewsDbHelper.SENSOR_TYPE, sensorType.name());
+        values.put(TrackingViewsDbHelper.VIEW_SIZE, viewSize.name());
+        if (sourceDeviceId != null && sourceDeviceId >= 0) {
+            values.put(TrackingViewsDbHelper.SOURCE_DEVICE_ID, sourceDeviceId);
+        }
+        values.put(TrackingViewsDbHelper.FILTER_TYPE, filterType.name());
+        values.put(TrackingViewsDbHelper.FILTER_CONSTANT, filterConstant);
+
+        getDatabase().insert(TrackingViewsDbHelper.ROWS_TABLE, null, values);
+    }
+
+
 
     @Deprecated // use ViewSize now!
     public void updateTextSizeOfRow(long rowId, int textSize) {
@@ -183,12 +227,12 @@ public class TrackingViewsDatabaseManager {
         updateBoolean(viewId, TrackingViewsDbHelper.SHOW_LAP_BUTTON, showLapButton);
     }
 
-    public void deleteRow(long rowId) {
-        if (DEBUG) Log.i(TAG, "deleteRow(" + rowId + ")");
+    public void deleteSensorField(long sensorFieldId) {
+        if (DEBUG) Log.i(TAG, "deleteSensorField(" + sensorFieldId + ")");
 
         getDatabase().delete(TrackingViewsDbHelper.ROWS_TABLE,
-                TrackingViewsDbHelper.ROW_ID + "=?",
-                new String[]{rowId + ""});
+                TrackingViewsDbHelper.ROW_ID + "=?", // note that due to historic reasons, whe ID of a sensor field is called ROW_ID :(
+                new String[]{sensorFieldId + ""});
     }
 
     @Nullable
@@ -473,7 +517,7 @@ public class TrackingViewsDatabaseManager {
                 new String[]{sourceDeviceId + ""});
     }
 
-    public void deleteView(long viewId) {
+    public void deleteTabView(long viewId) {
 
         SQLiteDatabase db = getDatabase();
         int layoutNr = getLayoutNr(viewId);
@@ -491,7 +535,7 @@ public class TrackingViewsDatabaseManager {
         db.execSQL(execsql);
     }
 
-    public void addEmptyView(long viewId, boolean addAfterLayout) {
+    public void addEmptyTabView(long viewId, boolean addAfterLayout) {
         int layoutNr = getLayoutNr(viewId);
         ActivityType activityType = getActivityTypeForTab(viewId);
         int newLayoutNr = layoutNr;

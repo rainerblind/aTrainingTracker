@@ -126,7 +126,7 @@ fun ConfigureFilterDialog(
                         Text(stringResource(R.string.Cancel))
                     }
                     Spacer(Modifier.width(8.dp))
-                    Button(onClick = onSave) {  // Simply call the onSave lambda passed from the Fragment.
+                    Button(onClick = onSave) {  // Simply call the passed onSave lambda
                         Text(stringResource(R.string.OK))
                     }
                 }

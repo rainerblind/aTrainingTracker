@@ -25,7 +25,7 @@ import com.atrainingtracker.banalservice.ActivityType;
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
-import com.atrainingtracker.trainingtracker.fragments.ConfigTrackingViewsFragment;
+import com.atrainingtracker.trainingtracker.fragments.ConfigTrackingViewsFragmentClassic;
 import com.atrainingtracker.trainingtracker.fragments.ConfigViewsFragment;
 
 public class ConfigTrackingViewsActivity
@@ -45,7 +45,7 @@ public class ConfigTrackingViewsActivity
     @NonNull
     @Override
     public ConfigViewsFragment getNewConfigViewsFragment(ActivityType activityType, long viewId) {
-        return ConfigTrackingViewsFragment.newInstance(activityType, viewId);
+        return ConfigTrackingViewsFragmentClassic.newInstance(activityType, viewId);
     }
 
 
