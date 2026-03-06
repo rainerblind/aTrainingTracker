@@ -111,12 +111,8 @@ class TrackingTabsViewModel(
             val currentViews = trackingViews.value ?: emptyList()
             val currentIndex = currentViews.indexOfFirst { it.tabViewId == tabViewId }
 
-            // 2. Perform the database update
-            trackingRepository.deleteTab(tabViewId)
-
-            // 3. Calculate the target index for the Fragment
-            // If the user deletes the last tab (currentIndex == currentViews.size - 1),
-            // we move to the new last tab (newCount).
+            // 2. Calculate the target index for the Fragment
+            // If the user deletes the last tab, we move to the new last tab (newCount).
             // Otherwise, we stay at the same index (which is now the next tab).
             val newCount = currentViews.size - 1
             val targetIndex = if (currentIndex >= newCount && newCount > 0) {
@@ -124,11 +120,14 @@ class TrackingTabsViewModel(
             } else {
                 currentIndex
             }
+            // Note that we do this navigation before the update of the database due to the following reason:
+            // When we delete the last tab in the database and the pager is showing the last tab, the Pager will navigate to the first tab.
 
-            Log.i("TrackingTabsViewModel", "Deleting $currentIndex; newCount=$newCount.  -> Navigate to $targetIndex")
-
-            // 4. Emit the event with the safe, pre-calculated index
+            // 3. Emit the event with the safe, pre-calculated index
             _navigationEvent.emit(TabNavigationEvent.NavigateTo(targetIndex))
+
+            // 4. Perform the database update
+            trackingRepository.deleteTab(tabViewId)
         }
     }
 
