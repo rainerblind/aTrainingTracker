@@ -51,10 +51,7 @@ class TrackingTabsViewModel(
     private val _navigationEvent = MutableSharedFlow<TabNavigationEvent>()
     val navigationEvent = _navigationEvent.asSharedFlow()
 
-    // 1. Combine ActivityType and Trigger into a single reactive LiveData
-    // This ensures that tabs refresh whenever:
-    // a) The user changes the activity type (Running -> Cycling)
-    // b) The user renames/adds/deletes a tab (configUpdateTrigger increments)
+    // liveData for the list of tabs.  Whenever the activity type changes, we update the list.
     @OptIn(ExperimentalCoroutinesApi::class)
     val trackingViews: LiveData<List<TrackingViewInfo>> = activityType.asFlow()
         .flatMapLatest { currentActivityType ->

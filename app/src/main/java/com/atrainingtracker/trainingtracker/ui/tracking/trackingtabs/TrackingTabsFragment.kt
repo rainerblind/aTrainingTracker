@@ -62,6 +62,8 @@ import kotlinx.coroutines.launch
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.RecyclerView
 
 class TrackingTabsFragment : Fragment() {
@@ -123,7 +125,7 @@ class TrackingTabsFragment : Fragment() {
         viewModel = ViewModelProvider(this, factory).get(TrackingTabsViewModel::class.java)
 
         viewPager = view.findViewById(R.id.pager)
-        tabLayout = view.findViewById(R.id.tab_layout) // Now this won't fail
+        tabLayout = view.findViewById(R.id.tab_layout)
         val configHeader = view.findViewById<ComposeView>(R.id.tab_config_header)
 
         lapButton = view.findViewById(R.id.fab_lap_button)
@@ -154,6 +156,21 @@ class TrackingTabsFragment : Fragment() {
             }
         }
 
+        // Initialize the adapter
+        pagerAdapter = TrackingPagerAdapter(this)
+        viewPager.adapter = pagerAdapter
+
+        // Add a page change callback to update the header and the lap buttons visibility
+        viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) {
+                super.onPageSelected(position)
+
+                updateConfigHeader(configHeader)
+                updateLapButtonVisibility()
+            }
+        })
+
+
         // --- BACK BUTTON HANDLING ---
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -171,63 +188,21 @@ class TrackingTabsFragment : Fragment() {
 
         // Observe the ActivityType from the ViewModel (which gets it from the repository)
         viewModel.activityType.observe(viewLifecycleOwner) { activityType ->
-            // This observer will be triggered on initial load and whenever the activity type changes.
-            if (!::pagerAdapter.isInitialized) {
-                // First-time setup
-                pagerAdapter = TrackingPagerAdapter(this, activityType)
-                viewPager.adapter = pagerAdapter
-
-                // Add a page change callback to control button visibility
-                viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
-                    override fun onPageSelected(position: Int) {
-                        super.onPageSelected(position)
-                        updateLapButtonVisibility()
-                    }
-                })
-            } else {
-                // If the adapter already exists, just update its activityType.
-                // The trackingViews observer below will handle updating the actual pages.
-                pagerAdapter.setActivityType(activityType)
-            }
-
-            // Trigger an initial refresh of the tabs now that the adapter exists
             attachTabLayoutMediator()
         }
 
-        lifecycleScope.launchWhenStarted {
-            viewModel.navigationEvent.collect { tabNavigationEvent ->
-                when (tabNavigationEvent) {
-                    is TabNavigationEvent.NavigateTo -> {
-                        // Wait for the ViewPager to finish its layout pass
-                        viewPager.post {
 
-                            Log.i(TAG, "Item count of pagerAdapter before notifyDatasetChanged: ${pagerAdapter.itemCount}")
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
 
-                            // Ensure the adapter is aware of the new count
-                            pagerAdapter.notifyDataSetChanged()
+                viewModel.navigationEvent.collect { tabNavigationEvent ->
+                    when (tabNavigationEvent) {
+                        is TabNavigationEvent.NavigateTo -> {
 
-                            Log.i(TAG, "Item count of pagerAdapter after notifyDatasetChanged: ${pagerAdapter.itemCount}")
-
-                            // Re-sync the tabs
-                            attachTabLayoutMediator()
-
-                            // Force header update for the new position
-                            updateConfigHeader(configHeader)
-                            Log.i(TAG, "updatedConfigHeader")
-
-                            // Probably, we get the problems because the update of the pagerAdapter take some time.  Thus, the itemCount is not up to date.
-                            // TODO: fix this shit.
-
-
-                            val target = tabNavigationEvent.index + 1 // Note that we have to add one due to the fact that we also have the control tracking fragment.
-                            Log.i(TAG, "Requested target + 1 = " + target)
-
+                            val target =
+                                tabNavigationEvent.index + 1 // Note that we have to add one due to the fact that we also have the control tracking fragment.
                             viewPager.setCurrentItem(target, true)
-                            Log.i(TAG, "Navigated to " + target)
-
                         }
-                        Log.i(TAG, "Item count of pagerAdapter after notifyDatasetChanged 2: ${pagerAdapter.itemCount}")
-
                     }
                 }
             }
@@ -235,6 +210,7 @@ class TrackingTabsFragment : Fragment() {
 
         viewModel.trackingViews.observe(viewLifecycleOwner) { trackingViews ->
             if (::pagerAdapter.isInitialized) {
+
                 // note that we call notifyDatasetChanged already here...
                 pagerAdapter.updateTrackingViews(trackingViews)
 
@@ -246,16 +222,10 @@ class TrackingTabsFragment : Fragment() {
                 }
                 updateLapButtonVisibility()
                 updateConfigHeader(configHeader)
-
-                // Only notify changed if the count is the same (renames)
-                // structural changes are handled by the navigationEvent above
-                if (trackingViews.size == tabLayout.tabCount) {
-                    pagerAdapter.notifyDataSetChanged()
-                }
             }
         }
 
-        // Observe TrackingMode to update the tab text
+        // Observe TrackingMode to update the tab text of the first tab (the control tracking fragment)
         viewModel.trackingMode.observe(viewLifecycleOwner) { _ ->
             if (::tabLayout.isInitialized && ::pagerAdapter.isInitialized) {
                 tabLayout.getTabAt(0)?.text = pagerAdapter.getPageTitle(0)
@@ -268,19 +238,10 @@ class TrackingTabsFragment : Fragment() {
                 // Force the menu to update (shows/hides toggle icon)
                 requireActivity().invalidateOptionsMenu()
 
-                configHeader.visibility = if (mode == ScreenMode.CONFIGURATION) View.VISIBLE else View.GONE
-
                 // Refresh the Compose content whenever mode or selection changes
                 updateConfigHeader(configHeader)
             }
         }
-
-        // Ensure the header updates when the user swipes between tabs
-        viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
-            override fun onPageSelected(position: Int) {
-                updateConfigHeader(configHeader)
-            }
-        })
 
         viewModel.lapEvent.observe(viewLifecycleOwner) { lapEvent ->
             // Check that the control tab isn't active and that we have a valid event
@@ -309,7 +270,7 @@ class TrackingTabsFragment : Fragment() {
         composeView.visibility = View.VISIBLE
         composeView.setContent {
             ATrainingTrackerTheme {
-                // Call the actual Composable here
+                // Call the actual Composable
                 TabConfigContent(viewInfo)
             }
         }
@@ -317,7 +278,6 @@ class TrackingTabsFragment : Fragment() {
 
     @Composable
     private fun TabConfigContent(viewInfo: TrackingViewInfo) {
-        // 'remember' now works because this is a @Composable.
         // We use viewInfo.tabViewId as a key so that when you swipe tabs, the local state resets.
         var localName by remember(viewInfo.tabViewId) { mutableStateOf(viewInfo.name) }
 
@@ -417,8 +377,7 @@ class TrackingTabsFragment : Fragment() {
     }
 
     private class TrackingPagerAdapter(
-        private val fragment: TrackingTabsFragment,
-        private var activityType: ActivityType
+        private val fragment: TrackingTabsFragment
     ) : FragmentStateAdapter(fragment) {
 
         private var trackingViews: List<TrackingViewInfo> = emptyList()
@@ -426,23 +385,14 @@ class TrackingTabsFragment : Fragment() {
             ViewModelProvider(fragment).get(TrackingTabsViewModel::class.java)
         }
 
-        fun setActivityType(newActivityType: ActivityType) {
-            this.activityType = newActivityType
-            // The logic to update pages is handled by the trackingViews observer,
-            // which will call updateTrackingViews.
-        }
-
         fun updateTrackingViews(newViews: List<TrackingViewInfo>) {
             Log.i(TAG, "updateTrackingViews")
             this.trackingViews = newViews
+
             notifyDataSetChanged()
 
-            Log.i(TAG, "Here, I am...")
             // Trigger the fragment to re-attach the mediator to show the new tabs
-            (fragment as? TrackingTabsFragment)?.let {
-                Log.i(TAG, "attachTabLayoutMediator.... for {${it.id}}")
-                it.attachTabLayoutMediator()
-            }
+            fragment.attachTabLayoutMediator()
         }
 
         fun getPageTitle(position: Int): CharSequence {
