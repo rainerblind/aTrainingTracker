@@ -2,6 +2,7 @@ package com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs
 
 
 import android.app.Application
+import android.util.Log
 import androidx.activity.result.launch
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
@@ -101,18 +102,37 @@ class TrackingTabsViewModel(
 
             // 3. Calculate target: if 'after', target is current + 1. If 'before', target is current.
             val targetIndex = if (after) currentIndex + 1 else currentIndex
+
+            Log.i("TrackingTabsViewModel", "Adding after=$after $currentIndex -> $targetIndex")
+
             _navigationEvent.emit(TabNavigationEvent.NavigateTo(targetIndex))
         }
     }
 
     fun onDeleteTab(tabViewId: Long) {
         viewModelScope.launch {
-            val currentIndex = trackingViews.value?.indexOfFirst { it.tabViewId == tabViewId } ?: 0
+            // 1. Get current index and total count before deletion
+            val currentViews = trackingViews.value ?: emptyList()
+            val currentIndex = currentViews.indexOfFirst { it.tabViewId == tabViewId }
+
+            // 2. Perform the database update
             trackingRepository.deleteTab(tabViewId)
 
-            // After deletion, stay at the same index (which is now the next tab)
-            // but clamp it to the new size in the Fragment.
-            _navigationEvent.emit(TabNavigationEvent.NavigateTo(currentIndex))
+            // 3. Calculate the target index for the Fragment
+            // If the user deletes the last tab (currentIndex == currentViews.size - 1),
+            // we move to the new last tab (newCount).
+            // Otherwise, we stay at the same index (which is now the next tab).
+            val newCount = currentViews.size - 1
+            val targetIndex = if (currentIndex >= newCount && newCount > 0) {
+                newCount
+            } else {
+                currentIndex
+            }
+
+            Log.i("TrackingTabsViewModel", "Deleting $currentIndex; newCount=$newCount.  -> Navigate to $targetIndex")
+
+            // 4. Emit the event with the safe, pre-calculated index
+            _navigationEvent.emit(TabNavigationEvent.NavigateTo(targetIndex))
         }
     }
 

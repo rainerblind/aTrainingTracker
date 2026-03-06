@@ -61,6 +61,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.res.stringResource
+import androidx.recyclerview.widget.RecyclerView
 
 class TrackingTabsFragment : Fragment() {
 
@@ -198,28 +199,46 @@ class TrackingTabsFragment : Fragment() {
                     is TabNavigationEvent.NavigateTo -> {
                         // Wait for the ViewPager to finish its layout pass
                         viewPager.post {
+
+                            Log.i(TAG, "Item count of pagerAdapter before notifyDatasetChanged: ${pagerAdapter.itemCount}")
+
                             // Ensure the adapter is aware of the new count
                             pagerAdapter.notifyDataSetChanged()
+
+                            Log.i(TAG, "Item count of pagerAdapter after notifyDatasetChanged: ${pagerAdapter.itemCount}")
+
                             // Re-sync the tabs
                             attachTabLayoutMediator()
 
-                            val target = tabNavigationEvent.index.coerceIn(0, (pagerAdapter.itemCount - 1).coerceAtLeast(0))
-
-                            viewPager.setCurrentItem(target + 1, true)  // (!) Note that we have ot add one due to the fact that we also have the control tracking fragmeng.
-
                             // Force header update for the new position
                             updateConfigHeader(configHeader)
+                            Log.i(TAG, "updatedConfigHeader")
+
+                            // Probably, we get the problems because the update of the pagerAdapter take some time.  Thus, the itemCount is not up to date.
+                            // TODO: fix this shit.
+
+
+                            val target = tabNavigationEvent.index + 1 // Note that we have to add one due to the fact that we also have the control tracking fragment.
+                            Log.i(TAG, "Requested target + 1 = " + target)
+
+                            viewPager.setCurrentItem(target, true)
+                            Log.i(TAG, "Navigated to " + target)
+
                         }
+                        Log.i(TAG, "Item count of pagerAdapter after notifyDatasetChanged 2: ${pagerAdapter.itemCount}")
+
                     }
                     TabNavigationEvent.RefreshOnly -> {
                         attachTabLayoutMediator()
                     }
+
                 }
             }
         }
 
         viewModel.trackingViews.observe(viewLifecycleOwner) { trackingViews ->
             if (::pagerAdapter.isInitialized) {
+                // note that we call notifyDatasetChanged already here...
                 pagerAdapter.updateTrackingViews(trackingViews)
 
                 // For renames/settings, we don't want to jump pages, just refresh visuals
@@ -395,7 +414,7 @@ class TrackingTabsFragment : Fragment() {
     }
 
     private class TrackingPagerAdapter(
-        private val fragment: Fragment,
+        private val fragment: TrackingTabsFragment,
         private var activityType: ActivityType
     ) : FragmentStateAdapter(fragment) {
 
@@ -411,11 +430,14 @@ class TrackingTabsFragment : Fragment() {
         }
 
         fun updateTrackingViews(newViews: List<TrackingViewInfo>) {
+            Log.i(TAG, "updateTrackingViews")
             this.trackingViews = newViews
             notifyDataSetChanged()
 
+            Log.i(TAG, "Here, I am...")
             // Trigger the fragment to re-attach the mediator to show the new tabs
             (fragment as? TrackingTabsFragment)?.let {
+                Log.i(TAG, "attachTabLayoutMediator.... for {${it.id}}")
                 it.attachTabLayoutMediator()
             }
         }
@@ -451,11 +473,39 @@ class TrackingTabsFragment : Fragment() {
                 TrackingFragment.newInstance(viewInfo.tabViewId, viewInfo.showMap)
             }
         }
+
+        override fun getItemId(position: Int): Long {
+            Log.i(TAG, "getItemId: position=$position")
+
+            // Position 0 is the fixed Control tab. Give it a unique, constant ID.
+            if (position == 0) return -1L
+
+            // For other tabs, use the database ID.
+            // Remember position 1 corresponds to trackingViews[0].
+            val viewIndex = position - 1
+            return if (viewIndex >= 0 && viewIndex < trackingViews.size) {
+                trackingViews[viewIndex].tabViewId
+            } else {
+                RecyclerView.NO_ID // Safety fallback
+            }
+        }
+
+        override fun containsItem(itemId: Long): Boolean {
+            Log.i(TAG, "containsItem: itemId = $itemId")
+
+            // The fixed tab ID (-1L) always exists.
+            if (itemId == -1L) return true
+
+            // Check if the database ID still exists in the list.
+            return trackingViews.any { it.tabViewId == itemId }
+        }
+
     }
+
 
     companion object {
         @JvmField
-        val TAG = "TabbedContainerFragment"
+        val TAG = "TrackingTabsFragment"
         @JvmStatic
         fun newInstance(): TrackingTabsFragment {
             return TrackingTabsFragment()
