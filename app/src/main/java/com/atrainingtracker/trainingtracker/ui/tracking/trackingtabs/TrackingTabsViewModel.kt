@@ -3,16 +3,13 @@ package com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs
 
 import android.app.Application
 import android.util.Log
-import androidx.activity.result.launch
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.asFlow
 import androidx.lifecycle.asLiveData
-import androidx.lifecycle.liveData
 
-import androidx.lifecycle.switchMap
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.trainingtracker.TrackingMode

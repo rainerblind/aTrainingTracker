@@ -9,10 +9,7 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
-import android.widget.EditText
-import android.widget.CheckBox
 import androidx.activity.OnBackPressedCallback
-import androidx.compose.animation.core.copy
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -32,14 +29,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
@@ -47,7 +42,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.atrainingtracker.R
-import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.fragments.ControlTrackingFragment
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
@@ -59,7 +53,6 @@ import com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingFragmen
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import kotlinx.coroutines.launch
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
@@ -87,19 +80,6 @@ class TrackingTabsFragment : Fragment() {
         inflater.inflate(R.menu.menu_tracking_tabs, menu) // Use a menu that has the toggle
         super.onCreateOptionsMenu(menu, inflater)
     }
-
-    /*
-    override fun onPrepareOptionsMenu(menu: Menu) {
-        super.onPrepareOptionsMenu(menu)
-
-        // Do not show the configure button if we are on the first (control tracking) tab
-        val currentTab = viewPager.currentItem
-        val isFirstTab = currentTab == 0
-        menu.findItem(R.id.action_configure)?.apply {
-            isVisible = !isFirstTab
-        }
-    }
-     */
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
