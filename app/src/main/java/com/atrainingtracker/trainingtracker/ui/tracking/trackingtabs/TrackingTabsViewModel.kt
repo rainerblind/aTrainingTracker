@@ -31,7 +31,6 @@ import kotlinx.coroutines.launch
 // helper class to navigate the fragment container after adding or deletion of a tab
 sealed class TabNavigationEvent {
     data class NavigateTo(val index: Int) : TabNavigationEvent()
-    object RefreshOnly : TabNavigationEvent()
 }
 
 /**

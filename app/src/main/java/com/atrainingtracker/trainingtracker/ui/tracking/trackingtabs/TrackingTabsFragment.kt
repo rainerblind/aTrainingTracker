@@ -229,10 +229,6 @@ class TrackingTabsFragment : Fragment() {
                         Log.i(TAG, "Item count of pagerAdapter after notifyDatasetChanged 2: ${pagerAdapter.itemCount}")
 
                     }
-                    TabNavigationEvent.RefreshOnly -> {
-                        attachTabLayoutMediator()
-                    }
-
                 }
             }
         }
