@@ -20,6 +20,7 @@ import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.flatMapLatest
@@ -38,8 +39,22 @@ class TrackingTabsViewModel(
     private val trackingRepository: TrackingRepository
 ) : AndroidViewModel(application) {
 
-    // Simply expose the ActivityType and TrackingMode from the repository
-    val activityType: LiveData<ActivityType> = trackingRepository.activityType
+    // State to hold the explicitly selected ActivityType
+    private val _explicitActivityType = MutableStateFlow<ActivityType?>(null)
+
+    // activityType prefers the explicit type over the repository's live type.
+    val activityType: LiveData<ActivityType> = _explicitActivityType
+        .flatMapLatest { explicit ->
+            if (explicit != null) {
+                // If the user selected a type (e.g. in Config Activity), stay on it.
+                kotlinx.coroutines.flow.flowOf(explicit)
+            } else {
+                // Otherwise, follow the live sensor service (Classic Tracking mode)
+                trackingRepository.activityType.asFlow()
+            }
+        }
+        .asLiveData(viewModelScope.coroutineContext)
+
     val trackingMode: LiveData<TrackingMode> = trackingRepository.trackingMode
     val lapEvent: LiveData<LapEvent> = trackingRepository.lapEvent
 
@@ -48,14 +63,19 @@ class TrackingTabsViewModel(
     private val _navigationEvent = MutableSharedFlow<TabNavigationEvent>()
     val navigationEvent = _navigationEvent.asSharedFlow()
 
-    // liveData for the list of tabs.  Whenever the activity type changes, we update the list.
+    // Note that the trackingViews depends on our "smart" activityType above,
+    // effectively decoupling it from BANALService when an explicit type is provided.
     @OptIn(ExperimentalCoroutinesApi::class)
     val trackingViews: LiveData<List<TrackingViewInfo>> = activityType.asFlow()
         .flatMapLatest { currentActivityType ->
-            // Use the flow from the repository which already listens to configUpdateTrigger
             trackingRepository.getTrackingViewsFlow(currentActivityType)
         }
         .asLiveData(viewModelScope.coroutineContext + Dispatchers.Default)
+
+    // Method for the Fragment to set the explicit ActivityType
+    fun setExplicitActivityType(type: ActivityType) {
+        _explicitActivityType.value = type
+    }
 
     fun toggleScreenMode() {
         trackingRepository.toggleScreenMode()

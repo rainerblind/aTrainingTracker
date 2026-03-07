@@ -73,7 +73,7 @@
 
 
         <activity
-            android:name=".trainingtracker.activities.ConfigTrackingViewsActivity"
+            android:name=".trainingtracker.ui.tracking.trackingtabs.ConfigTrackingTabsActivity"
             android:exported="true"
             android:label="@string/TrackingFragmentConfigActivityLabel"
             android:launchMode="singleTask"
