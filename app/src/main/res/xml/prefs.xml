@@ -73,22 +73,26 @@
                 android:defaultValue="false"
                 android:key="exportToGarminTCX"
                 android:summary="@string/prefsExportToGarminTCXSummary"
-                android:title="@string/prefsExportToGarminTCXTitle" />
+                android:title="@string/prefsExportToGarminTCXTitle"
+                android:layout="@layout/preference_slim"/>
             <CheckBoxPreference
                 android:defaultValue="false"
                 android:key="exportToGPX"
                 android:summary="@string/prefsExportToGPXSummary"
-                android:title="@string/prefsExportToGPXTitle" />
+                android:title="@string/prefsExportToGPXTitle"
+                android:layout="@layout/preference_slim"/>
             <CheckBoxPreference
                 android:defaultValue="false"
                 android:key="exportToGCJson"
                 android:summary="@string/prefsExportToGCJsonSummary"
-                android:title="@string/prefsExportToGCJsonTitle" />
+                android:title="@string/prefsExportToGCJsonTitle"
+                android:layout="@layout/preference_slim"/>
             <CheckBoxPreference
                 android:defaultValue="false"
                 android:key="exportToCSV"
                 android:summary="@string/prefsExportToCSVSummary"
-                android:title="@string/prefsExportToCSVTitle" />
+                android:title="@string/prefsExportToCSVTitle"
+                android:layout="@layout/preference_slim"/>
         </PreferenceScreen>
 
         <PreferenceScreen
@@ -104,7 +108,8 @@
                     android:icon="@drawable/dropbox_logo_blue"
                     android:key="uploadToDropbox"
                     android:summary="@string/prefsUploadToDropboxSummary"
-                    android:title="@string/prefsUploadToDropboxTitle" />
+                    android:title="@string/prefsUploadToDropboxTitle"
+                    android:layout="@layout/preference_slim"/>
             </PreferenceCategory>
 
             <PreferenceCategory android:title="@string/prefsOnlineCommunities">
@@ -136,27 +141,32 @@
                             android:defaultValue="true"
                             android:dependency="uploadToStrava"
                             android:key="uploadStravaGPS"
-                            android:title="@string/uploadGPS" />
+                            android:title="@string/uploadGPS"
+                            android:layout="@layout/preference_slim"/>
                         <CheckBoxPreference
                             android:defaultValue="true"
                             android:dependency="uploadToStrava"
                             android:key="uploadStravaAltitude"
-                            android:title="@string/uploadAltitude" />
+                            android:title="@string/uploadAltitude"
+                            android:layout="@layout/preference_slim"/>
                         <CheckBoxPreference
                             android:defaultValue="true"
                             android:dependency="uploadToStrava"
                             android:key="uploadStravaHR"
-                            android:title="@string/uploadHR" />
+                            android:title="@string/uploadHR"
+                            android:layout="@layout/preference_slim"/>
                         <CheckBoxPreference
                             android:defaultValue="true"
                             android:dependency="uploadToStrava"
                             android:key="uploadStravaPower"
-                            android:title="@string/uploadPower" />
+                            android:title="@string/uploadPower"
+                            android:layout="@layout/preference_slim"/>
                         <CheckBoxPreference
                             android:defaultValue="true"
                             android:dependency="uploadToStrava"
                             android:key="uploadStravaCadence"
-                            android:title="@string/uploadCadence" />
+                            android:title="@string/uploadCadence"
+                            android:layout="@layout/preference_slim"/>
                     </PreferenceCategory>
                 </PreferenceScreen>
 
@@ -250,19 +260,23 @@
             <CheckBoxPreference
                 android:defaultValue="true"
                 android:key="forcePortrait"
-                android:title="@string/forcePortrait" />
+                android:title="@string/forcePortrait"
+                android:layout="@layout/preference_slim"/>
             <CheckBoxPreference
                 android:defaultValue="true"
                 android:key="keepScreenOn"
-                android:title="@string/prefsKeepScreenOnTitle" />
+                android:title="@string/prefsKeepScreenOnTitle"
+                android:layout="@layout/preference_slim"/>
             <CheckBoxPreference
                 android:defaultValue="true"
                 android:key="noUnlocking"
-                android:title="@string/prefsNoUnlockingTitle" />
+                android:title="@string/prefsNoUnlockingTitle"
+                android:layout="@layout/preference_slim"/>
             <CheckBoxPreference
                 android:defaultValue="true"
                 android:key="zoomDependingOnSpeed"
-                android:title="@string/prefZoomDependingOnSpeedTitle" />
+                android:title="@string/prefZoomDependingOnSpeedTitle"
+                android:layout="@layout/preference_slim"/>
         </PreferenceScreen>
 
         <Preference
@@ -286,42 +300,51 @@
                 android:key="numberOfSearchTries"
                 android:numeric="integer"
                 android:summary="3"
-                android:title="@string/prefsNumberOfSearchTriesTitle" />
+                android:title="@string/prefsNumberOfSearchTriesTitle"
+                android:layout="@layout/preference_slim"/>
             <PreferenceScreen
                 android:key="start_search"
                 android:summary="Start searching when app starts, resume from paused, or you change the sport type"
-                android:title="@string/prefStartSearchTitle">
+                android:title="@string/prefStartSearchTitle"
+                android:layout="@layout/preference_slim">
                 <CheckBoxPreference
                     android:defaultValue="true"
                     android:key="startSearchWhenAppStarts"
-                    android:title="@string/prefsStartSearchWhenAppStartsTitle" />
+                    android:title="@string/prefsStartSearchWhenAppStartsTitle"
+                    android:layout="@layout/preference_slim"/>
                 <CheckBoxPreference
                     android:defaultValue="false"
                     android:key="startSearchWhenTrackingStarts"
-                    android:title="@string/prefsStartSearchWhenTrackingStartsTitle" />
+                    android:title="@string/prefsStartSearchWhenTrackingStartsTitle"
+                    android:layout="@layout/preference_slim"/>
                 <CheckBoxPreference
                     android:defaultValue="true"
                     android:key="startSearchWhenResumeFromPaused"
-                    android:title="@string/prefsStartSearchWhenResumeFromPausedTitle" />
+                    android:title="@string/prefsStartSearchWhenResumeFromPausedTitle"
+                    android:layout="@layout/preference_slim"/>
                 <CheckBoxPreference
                     android:defaultValue="false"
                     android:key="startSearchWhenNewLap"
-                    android:title="@string/prefsStartSearchWhenNewLapTitle" />
+                    android:title="@string/prefsStartSearchWhenNewLapTitle"
+                    android:layout="@layout/preference_slim" />
                 <CheckBoxPreference
                     android:defaultValue="true"
                     android:key="startSearchWhenUserChangesSport"
-                    android:title="@string/prefsStartSearchWhenUserChangesSportTitle" />
+                    android:title="@string/prefsStartSearchWhenUserChangesSportTitle"
+                    android:layout="@layout/preference_slim"/>
             </PreferenceScreen>
             <CheckBoxPreference
                 android:defaultValue="true"
                 android:key="searchOnlyForSportSpecificDevices"
                 android:summary="@string/prefsSearchOnlyForSportSpecificDevicesSummary"
-                android:title="@string/prefsSearchOnlyForSportSpecificDevicesTitle" />
+                android:title="@string/prefsSearchOnlyForSportSpecificDevicesTitle"
+                android:layout="@layout/preference_slim"/>
             <CheckBoxPreference
                 android:defaultValue="true"
                 android:key="changeSportWhenDeviceGetsLost"
                 android:summary="@string/prefsChangeSportWhenDeviceGetsLostSummary"
-                android:title="@string/prefsChangeSportWhenDeviceGetsLostTitle" />
+                android:title="@string/prefsChangeSportWhenDeviceGetsLostTitle"
+                android:layout="@layout/preference_slim"/>
         </PreferenceScreen>
 
         <PreferenceScreen
