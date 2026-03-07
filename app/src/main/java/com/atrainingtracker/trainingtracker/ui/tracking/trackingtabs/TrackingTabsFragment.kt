@@ -63,7 +63,7 @@ import kotlin.properties.Delegates
 
 class TrackingTabsFragment : Fragment() {
 
-    private var isExplicitMode by Delegates.notNull<Boolean>()  // ActivityType is explicitely selected by the user.
+    private var isExplicitMode by Delegates.notNull<Boolean>()  // ActivityType is explicitly selected by the user.
     // In this case, we do directly start in edit mode and do not show the control tracking fragment as the first tab
 
     private lateinit var viewModel: TrackingTabsViewModel
