@@ -24,7 +24,7 @@ import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 
 import com.atrainingtracker.banalservice.ActivityType;
-import com.atrainingtracker.trainingtracker.activities.ConfigViewsActivity;
+import com.atrainingtracker.trainingtracker.activities.ConfigViewsActivityClassic;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
 
@@ -47,8 +47,8 @@ public class ConfigTrackingViewsFragmentClassic extends ConfigViewsFragment {
         ConfigTrackingViewsFragmentClassic fragment = new ConfigTrackingViewsFragmentClassic();
 
         Bundle args = new Bundle();
-        args.putString(ConfigViewsActivity.ACTIVITY_TYPE, Objects.requireNonNullElseGet(activityType, ActivityType::getDefaultActivityType).name());
-        args.putLong(ConfigViewsActivity.VIEW_ID, viewId);
+        args.putString(ConfigViewsActivityClassic.ACTIVITY_TYPE, Objects.requireNonNullElseGet(activityType, ActivityType::getDefaultActivityType).name());
+        args.putLong(ConfigViewsActivityClassic.VIEW_ID, viewId);
         fragment.setArguments(args);
 
         return fragment;

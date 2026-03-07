@@ -23,7 +23,7 @@ import androidx.fragment.app.Fragment;
 import android.util.Log;
 
 import com.atrainingtracker.banalservice.ActivityType;
-import com.atrainingtracker.trainingtracker.activities.ConfigViewsActivity;
+import com.atrainingtracker.trainingtracker.activities.ConfigViewsActivityClassic;
 
 public abstract class ConfigViewFragment extends Fragment {
     private static final String TAG = ConfigViewFragment.class.getName();
@@ -40,9 +40,9 @@ public abstract class ConfigViewFragment extends Fragment {
 
         updateNameOfView(name);
 
-        Intent intent = new Intent(ConfigViewsActivity.NAME_CHANGED_INTENT)
-                .putExtra(ConfigViewsActivity.VIEW_ID, mViewId)
-                .putExtra(ConfigViewsActivity.NAME, name)
+        Intent intent = new Intent(ConfigViewsActivityClassic.NAME_CHANGED_INTENT)
+                .putExtra(ConfigViewsActivityClassic.VIEW_ID, mViewId)
+                .putExtra(ConfigViewsActivityClassic.NAME, name)
                 .setPackage(getActivity().getPackageName());
         getActivity().sendBroadcast(intent);
     }

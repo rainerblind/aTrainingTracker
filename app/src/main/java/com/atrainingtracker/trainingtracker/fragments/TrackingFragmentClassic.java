@@ -49,8 +49,8 @@ import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 import com.atrainingtracker.banalservice.filters.FilterData;
 import com.atrainingtracker.banalservice.filters.FilteredSensorData;
-import com.atrainingtracker.trainingtracker.activities.ConfigTrackingViewsActivity;
-import com.atrainingtracker.trainingtracker.activities.ConfigViewsActivity;
+import com.atrainingtracker.trainingtracker.activities.ConfigTrackingViewsActivityClassic;
+import com.atrainingtracker.trainingtracker.activities.ConfigViewsActivityClassic;
 import com.atrainingtracker.trainingtracker.MyHelper;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
@@ -302,8 +302,8 @@ public class TrackingFragmentClassic extends BaseTrackingFragment {
                 if (DEBUG) Log.i(TAG, "edit trackingView for viewId=" + mViewId);
 
                 Bundle bundle = new Bundle();
-                bundle.putLong(ConfigViewsActivity.VIEW_ID, mViewId);
-                Intent intent = new Intent(getActivity(), ConfigTrackingViewsActivity.class);
+                bundle.putLong(ConfigViewsActivityClassic.VIEW_ID, mViewId);
+                Intent intent = new Intent(getActivity(), ConfigTrackingViewsActivityClassic.class);
                 intent.putExtras(bundle);
                 startActivity(intent);
 

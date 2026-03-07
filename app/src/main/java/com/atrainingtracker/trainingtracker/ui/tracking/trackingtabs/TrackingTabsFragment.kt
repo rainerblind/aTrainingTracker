@@ -59,6 +59,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.adapter.FragmentViewHolder
+import com.atrainingtracker.banalservice.ActivityType
 
 class TrackingTabsFragment : Fragment() {
 
@@ -104,6 +105,19 @@ class TrackingTabsFragment : Fragment() {
 
         val factory = TrackingTabsViewModelFactory(requireActivity().application)
         viewModel = ViewModelProvider(this, factory).get(TrackingTabsViewModel::class.java)
+
+        // Retrieve the type passed from the Activity's Selection Dialog
+        val activityTypeName = arguments?.getString(ARG_ACTIVITY_TYPE)
+        if (activityTypeName != null) {
+            val selectedActivityType = ActivityType.valueOf(activityTypeName)
+
+            // This "locks" the ViewModel to the selected sport
+            viewModel.setExplicitActivityType(selectedActivityType)
+        }
+        else {
+            // ViewModel will follow BANALService/Repository activity type
+            // No action needed here; the ViewModel should handle its own default flow
+        }
 
         viewPager = view.findViewById(R.id.pager)
         tabLayout = view.findViewById(R.id.tab_layout)
@@ -455,6 +469,17 @@ class TrackingTabsFragment : Fragment() {
     companion object {
         @JvmField
         val TAG = "TrackingTabsFragment"
+        const val ARG_ACTIVITY_TYPE = "arg_activity_type"
+
+        @JvmStatic
+        fun newInstance(activityType: ActivityType): TrackingTabsFragment {
+            return TrackingTabsFragment().apply {
+                arguments = Bundle().apply {
+                    putString(ARG_ACTIVITY_TYPE, activityType.name)
+                }
+            }
+        }
+
         @JvmStatic
         fun newInstance(): TrackingTabsFragment {
             return TrackingTabsFragment()

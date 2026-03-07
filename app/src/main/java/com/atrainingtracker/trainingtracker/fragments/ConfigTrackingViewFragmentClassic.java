@@ -49,7 +49,7 @@ import android.widget.TextView;
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
-import com.atrainingtracker.trainingtracker.activities.ConfigViewsActivity;
+import com.atrainingtracker.trainingtracker.activities.ConfigViewsActivityClassic;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
 import com.atrainingtracker.trainingtracker.dialogs.EditFieldDialogClassic;
@@ -96,7 +96,7 @@ public class ConfigTrackingViewFragmentClassic extends ConfigViewFragment {
         ConfigTrackingViewFragmentClassic fragment = new ConfigTrackingViewFragmentClassic();
 
         Bundle args = new Bundle();
-        args.putLong(ConfigViewsActivity.VIEW_ID, viewId);
+        args.putLong(ConfigViewsActivityClassic.VIEW_ID, viewId);
         fragment.setArguments(args);
 
         return fragment;
@@ -115,7 +115,7 @@ public class ConfigTrackingViewFragmentClassic extends ConfigViewFragment {
         super.onCreate(savedInstanceState);
         if (DEBUG) Log.i(TAG, "onCreate");
 
-        mViewId = getArguments().getLong(ConfigViewsActivity.VIEW_ID);
+        mViewId = getArguments().getLong(ConfigViewsActivityClassic.VIEW_ID);
         if (DEBUG) Log.i(TAG, "mViewId=" + mViewId);
     }
 

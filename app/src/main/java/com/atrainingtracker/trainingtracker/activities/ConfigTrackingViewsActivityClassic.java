@@ -27,12 +27,12 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
 import com.atrainingtracker.trainingtracker.fragments.ConfigTrackingViewsFragmentClassic;
 import com.atrainingtracker.trainingtracker.fragments.ConfigViewsFragment;
-
-public class ConfigTrackingViewsActivity
-        extends ConfigViewsActivity
+@Deprecated
+public class ConfigTrackingViewsActivityClassic
+        extends ConfigViewsActivityClassic
         implements BANALService.GetBanalServiceInterface {
 
-    private static final String TAG = ConfigTrackingViewsActivity.class.getName();
+    private static final String TAG = ConfigTrackingViewsActivityClassic.class.getName();
     private static final boolean DEBUG = TrainingApplication.getDebug(true);
 
 

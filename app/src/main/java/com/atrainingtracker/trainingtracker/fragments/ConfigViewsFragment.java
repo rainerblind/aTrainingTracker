@@ -43,7 +43,7 @@ import android.widget.Button;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.ActivityType;
-import com.atrainingtracker.trainingtracker.activities.ConfigViewsActivity;
+import com.atrainingtracker.trainingtracker.activities.ConfigViewsActivityClassic;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 
 import java.util.HashMap;
@@ -58,7 +58,7 @@ public abstract class ConfigViewsFragment extends Fragment {
     public static final String TAG = ConfigViewsFragment.class.getSimpleName();
     private static final boolean DEBUG = TrainingApplication.getDebug(true);
     private static final String CURRENT_ITEM = "CURRENT_ITEM";
-    private final IntentFilter mNameChangedFilter = new IntentFilter(ConfigViewsActivity.NAME_CHANGED_INTENT);
+    private final IntentFilter mNameChangedFilter = new IntentFilter(ConfigViewsActivityClassic.NAME_CHANGED_INTENT);
     @NonNull
     protected ActivityType mActivityType = ActivityType.getDefaultActivityType();
     protected long mViewId = -1;
@@ -87,8 +87,8 @@ public abstract class ConfigViewsFragment extends Fragment {
         @Override
         public void onReceive(Context context, @NonNull Intent intent) {
 
-            long viewId = intent.getLongExtra(ConfigViewsActivity.VIEW_ID, -1);
-            String name = intent.getStringExtra(ConfigViewsActivity.NAME);
+            long viewId = intent.getLongExtra(ConfigViewsActivityClassic.VIEW_ID, -1);
+            String name = intent.getStringExtra(ConfigViewsActivityClassic.NAME);
 
             if (DEBUG)
                 Log.i(TAG, "nameChangedReceiver.onReceive() viewId=" + viewId + ", name=" + name);
@@ -150,8 +150,8 @@ public abstract class ConfigViewsFragment extends Fragment {
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        mActivityType = ActivityType.valueOf(getArguments().getString(ConfigViewsActivity.ACTIVITY_TYPE));
-        mViewId = getArguments().getLong(ConfigViewsActivity.VIEW_ID);
+        mActivityType = ActivityType.valueOf(getArguments().getString(ConfigViewsActivityClassic.ACTIVITY_TYPE));
+        mViewId = getArguments().getLong(ConfigViewsActivityClassic.VIEW_ID);
         if (savedInstanceState != null && savedInstanceState.containsKey(CURRENT_ITEM)) {
             mCurrentItem = savedInstanceState.getInt(CURRENT_ITEM);
         }

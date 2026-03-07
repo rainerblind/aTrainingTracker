@@ -44,7 +44,8 @@ import com.atrainingtracker.trainingtracker.fragments.ConfigViewsFragment;
 
 import java.util.ArrayList;
 
-public abstract class ConfigViewsActivity
+@Deprecated
+public abstract class ConfigViewsActivityClassic
         extends AppCompatActivity
         implements ConfigViewsFragment.ViewSetChangedListener {
 
@@ -52,7 +53,7 @@ public abstract class ConfigViewsActivity
     public static final String ACTIVITY_TYPE = "ACTIVITY_TYPE";
     public static final String NAME = "NAME";
     public static final String NAME_CHANGED_INTENT = "NAME_CHANGED_INTENT";
-    private static final String TAG = ConfigViewsActivity.class.getName();
+    private static final String TAG = "ConfigViewsActivityClassic";
     private static final boolean DEBUG = TrainingApplication.getDebug(true);
     // public static final String VIEW_CHANGED_INTENT = "VIEW_CHANGED_INTENT";
     long mViewId = -1;

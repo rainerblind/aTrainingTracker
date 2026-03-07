@@ -38,7 +38,7 @@ import androidx.annotation.NonNull;
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.ActivityType;
 import com.atrainingtracker.banalservice.sensor.SensorType;
-import com.atrainingtracker.trainingtracker.activities.ConfigViewsActivity;
+import com.atrainingtracker.trainingtracker.activities.ConfigViewsActivityClassic;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.views.SensorArrayAdapter;
 import com.atrainingtracker.trainingtracker.fragments.ConfigViewFragment;
@@ -70,7 +70,7 @@ public class ConfigPebbleViewFragment extends ConfigViewFragment {
         ConfigPebbleViewFragment fragment = new ConfigPebbleViewFragment();
 
         Bundle args = new Bundle();
-        args.putLong(ConfigViewsActivity.VIEW_ID, viewId);
+        args.putLong(ConfigViewsActivityClassic.VIEW_ID, viewId);
         fragment.setArguments(args);
 
         return fragment;
@@ -84,7 +84,7 @@ public class ConfigPebbleViewFragment extends ConfigViewFragment {
 
         NUMBER_OF_FIELDS_ARRAY_ADAPTER = new ArrayAdapter<>(getContext(), android.R.layout.simple_spinner_item, new Integer[]{3, 5});
 
-        mViewId = getArguments().getLong(ConfigViewsActivity.VIEW_ID);
+        mViewId = getArguments().getLong(ConfigViewsActivityClassic.VIEW_ID);
     }
 
     @Override

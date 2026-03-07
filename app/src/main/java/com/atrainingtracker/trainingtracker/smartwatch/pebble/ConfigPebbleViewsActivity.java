@@ -22,11 +22,11 @@ package com.atrainingtracker.trainingtracker.smartwatch.pebble;
 import androidx.annotation.NonNull;
 
 import com.atrainingtracker.banalservice.ActivityType;
-import com.atrainingtracker.trainingtracker.activities.ConfigViewsActivity;
+import com.atrainingtracker.trainingtracker.activities.ConfigViewsActivityClassic;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.fragments.ConfigViewsFragment;
 
-public class ConfigPebbleViewsActivity extends ConfigViewsActivity {
+public class ConfigPebbleViewsActivity extends ConfigViewsActivityClassic {
 
     private static final String TAG = ConfigPebbleViewsActivity.class.getName();
     private static final boolean DEBUG = TrainingApplication.getDebug(true);
