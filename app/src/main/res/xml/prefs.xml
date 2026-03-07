@@ -17,7 +17,8 @@
   ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
   -->
 
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+<PreferenceScreen
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:key="root">
 
     <PreferenceCategory android:title="@string/prefsBasic"
@@ -30,13 +31,15 @@
             android:key="listUnits"
             android:summary="@string/prefsUnitsSummary"
             android:title="@string/prefsUnitsTitle"
-            android:icon="@drawable/ic_square_foot"/>
+            android:icon="@drawable/ic_square_foot"
+            android:layout="@layout/preference_slim"/>
 
         <Preference
             android:key="training_zones_settings"
             android:title="@string/prefs_training_zones"
             android:summary="@string/prefs_training_zones_summary"
-            android:icon="@drawable/ic_cell_5_bar"/>
+            android:icon="@drawable/ic_cell_5_bar"
+            android:layout="@layout/preference_slim"/>
         <!-- android:icon="@drawable/ic_cardiology"/> -->
         <!-- android:icon="@drawable/ic_cardio_load"/> -->
 
@@ -46,7 +49,8 @@
             android:key="sportTypes"
             android:summary="@string/configure_sport_types"
             android:title="@string/sport_types"
-            android:icon="@drawable/ic_sports_combined">
+            android:icon="@drawable/ic_sports_combined"
+            android:layout="@layout/preference_slim">
             <Preference>
                 <!-- just a dummy entry -->
             </Preference>
@@ -63,7 +67,8 @@
             android:icon="@drawable/ic_save_to_disc"
             android:key="fileExport"
             android:summary="@string/prefsExportSummary"
-            android:title="@string/prefsExportTitle">
+            android:title="@string/prefsExportTitle"
+            android:layout="@layout/preference_slim">
             <CheckBoxPreference
                 android:defaultValue="false"
                 android:key="exportToGarminTCX"
@@ -90,7 +95,8 @@
             android:icon="@drawable/ic_cloud_upload"
             android:key="cloudUpload"
             android:summary="@string/prefsUploadSummary"
-            android:title="@string/prefsUploadTitle">
+            android:title="@string/prefsUploadTitle"
+            android:layout="@layout/preference_slim">
 
             <PreferenceCategory android:title="@string/prefsOnlineStorage">
                 <CheckBoxPreference
@@ -107,20 +113,23 @@
                     android:icon="@drawable/logo_square_strava"
                     android:key="psUploadToStrava"
                     android:summary="@string/prefsUploadToStravaSummary"
-                    android:title="@string/prefsUploadToStravaTitle">
+                    android:title="@string/prefsUploadToStravaTitle"
+                    android:layout="@layout/preference_slim">
 
                     <CheckBoxPreference
                         android:defaultValue="false"
                         android:icon="@drawable/logo_square_strava"
                         android:key="uploadToStrava"
                         android:summary="@string/prefsUploadToStravaSummary"
-                        android:title="@string/prefsUploadToStravaTitle" />
+                        android:title="@string/prefsUploadToStravaTitle"
+                        android:layout="@layout/preference_slim"/>
 
                     <Preference
                         android:dependency="uploadToStrava"
                         android:key="updateStravaEquipment"
                         android:summary="@string/lastUpdateOfEquipmentNever"
-                        android:title="@string/updateStravaEquipment" />
+                        android:title="@string/updateStravaEquipment"
+                        android:layout="@layout/preference_slim"/>
 
                     <PreferenceCategory android:title="@string/selectiveUpload">
                         <CheckBoxPreference
@@ -236,7 +245,8 @@
         <PreferenceScreen
             android:icon="@drawable/ic_checklist"
             android:key="display"
-            android:title="@string/Display">
+            android:title="@string/Display"
+            android:layout="@layout/preference_slim">
             <CheckBoxPreference
                 android:defaultValue="true"
                 android:key="forcePortrait"
@@ -257,7 +267,8 @@
 
         <Preference
             android:icon="@drawable/ic_table_edit"
-            android:title="@string/prefsConfigureDisplaysTitle">
+            android:title="@string/prefsConfigureDisplaysTitle"
+            android:layout="@layout/preference_slim">
             <intent android:action="com.atrainingtracker.trainingtracker.intent.action.ConfigureAllTrackingViews" />
         </Preference>
     </PreferenceCategory>
@@ -269,7 +280,8 @@
         <PreferenceScreen
             android:icon="@drawable/ic_search"
             android:key="search_settings"
-            android:title="@string/Search_Settings">
+            android:title="@string/Search_Settings"
+            android:layout="@layout/preference_slim">
             <EditTextPreference
                 android:key="numberOfSearchTries"
                 android:numeric="integer"
@@ -315,7 +327,8 @@
         <PreferenceScreen
             android:key="fancyWorkoutNames"
             android:summary="@string/configureWorkoutNameSchemes"
-            android:title="@string/workout_name_schemes">
+            android:title="@string/workout_name_schemes"
+            android:layout="@layout/preference_slim">
             <Preference>
                 <!-- just a dummy entry -->
             </Preference>
