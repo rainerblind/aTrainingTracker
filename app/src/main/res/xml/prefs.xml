@@ -338,36 +338,10 @@
         </PreferenceScreen>
 
         <Preference
-            android:icon="@drawable/icon_configure_views"
+            android:icon="@drawable/ic_settings"
             android:title="@string/prefsConfigureDisplaysTitle">
             <intent android:action="com.atrainingtracker.trainingtracker.intent.action.ConfigureAllTrackingViews" />
         </Preference>
-
-        <PreferenceScreen
-            android:icon="@drawable/icon_pebble"
-            android:key="pebbleScreen"
-            android:title="@string/prefsPebbleTitle">
-            <CheckBoxPreference
-                android:defaultValue="false"
-                android:key="PebbleSupport"
-                android:summary="@string/prefsPebbleSupportSummary"
-                android:title="@string/prefsPebbleSupportTitle" />
-
-            <ListPreference
-                android:defaultValue="BUILD_IN"
-                android:dependency="PebbleSupport"
-                android:entries="@array/PebbleWatchapps"
-                android:entryValues="@array/PebbleWatchapps_values"
-                android:key="listPebbleWatchapps"
-                android:summary="@string/prefsPebbleWatchappsSummary"
-                android:title="@string/prefsPebbleWatchappsTitle" />
-
-            <Preference
-                android:key="configurePebbleDisplays"
-                android:title="@string/prefsConfigurePebbleDisplaysTitle">
-                <intent android:action="com.atrainingtracker.trainingtracker.smartwatch.pebble.ConfigPebbleViewsActivity" />
-            </Preference>
-        </PreferenceScreen>
 
         <PreferenceScreen
             android:key="fancyWorkoutNames"

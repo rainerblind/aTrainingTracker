@@ -102,7 +102,6 @@ import com.atrainingtracker.trainingtracker.fragments.preferences.EmailUploadFra
 import com.atrainingtracker.trainingtracker.fragments.preferences.FancyWorkoutNameListFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.FileExportFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.LocationSourcesFragment;
-import com.atrainingtracker.trainingtracker.fragments.preferences.PebbleScreenFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.RootPrefsFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.RunkeeperUploadFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.SearchFragment;
@@ -832,7 +831,6 @@ public class MainActivityWithNavigation
                     fragment = new RunkeeperUploadFragment();
             case TrainingApplication.PREFERENCE_SCREEN_TRAINING_PEAKS ->
                     fragment = new TrainingpeaksUploadFragment();
-            case "pebbleScreen" -> fragment = new PebbleScreenFragment();
             case "prefsLocationSources" -> fragment = new LocationSourcesFragment();
             case "altitudeCorrection" -> fragment = new AltitudeCorrectionFragment();
             case "sportTypes" -> {
