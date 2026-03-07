@@ -98,7 +98,6 @@ import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapTra
 import com.atrainingtracker.trainingtracker.fragments.preferences.AltitudeCorrectionFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.CloudUploadFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.DisplayFragment;
-import com.atrainingtracker.trainingtracker.fragments.preferences.EmailUploadFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.FancyWorkoutNameListFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.FileExportFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.LocationSourcesFragment;
@@ -823,8 +822,6 @@ public class MainActivityWithNavigation
             case TrainingApplication.PREF_KEY_START_SEARCH -> fragment = new StartSearchFragment();
             case "fileExport" -> fragment = new FileExportFragment();
             case "cloudUpload" -> fragment = new CloudUploadFragment();
-            case TrainingApplication.PREFERENCE_SCREEN_EMAIL_UPLOAD ->
-                    fragment = new EmailUploadFragment();
             case TrainingApplication.PREFERENCE_SCREEN_STRAVA ->
                     fragment = new StravaUploadFragment();
             case TrainingApplication.PREFERENCE_SCREEN_RUNKEEPER ->

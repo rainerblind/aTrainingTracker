@@ -135,7 +135,7 @@ public class ExportManager {
         // 3. now, set all relevant to TRACKING
 
         for (FileFormat fileFormat : ExportType.FILE.getExportToFileFormats()) {
-            if (TrainingApplication.exportToFile(fileFormat) || TrainingApplication.exportViaEmail(fileFormat)) {
+            if (TrainingApplication.exportToFile(fileFormat)) {
                 mRepository.updateExportStatus(TRACKING, fileBaseName, ExportType.FILE, fileFormat);
             }
         }
@@ -184,7 +184,7 @@ public class ExportManager {
         if (DEBUG) Log.d(TAG, "exportWorkout: " + fileBaseName);
 
         for (FileFormat fileFormat : FileFormat.values()) {
-            if (TrainingApplication.exportToFile(fileFormat) || TrainingApplication.exportViaEmail(fileFormat)) {
+            if (TrainingApplication.exportToFile(fileFormat)) {
                 startFullExportProcess(fileBaseName, fileFormat);
             }
         }

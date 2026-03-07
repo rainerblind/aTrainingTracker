@@ -59,10 +59,6 @@ import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigatio
 import com.atrainingtracker.trainingtracker.exporter.FileFormat;
 import com.atrainingtracker.trainingtracker.helpers.CalcExtremaWorker;
 import com.atrainingtracker.trainingtracker.tracker.TrackerService;
-import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager;
-import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager;
-import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
-import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapHelper;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;

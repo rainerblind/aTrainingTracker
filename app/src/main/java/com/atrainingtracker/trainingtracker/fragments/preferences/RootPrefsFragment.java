@@ -198,10 +198,6 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
 
         String cloudUpload = null;
 
-        if (TrainingApplication.sendEmail()) {
-            // cloudUpload = incString(cloudUpload);
-            cloudUpload = getString(R.string.prefEmailExport);
-        }
         if (TrainingApplication.uploadToDropbox()) {
             cloudUpload = incString(cloudUpload);
             cloudUpload += getString(R.string.Dropbox);
