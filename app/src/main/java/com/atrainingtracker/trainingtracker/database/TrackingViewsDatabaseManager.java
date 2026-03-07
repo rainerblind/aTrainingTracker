@@ -709,10 +709,10 @@ public class TrackingViewsDatabaseManager {
         // protected static final int HUGE = 40;                  removed in version 8
 
         // new in V7 -> fullscreen and day/night
-        protected static final String FULL_SCREEN = "FullScreen";
-        protected static final String SYSTEM_SETTING = "SystemSetting";
-        protected static final String DAY = "Day";
-        protected static final String NIGHT = "Night";
+        protected static final String FULL_SCREEN = "FullScreen";        // currently, not used.
+        protected static final String SYSTEM_SETTING = "SystemSetting";  // no longer supported
+        protected static final String DAY = "Day";                       // no longer supported
+        protected static final String NIGHT = "Night";                   // no longer supported
 
         @Deprecated
         protected static final String CREATE_VIEWS_TABLE_V1 = "create table " + VIEWS_TABLE + " ("

@@ -59,10 +59,6 @@ import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigatio
 import com.atrainingtracker.trainingtracker.exporter.FileFormat;
 import com.atrainingtracker.trainingtracker.helpers.CalcExtremaWorker;
 import com.atrainingtracker.trainingtracker.tracker.TrackerService;
-import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager;
-import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager;
-import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
-import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapHelper;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
@@ -104,14 +100,6 @@ public class TrainingApplication extends Application {
     //    protected static final String SP_DROPBOX_KEY       = "dropboxKey";
 //    protected static final String SP_DROPBOX_SECRET    = "dropboxSecret";
     public static final String SP_UPLOAD_TO_DROPBOX = "uploadToDropbox";
-    public static final String PREFERENCE_SCREEN_EMAIL_UPLOAD = "psSendEmail";
-    public static final String SP_SEND_EMAIL = "spSendWorkoutEmail";
-    public static final String SP_EMAIL_ADDRESS = "spEmailAddress";
-    public static final String SP_EMAIL_SUBJECT = "spEmailSubject";
-    public static final String SP_SEND_TCX_EMAIL = "spSendTCXEmail";
-    public static final String SP_SEND_GPX_EMAIL = "spSendGPXEmail";
-    public static final String SP_SEND_CSV_EMAIL = "spSendCSVEmail";
-    public static final String SP_SEND_GC_EMAIL = "spSendGCEmail";
     public static final String PREFERENCE_SCREEN_STRAVA = "psUploadToStrava";
     public static final String SP_UPLOAD_TO_STRAVA = "uploadToStrava";
     public static final String SP_STRAVA_TOKEN = "stravaToken";
@@ -346,36 +334,6 @@ public class TrainingApplication extends Application {
 
     public static boolean searchOnlyForSportSpecificDevices() {
         return cSharedPreferences.getBoolean(SP_SEARCH_ONLY_FOR_SPORT_SPECIFIC_DEVICES, SEARCH_ONLY_FOR_SPORT_SPECIFIC_DEVICES_DEFAULT);
-    }
-
-    public static boolean sendEmail() {
-        return cSharedPreferences.getBoolean(SP_SEND_EMAIL, false);
-    }
-
-    @NonNull
-    public static String getSpEmailAddress() {
-        return cSharedPreferences.getString(SP_EMAIL_ADDRESS, "first.last@example.com");
-    }
-
-    @NonNull
-    public static String getSpEmailSubject() {
-        return cSharedPreferences.getString(SP_EMAIL_SUBJECT, getAppName());
-    }
-
-    public static boolean sendTCXEmail() {
-        return cSharedPreferences.getBoolean(SP_SEND_TCX_EMAIL, false);
-    }
-
-    public static boolean sendGPXEmail() {
-        return cSharedPreferences.getBoolean(SP_SEND_GPX_EMAIL, false);
-    }
-
-    public static boolean sendCSVEmail() {
-        return cSharedPreferences.getBoolean(SP_SEND_CSV_EMAIL, false);
-    }
-
-    public static boolean sendGCEmail() {
-        return cSharedPreferences.getBoolean(SP_SEND_GC_EMAIL, false);
     }
 
     public static boolean checkANTInstallation() {
@@ -735,20 +693,6 @@ public class TrainingApplication extends Application {
             /* case TRAINING_PEAKS:
                 return uploadToTrainingPeaks(); */
         };
-    }
-
-    public static boolean exportViaEmail(FileFormat fileFormat) {
-        if (sendEmail()) {
-            return switch (fileFormat) {
-                case CSV -> sendCSVEmail();
-                case GC -> sendGCEmail();
-                case TCX -> sendTCXEmail();
-                case GPX -> sendGPXEmail();
-                default -> false;
-            };
-        } else {
-            return false;
-        }
     }
 
     public static boolean uploadToCommunity(@NonNull FileFormat fileFormat) {

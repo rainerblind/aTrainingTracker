@@ -50,11 +50,6 @@
         </activity>
 
         <activity
-            android:name=".trainingtracker.activities.WorkoutDetailsActivity"
-            android:theme="@style/Theme.aTrainingTracker"
-            android:windowSoftInputMode="stateHidden" />
-
-        <activity
             android:name=".trainingtracker.ui.aftermath.editworkout.EditWorkoutActivity"
             android:theme="@style/Theme.aTrainingTracker"
             android:label="@string/edit_workout"/>

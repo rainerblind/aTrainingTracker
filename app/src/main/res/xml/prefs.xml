@@ -54,10 +54,6 @@
                 android:defaultValue="true"
                 android:key="zoomDependingOnSpeed"
                 android:title="@string/prefZoomDependingOnSpeedTitle" />
-            <CheckBoxPreference
-                android:defaultValue="true"
-                android:key="showUnits"
-                android:title="@string/prefShowUnitsTitle" />
         </PreferenceScreen>
 
         <PreferenceScreen
@@ -137,58 +133,6 @@
             android:key="cloudUpload"
             android:summary="@string/prefsUploadSummary"
             android:title="@string/prefsUploadTitle">
-
-            <PreferenceCategory android:title="@string/prefEmailExport">
-                <PreferenceScreen
-                    android:icon="@drawable/ic_mail_outline_black_48dp"
-                    android:key="psSendEmail"
-                    android:summary="send TXC and CSV to first.last@example.com"
-                    android:title="@string/send_email">
-                    <CheckBoxPreference
-                        android:defaultValue="false"
-                        android:key="spSendWorkoutEmail"
-                        android:summary="@string/prefSendWorkoutEmailSummary"
-                        android:title="@string/prefSendWorkoutEmailTitle" />
-                    <EditTextPreference
-                        android:dependency="spSendWorkoutEmail"
-                        android:inputType="textEmailAddress"
-                        android:autofillHints="emailAddress"
-                        android:key="spEmailAddress"
-                        android:summary="first.last@example.com"
-                        android:title="@string/prefSendEmailTo" />
-                    <EditTextPreference
-                        android:defaultValue="just finished a workout"
-                        android:dependency="spSendWorkoutEmail"
-                        android:key="spEmailSubject"
-                        android:summary="just finished a workout"
-                        android:title="@string/prefEmailSubject" />
-
-                    <CheckBoxPreference
-                        android:defaultValue="true"
-                        android:dependency="spSendWorkoutEmail"
-                        android:key="spSendTCXEmail"
-                        android:summary="@string/prefSendTCXEmailSummary"
-                        android:title="@string/prefSendTCXEmailTitle" />
-                    <CheckBoxPreference
-                        android:defaultValue="false"
-                        android:dependency="spSendWorkoutEmail"
-                        android:key="spSendGPXEmail"
-                        android:summary="@string/prefSendGPXEmailSummary"
-                        android:title="@string/prefSendGPXEmailTitle" />
-                    <CheckBoxPreference
-                        android:defaultValue="false"
-                        android:dependency="spSendWorkoutEmail"
-                        android:key="spSendCSVEmail"
-                        android:summary="@string/prefSendCSVEmailSummary"
-                        android:title="@string/prefSendCSVEmailTitle" />
-                    <CheckBoxPreference
-                        android:defaultValue="false"
-                        android:dependency="spSendWorkoutEmail"
-                        android:key="spSendGCEmail"
-                        android:summary="@string/prefSendGCEmailSummary"
-                        android:title="@string/prefSendGCEmailTitle" />
-                </PreferenceScreen>
-            </PreferenceCategory>
 
             <PreferenceCategory android:title="@string/prefsOnlineStorage">
                 <CheckBoxPreference
