@@ -69,10 +69,6 @@ import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelpe
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaSegmentsHelper;
 import com.atrainingtracker.trainingtracker.segments.SegmentOnMapHelper;
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager;
-import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleDatabaseManager;
-import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleService;
-import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleServiceBuildIn;
-import com.atrainingtracker.trainingtracker.smartwatch.pebble.Watchapp;
 import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutActivity;
 import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapAftermathActivity;
 import com.dropbox.core.json.JsonReadException;
@@ -103,11 +99,6 @@ public class TrainingApplication extends Application {
     // configure search behaviour
     public static final String PREF_KEY_START_SEARCH = "start_search";
     public static final String SP_NUMBER_OF_SEARCH_TRIES = "numberOfSearchTries";
-    public static final String PEBBLE_SCREEN = "pebbleScreen";
-    public static final String SP_PEBBLE_SUPPORT = "PebbleSupport";
-    public static final String SP_PEBBLE_WATCHAPP = "listPebbleWatchapps";
-    public static final String SP_SHOW_PEBBLE_INSTALL_DIALOG = "showPebbleInstallDialog";
-    public static final String SP_CONFIGURE_PEBBLE_DISPLAY = "configurePebbleDisplays";
     public static final String FILE_EXPORT = "fileExport";
     public static final String CLOUD_UPLOAD = "cloudUpload";
     //    protected static final String SP_DROPBOX_KEY       = "dropboxKey";
@@ -221,8 +212,6 @@ public class TrainingApplication extends Application {
             setWorkoutID(intent.getLongExtra(WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_ID, -1));
         }
     };
-    @Nullable
-    private Watchapp startedWatchapp = null;
     protected final BroadcastReceiver mTrackingStoppedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -419,23 +408,6 @@ public class TrainingApplication extends Application {
     @NonNull
     public static MyUnits getUnit() {
         return MyUnits.valueOf(cSharedPreferences.getString(SP_UNITS, MyUnits.METRIC.name()));
-    }
-
-    public static boolean pebbleSupport() {
-        return cSharedPreferences.getBoolean(SP_PEBBLE_SUPPORT, false);
-    }
-
-    @NonNull
-    public static Watchapp getPebbleWatchapp() {
-        return Watchapp.valueOf(cSharedPreferences.getString(SP_PEBBLE_WATCHAPP, Watchapp.BUILD_IN.name()));
-    }
-
-    public static boolean showPebbleInstallDialog() {
-        return cSharedPreferences.getBoolean(SP_SHOW_PEBBLE_INSTALL_DIALOG, true);
-    }
-
-    public static void setShowPebbleInstallDialog(boolean value) {
-        cSharedPreferences.edit().putBoolean(SP_SHOW_PEBBLE_INSTALL_DIALOG, value).apply();
     }
 
     public static boolean forcePortrait() {
@@ -1017,40 +989,6 @@ public class TrainingApplication extends Application {
         return mTrackingAndSearchingNotificationBuilder.build();
     }
 
-    public void startPebbleWatchapp() {
-        if (DEBUG) Log.d(TAG, "startPebbleWatchapp()");
-        if (pebbleSupport() && startedWatchapp == null) {
-            switch (getPebbleWatchapp()) {
-                case BUILD_IN:
-                    if (DEBUG) Log.d(TAG, "starting build in Pebble Watchapp Service");
-                    startService(new Intent(this, PebbleServiceBuildIn.class));
-                    break;
-
-                case TRAINING_TRACKER:
-                    if (DEBUG) Log.d(TAG, "starting Training Tracker Pebble Watchapp Service");
-                    startService(new Intent(this, PebbleService.class));
-                    break;
-            }
-            startedWatchapp = getPebbleWatchapp();
-        }
-    }
-
-    public void stopPebbleWatchapp() {
-        if (DEBUG) Log.d(TAG, "stopPebbleWatchapp()");
-        if (startedWatchapp != null) {
-            switch (startedWatchapp) {
-                case BUILD_IN:
-                    stopService(new Intent(this, PebbleServiceBuildIn.class));
-                    break;
-
-                case TRAINING_TRACKER:
-                    stopService(new Intent(this, PebbleService.class));
-                    break;
-            }
-        }
-        startedWatchapp = null;
-    }
-
     public void setIsSegmentListUpdating(long sportTypeId, boolean isUpdating) {
         if (DEBUG)
             Log.i(TAG, "setIsSegmentListUpdating, sportTypeId=" + sportTypeId + ", isUpdating=" + isUpdating);
@@ -1108,8 +1046,6 @@ public class TrainingApplication extends Application {
         }
         startService(intent);
 
-        startPebbleWatchapp();
-
         cTrackingMode = TrackingMode.TRACKING;
         notifyTrackingStateChanged();
     }
@@ -1140,7 +1076,6 @@ public class TrainingApplication extends Application {
     }
 
     protected void stopTracking() {
-        stopPebbleWatchapp();
 
         stopService(new Intent(this, TrackerService.class));
 

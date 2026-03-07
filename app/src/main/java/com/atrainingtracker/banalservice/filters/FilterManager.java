@@ -36,8 +36,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 
-import static com.atrainingtracker.trainingtracker.dialogs.EditFieldDialogClassic.TRACKING_VIEW_CHANGED_INTENT;
-
 import androidx.core.content.ContextCompat;
 
 public class FilterManager {
@@ -54,7 +52,6 @@ public class FilterManager {
     protected MySensorManager mMySensorManager;
 
     protected IntentFilter mSensorsChangedFilter = new IntentFilter(BANALService.SENSORS_CHANGED);
-    protected IntentFilter mFiltersChangedFilter = new IntentFilter(TRACKING_VIEW_CHANGED_INTENT);
     protected BroadcastReceiver mSensorsChangedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -64,16 +61,6 @@ public class FilterManager {
             }
         }
     };
-    protected BroadcastReceiver mFiltersChangedReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            DevicesDatabaseManager devicesDatabaseManager = DevicesDatabaseManager.getInstance(context);
-            for (FilterData filterData : TrackingViewsDatabaseManager.getInstance(context).getAllFilterData(devicesDatabaseManager)) {
-                createFilter(filterData);
-            }
-        }
-    };
-
 
     public FilterManager(Context context, DeviceManager deviceManager, MySensorManager mySensorManager) {
         if (DEBUG) Log.i(TAG, "FilterManager()");
@@ -83,7 +70,6 @@ public class FilterManager {
         mContext = context;
 
         ContextCompat.registerReceiver(mContext, mSensorsChangedReceiver, mSensorsChangedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
-        ContextCompat.registerReceiver(mContext, mFiltersChangedReceiver, mFiltersChangedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     public void createFilter(FilterData filterData) {
@@ -170,7 +156,6 @@ public class FilterManager {
         }
 
         mContext.unregisterReceiver(mSensorsChangedReceiver);
-        mContext.unregisterReceiver(mFiltersChangedReceiver);
     }
 
 

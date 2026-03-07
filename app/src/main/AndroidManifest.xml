@@ -73,7 +73,7 @@
 
 
         <activity
-            android:name=".trainingtracker.activities.ConfigTrackingViewsActivity"
+            android:name=".trainingtracker.ui.tracking.trackingtabs.ConfigTrackingTabsActivity"
             android:exported="true"
             android:label="@string/TrackingFragmentConfigActivityLabel"
             android:launchMode="singleTask"
@@ -90,20 +90,6 @@
             android:label="Training Zones"
             android:theme="@style/Theme.aTrainingTracker" />
         <!-- Ensure the theme is a Material3 compatible theme or Theme.AppCompat -->
-
-
-        <activity
-            android:name=".trainingtracker.smartwatch.pebble.ConfigPebbleViewsActivity"
-            android:exported="true"
-            android:label="@string/PebbleConfigActivityLabel"
-            android:launchMode="singleTask"
-            android:theme="@style/Theme.aTrainingTracker"
-            android:windowSoftInputMode="stateHidden">
-            <intent-filter>
-                <action android:name="com.atrainingtracker.trainingtracker.smartwatch.pebble.ConfigPebbleViewsActivity" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </activity>
 
         <activity
             android:name="com.dropbox.core.android.AuthActivity"
@@ -153,8 +139,6 @@
         <service
             android:name=".trainingtracker.tracker.TrackerService"
             android:foregroundServiceType="location" />
-        <service android:name=".trainingtracker.smartwatch.pebble.PebbleService" />
-        <service android:name=".trainingtracker.smartwatch.pebble.PebbleServiceBuildIn" />
         <service android:name=".banalservice.BANALService" />
         <service android:name=".trainingtracker.onlinecommunities.strava.StravaSegmentsIntentService" />
 

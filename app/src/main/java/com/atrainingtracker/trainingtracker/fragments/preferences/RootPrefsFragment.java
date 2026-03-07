@@ -50,7 +50,7 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
     @Nullable
     private ListPreference mUnitPref;
     @Nullable
-    private Preference mTrainingZonesPref, mExport, mPebble, mCloudUpload;
+    private Preference mTrainingZonesPref, mExport, mCloudUpload;
 
     private SharedPreferences mSharedPreferences;
     private SettingsDataStore mSettingsDataStore;
@@ -78,7 +78,6 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
 
         mExport = this.getPreferenceScreen().findPreference(TrainingApplication.FILE_EXPORT);
         mCloudUpload = this.getPreferenceScreen().findPreference(TrainingApplication.CLOUD_UPLOAD);
-        mPebble = this.getPreferenceScreen().findPreference(TrainingApplication.PEBBLE_SCREEN);
     }
 
     @Override
@@ -97,7 +96,6 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
         mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(getActivity());
 
         mUnitPref.setSummary(TrainingApplication.getUnit().getNameId());
-        mPebble.setSummary(pebbleSummary());
 
         updateTrainingZonesSummary();
 
@@ -139,17 +137,6 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
         if (TrainingApplication.SP_UNITS.equals(key)) {
             mUnitPref.setSummary(TrainingApplication.getUnit().toString());
         }
-
-        if (TrainingApplication.SP_PEBBLE_WATCHAPP.equals(key)) {
-            mPebble.setSummary(pebbleSummary());
-            getActivity().onContentChanged();
-        }
-
-        if (TrainingApplication.SP_PEBBLE_SUPPORT.equals(key)) {
-            mPebble.setSummary(pebbleSummary());
-            getActivity().onContentChanged();
-        }
-
 
         if (TrainingApplication.SP_EXPORT_TO_CSV.equals(key)
                 || TrainingApplication.SP_EXPORT_TO_TCX.equals(key)
@@ -241,14 +228,5 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
             string = "";
         }
         return string;
-    }
-
-    @NonNull
-    protected String pebbleSummary() {
-        if (TrainingApplication.pebbleSupport()) {
-            return getString(TrainingApplication.getPebbleWatchapp().getUiId());
-        } else {
-            return getString(R.string.prefsDoNotUsePebble);
-        }
     }
 }
