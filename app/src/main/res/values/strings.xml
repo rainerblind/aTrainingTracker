@@ -370,6 +370,8 @@
     <!--  For Preferences Activity -->
     <string name="prefsUserTitle">User</string>
     <string name="prefsBasic">Basic</string>
+    <string name="prefs_Export">Export</string>
+    <string name="prefs_Display">Display</string>
     <string name="prefsAdvanced">Advanced</string>
 
     <string name="prefsThresholdSpeedsTitle">Threshold speeds</string>
@@ -389,7 +391,7 @@
     <string name="prefsUnitsSummary">metric</string>
     <string name="prefShowUnitsTitle">show units</string>
 
-    <string name="prefsConfigureDisplaysTitle">Configure Displays</string>
+    <string name="prefsConfigureDisplaysTitle">Tracking Tabs</string>
 
     <string name="prefsPebbleTitle" translatable="false">Pebble</string>
     <string name="prefsDoNotUsePebble">don\'t use Pebble</string>

@@ -307,6 +307,8 @@
     <!--  For Preferences Activity -->
     <string name="prefsUserTitle">Benutzer</string>
     <string name="prefsBasic">Basic</string>
+    <string name="prefs_Export">Export</string>
+    <string name="prefs_Display">Anzeige</string>
     <string name="prefsAdvanced">Erweitert</string>
 
     <string name="prefsThresholdSpeedsTitle">Geschwindigkeitsschwellwerte</string>
@@ -326,7 +328,7 @@
     <string name="prefsUnitsSummary">Metrisch</string>
     <string name="prefShowUnitsTitle">Einheiten anzeigen</string>
 
-    <string name="prefsConfigureDisplaysTitle">Anzeigen konfigurieren</string>
+    <string name="prefsConfigureDisplaysTitle">Tracking Tabs</string>
 
     <string name="prefsDoNotUsePebble">Keine Pebble verwenden</string>
     <string name="prefsPebbleSupportTitle">Pebble Support</string>

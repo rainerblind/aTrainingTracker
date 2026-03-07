@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:width="24dp"
+        android:height="24dp">
+        <shape android:shape="rectangle">
+            <solid android:color="@android:color/transparent" />
+        </shape>
+    </item>
+    <!-- Bottom/Background Layer: The Bike -->
+    <item
+        android:drawable="@drawable/ic_directions_bike"
+        android:width="14dp"
+        android:height="14dp"
+        android:gravity="bottom|left" />
+
+    <!-- Top/Foreground Layer: The Runner -->
+    <item
+        android:drawable="@drawable/ic_directions_run"
+        android:width="14dp"
+        android:height="14dp"
+        android:gravity="top|right" />
+</layer-list>

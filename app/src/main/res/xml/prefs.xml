@@ -20,12 +20,8 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     android:key="root">
 
-    <PreferenceCategory android:title="@string/prefsBasic">
-        <Preference
-            android:key="training_zones_settings"
-            android:title="@string/prefs_training_zones"
-            android:summary="@string/prefs_training_zones_summary" />
-            <!-- TODO android:icon="@drawable/ic_heart_rate" /> -->
+    <PreferenceCategory android:title="@string/prefsBasic"
+        android:layout="@layout/preference_category">
 
         <ListPreference
             android:defaultValue="METRIC"
@@ -33,77 +29,38 @@
             android:entryValues="@array/units_values"
             android:key="listUnits"
             android:summary="@string/prefsUnitsSummary"
-            android:title="@string/prefsUnitsTitle" />
+            android:title="@string/prefsUnitsTitle"
+            android:icon="@drawable/ic_square_foot"/>
+
+        <Preference
+            android:key="training_zones_settings"
+            android:title="@string/prefs_training_zones"
+            android:summary="@string/prefs_training_zones_summary"
+            android:icon="@drawable/ic_cell_5_bar"/>
+        <!-- android:icon="@drawable/ic_cardiology"/> -->
+        <!-- android:icon="@drawable/ic_cardio_load"/> -->
+
+        <!-- TODO android:icon="@drawable/ic_heart_rate" /> -->
 
         <PreferenceScreen
-            android:key="display"
-            android:title="@string/Display">
-            <CheckBoxPreference
-                android:defaultValue="true"
-                android:key="forcePortrait"
-                android:title="@string/forcePortrait" />
-            <CheckBoxPreference
-                android:defaultValue="true"
-                android:key="keepScreenOn"
-                android:title="@string/prefsKeepScreenOnTitle" />
-            <CheckBoxPreference
-                android:defaultValue="true"
-                android:key="noUnlocking"
-                android:title="@string/prefsNoUnlockingTitle" />
-            <CheckBoxPreference
-                android:defaultValue="true"
-                android:key="zoomDependingOnSpeed"
-                android:title="@string/prefZoomDependingOnSpeedTitle" />
+            android:key="sportTypes"
+            android:summary="@string/configure_sport_types"
+            android:title="@string/sport_types"
+            android:icon="@drawable/ic_sports_combined">
+            <Preference>
+                <!-- just a dummy entry -->
+            </Preference>
         </PreferenceScreen>
 
-        <PreferenceScreen
-            android:icon="@drawable/ic_search_black_48dp"
-            android:key="search_settings"
-            android:title="@string/Search_Settings">
-            <EditTextPreference
-                android:key="numberOfSearchTries"
-                android:numeric="integer"
-                android:summary="3"
-                android:title="@string/prefsNumberOfSearchTriesTitle" />
-            <PreferenceScreen
-                android:key="start_search"
-                android:summary="Start searching when app starts, resume from paused, or you change the sport type"
-                android:title="@string/prefStartSearchTitle">
-                <CheckBoxPreference
-                    android:defaultValue="true"
-                    android:key="startSearchWhenAppStarts"
-                    android:title="@string/prefsStartSearchWhenAppStartsTitle" />
-                <CheckBoxPreference
-                    android:defaultValue="false"
-                    android:key="startSearchWhenTrackingStarts"
-                    android:title="@string/prefsStartSearchWhenTrackingStartsTitle" />
-                <CheckBoxPreference
-                    android:defaultValue="true"
-                    android:key="startSearchWhenResumeFromPaused"
-                    android:title="@string/prefsStartSearchWhenResumeFromPausedTitle" />
-                <CheckBoxPreference
-                    android:defaultValue="false"
-                    android:key="startSearchWhenNewLap"
-                    android:title="@string/prefsStartSearchWhenNewLapTitle" />
-                <CheckBoxPreference
-                    android:defaultValue="true"
-                    android:key="startSearchWhenUserChangesSport"
-                    android:title="@string/prefsStartSearchWhenUserChangesSportTitle" />
-            </PreferenceScreen>
-            <CheckBoxPreference
-                android:defaultValue="true"
-                android:key="searchOnlyForSportSpecificDevices"
-                android:summary="@string/prefsSearchOnlyForSportSpecificDevicesSummary"
-                android:title="@string/prefsSearchOnlyForSportSpecificDevicesTitle" />
-            <CheckBoxPreference
-                android:defaultValue="true"
-                android:key="changeSportWhenDeviceGetsLost"
-                android:summary="@string/prefsChangeSportWhenDeviceGetsLostSummary"
-                android:title="@string/prefsChangeSportWhenDeviceGetsLostTitle" />
-        </PreferenceScreen>
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="@string/prefs_Export"
+        android:icon="@drawable/ic_upload"
+        android:layout="@layout/preference_category">
 
         <PreferenceScreen
-            android:icon="@drawable/ic_save_black_48dp"
+            android:icon="@drawable/ic_save_to_disc"
             android:key="fileExport"
             android:summary="@string/prefsExportSummary"
             android:title="@string/prefsExportTitle">
@@ -128,8 +85,9 @@
                 android:summary="@string/prefsExportToCSVSummary"
                 android:title="@string/prefsExportToCSVTitle" />
         </PreferenceScreen>
+
         <PreferenceScreen
-            android:icon="@drawable/ic_file_upload_black_48dp"
+            android:icon="@drawable/ic_cloud_upload"
             android:key="cloudUpload"
             android:summary="@string/prefsUploadSummary"
             android:title="@string/prefsUploadTitle">
@@ -269,23 +227,90 @@
             </PreferenceCategory>
         </PreferenceScreen>
     </PreferenceCategory>
-    <PreferenceCategory android:title="@string/prefsAdvanced">
 
+    <PreferenceCategory
+        android:title="@string/prefs_Display"
+        android:icon="@drawable/ic_display_settings"
+        android:layout="@layout/preference_category">
 
         <PreferenceScreen
-            android:key="sportTypes"
-            android:summary="@string/configure_sport_types"
-            android:title="@string/sport_types">
-            <Preference>
-                <!-- just a dummy entry -->
-            </Preference>
+            android:icon="@drawable/ic_checklist"
+            android:key="display"
+            android:title="@string/Display">
+            <CheckBoxPreference
+                android:defaultValue="true"
+                android:key="forcePortrait"
+                android:title="@string/forcePortrait" />
+            <CheckBoxPreference
+                android:defaultValue="true"
+                android:key="keepScreenOn"
+                android:title="@string/prefsKeepScreenOnTitle" />
+            <CheckBoxPreference
+                android:defaultValue="true"
+                android:key="noUnlocking"
+                android:title="@string/prefsNoUnlockingTitle" />
+            <CheckBoxPreference
+                android:defaultValue="true"
+                android:key="zoomDependingOnSpeed"
+                android:title="@string/prefZoomDependingOnSpeedTitle" />
         </PreferenceScreen>
 
         <Preference
-            android:icon="@drawable/ic_settings"
+            android:icon="@drawable/ic_table_edit"
             android:title="@string/prefsConfigureDisplaysTitle">
             <intent android:action="com.atrainingtracker.trainingtracker.intent.action.ConfigureAllTrackingViews" />
         </Preference>
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="@string/prefsAdvanced"
+        android:layout="@layout/preference_category">
+
+        <PreferenceScreen
+            android:icon="@drawable/ic_search"
+            android:key="search_settings"
+            android:title="@string/Search_Settings">
+            <EditTextPreference
+                android:key="numberOfSearchTries"
+                android:numeric="integer"
+                android:summary="3"
+                android:title="@string/prefsNumberOfSearchTriesTitle" />
+            <PreferenceScreen
+                android:key="start_search"
+                android:summary="Start searching when app starts, resume from paused, or you change the sport type"
+                android:title="@string/prefStartSearchTitle">
+                <CheckBoxPreference
+                    android:defaultValue="true"
+                    android:key="startSearchWhenAppStarts"
+                    android:title="@string/prefsStartSearchWhenAppStartsTitle" />
+                <CheckBoxPreference
+                    android:defaultValue="false"
+                    android:key="startSearchWhenTrackingStarts"
+                    android:title="@string/prefsStartSearchWhenTrackingStartsTitle" />
+                <CheckBoxPreference
+                    android:defaultValue="true"
+                    android:key="startSearchWhenResumeFromPaused"
+                    android:title="@string/prefsStartSearchWhenResumeFromPausedTitle" />
+                <CheckBoxPreference
+                    android:defaultValue="false"
+                    android:key="startSearchWhenNewLap"
+                    android:title="@string/prefsStartSearchWhenNewLapTitle" />
+                <CheckBoxPreference
+                    android:defaultValue="true"
+                    android:key="startSearchWhenUserChangesSport"
+                    android:title="@string/prefsStartSearchWhenUserChangesSportTitle" />
+            </PreferenceScreen>
+            <CheckBoxPreference
+                android:defaultValue="true"
+                android:key="searchOnlyForSportSpecificDevices"
+                android:summary="@string/prefsSearchOnlyForSportSpecificDevicesSummary"
+                android:title="@string/prefsSearchOnlyForSportSpecificDevicesTitle" />
+            <CheckBoxPreference
+                android:defaultValue="true"
+                android:key="changeSportWhenDeviceGetsLost"
+                android:summary="@string/prefsChangeSportWhenDeviceGetsLostSummary"
+                android:title="@string/prefsChangeSportWhenDeviceGetsLostTitle" />
+        </PreferenceScreen>
 
         <PreferenceScreen
             android:key="fancyWorkoutNames"
