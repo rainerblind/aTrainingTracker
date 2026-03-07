@@ -58,10 +58,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.RecyclerView
-import androidx.viewpager2.adapter.FragmentViewHolder
 import com.atrainingtracker.banalservice.ActivityType
+import kotlin.properties.Delegates
 
 class TrackingTabsFragment : Fragment() {
+
+    private var isExplicitMode by Delegates.notNull<Boolean>()  // ActivityType is explicitely selected by the user.
+    // In this case, we do directly start in edit mode and do not show the control tracking fragment as the first tab
 
     private lateinit var viewModel: TrackingTabsViewModel
     private lateinit var viewPager: ViewPager2
@@ -108,11 +111,19 @@ class TrackingTabsFragment : Fragment() {
 
         // Retrieve the type passed from the Activity's Selection Dialog
         val activityTypeName = arguments?.getString(ARG_ACTIVITY_TYPE)
-        if (activityTypeName != null) {
-            val selectedActivityType = ActivityType.valueOf(activityTypeName)
+        isExplicitMode = activityTypeName != null
 
-            // This "locks" the ViewModel to the selected sport
+        if (isExplicitMode) {
+            val selectedActivityType = ActivityType.valueOf(activityTypeName!!)
+
+            // Lock the ViewModel to the selected sport
             viewModel.setExplicitActivityType(selectedActivityType)
+
+            // Force the UI into Configuration Mode immediately
+            // Thereby, we check if already in config to avoid toggling back and forth
+            if (viewModel.screenMode.value != ScreenMode.CONFIGURATION) {
+                viewModel.toggleScreenMode()
+            }
         }
         else {
             // ViewModel will follow BANALService/Repository activity type
@@ -152,7 +163,7 @@ class TrackingTabsFragment : Fragment() {
         }
 
         // Initialize the adapter
-        pagerAdapter = TrackingPagerAdapter(this)
+        pagerAdapter = TrackingPagerAdapter(this, showControlTab = !isExplicitMode)
         viewPager.adapter = pagerAdapter
 
         // Add a page change callback to update the header and the lap buttons visibility
@@ -193,9 +204,9 @@ class TrackingTabsFragment : Fragment() {
                 viewModel.navigationEvent.collect { tabNavigationEvent ->
                     when (tabNavigationEvent) {
                         is TabNavigationEvent.NavigateTo -> {
-
-                            val target =
-                                tabNavigationEvent.index + 1 // Note that we have to add one due to the fact that we also have the control tracking fragment.
+                            // If control tab is hidden in explicitMode, target is exactly the index; otherwise, the offset is 1
+                            val offset = if (isExplicitMode) 0 else 1
+                            val target = tabNavigationEvent.index + offset
                             viewPager.setCurrentItem(target, true)
                         }
                     }
@@ -215,6 +226,7 @@ class TrackingTabsFragment : Fragment() {
                         tabLayout.getTabAt(i)?.text = pagerAdapter.getPageTitle(i)
                     }
                 }
+
                 updateLapButtonVisibility()
                 updateConfigHeader(configHeader)
             }
@@ -222,6 +234,8 @@ class TrackingTabsFragment : Fragment() {
 
         // Observe TrackingMode to update the tab text of the first tab (the control tracking fragment)
         viewModel.trackingMode.observe(viewLifecycleOwner) { _ ->
+            if (isExplicitMode) return@observe // when in explicit mode, there is no control tracking fragment, so we immediately return.
+
             if (::tabLayout.isInitialized && ::pagerAdapter.isInitialized) {
                 tabLayout.getTabAt(0)?.text = pagerAdapter.getPageTitle(0)
             }
@@ -254,10 +268,14 @@ class TrackingTabsFragment : Fragment() {
         }
 
         val position = viewPager.currentItem
-        val isFirstTab = position == 0
+
         val viewInfo = pagerAdapter.getTrackingViewInfo(position)
 
-        if (viewModel.screenMode.value != ScreenMode.CONFIGURATION || isFirstTab || viewInfo == null) {
+        // If NOT in explicit mode, position 0 is the Control tab (Hide header)
+        // If IN explicit mode, position 0 is a sensor tab (Show header)
+        val isControlTab = !isExplicitMode && position == 0
+
+        if (viewModel.screenMode.value != ScreenMode.CONFIGURATION || isControlTab || viewInfo == null) {
             composeView.visibility = View.GONE
             return
         }
@@ -372,7 +390,8 @@ class TrackingTabsFragment : Fragment() {
     }
 
     private class TrackingPagerAdapter(
-        private val fragment: TrackingTabsFragment
+        private val fragment: TrackingTabsFragment,
+        private val showControlTab: Boolean
     ) : FragmentStateAdapter(fragment) {
 
         private var trackingViews: List<TrackingViewInfo> = emptyList()
@@ -390,6 +409,7 @@ class TrackingTabsFragment : Fragment() {
             fragment.attachTabLayoutMediator()
         }
 
+        /*
         override fun onBindViewHolder(
             holder: FragmentViewHolder,
             position: Int,
@@ -404,62 +424,58 @@ class TrackingTabsFragment : Fragment() {
             }
             super.onBindViewHolder(holder, position, payloads)
         }
+         */
 
         fun getPageTitle(position: Int): CharSequence {
-            return if (position == 0) {
+            return if (showControlTab && position == 0) {
                 when (viewModel.trackingMode.value) {
                     TrackingMode.PAUSED -> fragment.getString(R.string.Paused)
                     TrackingMode.TRACKING -> fragment.getString(R.string.Tracking)
-                    else -> fragment.getString(R.string.tab_start) // STOPPED or null
+                    else -> fragment.getString(R.string.tab_start)
                 }
             } else {
-                trackingViews[position - 1].name
+                val viewIndex = if (showControlTab) position - 1 else position
+                trackingViews[viewIndex].name
             }
         }
 
         fun getTrackingViewInfo(position: Int): TrackingViewInfo? {
-            val viewIndex = position - 1
+            val viewIndex = if (showControlTab) position - 1 else position
             return if (viewIndex >= 0 && viewIndex < trackingViews.size) {
                 trackingViews[viewIndex]
-            } else {
-                null
-            }
+            } else null
         }
 
-        override fun getItemCount(): Int = 1 + trackingViews.size
+        override fun getItemCount(): Int {
+            val baseCount = if (showControlTab) 1 else 0
+            return baseCount + trackingViews.size
+        }
 
         override fun createFragment(position: Int): Fragment {
-            return if (position == 0) {
+            return if (showControlTab && position == 0) {
                 ControlTrackingFragment()
             } else {
-                val viewInfo = trackingViews[position - 1]
+                // If control tab is hidden, position 0 is trackingViews[0]
+                // If control tab is shown, position 1 is trackingViews[0]
+                val viewIndex = if (showControlTab) position - 1 else position
+                val viewInfo = trackingViews[viewIndex]
                 TrackingFragment.newInstance(viewInfo.tabViewId, viewInfo.showMap)
             }
         }
 
         override fun getItemId(position: Int): Long {
-            Log.i(TAG, "getItemId: position=$position")
+            if (showControlTab && position == 0) return -1L
 
-            // Position 0 is the fixed Control tab. Give it a unique, constant ID.
-            if (position == 0) return -1L
-
-            // For other tabs, use the database ID.
-            // Remember position 1 corresponds to trackingViews[0].
-            val viewIndex = position - 1
+            val viewIndex = if (showControlTab) position - 1 else position
             return if (viewIndex >= 0 && viewIndex < trackingViews.size) {
                 trackingViews[viewIndex].tabViewId
             } else {
-                RecyclerView.NO_ID // Safety fallback
+                RecyclerView.NO_ID
             }
         }
 
         override fun containsItem(itemId: Long): Boolean {
-            Log.i(TAG, "containsItem: itemId = $itemId")
-
-            // The fixed tab ID (-1L) always exists.
-            if (itemId == -1L) return true
-
-            // Check if the database ID still exists in the list.
+            if (showControlTab && itemId == -1L) return true
             return trackingViews.any { it.tabViewId == itemId }
         }
 
