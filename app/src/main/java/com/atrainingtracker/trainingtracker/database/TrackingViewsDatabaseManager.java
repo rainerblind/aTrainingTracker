@@ -991,17 +991,6 @@ public class TrackingViewsDatabaseManager {
             EnumMap<ActivityType, List<RowData>> viewMap = new EnumMap<>(ActivityType.class);
             List<RowData> rowDataList;
 
-            // GENERIC
-            rowDataList = new LinkedList<>();
-            rowDataList.add(new RowData(SensorType.TIME_ACTIVE, ViewSize.SMALL, 1, 1));
-            rowDataList.add(new RowData(SensorType.TIME_OF_DAY, ViewSize.SMALL, 1, 2));
-            rowDataList.add(new RowData(SensorType.SPEED_mps, ViewSize.LARGE, 2, 1));
-            rowDataList.add(new RowData(SensorType.DISTANCE_m, ViewSize.NORMAL, 3, 1));
-            if (mHavePressureSensor) {
-                rowDataList.add(new RowData(SensorType.ALTITUDE, ViewSize.NORMAL, 3, 2));
-            }
-            viewMap.put(ActivityType.GENERIC, rowDataList);
-
             // GENERIC_HR
             rowDataList = new LinkedList<>();
             rowDataList.add(new RowData(SensorType.TIME_ACTIVE, ViewSize.SMALL, 1, 1));
@@ -1026,30 +1015,6 @@ public class TrackingViewsDatabaseManager {
                 rowDataList.add(new RowData(SensorType.ALTITUDE, ViewSize.NORMAL, 5, 2));
             }
             viewMap.put(ActivityType.RUN_SPEED_AND_CADENCE, rowDataList);
-
-            // RUN_SPEED
-            rowDataList = new LinkedList<>();
-            rowDataList.add(new RowData(SensorType.TIME_ACTIVE, ViewSize.SMALL, 1, 1));
-            rowDataList.add(new RowData(SensorType.TIME_OF_DAY, ViewSize.SMALL, 1, 2));
-            rowDataList.add(new RowData(SensorType.HR, ViewSize.LARGE, 2, 1));
-            rowDataList.add(new RowData(SensorType.PACE_spm, ViewSize.LARGE, 3, 1));
-            rowDataList.add(new RowData(SensorType.DISTANCE_m, ViewSize.NORMAL, 5, 1));
-            if (mHavePressureSensor) {
-                rowDataList.add(new RowData(SensorType.ALTITUDE, ViewSize.NORMAL, 5, 2));
-            }
-            viewMap.put(ActivityType.RUN_SPEED, rowDataList);
-
-            // BIKE_SPEED
-            rowDataList = new LinkedList<>();
-            rowDataList.add(new RowData(SensorType.TIME_ACTIVE, ViewSize.SMALL, 1, 1));
-            rowDataList.add(new RowData(SensorType.TIME_OF_DAY, ViewSize.SMALL, 1, 2));
-            rowDataList.add(new RowData(SensorType.HR, ViewSize.LARGE, 2, 1));
-            rowDataList.add(new RowData(SensorType.SPEED_mps, ViewSize.LARGE, 3, 1));
-            rowDataList.add(new RowData(SensorType.DISTANCE_m, ViewSize.NORMAL, 5, 1));
-            if (mHavePressureSensor) {
-                rowDataList.add(new RowData(SensorType.ALTITUDE, ViewSize.NORMAL, 5, 2));
-            }
-            viewMap.put(ActivityType.BIKE_SPEED, rowDataList);
 
             // BIKE_SPEED_AND_CADENCE
             rowDataList = new LinkedList<>();

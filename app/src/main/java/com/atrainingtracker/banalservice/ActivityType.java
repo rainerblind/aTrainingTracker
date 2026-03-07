@@ -27,30 +27,40 @@ import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 import java.util.Arrays;
 
 public enum ActivityType {
-    //                                                                                                                                              power  HR     cadence
-    GENERIC(BSportType.UNKNOWN, R.string.activity_type_multisport, R.string.activity_type_short_multisport, false, false, false),
-    GENERIC_HR(BSportType.UNKNOWN, R.string.activity_type_multisport_with_hr, R.string.activity_type_short_multisport_with_hr, false, true, false),
-    RUN_SPEED(BSportType.RUN, R.string.activity_type_run_speed, R.string.activity_type_short_run_speed, false, true, false),
-    RUN_SPEED_AND_CADENCE(BSportType.RUN, R.string.activity_type_run_speed_and_cadence, R.string.activity_type_short_run_speed_and_cadence, false, true, true),
-    BIKE_SPEED(BSportType.BIKE, R.string.activity_type_bike_speed, R.string.activity_type_short_bike_speed, false, true, false),
-    BIKE_SPEED_AND_CADENCE(BSportType.BIKE, R.string.activity_type_bike_speed_and_cadence, R.string.activity_type_short_bike_speed_and_cadence, false, true, true),
-    BIKE_POWER(BSportType.BIKE, R.string.activity_type_bike_power, R.string.activity_type_short_bike_power, true, true, true);
+    // Note that in the pase, we had some more ActivityTypes.  They have been removed on 07.03.2026.
+    // GENERIC(BSportType.UNKNOWN, R.string.activity_type_multisport),
+    GENERIC_HR(BSportType.UNKNOWN, R.string.activity_type_multisport_with_hr, R.drawable.bsport_other),
+    // RUN_SPEED(BSportType.RUN, R.string.activity_type_run_speed, R.string.activity_type_short_run_speed),
+    RUN_SPEED_AND_CADENCE(BSportType.RUN, R.string.activity_type_run_speed_and_cadence, R.drawable.bsport_run),
+    // BIKE_SPEED(BSportType.BIKE, R.string.activity_type_bike_speed),
+    BIKE_SPEED_AND_CADENCE(BSportType.BIKE, R.string.activity_type_bike_speed_and_cadence, R.drawable.bsport_bike),
+    BIKE_POWER(BSportType.BIKE, R.string.activity_type_bike_power, R.drawable.bsport_bike);
 
 
     private final BSportType sportType;
     private final int titleId;
-    private final int titleIdShort;
-    private final boolean havePower;
-    private final boolean haveHR;
-    private final boolean haveCadence;
+    private final int logoId;
 
-    ActivityType(BSportType sportType, int titleId, int titleIdShort, boolean havePower, boolean haveHR, boolean haveCadence) {
+    ActivityType(BSportType sportType, int titleId, int logoId) {
         this.sportType = sportType;
         this.titleId = titleId;
-        this.titleIdShort = titleIdShort;
-        this.havePower = havePower;
-        this.haveHR = haveHR;
-        this.haveCadence = haveCadence;
+        this.logoId = logoId;
+    }
+
+    public static ActivityType getDefaultActivityType() {
+        return GENERIC_HR;
+    }
+
+    public BSportType getSportType() {
+        return sportType;
+    }
+
+    public int getTitleId() {
+        return titleId;
+    }
+
+    public int getLogoId() {
+        return logoId;
     }
 
     public static SensorType[] getSensorTypeArray(ActivityType activityType, Context context) {
@@ -83,32 +93,6 @@ public enum ActivityType {
                         SensorType.TIME_TOTAL};
                 break;
 
-            case RUN_SPEED:
-                sensors = new SensorType[]{
-                        SensorType.ACCUMULATED_SENSORS,
-                        SensorType.ACCURACY,
-                        SensorType.ALTITUDE,
-                        SensorType.ASCENT,
-                        SensorType.DESCENT,
-                        SensorType.VERTICAL_SPEED,
-                        SensorType.SLOPE,
-                        // SensorType.CALORIES,
-                        SensorType.DISTANCE_m,
-                        SensorType.DISTANCE_m_LAP,
-                        SensorType.HR,
-                        SensorType.LAP_NR,
-                        SensorType.LATITUDE,
-                        SensorType.LONGITUDE,
-                        SensorType.PACE_spm,
-                        SensorType.SPEED_mps,
-                        SensorType.SENSORS,
-                        SensorType.STRIDES,
-                        SensorType.TIME_OF_DAY,
-                        SensorType.TIME_ACTIVE,
-                        SensorType.TIME_LAP,
-                        SensorType.TIME_TOTAL};
-                break;
-
             case RUN_SPEED_AND_CADENCE:
                 sensors = new SensorType[]{
                         SensorType.ACCUMULATED_SENSORS,
@@ -130,31 +114,6 @@ public enum ActivityType {
                         SensorType.SPEED_mps,
                         SensorType.SENSORS,
                         SensorType.STRIDES,
-                        SensorType.TIME_OF_DAY,
-                        SensorType.TIME_ACTIVE,
-                        SensorType.TIME_LAP,
-                        SensorType.TIME_TOTAL};
-                break;
-
-            case BIKE_SPEED:
-                sensors = new SensorType[]{
-                        SensorType.ACCUMULATED_SENSORS,
-                        SensorType.ACCURACY,
-                        SensorType.ALTITUDE,
-                        SensorType.ASCENT,
-                        SensorType.DESCENT,
-                        SensorType.VERTICAL_SPEED,
-                        SensorType.SLOPE,
-                        // SensorType.CALORIES,
-                        SensorType.DISTANCE_m,
-                        SensorType.DISTANCE_m_LAP,
-                        SensorType.HR,
-                        SensorType.LAP_NR,
-                        SensorType.LATITUDE,
-                        SensorType.LONGITUDE,
-                        // SensorType.PACE_spm,
-                        SensorType.SPEED_mps,
-                        SensorType.SENSORS,
                         SensorType.TIME_OF_DAY,
                         SensorType.TIME_ACTIVE,
                         SensorType.TIME_LAP,
@@ -221,7 +180,6 @@ public enum ActivityType {
                         SensorType.TORQUE_EFFECTIVENESS_R};
                 break;
 
-            case GENERIC:
             default:
                 sensors = new SensorType[]{
                         SensorType.ACCUMULATED_SENSORS,
@@ -254,33 +212,5 @@ public enum ActivityType {
         }
 
         return sensors;
-    }
-
-    public static ActivityType getDefaultActivityType() {
-        return GENERIC;
-    }
-
-    public BSportType getSportType() {
-        return sportType;
-    }
-
-    public int getTitleId() {
-        return titleId;
-    }
-
-    public int getShortTitleId() {
-        return titleIdShort;
-    }
-
-    public boolean havePower() {
-        return havePower;
-    }
-
-    public boolean haveHR() {
-        return haveHR;
-    }
-
-    public boolean haveCadence() {
-        return haveCadence;
     }
 }

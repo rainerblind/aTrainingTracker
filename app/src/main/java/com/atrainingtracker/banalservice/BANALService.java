@@ -142,7 +142,7 @@ public class BANALService
     private static DeviceManager cDeviceManager;
     private static MySensorManager cSensorManager;
     private static FilterManager cFilterManager;
-    protected ActivityType mActivityTypeMax = ActivityType.GENERIC;
+    protected ActivityType mActivityTypeMax = ActivityType.getDefaultActivityType();
 
     /***********************************************************************************************/
 
@@ -405,36 +405,26 @@ public class BANALService
     protected ActivityType getActivityType() {
         if (DEBUG) Log.d(TAG, "getActivityType");
 
-        ActivityType result = ActivityType.GENERIC;
+        ActivityType result = ActivityType.getDefaultActivityType();
 
         Set<SensorType> sensorTypes = EnumSet.copyOf(Arrays.asList(getSensorTypes()));
         BSportType sportType = getBSportType();
 
         switch (sportType) {
             case RUN:
-                if (sensorTypes.contains(SensorType.CADENCE)) {
-                    result = ActivityType.RUN_SPEED_AND_CADENCE;
-                } else {
-                    result = ActivityType.RUN_SPEED;
-                }
+                result = ActivityType.RUN_SPEED_AND_CADENCE;
                 break;
 
             case BIKE:
                 if (sensorTypes.contains(SensorType.POWER)) {
                     result = ActivityType.BIKE_POWER;
-                } else if (sensorTypes.contains(SensorType.CADENCE)) {
-                    result = ActivityType.BIKE_SPEED_AND_CADENCE;
-                } else {
-                    result = ActivityType.BIKE_SPEED;
                 }
+                else
+                    result = ActivityType.BIKE_SPEED_AND_CADENCE;
                 break;
 
             default:
-                if (sensorTypes.contains(SensorType.HR)) {
-                    result = ActivityType.GENERIC_HR;
-                } else {
-                    result = ActivityType.GENERIC;
-                }
+                result = ActivityType.GENERIC_HR;
                 break;
         }
 

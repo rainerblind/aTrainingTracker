@@ -185,21 +185,12 @@
 
     <!--  ActivityType -->
     <string name="activity_type_bike_power">Bike Power</string>
-    <string name="activity_type_bike_speed_and_cadence">Bike Speed and Cadence</string>
-    <string name="activity_type_bike_speed">Bike Speed</string>
-    <string name="activity_type_multisport_with_hr">Multisport with HR</string>
-    <string name="activity_type_multisport">Multisport</string>
-    <string name="activity_type_run_speed_and_cadence">Run Speed and Cadence</string>
-    <string name="activity_type_run_speed">Run Speed</string>
-
-    <!-- Short version of ActivityType, at most 14 letters -->
-    <string name="activity_type_short_bike_power">Bike Power</string>
-    <string name="activity_type_short_bike_speed_and_cadence">Bike Spd &amp; Cad</string>
-    <string name="activity_type_short_bike_speed">Bike Speed</string>
-    <string name="activity_type_short_multisport_with_hr">Multisport HR</string>
-    <string name="activity_type_short_multisport">Multisport</string>
-    <string name="activity_type_short_run_speed_and_cadence">Run Spd &amp; Cad</string>
-    <string name="activity_type_short_run_speed">Run Speed</string>
+    <string name="activity_type_bike_speed_and_cadence">Bike</string>
+    <!-- <string name="activity_type_bike_speed">Bike Speed</string> -->
+    <string name="activity_type_multisport_with_hr">Generic</string>
+    <!-- <string name="activity_type_multisport">Multisport</string> -->
+    <string name="activity_type_run_speed_and_cadence">Run</string>
+    <!-- <string name="activity_type_run_speed">Run Speed</string> -->
 
     <string name="text_default">default</string>
     <string name="string_and_number_format">%1$s %2$d</string>

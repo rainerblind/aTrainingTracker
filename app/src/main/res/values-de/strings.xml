@@ -130,21 +130,12 @@
 
     <!--  ActivityType -->
     <string name="activity_type_bike_power">Rad Leistung</string>
-    <string name="activity_type_bike_speed_and_cadence">Rad Geschw. und Freq.</string>
-    <string name="activity_type_bike_speed">Rad Geschwindigkeit</string>
-    <string name="activity_type_multisport_with_hr">Multisport mit HF</string>
-    <string name="activity_type_multisport">Multisport</string>
-    <string name="activity_type_run_speed_and_cadence">Lauf Geschw. und Freq.</string>
-    <string name="activity_type_run_speed">Lauf Geschwindigkeit</string>
-
-    <!-- Short version of ActivityType, at most 14 letters -->
-    <string name="activity_type_short_bike_power">Rad Leistung</string>
-    <string name="activity_type_short_bike_speed_and_cadence">Rad Spd &amp; Cad</string>
-    <string name="activity_type_short_bike_speed">Rad Geschw.</string>
-    <string name="activity_type_short_multisport_with_hr">Multisport HF</string>
-    <string name="activity_type_short_multisport">Multisport</string>
-    <string name="activity_type_short_run_speed_and_cadence">Lauf Spd &amp; Cad</string>
-    <string name="activity_type_short_run_speed">Lauf Geschw.</string>
+    <string name="activity_type_bike_speed_and_cadence">Radeln</string>
+    <!-- <string name="activity_type_bike_speed">Rad Geschwindigkeit</string> -->
+    <string name="activity_type_multisport_with_hr">Generell</string>
+    <!-- <string name="activity_type_multisport">Multisport</string> -->
+    <string name="activity_type_run_speed_and_cadence">Laufen</string>
+    <!-- <string name="activity_type_run_speed">Lauf Geschwindigkeit</string> -->
 
     <string name="text_default">Standard</string>
     <string name="string_and_number_format">%1$s %2$d</string>
