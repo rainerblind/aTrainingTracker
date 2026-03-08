@@ -1,3 +1,21 @@
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+  -->
+
 <vector xmlns:android="http://schemas.android.com/apk/res/android" android:height="24dp" android:tint="#000000" android:viewportHeight="960" android:viewportWidth="960" android:width="24dp">
       
     <path android:fillColor="@android:color/white" android:pathData="M600,840L360,756L174,828Q154,836 137,823.5Q120,811 120,790L120,230Q120,217 127.5,207Q135,197 148,192L360,120L600,204L786,132Q806,124 823,136.5Q840,149 840,170L840,730Q840,743 832.5,753Q825,763 812,768L600,840ZM560,742L560,274L400,218L400,686L560,742ZM640,742L760,702L760,228L640,274L640,742ZM200,732L320,686L320,218L200,258L200,732ZM640,274L640,274L640,742L640,742L640,274ZM320,218L320,218L320,686L320,686L320,218Z"/>

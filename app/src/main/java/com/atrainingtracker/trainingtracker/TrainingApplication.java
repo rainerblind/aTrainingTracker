@@ -1,6 +1,6 @@
 /*
  * aTrainingTracker (ANT+ BTLE)
- * Copyright (C) 2011 - 2019 Rainer Blind <rainer.blind@gmail.com>
+ * Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -96,7 +96,6 @@ public class TrainingApplication extends Application {
             "noUnlocking"
     ));
     public static final String SP_UNITS = "listUnits";
-    public static final String SP_SHOW_UNITS = "showUnits";
 
     // configure search behaviour
     public static final String SP_NUMBER_OF_SEARCH_TRIES_INT = "numberOfSearchTriesInt";
@@ -123,7 +122,6 @@ public class TrainingApplication extends Application {
     public static final String SP_TRAINING_PEAKS_ACCESS_TOKEN = "trainingPeaksAccessToken";
     public static final String SP_TRAINING_PEAKS_REFRESH_TOKEN = "trainingPeaksRefreshToken";
     // public static final String SP_DISPLAY_UPDATE_TIME     = "displayUpdateTime";
-    public static final String SP_LACTATE_THRESHOLD_POWER = "lactateThresholdPower";
     public static final String SP_EXPORT_FORMATS = "pref_export_formats";
     public static final String SP_CHECK_ANT_INSTALLATION = "checkANTInstallation";
     public static final String MIN_WALK_SPEED = "minWalkSpeed";
@@ -138,11 +136,7 @@ public class TrainingApplication extends Application {
     protected static final String NOTIFICATION_CHANNEL__TRACKING_2 = "NOTIFICATION_CHANNEL__TRACKING_2";
     public static final String NOTIFICATION_CHANNEL__EXPORT = "NOTIFICATION_CHANNEL__EXPORT";
     public static final int TRACKING_NOTIFICATION_ID = 1;
-    public static final int EXPORT_PROGRESS_NOTIFICATION_ID = 2;
-    public static final int EXPORT_RESULT_NOTIFICATION_ID = 3;
-    public static final int SEND_EMAIL_NOTIFICATION_ID = 4;
 
-    public static final float MIN_DISTANCE_BETWEEN_START_AND_STOP = 100;
     public static final double DISTANCE_TO_MAX_THRESHOLD_FOR_TRAINER = 200;
     public static final double DISTANCE_TO_MAX_RATIO_FOR_COMMUTE = Math.PI / 2; // probably the best value ;-)
     protected static final String SP_DROPBOX_CREDENTIAL = "dropboxCredential";
@@ -371,15 +365,6 @@ public class TrainingApplication extends Application {
 
     public static boolean NoUnlocking() {
         return cSharedPreferences.getStringSet(SP_DISPLAY_OPTIONS, DEFAULT_DISPLAY_OPTIONS).contains("noUnlocking");
-    }
-
-    @Deprecated // Deprecated because we always return true here.  TODO: remove this function.
-    public static boolean zoomDependsOnSpeed() {
-        return true;
-    }
-
-    public static boolean showUnits() {
-        return cSharedPreferences.getBoolean(SP_SHOW_UNITS, true);
     }
 
     @NonNull

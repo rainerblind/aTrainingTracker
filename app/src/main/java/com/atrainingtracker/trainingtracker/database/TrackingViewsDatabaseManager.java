@@ -1,6 +1,6 @@
 /*
  * aTrainingTracker (ANT+ BTLE)
- * Copyright (C) 2011 - 2019 Rainer Blind <rainer.blind@gmail.com>
+ * Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -778,8 +778,6 @@ public class TrackingViewsDatabaseManager {
                 + SENSOR_TYPE + " text, "
                 + TEXT_SIZE + " int, "
                 + SOURCE_DEVICE_ID + " int)";
-        // TODO: same as for PebbleDbHelper: switch to next/previous id structure?
-        // NO! when inserting a new view, we just have to add 1 to all following layout_nrs, similar for deleting.
         @Deprecated
         protected static final String CREATE_LAYOUTS_TABLE_V6 = "create table " + ROWS_TABLE + " ("
                 + ROW_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
