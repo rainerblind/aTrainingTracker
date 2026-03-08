@@ -248,32 +248,14 @@
         android:icon="@drawable/ic_display_settings"
         android:layout="@layout/preference_category">
 
-        <PreferenceScreen
-            android:icon="@drawable/ic_checklist"
-            android:key="display"
+        <MultiSelectListPreference
+            android:key="pref_display_options"
             android:title="@string/Display"
-            android:layout="@layout/preference_slim">
-            <CheckBoxPreference
-                android:defaultValue="true"
-                android:key="forcePortrait"
-                android:title="@string/forcePortrait"
-                android:layout="@layout/preference_slim"/>
-            <CheckBoxPreference
-                android:defaultValue="true"
-                android:key="keepScreenOn"
-                android:title="@string/prefsKeepScreenOnTitle"
-                android:layout="@layout/preference_slim"/>
-            <CheckBoxPreference
-                android:defaultValue="true"
-                android:key="noUnlocking"
-                android:title="@string/prefsNoUnlockingTitle"
-                android:layout="@layout/preference_slim"/>
-            <CheckBoxPreference
-                android:defaultValue="true"
-                android:key="zoomDependingOnSpeed"
-                android:title="@string/prefZoomDependingOnSpeedTitle"
-                android:layout="@layout/preference_slim"/>
-        </PreferenceScreen>
+            android:summary="Configure screen and orientation behavior"
+            android:icon="@drawable/ic_checklist"
+            android:entries="@array/display_options_titles"
+            android:entryValues="@array/display_options_values"
+            android:layout="@layout/preference_slim" />
 
         <Preference
             android:icon="@drawable/ic_table_edit"

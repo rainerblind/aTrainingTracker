@@ -87,11 +87,8 @@ public class TrainingApplication extends Application {
     public static final String REQUEST_CHANGE_SPORT_TYPE = "com.atrainingtracker.trainingapplication.REQUEST_CHANGE_SPORT_TYPE";
     public static final String SPORT_TYPE_ID = "com.atrainingtracker.trainingapplication.SPORT_TYPE_ID";
     // TODO: also move these Strings to string.xml???
+    public static final String SP_DISPLAY_OPTIONS = "pref_display_options";
     public static final String SP_UNITS = "listUnits";
-    public static final String SP_FORCE_PORTRAIT = "forcePortrait";
-    public static final String SP_KEEP_SCREEN_ON = "keepScreenOn";
-    public static final String SP_NO_UNLOCKING = "noUnlocking";
-    public static final String SP_ZOOM_DEPENDING_ON_SPEED = "zoomDependingOnSpeed";
     public static final String SP_SHOW_UNITS = "showUnits";
     // configure search behaviour
     public static final String PREF_KEY_START_SEARCH = "start_search";
@@ -365,21 +362,23 @@ public class TrainingApplication extends Application {
         return MyUnits.valueOf(cSharedPreferences.getString(SP_UNITS, MyUnits.METRIC.name()));
     }
 
+    // -- Display options
     public static boolean forcePortrait() {
-        return cSharedPreferences.getBoolean(SP_FORCE_PORTRAIT, true);
+        return cSharedPreferences.getStringSet(SP_DISPLAY_OPTIONS, new HashSet<>()).contains("forcePortrait");
     }
 
     public static boolean keepScreenOn() {
-        return cSharedPreferences.getBoolean(SP_KEEP_SCREEN_ON, true);
+        return cSharedPreferences.getStringSet(SP_DISPLAY_OPTIONS, new HashSet<>()).contains("keepScreenOn");
     }
 
     public static boolean NoUnlocking() {
-        return cSharedPreferences.getBoolean(SP_NO_UNLOCKING, true);
+        return cSharedPreferences.getStringSet(SP_DISPLAY_OPTIONS, new HashSet<>()).contains("noUnlocking");
     }
 
+    @Deprecated // Deprecated because we always return true here.  TODO: remove this function.
     public static boolean zoomDependsOnSpeed() {
-        return cSharedPreferences.getBoolean(SP_ZOOM_DEPENDING_ON_SPEED, true);
-    }  // TODO should default to false?
+        return true;
+    }
 
     public static boolean showUnits() {
         return cSharedPreferences.getBoolean(SP_SHOW_UNITS, true);

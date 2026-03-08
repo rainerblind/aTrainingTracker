@@ -238,4 +238,17 @@
         <item>CSV</item>
     </string-array>
 
+    <!-- Display settings -->
+    <string-array name="display_options_titles">
+        <item>@string/forcePortrait</item>
+        <item>@string/prefsKeepScreenOnTitle</item>
+        <item>@string/prefsNoUnlockingTitle</item>
+    </string-array>
+
+    <string-array name="display_options_values">
+        <item>forcePortrait</item>
+        <item>keepScreenOn</item>
+        <item>noUnlocking</item>
+    </string-array>
+
 </resources>
