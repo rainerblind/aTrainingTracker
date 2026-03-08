@@ -60,23 +60,19 @@
             android:key="zones_hr_run"
             android:title="@string/tab_hr_run"
             android:icon="@drawable/ic_zones_hr_run_combined"
-            android:layout="@layout/preference_slim"
-            android:order="2" />
+            android:layout="@layout/preference_slim"/>
 
         <Preference
             android:key="zones_hr_bike"
             android:title="@string/tab_hr_bike"
             android:icon="@drawable/ic_zones_hr_bike_combined"
-            android:layout="@layout/preference_slim"
-            android:order="3" />
+            android:layout="@layout/preference_slim"/>
 
         <Preference
             android:key="zones_pwr_bike"
             android:title="@string/tab_pwr_bike"
             android:icon="@drawable/ic_zones_pwr_bike_combined"
-            android:layout="@layout/preference_slim"
-            android:order="4" />
-
+            android:layout="@layout/preference_slim"/>
 
     </PreferenceCategory>
 
