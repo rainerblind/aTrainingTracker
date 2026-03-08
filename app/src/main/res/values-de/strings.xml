@@ -604,6 +604,7 @@
     <string name="prefsStartSearchWhenAppStartsTitle">App startet</string>
     <string name="prefsStartSearchWhenTrackingStartsTitle">Aufzeichnung startet</string>
     <string name="prefsStartSearchWhenResumeFromPausedTitle">Pause beendet wird</string>
+    <string name="prefs_search_behavior_title">Suchverhalten</string>
     <string name="prefsStartSearchWhenNewLapTitle">Neue Runde</string>
     <string name="prefsStartSearchWhenUserChangesSportTitle">Der Sporttyp geändert wird</string>
 

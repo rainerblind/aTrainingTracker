@@ -46,8 +46,6 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
 
 
     @Nullable
-    private EditTextPreference mSearchRoundsPref;
-    @Nullable
     private ListPreference mUnitPref;
     @Nullable
     private Preference mZonesRunHR, mZonesBikeHR, mZonesBikePower, mExport, mCloudUpload, mDisplayOptions;
@@ -93,8 +91,6 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
             });
         }
 
-        mSearchRoundsPref = getPreferenceScreen().findPreference(TrainingApplication.SP_NUMBER_OF_SEARCH_TRIES);
-
         mExport = this.getPreferenceScreen().findPreference(TrainingApplication.SP_EXPORT_FORMATS);
         mCloudUpload = this.getPreferenceScreen().findPreference(TrainingApplication.CLOUD_UPLOAD);
 
@@ -121,9 +117,6 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
         updateZonesRunHRSummary();
         updateZonesBikeHRSummary();
         updateZonesBikePowerSummary();
-
-        mSearchRoundsPref.setSummary(TrainingApplication.getNumberOfSearchTries() + "");
-
 
         mExport.setSummary(exportSummary());
         mCloudUpload.setSummary(cloudUploadSummary());
@@ -217,9 +210,6 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
             }
         }
 
-        if (TrainingApplication.SP_NUMBER_OF_SEARCH_TRIES.equals(key)) {
-            mSearchRoundsPref.setSummary(TrainingApplication.getNumberOfSearchTries() + "");
-        }
     }
 
     @NonNull

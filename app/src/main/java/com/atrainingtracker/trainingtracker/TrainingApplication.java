@@ -99,7 +99,10 @@ public class TrainingApplication extends Application {
     public static final String SP_SHOW_UNITS = "showUnits";
     // configure search behaviour
     public static final String PREF_KEY_START_SEARCH = "start_search";
-    public static final String SP_NUMBER_OF_SEARCH_TRIES = "numberOfSearchTries";
+
+    public static final String SP_NUMBER_OF_SEARCH_TRIES_INT = "numberOfSearchTriesInt";
+    private static final int DEFAULT_NUMBER_OF_SEARCH_TRIES = 3;
+
     public static final String CLOUD_UPLOAD = "cloudUpload";
     //    protected static final String SP_DROPBOX_KEY       = "dropboxKey";
 //    protected static final String SP_DROPBOX_SECRET    = "dropboxSecret";
@@ -147,7 +150,6 @@ public class TrainingApplication extends Application {
     private static final String TAG = "TrainingApplication";
     private static final String SP_PLAY_SERVICE_INSTALLATION_TRIES = "playServiceInstallationTries";
     private static final int MAX_PLAY_SERVICE_INSTALLATION_TRIES = 10;
-    private static final int DEFAULT_NUMBER_OF_SEARCH_TRIES = 3;
     private static final String SP_START_SEARCH_WHEN_APP_STARTS = "startSearchWhenAppStarts";
     private static final boolean START_SEARCH_WHEN_APP_STARTS_DEFAULT = true;
     private static final String SP_START_SEARCH_WHEN_TRACKING_STARTS = "startSearchWhenTrackingStarts";
@@ -296,17 +298,7 @@ public class TrainingApplication extends Application {
     }
 
     public static int getNumberOfSearchTries() {
-        String numberOfSearchTries = cSharedPreferences.getString(SP_NUMBER_OF_SEARCH_TRIES, null);
-        if (DEBUG) Log.i(TAG, "number of search tries=" + numberOfSearchTries);
-        if (numberOfSearchTries == null || numberOfSearchTries.isEmpty()) {
-            return DEFAULT_NUMBER_OF_SEARCH_TRIES;
-        } else {
-            try {
-                return Integer.parseInt(numberOfSearchTries);
-            } catch (Exception e) {
-                return DEFAULT_NUMBER_OF_SEARCH_TRIES;
-            }
-        }
+        return cSharedPreferences.getInt(SP_NUMBER_OF_SEARCH_TRIES_INT, DEFAULT_NUMBER_OF_SEARCH_TRIES);
     }
 
     public static boolean startSearchWhenAppStarts() {

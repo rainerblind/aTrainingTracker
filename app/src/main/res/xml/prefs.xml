@@ -19,6 +19,7 @@
 
 <PreferenceScreen
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:key="root">
 
     <PreferenceCategory android:title="@string/prefsBasic"
@@ -275,55 +276,66 @@
             android:key="search_settings"
             android:title="@string/Search_Settings"
             android:layout="@layout/preference_slim">
-            <EditTextPreference
-                android:key="numberOfSearchTries"
-                android:numeric="integer"
-                android:summary="3"
+
+            <SeekBarPreference
+                android:key="numberOfSearchTriesInt"
                 android:title="@string/prefsNumberOfSearchTriesTitle"
-                android:layout="@layout/preference_slim"/>
-            <PreferenceScreen
-                android:key="start_search"
-                android:summary="Start searching when app starts, resume from paused, or you change the sport type"
+                android:defaultValue="3"
+                android:max="10"
+                android:min="1"
+                app:showSeekBarValue="true"/>
+
+            <!-- 2. Flatten the "Start Search" triggers into a category -->
+            <PreferenceCategory
                 android:title="@string/prefStartSearchTitle"
-                android:layout="@layout/preference_slim">
+                android:layout="@layout/preference_category">
+
                 <CheckBoxPreference
                     android:defaultValue="true"
                     android:key="startSearchWhenAppStarts"
                     android:title="@string/prefsStartSearchWhenAppStartsTitle"
                     android:layout="@layout/preference_slim"/>
-                <CheckBoxPreference
-                    android:defaultValue="false"
-                    android:key="startSearchWhenTrackingStarts"
-                    android:title="@string/prefsStartSearchWhenTrackingStartsTitle"
-                    android:layout="@layout/preference_slim"/>
+
                 <CheckBoxPreference
                     android:defaultValue="true"
                     android:key="startSearchWhenResumeFromPaused"
                     android:title="@string/prefsStartSearchWhenResumeFromPausedTitle"
                     android:layout="@layout/preference_slim"/>
-                <CheckBoxPreference
-                    android:defaultValue="false"
-                    android:key="startSearchWhenNewLap"
-                    android:title="@string/prefsStartSearchWhenNewLapTitle"
-                    android:layout="@layout/preference_slim" />
+
                 <CheckBoxPreference
                     android:defaultValue="true"
                     android:key="startSearchWhenUserChangesSport"
                     android:title="@string/prefsStartSearchWhenUserChangesSportTitle"
                     android:layout="@layout/preference_slim"/>
-            </PreferenceScreen>
-            <CheckBoxPreference
-                android:defaultValue="true"
-                android:key="searchOnlyForSportSpecificDevices"
-                android:summary="@string/prefsSearchOnlyForSportSpecificDevicesSummary"
-                android:title="@string/prefsSearchOnlyForSportSpecificDevicesTitle"
-                android:layout="@layout/preference_slim"/>
-            <CheckBoxPreference
-                android:defaultValue="true"
-                android:key="changeSportWhenDeviceGetsLost"
-                android:summary="@string/prefsChangeSportWhenDeviceGetsLostSummary"
-                android:title="@string/prefsChangeSportWhenDeviceGetsLostTitle"
-                android:layout="@layout/preference_slim"/>
+
+                <!-- Put less common triggers here -->
+                <CheckBoxPreference
+                    android:defaultValue="false"
+                    android:key="startSearchWhenTrackingStarts"
+                    android:title="@string/prefsStartSearchWhenTrackingStartsTitle"
+                    android:layout="@layout/preference_slim"/>
+
+            </PreferenceCategory>
+
+            <PreferenceCategory
+                android:title="@string/prefs_search_behavior_title"
+                android:layout="@layout/preference_category">
+
+                <CheckBoxPreference
+                    android:defaultValue="true"
+                    android:key="searchOnlyForSportSpecificDevices"
+                    android:summary="@string/prefsSearchOnlyForSportSpecificDevicesSummary"
+                    android:title="@string/prefsSearchOnlyForSportSpecificDevicesTitle"
+                    android:layout="@layout/preference_slim"/>
+
+                <CheckBoxPreference
+                    android:defaultValue="true"
+                    android:key="changeSportWhenDeviceGetsLost"
+                    android:summary="@string/prefsChangeSportWhenDeviceGetsLostSummary"
+                    android:title="@string/prefsChangeSportWhenDeviceGetsLostTitle"
+                    android:layout="@layout/preference_slim"/>
+            </PreferenceCategory>
+
         </PreferenceScreen>
 
         <PreferenceScreen
