@@ -370,6 +370,8 @@
     <!--  For Preferences Activity -->
     <string name="prefsUserTitle">User</string>
     <string name="prefsBasic">Basic</string>
+    <string name="prefs_Export">Export</string>
+    <string name="prefs_Display">Display</string>
     <string name="prefsAdvanced">Advanced</string>
 
     <string name="prefsThresholdSpeedsTitle">Threshold speeds</string>
@@ -382,6 +384,7 @@
     <string name="prefsTrackingTitle">Tracking</string>
 
     <string name="prefsDisplayTitle">Display</string>
+    <string name="prefsDisplaySummary">Configure screen and orientation behavior</string>
     <string name="prefsKeepScreenOnTitle">keep screen on</string>
     <string name="prefsNoUnlockingTitle">keep screen unlocked</string>
     <string name="prefZoomDependingOnSpeedTitle">zoom depends on speed</string>
@@ -389,7 +392,7 @@
     <string name="prefsUnitsSummary">metric</string>
     <string name="prefShowUnitsTitle">show units</string>
 
-    <string name="prefsConfigureDisplaysTitle">Configure Displays</string>
+    <string name="prefsConfigureDisplaysTitle">Tracking Tabs</string>
 
     <string name="prefsPebbleTitle" translatable="false">Pebble</string>
     <string name="prefsDoNotUsePebble">don\'t use Pebble</string>
@@ -401,14 +404,6 @@
 
     <string name="prefsExportTitle">File Export</string>
     <string name="prefsExportSummary">File formats the workouts are exported to</string>
-    <string name="prefsExportToGCJsonTitle">Golden Cheetah json</string>
-    <string name="prefsExportToGCJsonSummary">Automatically export to Golden Cheetah json</string>
-    <string name="prefsExportToGarminTCXTitle" translatable="false">TCX</string>
-    <string name="prefsExportToGarminTCXSummary">Automatically export to TCX</string>
-    <string name="prefsExportToGPXTitle" translatable="false">GPX</string>
-    <string name="prefsExportToGPXSummary">Automatically export to GPX</string>
-    <string name="prefsExportToCSVTitle" translatable="false">CSV</string>
-    <string name="prefsExportToCSVSummary">Automatically export to CSV</string>
 
     <string name="prefsUploadTitle">Upload</string>
     <string name="prefsUploadSummary">Upload to cloud services and online communities</string>
@@ -687,9 +682,10 @@
     <string name="prefsStartSearchWhenResumeFromPausedTitle">Resume after pause</string>
     <string name="prefsStartSearchWhenNewLapTitle">New lap</string>
     <string name="prefsStartSearchWhenUserChangesSportTitle">You change the sport</string>
-
+    <string name="prefs_search_behavior_title">Search Behavior</string>
     <string name="prefsChangeSportWhenDeviceGetsLostTitle">Change activity type</string>
     <string name="prefsChangeSportWhenDeviceGetsLostSummary">Change activity type when sensor gets lost</string>
+
     <string name="prefsSearchOnlyForSportSpecificDevicesTitle">Sport specific search</string>
     <string name="prefsSearchOnlyForSportSpecificDevicesSummary">Search only for sport specific sensor</string>
 

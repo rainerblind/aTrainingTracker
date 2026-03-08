@@ -70,8 +70,11 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapAftermathActi
 import com.dropbox.core.json.JsonReadException;
 import com.dropbox.core.oauth.DbxCredential;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Set;
 
 public class TrainingApplication extends Application {
     private static final boolean DEBUG = true;
@@ -86,16 +89,19 @@ public class TrainingApplication extends Application {
     public static final String REQUEST_CHANGE_SPORT_TYPE = "com.atrainingtracker.trainingapplication.REQUEST_CHANGE_SPORT_TYPE";
     public static final String SPORT_TYPE_ID = "com.atrainingtracker.trainingapplication.SPORT_TYPE_ID";
     // TODO: also move these Strings to string.xml???
+    public static final String SP_DISPLAY_OPTIONS = "pref_display_options";
+    private static final Set<String> DEFAULT_DISPLAY_OPTIONS = new HashSet<>(Arrays.asList(
+            "forcePortrait",
+            "keepScreenOn",
+            "noUnlocking"
+    ));
     public static final String SP_UNITS = "listUnits";
-    public static final String SP_FORCE_PORTRAIT = "forcePortrait";
-    public static final String SP_KEEP_SCREEN_ON = "keepScreenOn";
-    public static final String SP_NO_UNLOCKING = "noUnlocking";
-    public static final String SP_ZOOM_DEPENDING_ON_SPEED = "zoomDependingOnSpeed";
     public static final String SP_SHOW_UNITS = "showUnits";
+
     // configure search behaviour
-    public static final String PREF_KEY_START_SEARCH = "start_search";
-    public static final String SP_NUMBER_OF_SEARCH_TRIES = "numberOfSearchTries";
-    public static final String FILE_EXPORT = "fileExport";
+    public static final String SP_NUMBER_OF_SEARCH_TRIES_INT = "numberOfSearchTriesInt";
+    private static final int DEFAULT_NUMBER_OF_SEARCH_TRIES = 3;
+
     public static final String CLOUD_UPLOAD = "cloudUpload";
     //    protected static final String SP_DROPBOX_KEY       = "dropboxKey";
 //    protected static final String SP_DROPBOX_SECRET    = "dropboxSecret";
@@ -118,10 +124,7 @@ public class TrainingApplication extends Application {
     public static final String SP_TRAINING_PEAKS_REFRESH_TOKEN = "trainingPeaksRefreshToken";
     // public static final String SP_DISPLAY_UPDATE_TIME     = "displayUpdateTime";
     public static final String SP_LACTATE_THRESHOLD_POWER = "lactateThresholdPower";
-    public static final String SP_EXPORT_TO_CSV = "exportToCSV";
-    public static final String SP_EXPORT_TO_TCX = "exportToGarminTCX";
-    public static final String SP_EXPORT_TO_GPX = "exportToGPX";
-    public static final String SP_EXPORT_TO_GC_JSON = "exportToGCJson";
+    public static final String SP_EXPORT_FORMATS = "pref_export_formats";
     public static final String SP_CHECK_ANT_INSTALLATION = "checkANTInstallation";
     public static final String MIN_WALK_SPEED = "minWalkSpeed";
     public static final String MAX_WALK_SPEED = "maxWalkSpeed";
@@ -146,7 +149,6 @@ public class TrainingApplication extends Application {
     private static final String TAG = "TrainingApplication";
     private static final String SP_PLAY_SERVICE_INSTALLATION_TRIES = "playServiceInstallationTries";
     private static final int MAX_PLAY_SERVICE_INSTALLATION_TRIES = 10;
-    private static final int DEFAULT_NUMBER_OF_SEARCH_TRIES = 3;
     private static final String SP_START_SEARCH_WHEN_APP_STARTS = "startSearchWhenAppStarts";
     private static final boolean START_SEARCH_WHEN_APP_STARTS_DEFAULT = true;
     private static final String SP_START_SEARCH_WHEN_TRACKING_STARTS = "startSearchWhenTrackingStarts";
@@ -295,17 +297,7 @@ public class TrainingApplication extends Application {
     }
 
     public static int getNumberOfSearchTries() {
-        String numberOfSearchTries = cSharedPreferences.getString(SP_NUMBER_OF_SEARCH_TRIES, null);
-        if (DEBUG) Log.i(TAG, "number of search tries=" + numberOfSearchTries);
-        if (numberOfSearchTries == null || numberOfSearchTries.isEmpty()) {
-            return DEFAULT_NUMBER_OF_SEARCH_TRIES;
-        } else {
-            try {
-                return Integer.parseInt(numberOfSearchTries);
-            } catch (Exception e) {
-                return DEFAULT_NUMBER_OF_SEARCH_TRIES;
-            }
-        }
+        return cSharedPreferences.getInt(SP_NUMBER_OF_SEARCH_TRIES_INT, DEFAULT_NUMBER_OF_SEARCH_TRIES);
     }
 
     public static boolean startSearchWhenAppStarts() {
@@ -368,21 +360,23 @@ public class TrainingApplication extends Application {
         return MyUnits.valueOf(cSharedPreferences.getString(SP_UNITS, MyUnits.METRIC.name()));
     }
 
+    // -- Display options
     public static boolean forcePortrait() {
-        return cSharedPreferences.getBoolean(SP_FORCE_PORTRAIT, true);
+        return cSharedPreferences.getStringSet(SP_DISPLAY_OPTIONS, DEFAULT_DISPLAY_OPTIONS).contains("forcePortrait");
     }
 
     public static boolean keepScreenOn() {
-        return cSharedPreferences.getBoolean(SP_KEEP_SCREEN_ON, true);
+        return cSharedPreferences.getStringSet(SP_DISPLAY_OPTIONS, DEFAULT_DISPLAY_OPTIONS).contains("keepScreenOn");
     }
 
     public static boolean NoUnlocking() {
-        return cSharedPreferences.getBoolean(SP_NO_UNLOCKING, true);
+        return cSharedPreferences.getStringSet(SP_DISPLAY_OPTIONS, DEFAULT_DISPLAY_OPTIONS).contains("noUnlocking");
     }
 
+    @Deprecated // Deprecated because we always return true here.  TODO: remove this function.
     public static boolean zoomDependsOnSpeed() {
-        return cSharedPreferences.getBoolean(SP_ZOOM_DEPENDING_ON_SPEED, true);
-    }  // TODO should default to false?
+        return true;
+    }
 
     public static boolean showUnits() {
         return cSharedPreferences.getBoolean(SP_SHOW_UNITS, true);
@@ -647,36 +641,21 @@ public class TrainingApplication extends Application {
         // cSharedPreferences.getBoolean(SP_DEFAULT_TO_PRIVATE, false);
     }
 
+    // File exports
     public static boolean exportToTCX() {
-        return cSharedPreferences.getBoolean(SP_EXPORT_TO_TCX, false);
+        return cSharedPreferences.getStringSet(SP_EXPORT_FORMATS, new HashSet<>()).contains("TCX");
     }
 
     public static boolean exportToGPX() {
-        return cSharedPreferences.getBoolean(SP_EXPORT_TO_GPX, false);
+        return cSharedPreferences.getStringSet(SP_EXPORT_FORMATS, new HashSet<>()).contains("GPX");
     }
 
     public static boolean exportToCSV() {
-        return cSharedPreferences.getBoolean(SP_EXPORT_TO_CSV, false);
+        return cSharedPreferences.getStringSet(SP_EXPORT_FORMATS, new HashSet<>()).contains("CSV");
     }
 
     public static boolean exportToGCJson() {
-        return cSharedPreferences.getBoolean(SP_EXPORT_TO_GC_JSON, false);
-    }
-
-    public static void setExportToTCX(boolean value) {
-        cSharedPreferences.edit().putBoolean(SP_EXPORT_TO_TCX, value).apply();
-    }
-
-    public static void setExportToGPX(boolean value) {
-        cSharedPreferences.edit().putBoolean(SP_EXPORT_TO_GPX, value).apply();
-    }
-
-    public static void setExportToCSV(boolean value) {
-        cSharedPreferences.edit().putBoolean(SP_EXPORT_TO_CSV, value).apply();
-    }
-
-    public static void setExportToGCJson(boolean value) {
-        cSharedPreferences.edit().putBoolean(SP_EXPORT_TO_GC_JSON, value).apply();
+        return cSharedPreferences.getStringSet(SP_EXPORT_FORMATS, new HashSet<>()).contains("GC_JSON");
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

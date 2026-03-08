@@ -307,6 +307,8 @@
     <!--  For Preferences Activity -->
     <string name="prefsUserTitle">Benutzer</string>
     <string name="prefsBasic">Basic</string>
+    <string name="prefs_Export">Export</string>
+    <string name="prefs_Display">Anzeige</string>
     <string name="prefsAdvanced">Erweitert</string>
 
     <string name="prefsThresholdSpeedsTitle">Geschwindigkeitsschwellwerte</string>
@@ -319,6 +321,7 @@
     <string name="prefsTrackingTitle">Aufzeichnung</string>
 
     <string name="prefsDisplayTitle">Display</string>
+    <string name="prefsDisplaySummary">Einstellungen für die Anzeige</string>
     <string name="prefsKeepScreenOnTitle">Display an lassen</string>
     <string name="prefsNoUnlockingTitle">Display entsperrt lassen</string>
     <string name="prefZoomDependingOnSpeedTitle">Zoom basierend auf Geschwindigkeit</string>
@@ -326,7 +329,7 @@
     <string name="prefsUnitsSummary">Metrisch</string>
     <string name="prefShowUnitsTitle">Einheiten anzeigen</string>
 
-    <string name="prefsConfigureDisplaysTitle">Anzeigen konfigurieren</string>
+    <string name="prefsConfigureDisplaysTitle">Tracking Tabs</string>
 
     <string name="prefsDoNotUsePebble">Keine Pebble verwenden</string>
     <string name="prefsPebbleSupportTitle">Pebble Support</string>
@@ -337,11 +340,6 @@
 
     <string name="prefsExportTitle">Datei Export</string>
     <string name="prefsExportSummary">Dateiformate zu denen die Einheiten exportiert werden</string>
-    <string name="prefsExportToGCJsonTitle">Golden Cheetah json</string>
-    <string name="prefsExportToGCJsonSummary">Golden Cheetah json exportieren</string>
-    <string name="prefsExportToGarminTCXSummary">Nach TCX exportieren</string>
-    <string name="prefsExportToGPXSummary">Nach GPX exportieren</string>
-    <string name="prefsExportToCSVSummary">Nach CSV exportieren</string>
 
     <string name="prefsUploadTitle">Hochladen</string>
     <string name="prefsUploadSummary">Hochladen zu Cloud Diensten und Online Communities</string>
@@ -606,6 +604,7 @@
     <string name="prefsStartSearchWhenAppStartsTitle">App startet</string>
     <string name="prefsStartSearchWhenTrackingStartsTitle">Aufzeichnung startet</string>
     <string name="prefsStartSearchWhenResumeFromPausedTitle">Pause beendet wird</string>
+    <string name="prefs_search_behavior_title">Suchverhalten</string>
     <string name="prefsStartSearchWhenNewLapTitle">Neue Runde</string>
     <string name="prefsStartSearchWhenUserChangesSportTitle">Der Sporttyp geändert wird</string>
 
