@@ -46,8 +46,6 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
 
 
     @Nullable
-    private ListPreference mUnitPref;
-    @Nullable
     private Preference mZonesRunHR, mZonesBikeHR, mZonesBikePower, mExport, mCloudUpload, mDisplayOptions;
 
     private SharedPreferences mSharedPreferences;
@@ -61,8 +59,6 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
         // addPreferencesFromResource(R.xml.prefs);
         setPreferencesFromResource(R.xml.prefs, rootKey);
         if (DEBUG) Log.i(TAG, "inflated xml resource file");
-
-        mUnitPref = getPreferenceScreen().findPreference(TrainingApplication.SP_UNITS);
 
         // HR Run Zones
         mZonesRunHR = findPreference("zones_hr_run");
@@ -111,8 +107,6 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
 
 
         mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(getActivity());
-
-        mUnitPref.setSummary(TrainingApplication.getUnit().getNameId());
 
         updateZonesRunHRSummary();
         updateZonesBikeHRSummary();
@@ -179,9 +173,6 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
 
     @Override
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
-        if (TrainingApplication.SP_UNITS.equals(key)) {
-            mUnitPref.setSummary(TrainingApplication.getUnit().toString());
-        }
 
         if (TrainingApplication.SP_EXPORT_FORMATS.equals(key)) {
             String exportSummary = exportSummary();

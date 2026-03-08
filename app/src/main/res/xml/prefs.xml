@@ -33,6 +33,7 @@
             android:summary="@string/prefsUnitsSummary"
             android:title="@string/prefsUnitsTitle"
             android:icon="@drawable/ic_square_foot"
+            app:useSimpleSummaryProvider="true"
             android:layout="@layout/preference_slim"/>
 
         <PreferenceScreen
