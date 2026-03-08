@@ -321,6 +321,7 @@
     <string name="prefsTrackingTitle">Aufzeichnung</string>
 
     <string name="prefsDisplayTitle">Display</string>
+    <string name="prefsDisplaySummary">Einstellungen für die Anzeige</string>
     <string name="prefsKeepScreenOnTitle">Display an lassen</string>
     <string name="prefsNoUnlockingTitle">Display entsperrt lassen</string>
     <string name="prefZoomDependingOnSpeedTitle">Zoom basierend auf Geschwindigkeit</string>

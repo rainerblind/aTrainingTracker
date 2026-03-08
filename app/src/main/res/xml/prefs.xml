@@ -251,7 +251,7 @@
         <MultiSelectListPreference
             android:key="pref_display_options"
             android:title="@string/Display"
-            android:summary="Configure screen and orientation behavior"
+            android:summary="@string/prefsDisplaySummary"
             android:icon="@drawable/ic_checklist"
             android:entries="@array/display_options_titles"
             android:entryValues="@array/display_options_values"

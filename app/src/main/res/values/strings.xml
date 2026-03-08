@@ -384,6 +384,7 @@
     <string name="prefsTrackingTitle">Tracking</string>
 
     <string name="prefsDisplayTitle">Display</string>
+    <string name="prefsDisplaySummary">Configure screen and orientation behavior</string>
     <string name="prefsKeepScreenOnTitle">keep screen on</string>
     <string name="prefsNoUnlockingTitle">keep screen unlocked</string>
     <string name="prefZoomDependingOnSpeedTitle">zoom depends on speed</string>

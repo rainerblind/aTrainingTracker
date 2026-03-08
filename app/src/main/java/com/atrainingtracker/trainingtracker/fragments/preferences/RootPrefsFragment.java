@@ -50,7 +50,7 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
     @Nullable
     private ListPreference mUnitPref;
     @Nullable
-    private Preference mZonesRunHR, mZonesBikeHR, mZonesBikePower, mExport, mCloudUpload;
+    private Preference mZonesRunHR, mZonesBikeHR, mZonesBikePower, mExport, mCloudUpload, mDisplayOptions;
 
     private SharedPreferences mSharedPreferences;
     private SettingsDataStore mSettingsDataStore;
@@ -97,6 +97,8 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
 
         mExport = this.getPreferenceScreen().findPreference(TrainingApplication.SP_EXPORT_FORMATS);
         mCloudUpload = this.getPreferenceScreen().findPreference(TrainingApplication.CLOUD_UPLOAD);
+
+        mDisplayOptions = this.getPreferenceScreen().findPreference(TrainingApplication.SP_DISPLAY_OPTIONS);
     }
 
     @Override
@@ -125,6 +127,8 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
 
         mExport.setSummary(exportSummary());
         mCloudUpload.setSummary(cloudUploadSummary());
+
+        mDisplayOptions.setSummary(displayOptionsSummary());
 
 
         mSharedPreferences.registerOnSharedPreferenceChangeListener(this);
@@ -203,6 +207,16 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
             getActivity().onContentChanged();
         }
 
+        if (TrainingApplication.SP_DISPLAY_OPTIONS.equals(key)) {
+            String displaySummary = displayOptionsSummary();
+            if (DEBUG) Log.i(TAG, "updating displayOptionsSummary to " + displaySummary);
+            mDisplayOptions.setSummary(displaySummary);
+            // This ensures the UI refreshes the text immediately
+            if (getActivity() != null) {
+                getActivity().runOnUiThread(() -> mDisplayOptions.setSummary(displaySummary));
+            }
+        }
+
         if (TrainingApplication.SP_NUMBER_OF_SEARCH_TRIES.equals(key)) {
             mSearchRoundsPref.setSummary(TrainingApplication.getNumberOfSearchTries() + "");
         }
@@ -259,6 +273,34 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
         }
 
         return cloudUpload;
+    }
+
+    String displayOptionsSummary() {
+        if (DEBUG) Log.i(TAG, "displayOptionsSummary()");
+
+        String displayOptions = null;
+
+        if (TrainingApplication.forcePortrait()) {
+            displayOptions = incString(displayOptions);
+            displayOptions += getString(R.string.forcePortrait);
+        }
+
+        if (TrainingApplication.keepScreenOn()) {
+            displayOptions = incString(displayOptions);
+            displayOptions += getString(R.string.prefsKeepScreenOnTitle);
+        }
+
+        if (TrainingApplication.NoUnlocking()) {
+            displayOptions = incString(displayOptions);
+            displayOptions += getString(R.string.prefsNoUnlockingTitle);
+        }
+
+        if (displayOptions == null) {
+            // Default text if nothing is selected
+            displayOptions = getString(R.string.prefsDisplaySummary);
+        }
+
+        return displayOptions;
     }
 
     @NonNull
