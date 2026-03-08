@@ -223,4 +223,19 @@
     </string-array>
 
 
+    <!-- Export formats -->
+    <string-array name="export_formats_title">
+        <item>TCX</item>
+        <item>GPX</item>
+        <item>Golden Cheetah JSON</item>
+        <item>CSV</item>
+    </string-array>
+
+    <string-array name="export_formats_values">
+        <item>TCX</item>
+        <item>GPX</item>
+        <item>GC_JSON</item>
+        <item>CSV</item>
+    </string-array>
+
 </resources>

@@ -50,7 +50,7 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
     @Nullable
     private ListPreference mUnitPref;
     @Nullable
-    private Preference mZonesRunHR, mZonesBikeHR, mZonesBikePower, mExport, mCloudUpload;
+    private Preference mZonesRunHR, mZonesBikeHR, mZonesBikePower, mFileExportFormats, mCloudUpload;
 
     private SharedPreferences mSharedPreferences;
     private SettingsDataStore mSettingsDataStore;
@@ -95,7 +95,7 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
 
         mSearchRoundsPref = getPreferenceScreen().findPreference(TrainingApplication.SP_NUMBER_OF_SEARCH_TRIES);
 
-        mExport = this.getPreferenceScreen().findPreference(TrainingApplication.FILE_EXPORT);
+        mFileExportFormats = this.getPreferenceScreen().findPreference(TrainingApplication.SP_EXPORT_FORMATS);
         mCloudUpload = this.getPreferenceScreen().findPreference(TrainingApplication.CLOUD_UPLOAD);
     }
 
@@ -123,7 +123,7 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
         mSearchRoundsPref.setSummary(TrainingApplication.getNumberOfSearchTries() + "");
 
 
-        mExport.setSummary(exportSummary());
+        mFileExportFormats.setSummary(exportSummary());
         mCloudUpload.setSummary(cloudUploadSummary());
 
 
@@ -186,13 +186,10 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
             mUnitPref.setSummary(TrainingApplication.getUnit().toString());
         }
 
-        if (TrainingApplication.SP_EXPORT_TO_CSV.equals(key)
-                || TrainingApplication.SP_EXPORT_TO_TCX.equals(key)
-                || TrainingApplication.SP_EXPORT_TO_GPX.equals(key)
-                || TrainingApplication.SP_EXPORT_TO_GC_JSON.equals(key)) {
+        if (TrainingApplication.SP_EXPORT_FORMATS.equals(key)) {
             String exportSummary = exportSummary();
             Log.i(TAG, "updating exportSummary to " + exportSummary);
-            mExport.setSummary(exportSummary);
+            mFileExportFormats.setSummary(exportSummary);
             getActivity().onContentChanged();
         }
 

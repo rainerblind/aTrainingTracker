@@ -403,14 +403,6 @@
 
     <string name="prefsExportTitle">File Export</string>
     <string name="prefsExportSummary">File formats the workouts are exported to</string>
-    <string name="prefsExportToGCJsonTitle">Golden Cheetah json</string>
-    <string name="prefsExportToGCJsonSummary">Automatically export to Golden Cheetah json</string>
-    <string name="prefsExportToGarminTCXTitle" translatable="false">TCX</string>
-    <string name="prefsExportToGarminTCXSummary">Automatically export to TCX</string>
-    <string name="prefsExportToGPXTitle" translatable="false">GPX</string>
-    <string name="prefsExportToGPXSummary">Automatically export to GPX</string>
-    <string name="prefsExportToCSVTitle" translatable="false">CSV</string>
-    <string name="prefsExportToCSVSummary">Automatically export to CSV</string>
 
     <string name="prefsUploadTitle">Upload</string>
     <string name="prefsUploadSummary">Upload to cloud services and online communities</string>

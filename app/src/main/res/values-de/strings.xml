@@ -339,11 +339,6 @@
 
     <string name="prefsExportTitle">Datei Export</string>
     <string name="prefsExportSummary">Dateiformate zu denen die Einheiten exportiert werden</string>
-    <string name="prefsExportToGCJsonTitle">Golden Cheetah json</string>
-    <string name="prefsExportToGCJsonSummary">Golden Cheetah json exportieren</string>
-    <string name="prefsExportToGarminTCXSummary">Nach TCX exportieren</string>
-    <string name="prefsExportToGPXSummary">Nach GPX exportieren</string>
-    <string name="prefsExportToCSVSummary">Nach CSV exportieren</string>
 
     <string name="prefsUploadTitle">Hochladen</string>
     <string name="prefsUploadSummary">Hochladen zu Cloud Diensten und Online Communities</string>

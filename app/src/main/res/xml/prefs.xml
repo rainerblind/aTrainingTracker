@@ -82,37 +82,14 @@
         android:icon="@drawable/ic_upload"
         android:layout="@layout/preference_category">
 
-        <PreferenceScreen
+        <MultiSelectListPreference
+            android:key="pref_export_formats"
             android:icon="@drawable/ic_save_to_disc"
-            android:key="fileExport"
-            android:summary="@string/prefsExportSummary"
             android:title="@string/prefsExportTitle"
-            android:layout="@layout/preference_slim">
-            <CheckBoxPreference
-                android:defaultValue="false"
-                android:key="exportToGarminTCX"
-                android:summary="@string/prefsExportToGarminTCXSummary"
-                android:title="@string/prefsExportToGarminTCXTitle"
-                android:layout="@layout/preference_slim"/>
-            <CheckBoxPreference
-                android:defaultValue="false"
-                android:key="exportToGPX"
-                android:summary="@string/prefsExportToGPXSummary"
-                android:title="@string/prefsExportToGPXTitle"
-                android:layout="@layout/preference_slim"/>
-            <CheckBoxPreference
-                android:defaultValue="false"
-                android:key="exportToGCJson"
-                android:summary="@string/prefsExportToGCJsonSummary"
-                android:title="@string/prefsExportToGCJsonTitle"
-                android:layout="@layout/preference_slim"/>
-            <CheckBoxPreference
-                android:defaultValue="false"
-                android:key="exportToCSV"
-                android:summary="@string/prefsExportToCSVSummary"
-                android:title="@string/prefsExportToCSVTitle"
-                android:layout="@layout/preference_slim"/>
-        </PreferenceScreen>
+            android:summary="@string/prefsExportSummary"
+            android:entries="@array/export_formats_title"
+            android:entryValues="@array/export_formats_values"
+            android:layout="@layout/preference_slim"/>
 
         <PreferenceScreen
             android:icon="@drawable/ic_cloud_upload"

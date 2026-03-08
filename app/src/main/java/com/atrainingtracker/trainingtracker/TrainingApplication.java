@@ -71,6 +71,7 @@ import com.dropbox.core.json.JsonReadException;
 import com.dropbox.core.oauth.DbxCredential;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Locale;
 
 public class TrainingApplication extends Application {
@@ -95,7 +96,6 @@ public class TrainingApplication extends Application {
     // configure search behaviour
     public static final String PREF_KEY_START_SEARCH = "start_search";
     public static final String SP_NUMBER_OF_SEARCH_TRIES = "numberOfSearchTries";
-    public static final String FILE_EXPORT = "fileExport";
     public static final String CLOUD_UPLOAD = "cloudUpload";
     //    protected static final String SP_DROPBOX_KEY       = "dropboxKey";
 //    protected static final String SP_DROPBOX_SECRET    = "dropboxSecret";
@@ -118,10 +118,7 @@ public class TrainingApplication extends Application {
     public static final String SP_TRAINING_PEAKS_REFRESH_TOKEN = "trainingPeaksRefreshToken";
     // public static final String SP_DISPLAY_UPDATE_TIME     = "displayUpdateTime";
     public static final String SP_LACTATE_THRESHOLD_POWER = "lactateThresholdPower";
-    public static final String SP_EXPORT_TO_CSV = "exportToCSV";
-    public static final String SP_EXPORT_TO_TCX = "exportToGarminTCX";
-    public static final String SP_EXPORT_TO_GPX = "exportToGPX";
-    public static final String SP_EXPORT_TO_GC_JSON = "exportToGCJson";
+    public static final String SP_EXPORT_FORMATS = "pref_export_formats";
     public static final String SP_CHECK_ANT_INSTALLATION = "checkANTInstallation";
     public static final String MIN_WALK_SPEED = "minWalkSpeed";
     public static final String MAX_WALK_SPEED = "maxWalkSpeed";
@@ -647,36 +644,21 @@ public class TrainingApplication extends Application {
         // cSharedPreferences.getBoolean(SP_DEFAULT_TO_PRIVATE, false);
     }
 
+    // File exports
     public static boolean exportToTCX() {
-        return cSharedPreferences.getBoolean(SP_EXPORT_TO_TCX, false);
+        return cSharedPreferences.getStringSet(SP_EXPORT_FORMATS, new HashSet<>()).contains("TCX");
     }
 
     public static boolean exportToGPX() {
-        return cSharedPreferences.getBoolean(SP_EXPORT_TO_GPX, false);
+        return cSharedPreferences.getStringSet(SP_EXPORT_FORMATS, new HashSet<>()).contains("GPX");
     }
 
     public static boolean exportToCSV() {
-        return cSharedPreferences.getBoolean(SP_EXPORT_TO_CSV, false);
+        return cSharedPreferences.getStringSet(SP_EXPORT_FORMATS, new HashSet<>()).contains("CSV");
     }
 
     public static boolean exportToGCJson() {
-        return cSharedPreferences.getBoolean(SP_EXPORT_TO_GC_JSON, false);
-    }
-
-    public static void setExportToTCX(boolean value) {
-        cSharedPreferences.edit().putBoolean(SP_EXPORT_TO_TCX, value).apply();
-    }
-
-    public static void setExportToGPX(boolean value) {
-        cSharedPreferences.edit().putBoolean(SP_EXPORT_TO_GPX, value).apply();
-    }
-
-    public static void setExportToCSV(boolean value) {
-        cSharedPreferences.edit().putBoolean(SP_EXPORT_TO_CSV, value).apply();
-    }
-
-    public static void setExportToGCJson(boolean value) {
-        cSharedPreferences.edit().putBoolean(SP_EXPORT_TO_GC_JSON, value).apply();
+        return cSharedPreferences.getStringSet(SP_EXPORT_FORMATS, new HashSet<>()).contains("GC_JSON");
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
