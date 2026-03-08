@@ -34,17 +34,6 @@
             android:icon="@drawable/ic_square_foot"
             android:layout="@layout/preference_slim"/>
 
-        <Preference
-            android:key="training_zones_settings"
-            android:title="@string/prefs_training_zones"
-            android:summary="@string/prefs_training_zones_summary"
-            android:icon="@drawable/ic_cell_5_bar"
-            android:layout="@layout/preference_slim"/>
-        <!-- android:icon="@drawable/ic_cardiology"/> -->
-        <!-- android:icon="@drawable/ic_cardio_load"/> -->
-
-        <!-- TODO android:icon="@drawable/ic_heart_rate" /> -->
-
         <PreferenceScreen
             android:key="sportTypes"
             android:summary="@string/configure_sport_types"
@@ -57,6 +46,40 @@
         </PreferenceScreen>
 
     </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="@string/prefs_training_zones"
+        android:summary="@string/prefs_training_zones_summary"
+        android:layout="@layout/preference_category">
+        <!-- android:layout="@layout/preference_slim"/> -->
+        <!-- android:icon="@drawable/ic_cardiology"/> -->
+        <!-- android:icon="@drawable/ic_cardio_load"/> -->
+        <!-- android:icon="@drawable/ic_heart_rate" /> ic_cell_5_bar-->
+
+        <Preference
+            android:key="zones_hr_run"
+            android:title="@string/tab_hr_run"
+            android:icon="@drawable/ic_zones_hr_run_combined"
+            android:layout="@layout/preference_slim"
+            android:order="2" />
+
+        <Preference
+            android:key="zones_hr_bike"
+            android:title="@string/tab_hr_bike"
+            android:icon="@drawable/ic_zones_hr_bike_combined"
+            android:layout="@layout/preference_slim"
+            android:order="3" />
+
+        <Preference
+            android:key="zones_pwr_bike"
+            android:title="@string/tab_pwr_bike"
+            android:icon="@drawable/ic_zones_pwr_bike_combined"
+            android:layout="@layout/preference_slim"
+            android:order="4" />
+
+
+    </PreferenceCategory>
+
 
     <PreferenceCategory
         android:title="@string/prefs_Export"

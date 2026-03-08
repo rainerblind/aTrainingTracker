@@ -8,6 +8,6 @@
     android:paddingTop="24dp"
     android:paddingBottom="8dp"
     android:textColor="@color/color_primary"
-    android:textSize="20sp"
+    android:textSize="18sp"
     android:textStyle="bold"
     android:textAllCaps="false" />

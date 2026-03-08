@@ -50,7 +50,7 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
     @Nullable
     private ListPreference mUnitPref;
     @Nullable
-    private Preference mTrainingZonesPref, mExport, mCloudUpload;
+    private Preference mZonesRunHR, mZonesBikeHR, mZonesBikePower, mExport, mCloudUpload;
 
     private SharedPreferences mSharedPreferences;
     private SettingsDataStore mSettingsDataStore;
@@ -66,14 +66,33 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
 
         mUnitPref = getPreferenceScreen().findPreference(TrainingApplication.SP_UNITS);
 
-        mTrainingZonesPref = getPreferenceScreen().findPreference("training_zones_settings");
-        if (mTrainingZonesPref != null) {
-            mTrainingZonesPref.setOnPreferenceClickListener(preference -> {
-                Intent intent = new Intent(getActivity(), ZonesSettingsActivity.class);
-                startActivity(intent);
+        // HR Run Zones
+        mZonesRunHR = findPreference("zones_hr_run");
+        if (mZonesRunHR != null) {
+            mZonesRunHR.setOnPreferenceClickListener(preference -> {
+                startZonesActivity(0); // Index for Run
                 return true;
             });
         }
+
+        // HR Bike Zones
+        mZonesBikeHR = findPreference("zones_hr_bike");
+        if (mZonesBikeHR != null) {
+            mZonesBikeHR.setOnPreferenceClickListener(preference -> {
+                startZonesActivity(1); // Index for Bike
+                return true;
+            });
+        }
+
+        // Power Bike Zones
+        mZonesBikePower = findPreference("zones_pwr_bike");
+        if (mZonesBikePower != null) {
+            mZonesBikePower.setOnPreferenceClickListener(preference -> {
+                startZonesActivity(2); // Index for Power
+                return true;
+            });
+        }
+
         mSearchRoundsPref = getPreferenceScreen().findPreference(TrainingApplication.SP_NUMBER_OF_SEARCH_TRIES);
 
         mExport = this.getPreferenceScreen().findPreference(TrainingApplication.FILE_EXPORT);
@@ -97,7 +116,9 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
 
         mUnitPref.setSummary(TrainingApplication.getUnit().getNameId());
 
-        updateTrainingZonesSummary();
+        updateZonesRunHRSummary();
+        updateZonesBikeHRSummary();
+        updateZonesBikePowerSummary();
 
         mSearchRoundsPref.setSummary(TrainingApplication.getNumberOfSearchTries() + "");
 
@@ -109,17 +130,44 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
         mSharedPreferences.registerOnSharedPreferenceChangeListener(this);
     }
 
-    private void updateTrainingZonesSummary() {
-        if (mTrainingZonesPref != null && mSettingsDataStore != null) {
+    private void startZonesActivity(int tabIndex) {
+        Intent intent = new Intent(getActivity(), ZonesSettingsActivity.class);
+        intent.putExtra("TARGET_ZONE_TAB", tabIndex);
+        startActivity(intent);
+    }
+
+    private void updateZonesRunHRSummary() {
+        if (mZonesRunHR != null && mSettingsDataStore != null) {
             try {
                 // Fetch the summary string from the Kotlin helper
-                String summary = getString(R.string.tab_hr_run) + ":\n" + mSettingsDataStore.getSummary(SettingsDataStore.ZoneType.HR_RUN);
-                summary += "\n\n" + getString(R.string.tab_hr_bike) + ":\n" + mSettingsDataStore.getSummary(SettingsDataStore.ZoneType.HR_BIKE);
-                summary += "\n\n" + getString(R.string.tab_pwr_bike) + ":\n" + mSettingsDataStore.getSummary(SettingsDataStore.ZoneType.PWR_BIKE);
-                mTrainingZonesPref.setSummary(summary);
+                mZonesRunHR.setSummary(mSettingsDataStore.getSummary(SettingsDataStore.ZoneType.HR_RUN));
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to load HR Zones summary for run HR", e);
+                mZonesRunHR.setSummary("Configure your run HR training zones");
+            }
+        }
+    }
+
+    private void updateZonesBikeHRSummary() {
+        if (mZonesBikeHR != null && mSettingsDataStore != null) {
+            try {
+                // Fetch the summary string from the Kotlin helper
+                mZonesBikeHR.setSummary(mSettingsDataStore.getSummary(SettingsDataStore.ZoneType.HR_BIKE));
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to load HR Zones summary for bike HR", e);
+                mZonesBikeHR.setSummary("Configure your bike HR training zones");
+            }
+        }
+    }
+
+    private void updateZonesBikePowerSummary() {
+        if (mZonesBikePower != null && mSettingsDataStore != null) {
+            try {
+                // Fetch the summary string from the Kotlin helper
+                mZonesBikePower.setSummary(mSettingsDataStore.getSummary(SettingsDataStore.ZoneType.PWR_BIKE));
             } catch (Exception e) {
                 Log.e(TAG, "Failed to load HR Zones summary", e);
-                mTrainingZonesPref.setSummary("Configure your training zones");
+                mZonesBikePower.setSummary("Configure your bike power training zones");
             }
         }
     }

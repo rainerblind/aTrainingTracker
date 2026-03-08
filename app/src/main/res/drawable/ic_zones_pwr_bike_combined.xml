@@ -10,13 +10,13 @@
 
     <item
         android:drawable="@drawable/ic_directions_bike"
-        android:width="14dp"
-        android:height="14dp"
-        android:gravity="top|left" />
+        android:width="18dp"
+        android:height="18dp"
+        android:gravity="bottom|left" />
 
     <item
-        android:drawable="@drawable/ic_directions_run"
-        android:width="14dp"
-        android:height="14dp"
-        android:gravity="bottom|right" />
+        android:drawable="@drawable/ic_cell_5_bar"
+        android:width="8dp"
+        android:height="8dp"
+        android:gravity="top|right" />
 </layer-list>

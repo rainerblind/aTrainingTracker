@@ -9,14 +9,14 @@
     </item>
 
     <item
-        android:drawable="@drawable/ic_directions_bike"
-        android:width="14dp"
-        android:height="14dp"
-        android:gravity="top|left" />
+        android:drawable="@drawable/ic_directions_run"
+        android:width="18dp"
+        android:height="18dp"
+        android:gravity="bottom|left" />
 
     <item
-        android:drawable="@drawable/ic_directions_run"
-        android:width="14dp"
-        android:height="14dp"
-        android:gravity="bottom|right" />
+        android:drawable="@drawable/ic_cardiology"
+        android:width="10dp"
+        android:height="10dp"
+        android:gravity="top|right" />
 </layer-list>

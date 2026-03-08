@@ -36,9 +36,14 @@ import kotlinx.coroutines.withContext
 class ZonesSettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Retrieve the target tab index from the intent, default to 0
+        val targetTab = intent.getIntExtra("TARGET_ZONE_TAB", 0)
+
         setContent {
             MaterialTheme {
-                SettingsScreenRoute()
+                // Pass the initial tab to the route
+                SettingsScreenRoute(initialTab = targetTab)
             }
         }
     }
@@ -55,7 +60,10 @@ data class ZoneProfileState(
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun SettingsScreenRoute(onFinish: () -> Unit = {}) {
+fun SettingsScreenRoute(
+    initialTab: Int = 0,
+    onFinish: () -> Unit = {}
+) {
     val context = LocalContext.current
     val dataStore = remember { SettingsDataStore(context) }
     val scope = rememberCoroutineScope()
@@ -116,8 +124,11 @@ fun SettingsScreenRoute(onFinish: () -> Unit = {}) {
         }
     }
 
-    // Pager State
-    val pagerState = rememberPagerState(pageCount = { profileNameResIds.size })
+    // Update the Pager State to start at initialTab
+    val pagerState = rememberPagerState(
+        initialPage = initialTab, // Initialize with the passed value
+        pageCount = { profileNameResIds.size }
+    )
 
     Scaffold(
         topBar = { TopAppBar(title = { Text(stringResource(R.string.title_edit_zones)) }) }
