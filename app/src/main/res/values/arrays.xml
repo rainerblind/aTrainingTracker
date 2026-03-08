@@ -28,15 +28,6 @@
         <item>@string/IMPERIAL</item>
     </string-array>
 
-    <string-array name="PebbleWatchapps">
-        <item>@string/pebble_build_in</item>
-        <item>@string/pebble_a_training_tracker_watchapp</item>
-    </string-array>
-    <string-array name="PebbleWatchapps_values">
-        <item>@string/BUILD_IN</item>
-        <item>@string/TRAINING_TRACKER</item>
-    </string-array>
-
     <string-array name="Basic_Sport_Types">
         <item>@string/sport_type_other</item>
         <item>@string/sport_type_run</item>
