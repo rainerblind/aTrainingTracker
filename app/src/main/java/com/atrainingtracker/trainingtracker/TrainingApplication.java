@@ -373,10 +373,6 @@ public class TrainingApplication extends Application {
         return cSharedPreferences.getStringSet(SP_DISPLAY_OPTIONS, DEFAULT_DISPLAY_OPTIONS).contains("noUnlocking");
     }
 
-    public static boolean showUnits() {
-        return cSharedPreferences.getBoolean(SP_SHOW_UNITS, true);
-    }
-
     @NonNull
     public static String getAppName() {
         return cAppContext.getString(R.string.application_name);
