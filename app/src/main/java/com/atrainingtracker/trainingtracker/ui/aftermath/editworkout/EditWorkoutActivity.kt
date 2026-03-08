@@ -1,3 +1,21 @@
+/*
+ * aTrainingTracker (ANT+ BTLE)
+ * Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+ */
+
 package com.atrainingtracker.trainingtracker.ui.aftermath.editworkout
 
 import android.app.Activity
@@ -12,6 +30,7 @@ import android.widget.Toast
 import androidx.core.widget.doOnTextChanged
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.layout.add
 import androidx.lifecycle.ViewModelProvider
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
@@ -309,6 +328,7 @@ class EditWorkoutActivity : AppCompatActivity() {
 
                 // First, get the selected equipment
                 val selectedEquipment = parent?.getItemAtPosition(position) as? String
+                val noEquipmentString = getString(R.string.equipment_none)
 
                 // This is the "Show all equipment" item
                 if (selectedEquipment == getString(R.string.equipment_all)
@@ -316,7 +336,12 @@ class EditWorkoutActivity : AppCompatActivity() {
                     || selectedEquipment == getString(R.string.equipment_all_bikes)) {  // -> user selected 'show all equipment/shoes/bikes'
                     setupEquipmentSpinner(newEquipmentData,true)         // Rebuild the spinner with all items
                     spinnerEquipment.performClick() // Open the spinner for the user to select again
-                } else {
+                }
+                else if (selectedEquipment == noEquipmentString) {
+                    // User selected "No Equipment", so we update the ViewModel with null.
+                    viewModel.updateEquipmentName(null)
+                }
+                else {
                     // A regular equipment was selected  -> update the view model
                     viewModel.updateEquipmentName(selectedEquipment)
                 }
@@ -409,6 +434,12 @@ class EditWorkoutActivity : AppCompatActivity() {
             equipmentList.add(getString(allEquipmentId))
         }
 
+        // Add the "No Equipment" option to the top of the list
+        val noEquipmentString = getString(R.string.equipment_none) // Create this string resource
+        if (!equipmentList.contains(noEquipmentString)) {
+            equipmentList.add(0, noEquipmentString)
+        }
+
         // change visibility depending the the list of equipment
         if (equipmentList.isEmpty()) {
             spinnerEquipment.visibility = View.GONE
@@ -427,7 +458,9 @@ class EditWorkoutActivity : AppCompatActivity() {
         spinnerEquipment.adapter = equipmentAdapter
 
         // Set the current selection after the adapter has been set
-        val selectionIndex = equipmentList.indexOf(newEquipmentName).takeIf { it >= 0 } ?: 0
+        val currentEquipment = newEquipmentName ?: noEquipmentString // If current is null, select "No Equipment"
+        // val selectionIndex = equipmentList.indexOf(newEquipmentName).takeIf { it >= 0 } ?: 0
+        val selectionIndex = equipmentList.indexOf(currentEquipment)
         spinnerEquipment.setSelection(selectionIndex)
     }
 

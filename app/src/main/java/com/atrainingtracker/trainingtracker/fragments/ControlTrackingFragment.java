@@ -1,6 +1,6 @@
 /*
  * aTrainingTracker (ANT+ BTLE)
- * Copyright (C) 2011 - 2019 Rainer Blind <rainer.blind@gmail.com>
+ * Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -168,15 +168,23 @@ public class ControlTrackingFragment extends BaseTrackingFragment {
 
         FragmentManager fragmentManager = getFragmentManager();
 
-        TrackingModeFragment trackingModeFragment = new TrackingModeFragment();
-        FragmentTransaction ft = fragmentManager.beginTransaction();
-        ft.replace(R.id.tracking_mode_container, trackingModeFragment);
-        ft.commitAllowingStateLoss();
+        // FIX 1: Use getChildFragmentManager() for fragments inside this layout
+        FragmentManager childFragmentManager = getChildFragmentManager();
 
-        ControlSportTypeFragment controlSportTypeFragment = new ControlSportTypeFragment();
-        ft = fragmentManager.beginTransaction();
-        ft.replace(R.id.ctl_control_sport_type_container, controlSportTypeFragment);
-        ft.commitAllowingStateLoss();
+        // Check if fragment is already there to avoid overlapping on orientation change
+        if (childFragmentManager.findFragmentById(R.id.tracking_mode_container) == null) {
+            TrackingModeFragment trackingModeFragment = new TrackingModeFragment();
+            childFragmentManager.beginTransaction()
+                    .replace(R.id.tracking_mode_container, trackingModeFragment)
+                    .commit();
+        }
+
+        if (childFragmentManager.findFragmentById(R.id.ctl_control_sport_type_container) == null) {
+            ControlSportTypeFragment controlSportTypeFragment = new ControlSportTypeFragment();
+            childFragmentManager.beginTransaction()
+                    .replace(R.id.ctl_control_sport_type_container, controlSportTypeFragment)
+                    .commit();
+        }
 
 
         // set the handlers for the main tracking control buttons (start, pause, resume, stop)

@@ -1,6 +1,6 @@
 /*
  * aTrainingTracker (ANT+ BTLE)
- * Copyright (C) 2011 - 2019 Rainer Blind <rainer.blind@gmail.com>
+ * Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -135,7 +135,7 @@ public class ExportManager {
         // 3. now, set all relevant to TRACKING
 
         for (FileFormat fileFormat : ExportType.FILE.getExportToFileFormats()) {
-            if (TrainingApplication.exportToFile(fileFormat) || TrainingApplication.exportViaEmail(fileFormat)) {
+            if (TrainingApplication.exportToFile(fileFormat)) {
                 mRepository.updateExportStatus(TRACKING, fileBaseName, ExportType.FILE, fileFormat);
             }
         }
@@ -184,7 +184,7 @@ public class ExportManager {
         if (DEBUG) Log.d(TAG, "exportWorkout: " + fileBaseName);
 
         for (FileFormat fileFormat : FileFormat.values()) {
-            if (TrainingApplication.exportToFile(fileFormat) || TrainingApplication.exportViaEmail(fileFormat)) {
+            if (TrainingApplication.exportToFile(fileFormat)) {
                 startFullExportProcess(fileBaseName, fileFormat);
             }
         }

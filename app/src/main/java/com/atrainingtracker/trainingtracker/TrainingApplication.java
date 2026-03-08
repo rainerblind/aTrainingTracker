@@ -1,6 +1,6 @@
 /*
  * aTrainingTracker (ANT+ BTLE)
- * Copyright (C) 2011 - 2019 Rainer Blind <rainer.blind@gmail.com>
+ * Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -59,27 +59,22 @@ import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigatio
 import com.atrainingtracker.trainingtracker.exporter.FileFormat;
 import com.atrainingtracker.trainingtracker.helpers.CalcExtremaWorker;
 import com.atrainingtracker.trainingtracker.tracker.TrackerService;
-import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager;
-import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager;
-import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
-import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapHelper;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaSegmentsHelper;
 import com.atrainingtracker.trainingtracker.segments.SegmentOnMapHelper;
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager;
-import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleDatabaseManager;
-import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleService;
-import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleServiceBuildIn;
-import com.atrainingtracker.trainingtracker.smartwatch.pebble.Watchapp;
 import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutActivity;
 import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapAftermathActivity;
 import com.dropbox.core.json.JsonReadException;
 import com.dropbox.core.oauth.DbxCredential;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Set;
 
 public class TrainingApplication extends Application {
     private static final boolean DEBUG = true;
@@ -94,33 +89,22 @@ public class TrainingApplication extends Application {
     public static final String REQUEST_CHANGE_SPORT_TYPE = "com.atrainingtracker.trainingapplication.REQUEST_CHANGE_SPORT_TYPE";
     public static final String SPORT_TYPE_ID = "com.atrainingtracker.trainingapplication.SPORT_TYPE_ID";
     // TODO: also move these Strings to string.xml???
+    public static final String SP_DISPLAY_OPTIONS = "pref_display_options";
+    private static final Set<String> DEFAULT_DISPLAY_OPTIONS = new HashSet<>(Arrays.asList(
+            "forcePortrait",
+            "keepScreenOn",
+            "noUnlocking"
+    ));
     public static final String SP_UNITS = "listUnits";
-    public static final String SP_FORCE_PORTRAIT = "forcePortrait";
-    public static final String SP_KEEP_SCREEN_ON = "keepScreenOn";
-    public static final String SP_NO_UNLOCKING = "noUnlocking";
-    public static final String SP_ZOOM_DEPENDING_ON_SPEED = "zoomDependingOnSpeed";
-    public static final String SP_SHOW_UNITS = "showUnits";
+
     // configure search behaviour
-    public static final String PREF_KEY_START_SEARCH = "start_search";
-    public static final String SP_NUMBER_OF_SEARCH_TRIES = "numberOfSearchTries";
-    public static final String PEBBLE_SCREEN = "pebbleScreen";
-    public static final String SP_PEBBLE_SUPPORT = "PebbleSupport";
-    public static final String SP_PEBBLE_WATCHAPP = "listPebbleWatchapps";
-    public static final String SP_SHOW_PEBBLE_INSTALL_DIALOG = "showPebbleInstallDialog";
-    public static final String SP_CONFIGURE_PEBBLE_DISPLAY = "configurePebbleDisplays";
-    public static final String FILE_EXPORT = "fileExport";
+    public static final String SP_NUMBER_OF_SEARCH_TRIES_INT = "numberOfSearchTriesInt";
+    private static final int DEFAULT_NUMBER_OF_SEARCH_TRIES = 3;
+
     public static final String CLOUD_UPLOAD = "cloudUpload";
     //    protected static final String SP_DROPBOX_KEY       = "dropboxKey";
 //    protected static final String SP_DROPBOX_SECRET    = "dropboxSecret";
     public static final String SP_UPLOAD_TO_DROPBOX = "uploadToDropbox";
-    public static final String PREFERENCE_SCREEN_EMAIL_UPLOAD = "psSendEmail";
-    public static final String SP_SEND_EMAIL = "spSendWorkoutEmail";
-    public static final String SP_EMAIL_ADDRESS = "spEmailAddress";
-    public static final String SP_EMAIL_SUBJECT = "spEmailSubject";
-    public static final String SP_SEND_TCX_EMAIL = "spSendTCXEmail";
-    public static final String SP_SEND_GPX_EMAIL = "spSendGPXEmail";
-    public static final String SP_SEND_CSV_EMAIL = "spSendCSVEmail";
-    public static final String SP_SEND_GC_EMAIL = "spSendGCEmail";
     public static final String PREFERENCE_SCREEN_STRAVA = "psUploadToStrava";
     public static final String SP_UPLOAD_TO_STRAVA = "uploadToStrava";
     public static final String SP_STRAVA_TOKEN = "stravaToken";
@@ -138,11 +122,7 @@ public class TrainingApplication extends Application {
     public static final String SP_TRAINING_PEAKS_ACCESS_TOKEN = "trainingPeaksAccessToken";
     public static final String SP_TRAINING_PEAKS_REFRESH_TOKEN = "trainingPeaksRefreshToken";
     // public static final String SP_DISPLAY_UPDATE_TIME     = "displayUpdateTime";
-    public static final String SP_LACTATE_THRESHOLD_POWER = "lactateThresholdPower";
-    public static final String SP_EXPORT_TO_CSV = "exportToCSV";
-    public static final String SP_EXPORT_TO_TCX = "exportToGarminTCX";
-    public static final String SP_EXPORT_TO_GPX = "exportToGPX";
-    public static final String SP_EXPORT_TO_GC_JSON = "exportToGCJson";
+    public static final String SP_EXPORT_FORMATS = "pref_export_formats";
     public static final String SP_CHECK_ANT_INSTALLATION = "checkANTInstallation";
     public static final String MIN_WALK_SPEED = "minWalkSpeed";
     public static final String MAX_WALK_SPEED = "maxWalkSpeed";
@@ -156,18 +136,13 @@ public class TrainingApplication extends Application {
     protected static final String NOTIFICATION_CHANNEL__TRACKING_2 = "NOTIFICATION_CHANNEL__TRACKING_2";
     public static final String NOTIFICATION_CHANNEL__EXPORT = "NOTIFICATION_CHANNEL__EXPORT";
     public static final int TRACKING_NOTIFICATION_ID = 1;
-    public static final int EXPORT_PROGRESS_NOTIFICATION_ID = 2;
-    public static final int EXPORT_RESULT_NOTIFICATION_ID = 3;
-    public static final int SEND_EMAIL_NOTIFICATION_ID = 4;
 
-    public static final float MIN_DISTANCE_BETWEEN_START_AND_STOP = 100;
     public static final double DISTANCE_TO_MAX_THRESHOLD_FOR_TRAINER = 200;
     public static final double DISTANCE_TO_MAX_RATIO_FOR_COMMUTE = Math.PI / 2; // probably the best value ;-)
     protected static final String SP_DROPBOX_CREDENTIAL = "dropboxCredential";
     private static final String TAG = "TrainingApplication";
     private static final String SP_PLAY_SERVICE_INSTALLATION_TRIES = "playServiceInstallationTries";
     private static final int MAX_PLAY_SERVICE_INSTALLATION_TRIES = 10;
-    private static final int DEFAULT_NUMBER_OF_SEARCH_TRIES = 3;
     private static final String SP_START_SEARCH_WHEN_APP_STARTS = "startSearchWhenAppStarts";
     private static final boolean START_SEARCH_WHEN_APP_STARTS_DEFAULT = true;
     private static final String SP_START_SEARCH_WHEN_TRACKING_STARTS = "startSearchWhenTrackingStarts";
@@ -221,8 +196,6 @@ public class TrainingApplication extends Application {
             setWorkoutID(intent.getLongExtra(WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_ID, -1));
         }
     };
-    @Nullable
-    private Watchapp startedWatchapp = null;
     protected final BroadcastReceiver mTrackingStoppedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -318,17 +291,7 @@ public class TrainingApplication extends Application {
     }
 
     public static int getNumberOfSearchTries() {
-        String numberOfSearchTries = cSharedPreferences.getString(SP_NUMBER_OF_SEARCH_TRIES, null);
-        if (DEBUG) Log.i(TAG, "number of search tries=" + numberOfSearchTries);
-        if (numberOfSearchTries == null || numberOfSearchTries.isEmpty()) {
-            return DEFAULT_NUMBER_OF_SEARCH_TRIES;
-        } else {
-            try {
-                return Integer.parseInt(numberOfSearchTries);
-            } catch (Exception e) {
-                return DEFAULT_NUMBER_OF_SEARCH_TRIES;
-            }
-        }
+        return cSharedPreferences.getInt(SP_NUMBER_OF_SEARCH_TRIES_INT, DEFAULT_NUMBER_OF_SEARCH_TRIES);
     }
 
     public static boolean startSearchWhenAppStarts() {
@@ -357,36 +320,6 @@ public class TrainingApplication extends Application {
 
     public static boolean searchOnlyForSportSpecificDevices() {
         return cSharedPreferences.getBoolean(SP_SEARCH_ONLY_FOR_SPORT_SPECIFIC_DEVICES, SEARCH_ONLY_FOR_SPORT_SPECIFIC_DEVICES_DEFAULT);
-    }
-
-    public static boolean sendEmail() {
-        return cSharedPreferences.getBoolean(SP_SEND_EMAIL, false);
-    }
-
-    @NonNull
-    public static String getSpEmailAddress() {
-        return cSharedPreferences.getString(SP_EMAIL_ADDRESS, "first.last@example.com");
-    }
-
-    @NonNull
-    public static String getSpEmailSubject() {
-        return cSharedPreferences.getString(SP_EMAIL_SUBJECT, getAppName());
-    }
-
-    public static boolean sendTCXEmail() {
-        return cSharedPreferences.getBoolean(SP_SEND_TCX_EMAIL, false);
-    }
-
-    public static boolean sendGPXEmail() {
-        return cSharedPreferences.getBoolean(SP_SEND_GPX_EMAIL, false);
-    }
-
-    public static boolean sendCSVEmail() {
-        return cSharedPreferences.getBoolean(SP_SEND_CSV_EMAIL, false);
-    }
-
-    public static boolean sendGCEmail() {
-        return cSharedPreferences.getBoolean(SP_SEND_GC_EMAIL, false);
     }
 
     public static boolean checkANTInstallation() {
@@ -421,41 +354,17 @@ public class TrainingApplication extends Application {
         return MyUnits.valueOf(cSharedPreferences.getString(SP_UNITS, MyUnits.METRIC.name()));
     }
 
-    public static boolean pebbleSupport() {
-        return cSharedPreferences.getBoolean(SP_PEBBLE_SUPPORT, false);
-    }
-
-    @NonNull
-    public static Watchapp getPebbleWatchapp() {
-        return Watchapp.valueOf(cSharedPreferences.getString(SP_PEBBLE_WATCHAPP, Watchapp.BUILD_IN.name()));
-    }
-
-    public static boolean showPebbleInstallDialog() {
-        return cSharedPreferences.getBoolean(SP_SHOW_PEBBLE_INSTALL_DIALOG, true);
-    }
-
-    public static void setShowPebbleInstallDialog(boolean value) {
-        cSharedPreferences.edit().putBoolean(SP_SHOW_PEBBLE_INSTALL_DIALOG, value).apply();
-    }
-
+    // -- Display options
     public static boolean forcePortrait() {
-        return cSharedPreferences.getBoolean(SP_FORCE_PORTRAIT, true);
+        return cSharedPreferences.getStringSet(SP_DISPLAY_OPTIONS, DEFAULT_DISPLAY_OPTIONS).contains("forcePortrait");
     }
 
     public static boolean keepScreenOn() {
-        return cSharedPreferences.getBoolean(SP_KEEP_SCREEN_ON, true);
+        return cSharedPreferences.getStringSet(SP_DISPLAY_OPTIONS, DEFAULT_DISPLAY_OPTIONS).contains("keepScreenOn");
     }
 
     public static boolean NoUnlocking() {
-        return cSharedPreferences.getBoolean(SP_NO_UNLOCKING, true);
-    }
-
-    public static boolean zoomDependsOnSpeed() {
-        return cSharedPreferences.getBoolean(SP_ZOOM_DEPENDING_ON_SPEED, true);
-    }  // TODO should default to false?
-
-    public static boolean showUnits() {
-        return cSharedPreferences.getBoolean(SP_SHOW_UNITS, true);
+        return cSharedPreferences.getStringSet(SP_DISPLAY_OPTIONS, DEFAULT_DISPLAY_OPTIONS).contains("noUnlocking");
     }
 
     @NonNull
@@ -717,36 +626,21 @@ public class TrainingApplication extends Application {
         // cSharedPreferences.getBoolean(SP_DEFAULT_TO_PRIVATE, false);
     }
 
+    // File exports
     public static boolean exportToTCX() {
-        return cSharedPreferences.getBoolean(SP_EXPORT_TO_TCX, false);
+        return cSharedPreferences.getStringSet(SP_EXPORT_FORMATS, new HashSet<>()).contains("TCX");
     }
 
     public static boolean exportToGPX() {
-        return cSharedPreferences.getBoolean(SP_EXPORT_TO_GPX, false);
+        return cSharedPreferences.getStringSet(SP_EXPORT_FORMATS, new HashSet<>()).contains("GPX");
     }
 
     public static boolean exportToCSV() {
-        return cSharedPreferences.getBoolean(SP_EXPORT_TO_CSV, false);
+        return cSharedPreferences.getStringSet(SP_EXPORT_FORMATS, new HashSet<>()).contains("CSV");
     }
 
     public static boolean exportToGCJson() {
-        return cSharedPreferences.getBoolean(SP_EXPORT_TO_GC_JSON, false);
-    }
-
-    public static void setExportToTCX(boolean value) {
-        cSharedPreferences.edit().putBoolean(SP_EXPORT_TO_TCX, value).apply();
-    }
-
-    public static void setExportToGPX(boolean value) {
-        cSharedPreferences.edit().putBoolean(SP_EXPORT_TO_GPX, value).apply();
-    }
-
-    public static void setExportToCSV(boolean value) {
-        cSharedPreferences.edit().putBoolean(SP_EXPORT_TO_CSV, value).apply();
-    }
-
-    public static void setExportToGCJson(boolean value) {
-        cSharedPreferences.edit().putBoolean(SP_EXPORT_TO_GC_JSON, value).apply();
+        return cSharedPreferences.getStringSet(SP_EXPORT_FORMATS, new HashSet<>()).contains("GC_JSON");
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -763,20 +657,6 @@ public class TrainingApplication extends Application {
             /* case TRAINING_PEAKS:
                 return uploadToTrainingPeaks(); */
         };
-    }
-
-    public static boolean exportViaEmail(FileFormat fileFormat) {
-        if (sendEmail()) {
-            return switch (fileFormat) {
-                case CSV -> sendCSVEmail();
-                case GC -> sendGCEmail();
-                case TCX -> sendTCXEmail();
-                case GPX -> sendGPXEmail();
-                default -> false;
-            };
-        } else {
-            return false;
-        }
     }
 
     public static boolean uploadToCommunity(@NonNull FileFormat fileFormat) {
@@ -1017,40 +897,6 @@ public class TrainingApplication extends Application {
         return mTrackingAndSearchingNotificationBuilder.build();
     }
 
-    public void startPebbleWatchapp() {
-        if (DEBUG) Log.d(TAG, "startPebbleWatchapp()");
-        if (pebbleSupport() && startedWatchapp == null) {
-            switch (getPebbleWatchapp()) {
-                case BUILD_IN:
-                    if (DEBUG) Log.d(TAG, "starting build in Pebble Watchapp Service");
-                    startService(new Intent(this, PebbleServiceBuildIn.class));
-                    break;
-
-                case TRAINING_TRACKER:
-                    if (DEBUG) Log.d(TAG, "starting Training Tracker Pebble Watchapp Service");
-                    startService(new Intent(this, PebbleService.class));
-                    break;
-            }
-            startedWatchapp = getPebbleWatchapp();
-        }
-    }
-
-    public void stopPebbleWatchapp() {
-        if (DEBUG) Log.d(TAG, "stopPebbleWatchapp()");
-        if (startedWatchapp != null) {
-            switch (startedWatchapp) {
-                case BUILD_IN:
-                    stopService(new Intent(this, PebbleServiceBuildIn.class));
-                    break;
-
-                case TRAINING_TRACKER:
-                    stopService(new Intent(this, PebbleService.class));
-                    break;
-            }
-        }
-        startedWatchapp = null;
-    }
-
     public void setIsSegmentListUpdating(long sportTypeId, boolean isUpdating) {
         if (DEBUG)
             Log.i(TAG, "setIsSegmentListUpdating, sportTypeId=" + sportTypeId + ", isUpdating=" + isUpdating);
@@ -1081,6 +927,7 @@ public class TrainingApplication extends Application {
         Toast.makeText(context, "TODO: " + text, Toast.LENGTH_SHORT).show();
     }
 
+    // TODO: Note that here notifyTrackingStateChanged is not called!
     public void setTracking() {
         cTrackingMode = TrackingMode.TRACKING;
     }
@@ -1106,8 +953,6 @@ public class TrainingApplication extends Application {
             intent.putExtra(TrackerService.START_TYPE, TrackerService.StartType.START_NORMAL.name());
         }
         startService(intent);
-
-        startPebbleWatchapp();
 
         cTrackingMode = TrackingMode.TRACKING;
         notifyTrackingStateChanged();
@@ -1139,7 +984,6 @@ public class TrainingApplication extends Application {
     }
 
     protected void stopTracking() {
-        stopPebbleWatchapp();
 
         stopService(new Intent(this, TrackerService.class));
 
@@ -1205,7 +1049,7 @@ public class TrainingApplication extends Application {
 
         channel = new NotificationChannel(NOTIFICATION_CHANNEL__EXPORT,
                 getString(R.string.notification_channel_name__export),
-                NotificationManager.IMPORTANCE_DEFAULT);
+                NotificationManager.IMPORTANCE_LOW);
         channel.setDescription(getString(R.string.notification_channel_description__export));
         notificationManager.createNotificationChannel(channel);
     }

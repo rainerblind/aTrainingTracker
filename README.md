@@ -30,7 +30,6 @@ your computer, waiting to be analyzed with your favorite software like WKO+, or 
 * Export to TCX, GPX, CSV, and Golden Cheetah.
 * Upload to Dropbox.
 * Upload to Strava.
-* Use your Pebble to display values.
 * When the app starts, it searches for all paired sensors and takes the data from the "best" available one.
 * The sport type (run, bike) is derived from the available remote sensors.  When no remote sensors were available, the sport type is guessed from the average speed.
 * The equipment is synchronized with Strava.  The equipment used in a training session is then derived from the available remote sensors.

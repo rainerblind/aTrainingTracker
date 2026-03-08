@@ -1,6 +1,6 @@
 /*
  * aTrainingTracker (ANT+ BTLE)
- * Copyright (C) 2011 - 2019 Rainer Blind <rainer.blind@gmail.com>
+ * Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -47,7 +47,7 @@ public class CloudUploadFragment extends androidx.preference.PreferenceFragmentC
     private static final String TAG = CloudUploadFragment.class.getName();
 
     @Nullable
-    private PreferenceScreen mPSStrava, /* mPSRunkeeper, mPSTrainingPeaks, */ mPSEmailUpload;
+    private PreferenceScreen mPSStrava; /* mPSRunkeeper, mPSTrainingPeaks, */
 
     private SharedPreferences mSharedPreferences;
 
@@ -64,7 +64,6 @@ public class CloudUploadFragment extends androidx.preference.PreferenceFragmentC
         mPSStrava = this.getPreferenceScreen().findPreference(TrainingApplication.PREFERENCE_SCREEN_STRAVA);
         // mPSRunkeeper = this.getPreferenceScreen().findPreference(TrainingApplication.PREFERENCE_SCREEN_RUNKEEPER);
         // mPSTrainingPeaks = this.getPreferenceScreen().findPreference(TrainingApplication.PREFERENCE_SCREEN_TRAINING_PEAKS);
-        mPSEmailUpload = this.getPreferenceScreen().findPreference(TrainingApplication.PREFERENCE_SCREEN_EMAIL_UPLOAD);
     }
 
     @Override
@@ -75,7 +74,6 @@ public class CloudUploadFragment extends androidx.preference.PreferenceFragmentC
         mPSStrava.setSummary(getPSStravaSummary());
         // mPSRunkeeper.setSummary(getPSRunkeeperSummary());
         // mPSTrainingPeaks.setSummary(getPSTrainingPeaksSummary());
-        mPSEmailUpload.setSummary(getPSEmailUploadSummary());
 
         if (mAwaitDropboxResult) {
             DbxCredential dbxCredential = Auth.getDbxCredential();
@@ -176,35 +174,6 @@ public class CloudUploadFragment extends androidx.preference.PreferenceFragmentC
             }
 
             return getString(R.string.upload_to_training_peaks_format, listToString(list, 5));
-        }
-    }
-
-    @NonNull
-    private String getPSEmailUploadSummary() {
-        if (!TrainingApplication.sendEmail()) {
-            return getString(R.string.upload_via_email);
-        } else {
-            List<String> list = new LinkedList<>();
-            if (TrainingApplication.sendTCXEmail()) {
-                list.add(getString(R.string.TCX));
-            }
-            if (TrainingApplication.sendGPXEmail()) {
-                list.add(getString(R.string.GPX));
-            }
-            if (TrainingApplication.sendCSVEmail()) {
-                list.add(getString(R.string.CSV));
-            }
-            if (TrainingApplication.sendGCEmail()) {
-                list.add(getString(R.string.GC));
-            }
-
-            if (list.isEmpty()) {
-                return getString(R.string.send_email_only_summary_format, TrainingApplication.getSpEmailAddress());
-            } else if (list.size() == 1) {
-                return getString(R.string.send_email_format, list.get(0), TrainingApplication.getSpEmailAddress());
-            } else {
-                return getString(R.string.send_email_format_plural, listToString(list, 5), TrainingApplication.getSpEmailAddress());
-            }
         }
     }
 

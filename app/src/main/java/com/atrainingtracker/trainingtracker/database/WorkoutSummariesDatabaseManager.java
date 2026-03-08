@@ -1,6 +1,6 @@
 /*
  * aTrainingTracker (ANT+ BTLE)
- * Copyright (C) 2011 - 2019 Rainer Blind <rainer.blind@gmail.com>
+ * Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -83,7 +83,12 @@ public class WorkoutSummariesDatabaseManager {
 
         ContentValues values = new ContentValues();
         values.put(WorkoutSummaries.SPORT_ID, sportId);
-        values.put(WorkoutSummaries.EQUIPMENT_ID, equipmentId);
+        if (equipmentId == -1) {  // when the equipmentId is -1, the link to the equipment is removed.
+            values.putNull(WorkoutSummaries.EQUIPMENT_ID);
+        }
+        else {
+            values.put(WorkoutSummaries.EQUIPMENT_ID, equipmentId);
+        }
 
         updateValues(workoutId, values);
     }

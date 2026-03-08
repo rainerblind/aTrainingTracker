@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   ~ aTrainingTracker (ANT+ BTLE)
-  ~ Copyright (C) 2011 - 2019 Rainer Blind <rainer.blind@gmail.com>
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
   ~
   ~ This program is free software: you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -26,15 +26,6 @@
     <string-array name="units_values">
         <item>@string/METRIC</item>
         <item>@string/IMPERIAL</item>
-    </string-array>
-
-    <string-array name="PebbleWatchapps">
-        <item>@string/pebble_build_in</item>
-        <item>@string/pebble_a_training_tracker_watchapp</item>
-    </string-array>
-    <string-array name="PebbleWatchapps_values">
-        <item>@string/BUILD_IN</item>
-        <item>@string/TRAINING_TRACKER</item>
     </string-array>
 
     <string-array name="Basic_Sport_Types">
@@ -222,5 +213,39 @@
         <item>1913</item>
     </string-array>
 
+
+    <!-- Export formats -->
+    <string-array name="export_formats_title">
+        <item>TCX</item>
+        <item>GPX</item>
+        <item>Golden Cheetah JSON</item>
+        <item>CSV</item>
+    </string-array>
+
+    <string-array name="export_formats_values">
+        <item>TCX</item>
+        <item>GPX</item>
+        <item>GC_JSON</item>
+        <item>CSV</item>
+    </string-array>
+
+    <!-- Display settings -->
+    <string-array name="display_options_titles">
+        <item>@string/forcePortrait</item>
+        <item>@string/prefsKeepScreenOnTitle</item>
+        <item>@string/prefsNoUnlockingTitle</item>
+    </string-array>
+
+    <string-array name="display_options_values">
+        <item>forcePortrait</item>
+        <item>keepScreenOn</item>
+        <item>noUnlocking</item>
+    </string-array>
+
+    <string-array name="display_options_defaults">
+        <item>forcePortrait</item>
+        <item>keepScreenOn</item>
+        <item>noUnlocking</item>
+    </string-array>
 
 </resources>

@@ -1,4 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+  -->
+
 <resources>
     <string name="devices_button_pair">Koppeln</string>
     <string name="devices_button_unpair">Entkoppeln</string>
@@ -7,6 +25,16 @@
     <string name="devices_unknown">Unbekannt</string>
     <string name="devices_unknown_manufacturer">Unbekannter Hersteller</string>
     <string name="devices_unknown_device">Kein Name</string>
+
+    <string name="devices_all">Alle</string>
+
+    <!-- tab title -->
+    <string name="devices_available_devices_format">Sichtbare %1$s Sensoren</string>
+    <string name="devices_paired_devices_format">Gekoppelte %1$s Sensoren</string>
+    <string name="devices_known_devices_format">Bekannte %1$s Sensoren</string>
+    <string name="devices_all_available_devices">Alle sichtbaren Sensoren</string>
+    <string name="devices_all_paired_devices">Alle gekoppelten Sensoren</string>
+    <string name="devices_all_known_devices">Alle bekannten Sensoren</string>
 
     <!-- device_list -->
     <string name="devices_myRemoteDevices">Meine Sensoren</string>

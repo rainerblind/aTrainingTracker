@@ -1,4 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+  -->
+
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     package="com.atrainingtracker">
@@ -50,11 +68,6 @@
         </activity>
 
         <activity
-            android:name=".trainingtracker.activities.WorkoutDetailsActivity"
-            android:theme="@style/Theme.aTrainingTracker"
-            android:windowSoftInputMode="stateHidden" />
-
-        <activity
             android:name=".trainingtracker.ui.aftermath.editworkout.EditWorkoutActivity"
             android:theme="@style/Theme.aTrainingTracker"
             android:label="@string/edit_workout"/>
@@ -73,7 +86,7 @@
 
 
         <activity
-            android:name=".trainingtracker.activities.ConfigTrackingViewsActivity"
+            android:name=".trainingtracker.ui.tracking.trackingtabs.ConfigTrackingTabsActivity"
             android:exported="true"
             android:label="@string/TrackingFragmentConfigActivityLabel"
             android:launchMode="singleTask"
@@ -90,20 +103,6 @@
             android:label="Training Zones"
             android:theme="@style/Theme.aTrainingTracker" />
         <!-- Ensure the theme is a Material3 compatible theme or Theme.AppCompat -->
-
-
-        <activity
-            android:name=".trainingtracker.smartwatch.pebble.ConfigPebbleViewsActivity"
-            android:exported="true"
-            android:label="@string/PebbleConfigActivityLabel"
-            android:launchMode="singleTask"
-            android:theme="@style/Theme.aTrainingTracker"
-            android:windowSoftInputMode="stateHidden">
-            <intent-filter>
-                <action android:name="com.atrainingtracker.trainingtracker.smartwatch.pebble.ConfigPebbleViewsActivity" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </activity>
 
         <activity
             android:name="com.dropbox.core.android.AuthActivity"
@@ -153,8 +152,6 @@
         <service
             android:name=".trainingtracker.tracker.TrackerService"
             android:foregroundServiceType="location" />
-        <service android:name=".trainingtracker.smartwatch.pebble.PebbleService" />
-        <service android:name=".trainingtracker.smartwatch.pebble.PebbleServiceBuildIn" />
         <service android:name=".banalservice.BANALService" />
         <service android:name=".trainingtracker.onlinecommunities.strava.StravaSegmentsIntentService" />
 

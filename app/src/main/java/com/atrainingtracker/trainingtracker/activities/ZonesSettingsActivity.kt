@@ -1,3 +1,21 @@
+/*
+ * aTrainingTracker (ANT+ BTLE)
+ * Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+ */
+
 package com.atrainingtracker.trainingtracker.activities
 
 import android.os.Bundle
@@ -36,9 +54,14 @@ import kotlinx.coroutines.withContext
 class ZonesSettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Retrieve the target tab index from the intent, default to 0
+        val targetTab = intent.getIntExtra("TARGET_ZONE_TAB", 0)
+
         setContent {
             MaterialTheme {
-                SettingsScreenRoute()
+                // Pass the initial tab to the route
+                SettingsScreenRoute(initialTab = targetTab)
             }
         }
     }
@@ -55,7 +78,10 @@ data class ZoneProfileState(
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun SettingsScreenRoute(onFinish: () -> Unit = {}) {
+fun SettingsScreenRoute(
+    initialTab: Int = 0,
+    onFinish: () -> Unit = {}
+) {
     val context = LocalContext.current
     val dataStore = remember { SettingsDataStore(context) }
     val scope = rememberCoroutineScope()
@@ -69,6 +95,16 @@ fun SettingsScreenRoute(onFinish: () -> Unit = {}) {
 
     // Local state to hold data for swiping performance
     var allProfilesData by remember { mutableStateOf<List<ZoneProfileState>>(emptyList()) }
+
+    // save helper
+    val saveProfile = { profile: ZoneProfileState ->
+        scope.launch(Dispatchers.IO) {
+            dataStore.saveHrZoneMax(profile.type, Zone.ZONE_1, profile.z1)
+            dataStore.saveHrZoneMax(profile.type, Zone.ZONE_2, profile.z2)
+            dataStore.saveHrZoneMax(profile.type, Zone.ZONE_3, profile.z3)
+            dataStore.saveHrZoneMax(profile.type, Zone.ZONE_4, profile.z4)
+        }
+    }
 
     // Initial Load
     LaunchedEffect(Unit) {
@@ -86,38 +122,11 @@ fun SettingsScreenRoute(onFinish: () -> Unit = {}) {
         }
     }
 
-    // --- AUTO-SAVE LOGIC ---
-    val lifecycleOwner = LocalLifecycleOwner.current
-    // rememberUpdatedState ensures the observer uses the very latest data when the event triggers
-    val currentData by rememberUpdatedState(allProfilesData)
-
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            // ON_STOP is called when the Activity is no longer visible
-            if (event == Lifecycle.Event.ON_STOP) {
-                if (currentData.isNotEmpty()) {
-                    // We use the existing scope. Note: In complex apps, if the scope is
-                    // cancelled too quickly, you might use GlobalScope or NonCancellable here,
-                    // but for DataStore this usually completes fine.
-                    scope.launch(Dispatchers.IO) {
-                        currentData.forEach { profile ->
-                            dataStore.saveHrZoneMax(profile.type, Zone.ZONE_1, profile.z1)
-                            dataStore.saveHrZoneMax(profile.type, Zone.ZONE_2, profile.z2)
-                            dataStore.saveHrZoneMax(profile.type, Zone.ZONE_3, profile.z3)
-                            dataStore.saveHrZoneMax(profile.type, Zone.ZONE_4, profile.z4)
-                        }
-                    }
-                }
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
-    }
-
-    // Pager State
-    val pagerState = rememberPagerState(pageCount = { profileNameResIds.size })
+    // Update the Pager State to start at initialTab
+    val pagerState = rememberPagerState(
+        initialPage = initialTab, // Initialize with the passed value
+        pageCount = { profileNameResIds.size }
+    )
 
     Scaffold(
         topBar = { TopAppBar(title = { Text(stringResource(R.string.title_edit_zones)) }) }
@@ -153,18 +162,25 @@ fun SettingsScreenRoute(onFinish: () -> Unit = {}) {
                         z3Max = profileState.z3,
                         z4Max = profileState.z4,
 
-                        // Update the LOCAL List State (in memory)
                         onUpdateZone1Max = { new ->
-                            allProfilesData = updateProfile(allProfilesData, page) { it.copy(z1 = new) }
+                            val updated = updateProfile(allProfilesData, page) { it.copy(z1 = new) }
+                            allProfilesData = updated
+                            saveProfile(updated[page]) // Save immediately on change}
                         },
                         onUpdateZone2Max = { new ->
-                            allProfilesData = updateProfile(allProfilesData, page) { it.copy(z2 = new) }
+                            val updated = updateProfile(allProfilesData, page) { it.copy(z2 = new) }
+                            allProfilesData = updated
+                            saveProfile(updated[page]) // Save immediately on change
                         },
                         onUpdateZone3Max = { new ->
-                            allProfilesData = updateProfile(allProfilesData, page) { it.copy(z3 = new) }
+                            val updated = updateProfile(allProfilesData, page) { it.copy(z3 = new) }
+                            allProfilesData = updated
+                            saveProfile(updated[page]) // Save immediately on change
                         },
                         onUpdateZone4Max = { new ->
-                            allProfilesData = updateProfile(allProfilesData, page) { it.copy(z4 = new) }
+                            val updated = updateProfile(allProfilesData, page) { it.copy(z4 = new) }
+                            allProfilesData = updated
+                            saveProfile(updated[page]) // Save immediately on change
                         }
                     )
                 }

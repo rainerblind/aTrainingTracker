@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   ~ aTrainingTracker (ANT+ BTLE)
-  ~ Copyright (C) 2011 - 2019 Rainer Blind <rainer.blind@gmail.com>
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
   ~
   ~ This program is free software: you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -51,7 +51,6 @@
     <string name="edit_calibration_factor">edit calibration factor</string>
     <string name="delete">delete</string>
     <string name="delete_device">delete device</string>
-    <string name="delete_pebble_view">delete Pebble view</string>
     <string name="delete_tracking_view">delete tracking view</string>
     <string name="delete_workout">delete workout</string>
     <string name="deleteOldWorkouts">delete old workouts</string>
@@ -60,7 +59,6 @@
     <string name="delete_sensor">delete</string>
     <string name="really_delete_workout">Do you really want to delete this workout?</string>
     <string name="really_delete_location">Do you really want to delete this location?</string>
-    <string name="really_delete_pebble_view_format">Do you really want to delete the Pebble view "%1$s"?</string>
     <string name="really_delete_view_format">Do you really want to delete the tracking view "%1$s"?</string>
     <string name="deleting_please_wait">Deleting workout …\nplease wait</string>
     <string name="deleting_workout">Deleting: %1$s…</string>)
@@ -116,12 +114,6 @@
     <string name="guess_commute_and_trainer">guess commute and trainer</string>
 
     <string name="exampleSensorString" translatable="false">TDSPHCNAG--</string>
-
-    <string name="install_pebble_watchapp_title">Install Pebble Watchapp</string>
-    <string name="install_pebble_watchapp_text">To use this option, you must install the corresponding Pebble Watchapp.</string>
-    <string name="install_pebble_watchapp_now">OK, install Watchapp now</string>
-    <string name="pebble_build_in">Standard Pebble Watchapp</string>
-    <string name="pebble_a_training_tracker_watchapp">a Training Tracker Watchapp</string>
 
     <string name="install_ant_plugin_message">To use ANT+, you must have the ANT+ Plugin Service installed.</string>
     <string name="install_ant_plugin_ok">OK, install ANT+ Plugin Service now</string>
@@ -181,25 +173,14 @@
 
     <string name="location_extrema_format">%1$s %2$s: %3$s %4$s</string>
 
-    <string name="configure_pebble_view">Configure Pebble View: %1$s</string>
-
     <!--  ActivityType -->
     <string name="activity_type_bike_power">Bike Power</string>
-    <string name="activity_type_bike_speed_and_cadence">Bike Speed and Cadence</string>
-    <string name="activity_type_bike_speed">Bike Speed</string>
-    <string name="activity_type_multisport_with_hr">Multisport with HR</string>
-    <string name="activity_type_multisport">Multisport</string>
-    <string name="activity_type_run_speed_and_cadence">Run Speed and Cadence</string>
-    <string name="activity_type_run_speed">Run Speed</string>
-
-    <!-- Short version of ActivityType, at most 14 letters -->
-    <string name="activity_type_short_bike_power">Bike Power</string>
-    <string name="activity_type_short_bike_speed_and_cadence">Bike Spd &amp; Cad</string>
-    <string name="activity_type_short_bike_speed">Bike Speed</string>
-    <string name="activity_type_short_multisport_with_hr">Multisport HR</string>
-    <string name="activity_type_short_multisport">Multisport</string>
-    <string name="activity_type_short_run_speed_and_cadence">Run Spd &amp; Cad</string>
-    <string name="activity_type_short_run_speed">Run Speed</string>
+    <string name="activity_type_bike_speed_and_cadence">Bike</string>
+    <!-- <string name="activity_type_bike_speed">Bike Speed</string> -->
+    <string name="activity_type_multisport_with_hr">Generic</string>
+    <!-- <string name="activity_type_multisport">Multisport</string> -->
+    <string name="activity_type_run_speed_and_cadence">Run</string>
+    <!-- <string name="activity_type_run_speed">Run Speed</string> -->
 
     <string name="text_default">default</string>
     <string name="string_and_number_format">%1$s %2$d</string>
@@ -361,8 +342,6 @@
     <string name="ExportDetailsActivityLabel">Export Details</string>
     <string name="TrackingFragmentConfigListActivityLabel">Edit Tracking Views</string>
     <string name="TrackingFragmentConfigActivityLabel">Edit Tracking View</string>
-    <string name="PebbleConfigListActivityLabel">Edit Pebble Views</string>
-    <string name="PebbleConfigActivityLabel">Edit Pebble View</string>
     <string name="AltitudeCorrectionListActivityLabel">Altitude Correction</string>
     <string name="DeviceChoiceActivityLabel">Pairing</string>
     <string name="PairingActivityLabel">Pairing</string>
@@ -379,6 +358,8 @@
     <!--  For Preferences Activity -->
     <string name="prefsUserTitle">User</string>
     <string name="prefsBasic">Basic</string>
+    <string name="prefs_Export">Export</string>
+    <string name="prefs_Display">Display</string>
     <string name="prefsAdvanced">Advanced</string>
 
     <string name="prefsThresholdSpeedsTitle">Threshold speeds</string>
@@ -391,6 +372,7 @@
     <string name="prefsTrackingTitle">Tracking</string>
 
     <string name="prefsDisplayTitle">Display</string>
+    <string name="prefsDisplaySummary">Configure screen and orientation behavior</string>
     <string name="prefsKeepScreenOnTitle">keep screen on</string>
     <string name="prefsNoUnlockingTitle">keep screen unlocked</string>
     <string name="prefZoomDependingOnSpeedTitle">zoom depends on speed</string>
@@ -398,26 +380,10 @@
     <string name="prefsUnitsSummary">metric</string>
     <string name="prefShowUnitsTitle">show units</string>
 
-    <string name="prefsConfigureDisplaysTitle">Configure Displays</string>
-
-    <string name="prefsPebbleTitle" translatable="false">Pebble</string>
-    <string name="prefsDoNotUsePebble">don\'t use Pebble</string>
-    <string name="prefsPebbleSupportTitle">Pebble Support</string>
-    <string name="prefsPebbleSupportSummary">Use Pebble to display values</string>
-    <string name="prefsPebbleWatchappsTitle">Pebble Watchapp</string>
-    <string name="prefsPebbleWatchappsSummary">build in</string>
-    <string name="prefsConfigurePebbleDisplaysTitle">Configure Pebble Displays</string>
+    <string name="prefsConfigureDisplaysTitle">Tracking Tabs</string>
 
     <string name="prefsExportTitle">File Export</string>
     <string name="prefsExportSummary">File formats the workouts are exported to</string>
-    <string name="prefsExportToGCJsonTitle">Golden Cheetah json</string>
-    <string name="prefsExportToGCJsonSummary">Automatically export to Golden Cheetah json</string>
-    <string name="prefsExportToGarminTCXTitle" translatable="false">TCX</string>
-    <string name="prefsExportToGarminTCXSummary">Automatically export to TCX</string>
-    <string name="prefsExportToGPXTitle" translatable="false">GPX</string>
-    <string name="prefsExportToGPXSummary">Automatically export to GPX</string>
-    <string name="prefsExportToCSVTitle" translatable="false">CSV</string>
-    <string name="prefsExportToCSVSummary">Automatically export to CSV</string>
 
     <string name="prefsUploadTitle">Upload</string>
     <string name="prefsUploadSummary">Upload to cloud services and online communities</string>
@@ -522,9 +488,10 @@
     <string name="ValueAndUnitFormat">(%1$s %2$s)</string>
 
     <!-- others -->
-    <string name="equipment_all">all</string>
-    <string name="equipment_all_bikes">all bikes</string>
-    <string name="equipment_all_shoes">all shoes</string>
+    <string name="equipment_none">- none -</string>
+    <string name="equipment_all">+ all+ </string>
+    <string name="equipment_all_bikes">+ all bikes +</string>
+    <string name="equipment_all_shoes">+ all shoes +</string>
     <string name="equipment_type_bike">Bike</string>
     <string name="equipment_type_shoe">Shoes</string>
 
@@ -628,9 +595,6 @@
     <string name="paused_bike"> a ride</string>
     <string name="paused_other">training</string>
     <string name="export_status">Export Status</string>
-    <string name="available_devices">available devices</string>
-    <string name="paired_devices">paired devices</string>
-    <string name="known_devices">known devices</string>
     <string name="enable_bluetooth">Enable</string>
     <string name="bluetooth_disabled_on_device">Bluetooth is currently disabled on this device.  In order to pair a Bluetooth device, you have to enable Bluetooth.  \nDo you want to enable Bluetooth?</string>
     <string name="LocationsActivityLabel">Locations</string>
@@ -698,9 +662,10 @@
     <string name="prefsStartSearchWhenResumeFromPausedTitle">Resume after pause</string>
     <string name="prefsStartSearchWhenNewLapTitle">New lap</string>
     <string name="prefsStartSearchWhenUserChangesSportTitle">You change the sport</string>
-
+    <string name="prefs_search_behavior_title">Search Behavior</string>
     <string name="prefsChangeSportWhenDeviceGetsLostTitle">Change activity type</string>
     <string name="prefsChangeSportWhenDeviceGetsLostSummary">Change activity type when sensor gets lost</string>
+
     <string name="prefsSearchOnlyForSportSpecificDevicesTitle">Sport specific search</string>
     <string name="prefsSearchOnlyForSportSpecificDevicesSummary">Search only for sport specific sensor</string>
 
@@ -770,33 +735,16 @@
     <string name="no_sensor_available">no sensor available</string>
     <string name="bestSensor">best</string>
     <string name="format_sensorType_and_DeviceName" translatable="false">%1$s (%2$s):</string>
-    <string name="configure_filter">Configure Smoothing</string>
-
 
     <string name="units_seconds" translatable="false">sec</string>
     <string name="units_seconds_long">seconds</string>
     <string name="units_minutes" translatable="false">min</string>
     <string name="units_minutes_long">minutes</string>
     <string name="units_samples" translatable="false">N</string>
-    <string name="filter_instantaneous">instantaneous</string>
-    <string name="filter_instantaneous_short" translatable="false" />
-    <string name="filter_average">average (entire workout)</string>
-    <string name="filter_average_short" translatable="false">Ø</string>
-    <string name="filter_exponential_smoothing">exponential smoothing</string>
-    <string name="filter_moving_average">moving average</string>
-    <string name="filter_moving_average_short" translatable="false">Ø</string>
-    <string name="filter_exponential_smoothing_format">exponential smoothing with α=%1$f</string>
-    <string name="filter_exponential_smoothing_short_format">exp α=%1$f</string>
     <string name="configSensor">Sensor:</string>
     <string name="configSource">Source:</string>
     <string name="configSmoothing">Smoothing:</string>
     <string name="configSize">Size:</string>
-    <string name="filter_details__instantaneous">Show the current value.</string>
-    <string name="filter_details__average">Show the average value of the entire workout.</string>
-    <string name="filter_details__max">Show the maximal value of the workout.</string>
-    <string name="filter_details__moving_average_time">Show the average of the last %1$d %2$s.</string>
-    <string name="filter_details__moving_average_number">Show the average value of the last %1$d received values.</string>
-    <string name="filter_details__exponential_smoothing">Exponential smoothing with 0 &lt; α &#8804; 1. Displayed_value = α measured_value + (1-α) display_value_old. The smaller α, the smoother the displayed value. I.e., α=1 gives the current measurement, α close to 0 results in super smooth displayed values.</string>
     <string name="privacy_policy">Privacy Policy</string>
     <string name="notification_channel_name__tracking">Tracking</string>
     <string name="notification_channel_description__tracking">Notifications while tracking a workout</string>
@@ -1017,4 +965,19 @@
     <string name="drawer__training">Training</string>
     <string name="drawer__maps">Maps</string>
 
+    <!-- sensor view settings -->
+    <string name="source">Source</string>
+    <string name="sensor">Sensor</string>
+    <string name="text_size">Size</string>
+    <string name="filter">Filter</string>
+
+    <string name="view_size_xsmall">XSmall</string>
+    <string name="view_size_small">Small</string>
+    <string name="view_size_normal">Normal</string>
+    <string name="view_size_large">Large</string>
+    <string name="view_size_xlarge">XLarge</string>
+    <string name="view_size_huge">Huge</string>
+    <string name="view_size_xhuge">XHuge</string>
+    <string name="configure">Configure</string>
+    <string name="tab_name">Name</string>
 </resources>

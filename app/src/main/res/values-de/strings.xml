@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   ~ aTrainingTracker (ANT+ BTLE)
-  ~ Copyright (C) 2011 - 2019 Rainer Blind <rainer.blind@gmail.com>
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
   ~
   ~ This program is free software: you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -51,7 +51,6 @@
     <string name="edit_calibration_factor">Kalibrierungsfaktor eingeben</string>
     <string name="delete">löschen</string>
     <string name="delete_device">Sensor löschen</string>
-    <string name="delete_pebble_view">Pebble Ansicht löschen</string>
     <string name="delete_tracking_view">Ansicht löschen</string>
     <string name="delete_workout">Trainingseinheit löschen</string>
     <string name="deleteOldWorkouts">Alte Einheiten löschen</string>
@@ -59,7 +58,6 @@
     <string name="delete_sensor">löschen</string>
     <string name="really_delete_workout">Willst du diese Trainingseinheit wirklich löchen?</string>
     <string name="really_delete_location">Willst du diesen Ort wirklich löchen?</string>
-    <string name="really_delete_pebble_view_format">Willst du die Pebble Ansicht "%1$s" wirklich löschen?</string>
     <string name="really_delete_view_format">Willst du die Ansicht "%1$s" wirklich löschen?</string>
     <string name="deleting_please_wait">Lösche die Einheit …\nbitte warten</string>
     <string name="deleting_workout">Lösche: %1$s…</string>)
@@ -104,12 +102,6 @@
 
     <string name="guess_commute_and_trainer">Rate pendeln und indoor trainer</string>
 
-    <string name="install_pebble_watchapp_title">Pebble Watchapp installieren</string>
-    <string name="install_pebble_watchapp_text">Um dies zu nutzen, muss die entsprechende Pebble Watchapp installierte sein.</string>
-    <string name="install_pebble_watchapp_now">OK, jetzt intallieren</string>
-    <string name="pebble_build_in">Standard Pebble Watchapp</string>
-    <string name="pebble_a_training_tracker_watchapp">a Training Tracker Watchapp</string>
-
     <string name="install_ant_plugin_message">Um ANT+ zu nutzen muss der ANT+ Plugin Service installiert sein.</string>
     <string name="install_ant_plugin_ok">OK, jetzt installieren</string>
 
@@ -126,25 +118,14 @@
     <string name="distance_distanceUnit_sport_time_format">%1$s %2$s %3$s in %4$s</string>
     <string name="location_extrema_format">%1$s %2$s: %3$s %4$s</string>
 
-    <string name="configure_pebble_view">Pebble Anzeige anpassen: %1$s</string>
-
     <!--  ActivityType -->
     <string name="activity_type_bike_power">Rad Leistung</string>
-    <string name="activity_type_bike_speed_and_cadence">Rad Geschw. und Freq.</string>
-    <string name="activity_type_bike_speed">Rad Geschwindigkeit</string>
-    <string name="activity_type_multisport_with_hr">Multisport mit HF</string>
-    <string name="activity_type_multisport">Multisport</string>
-    <string name="activity_type_run_speed_and_cadence">Lauf Geschw. und Freq.</string>
-    <string name="activity_type_run_speed">Lauf Geschwindigkeit</string>
-
-    <!-- Short version of ActivityType, at most 14 letters -->
-    <string name="activity_type_short_bike_power">Rad Leistung</string>
-    <string name="activity_type_short_bike_speed_and_cadence">Rad Spd &amp; Cad</string>
-    <string name="activity_type_short_bike_speed">Rad Geschw.</string>
-    <string name="activity_type_short_multisport_with_hr">Multisport HF</string>
-    <string name="activity_type_short_multisport">Multisport</string>
-    <string name="activity_type_short_run_speed_and_cadence">Lauf Spd &amp; Cad</string>
-    <string name="activity_type_short_run_speed">Lauf Geschw.</string>
+    <string name="activity_type_bike_speed_and_cadence">Radeln</string>
+    <!-- <string name="activity_type_bike_speed">Rad Geschwindigkeit</string> -->
+    <string name="activity_type_multisport_with_hr">Generell</string>
+    <!-- <string name="activity_type_multisport">Multisport</string> -->
+    <string name="activity_type_run_speed_and_cadence">Laufen</string>
+    <!-- <string name="activity_type_run_speed">Lauf Geschwindigkeit</string> -->
 
     <string name="text_default">Standard</string>
     <string name="string_and_number_format">%1$s %2$d</string>
@@ -220,7 +201,7 @@
     <string name="power">Leistung</string>
     <string name="power_short">Leistung</string>
     <string name="speed">Geschwindigkeit</string>
-    <string name="speed_short">spd</string>
+    <string name="speed_short">Geschw.</string>
     <string name="current_sensors">Aktuelle Sensoren</string>
     <string name="current_sensors_short">Akt. Sensoren</string>
     <string name="strides">Schritte</string>
@@ -298,8 +279,6 @@
     <string name="ExportDetailsActivityLabel">Details exportieren</string>
     <string name="TrackingFragmentConfigListActivityLabel">Anzeigen konfigurieren</string>
     <string name="TrackingFragmentConfigActivityLabel">Anzeige konfigurieren</string>
-    <string name="PebbleConfigListActivityLabel">Pebble Anzeigen konfigurieren</string>
-    <string name="PebbleConfigActivityLabel">Pebble Anzeige konfigurieren</string>
     <string name="AltitudeCorrectionListActivityLabel">Höhenkorrektur</string>
     <string name="DeviceChoiceActivityLabel">Koppeln</string>
     <string name="PairingActivityLabel">Koppeln</string>
@@ -316,6 +295,8 @@
     <!--  For Preferences Activity -->
     <string name="prefsUserTitle">Benutzer</string>
     <string name="prefsBasic">Basic</string>
+    <string name="prefs_Export">Export</string>
+    <string name="prefs_Display">Anzeige</string>
     <string name="prefsAdvanced">Erweitert</string>
 
     <string name="prefsThresholdSpeedsTitle">Geschwindigkeitsschwellwerte</string>
@@ -328,6 +309,7 @@
     <string name="prefsTrackingTitle">Aufzeichnung</string>
 
     <string name="prefsDisplayTitle">Display</string>
+    <string name="prefsDisplaySummary">Einstellungen für die Anzeige</string>
     <string name="prefsKeepScreenOnTitle">Display an lassen</string>
     <string name="prefsNoUnlockingTitle">Display entsperrt lassen</string>
     <string name="prefZoomDependingOnSpeedTitle">Zoom basierend auf Geschwindigkeit</string>
@@ -335,22 +317,10 @@
     <string name="prefsUnitsSummary">Metrisch</string>
     <string name="prefShowUnitsTitle">Einheiten anzeigen</string>
 
-    <string name="prefsConfigureDisplaysTitle">Anzeigen konfigurieren</string>
-
-    <string name="prefsDoNotUsePebble">Keine Pebble verwenden</string>
-    <string name="prefsPebbleSupportTitle">Pebble Support</string>
-    <string name="prefsPebbleSupportSummary">Zeige Werte auf der Pebble an</string>
-    <string name="prefsPebbleWatchappsTitle">Pebble Watchapp</string>
-    <string name="prefsPebbleWatchappsSummary">Standard</string>
-    <string name="prefsConfigurePebbleDisplaysTitle">Pebble Anzeigen konfigurieren</string>
+    <string name="prefsConfigureDisplaysTitle">Tracking Tabs</string>
 
     <string name="prefsExportTitle">Datei Export</string>
     <string name="prefsExportSummary">Dateiformate zu denen die Einheiten exportiert werden</string>
-    <string name="prefsExportToGCJsonTitle">Golden Cheetah json</string>
-    <string name="prefsExportToGCJsonSummary">Golden Cheetah json exportieren</string>
-    <string name="prefsExportToGarminTCXSummary">Nach TCX exportieren</string>
-    <string name="prefsExportToGPXSummary">Nach GPX exportieren</string>
-    <string name="prefsExportToCSVSummary">Nach CSV exportieren</string>
 
     <string name="prefsUploadTitle">Hochladen</string>
     <string name="prefsUploadSummary">Hochladen zu Cloud Diensten und Online Communities</string>
@@ -450,9 +420,10 @@
     <string name="ValueAndUnitFormat">(%1$s %2$s)</string>
 
     <!-- others -->
-    <string name="equipment_all">Alle</string>
-    <string name="equipment_all_bikes">Alle Räder</string>
-    <string name="equipment_all_shoes">Alle Schuhe</string>
+    <string name="equipment_none">- Keins -</string>
+    <string name="equipment_all">+ Alle+ </string>
+    <string name="equipment_all_bikes">+ Alle Räder+ </string>
+    <string name="equipment_all_shoes">+ Alle Schuhe+ </string>
     <string name="equipment_type_bike">Rad</string>
     <string name="equipment_type_shoe">Schuhe</string>
 
@@ -556,9 +527,6 @@
     <string name="paused_bike">Radfahren</string>
     <string name="paused_other">Trainieren</string>
     <string name="export_status">Exportstatus</string>
-    <string name="available_devices">Sichtbare Sensoren</string>
-    <string name="paired_devices">Gekoppelte Sensoren</string>
-    <string name="known_devices">Bekannte Sensoren</string>
     <string name="enable_bluetooth">Einschalten</string>
     <string name="bluetooth_disabled_on_device">Im Moment is Bluetooth auf dem Gerät ausgeschaltet.  Um externe Sensoren zu koppeln muss Bluetooth eingeschaltet sein. \nSoll Bluetooth eingeschaltet werden?</string>
     <string name="LocationsActivityLabel">Locations</string>
@@ -617,6 +585,7 @@
     <string name="prefsStartSearchWhenAppStartsTitle">App startet</string>
     <string name="prefsStartSearchWhenTrackingStartsTitle">Aufzeichnung startet</string>
     <string name="prefsStartSearchWhenResumeFromPausedTitle">Pause beendet wird</string>
+    <string name="prefs_search_behavior_title">Suchverhalten</string>
     <string name="prefsStartSearchWhenNewLapTitle">Neue Runde</string>
     <string name="prefsStartSearchWhenUserChangesSportTitle">Der Sporttyp geändert wird</string>
 
@@ -682,27 +651,13 @@
     <string name="smartphone">Smartphone</string>
     <string name="no_sensor_available">Kein Sensor vorhanden</string>
     <string name="bestSensor">Bester</string>
-    <string name="configure_filter">Glättung anpassen</string>
-
 
     <string name="units_seconds_long">Sekunden</string>
     <string name="units_minutes_long">Minuten</string>
-    <string name="filter_instantaneous">keine Glättung</string>
-    <string name="filter_average">Durchschnitt (gesamte Einheit)</string>
-    <string name="filter_exponential_smoothing">Exponentielle Glättung</string>
-    <string name="filter_moving_average">Gleitender Durchschnitt</string>
-    <string name="filter_exponential_smoothing_format">"Exponentielle Glättung mit α=%1$f"</string>
-    <string name="filter_exponential_smoothing_short_format">Exp α=%1$f</string>
     <string name="configSensor">Sensor:</string>
     <string name="configSource">Quelle:</string>
     <string name="configSmoothing">Glättung:</string>
     <string name="configSize">Größe:</string>
-    <string name="filter_details__instantaneous">Der aktuelle Wert wird angezeigt.</string>
-    <string name="filter_details__average">Der Durchschnitt von der gesamten Einheit wird angezeigt.</string>
-    <string name="filter_details__max">Der maximale Wert der Einheit wird angezeigt.</string>
-    <string name="filter_details__moving_average_time">Der Durchschnitt der letzten %1$d %2$s wird angezeigt.</string>
-    <string name="filter_details__moving_average_number">Der Durchschnitt der letzten %1$d Messungen wird angezeigt.</string>
-    <string name="filter_details__exponential_smoothing">Exponentielle Glättung mit 0 &lt; α &#8804; 1.  Wert_angezeigt = α Wert_gemessen + (1-α) Wert_angezeigt_alt.  Je kleiner α, desto glatter werden die angezeigten Werte.  D.h. bei α=1 wird der aktuell gemessene Wert angezeigt, mit α in der Nähe von 0 werden die Werte sehr stark geglättet.</string>
     <string name="privacy_policy">Datenschutz</string>
     <string name="notification_channel_name__tracking">Tracking</string>
     <string name="notification_channel_description__tracking">Benachrichtigungen während der Aufzeichnugn von Einheiten</string>
@@ -917,5 +872,12 @@
     <string name="drawer__training">Training</string>
     <string name="drawer__maps">Karten</string>
 
+    <!-- sensor view settings -->
+    <string name="source">Quelle</string>
+    <string name="sensor">Sensor</string>
+    <string name="text_size">Größe</string>
+    <string name="filter">Glättung</string>
+    <string name="configure">Configure</string>
+    <string name="tab_name">Name</string>
 
 </resources>

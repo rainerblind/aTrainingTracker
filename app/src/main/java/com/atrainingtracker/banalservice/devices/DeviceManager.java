@@ -1,6 +1,6 @@
 /*
  * aTrainingTracker (ANT+ BTLE)
- * Copyright (C) 2011 - 2019 Rainer Blind <rainer.blind@gmail.com>
+ * Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -290,8 +290,6 @@ public class DeviceManager {
             mSpeedAndLocationDevice_Network = new SpeedAndLocationDevice_Network(mContext, mSensorManager);
         }
 
-        mVerticalSpeedAndSlopeDevice = new VerticalSpeedAndSlopeDevice(mContext, mSensorManager);
-
         // also create paired remote devices and start searching for them
         if (TrainingApplication.startSearchWhenAppStarts()) {
             startSearchForPairedDevices();
@@ -301,6 +299,10 @@ public class DeviceManager {
         ContextCompat.registerReceiver(mContext, mSearchingStoppedForOneReceiver, mSearchingStoppedForOneFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(mContext, mStartSearchingForNewDevicesReceiver, mStartSearchingForNewDevicesFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(mContext, mStopSearchingForNewDevicesReceiver, mStopSearchingForNewDevicesFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+    }
+
+    public void createVerticalSpeedAndSlopeDevice() {
+        mVerticalSpeedAndSlopeDevice = new VerticalSpeedAndSlopeDevice(mContext, mSensorManager);
     }
 
     public static boolean isSearchingForARemoteDevice() {

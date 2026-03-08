@@ -1,6 +1,6 @@
 /*
  * aTrainingTracker (ANT+ BTLE)
- * Copyright (C) 2011 - 2019 Rainer Blind <rainer.blind@gmail.com>
+ * Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -174,6 +174,8 @@ public class MyHelper {
         };
     }
 
+    // TODO: replace with getSpeedUnitName(Context context)
+    // TODO: globally!
     public static int getSpeedUnitNameId() {
         return switch (TrainingApplication.getUnit()) {
             case METRIC -> R.string.units_speed_metric;

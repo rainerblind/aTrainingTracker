@@ -1,6 +1,6 @@
 /*
  * aTrainingTracker (ANT+ BTLE)
- * Copyright (C) 2011 - 2019 Rainer Blind <rainer.blind@gmail.com>
+ * Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -44,10 +44,12 @@ import android.os.Handler;
 import android.os.IBinder;
 
 import com.atrainingtracker.banalservice.ui.SportTypeListFragment;
+import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedContainerFragment;
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFragmentFactory;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
 import com.atrainingtracker.trainingtracker.segments.StarredSegmentsTabbedContainer;
 import com.atrainingtracker.trainingtracker.tracker.TrackerService;
+import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsFragment;
 import com.google.android.material.navigation.NavigationView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -84,30 +86,20 @@ import com.atrainingtracker.banalservice.Protocol;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 import com.atrainingtracker.banalservice.dialogs.InstallANTShitDialog;
 import com.atrainingtracker.banalservice.filters.FilterData;
-import com.atrainingtracker.banalservice.fragments.DeviceTypeChoiceFragment;
-import com.atrainingtracker.banalservice.fragments.RemoteDevicesFragmentTabbedContainer;
 import com.atrainingtracker.banalservice.helpers.BatteryStatusHelper;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
 import com.atrainingtracker.trainingtracker.dialogs.EnableBluetoothDialog;
 import com.atrainingtracker.trainingtracker.dialogs.GPSDisabledDialog;
 import com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialog;
-import com.atrainingtracker.trainingtracker.fragments.StartAndTrackingFragmentTabbedContainer;
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesListFragment;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.MyLocationsFragment;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapTrackingFragment;
-import com.atrainingtracker.trainingtracker.fragments.preferences.AltitudeCorrectionFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.CloudUploadFragment;
-import com.atrainingtracker.trainingtracker.fragments.preferences.DisplayFragment;
-import com.atrainingtracker.trainingtracker.fragments.preferences.EmailUploadFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.FancyWorkoutNameListFragment;
-import com.atrainingtracker.trainingtracker.fragments.preferences.FileExportFragment;
-import com.atrainingtracker.trainingtracker.fragments.preferences.LocationSourcesFragment;
-import com.atrainingtracker.trainingtracker.fragments.preferences.PebbleScreenFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.RootPrefsFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.RunkeeperUploadFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.SearchFragment;
-import com.atrainingtracker.trainingtracker.fragments.preferences.StartSearchFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.StravaUploadFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.TrainingpeaksUploadFragment;
 import com.atrainingtracker.trainingtracker.interfaces.RemoteDevicesSettingsInterface;
@@ -131,11 +123,9 @@ public class MainActivityWithNavigation
         extends AppCompatActivity
         implements
         NavigationView.OnNavigationItemSelectedListener,
-        DeviceTypeChoiceFragment.OnDeviceTypeSelectedListener,
         RemoteDevicesSettingsInterface,
         BANALService.GetBanalServiceInterface,
         PreferenceFragmentCompat.OnPreferenceStartScreenCallback,
-        StartAndTrackingFragmentTabbedContainer.UpdateActivityTypeInterface,
         StarredSegmentsListFragment.StartSegmentDetailsActivityInterface,
         StartOrResumeInterface {
     public static final String SELECTED_FRAGMENT_ID = "SELECTED_FRAGMENT_ID";
@@ -617,8 +607,8 @@ public class MainActivityWithNavigation
 
         switch (mSelectedFragmentId) {
             case R.id.drawer_start_tracking:
-                mFragment = StartAndTrackingFragmentTabbedContainer.newInstance(getActivityType(), StartAndTrackingFragmentTabbedContainer.CONTROL_ITEM);
-                tag = StartAndTrackingFragmentTabbedContainer.TAG;
+                mFragment = TrackingTabsFragment.newInstance();
+                tag = TrackingTabsFragment.TAG;
                 break;
 
             case R.id.drawer_map:
@@ -648,22 +638,22 @@ public class MainActivityWithNavigation
                 // Log.i(TAG, "MissingDependencyPackageName=" + AntPluginPcc.getMissingDependencyPackageName());
                 // Log.i(TAG, "PATH_ANTPLUS_PLUGIN_PKG=" + AntPluginPcc.PATH_ANTPLUS_PLUGINS_PKG);
 
-                mFragment = RemoteDevicesFragmentTabbedContainer.newInstance(Protocol.ANT_PLUS);
-                tag = DeviceTypeChoiceFragment.TAG;
+                mFragment = DevicesTabbedContainerFragment.newInstance(Protocol.ANT_PLUS, null);
+                tag = DevicesTabbedContainerFragment.TAG;
                 break;
 
             case R.id.drawer_pairing_BTLE:
                 titleId = R.string.pairing_bluetooth;
                 // fragment = DeviceTypeChoiceFragment.newInstance(Protocol.BLUETOOTH_LE);
                 // tag = DeviceTypeChoiceFragment.TAG;
-                mFragment = RemoteDevicesFragmentTabbedContainer.newInstance(Protocol.BLUETOOTH_LE);
-                tag = DeviceTypeChoiceFragment.TAG;
+                mFragment = DevicesTabbedContainerFragment.newInstance(Protocol.BLUETOOTH_LE, null);
+                tag = DevicesTabbedContainerFragment.TAG;
                 break;
 
             case R.id.drawer_my_sensors:
                 titleId = R.string.devices_myRemoteDevices;
-                mFragment = RemoteDevicesFragmentTabbedContainer.newInstance(Protocol.ALL, DeviceType.ALL);
-                tag = DeviceTypeChoiceFragment.TAG;
+                mFragment = DevicesTabbedContainerFragment.newInstance(Protocol.ALL, DeviceType.ALL);
+                tag = DevicesTabbedContainerFragment.TAG;
                 break;
 
             case R.id.drawer_my_locations:
@@ -722,14 +712,6 @@ public class MainActivityWithNavigation
         } else {
             return mBanalServiceComm.getActivityType();
         }
-    }
-
-    @Override
-    public void updateActivityType(int selectedItem) {
-        FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
-        fragmentTransaction.replace(R.id.content, StartAndTrackingFragmentTabbedContainer.newInstance(getActivityType(), selectedItem));
-        // if (addToBackStack) { fragmentTransaction.addToBackStack(null); }
-        fragmentTransaction.commit();
     }
 
     @Override
@@ -813,18 +795,6 @@ public class MainActivityWithNavigation
         startActivity(segmentDetailsIntent);
     }
 
-    @Override
-    public void onDeviceTypeSelected(@NonNull DeviceType deviceType, @NonNull Protocol protocol) {
-        if (DEBUG)
-            Log.i(TAG, "onDeviceTypeSelected(" + deviceType.name() + "), mProtocol=" + protocol);
-
-        RemoteDevicesFragmentTabbedContainer fragment = RemoteDevicesFragmentTabbedContainer.newInstance(protocol, deviceType);
-        FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
-        fragmentTransaction.replace(R.id.content, fragment, RemoteDevicesFragmentTabbedContainer.TAG);
-        fragmentTransaction.addToBackStack(null);
-        fragmentTransaction.commit();
-    }
-
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // the connection to the BANALService
@@ -838,26 +808,14 @@ public class MainActivityWithNavigation
         PreferenceFragmentCompat fragment = null;
         switch (key) {
             case "root" -> fragment = new RootPrefsFragment();
-            case "display" -> fragment = new DisplayFragment();
-
-            // else if (key.equals("smoothing")) {
-            //     fragment = new SmoothingFragment();
-            // }
             case "search_settings" -> fragment = new SearchFragment();
-            case TrainingApplication.PREF_KEY_START_SEARCH -> fragment = new StartSearchFragment();
-            case "fileExport" -> fragment = new FileExportFragment();
             case "cloudUpload" -> fragment = new CloudUploadFragment();
-            case TrainingApplication.PREFERENCE_SCREEN_EMAIL_UPLOAD ->
-                    fragment = new EmailUploadFragment();
             case TrainingApplication.PREFERENCE_SCREEN_STRAVA ->
                     fragment = new StravaUploadFragment();
             case TrainingApplication.PREFERENCE_SCREEN_RUNKEEPER ->
                     fragment = new RunkeeperUploadFragment();
             case TrainingApplication.PREFERENCE_SCREEN_TRAINING_PEAKS ->
                     fragment = new TrainingpeaksUploadFragment();
-            case "pebbleScreen" -> fragment = new PebbleScreenFragment();
-            case "prefsLocationSources" -> fragment = new LocationSourcesFragment();
-            case "altitudeCorrection" -> fragment = new AltitudeCorrectionFragment();
             case "sportTypes" -> {
                 FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
                 ft.replace(R.id.content, new SportTypeListFragment(), preferenceScreen.getKey());

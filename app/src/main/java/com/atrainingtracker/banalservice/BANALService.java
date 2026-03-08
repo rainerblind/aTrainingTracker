@@ -1,6 +1,6 @@
 /*
  * aTrainingTracker (ANT+ BTLE)
- * Copyright (C) 2011 - 2019 Rainer Blind <rainer.blind@gmail.com>
+ * Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -54,6 +54,7 @@ import java.util.Set;
 import static com.atrainingtracker.trainingtracker.TrainingApplication.REQUEST_NEW_LAP;
 import static com.atrainingtracker.trainingtracker.TrainingApplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES;
 
+import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 
 public class BANALService
@@ -141,7 +142,7 @@ public class BANALService
     private static DeviceManager cDeviceManager;
     private static MySensorManager cSensorManager;
     private static FilterManager cFilterManager;
-    protected ActivityType mActivityTypeMax = ActivityType.GENERIC;
+    protected ActivityType mActivityTypeMax = ActivityType.getDefaultActivityType();
 
     /***********************************************************************************************/
 
@@ -400,39 +401,30 @@ public class BANALService
         return cDeviceManager.getMainSensorStringValue(deviceID);
     }
 
+    @NonNull
     protected ActivityType getActivityType() {
         if (DEBUG) Log.d(TAG, "getActivityType");
 
-        ActivityType result = ActivityType.GENERIC;
+        ActivityType result = ActivityType.getDefaultActivityType();
 
         Set<SensorType> sensorTypes = EnumSet.copyOf(Arrays.asList(getSensorTypes()));
         BSportType sportType = getBSportType();
 
         switch (sportType) {
             case RUN:
-                if (sensorTypes.contains(SensorType.CADENCE)) {
-                    result = ActivityType.RUN_SPEED_AND_CADENCE;
-                } else {
-                    result = ActivityType.RUN_SPEED;
-                }
+                result = ActivityType.RUN_SPEED_AND_CADENCE;
                 break;
 
             case BIKE:
                 if (sensorTypes.contains(SensorType.POWER)) {
                     result = ActivityType.BIKE_POWER;
-                } else if (sensorTypes.contains(SensorType.CADENCE)) {
-                    result = ActivityType.BIKE_SPEED_AND_CADENCE;
-                } else {
-                    result = ActivityType.BIKE_SPEED;
                 }
+                else
+                    result = ActivityType.BIKE_SPEED_AND_CADENCE;
                 break;
 
             default:
-                if (sensorTypes.contains(SensorType.HR)) {
-                    result = ActivityType.GENERIC_HR;
-                } else {
-                    result = ActivityType.GENERIC;
-                }
+                result = ActivityType.GENERIC_HR;
                 break;
         }
 
@@ -486,8 +478,11 @@ public class BANALService
         if (DEBUG) Log.d(TAG, "onCreate");
 
         cSensorManager = new MySensorManager(this);
-        cFilterManager = new FilterManager(this, cDeviceManager, cSensorManager);
         cDeviceManager = new DeviceManager(this, cSensorManager);
+        cFilterManager = new FilterManager(this, cDeviceManager, cSensorManager);
+
+        // when there is a FilterManager, we can create the devices that need filtered data.
+        cDeviceManager.createVerticalSpeedAndSlopeDevice();
 
         ContextCompat.registerReceiver(this, mStartSearchForPairedDevices, new IntentFilter(REQUEST_START_SEARCH_FOR_PAIRED_DEVICES), ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mNewLapReceiver, new IntentFilter(REQUEST_NEW_LAP), ContextCompat.RECEIVER_NOT_EXPORTED);
@@ -628,6 +623,7 @@ public class BANALService
             return cDeviceManager.getIdsOfFoundDevices();
         }
 
+        @NonNull
         public ActivityType getActivityType() {
             return BANALService.this.getActivityType();
         }

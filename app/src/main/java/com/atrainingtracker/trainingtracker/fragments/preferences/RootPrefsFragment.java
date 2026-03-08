@@ -1,6 +1,6 @@
 /*
  * aTrainingTracker (ANT+ BTLE)
- * Copyright (C) 2011 - 2019 Rainer Blind <rainer.blind@gmail.com>
+ * Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,16 +41,12 @@ import com.atrainingtracker.trainingtracker.settings.SettingsDataStore;
 
 public class RootPrefsFragment extends PreferenceFragmentCompat
         implements OnSharedPreferenceChangeListener {
-    public static final String TAG = RootPrefsFragment.class.getName();
+    public static final String TAG = "RootPrefsFragment";
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
 
     @Nullable
-    private EditTextPreference mSearchRoundsPref;
-    @Nullable
-    private ListPreference mUnitPref;
-    @Nullable
-    private Preference mTrainingZonesPref, mExport, mPebble, mCloudUpload;
+    private Preference mZonesRunHR, mZonesBikeHR, mZonesBikePower, mExport, mCloudUpload, mDisplayOptions;
 
     private SharedPreferences mSharedPreferences;
     private SettingsDataStore mSettingsDataStore;
@@ -64,21 +60,37 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
         setPreferencesFromResource(R.xml.prefs, rootKey);
         if (DEBUG) Log.i(TAG, "inflated xml resource file");
 
-        mUnitPref = getPreferenceScreen().findPreference(TrainingApplication.SP_UNITS);
-
-        mTrainingZonesPref = getPreferenceScreen().findPreference("training_zones_settings");
-        if (mTrainingZonesPref != null) {
-            mTrainingZonesPref.setOnPreferenceClickListener(preference -> {
-                Intent intent = new Intent(getActivity(), ZonesSettingsActivity.class);
-                startActivity(intent);
+        // HR Run Zones
+        mZonesRunHR = findPreference("zones_hr_run");
+        if (mZonesRunHR != null) {
+            mZonesRunHR.setOnPreferenceClickListener(preference -> {
+                startZonesActivity(0); // Index for Run
                 return true;
             });
         }
-        mSearchRoundsPref = getPreferenceScreen().findPreference(TrainingApplication.SP_NUMBER_OF_SEARCH_TRIES);
 
-        mExport = this.getPreferenceScreen().findPreference(TrainingApplication.FILE_EXPORT);
+        // HR Bike Zones
+        mZonesBikeHR = findPreference("zones_hr_bike");
+        if (mZonesBikeHR != null) {
+            mZonesBikeHR.setOnPreferenceClickListener(preference -> {
+                startZonesActivity(1); // Index for Bike
+                return true;
+            });
+        }
+
+        // Power Bike Zones
+        mZonesBikePower = findPreference("zones_pwr_bike");
+        if (mZonesBikePower != null) {
+            mZonesBikePower.setOnPreferenceClickListener(preference -> {
+                startZonesActivity(2); // Index for Power
+                return true;
+            });
+        }
+
+        mExport = this.getPreferenceScreen().findPreference(TrainingApplication.SP_EXPORT_FORMATS);
         mCloudUpload = this.getPreferenceScreen().findPreference(TrainingApplication.CLOUD_UPLOAD);
-        mPebble = this.getPreferenceScreen().findPreference(TrainingApplication.PEBBLE_SCREEN);
+
+        mDisplayOptions = this.getPreferenceScreen().findPreference(TrainingApplication.SP_DISPLAY_OPTIONS);
     }
 
     @Override
@@ -96,32 +108,57 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
 
         mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(getActivity());
 
-        mUnitPref.setSummary(TrainingApplication.getUnit().getNameId());
-        mPebble.setSummary(pebbleSummary());
-
-        updateTrainingZonesSummary();
-
-        mSearchRoundsPref.setSummary(TrainingApplication.getNumberOfSearchTries() + "");
-
+        updateZonesRunHRSummary();
+        updateZonesBikeHRSummary();
+        updateZonesBikePowerSummary();
 
         mExport.setSummary(exportSummary());
         mCloudUpload.setSummary(cloudUploadSummary());
+
+        mDisplayOptions.setSummary(displayOptionsSummary());
 
 
         mSharedPreferences.registerOnSharedPreferenceChangeListener(this);
     }
 
-    private void updateTrainingZonesSummary() {
-        if (mTrainingZonesPref != null && mSettingsDataStore != null) {
+    private void startZonesActivity(int tabIndex) {
+        Intent intent = new Intent(getActivity(), ZonesSettingsActivity.class);
+        intent.putExtra("TARGET_ZONE_TAB", tabIndex);
+        startActivity(intent);
+    }
+
+    private void updateZonesRunHRSummary() {
+        if (mZonesRunHR != null && mSettingsDataStore != null) {
             try {
                 // Fetch the summary string from the Kotlin helper
-                String summary = getString(R.string.tab_hr_run) + ":\n" + mSettingsDataStore.getSummary(SettingsDataStore.ZoneType.HR_RUN);
-                summary += "\n\n" + getString(R.string.tab_hr_bike) + ":\n" + mSettingsDataStore.getSummary(SettingsDataStore.ZoneType.HR_BIKE);
-                summary += "\n\n" + getString(R.string.tab_pwr_bike) + ":\n" + mSettingsDataStore.getSummary(SettingsDataStore.ZoneType.PWR_BIKE);
-                mTrainingZonesPref.setSummary(summary);
+                mZonesRunHR.setSummary(mSettingsDataStore.getSummary(SettingsDataStore.ZoneType.HR_RUN));
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to load HR Zones summary for run HR", e);
+                mZonesRunHR.setSummary("Configure your run HR training zones");
+            }
+        }
+    }
+
+    private void updateZonesBikeHRSummary() {
+        if (mZonesBikeHR != null && mSettingsDataStore != null) {
+            try {
+                // Fetch the summary string from the Kotlin helper
+                mZonesBikeHR.setSummary(mSettingsDataStore.getSummary(SettingsDataStore.ZoneType.HR_BIKE));
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to load HR Zones summary for bike HR", e);
+                mZonesBikeHR.setSummary("Configure your bike HR training zones");
+            }
+        }
+    }
+
+    private void updateZonesBikePowerSummary() {
+        if (mZonesBikePower != null && mSettingsDataStore != null) {
+            try {
+                // Fetch the summary string from the Kotlin helper
+                mZonesBikePower.setSummary(mSettingsDataStore.getSummary(SettingsDataStore.ZoneType.PWR_BIKE));
             } catch (Exception e) {
                 Log.e(TAG, "Failed to load HR Zones summary", e);
-                mTrainingZonesPref.setSummary("Configure your training zones");
+                mZonesBikePower.setSummary("Configure your bike power training zones");
             }
         }
     }
@@ -136,25 +173,8 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
 
     @Override
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
-        if (TrainingApplication.SP_UNITS.equals(key)) {
-            mUnitPref.setSummary(TrainingApplication.getUnit().toString());
-        }
 
-        if (TrainingApplication.SP_PEBBLE_WATCHAPP.equals(key)) {
-            mPebble.setSummary(pebbleSummary());
-            getActivity().onContentChanged();
-        }
-
-        if (TrainingApplication.SP_PEBBLE_SUPPORT.equals(key)) {
-            mPebble.setSummary(pebbleSummary());
-            getActivity().onContentChanged();
-        }
-
-
-        if (TrainingApplication.SP_EXPORT_TO_CSV.equals(key)
-                || TrainingApplication.SP_EXPORT_TO_TCX.equals(key)
-                || TrainingApplication.SP_EXPORT_TO_GPX.equals(key)
-                || TrainingApplication.SP_EXPORT_TO_GC_JSON.equals(key)) {
+        if (TrainingApplication.SP_EXPORT_FORMATS.equals(key)) {
             String exportSummary = exportSummary();
             Log.i(TAG, "updating exportSummary to " + exportSummary);
             mExport.setSummary(exportSummary);
@@ -171,9 +191,16 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
             getActivity().onContentChanged();
         }
 
-        if (TrainingApplication.SP_NUMBER_OF_SEARCH_TRIES.equals(key)) {
-            mSearchRoundsPref.setSummary(TrainingApplication.getNumberOfSearchTries() + "");
+        if (TrainingApplication.SP_DISPLAY_OPTIONS.equals(key)) {
+            String displaySummary = displayOptionsSummary();
+            if (DEBUG) Log.i(TAG, "updating displayOptionsSummary to " + displaySummary);
+            mDisplayOptions.setSummary(displaySummary);
+            // This ensures the UI refreshes the text immediately
+            if (getActivity() != null) {
+                getActivity().runOnUiThread(() -> mDisplayOptions.setSummary(displaySummary));
+            }
         }
+
     }
 
     @NonNull
@@ -211,10 +238,6 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
 
         String cloudUpload = null;
 
-        if (TrainingApplication.sendEmail()) {
-            // cloudUpload = incString(cloudUpload);
-            cloudUpload = getString(R.string.prefEmailExport);
-        }
         if (TrainingApplication.uploadToDropbox()) {
             cloudUpload = incString(cloudUpload);
             cloudUpload += getString(R.string.Dropbox);
@@ -233,6 +256,34 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
         return cloudUpload;
     }
 
+    String displayOptionsSummary() {
+        if (DEBUG) Log.i(TAG, "displayOptionsSummary()");
+
+        String displayOptions = null;
+
+        if (TrainingApplication.forcePortrait()) {
+            displayOptions = incString(displayOptions);
+            displayOptions += getString(R.string.forcePortrait);
+        }
+
+        if (TrainingApplication.keepScreenOn()) {
+            displayOptions = incString(displayOptions);
+            displayOptions += getString(R.string.prefsKeepScreenOnTitle);
+        }
+
+        if (TrainingApplication.NoUnlocking()) {
+            displayOptions = incString(displayOptions);
+            displayOptions += getString(R.string.prefsNoUnlockingTitle);
+        }
+
+        if (displayOptions == null) {
+            // Default text if nothing is selected
+            displayOptions = getString(R.string.prefsDisplaySummary);
+        }
+
+        return displayOptions;
+    }
+
     @NonNull
     protected String incString(@Nullable String string) {
         if (string != null) {
@@ -241,14 +292,5 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
             string = "";
         }
         return string;
-    }
-
-    @NonNull
-    protected String pebbleSummary() {
-        if (TrainingApplication.pebbleSupport()) {
-            return getString(TrainingApplication.getPebbleWatchapp().getUiId());
-        } else {
-            return getString(R.string.prefsDoNotUsePebble);
-        }
     }
 }
