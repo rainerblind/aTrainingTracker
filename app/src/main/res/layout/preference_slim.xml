@@ -43,6 +43,6 @@
             android:layout_below="@android:id/title"
             android:textAppearance="?android:attr/textAppearanceListItemSecondary"
             android:textColor="?android:attr/textColorSecondary"
-            android:textSize="13sp" />
+            android:textSize="14sp" />
     </RelativeLayout>
 </LinearLayout>
