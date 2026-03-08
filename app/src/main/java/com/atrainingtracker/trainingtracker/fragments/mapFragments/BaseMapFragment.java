@@ -106,7 +106,7 @@ public abstract class BaseMapFragment
         // MapsInitializer.initialize(getContext());
         // }
         mMap.setMapType(GoogleMap.MAP_TYPE_TERRAIN);
-        mMap.getUiSettings().setZoomControlsEnabled(!TrainingApplication.zoomDependsOnSpeed());
+        mMap.getUiSettings().setZoomControlsEnabled(false);
     }
 
 

@@ -253,34 +253,7 @@ public class TrackOnMapTrackingAndFollowingFragment2
         protected float speed2zoom(float speed, float currentZoom) {
             if (DEBUG) Log.i(TAG, "speed2zoom(" + speed + ")");
 
-            if (!TrainingApplication.zoomDependsOnSpeed()) {
-                return currentZoom;
-            } else {
-                return ZOOM_MAX - speed * ZOOM_GAIN;
-            }
-
-        /*
-        if (speed <= ZOOM_SUPER_CLOSE_THRESHOLD) {
-            if (DEBUG) Log.i(TAG, "returning" + ZOOM_SUPER_CLOSE);
-            return ZOOM_SUPER_CLOSE;
-        }
-        else if (speed <= ZOOM_CLOSE_THRESHOLD) {
-            if (DEBUG) Log.i(TAG, "returning " + ZOOM_CLOSE);
-            return ZOOM_CLOSE;
-        }
-        else if (speed <= ZOOM_NORMAL_THRESHOLD) {
-            if (DEBUG) Log.i(TAG, "returning " + ZOOM_NORMAL);
-            return ZOOM_NORMAL;
-        }
-        else if (speed <= ZOOM_AWAY_THRESHOLD) {
-            if (DEBUG) Log.i(TAG, "returning " + ZOOM_AWAY);
-            return ZOOM_AWAY;
-        }
-        else {
-            if (DEBUG) Log.i(TAG, "returning " + ZOOM_SUPER_AWAY);
-            return ZOOM_SUPER_AWAY;
-        }
-        */
+            return ZOOM_MAX - speed * ZOOM_GAIN;
         }
     }
 

@@ -373,11 +373,6 @@ public class TrainingApplication extends Application {
         return cSharedPreferences.getStringSet(SP_DISPLAY_OPTIONS, DEFAULT_DISPLAY_OPTIONS).contains("noUnlocking");
     }
 
-    @Deprecated // Deprecated because we always return true here.  TODO: remove this function.
-    public static boolean zoomDependsOnSpeed() {
-        return true;
-    }
-
     public static boolean showUnits() {
         return cSharedPreferences.getBoolean(SP_SHOW_UNITS, true);
     }
