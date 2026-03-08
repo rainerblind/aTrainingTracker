@@ -18,3 +18,5 @@ gen/
 
 # Release signing property file
 release.properties
+
+google-services.json
