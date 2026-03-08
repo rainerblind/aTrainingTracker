@@ -78,6 +78,16 @@ fun SettingsScreenRoute(
     // Local state to hold data for swiping performance
     var allProfilesData by remember { mutableStateOf<List<ZoneProfileState>>(emptyList()) }
 
+    // save helper
+    val saveProfile = { profile: ZoneProfileState ->
+        scope.launch(Dispatchers.IO) {
+            dataStore.saveHrZoneMax(profile.type, Zone.ZONE_1, profile.z1)
+            dataStore.saveHrZoneMax(profile.type, Zone.ZONE_2, profile.z2)
+            dataStore.saveHrZoneMax(profile.type, Zone.ZONE_3, profile.z3)
+            dataStore.saveHrZoneMax(profile.type, Zone.ZONE_4, profile.z4)
+        }
+    }
+
     // Initial Load
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
@@ -91,36 +101,6 @@ fun SettingsScreenRoute(
                 )
             }
             allProfilesData = loadedData
-        }
-    }
-
-    // --- AUTO-SAVE LOGIC ---
-    val lifecycleOwner = LocalLifecycleOwner.current
-    // rememberUpdatedState ensures the observer uses the very latest data when the event triggers
-    val currentData by rememberUpdatedState(allProfilesData)
-
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            // ON_STOP is called when the Activity is no longer visible
-            if (event == Lifecycle.Event.ON_STOP) {
-                if (currentData.isNotEmpty()) {
-                    // We use the existing scope. Note: In complex apps, if the scope is
-                    // cancelled too quickly, you might use GlobalScope or NonCancellable here,
-                    // but for DataStore this usually completes fine.
-                    scope.launch(Dispatchers.IO) {
-                        currentData.forEach { profile ->
-                            dataStore.saveHrZoneMax(profile.type, Zone.ZONE_1, profile.z1)
-                            dataStore.saveHrZoneMax(profile.type, Zone.ZONE_2, profile.z2)
-                            dataStore.saveHrZoneMax(profile.type, Zone.ZONE_3, profile.z3)
-                            dataStore.saveHrZoneMax(profile.type, Zone.ZONE_4, profile.z4)
-                        }
-                    }
-                }
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 
@@ -164,18 +144,25 @@ fun SettingsScreenRoute(
                         z3Max = profileState.z3,
                         z4Max = profileState.z4,
 
-                        // Update the LOCAL List State (in memory)
                         onUpdateZone1Max = { new ->
-                            allProfilesData = updateProfile(allProfilesData, page) { it.copy(z1 = new) }
+                            val updated = updateProfile(allProfilesData, page) { it.copy(z1 = new) }
+                            allProfilesData = updated
+                            saveProfile(updated[page]) // Save immediately on change}
                         },
                         onUpdateZone2Max = { new ->
-                            allProfilesData = updateProfile(allProfilesData, page) { it.copy(z2 = new) }
+                            val updated = updateProfile(allProfilesData, page) { it.copy(z2 = new) }
+                            allProfilesData = updated
+                            saveProfile(updated[page]) // Save immediately on change
                         },
                         onUpdateZone3Max = { new ->
-                            allProfilesData = updateProfile(allProfilesData, page) { it.copy(z3 = new) }
+                            val updated = updateProfile(allProfilesData, page) { it.copy(z3 = new) }
+                            allProfilesData = updated
+                            saveProfile(updated[page]) // Save immediately on change
                         },
                         onUpdateZone4Max = { new ->
-                            allProfilesData = updateProfile(allProfilesData, page) { it.copy(z4 = new) }
+                            val updated = updateProfile(allProfilesData, page) { it.copy(z4 = new) }
+                            allProfilesData = updated
+                            saveProfile(updated[page]) // Save immediately on change
                         }
                     )
                 }

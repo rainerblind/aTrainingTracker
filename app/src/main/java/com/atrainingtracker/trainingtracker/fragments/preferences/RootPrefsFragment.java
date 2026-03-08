@@ -41,7 +41,7 @@ import com.atrainingtracker.trainingtracker.settings.SettingsDataStore;
 
 public class RootPrefsFragment extends PreferenceFragmentCompat
         implements OnSharedPreferenceChangeListener {
-    public static final String TAG = RootPrefsFragment.class.getName();
+    public static final String TAG = "RootPrefsFragment";
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
 
