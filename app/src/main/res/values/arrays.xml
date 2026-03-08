@@ -251,4 +251,10 @@
         <item>noUnlocking</item>
     </string-array>
 
+    <string-array name="display_options_defaults">
+        <item>forcePortrait</item>
+        <item>keepScreenOn</item>
+        <item>noUnlocking</item>
+    </string-array>
+
 </resources>

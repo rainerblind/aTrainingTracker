@@ -255,6 +255,7 @@
             android:icon="@drawable/ic_checklist"
             android:entries="@array/display_options_titles"
             android:entryValues="@array/display_options_values"
+            android:defaultValue="@array/display_options_defaults"
             android:layout="@layout/preference_slim" />
 
         <Preference

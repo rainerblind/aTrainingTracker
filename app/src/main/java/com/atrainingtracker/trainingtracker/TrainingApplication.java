@@ -70,9 +70,11 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapAftermathActi
 import com.dropbox.core.json.JsonReadException;
 import com.dropbox.core.oauth.DbxCredential;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Locale;
+import java.util.Set;
 
 public class TrainingApplication extends Application {
     private static final boolean DEBUG = true;
@@ -88,6 +90,11 @@ public class TrainingApplication extends Application {
     public static final String SPORT_TYPE_ID = "com.atrainingtracker.trainingapplication.SPORT_TYPE_ID";
     // TODO: also move these Strings to string.xml???
     public static final String SP_DISPLAY_OPTIONS = "pref_display_options";
+    private static final Set<String> DEFAULT_DISPLAY_OPTIONS = new HashSet<>(Arrays.asList(
+            "forcePortrait",
+            "keepScreenOn",
+            "noUnlocking"
+    ));
     public static final String SP_UNITS = "listUnits";
     public static final String SP_SHOW_UNITS = "showUnits";
     // configure search behaviour
@@ -364,15 +371,15 @@ public class TrainingApplication extends Application {
 
     // -- Display options
     public static boolean forcePortrait() {
-        return cSharedPreferences.getStringSet(SP_DISPLAY_OPTIONS, new HashSet<>()).contains("forcePortrait");
+        return cSharedPreferences.getStringSet(SP_DISPLAY_OPTIONS, DEFAULT_DISPLAY_OPTIONS).contains("forcePortrait");
     }
 
     public static boolean keepScreenOn() {
-        return cSharedPreferences.getStringSet(SP_DISPLAY_OPTIONS, new HashSet<>()).contains("keepScreenOn");
+        return cSharedPreferences.getStringSet(SP_DISPLAY_OPTIONS, DEFAULT_DISPLAY_OPTIONS).contains("keepScreenOn");
     }
 
     public static boolean NoUnlocking() {
-        return cSharedPreferences.getStringSet(SP_DISPLAY_OPTIONS, new HashSet<>()).contains("noUnlocking");
+        return cSharedPreferences.getStringSet(SP_DISPLAY_OPTIONS, DEFAULT_DISPLAY_OPTIONS).contains("noUnlocking");
     }
 
     @Deprecated // Deprecated because we always return true here.  TODO: remove this function.
