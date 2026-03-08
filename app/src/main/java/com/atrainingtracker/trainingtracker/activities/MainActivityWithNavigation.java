@@ -95,16 +95,11 @@ import com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialog;
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesListFragment;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.MyLocationsFragment;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapTrackingFragment;
-import com.atrainingtracker.trainingtracker.fragments.preferences.AltitudeCorrectionFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.CloudUploadFragment;
-import com.atrainingtracker.trainingtracker.fragments.preferences.DisplayFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.FancyWorkoutNameListFragment;
-import com.atrainingtracker.trainingtracker.fragments.preferences.FileExportFragment;
-import com.atrainingtracker.trainingtracker.fragments.preferences.LocationSourcesFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.RootPrefsFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.RunkeeperUploadFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.SearchFragment;
-import com.atrainingtracker.trainingtracker.fragments.preferences.StartSearchFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.StravaUploadFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.TrainingpeaksUploadFragment;
 import com.atrainingtracker.trainingtracker.interfaces.RemoteDevicesSettingsInterface;
@@ -813,14 +808,7 @@ public class MainActivityWithNavigation
         PreferenceFragmentCompat fragment = null;
         switch (key) {
             case "root" -> fragment = new RootPrefsFragment();
-            case "display" -> fragment = new DisplayFragment();
-
-            // else if (key.equals("smoothing")) {
-            //     fragment = new SmoothingFragment();
-            // }
             case "search_settings" -> fragment = new SearchFragment();
-            case TrainingApplication.PREF_KEY_START_SEARCH -> fragment = new StartSearchFragment();
-            case "fileExport" -> fragment = new FileExportFragment();
             case "cloudUpload" -> fragment = new CloudUploadFragment();
             case TrainingApplication.PREFERENCE_SCREEN_STRAVA ->
                     fragment = new StravaUploadFragment();
@@ -828,8 +816,6 @@ public class MainActivityWithNavigation
                     fragment = new RunkeeperUploadFragment();
             case TrainingApplication.PREFERENCE_SCREEN_TRAINING_PEAKS ->
                     fragment = new TrainingpeaksUploadFragment();
-            case "prefsLocationSources" -> fragment = new LocationSourcesFragment();
-            case "altitudeCorrection" -> fragment = new AltitudeCorrectionFragment();
             case "sportTypes" -> {
                 FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
                 ft.replace(R.id.content, new SportTypeListFragment(), preferenceScreen.getKey());

@@ -97,9 +97,8 @@ public class TrainingApplication extends Application {
     ));
     public static final String SP_UNITS = "listUnits";
     public static final String SP_SHOW_UNITS = "showUnits";
-    // configure search behaviour
-    public static final String PREF_KEY_START_SEARCH = "start_search";
 
+    // configure search behaviour
     public static final String SP_NUMBER_OF_SEARCH_TRIES_INT = "numberOfSearchTriesInt";
     private static final int DEFAULT_NUMBER_OF_SEARCH_TRIES = 3;
 
