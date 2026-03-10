@@ -1,6 +1,7 @@
 package com.atrainingtracker.banalservice.ui.sporttype
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,8 +23,9 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -42,13 +44,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.MyHelper
+import com.atrainingtracker.trainingtracker.ui.components.stats.RichStatsSheet
+import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
+import com.atrainingtracker.trainingtracker.ui.components.stats.StatsSummaryBlock
 
 @Composable
 fun SportTypeScreen(
@@ -58,11 +62,31 @@ fun SportTypeScreen(
     var itemToEdit by remember { mutableStateOf<SportTypeItem?>(null) }
     var itemToDelete by remember { mutableStateOf<SportTypeItem?>(null) }
 
+    var statsToShow by remember { mutableStateOf<Pair<String, List<StatsData>>?>(null) }
+
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(onClick = {
                 // Create blank template for new item
-                itemToEdit = SportTypeItem(-1, "TODO", 4.2, 10.0, "Ride", "Biking", "bike", true)
+                itemToEdit = SportTypeItem(
+                    id = -1,
+                    name = "",
+                    minSpeed = 4.2,
+                    maxSpeed = 10.0,
+                    stravaName = "Ride",
+                    tcxName = "Biking",
+                    gcName = "bike",
+                    isEditable = true,
+                    firstUsed = null,
+                    lastUsed = null,
+                    statsData = StatsData(
+                        title = "",
+                        totalWorkouts = 0,
+                        totalDistanceWithUnits = "0",
+                        timeWithUnits = "0",
+                        totalAscentWithUnits = "0"
+                    )
+                )
             }) {
                 Icon(Icons.Default.Add, contentDescription = stringResource(R.string.text_new))
             }
@@ -78,11 +102,28 @@ fun SportTypeScreen(
             items(sportTypes, key = { it.id }) { item ->
                 SportTypeCard(
                     item = item,
-                    onClick = { itemToEdit = item },
+                    onConfigClick = { itemToEdit = item },
+                    onStatsClick = { item ->
+                        // 1. Fetch detailed periods from ViewModel
+                        val periods = viewModel.getDetailedStats(item.id, item.firstUsed)
+                        // 2. Combine with the "Total" stats already in the item
+                        val allStats = listOf(item.statsData) + periods
+                        // 3. Show the sheet
+                        statsToShow = Pair(item.name, allStats)
+                    },
                     onDelete = { itemToDelete = item }
                 )
             }
         }
+    }
+
+    // --- Rich Stats Sheet ---
+    statsToShow?.let { (name, data) ->
+        RichStatsSheet(
+            title = name,
+            periodStats = data,
+            onDismiss = { statsToShow = null }
+        )
     }
 
     // Edit Dialog
@@ -121,7 +162,8 @@ fun SportTypeScreen(
 @Composable
 fun SportTypeCard(
     item: SportTypeItem,
-    onClick: () -> Unit,
+    onConfigClick: (SportTypeItem) -> Unit,
+    onStatsClick: (SportTypeItem) -> Unit,
     onDelete: () -> Unit
 ) {
     val context = LocalContext.current
@@ -129,21 +171,20 @@ fun SportTypeCard(
 
     var showMenu by remember { mutableStateOf(false) }
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = { showMenu = true }
-            ),
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
-        Box {
-            Column(modifier = Modifier.padding(16.dp)) {
+    Box {
+        ElevatedCard(
+            modifier = Modifier
+                .fillMaxWidth()
+        ) {
+            // Upper part: The equipment itself
+            Column(modifier = Modifier
+                .fillMaxWidth()
+                .combinedClickable(
+                    onClick = { onConfigClick(item) },
+                    onLongClick = { showMenu = true }
+                )
+                .padding(16.dp)
+            ) {
                 // HEADER ZONE
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -183,8 +224,6 @@ fun SportTypeCard(
                         )
                     }
 
-
-
                     if (!item.isEditable) {
                         Icon(
                             Icons.Default.Lock,
@@ -195,11 +234,6 @@ fun SportTypeCard(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
-                HorizontalDivider(
-                    thickness = 0.5.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant
-                )
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // MAPPING ZONE
@@ -242,79 +276,96 @@ fun SportTypeCard(
                 }
             }
 
-            // The Menu itself (anchored to the Card via the Box)
-            androidx.compose.material3.DropdownMenu(
-                expanded = showMenu,
-                onDismissRequest = { showMenu = false }
-            ) {
-                androidx.compose.material3.DropdownMenuItem(
-                    text = {
-                        Text(
-                            text = stringResource(R.string.delete),
-                            color = if (item.isEditable) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline
-                        )
-                    },
-                    enabled = item.isEditable,
-                    onClick = {
-                        showMenu = false
-                        onDelete()
-                    },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = null,
-                            tint = if (item.isEditable) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline
-                        )
+            // --- THE STATS BLOCK
+            if (item.statsData.totalWorkouts > 0) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onStatsClick(item) }
+                        .padding(horizontal = 16.dp)
+                ) {
+                    HorizontalDivider(
+                        thickness = 0.5.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Usage Timeline Row (First/Last Activity)
+                    if (!item.firstUsed.isNullOrBlank() || !item.lastUsed.isNullOrBlank()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            item.firstUsed?.let {
+                                UsageItem(
+                                    label = stringResource(R.string.stats_first_activity),
+                                    date = it
+                                )
+                            }
+                            item.lastUsed?.let {
+                                UsageItem(
+                                    label = stringResource(R.string.stats_last_activity),
+                                    date = it,
+                                    alignEnd = true
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
                     }
-                )
+
+                    StatsSummaryBlock(
+                        stats = item.statsData
+                        )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
-    }
-}
 
-@Preview(showBackground = true, name = "Sport Type Card - Editable")
-@Composable
-fun PreviewSportTypeCardEditable() {
-    MaterialTheme {
-        Column(modifier = Modifier.padding(16.dp)) {
-            SportTypeCard(
-                item = SportTypeItem(
-                    id = 100L,
-                    name = "Mountain Biking",
-                    minSpeed = 2.0,
-                    maxSpeed = 8.0,
-                    stravaName = "MountainBike",
-                    tcxName = "Biking",
-                    gcName = "Mountain Bike",
-                    isEditable = true
-                ),
-                onClick = {},
-                onDelete = {}
+        // The Menu itself (anchored to the Card via the Box)
+        DropdownMenu(
+            expanded = showMenu,
+            onDismissRequest = { showMenu = false }
+        ) {
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        text = stringResource(R.string.delete),
+                        color = if (item.isEditable) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline
+                    )
+                },
+                enabled = item.isEditable,
+                onClick = {
+                    showMenu = false
+                    onDelete()
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = null,
+                        tint = if (item.isEditable) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline
+                    )
+                }
             )
         }
     }
 }
 
-@Preview(showBackground = true, name = "Sport Type Card - System")
 @Composable
-fun PreviewSportTypeCardSystem() {
-    MaterialTheme {
-        Column(modifier = Modifier.padding(16.dp)) {
-            SportTypeCard(
-                item = SportTypeItem(
-                    id = 1L,
-                    name = "Cycling",
-                    minSpeed = 5.0,
-                    maxSpeed = 15.0,
-                    stravaName = "Ride",
-                    tcxName = "Cycling",
-                    gcName = "Bike",
-                    isEditable = false
-                ),
-                onClick = {},
-                onDelete = {}
-            )
-        }
+fun UsageItem(label: String, date: String, alignEnd: Boolean = false) {
+    Column(horizontalAlignment = if (alignEnd) Alignment.End else Alignment.Start) {
+        // Value on Top
+        Text(
+            text = date,
+            style = MaterialTheme.typography.bodyMedium, // Match importance of stats
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        // Label Below
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.outline
+        )
     }
 }
+
 

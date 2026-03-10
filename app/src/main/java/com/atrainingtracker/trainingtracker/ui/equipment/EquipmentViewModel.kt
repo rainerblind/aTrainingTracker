@@ -89,7 +89,7 @@ class EquipmentViewModel(application: Application) : AndroidViewModel(applicatio
                         lastUsed = stats.lastUsage?.substringBefore(" "),
                         statsData = StatsData.fromDatabase(
                             title = getApplication<Application>().getString(R.string.stats_total),
-                            equipmentStats = stats
+                            stats = stats
                         )
                     )
                 }

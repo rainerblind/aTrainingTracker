@@ -1004,6 +1004,8 @@
     <string name="stats_total">All Time</string>
     <string name="stats_first_use">First use</string>
     <string name="stats_last_use">Last use</string>
+    <string name="stats_first_activity">First Activity</string>
+    <string name="stats_last_activity">Last Activity</string>
     <string name="stats_distance">Distance</string>
     <string name="stats_workouts">Workouts</string>
     <string name="stats_time">Time active</string>

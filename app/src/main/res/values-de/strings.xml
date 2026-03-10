@@ -903,6 +903,8 @@
     <string name="stats_total">Gesamt</string>
     <string name="stats_first_use">Erste Nutzung</string>
     <string name="stats_last_use">Letzte Nutzung</string>
+    <string name="stats_first_activity">Erste Aktivität</string>
+    <string name="stats_last_activity">Letzte Aktiviität</string>
     <string name="stats_distance">Distanz</string>
     <string name="stats_workouts">Einheiten</string>
     <string name="stats_time">Zeit aktiv</string>

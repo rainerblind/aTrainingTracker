@@ -21,7 +21,6 @@ package com.atrainingtracker.trainingtracker.database;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
-import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.BaseColumns;
@@ -34,8 +33,6 @@ import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
-import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusRepository;
-import com.google.android.gms.maps.model.LatLng;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -722,10 +719,9 @@ public class WorkoutSummariesDatabaseManager {
 
 
     /**
-     * Getting some stats for an equipment
+     * Getting some stats for an equipment or a sport type
      */
-    // TODO: rename since we also need such a stat for sport types.
-    public static class EquipmentStats {
+    public static class Stats {
         public double totalDistanceM = 0;
         public long totalActiveTimeS = 0;
         public int totalAscentM = 0;
@@ -737,8 +733,8 @@ public class WorkoutSummariesDatabaseManager {
     /**
      * Aggregates workout statistics for a specific piece of equipment.
      */
-    public EquipmentStats getEquipmentStats(long equipmentId) {
-        EquipmentStats stats = new EquipmentStats();
+    public Stats getEquipmentStats(long equipmentId) {
+        Stats stats = new Stats();
         SQLiteDatabase db = getDatabase();
 
         String[] columns = {
@@ -772,10 +768,48 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     /**
+     * Aggregates workout statistics for a specific sport type
+     */
+    public Stats getSportTypeStats(long sportTypeId) {
+        Stats stats = new Stats();
+        SQLiteDatabase db = getDatabase();
+
+        String[] columns = {
+                "SUM(" + WorkoutSummaries.DISTANCE_TOTAL_m + ")",
+                "SUM(" + WorkoutSummaries.TIME_ACTIVE_s + ")",
+                "SUM(" + WorkoutSummaries.ASCENDING + ")",
+                "MIN(" + WorkoutSummaries.TIME_START + ")",
+                "MAX(" + WorkoutSummaries.TIME_START + ")",
+                "COUNT(*)" // count of workouts
+        };
+
+        Cursor cursor = db.query(
+                WorkoutSummaries.TABLE,
+                columns,
+                WorkoutSummaries.SPORT_ID + "=?",
+                new String[]{String.valueOf(sportTypeId)},
+                null, null, null
+        );
+
+        if (cursor != null && cursor.moveToFirst()) {
+            stats.totalDistanceM = cursor.getDouble(0);
+            stats.totalActiveTimeS = cursor.getLong(1);
+            stats.totalAscentM = cursor.getInt(2);
+            stats.firstUsage = cursor.getString(3);
+            stats.lastUsage = cursor.getString(4);
+            stats.count = cursor.getInt(5); // Extract count
+            cursor.close();
+        }
+
+        return stats;
+    }
+
+
+    /**
      * Aggregates statistics for a specific equipment within a time range.
      */
-    public EquipmentStats getEquipmentStatsForPeriod(long equipmentId, long startTimeS, long endTimeS) {
-        EquipmentStats stats = new EquipmentStats();
+    public Stats getEquipmentStatsForPeriod(long equipmentId, long startTimeS, long endTimeS) {
+        Stats stats = new Stats();
         SQLiteDatabase db = getDatabase();
 
         String[] columns = {
@@ -794,6 +828,46 @@ public class WorkoutSummariesDatabaseManager {
 
         String[] selectionArgs = {
                 String.valueOf(equipmentId),
+                String.valueOf(startTimeS),
+                String.valueOf(endTimeS)
+        };
+
+        try (Cursor cursor = db.query(WorkoutSummaries.TABLE, columns, selection, selectionArgs, null, null, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                stats.totalDistanceM = cursor.getDouble(0);
+                stats.totalActiveTimeS = cursor.getLong(1);
+                stats.totalAscentM = cursor.getInt(2);
+                stats.firstUsage = cursor.getString(3);
+                stats.lastUsage = cursor.getString(4);
+                stats.count = cursor.getInt(5);
+            }
+        }
+        return stats;
+    }
+
+    /**
+     * Aggregates statistics for a specific sport type within a time range.
+     */
+    public Stats getSportTypeStatsForPeriod(long sportTypeId, long startTimeS, long endTimeS) {
+        Stats stats = new Stats();
+        SQLiteDatabase db = getDatabase();
+
+        String[] columns = {
+                "SUM(" + WorkoutSummaries.DISTANCE_TOTAL_m + ")",
+                "SUM(" + WorkoutSummaries.TIME_ACTIVE_s + ")",
+                "SUM(" + WorkoutSummaries.ASCENDING + ")",
+                "MIN(" + WorkoutSummaries.TIME_START + ")",
+                "MAX(" + WorkoutSummaries.TIME_START + ")",
+                "COUNT(*)"
+        };
+
+        // Compare DATETIME column against numeric unix timestamps
+        String selection = WorkoutSummaries.SPORT_ID + "=? AND " +
+                WorkoutSummaries.TIME_START + " >= datetime(?, 'unixepoch') AND " +
+                WorkoutSummaries.TIME_START + " <= datetime(?, 'unixepoch')";
+
+        String[] selectionArgs = {
+                String.valueOf(sportTypeId),
                 String.valueOf(startTimeS),
                 String.valueOf(endTimeS)
         };

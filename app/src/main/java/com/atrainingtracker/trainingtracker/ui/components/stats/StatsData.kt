@@ -20,7 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.components.stats
 
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
-import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.EquipmentStats
+import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.Stats
 
 data class StatsData(
     val title: String,
@@ -30,15 +30,15 @@ data class StatsData(
     val totalAscentWithUnits: String
 ) {
     companion object {
-        fun fromDatabase(title: String, equipmentStats: EquipmentStats): StatsData {
+        fun fromDatabase(title: String, stats: Stats): StatsData {
             val distanceFormater = DistanceFormatter()
 
             return StatsData (
                 title = title,
-                totalWorkouts = equipmentStats.count,
-                totalDistanceWithUnits = distanceFormater.format_with_units(equipmentStats.totalDistanceM),
-                timeWithUnits = TimeFormatter().format_with_units(equipmentStats.totalActiveTimeS),
-                totalAscentWithUnits = distanceFormater.format_with_units(equipmentStats.totalAscentM)
+                totalWorkouts = stats.count,
+                totalDistanceWithUnits = distanceFormater.format_with_units(stats.totalDistanceM),
+                timeWithUnits = TimeFormatter().format_with_units(stats.totalActiveTimeS),
+                totalAscentWithUnits = distanceFormater.format_with_units(stats.totalAscentM)
             )
         }
     }
