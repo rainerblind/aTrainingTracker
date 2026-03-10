@@ -70,7 +70,7 @@ fun EquipmentScreen(
     // State for creating new equipment
     var isAddingNew by remember { mutableStateOf(false) }
 
-    val tabs = listOf("Bikes", "Shoes")
+    val tabs = listOf(stringResource(R.string.equipment_type_bike), stringResource(R.string.equipment_type_shoe))
     val pagerState = rememberPagerState(
         initialPage = initialTab,
         pageCount = { tabs.size }
@@ -81,7 +81,7 @@ fun EquipmentScreen(
         topBar = {
             Column {
                 TopAppBar(
-                    title = { Text("Equipment Management", style = MaterialTheme.typography.titleLarge) },
+                    title = { Text(stringResource(R.string.equipment_management_title_full), style = MaterialTheme.typography.titleLarge) },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surface,
                         titleContentColor = MaterialTheme.colorScheme.onSurface
@@ -100,7 +100,7 @@ fun EquipmentScreen(
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { isAddingNew = true }) {
-                Icon(Icons.Default.Add, contentDescription = "Add")
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.text_new))
             }
         }
     ) { padding ->
@@ -111,7 +111,7 @@ fun EquipmentScreen(
             val currentList = if (page == 0) bikes else shoes
             EquipmentList(
                 items = currentList,
-                emptyMessage = if (page == 0) "No bikes linked." else "No shoes linked.",
+                emptyMessage = if (page == 0) stringResource(R.string.equipment_no_bikes) else stringResource(R.string.equipment_no_shoes),
                 // Forward the clicks to set our local state
                 onConfigClick = { itemToConfigure = it },
                 onStatsClick = { item ->
@@ -297,7 +297,7 @@ fun EquipmentCard(
                 if (item.linkedDeviceNames.isNotBlank()) {
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "Sensors: ${item.linkedDeviceNames}",
+                        text = "${stringResource(R.string.SensorTypes)} ${item.linkedDeviceNames}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -353,7 +353,7 @@ fun EquipmentCard(
 
         DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
             DropdownMenuItem(
-                text = { Text("Delete") },
+                text = { Text(stringResource(R.string.delete)) },
                 onClick = { showMenu = false; onDelete() },
                 leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
             )

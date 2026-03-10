@@ -489,11 +489,13 @@
 
     <!-- others -->
     <string name="equipment_none">- none -</string>
-    <string name="equipment_all">+ all+ </string>
+    <string name="equipment_all">+ all +</string>
     <string name="equipment_all_bikes">+ all bikes +</string>
     <string name="equipment_all_shoes">+ all shoes +</string>
-    <string name="equipment_type_bike">Bike</string>
+    <string name="equipment_type_bike">Bikes</string>
     <string name="equipment_type_shoe">Shoes</string>
+    <string name="equipment_no_bikes">No Bikes</string>
+    <string name="equipment_no_shoes">No Shoes</string>
 
     <!-- dialogs -->
     <string name="SD_card_not_available">Sorry, the SD Card is not available.</string>
@@ -983,11 +985,19 @@
 
     <!-- Equipment -->
     <string name="equipment_management_title">Equipment</string>
+    <string name="equipment_management_title_full">Equipment Management</string>
     <string name="equipment_management_summary">Configure your equipment</string>
     <string name="prefs_manage_bikes_title">Bikes</string>
     <string name="prefs_manage_bikes_summary">Configure all your bikes</string>
     <string name="prefs_manage_shoes_title">Shoes</string>
     <string name="prefs_manage_shoes_summary">Configure all your shoes</string>
+
+    <string name="equipment_configure_equipment">Configure Equipment</string>
+    <string name="equipment_bike_type">Bike Type</string>
+    <string name="equipment_select_bike_type">Select Bike Type</string>
+    <string name="equipment_no_sensors_linked">No sensors linked</string>
+    <string name="equipment_linked_sensors">Linked Sensors</string>
+
 
     <!-- statistics -->
     <string name="stats_total">All Time</string>
