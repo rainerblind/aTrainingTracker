@@ -4,299 +4,60 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.database.Cursor
 import android.os.Bundle
-import android.util.Log
-import android.view.ContextMenu
 import android.view.LayoutInflater
-import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
-import android.widget.AdapterView
-import android.widget.TextView
-import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
+import androidx.activity.compose.setContent
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.platform.ComposeView
 import androidx.core.content.ContextCompat
-import androidx.cursoradapter.widget.SimpleCursorAdapter
-import androidx.fragment.app.ListFragment
-import com.atrainingtracker.R
-import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
-import com.atrainingtracker.trainingtracker.MyHelper
-import com.atrainingtracker.trainingtracker.TrainingApplication
-import com.google.android.material.floatingactionbutton.FloatingActionButton
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
-class SportTypeListFragment : ListFragment() {
+class SportTypeListFragment : Fragment() {
 
-    // Using 'lateinit' as these are initialized in onCreate and non-null afterward.
-    private lateinit var cursorAdapter: SimpleCursorAdapter
-    private lateinit var speedUnit: String
+    private val viewModel: SportTypeViewModel by viewModels()
 
-    // The cursor is nullable because it's closed in onDestroy.
-    private var cursor: Cursor? = null
-
-    private val sportTypeChangedFilter = IntentFilter(EditSportTypeDialog.SPORT_TYPE_CHANGED_INTENT)
-    private val sportTypeChangedReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            updateView()
-        }
-    }
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        if (DEBUG) Log.d(TAG, "onCreate")
-        super.onCreate(savedInstanceState)
-
-        speedUnit = getString(MyHelper.getSpeedUnitNameId())
-
-        val db = SportTypeDatabaseManager.getInstance(requireContext()).database
-        cursor = db.query(
-            SportTypeDatabaseManager.SportType.TABLE,
-            ALL_COLUMNS, // Use the new, expanded column array
-            null, null, null, null,
-            SORT_ORDER
-        )
-
-        // These from/to arrays are now just placeholders. The real work is in the ViewBinder.
-        val fromColumns = arrayOf(
-            SportTypeDatabaseManager.SportType.UI_NAME,
-            SportTypeDatabaseManager.SportType.MIN_AVG_SPEED,
-            SportTypeDatabaseManager.SportType.STRAVA_NAME,
-            SportTypeDatabaseManager.SportType.TCX_NAME,
-            SportTypeDatabaseManager.SportType.GOLDEN_CHEETAH_NAME,
-            SportTypeDatabaseManager.SportType.C_ID
-        )
-        val toViews = intArrayOf(
-            R.id.st_tvName,
-            R.id.st_tvSpeed,
-            R.id.st_tvStrava,
-            R.id.st_tv_file_mapping,
-            R.id.st_ivLock
-        )
-
-        cursorAdapter =
-            SimpleCursorAdapter(context, R.layout.sport_type_row, cursor, fromColumns, toViews, 0)
-        cursorAdapter.viewBinder = SimpleCursorAdapter.ViewBinder { view, cursor, _ ->
-            // The binding logic is handled entirely here for all views in the row.
-            val id = view.id
-
-            val sportTypeId = cursor.getLong(cursor.getColumnIndexOrThrow(SportTypeDatabaseManager.SportType.C_ID))
-            val canDelete = SportTypeDatabaseManager.canDelete(sportTypeId)
-
-            when (id) {
-
-                // show the lock icon when the item is not editable
-                R.id.st_ivLock -> {
-                    view.visibility = if (canDelete) View.GONE else View.VISIBLE
-                    true
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        return ComposeView(requireContext()).apply {
+            setContent {
+                ATrainingTrackerTheme {
+                    SportTypeScreen(
+                        viewModel = viewModel,
+                        onEdit = { id -> showEditSportTypeDialog(id) }
+                    )
                 }
-                R.id.st_tvName, R.id.st_tvSpeed, R.id.st_tvStrava, R.id.st_tv_file_mapping -> {
-                    val tv = view as TextView
-                    when (view.id) {
-                        R.id.st_tvName -> {
-                            val name =
-                                cursor.getString(cursor.getColumnIndexOrThrow(
-                                    SportTypeDatabaseManager.SportType.UI_NAME))
-
-                            context?.let { ctx ->
-                                val icon = SportTypeDatabaseManager.getInstance(ctx)
-                                    .getBSportTypeIcon(ctx, sportTypeId, 0.75)
-                                icon?.alpha =
-                                    if (canDelete) 150 else 255 // some transparency for editable
-                                icon.setBounds(0, 0, icon.intrinsicWidth, icon.intrinsicHeight)
-                                tv.setCompoundDrawables(icon, null, null, null)
-                            }
-
-                            //  Set a slightly more grey text color for editable items
-                            val textColorRes =
-                                if (canDelete) android.R.color.secondary_text_light else android.R.color.primary_text_light
-                            tv.setTextColor(ContextCompat.getColor(tv.context, textColorRes))
-
-                            tv.text = name
-                        }
-
-                        R.id.st_tvSpeed -> {
-                            val minSpeed = MyHelper.mps2userUnit(
-                                cursor.getDouble(
-                                    cursor.getColumnIndexOrThrow(SportTypeDatabaseManager.SportType.MIN_AVG_SPEED)
-                                )
-                            )
-                            val maxSpeed = MyHelper.mps2userUnit(
-                                cursor.getDouble(
-                                    cursor.getColumnIndexOrThrow(SportTypeDatabaseManager.SportType.MAX_AVG_SPEED)
-                                )
-                            )
-                            tv.text = getString(
-                                R.string.average_speed_range_format,
-                                minSpeed,
-                                maxSpeed,
-                                speedUnit
-                            )
-                        }
-
-                        R.id.st_tvStrava -> {
-                            val stravaType =
-                                cursor.getString(cursor.getColumnIndexOrThrow(
-                                    SportTypeDatabaseManager.SportType.STRAVA_NAME))
-                            tv.text = getString(R.string.mapping_format_strava, stravaType)
-
-                            // Get the Strava logo drawable
-                            val stravaLogo =
-                                ContextCompat.getDrawable(tv.context, R.drawable.logo_square_strava)
-
-                            stravaLogo?.let { drawable ->
-                                // Get the current text size to use as the height for the icon
-                                val iconSize = tv.textSize.toInt()
-
-                                // Calculate the width while maintaining the aspect ratio
-                                val aspectRatio =
-                                    drawable.intrinsicWidth.toFloat() / drawable.intrinsicHeight.toFloat()
-                                val iconWidth = (iconSize * aspectRatio).toInt()
-
-                                // Set the bounds for the drawable (left, top, right, bottom)
-                                drawable.setBounds(0, 0, iconWidth, iconSize)
-
-                                // Set the drawable to the start of the TextView
-                                tv.setCompoundDrawables(drawable, null, null, null)
-                            }
-                        }
-
-                        R.id.st_tv_file_mapping -> {
-                            var tcxType =
-                                cursor.getString(cursor.getColumnIndexOrThrow(
-                                    SportTypeDatabaseManager.SportType.TCX_NAME))
-                            tcxType = getString(R.string.mapping_format_tcx, tcxType)
-                            var gcType =
-                                cursor.getString(cursor.getColumnIndexOrThrow(
-                                    SportTypeDatabaseManager.SportType.GOLDEN_CHEETAH_NAME))
-                            gcType = getString(R.string.mapping_format_gc, gcType)
-                            tv.text = getString(R.string.sport_type_file_mapping_format, tcxType, gcType)
-                        }
-                    }
-                    true
-                }
-                else -> false // Let the adapter handle other views if any
             }
         }
-        listAdapter = cursorAdapter
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        val view = inflater.inflate(R.layout.sport_type_list_layout, container, false)
-        view.findViewById<FloatingActionButton>(R.id.fab).setOnClickListener {
-            showEditSportTypeDialog(-1)
-        }
-        return view
+    private fun showEditSportTypeDialog(id: Long) {
+        val editDialog = EditSportTypeDialog.newInstance(id)
+        editDialog.show(parentFragmentManager, EditSportTypeDialog.TAG)
     }
 
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
-        listView.onItemClickListener = AdapterView.OnItemClickListener { _, _, _, id ->
-            showEditSportTypeDialog(id)
+    // Keep the Receiver for now if EditSportTypeDialog still uses Broadcasts
+    private val sportTypeChangedReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            viewModel.loadSportTypes()
         }
-        registerForContextMenu(listView)
     }
 
     override fun onResume() {
         super.onResume()
-        context?.let {
-            ContextCompat.registerReceiver(it, sportTypeChangedReceiver, sportTypeChangedFilter, ContextCompat.RECEIVER_NOT_EXPORTED)
-        }
+        val filter = IntentFilter(EditSportTypeDialog.SPORT_TYPE_CHANGED_INTENT)
+        ContextCompat.registerReceiver(requireContext(), sportTypeChangedReceiver, filter,
+            ContextCompat.RECEIVER_NOT_EXPORTED)
     }
 
     override fun onPause() {
         super.onPause()
-        context?.unregisterReceiver(sportTypeChangedReceiver)
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        cursor?.close()
-        cursor = null
-    }
-
-    /* adds the 'delete' option only when it is allowed to be deleted */
-    override fun onCreateContextMenu(menu: ContextMenu, v: View, menuInfo: ContextMenu.ContextMenuInfo?) {
-        super.onCreateContextMenu(menu, v, menuInfo)
-        if (DEBUG) Log.i(TAG, "onCreateContextMenu")
-
-        // Get the ID of the item that was long-pressed.
-        val info = menuInfo as? AdapterView.AdapterContextMenuInfo ?: return
-        val id = info.id
-
-        // Check if this sport type is allowed to be deleted.
-        if (SportTypeDatabaseManager.canDelete(id)) {
-            // Only inflate (show) the menu if it is deletable.
-            activity?.menuInflater?.inflate(R.menu.delete, menu)
-        }
-    }
-
-    override fun onContextItemSelected(item: MenuItem): Boolean {
-        val info = item.menuInfo as? AdapterView.AdapterContextMenuInfo ?: return super.onContextItemSelected(item)
-        val id = info.id
-        if (DEBUG) Log.i(TAG, "onContextItemSelected: id=$id")
-
-        return when (item.itemId) {
-            R.id.itemDelete -> {
-                if (!SportTypeDatabaseManager.canDelete(id)) {
-                    Toast.makeText(context, R.string.you_can_not_delete_this_sport_type, Toast.LENGTH_LONG).show()
-                } else {
-                    showReallyDeleteDialog(id)
-                }
-                true
-            }
-            else -> super.onContextItemSelected(item)
-        }
-    }
-
-    private fun updateView() {
-        val db = SportTypeDatabaseManager.getInstance(requireContext()).database
-        val newCursor = db.query(
-            SportTypeDatabaseManager.SportType.TABLE, ALL_COLUMNS, null, null, null, null,
-            SORT_ORDER) // Use new columns
-        cursorAdapter.changeCursor(newCursor)
-
-        cursor?.close()
-        cursor = newCursor
-    }
-
-    private fun showReallyDeleteDialog(id: Long) {
-        if (DEBUG) Log.i(TAG, "showReallyDeleteDialog, id=$id")
-        val sportTypeDatabaseManager = SportTypeDatabaseManager.getInstance(requireContext())
-        val sportTypeUiName = sportTypeDatabaseManager.getUIName(id)
-
-        AlertDialog.Builder(requireContext())
-            .setTitle(R.string.delete)
-            .setMessage(getString(R.string.really_delete_workout_name_scheme, sportTypeUiName))
-            .setIcon(android.R.drawable.ic_menu_delete)
-            .setPositiveButton(R.string.delete) { dialog, _ ->
-                sportTypeDatabaseManager.delete(id)
-                updateView()
-                dialog.dismiss()
-            }
-            .setNegativeButton(R.string.Cancel) { dialog, _ ->
-                dialog.dismiss()
-            }
-            .show()
-    }
-
-    private fun showEditSportTypeDialog(id: Long) {
-        fragmentManager?.let {
-            val editSportTypeDialog = EditSportTypeDialog.newInstance(id)
-            editSportTypeDialog.show(it, EditSportTypeDialog.TAG)
-        }
+        requireContext().unregisterReceiver(sportTypeChangedReceiver)
     }
 
     companion object {
-        @JvmField
         val TAG: String = SportTypeListFragment::class.java.name
-
-        private val DEBUG = TrainingApplication.getDebug(false)
-
-        // Renamed and expanded this array to include all columns needed for the view.
-        private val ALL_COLUMNS = arrayOf(
-            SportTypeDatabaseManager.SportType.C_ID, SportTypeDatabaseManager.SportType.UI_NAME, SportTypeDatabaseManager.SportType.MIN_AVG_SPEED,
-            SportTypeDatabaseManager.SportType.MAX_AVG_SPEED, SportTypeDatabaseManager.SportType.STRAVA_NAME,
-            SportTypeDatabaseManager.SportType.TCX_NAME, SportTypeDatabaseManager.SportType.GOLDEN_CHEETAH_NAME
-        )
-        private val SORT_ORDER = "${SportTypeDatabaseManager.SportType.MIN_AVG_SPEED} ASC"
     }
 }
