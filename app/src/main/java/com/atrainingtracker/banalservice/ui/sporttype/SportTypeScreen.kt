@@ -18,7 +18,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -124,7 +126,7 @@ fun SportTypeCard(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp) // Clean flat look
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             // HEADER ZONE
@@ -140,7 +142,7 @@ fun SportTypeCard(
                     Image(
                         painter = rememberDrawablePainter(it),
                         contentDescription = null,
-                        modifier = Modifier.size(32.dp) // Slightly larger icon like equipment
+                        modifier = Modifier.size(40.dp)
                     )
                 }
 
@@ -153,6 +155,7 @@ fun SportTypeCard(
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
+
                     Text(
                         text = stringResource(
                             R.string.average_speed_range_format,
@@ -160,7 +163,7 @@ fun SportTypeCard(
                             MyHelper.mps2userUnit(item.maxSpeed),
                             speedUnit
                         ),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -187,9 +190,9 @@ fun SportTypeCard(
             HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
             Spacer(modifier = Modifier.height(12.dp))
 
-            // MAPPING ZONE (Similar to Linked Sensors or Secondary Info in Equipment)
+            // MAPPING ZONE
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                // Strava
+                // Strava Row
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         painter = painterResource(R.drawable.logo_square_strava),
@@ -205,12 +208,13 @@ fun SportTypeCard(
                     )
                 }
 
-                // File Formats
+                // File Formats Row
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Using a generic file icon if you have one, or just text
-                    Text(
-                        text = "📦", // Placeholder for file icon
-                        style = MaterialTheme.typography.bodySmall
+                    Icon(
+                        imageVector = Icons.Default.Save,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.outline
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
