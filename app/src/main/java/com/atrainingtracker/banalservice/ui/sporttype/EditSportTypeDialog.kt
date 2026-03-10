@@ -12,6 +12,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -27,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.isEmpty
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -40,9 +45,16 @@ fun EditSportTypeDialog(
     onDismiss: () -> Unit,
     onConfirm: (SportTypeItem) -> Unit
 ) {
+    fun formatSpeed(speed: Double): String = "%.2f".format(MyHelper.mps2userUnit(speed)).replace(",", ".")
+
     var name by remember { mutableStateOf(item.name) }
-    var minSpeed by remember { mutableStateOf(MyHelper.mps2userUnit(item.minSpeed).toString()) }
-    var maxSpeed by remember { mutableStateOf(MyHelper.mps2userUnit(item.maxSpeed).toString()) }
+    var minSpeed by remember { mutableStateOf(formatSpeed(item.minSpeed)) }
+    var maxSpeed by remember { mutableStateOf(formatSpeed(item.maxSpeed)) }
+
+    val stravaNames = stringArrayResource(R.array.Strava_Sport_Types_Strava_Names)
+    val tcxNames = stringArrayResource(R.array.TCX_Sport_Types)
+    val gcNames = stringArrayResource(R.array.GC_Sport_Types)
+
     var stravaName by remember { mutableStateOf(item.stravaName) }
     var tcxName by remember { mutableStateOf(item.tcxName) }
     var gcName by remember { mutableStateOf(item.gcName) }
@@ -75,14 +87,14 @@ fun EditSportTypeDialog(
                     OutlinedTextField(
                         value = minSpeed,
                         onValueChange = { if (it.isEmpty() || it.toDoubleOrNull() != null) minSpeed = it },
-                        label = { Text("${stringResource(R.string.min_avg_speed)} ($speedUnit)") },
+                        label = { Text("${stringResource(R.string.min)} ($speedUnit)") },
                         modifier = Modifier.weight(1f),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                     )
                     OutlinedTextField(
                         value = maxSpeed,
                         onValueChange = { if (it.isEmpty() || it.toDoubleOrNull() != null) maxSpeed = it },
-                        label = { Text("${stringResource(R.string.max_avg_speed)} ($speedUnit)") },
+                        label = { Text("${stringResource(R.string.max)} ($speedUnit)") },
                         modifier = Modifier.weight(1f),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                     )
@@ -92,30 +104,29 @@ fun EditSportTypeDialog(
                 Text(stringResource(R.string.prefs_Export), style = MaterialTheme.typography.labelLarge)
 
                 // Strava Mapping
-                OutlinedTextField(
-                    value = stravaName,
-                    onValueChange = { stravaName = it },
-                    label = { Text("Strava Sport Name") },
-                    modifier = Modifier.fillMaxWidth(),
-                    leadingIcon = { Icon(painterResource(R.drawable.logo_square_strava), null,
-                        Modifier.size(18.dp), tint = Color.Unspecified) }
+                SportTypeDropdown(
+                    label = "Strava Sport Name",
+                    selectedOption = stravaName,
+                    options = stravaNames.toList(),
+                    onOptionSelected = { stravaName = it },
+                    leadingIcon = { Icon(painterResource(R.drawable.logo_square_strava), null, Modifier.size(18.dp), tint = Color.Unspecified) }
                 )
 
                 // TCX Mapping
-                OutlinedTextField(
-                    value = tcxName,
-                    onValueChange = { tcxName = it },
-                    label = { Text("TCX Sport Name") },
-                    modifier = Modifier.fillMaxWidth(),
+                SportTypeDropdown(
+                    label = "TCX Sport Name",
+                    selectedOption = tcxName,
+                    options = tcxNames.toList(),
+                    onOptionSelected = { tcxName = it },
                     leadingIcon = { Icon(Icons.Default.Save, null) }
                 )
 
                 // GoldenCheetah Mapping
-                OutlinedTextField(
-                    value = gcName,
-                    onValueChange = { gcName = it },
-                    label = { Text("GoldenCheetah Name") },
-                    modifier = Modifier.fillMaxWidth()
+                SportTypeDropdown(
+                    label = "GoldenCheetah Name",
+                    selectedOption = gcName,
+                    options = gcNames.toList(),
+                    onOptionSelected = { gcName = it }
                 )
             }
         },
@@ -144,4 +155,51 @@ fun EditSportTypeDialog(
             }
         }
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SportTypeDropdown(
+    label: String,
+    selectedOption: String,
+    options: List<String>,
+    onOptionSelected: (String) -> Unit,
+    leadingIcon: @Composable (() -> Unit)? = null
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        OutlinedTextField(
+            value = selectedOption,
+            onValueChange = {},
+            readOnly = true, // Key: Mimics Spinner behavior (no keyboard)
+            label = { Text(label) },
+            leadingIcon = leadingIcon,
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .menuAnchor()
+                .fillMaxWidth(),
+            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            options.forEach { selectionOption ->
+                DropdownMenuItem(
+                    text = { Text(selectionOption) },
+                    onClick = {
+                        onOptionSelected(selectionOption)
+                        expanded = false
+                    },
+                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                )
+            }
+        }
+    }
 }

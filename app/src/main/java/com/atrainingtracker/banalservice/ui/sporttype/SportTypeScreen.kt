@@ -64,7 +64,7 @@ fun SportTypeScreen(
         floatingActionButton = {
             FloatingActionButton(onClick = {
                 // Create blank template for new item
-                itemToEdit = SportTypeItem(-1, "", 0.0, 0.0, "", "", "", true)
+                itemToEdit = SportTypeItem(-1, "TODO", 4.2, 10.0, "Ride", "Biking", "bike", true)
             }) {
                 Icon(Icons.Default.Add, contentDescription = stringResource(R.string.text_new))
             }
@@ -163,7 +163,6 @@ fun SportTypeCard(
                     Text(
                         text = item.name,
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
 
