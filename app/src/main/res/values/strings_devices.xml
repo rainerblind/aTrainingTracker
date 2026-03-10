@@ -48,7 +48,7 @@
     <string name="DeviceListRowEquipmentText" translatable="false" />
 
     <!-- device_list -->
-    <string name="devices_myRemoteDevices">My Devices</string>
+    <string name="devices_myRemoteDevices">Devices</string>
     <!-- <string name="knownDevices">known devices</string> -->
     <string name="devices_newDevices">New Devices</string>
     <string name="devices_searchingForDevice">searching for %1$s %2$s devices</string>

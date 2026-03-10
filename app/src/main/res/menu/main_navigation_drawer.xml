@@ -55,23 +55,24 @@
             </group>
         </menu>
     </item>
-    <item android:title="@string/drawer__pairing">
+    <item android:title="@string/drawer__my_stuff">
         <menu>
             <group android:checkableBehavior="single">
-                <item
-                    android:id="@+id/drawer_pairing_ant"
-                    android:icon="@drawable/ant_logo"
-                    android:title="@string/pairing_ANT" />
-
-                <item
-                    android:id="@+id/drawer_pairing_BTLE"
-                    android:icon="@drawable/logo_protocol_bluetooth"
-                    android:title="@string/pairing_bluetooth" />
-
                 <item
                     android:id="@+id/drawer_my_sensors"
                     android:icon="@drawable/ic_my_paired_devices"
                     android:title="@string/devices_myRemoteDevices" />
+
+                <item
+                    android:id="@+id/drawer_bikes"
+                    android:icon="@drawable/ic_equipment_bike"
+                    android:title="@string/prefs_manage_bikes_title" />
+
+                <item
+                    android:id="@+id/drawer_shoes"
+                    android:icon="@drawable/ic_equipment_shoe"
+                    android:title="@string/prefs_manage_shoes_title" />
+
             </group>
         </menu>
     </item>

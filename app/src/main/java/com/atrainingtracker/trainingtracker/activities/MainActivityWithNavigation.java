@@ -260,16 +260,6 @@ public class MainActivityWithNavigation
         mNavigationView.setItemIconTintList(null);  // avoid converting the icons to black and white or gray and white
         mNavigationView.setNavigationItemSelectedListener(this);
 
-        if (!BANALService.isProtocolSupported(this, Protocol.BLUETOOTH_LE)) {
-            MenuItem menuItem = mNavigationView.getMenu().findItem(R.id.drawer_pairing_BTLE);
-            menuItem.setEnabled(false);
-            menuItem.setCheckable(false);
-        }
-
-        if (BANALService.isANTProperlyInstalled(this)) {
-            MenuItem menuItem = mNavigationView.getMenu().findItem(R.id.drawer_pairing_ant);
-            menuItem.setVisible(false);
-        }
 
         // getPermissions
         getPermissions(true);
@@ -629,32 +619,22 @@ public class MainActivityWithNavigation
                 tag = WorkoutSummariesListFragment.TAG;
                 break;
 
-            case R.id.drawer_pairing_ant:
-                titleId = R.string.pairing_ANT;
-                // fragment = DeviceTypeChoiceFragment.newInstance(Protocol.ANT_PLUS);
-                // tag = DeviceTypeChoiceFragment.TAG;
-
-                // Log.i(TAG, "PluginVersionString=" + AntPluginPcc.getInstalledPluginsVersionString(this));
-                // Log.i(TAG, "MissingDependencyName=" + AntPluginPcc.getMissingDependencyName());
-                // Log.i(TAG, "MissingDependencyPackageName=" + AntPluginPcc.getMissingDependencyPackageName());
-                // Log.i(TAG, "PATH_ANTPLUS_PLUGIN_PKG=" + AntPluginPcc.PATH_ANTPLUS_PLUGINS_PKG);
-
-                mFragment = DevicesTabbedContainerFragment.newInstance(Protocol.ANT_PLUS, null);
-                tag = DevicesTabbedContainerFragment.TAG;
-                break;
-
-            case R.id.drawer_pairing_BTLE:
-                titleId = R.string.pairing_bluetooth;
-                // fragment = DeviceTypeChoiceFragment.newInstance(Protocol.BLUETOOTH_LE);
-                // tag = DeviceTypeChoiceFragment.TAG;
-                mFragment = DevicesTabbedContainerFragment.newInstance(Protocol.BLUETOOTH_LE, null);
-                tag = DevicesTabbedContainerFragment.TAG;
-                break;
-
             case R.id.drawer_my_sensors:
                 titleId = R.string.devices_myRemoteDevices;
                 mFragment = DevicesTabbedContainerFragment.newInstance(Protocol.ALL, DeviceType.ALL);
                 tag = DevicesTabbedContainerFragment.TAG;
+                break;
+
+            case R.id.drawer_bikes:
+                titleId = R.string.equipment_management_title;
+                mFragment = EquipmentFragment.newInstance(0);
+                tag = EquipmentFragment.TAG;
+                break;
+
+            case R.id.drawer_shoes:
+                titleId = R.string.equipment_management_title;
+                mFragment = EquipmentFragment.newInstance(1);
+                tag = EquipmentFragment.TAG;
                 break;
 
             case R.id.drawer_my_locations:
@@ -731,33 +711,23 @@ public class MainActivityWithNavigation
     @Override
     public void startPairing(@NonNull Protocol protocol) {
         if (DEBUG) Log.d(TAG, "startPairingActivity: " + protocol);
-        switch (protocol) {
-            case ANT_PLUS:
-                onNavigationItemSelected(mNavigationView.getMenu().findItem(R.id.drawer_pairing_ant));
-                // changeContentFragment(R.id.drawer_pairing_ant);
-                return;
 
-            case BLUETOOTH_LE:
-                onNavigationItemSelected(mNavigationView.getMenu().findItem(R.id.drawer_pairing_BTLE));
-                // changeContentFragment(R.id.drawer_pairing_BTLE);
-                return;
-        }
+        int titleId = switch (protocol) {
+            case ANT_PLUS -> R.string.pairing_ANT;
+            case BLUETOOTH_LE -> R.string.pairing_bluetooth;
+            default -> R.string.pairing_ANT;
+        };
 
-        Toast.makeText(getApplicationContext(), "TODO: must implement the startPairing for" + protocol.name(), Toast.LENGTH_SHORT).show();
+        mFragment = DevicesTabbedContainerFragment.newInstance(protocol, null);
+        String tag = DevicesTabbedContainerFragment.TAG;
+
+        FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
+        fragmentTransaction.replace(R.id.content, mFragment, tag);
+        // if (addToBackStack) { fragmentTransaction.addToBackStack(null); }
+        fragmentTransaction.commit();
+
+        setTitle(titleId);
     }
-
-    // @Override
-    // public void startWorkoutDetailsActivity(long workoutId, WorkoutDetailsActivity.SelectedFragment selectedFragment)
-    // {
-    //     if (DEBUG) Log.i(TAG, "startWorkoutDetailsActivity(" + workoutId + ")");
-
-    //     Bundle bundle = new Bundle();
-    //     bundle.putLong(WorkoutSummaries.WORKOUT_ID, workoutId);
-    //     bundle.putString(WorkoutDetailsActivity.SELECTED_FRAGMENT, selectedFragment.name());
-    //     Intent workoutDetailsIntent = new Intent(this, WorkoutDetailsActivity.class);
-    //     workoutDetailsIntent.putExtras(bundle);
-    //     startActivity(workoutDetailsIntent);
-    // }
 
     protected void checkBatteryStatus() {
         final List<DevicesDatabaseManager.NameAndBatteryPercentage> criticalBatteryDevices = DevicesDatabaseManager.getInstance(getApplicationContext()).getCriticalBatteryDevices(CRITICAL_BATTERY_LEVEL);
