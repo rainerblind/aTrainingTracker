@@ -49,6 +49,7 @@ import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFragmen
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
 import com.atrainingtracker.trainingtracker.segments.StarredSegmentsTabbedContainer;
 import com.atrainingtracker.trainingtracker.tracker.TrackerService;
+import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentFragment;
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsFragment;
 import com.google.android.material.navigation.NavigationView;
 import androidx.core.app.ActivityCompat;
@@ -820,6 +821,24 @@ public class MainActivityWithNavigation
                 FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
                 ft.replace(R.id.content, new SportTypeListFragment(), preferenceScreen.getKey());
                 ft.addToBackStack(preferenceScreen.getKey());
+                ft.commit();
+                return true;
+            }
+            case "manage_bikes", "manage_shoes" -> {
+                // Create the fragment instance
+                EquipmentFragment equipmentFragment = new EquipmentFragment();
+
+                // Pass the "starting_tab" extra from the preference to the fragment
+                // preferenceFragmentCompat.findPreference(key) gets the actual preference object
+                androidx.preference.Preference pref = preferenceFragmentCompat.findPreference(key);
+                if (pref != null) {
+                    equipmentFragment.setArguments(pref.getExtras());
+                }
+
+                // Perform the Fragment Transaction
+                FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
+                ft.replace(R.id.content, equipmentFragment, key);
+                ft.addToBackStack(key);
                 ft.commit();
                 return true;
             }

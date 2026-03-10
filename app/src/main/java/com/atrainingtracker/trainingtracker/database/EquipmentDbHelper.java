@@ -183,6 +183,90 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         return equipmentList;
     }
 
+
+    /**
+     * Data class for Equipment
+     */
+    public static class EquipmentData {
+        public final long id;
+        public final String name;
+        public final BSportType sportType;
+        public final int frameType;
+        public final String stravaName;
+        public final String stravaId;
+
+        public EquipmentData(long id, String name, BSportType sportType, int frameType, String stravaName, String stravaId) {
+            this.id = id;
+            this.name = name;
+            this.sportType = sportType;
+            this.frameType = frameType;
+            this.stravaName = stravaName;
+            this.stravaId = stravaId;
+        }
+    }
+    /**
+     * New method to get all Equipment IDs linked to a specific sport type
+     */
+    @NonNull
+    public List<EquipmentData> getEquipmentItems(@NonNull BSportType sportType) {
+        if (DEBUG) Log.d(TAG, "getEquipmentItems, sportType=" + sportType.name());
+
+        List<EquipmentData> itemList = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+
+        // Query all relevant columns
+        Cursor cursor = db.query(EQUIPMENT,
+                new String[]{C_ID, NAME, SPORT_TYPE, FRAME_TYPE, STRAVA_NAME, STRAVA_ID},
+                SPORT_TYPE + "=?",
+                new String[]{sportType.name()},
+                null, null, null);
+
+        if (cursor.moveToFirst()) {
+            int idIdx = cursor.getColumnIndex(C_ID);
+            int nameIdx = cursor.getColumnIndex(NAME);
+            int sportIdx = cursor.getColumnIndex(SPORT_TYPE);
+            int frameIdx = cursor.getColumnIndex(FRAME_TYPE);
+            int stravaNameIdx = cursor.getColumnIndex(STRAVA_NAME);
+            int stravaIdIdx = cursor.getColumnIndex(STRAVA_ID);
+
+            do {
+                itemList.add(new EquipmentData(
+                        cursor.getLong(idIdx),
+                        cursor.getString(nameIdx),
+                        BSportType.valueOf(cursor.getString(sportIdx)),
+                        cursor.getInt(frameIdx),
+                        cursor.getString(stravaNameIdx),
+                        cursor.getString(stravaIdIdx)
+                ));
+            } while (cursor.moveToNext());
+        }
+        cursor.close();
+        return itemList;
+    }
+
+    /**
+     * New method to get all ANT device IDs linked to a specific Equipment ID
+     */
+    @NonNull
+    public List<Long> getDeviceIdsForEquipment(long equipmentId) {
+        List<Long> deviceIds = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+
+        Cursor cursor = db.query(LINKS,
+                new String[]{ANT_DEVICE_ID},
+                EQUIPMENT_ID + "=?",
+                new String[]{Long.toString(equipmentId)},
+                null, null, null);
+
+        if (cursor.moveToFirst()) {
+            do {
+                deviceIds.add(cursor.getLong(0));
+            } while (cursor.moveToNext());
+        }
+        cursor.close();
+        return deviceIds;
+    }
+
     @Nullable
     public String getLinkedEquipmentStringFromDeviceId(long deviceId) {
         String equipment = null;

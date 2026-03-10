@@ -880,4 +880,26 @@
     <string name="configure">Configure</string>
     <string name="tab_name">Name</string>
 
+    <!-- equipment -->
+    <string name="equipment_management_title">Ausrüstung</string>
+    <string name="equipment_management_summary">Ausrüstung bearbeiten</string>
+    <string name="prefs_manage_bikes_title">Räder</string>
+    <string name="prefs_manage_bikes_summary">Konfiguriere all deine Fahrräder</string>
+    <string name="prefs_manage_shoes_title">Schuhe</string>
+    <string name="prefs_manage_shoes_summary">Konfiguriere all deine Schuhe</string>
+
+    <!-- statistics -->
+    <string name="stats_total">Gesamt</string>
+    <string name="stats_first_use">Erste Nutzung</string>
+    <string name="stats_last_use">Letzte Nutzung</string>
+    <string name="stats_distance">Distanz</string>
+    <string name="stats_workouts">Einheiten</string>
+    <string name="stats_time">Zeit aktiv</string>
+    <string name="stats_ascent">Anstieg</string>
+    <string name="stats_this_week">Diese Woche</string>
+    <string name="stats_last_week">Letzte Woche</string>
+    <string name="stats_this_month">Diesen Monat</string>
+    <string name="stats_last_month">Letzten Monat</string>
+    <string name="stats_this_year">Dieses Jahr</string>
+
 </resources>
