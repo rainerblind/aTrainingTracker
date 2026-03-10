@@ -60,7 +60,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     static final String DB_NAME = "Equipment.db";
     static final int DB_VERSION = 1;
     private static final String TAG = "EquipmentDbHelper";
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = true;
     private static final String CREATE_EQUIPMENT_TABLE = "create table " + EQUIPMENT + " ("
             + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
             + NAME + " text,"
@@ -457,6 +457,48 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         cursor.close();
 
         return stravaId;
+    }
+
+    /**
+     * Inserts new equipment and its linked sensors.
+     * @return The ID of the newly created equipment.
+     */
+    public long addEquipment(String name, int frameType, List<Long> linkedDeviceIds) {
+        if (DEBUG) Log.i(TAG, "addEquipment: " + name + ", " + frameType + ", " + linkedDeviceIds);
+
+        SQLiteDatabase db = this.getWritableDatabase();
+        long newId = -1;
+
+        db.beginTransaction();
+        try {
+            ContentValues values = new ContentValues();
+            values.put(NAME, name);
+            values.put(FRAME_TYPE, frameType);
+            if (frameType > 0 && frameType <= 4) {  // indeed a bike
+                values.put(SPORT_TYPE, BSportType.BIKE.name());
+            }
+            if (frameType == 0) {  // not a bike
+                values.put(SPORT_TYPE, BSportType.RUN.name());
+            }
+            // Strava IDs would be null/empty for new local items
+
+            newId = db.insert(EQUIPMENT, null, values);
+
+            if (newId != -1) {
+                for (Long deviceId : linkedDeviceIds) {
+                    ContentValues linkValues = new ContentValues();
+                    linkValues.put(EQUIPMENT_ID, newId);
+                    linkValues.put(ANT_DEVICE_ID, deviceId);
+                    db.insert(LINKS, null, linkValues);
+                }
+            }
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+
+        if (DEBUG) Log.i(TAG, "added equipment with id: " + newId);
+        return newId;
     }
 
     @Override

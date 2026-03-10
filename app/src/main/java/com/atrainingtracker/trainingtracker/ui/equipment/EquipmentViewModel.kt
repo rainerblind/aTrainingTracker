@@ -206,6 +206,13 @@ class EquipmentViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    fun addEquipment(name: String, frameType: Int, linkedIds: List<Long>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dbEquipmentHelper.addEquipment(name, frameType, linkedIds)
+            loadEquipment() // Refresh the list
+        }
+    }
+
     fun deleteEquipment(item: EquipmentItem) {
         viewModelScope.launch(Dispatchers.IO) {
             dbEquipmentHelper.deleteEquipment(item.id)

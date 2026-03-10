@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.equipment
 
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -56,8 +57,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun EquipmentScreen(
     viewModel: EquipmentViewModel,
-    initialTab: Int = 0,
-    onAddClick: () -> Unit
+    initialTab: Int = 0
 ) {
     val bikes by viewModel.bikes.collectAsState()
     val shoes by viewModel.shoes.collectAsState()
@@ -66,6 +66,9 @@ fun EquipmentScreen(
     var itemToConfigure by remember { mutableStateOf<EquipmentItem?>(null) }
     // State for the Stats Sheet
     var statsToShow by remember { mutableStateOf<Pair<String, List<StatsData>>?>(null) }
+
+    // State for creating new equipment
+    var isAddingNew by remember { mutableStateOf(false) }
 
     val tabs = listOf("Bikes", "Shoes")
     val pagerState = rememberPagerState(
@@ -96,7 +99,7 @@ fun EquipmentScreen(
             }
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = onAddClick) {
+            FloatingActionButton(onClick = { isAddingNew = true }) {
                 Icon(Icons.Default.Add, contentDescription = "Add")
             }
         }
@@ -124,6 +127,43 @@ fun EquipmentScreen(
     }
 
     // --- Dialog/Sheet Triggers ---
+
+    // ADD NEW EQUIPMENT
+    if (isAddingNew) {
+        val isBikeTab = pagerState.currentPage == 0
+        val availableSensors = if (isBikeTab) viewModel.bikeSensors else viewModel.runSensors
+
+        // Create a blank template
+        val newItem = EquipmentItem(
+            id = -1, // Database will generate real ID
+            name = "",
+            frameType = if (isBikeTab) 3 else 0, // Default to Road (3) for bikes, 0 for shoes
+            linkedDeviceIds = emptyList(),
+            linkedDeviceNames = "",
+            stravaName = null,
+            stravaId = null,
+            firstUsed = null,
+            lastUsed = null,
+            statsData = StatsData(
+                title = "",
+                totalWorkouts = 0,
+                totalDistanceWithUnits = "0",
+                timeWithUnits = "0",
+                totalAscentWithUnits = "0"
+            )
+        )
+
+        EditEquipmentDialog(
+            item = newItem,
+            availableSensors = availableSensors,
+            onDismiss = { isAddingNew = false },
+            onConfirm = { addedItem ->
+                // Call add instead of update
+                viewModel.addEquipment(addedItem.name, addedItem.frameType, addedItem.linkedDeviceIds)
+                isAddingNew = false
+            }
+        )
+    }
 
     // Show Configuration Dialog if an item is selected
     itemToConfigure?.let { item ->
@@ -185,7 +225,7 @@ fun EquipmentList(
     }
 }
 
-@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun EquipmentCard(
     item: EquipmentItem,

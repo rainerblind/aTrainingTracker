@@ -46,10 +46,7 @@ class EquipmentFragment : Fragment() {
                 ATrainingTrackerTheme {
                     EquipmentScreen(
                         viewModel = viewModel,
-                        initialTab = startingTab,
-                        onAddClick = {
-                            // The FAB action
-                        }
+                        initialTab = startingTab
                     )
                 }
             }
