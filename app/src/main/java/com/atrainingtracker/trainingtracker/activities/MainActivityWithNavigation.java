@@ -621,7 +621,7 @@ public class MainActivityWithNavigation
 
             case R.id.drawer_my_sensors:
                 titleId = R.string.devices_myRemoteDevices;
-                mFragment = DevicesTabbedContainerFragment.newInstance(Protocol.ALL, DeviceType.ALL);
+                mFragment = DevicesTabbedContainerFragment.newInstance(Protocol.ALL, DeviceType.ALL, 2);
                 tag = DevicesTabbedContainerFragment.TAG;
                 break;
 
@@ -718,12 +718,12 @@ public class MainActivityWithNavigation
             default -> R.string.pairing_ANT;
         };
 
-        mFragment = DevicesTabbedContainerFragment.newInstance(protocol, null);
+        mFragment = DevicesTabbedContainerFragment.newInstance(protocol, null, 0);
         String tag = DevicesTabbedContainerFragment.TAG;
 
         FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
         fragmentTransaction.replace(R.id.content, mFragment, tag);
-        // if (addToBackStack) { fragmentTransaction.addToBackStack(null); }
+        fragmentTransaction.addToBackStack(null);
         fragmentTransaction.commit();
 
         setTitle(titleId);
