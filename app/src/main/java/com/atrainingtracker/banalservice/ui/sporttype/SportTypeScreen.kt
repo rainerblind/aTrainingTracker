@@ -1,8 +1,9 @@
 package com.atrainingtracker.banalservice.ui.sporttype
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -18,7 +19,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.AlertDialog
@@ -27,7 +27,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -43,7 +42,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -129,114 +127,146 @@ fun SportTypeCard(
     val context = LocalContext.current
     val speedUnit = stringResource(MyHelper.getSpeedUnitNameId())
 
+    var showMenu by remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() },
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = { showMenu = true }
+            ),
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            // HEADER ZONE
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                val icon = remember(item.id) {
-                    SportTypeDatabaseManager.getInstance(context).getBSportTypeIcon(context, item.id, 1.0)
-                }
+        Box {
+            Column(modifier = Modifier.padding(16.dp)) {
+                // HEADER ZONE
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    val icon = remember(item.id) {
+                        SportTypeDatabaseManager.getInstance(context)
+                            .getBSportTypeIcon(context, item.id, 1.0)
+                    }
 
-                icon?.let {
-                    Image(
-                        painter = rememberDrawablePainter(it),
-                        contentDescription = null,
-                        modifier = Modifier.size(40.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = item.name,
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-
-                    Text(
-                        text = stringResource(
-                            R.string.average_speed_range_format,
-                            MyHelper.mps2userUnit(item.minSpeed),
-                            MyHelper.mps2userUnit(item.maxSpeed),
-                            speedUnit
-                        ),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                if (!item.isEditable) {
-                    Icon(
-                        Icons.Default.Lock,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                        tint = MaterialTheme.colorScheme.outline
-                    )
-                } else {
-                    IconButton(onClick = onDelete) {
-                        Icon(
-                            Icons.Default.Delete,
+                    icon?.let {
+                        Image(
+                            painter = rememberDrawablePainter(it),
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
+                            modifier = Modifier.size(40.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = item.name,
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+
+                        Text(
+                            text = stringResource(
+                                R.string.average_speed_range_format,
+                                MyHelper.mps2userUnit(item.minSpeed),
+                                MyHelper.mps2userUnit(item.maxSpeed),
+                                speedUnit
+                            ),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+
+
+                    if (!item.isEditable) {
+                        Icon(
+                            Icons.Default.Lock,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.outline
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+                HorizontalDivider(
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // MAPPING ZONE
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    // Strava Row
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            painter = painterResource(R.drawable.logo_square_strava),
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = Color.Unspecified
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.mapping_format_strava, item.stravaName),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    // File Formats Row
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Save,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.outline
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(
+                                R.string.sport_type_file_mapping_format,
+                                stringResource(R.string.mapping_format_tcx, item.tcxName),
+                                stringResource(R.string.mapping_format_gc, item.gcName)
+                            ),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-            HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // MAPPING ZONE
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                // Strava Row
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        painter = painterResource(R.drawable.logo_square_strava),
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = Color.Unspecified
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = stringResource(R.string.mapping_format_strava, item.stravaName),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                // File Formats Row
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Save,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.outline
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = stringResource(
-                            R.string.sport_type_file_mapping_format,
-                            stringResource(R.string.mapping_format_tcx, item.tcxName),
-                            stringResource(R.string.mapping_format_gc, item.gcName)
-                        ),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+            // The Menu itself (anchored to the Card via the Box)
+            androidx.compose.material3.DropdownMenu(
+                expanded = showMenu,
+                onDismissRequest = { showMenu = false }
+            ) {
+                androidx.compose.material3.DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = stringResource(R.string.delete),
+                            color = if (item.isEditable) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline
+                        )
+                    },
+                    enabled = item.isEditable,
+                    onClick = {
+                        showMenu = false
+                        onDelete()
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = null,
+                            tint = if (item.isEditable) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline
+                        )
+                    }
+                )
             }
         }
     }
