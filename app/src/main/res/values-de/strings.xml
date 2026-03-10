@@ -874,6 +874,7 @@
     <!-- drawer -->
     <string name="drawer__training">Training</string>
     <string name="drawer__maps">Karten</string>
+    <string name="drawer__my_stuff">Mein Zeugs</string>
 
     <!-- sensor view settings -->
     <string name="source">Quelle</string>

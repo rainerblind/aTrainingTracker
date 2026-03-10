@@ -57,4 +57,17 @@ class EquipmentFragment : Fragment() {
         super.onResume()
         viewModel.loadEquipment()
     }
+
+    companion object {
+        const val TAG = "EquipmentFragment"
+
+        @JvmStatic
+        fun newInstance(startingTab: Int = 0): EquipmentFragment {
+            return EquipmentFragment().apply {
+                arguments = Bundle().apply {
+                    putInt("starting_tab", startingTab)
+                }
+            }
+        }
+    }
 }
