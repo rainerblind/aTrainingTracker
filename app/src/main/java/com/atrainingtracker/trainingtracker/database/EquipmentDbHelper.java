@@ -60,7 +60,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     static final String DB_NAME = "Equipment.db";
     static final int DB_VERSION = 1;
     private static final String TAG = "EquipmentDbHelper";
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = true;
     private static final String CREATE_EQUIPMENT_TABLE = "create table " + EQUIPMENT + " ("
             + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
             + NAME + " text,"
@@ -181,6 +181,146 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         cursor.close();
 
         return equipmentList;
+    }
+
+    /**
+     * Updates an existing equipment entry and synchronizes its linked sensors.
+     *
+     * @param id              The ID of the equipment to update.
+     * @param name            The new name.
+     * @param frameType       The new frame type (1-4 for bikes, 0 for others).
+     * @param linkedDeviceIds The new list of sensor IDs to link to this equipment.
+     */
+    public void updateEquipment(long id, String name, int frameType, @NonNull List<Long> linkedDeviceIds) {
+        SQLiteDatabase db = this.getWritableDatabase();
+
+        // Start a transaction to ensure database integrity
+        db.beginTransaction();
+        try {
+            // 1. Update the Equipment table
+            ContentValues values = new ContentValues();
+            values.put(NAME, name);
+            values.put(FRAME_TYPE, frameType);
+            db.update(EQUIPMENT, values, C_ID + "=?", new String[]{String.valueOf(id)});
+
+            // 2. Clear existing links for this equipment
+            db.delete(LINKS, EQUIPMENT_ID + "=?", new String[]{String.valueOf(id)});
+
+            // 3. Insert new links
+            for (Long deviceId : linkedDeviceIds) {
+                ContentValues linkValues = new ContentValues();
+                linkValues.put(EQUIPMENT_ID, id);
+                linkValues.put(ANT_DEVICE_ID, deviceId);
+                db.insert(LINKS, null, linkValues);
+            }
+
+            // Mark transaction as successful
+            db.setTransactionSuccessful();
+            if (DEBUG) Log.d(TAG, "Successfully updated equipment " + id + " with " + linkedDeviceIds.size() + " sensors.");
+        } catch (Exception e) {
+            Log.e(TAG, "Error updating equipment links: " + e.getMessage());
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    /**
+     * Deletes equipment and its associated sensor links in one transaction.
+     */
+    public void deleteEquipment(long id) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        db.beginTransaction();
+        try {
+            db.delete(LINKS, EQUIPMENT_ID + "=?", new String[]{String.valueOf(id)});
+            db.delete(EQUIPMENT, C_ID + "=?", new String[]{String.valueOf(id)});
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+
+    /**
+     * Data class for Equipment
+     */
+    public static class EquipmentData {
+        public final long id;
+        public final String name;
+        public final BSportType sportType;
+        public final int frameType;
+        public final String stravaName;
+        public final String stravaId;
+
+        public EquipmentData(long id, String name, BSportType sportType, int frameType, String stravaName, String stravaId) {
+            this.id = id;
+            this.name = name;
+            this.sportType = sportType;
+            this.frameType = frameType;
+            this.stravaName = stravaName;
+            this.stravaId = stravaId;
+        }
+    }
+    /**
+     * New method to get all Equipment IDs linked to a specific sport type
+     */
+    @NonNull
+    public List<EquipmentData> getEquipmentItems(@NonNull BSportType sportType) {
+        if (DEBUG) Log.d(TAG, "getEquipmentItems, sportType=" + sportType.name());
+
+        List<EquipmentData> itemList = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+
+        // Query all relevant columns
+        Cursor cursor = db.query(EQUIPMENT,
+                new String[]{C_ID, NAME, SPORT_TYPE, FRAME_TYPE, STRAVA_NAME, STRAVA_ID},
+                SPORT_TYPE + "=?",
+                new String[]{sportType.name()},
+                null, null, null);
+
+        if (cursor.moveToFirst()) {
+            int idIdx = cursor.getColumnIndex(C_ID);
+            int nameIdx = cursor.getColumnIndex(NAME);
+            int sportIdx = cursor.getColumnIndex(SPORT_TYPE);
+            int frameIdx = cursor.getColumnIndex(FRAME_TYPE);
+            int stravaNameIdx = cursor.getColumnIndex(STRAVA_NAME);
+            int stravaIdIdx = cursor.getColumnIndex(STRAVA_ID);
+
+            do {
+                itemList.add(new EquipmentData(
+                        cursor.getLong(idIdx),
+                        cursor.getString(nameIdx),
+                        BSportType.valueOf(cursor.getString(sportIdx)),
+                        cursor.getInt(frameIdx),
+                        cursor.getString(stravaNameIdx),
+                        cursor.getString(stravaIdIdx)
+                ));
+            } while (cursor.moveToNext());
+        }
+        cursor.close();
+        return itemList;
+    }
+
+    /**
+     * New method to get all ANT device IDs linked to a specific Equipment ID
+     */
+    @NonNull
+    public List<Long> getDeviceIdsForEquipment(long equipmentId) {
+        List<Long> deviceIds = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+
+        Cursor cursor = db.query(LINKS,
+                new String[]{ANT_DEVICE_ID},
+                EQUIPMENT_ID + "=?",
+                new String[]{Long.toString(equipmentId)},
+                null, null, null);
+
+        if (cursor.moveToFirst()) {
+            do {
+                deviceIds.add(cursor.getLong(0));
+            } while (cursor.moveToNext());
+        }
+        cursor.close();
+        return deviceIds;
     }
 
     @Nullable
@@ -317,6 +457,48 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         cursor.close();
 
         return stravaId;
+    }
+
+    /**
+     * Inserts new equipment and its linked sensors.
+     * @return The ID of the newly created equipment.
+     */
+    public long addEquipment(String name, int frameType, List<Long> linkedDeviceIds) {
+        if (DEBUG) Log.i(TAG, "addEquipment: " + name + ", " + frameType + ", " + linkedDeviceIds);
+
+        SQLiteDatabase db = this.getWritableDatabase();
+        long newId = -1;
+
+        db.beginTransaction();
+        try {
+            ContentValues values = new ContentValues();
+            values.put(NAME, name);
+            values.put(FRAME_TYPE, frameType);
+            if (frameType > 0 && frameType <= 4) {  // indeed a bike
+                values.put(SPORT_TYPE, BSportType.BIKE.name());
+            }
+            if (frameType == 0) {  // not a bike
+                values.put(SPORT_TYPE, BSportType.RUN.name());
+            }
+            // Strava IDs would be null/empty for new local items
+
+            newId = db.insert(EQUIPMENT, null, values);
+
+            if (newId != -1) {
+                for (Long deviceId : linkedDeviceIds) {
+                    ContentValues linkValues = new ContentValues();
+                    linkValues.put(EQUIPMENT_ID, newId);
+                    linkValues.put(ANT_DEVICE_ID, deviceId);
+                    db.insert(LINKS, null, linkValues);
+                }
+            }
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+
+        if (DEBUG) Log.i(TAG, "added equipment with id: " + newId);
+        return newId;
     }
 
     @Override

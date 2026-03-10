@@ -211,6 +211,9 @@ public class MyHelper {
         };
     }
 
+    public static String getDistanceUnitName(Context context) {
+        return context.getString(getDistanceUnitNameId());
+    }
 
     public static int getUnitsId(@NonNull SensorType sensorType) {
         return switch (sensorType) {

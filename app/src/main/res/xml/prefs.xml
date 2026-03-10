@@ -47,6 +47,32 @@
             </Preference>
         </PreferenceScreen>
 
+        <!-- Preference for Bikes -->
+        <Preference
+            android:key="manage_bikes"
+            android:title="@string/prefs_manage_bikes_title"
+            android:summary="@string/prefs_manage_bikes_summary"
+            android:icon="@drawable/ic_equipment_bike"
+            android:fragment="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentFragment"
+            android:layout="@layout/preference_slim">
+            <extra
+                android:name="starting_tab"
+                android:value="0" />
+        </Preference>
+
+        <!-- Preference for Shoes -->
+        <Preference
+            android:key="manage_shoes"
+            android:title="@string/prefs_manage_shoes_title"
+            android:summary="@string/prefs_manage_shoes_summary"
+            android:icon="@drawable/ic_equipment_shoe"
+            android:fragment="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentFragment"
+            android:layout="@layout/preference_slim">
+            <extra
+                android:name="starting_tab"
+                android:value="1" />
+        </Preference>
+
     </PreferenceCategory>
 
     <PreferenceCategory

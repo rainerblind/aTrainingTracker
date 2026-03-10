@@ -421,11 +421,14 @@
 
     <!-- others -->
     <string name="equipment_none">- Keins -</string>
-    <string name="equipment_all">+ Alle+ </string>
-    <string name="equipment_all_bikes">+ Alle Räder+ </string>
-    <string name="equipment_all_shoes">+ Alle Schuhe+ </string>
-    <string name="equipment_type_bike">Rad</string>
+    <string name="equipment_all">+ Alle +</string>
+    <string name="equipment_all_bikes">+ Alle Räder +</string>
+    <string name="equipment_all_shoes">+ Alle Schuhe +</string>
+    <string name="equipment_type_bike">Räder</string>
     <string name="equipment_type_shoe">Schuhe</string>
+    <string name="equipment_no_bikes">Keine Räder</string>
+    <string name="equipment_no_shoes">Keine Schuhe</string>
+
 
     <!-- dialogs -->
     <string name="SD_card_not_available">Entschuldigung, die SD Karte ist nicht verfügbar.</string>  <!-- TODO: umbenennen? -->
@@ -879,5 +882,34 @@
     <string name="filter">Glättung</string>
     <string name="configure">Configure</string>
     <string name="tab_name">Name</string>
+
+    <!-- equipment -->
+    <string name="equipment_management_title">Ausrüstung</string>
+    <string name="equipment_management_title_full">Ausrüstung Bearbeiten</string>
+    <string name="equipment_management_summary">Ausrüstung bearbeiten</string>
+    <string name="prefs_manage_bikes_title">Räder</string>
+    <string name="prefs_manage_bikes_summary">Konfiguriere all deine Fahrräder</string>
+    <string name="prefs_manage_shoes_title">Schuhe</string>
+    <string name="prefs_manage_shoes_summary">Konfiguriere all deine Schuhe</string>
+    <string name="equipment_configure_equipment">Ausrüstung konfigurieren</string>
+    <string name="equipment_bike_type">Rad Typ</string>
+    <string name="equipment_select_bike_type">Wähle Rad Typ</string>
+    <string name="equipment_no_sensors_linked">Keine verknüpften Sensoren</string>
+    <string name="equipment_linked_sensors">Verknüpfte Sensoren</string>
+
+
+    <!-- statistics -->
+    <string name="stats_total">Gesamt</string>
+    <string name="stats_first_use">Erste Nutzung</string>
+    <string name="stats_last_use">Letzte Nutzung</string>
+    <string name="stats_distance">Distanz</string>
+    <string name="stats_workouts">Einheiten</string>
+    <string name="stats_time">Zeit aktiv</string>
+    <string name="stats_ascent">Anstieg</string>
+    <string name="stats_this_week">Diese Woche</string>
+    <string name="stats_last_week">Letzte Woche</string>
+    <string name="stats_this_month">Diesen Monat</string>
+    <string name="stats_last_month">Letzten Monat</string>
+    <string name="stats_this_year">Dieses Jahr</string>
 
 </resources>
