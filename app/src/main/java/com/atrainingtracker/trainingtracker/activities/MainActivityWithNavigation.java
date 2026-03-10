@@ -43,7 +43,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 
-import com.atrainingtracker.banalservice.ui.SportTypeListFragment;
+import com.atrainingtracker.banalservice.ui.sporttype.SportTypeListFragment;
 import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedContainerFragment;
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFragmentFactory;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;

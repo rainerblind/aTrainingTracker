@@ -1,22 +1,4 @@
-/*
- * aTrainingTracker (ANT+ BTLE)
- * Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
- */
-
-package com.atrainingtracker.banalservice.ui
+package com.atrainingtracker.banalservice.ui.sporttype
 
 import android.content.ContentValues
 import android.content.Intent
@@ -30,14 +12,12 @@ import android.view.WindowManager
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
 import android.widget.TextView
-import androidx.compose.foundation.layout.width
 import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
-import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.SportType
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
@@ -187,20 +167,23 @@ class EditSportTypeDialog : DialogFragment() {
 
         val db = SportTypeDatabaseManager.getInstance(requireContext()).database
         db.query(
-            SportType.TABLE, null, "${SportType.C_ID} =? ",
+            SportTypeDatabaseManager.SportType.TABLE, null, "${SportTypeDatabaseManager.SportType.C_ID} =? ",
             arrayOf(sportTypeId.toString()), null, null, null
         )?.use { cursor ->
             if (cursor.moveToFirst()) {
                 // This logic is mostly the same as before
-                val bSportType = BSportType.valueOf(cursor.getString(cursor.getColumnIndexOrThrow(SportType.BASE_SPORT_TYPE)))
-                val uiName = cursor.getString(cursor.getColumnIndexOrThrow(SportType.UI_NAME))
-                val minAvgSpeed = cursor.getDouble(cursor.getColumnIndexOrThrow(SportType.MIN_AVG_SPEED))
-                val maxAvgSpeed = cursor.getDouble(cursor.getColumnIndexOrThrow(SportType.MAX_AVG_SPEED))
+                val bSportType = BSportType.valueOf(cursor.getString(cursor.getColumnIndexOrThrow(
+                    SportTypeDatabaseManager.SportType.BASE_SPORT_TYPE)))
+                val uiName = cursor.getString(cursor.getColumnIndexOrThrow(SportTypeDatabaseManager.SportType.UI_NAME))
+                val minAvgSpeed = cursor.getDouble(cursor.getColumnIndexOrThrow(
+                    SportTypeDatabaseManager.SportType.MIN_AVG_SPEED))
+                val maxAvgSpeed = cursor.getDouble(cursor.getColumnIndexOrThrow(
+                    SportTypeDatabaseManager.SportType.MAX_AVG_SPEED))
 
                 // Populate Views
                 etName?.setText(uiName)
-                etMinAvgSpeed?.setText(String.format(Locale.getDefault(), "%.1f", MyHelper.mps2userUnit(minAvgSpeed)))
-                etMaxAvgSpeed?.setText(String.format(Locale.getDefault(), "%.1f", MyHelper.mps2userUnit(maxAvgSpeed)))
+                etMinAvgSpeed?.setText(String.Companion.format(Locale.getDefault(), "%.1f", MyHelper.mps2userUnit(minAvgSpeed)))
+                etMaxAvgSpeed?.setText(String.Companion.format(Locale.getDefault(), "%.1f", MyHelper.mps2userUnit(maxAvgSpeed)))
 
                 // Handle visibility and spinner setup
                 val isEditable = SportTypeDatabaseManager.canDelete(sportTypeId)
@@ -239,9 +222,9 @@ class EditSportTypeDialog : DialogFragment() {
         }
 
         // Setup all spinners
-        setupAutoComplete(spStrava, R.array.Strava_Sport_Types_UI_Names, R.array.Strava_Sport_Types_Strava_Names, SportType.STRAVA_NAME)
-        setupSimpleAutoComplete(spTcx, R.array.TCX_Sport_Types, SportType.TCX_NAME)
-        setupSimpleAutoComplete(spGc, R.array.GC_Sport_Types, SportType.GOLDEN_CHEETAH_NAME)
+        setupAutoComplete(spStrava, R.array.Strava_Sport_Types_UI_Names, R.array.Strava_Sport_Types_Strava_Names, SportTypeDatabaseManager.SportType.STRAVA_NAME)
+        setupSimpleAutoComplete(spTcx, R.array.TCX_Sport_Types, SportTypeDatabaseManager.SportType.TCX_NAME)
+        setupSimpleAutoComplete(spGc, R.array.GC_Sport_Types, SportTypeDatabaseManager.SportType.GOLDEN_CHEETAH_NAME)
         // TODO: Setup other spinners (Runkeeper, TrainingPeaks, ...) in the same pattern
     }
 
@@ -267,9 +250,9 @@ class EditSportTypeDialog : DialogFragment() {
 
 
         val contentValues = ContentValues().apply {
-            put(SportType.UI_NAME, etName?.text.toString())
-            put(SportType.MIN_AVG_SPEED, MyHelper.UserUnit2mps(MyHelper.string2Double(etMinAvgSpeed?.text.toString())))
-            put(SportType.MAX_AVG_SPEED, MyHelper.UserUnit2mps(MyHelper.string2Double(etMaxAvgSpeed?.text.toString())))
+            put(SportTypeDatabaseManager.SportType.UI_NAME, etName?.text.toString())
+            put(SportTypeDatabaseManager.SportType.MIN_AVG_SPEED, MyHelper.UserUnit2mps(MyHelper.string2Double(etMinAvgSpeed?.text.toString())))
+            put(SportTypeDatabaseManager.SportType.MAX_AVG_SPEED, MyHelper.UserUnit2mps(MyHelper.string2Double(etMaxAvgSpeed?.text.toString())))
 
             if (SportTypeDatabaseManager.canDelete(sportTypeId)) {
                 // Base Sport Type
@@ -277,22 +260,22 @@ class EditSportTypeDialog : DialogFragment() {
                     val selectedUiName = spBSportType?.text.toString()
                     val position = (0 until adapter.count).firstOrNull { adapter.getItem(it).toString() == selectedUiName }
                     if (position != null) {
-                        put(SportType.BASE_SPORT_TYPE, BSportType.values()[position].name)
+                        put(SportTypeDatabaseManager.SportType.BASE_SPORT_TYPE, BSportType.values()[position].name)
                     }
                 }
 
                 // Save all spinners
-                put(SportType.STRAVA_NAME, getSelectedApiName(spStrava, R.array.Strava_Sport_Types_Strava_Names))
-                put(SportType.TCX_NAME, getSelectedSimpleName(spTcx, R.array.TCX_Sport_Types))
-                put(SportType.GOLDEN_CHEETAH_NAME, getSelectedSimpleName(spGc, R.array.GC_Sport_Types))
+                put(SportTypeDatabaseManager.SportType.STRAVA_NAME, getSelectedApiName(spStrava, R.array.Strava_Sport_Types_Strava_Names))
+                put(SportTypeDatabaseManager.SportType.TCX_NAME, getSelectedSimpleName(spTcx, R.array.TCX_Sport_Types))
+                put(SportTypeDatabaseManager.SportType.GOLDEN_CHEETAH_NAME, getSelectedSimpleName(spGc, R.array.GC_Sport_Types))
             }
         }
 
         val db = SportTypeDatabaseManager.getInstance(safeContext).database
         if (sportTypeId < 0) { // create an entry
-            db.insert(SportType.TABLE, null, contentValues)
+            db.insert(SportTypeDatabaseManager.SportType.TABLE, null, contentValues)
         } else {
-            db.update(SportType.TABLE, contentValues, "${SportType.C_ID}=?", arrayOf(sportTypeId.toString()))
+            db.update(SportTypeDatabaseManager.SportType.TABLE, contentValues, "${SportTypeDatabaseManager.SportType.C_ID}=?", arrayOf(sportTypeId.toString()))
         }
 
         // Send broadcast

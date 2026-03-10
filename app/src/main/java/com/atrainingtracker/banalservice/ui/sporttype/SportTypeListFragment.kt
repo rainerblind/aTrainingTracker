@@ -1,22 +1,4 @@
-/*
- * aTrainingTracker (ANT+ BTLE)
- * Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
- */
-
-package com.atrainingtracker.banalservice.ui
+package com.atrainingtracker.banalservice.ui.sporttype
 
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -39,7 +21,6 @@ import androidx.cursoradapter.widget.SimpleCursorAdapter
 import androidx.fragment.app.ListFragment
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
-import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.SportType
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -68,7 +49,7 @@ class SportTypeListFragment : ListFragment() {
 
         val db = SportTypeDatabaseManager.getInstance(requireContext()).database
         cursor = db.query(
-            SportType.TABLE,
+            SportTypeDatabaseManager.SportType.TABLE,
             ALL_COLUMNS, // Use the new, expanded column array
             null, null, null, null,
             SORT_ORDER
@@ -76,12 +57,12 @@ class SportTypeListFragment : ListFragment() {
 
         // These from/to arrays are now just placeholders. The real work is in the ViewBinder.
         val fromColumns = arrayOf(
-            SportType.UI_NAME,
-            SportType.MIN_AVG_SPEED,
-            SportType.STRAVA_NAME,
-            SportType.TCX_NAME,
-            SportType.GOLDEN_CHEETAH_NAME,
-            SportType.C_ID
+            SportTypeDatabaseManager.SportType.UI_NAME,
+            SportTypeDatabaseManager.SportType.MIN_AVG_SPEED,
+            SportTypeDatabaseManager.SportType.STRAVA_NAME,
+            SportTypeDatabaseManager.SportType.TCX_NAME,
+            SportTypeDatabaseManager.SportType.GOLDEN_CHEETAH_NAME,
+            SportTypeDatabaseManager.SportType.C_ID
         )
         val toViews = intArrayOf(
             R.id.st_tvName,
@@ -91,12 +72,13 @@ class SportTypeListFragment : ListFragment() {
             R.id.st_ivLock
         )
 
-        cursorAdapter = SimpleCursorAdapter(context, R.layout.sport_type_row, cursor, fromColumns, toViews, 0)
+        cursorAdapter =
+            SimpleCursorAdapter(context, R.layout.sport_type_row, cursor, fromColumns, toViews, 0)
         cursorAdapter.viewBinder = SimpleCursorAdapter.ViewBinder { view, cursor, _ ->
             // The binding logic is handled entirely here for all views in the row.
             val id = view.id
 
-            val sportTypeId = cursor.getLong(cursor.getColumnIndexOrThrow(SportType.C_ID))
+            val sportTypeId = cursor.getLong(cursor.getColumnIndexOrThrow(SportTypeDatabaseManager.SportType.C_ID))
             val canDelete = SportTypeDatabaseManager.canDelete(sportTypeId)
 
             when (id) {
@@ -111,7 +93,8 @@ class SportTypeListFragment : ListFragment() {
                     when (view.id) {
                         R.id.st_tvName -> {
                             val name =
-                                cursor.getString(cursor.getColumnIndexOrThrow(SportType.UI_NAME))
+                                cursor.getString(cursor.getColumnIndexOrThrow(
+                                    SportTypeDatabaseManager.SportType.UI_NAME))
 
                             context?.let { ctx ->
                                 val icon = SportTypeDatabaseManager.getInstance(ctx)
@@ -133,12 +116,12 @@ class SportTypeListFragment : ListFragment() {
                         R.id.st_tvSpeed -> {
                             val minSpeed = MyHelper.mps2userUnit(
                                 cursor.getDouble(
-                                    cursor.getColumnIndexOrThrow(SportType.MIN_AVG_SPEED)
+                                    cursor.getColumnIndexOrThrow(SportTypeDatabaseManager.SportType.MIN_AVG_SPEED)
                                 )
                             )
                             val maxSpeed = MyHelper.mps2userUnit(
                                 cursor.getDouble(
-                                    cursor.getColumnIndexOrThrow(SportType.MAX_AVG_SPEED)
+                                    cursor.getColumnIndexOrThrow(SportTypeDatabaseManager.SportType.MAX_AVG_SPEED)
                                 )
                             )
                             tv.text = getString(
@@ -151,7 +134,8 @@ class SportTypeListFragment : ListFragment() {
 
                         R.id.st_tvStrava -> {
                             val stravaType =
-                                cursor.getString(cursor.getColumnIndexOrThrow(SportType.STRAVA_NAME))
+                                cursor.getString(cursor.getColumnIndexOrThrow(
+                                    SportTypeDatabaseManager.SportType.STRAVA_NAME))
                             tv.text = getString(R.string.mapping_format_strava, stravaType)
 
                             // Get the Strava logo drawable
@@ -177,10 +161,12 @@ class SportTypeListFragment : ListFragment() {
 
                         R.id.st_tv_file_mapping -> {
                             var tcxType =
-                                cursor.getString(cursor.getColumnIndexOrThrow(SportType.TCX_NAME))
+                                cursor.getString(cursor.getColumnIndexOrThrow(
+                                    SportTypeDatabaseManager.SportType.TCX_NAME))
                             tcxType = getString(R.string.mapping_format_tcx, tcxType)
                             var gcType =
-                                cursor.getString(cursor.getColumnIndexOrThrow(SportType.GOLDEN_CHEETAH_NAME))
+                                cursor.getString(cursor.getColumnIndexOrThrow(
+                                    SportTypeDatabaseManager.SportType.GOLDEN_CHEETAH_NAME))
                             gcType = getString(R.string.mapping_format_gc, gcType)
                             tv.text = getString(R.string.sport_type_file_mapping_format, tcxType, gcType)
                         }
@@ -263,7 +249,8 @@ class SportTypeListFragment : ListFragment() {
 
     private fun updateView() {
         val db = SportTypeDatabaseManager.getInstance(requireContext()).database
-        val newCursor = db.query(SportType.TABLE, ALL_COLUMNS, null, null, null, null,
+        val newCursor = db.query(
+            SportTypeDatabaseManager.SportType.TABLE, ALL_COLUMNS, null, null, null, null,
             SORT_ORDER) // Use new columns
         cursorAdapter.changeCursor(newCursor)
 
@@ -306,10 +293,10 @@ class SportTypeListFragment : ListFragment() {
 
         // Renamed and expanded this array to include all columns needed for the view.
         private val ALL_COLUMNS = arrayOf(
-            SportType.C_ID, SportType.UI_NAME, SportType.MIN_AVG_SPEED,
-            SportType.MAX_AVG_SPEED, SportType.STRAVA_NAME,
-            SportType.TCX_NAME, SportType.GOLDEN_CHEETAH_NAME
+            SportTypeDatabaseManager.SportType.C_ID, SportTypeDatabaseManager.SportType.UI_NAME, SportTypeDatabaseManager.SportType.MIN_AVG_SPEED,
+            SportTypeDatabaseManager.SportType.MAX_AVG_SPEED, SportTypeDatabaseManager.SportType.STRAVA_NAME,
+            SportTypeDatabaseManager.SportType.TCX_NAME, SportTypeDatabaseManager.SportType.GOLDEN_CHEETAH_NAME
         )
-        private val SORT_ORDER = "${SportType.MIN_AVG_SPEED} ASC"
+        private val SORT_ORDER = "${SportTypeDatabaseManager.SportType.MIN_AVG_SPEED} ASC"
     }
 }
