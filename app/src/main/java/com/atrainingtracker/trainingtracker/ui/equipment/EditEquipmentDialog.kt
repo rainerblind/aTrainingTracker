@@ -24,63 +24,119 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
 
 @Composable
 fun EditEquipmentDialog(
     item: EquipmentItem,
+    availableSensors: List<DevicesDatabaseManager.SimpleSensorInfo>,
     onDismiss: () -> Unit,
     onConfirm: (EquipmentItem) -> Unit
 ) {
     var name by remember { mutableStateOf(item.name) }
-    var sensors by remember { mutableStateOf(item.sensors) }
-    var frameType by remember { mutableIntStateOf(item.frameType) }
+    var frameType by remember { mutableStateOf(item.frameType) }
+    var selectedSensorIds by remember { mutableStateOf(item.linkedDeviceIds.toSet()) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Edit Equipment") },
+        title = { Text("Configure Equipment") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Name") },
+                    value = name,        onValueChange = { name = it },
+                    label = { Text("Equipment Name") },
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                OutlinedTextField(
-                    value = sensors,
-                    onValueChange = { sensors = it },
-                    label = { Text("Sensors (e.g. Garmin HRM)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Comma separated list") }
-                )
+                // Only show the spinner if the item is a bike (id 1-4)
+                if (item.frameType > 0) {
+                    BikeTypeSelector(
+                        selectedType = frameType,
+                        onTypeSelected = { frameType = it }
+                    )
+                }
 
-                // Currently a simple text display, could be a Dropdown later
-                Text("Type: ${if (frameType == 1) "MTB" else "Road"}",
-                    style = MaterialTheme.typography.bodySmall)
+                MultiSelectSensorSpinner(
+                    allSensors = availableSensors,
+                    selectedIds = selectedSensorIds,
+                    onToggleSensor = { id ->
+                        selectedSensorIds = if (selectedSensorIds.contains(id)) {
+                            selectedSensorIds - id
+                        } else {
+                            selectedSensorIds + id
+                        }
+                    }
+                )
             }
         },
         confirmButton = {
-            Button(
+            TextButton(
                 onClick = {
-                    onConfirm(item.copy(name = name, sensors = sensors, frameType = frameType))
-                    onDismiss()
-                },
-                enabled = name.isNotBlank()
-            ) {
-                Text("Save")
-            }
+                    onConfirm(item.copy(
+                        name = name,
+                        frameType = frameType,
+                        linkedDeviceIds = selectedSensorIds.toList()
+                    ))                }
+            ) { Text("Save") }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
+            TextButton(onClick = onDismiss) { Text("Cancel") }
         }
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MultiSelectSensorSpinner(
+    allSensors: List<DevicesDatabaseManager.SimpleSensorInfo>,
+    selectedIds: Set<Long>,
+    onToggleSensor: (Long) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    // UI Label: Show names of selected sensors
+    val displayText = allSensors
+        .filter { selectedIds.contains(it.id) }
+        .joinToString(", ") { it.name }
+        .ifEmpty { "No sensors linked" }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded }
+    ) {
+        OutlinedTextField(
+            value = displayText,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Linked Sensors") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .menuAnchor()
+                .fillMaxWidth()
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            allSensors.forEach { sensor ->
+                DropdownMenuItem(
+                    text = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = selectedIds.contains(sensor.id), onCheckedChange = null)
+                            Text(sensor.name, modifier = Modifier.padding(start = 8.dp))
+                        }
+                    },
+                    onClick = { onToggleSensor(sensor.id) }
+                )
+            }
+        }
+    }
 }
 
 @Preview(showBackground = true, name = "Edit Bike Preview")
@@ -98,7 +154,8 @@ fun PreviewEditEquipmentDialog() {
     val mockBike = EquipmentItem(
         id = 1,
         name = "Specialized Roubaix",
-        sensors = "Garmin HRM, Speed Sensor",
+        linkedDeviceIds = listOf(1, 2),
+        linkedDeviceNames = "Garmin HRM, Speed Sensor",
         frameType = 3, // Road
         firstUsed = "2023-01-15",
         lastUsed = "2024-03-08",
@@ -111,7 +168,13 @@ fun PreviewEditEquipmentDialog() {
         EditEquipmentDialog(
             item = mockBike,
             onDismiss = {},
-            onConfirm = {}
+            onConfirm = {},
+            availableSensors = listOf(
+                DevicesDatabaseManager.SimpleSensorInfo(1, "Garmin HRM"),
+                DevicesDatabaseManager.SimpleSensorInfo(2, "Wahoo Speed"),
+                DevicesDatabaseManager.SimpleSensorInfo(3, "Stages Power"),
+                DevicesDatabaseManager.SimpleSensorInfo(4, "Polar H10")
+            )
         )
     }
 }

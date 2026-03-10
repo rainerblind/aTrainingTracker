@@ -118,7 +118,7 @@ fun EquipmentScreen(
                     val allStats = listOf(item.statsData) + periods
                     // 3. Show the sheet
                     statsToShow = Pair(item.name, allStats)
-                },                onDelete = { item -> viewModel.deleteEquipment(item.name) }
+                },                onDelete = { item -> viewModel.deleteEquipment(item) }
             )
         }
     }
@@ -127,8 +127,22 @@ fun EquipmentScreen(
 
     // Show Configuration Dialog if an item is selected
     itemToConfigure?.let { item ->
-        // TODO: Replace with your actual EditEquipmentDialog component
-        // EditEquipmentDialog(item = item, onDismiss = { itemToConfigure = null })
+        // Determine which sensor list to use
+        val availableSensors = if (item.frameType > 0) {
+            viewModel.bikeSensors
+        } else {
+            viewModel.runSensors
+        }
+
+        EditEquipmentDialog(
+            item = item,
+            availableSensors = availableSensors,
+            onDismiss = { itemToConfigure = null },
+            onConfirm = { updated ->
+                viewModel.updateEquipment(updated)
+                itemToConfigure = null
+            }
+        )
     }
 
     // Show Stats Sheet
@@ -240,10 +254,10 @@ fun EquipmentCard(
                 }
 
                 // Sensors Line
-                if (item.sensors.isNotBlank()) {
+                if (item.linkedDeviceNames.isNotBlank()) {
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "Sensors: ${item.sensors}",
+                        text = "Sensors: ${item.linkedDeviceNames}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -361,7 +375,8 @@ fun PreviewEquipmentCardLinked() {
                 item = EquipmentItem(
                     id = 1,
                     name = "Specialized Epic MTB",
-                    sensors = "Garmin HRM, Wahoo Speed",
+                    linkedDeviceIds = listOf(1, 2),
+                    linkedDeviceNames = "Garmin HRM, Wahoo Speed",
                     frameType = 1, // MTB
                     stravaName = "My Epic",
                     stravaId = "b12345",
@@ -392,7 +407,8 @@ fun PreviewEquipmentCardSimple() {
                 item = EquipmentItem(
                     id = 2,
                     name = "Asics Gel-Nimbus",
-                    sensors = "",
+                    linkedDeviceIds = listOf(1, 2),
+                    linkedDeviceNames = "",
                     frameType = 0,
                     stravaName = null,
                     stravaId = null,
@@ -423,7 +439,8 @@ fun PreviewEquipmentCardEmpty() {
                 item = EquipmentItem(
                     id = 3,
                     name = "New Road Bike",
-                    sensors = "Cycplus Speed",
+                    linkedDeviceIds = listOf(3),
+                    linkedDeviceNames = "Cycplus Speed",
                     frameType = 3, // Road
                     stravaName = null,
                     stravaId = null,

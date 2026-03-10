@@ -19,9 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.equipment
 
 import android.app.Application
-import android.content.Context
 import android.icu.util.Calendar
-import androidx.compose.foundation.layout.add
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
@@ -38,7 +36,8 @@ import kotlinx.coroutines.launch
 data class EquipmentItem(
     val id: Long,
     val name: String,
-    val sensors: String,
+    val linkedDeviceIds: List<Long>,
+    val linkedDeviceNames: String,
     val frameType: Int,
     val stravaName: String?,
     val stravaId: String?,
@@ -59,7 +58,10 @@ class EquipmentViewModel(application: Application) : AndroidViewModel(applicatio
     private val _shoes = MutableStateFlow<List<EquipmentItem>>(emptyList())
     val shoes: StateFlow<List<EquipmentItem>> = _shoes
 
-    fun refreshEquipment() {
+    val bikeSensors = dbDevicesHelper.getSensorsForSportType(BSportType.BIKE)
+    val runSensors = dbDevicesHelper.getSensorsForSportType(BSportType.RUN)
+
+    fun loadEquipment() {
         viewModelScope.launch(Dispatchers.IO) {
             val fetchItems = { sportType: BSportType ->
                 // Use the new method to get full data objects
@@ -78,7 +80,8 @@ class EquipmentViewModel(application: Application) : AndroidViewModel(applicatio
                     EquipmentItem(
                         id = data.id,
                         name = data.name,
-                        sensors = sensorNames,
+                        linkedDeviceIds = linkedDeviceIds,
+                        linkedDeviceNames = sensorNames,
                         frameType = data.frameType,
                         stravaName = data.stravaName,
                         stravaId = data.stravaId,
@@ -192,11 +195,21 @@ class EquipmentViewModel(application: Application) : AndroidViewModel(applicatio
         return StatsData.fromDatabase(title, raw)
     }
 
-
-    fun deleteEquipment(name: String) {
+    fun updateEquipment(item: EquipmentItem) {
         viewModelScope.launch(Dispatchers.IO) {
-            // dbHelper.deleteEquipment(name) // TODO: implement this.
-            refreshEquipment()
+            // TODO: when the strava frame type is changed, we should also update strava.
+
+            dbEquipmentHelper.updateEquipment(
+                item.id, item.name, item.frameType, item.linkedDeviceIds
+            )
+            loadEquipment() // Refresh the list for the UI
+        }
+    }
+
+    fun deleteEquipment(item: EquipmentItem) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dbEquipmentHelper.deleteEquipment(item.id)
+            loadEquipment() // Refresh the list
         }
     }
 }

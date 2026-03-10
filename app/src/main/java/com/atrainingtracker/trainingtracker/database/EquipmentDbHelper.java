@@ -183,6 +183,62 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         return equipmentList;
     }
 
+    /**
+     * Updates an existing equipment entry and synchronizes its linked sensors.
+     *
+     * @param id              The ID of the equipment to update.
+     * @param name            The new name.
+     * @param frameType       The new frame type (1-4 for bikes, 0 for others).
+     * @param linkedDeviceIds The new list of sensor IDs to link to this equipment.
+     */
+    public void updateEquipment(long id, String name, int frameType, @NonNull List<Long> linkedDeviceIds) {
+        SQLiteDatabase db = this.getWritableDatabase();
+
+        // Start a transaction to ensure database integrity
+        db.beginTransaction();
+        try {
+            // 1. Update the Equipment table
+            ContentValues values = new ContentValues();
+            values.put(NAME, name);
+            values.put(FRAME_TYPE, frameType);
+            db.update(EQUIPMENT, values, C_ID + "=?", new String[]{String.valueOf(id)});
+
+            // 2. Clear existing links for this equipment
+            db.delete(LINKS, EQUIPMENT_ID + "=?", new String[]{String.valueOf(id)});
+
+            // 3. Insert new links
+            for (Long deviceId : linkedDeviceIds) {
+                ContentValues linkValues = new ContentValues();
+                linkValues.put(EQUIPMENT_ID, id);
+                linkValues.put(ANT_DEVICE_ID, deviceId);
+                db.insert(LINKS, null, linkValues);
+            }
+
+            // Mark transaction as successful
+            db.setTransactionSuccessful();
+            if (DEBUG) Log.d(TAG, "Successfully updated equipment " + id + " with " + linkedDeviceIds.size() + " sensors.");
+        } catch (Exception e) {
+            Log.e(TAG, "Error updating equipment links: " + e.getMessage());
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    /**
+     * Deletes equipment and its associated sensor links in one transaction.
+     */
+    public void deleteEquipment(long id) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        db.beginTransaction();
+        try {
+            db.delete(LINKS, EQUIPMENT_ID + "=?", new String[]{String.valueOf(id)});
+            db.delete(EQUIPMENT, C_ID + "=?", new String[]{String.valueOf(id)});
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
 
     /**
      * Data class for Equipment
