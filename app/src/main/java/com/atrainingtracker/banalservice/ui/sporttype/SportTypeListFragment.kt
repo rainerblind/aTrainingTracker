@@ -24,40 +24,19 @@ class SportTypeListFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setContent {
                 ATrainingTrackerTheme {
-                    SportTypeScreen(
-                        viewModel = viewModel,
-                        onEdit = { id -> showEditSportTypeDialog(id) }
-                    )
+                    // The Screen now handles its own state for adding/editing/deleting
+                    SportTypeScreen(viewModel = viewModel)
                 }
             }
         }
     }
 
-    private fun showEditSportTypeDialog(id: Long) {
-        val editDialog = EditSportTypeDialog.newInstance(id)
-        editDialog.show(parentFragmentManager, EditSportTypeDialog.TAG)
-    }
-
-    // Keep the Receiver for now if EditSportTypeDialog still uses Broadcasts
-    private val sportTypeChangedReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            viewModel.loadSportTypes()
-        }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        val filter = IntentFilter(EditSportTypeDialog.SPORT_TYPE_CHANGED_INTENT)
-        ContextCompat.registerReceiver(requireContext(), sportTypeChangedReceiver, filter,
-            ContextCompat.RECEIVER_NOT_EXPORTED)
-    }
-
-    override fun onPause() {
-        super.onPause()
-        requireContext().unregisterReceiver(sportTypeChangedReceiver)
-    }
-
     companion object {
         val TAG: String = SportTypeListFragment::class.java.name
+
+        @JvmStatic
+        fun newInstance(): SportTypeListFragment {
+            return SportTypeListFragment()
+        }
     }
 }

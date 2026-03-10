@@ -54,19 +54,18 @@ import com.atrainingtracker.trainingtracker.MyHelper
 
 @Composable
 fun SportTypeScreen(
-    viewModel: SportTypeViewModel,
-    onEdit: (Long) -> Unit
+    viewModel: SportTypeViewModel
 ) {
     val sportTypes by viewModel.sportTypes.collectAsStateWithLifecycle()
+    var itemToEdit by remember { mutableStateOf<SportTypeItem?>(null) }
     var itemToDelete by remember { mutableStateOf<SportTypeItem?>(null) }
 
     Scaffold(
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { onEdit(-1L) },
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-            ) {
+            FloatingActionButton(onClick = {
+                // Create blank template for new item
+                itemToEdit = SportTypeItem(-1, "", 0.0, 0.0, "", "", "", true)
+            }) {
                 Icon(Icons.Default.Add, contentDescription = stringResource(R.string.text_new))
             }
         }
@@ -81,11 +80,23 @@ fun SportTypeScreen(
             items(sportTypes, key = { it.id }) { item ->
                 SportTypeCard(
                     item = item,
-                    onClick = { onEdit(item.id) },
+                    onClick = { itemToEdit = item },
                     onDelete = { itemToDelete = item }
                 )
             }
         }
+    }
+
+    // Edit Dialog
+    itemToEdit?.let { item ->
+        EditSportTypeDialog(
+            item = item,
+            onDismiss = { itemToEdit = null },
+            onConfirm = { updatedItem ->
+                viewModel.saveSportType(updatedItem)
+                itemToEdit = null
+            }
+        )
     }
 
     // Delete Confirmation Dialog
