@@ -282,7 +282,7 @@
                 android:key="numberOfSearchTriesInt"
                 android:title="@string/prefsNumberOfSearchTriesTitle"
                 android:defaultValue="3"
-                android:max="10"
+                android:max="5"
                 android:min="1"
                 app:showSeekBarValue="true"/>
 
