@@ -20,76 +20,66 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:title="@string/drawer__training">
         <menu>
-            <group android:checkableBehavior="single">
-                <item
-                    android:id="@+id/drawer_start_tracking"
-                    android:icon="@drawable/control_start"
-                    android:title="@string/tab_start" />
+            <item
+                android:id="@+id/drawer_start_tracking"
+                android:icon="@drawable/control_start"
+                android:title="@string/tab_start" />
 
-                <item
-                    android:id="@+id/drawer_workouts"
-                    android:icon="@drawable/workout_list"
-                    android:title="@string/tab_workouts" />
-            </group>
+            <item
+                android:id="@+id/drawer_workouts"
+                android:icon="@drawable/workout_list"
+                android:title="@string/tab_workouts" />
         </menu>
     </item>
     <item android:title="@string/drawer__maps">
         <menu>
-            <group
-                android:id="@+id/drawer_group_map"
-                android:checkableBehavior="single">
-                <item
-                    android:id="@+id/drawer_map"
-                    android:icon="@drawable/ic_map"
-                    android:title="@string/tab_map" />
+            <item
+                android:id="@+id/drawer_map"
+                android:icon="@drawable/ic_map"
+                android:title="@string/tab_map" />
 
-                <item
-                    android:id="@+id/drawer_segments"
-                    android:icon="@drawable/ic_segment"
-                    android:title="@string/segments" />
+            <item
+                android:id="@+id/drawer_segments"
+                android:icon="@drawable/ic_segment"
+                android:title="@string/segments" />
 
-                <item
-                    android:id="@+id/drawer_my_locations"
-                    android:icon="@drawable/my_locations"
-                    android:title="@string/my_locations" />
-            </group>
+            <item
+                android:id="@+id/drawer_my_locations"
+                android:icon="@drawable/my_locations"
+                android:title="@string/my_locations" />
         </menu>
     </item>
     <item android:title="@string/drawer__my_stuff">
         <menu>
-            <group android:checkableBehavior="single">
-                <item
-                    android:id="@+id/drawer_my_sensors"
-                    android:icon="@drawable/ic_my_paired_devices"
-                    android:title="@string/devices_myRemoteDevices" />
+            <item
+                android:id="@+id/drawer_my_sensors"
+                android:icon="@drawable/ic_my_paired_devices"
+                android:title="@string/devices_myRemoteDevices" />
 
-                <item
-                    android:id="@+id/drawer_bikes"
-                    android:icon="@drawable/ic_equipment_bike"
-                    android:title="@string/prefs_manage_bikes_title" />
+            <item
+                android:id="@+id/drawer_bikes"
+                android:icon="@drawable/ic_equipment_bike"
+                android:title="@string/prefs_manage_bikes_title" />
 
-                <item
-                    android:id="@+id/drawer_shoes"
-                    android:icon="@drawable/ic_equipment_shoe"
-                    android:title="@string/prefs_manage_shoes_title" />
+            <item
+                android:id="@+id/drawer_shoes"
+                android:icon="@drawable/ic_equipment_shoe"
+                android:title="@string/prefs_manage_shoes_title" />
 
-            </group>
         </menu>
     </item>
     <item android:title="@string/drawer__settings">
         <menu>
-            <group
-                android:id="@+id/drawer_group_settings"
-                android:checkableBehavior="single">
-                <item
-                    android:id="@+id/drawer_settings"
-                    android:icon="@drawable/ic_settings_black_48dp"
-                    android:title="@string/Preferences" />
-                <item
-                    android:id="@+id/drawer_privacy_policy"
-                    android:icon="@drawable/ic_privacy"
-                    android:title="@string/privacy_policy" />
-            </group>
+            android:id="@+id/drawer_group_settings"
+            android:checkableBehavior="single">
+            <item
+                android:id="@+id/drawer_settings"
+                android:icon="@drawable/ic_settings_black_48dp"
+                android:title="@string/Preferences" />
+            <item
+                android:id="@+id/drawer_privacy_policy"
+                android:icon="@drawable/ic_privacy"
+                android:title="@string/privacy_policy" />
         </menu>
     </item>
 </menu>
