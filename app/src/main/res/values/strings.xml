@@ -1017,4 +1017,9 @@
     <string name="stats_this_month">This Month</string>
     <string name="stats_last_month">Last Month</string>
     <string name="stats_this_year">This Year</string>
+
+    <!-- sport type -->
+    <string name="sport_type_linked_equipment">Linked Equipment</string>
+    <string name="sport_type_no_equipment_linked">No equipment linked</string>
+    <string name="sport_type_equipment">Equipment</string>
 </resources>

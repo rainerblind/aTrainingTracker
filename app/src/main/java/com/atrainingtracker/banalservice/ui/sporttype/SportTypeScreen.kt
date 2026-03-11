@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.AlertDialog
@@ -78,6 +79,8 @@ fun SportTypeScreen(
                     stravaName = "Ride",
                     tcxName = "Biking",
                     gcName = "bike",
+                    linkedEquipmentIds = emptyList(),
+                    linkedEquipmentNames = "",
                     isEditable = true,
                     firstUsed = null,
                     lastUsed = null,
@@ -130,8 +133,11 @@ fun SportTypeScreen(
 
     // Edit Dialog
     itemToEdit?.let { item ->
+        val availableEquipment = viewModel.availableEquipment(item.bSportType)
+
         EditSportTypeDialog(
             item = item,
+            availableEquipment = availableEquipment,
             onDismiss = { itemToEdit = null },
             onConfirm = { updatedItem ->
                 viewModel.saveSportType(updatedItem)
@@ -273,6 +279,36 @@ fun SportTypeCard(
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                    }
+
+                    if (item.linkedEquipmentNames.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            val equipmentIcon = when (item.bSportType) {
+                                BSportType.BIKE -> painterResource(R.drawable.ic_equipment_bike)
+                                BSportType.RUN -> painterResource(R.drawable.ic_equipment_shoe)
+                                else -> null
+                            }
+
+                            if (equipmentIcon != null) {
+                                Icon(
+                                    painter = equipmentIcon,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.outline
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                            Text(
+                                text = item.linkedEquipmentNames,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }

@@ -424,7 +424,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     }
 
     @Nullable
-    public String getEquipmentNameFromId(int equipmentId) {
+    public String getEquipmentNameFromId(long equipmentId) {
         String equipmentName = null;
 
         SQLiteDatabase db = this.getReadableDatabase();

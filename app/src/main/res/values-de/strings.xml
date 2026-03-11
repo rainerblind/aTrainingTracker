@@ -918,4 +918,9 @@
     <string name="stats_last_month">Letzten Monat</string>
     <string name="stats_this_year">Dieses Jahr</string>
 
+    <!-- sport type -->
+    <string name="sport_type_linked_equipment">Verknüpfte Ausrüstung</string>
+    <string name="sport_type_no_equipment_linked">Keine Ausrüstung verknüpft</string>
+    <string name="sport_type_equipment">Ausrüstung</string>
+
 </resources>
