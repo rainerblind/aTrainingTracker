@@ -402,7 +402,7 @@ public class SportTypeDatabaseManager {
             db.update(
                     SportTypeDatabaseManager.SportType.TABLE,
                     values,
-                    "${SportTypeDatabaseManager.SportType.C_ID}=?",
+                    SportTypeDatabaseManager.SportType.C_ID + "=?",
                     new String[]{Long.toString(id)}
             );
         }
