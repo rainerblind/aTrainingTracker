@@ -96,6 +96,7 @@ public class SportTypeDatabaseManager {
         return result;
     }
 
+    @Deprecated // TODO: use the new methods in BSportType instead.
     public int getBSportTypeIconId(long id) {
         if (DEBUG) Log.i(TAG, "getBsportTypeIconId, id=" + id);
 
@@ -385,11 +386,14 @@ public class SportTypeDatabaseManager {
         return result;
     }
 
-    public void updateSportType(long id, String name, Double minSpeed, Double maxSpeed, String stravaName, String tcxName, String gcName) {
+    public void updateSportType(long id, String name, BSportType bSportType, Double minSpeed, Double maxSpeed, String stravaName, String tcxName, String gcName) {
+        if (DEBUG) Log.i(TAG, "updateSportType, id=" + id + ", name=" + name + ", bSportType=" + bSportType + ", minSpeed=" + minSpeed + ", maxSpeed=" + maxSpeed);
+
         SQLiteDatabase db = getDatabase();
 
         ContentValues values = new ContentValues();
         values.put(SportTypeDatabaseManager.SportType.UI_NAME, name);
+        values.put(SportType.BASE_SPORT_TYPE, bSportType.name());
         values.put(SportTypeDatabaseManager.SportType.MIN_AVG_SPEED, minSpeed);
         values.put(SportTypeDatabaseManager.SportType.MAX_AVG_SPEED, maxSpeed);
         values.put(SportTypeDatabaseManager.SportType.STRAVA_NAME, stravaName);

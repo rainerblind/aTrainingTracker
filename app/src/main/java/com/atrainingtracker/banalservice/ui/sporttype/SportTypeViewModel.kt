@@ -13,11 +13,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsPeriodHelper
 
 data class SportTypeItem(
     val id: Long,
     val name: String,
+    val bSportType: BSportType,
     val minSpeed: Double,
     val maxSpeed: Double,
     val stravaName: String,
@@ -58,6 +60,11 @@ class SportTypeViewModel(application: Application) : AndroidViewModel(applicatio
                     list.add(SportTypeItem(
                         id = id,
                         name = it.getString(it.getColumnIndexOrThrow(SportTypeDatabaseManager.SportType.UI_NAME)),
+                        bSportType = try {
+                            BSportType.valueOf(it.getString(it.getColumnIndexOrThrow(SportTypeDatabaseManager.SportType.BASE_SPORT_TYPE)))
+                        } catch (e: Exception) {
+                            BSportType.UNKNOWN
+                        },
                         minSpeed = it.getDouble(it.getColumnIndexOrThrow(SportTypeDatabaseManager.SportType.MIN_AVG_SPEED)),
                         maxSpeed = it.getDouble(it.getColumnIndexOrThrow(SportTypeDatabaseManager.SportType.MAX_AVG_SPEED)),
                         stravaName = it.getString(it.getColumnIndexOrThrow(SportTypeDatabaseManager.SportType.STRAVA_NAME)),
@@ -95,6 +102,7 @@ class SportTypeViewModel(application: Application) : AndroidViewModel(applicatio
             dbSportTypeManager.updateSportType(
                 item.id,
                 item.name,
+                item.bSportType,
                 item.minSpeed,
                 item.maxSpeed,
                 item.stravaName,

@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.ui.components.stats.RichStatsSheet
@@ -71,6 +72,7 @@ fun SportTypeScreen(
                 itemToEdit = SportTypeItem(
                     id = -1,
                     name = "",
+                    bSportType = BSportType.BIKE,
                     minSpeed = 4.2,
                     maxSpeed = 10.0,
                     stravaName = "Ride",
@@ -190,9 +192,8 @@ fun SportTypeCard(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    val icon = remember(item.id) {
-                        SportTypeDatabaseManager.getInstance(context)
-                            .getBSportTypeIcon(context, item.id, 1.0)
+                    val icon = remember(item.bSportType) {
+                        androidx.core.content.ContextCompat.getDrawable(context, item.bSportType.iconResId)
                     }
 
                     icon?.let {
