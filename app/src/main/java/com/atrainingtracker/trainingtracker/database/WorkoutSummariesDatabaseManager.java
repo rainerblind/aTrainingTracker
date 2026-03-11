@@ -21,7 +21,6 @@ package com.atrainingtracker.trainingtracker.database;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
-import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.BaseColumns;
@@ -34,8 +33,6 @@ import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
-import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusRepository;
-import com.google.android.gms.maps.model.LatLng;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -722,10 +719,9 @@ public class WorkoutSummariesDatabaseManager {
 
 
     /**
-     * Getting some stats for an equipment
+     * Getting some stats for an equipment or a sport type
      */
-    // TODO: rename since we also need such a stat for sport types.
-    public static class EquipmentStats {
+    public static class Stats {
         public double totalDistanceM = 0;
         public long totalActiveTimeS = 0;
         public int totalAscentM = 0;
@@ -735,10 +731,10 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     /**
-     * Aggregates workout statistics for a specific piece of equipment.
+     * generic method to get the total Stats for a column=id
      */
-    public EquipmentStats getEquipmentStats(long equipmentId) {
-        EquipmentStats stats = new EquipmentStats();
+    private Stats getStatsForColumn(String column, long id) {
+        Stats stats = new Stats();
         SQLiteDatabase db = getDatabase();
 
         String[] columns = {
@@ -753,8 +749,8 @@ public class WorkoutSummariesDatabaseManager {
         Cursor cursor = db.query(
                 WorkoutSummaries.TABLE,
                 columns,
-                WorkoutSummaries.EQUIPMENT_ID + "=?",
-                new String[]{String.valueOf(equipmentId)},
+                column + "=?",
+                new String[]{String.valueOf(id)},
                 null, null, null
         );
 
@@ -772,10 +768,25 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     /**
-     * Aggregates statistics for a specific equipment within a time range.
+     * Aggregates workout statistics for a specific piece of equipment.
      */
-    public EquipmentStats getEquipmentStatsForPeriod(long equipmentId, long startTimeS, long endTimeS) {
-        EquipmentStats stats = new EquipmentStats();
+    public Stats getEquipmentStats(long equipmentId) {
+        return getStatsForColumn(WorkoutSummaries.EQUIPMENT_ID, equipmentId);
+    }
+
+    /**
+     * Aggregates workout statistics for a specific sport type
+     */
+    public Stats getSportTypeStats(long sportTypeId) {
+        return getStatsForColumn(WorkoutSummaries.SPORT_ID, sportTypeId);
+    }
+
+
+    /**
+     * Generic method to get the Stats for a Period
+     */
+    public Stats getStatsForPeriod(String column, long equipmentId, long startTimeS, long endTimeS) {
+        Stats stats = new Stats();
         SQLiteDatabase db = getDatabase();
 
         String[] columns = {
@@ -788,7 +799,7 @@ public class WorkoutSummariesDatabaseManager {
         };
 
         // Compare DATETIME column against numeric unix timestamps
-        String selection = WorkoutSummaries.EQUIPMENT_ID + "=? AND " +
+        String selection = column + "=? AND " +
                 WorkoutSummaries.TIME_START + " >= datetime(?, 'unixepoch') AND " +
                 WorkoutSummaries.TIME_START + " <= datetime(?, 'unixepoch')";
 
@@ -809,6 +820,20 @@ public class WorkoutSummariesDatabaseManager {
             }
         }
         return stats;
+    }
+
+    /**
+     * Aggregates statistics for a specific equipment within a time range.
+     */
+    public Stats getEquipmentStatsForPeriod(long equipmentId, long startTimeS, long endTimeS) {
+        return getStatsForPeriod(WorkoutSummaries.EQUIPMENT_ID, equipmentId, startTimeS, endTimeS);
+    }
+
+    /**
+     * Aggregates statistics for a specific sport type within a time range.
+     */
+    public Stats getSportTypeStatsForPeriod(long sportTypeId, long startTimeS, long endTimeS) {
+        return getStatsForPeriod(WorkoutSummaries.SPORT_ID, sportTypeId, startTimeS, endTimeS);
     }
 
 

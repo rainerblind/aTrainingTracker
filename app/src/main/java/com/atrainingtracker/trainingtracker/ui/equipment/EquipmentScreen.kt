@@ -121,7 +121,8 @@ fun EquipmentScreen(
                     val allStats = listOf(item.statsData) + periods
                     // 3. Show the sheet
                     statsToShow = Pair(item.name, allStats)
-                },                onDelete = { item -> viewModel.deleteEquipment(item) }
+                },
+                onDelete = { item -> viewModel.deleteEquipment(item) }
             )
         }
     }
