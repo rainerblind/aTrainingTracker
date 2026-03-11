@@ -1,8 +1,6 @@
 package com.atrainingtracker.banalservice.ui.sporttype
 
 import android.app.Application
-import android.icu.util.Calendar
-import android.content.ContentValues
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
@@ -16,6 +14,20 @@ import kotlinx.coroutines.launch
 
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsPeriodHelper
+
+data class SportTypeItem(
+    val id: Long,
+    val name: String,
+    val minSpeed: Double,
+    val maxSpeed: Double,
+    val stravaName: String,
+    val tcxName: String,
+    val gcName: String,
+    val isEditable: Boolean,
+    val firstUsed: String?,
+    val lastUsed: String?,
+    val statsData: StatsData
+)
 
 class SportTypeViewModel(application: Application) : AndroidViewModel(application) {
     private val dbSportTypeManager = SportTypeDatabaseManager.getInstance(application)

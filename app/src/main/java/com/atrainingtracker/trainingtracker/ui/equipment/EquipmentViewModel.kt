@@ -19,7 +19,6 @@
 package com.atrainingtracker.trainingtracker.ui.equipment
 
 import android.app.Application
-import android.icu.util.Calendar
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
