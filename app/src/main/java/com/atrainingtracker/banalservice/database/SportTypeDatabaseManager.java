@@ -36,6 +36,7 @@ import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -410,6 +411,55 @@ public class SportTypeDatabaseManager {
                     new String[]{Long.toString(id)}
             );
         }
+    }
+
+    public static class SimpleSportTypeInfo {
+        public final long id;
+        public final String name;
+
+        public SimpleSportTypeInfo(long id, String name) {
+            this.id = id;
+            this.name = name;
+        }
+    }
+
+    /**
+     * Returns a list of sensors filtered by the sport type.
+     *
+     * @param bSportType The sport type (Cycling, Running, etc.) to filter relevant sensors.
+     * @return A list of SimpleSensorInfo objects.
+     */
+    public List<SimpleSportTypeInfo> getSportTypes(BSportType bSportType) {
+        List<SimpleSportTypeInfo> sensors = new ArrayList<>();
+
+        // Basic selection: Get ID and Name
+        // We filter by Name to ensure we only show devices the user has actually named/identified
+        String selection = SportType.UI_NAME + " IS NOT NULL AND " + SportType.UI_NAME + " != ''";
+
+        if (bSportType == BSportType.BIKE) {
+            selection += " AND (" + SportType.BASE_SPORT_TYPE + " = '" + BSportType.BIKE + "')";
+        }
+        else if (bSportType == BSportType.RUN) {
+            selection += " AND (" + SportType.BASE_SPORT_TYPE + " = '" + BSportType.RUN + "')";
+        }
+
+        Cursor cursor = getDatabase().query(SportType.TABLE,
+                new String[]{SportType.C_ID, SportType.UI_NAME},
+                selection,
+                null, null, null, SportType.UI_NAME + " ASC");
+
+        int idCol = cursor.getColumnIndex(SportType.C_ID);
+        int nameCol = cursor.getColumnIndex(SportType.UI_NAME);
+
+        while (cursor.moveToNext()) {
+            sensors.add(new SimpleSportTypeInfo(
+                    cursor.getLong(idCol),
+                    cursor.getString(nameCol)
+            ));
+        }
+        cursor.close();
+
+        return sensors;
     }
 
 

@@ -32,17 +32,20 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 
 @Composable
 fun EditEquipmentDialog(
     item: EquipmentItem,
     availableSensors: List<DevicesDatabaseManager.SimpleSensorInfo>,
+    availableSportTypes: List<SportTypeDatabaseManager.SimpleSportTypeInfo>,
     onDismiss: () -> Unit,
     onConfirm: (EquipmentItem) -> Unit
 ) {
     var name by remember { mutableStateOf(item.name) }
     var frameType by remember { mutableStateOf(item.frameType) }
     var selectedSensorIds by remember { mutableStateOf(item.linkedDeviceIds.toSet()) }
+    var selectedSportTypeIds by remember { mutableStateOf(item.linkedSportTypeIds.toSet()) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -63,6 +66,20 @@ fun EditEquipmentDialog(
                     )
                 }
 
+                // Multi-select for Sport Types
+                MultiSelectSportTypeSpinner(
+                    allSportTypes = availableSportTypes,
+                    selectedIds = selectedSportTypeIds,
+                    onToggleSportType = { id ->
+                        selectedSportTypeIds = if (selectedSportTypeIds.contains(id)) {
+                            selectedSportTypeIds - id
+                        } else {
+                            selectedSportTypeIds + id
+                        }
+                    }
+                )
+
+                // Multi-select for Sensors
                 MultiSelectSensorSpinner(
                     allSensors = availableSensors,
                     selectedIds = selectedSensorIds,
@@ -82,7 +99,8 @@ fun EditEquipmentDialog(
                     onConfirm(item.copy(
                         name = name,
                         frameType = frameType,
-                        linkedDeviceIds = selectedSensorIds.toList()
+                        linkedDeviceIds = selectedSensorIds.toList(),
+                        linkedSportTypeIds = selectedSportTypeIds.toList()
                     ))                }
             ) { Text(stringResource(R.string.save)) }
         },
@@ -90,6 +108,55 @@ fun EditEquipmentDialog(
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         }
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MultiSelectSportTypeSpinner(
+    allSportTypes: List<SportTypeDatabaseManager.SimpleSportTypeInfo>,
+    selectedIds: Set<Long>,
+    onToggleSportType: (Long) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    // UI Label: Show names of selected sport types
+    val displayText = allSportTypes
+        .filter { selectedIds.contains(it.id) }
+        .joinToString(", ") { it.name }
+        .ifEmpty { stringResource(R.string.equipment_no_sports_linked) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded }
+    ) {
+        OutlinedTextField(
+            value = displayText,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(stringResource(R.string.equipment_linked_sport_types)) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .menuAnchor()
+                .fillMaxWidth()
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            allSportTypes.forEach { sport ->
+                DropdownMenuItem(
+                    text = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = selectedIds.contains(sport.id), onCheckedChange = null)
+                            Text(sport.name, modifier = Modifier.padding(start = 8.dp))
+                        }
+                    },
+                    onClick = { onToggleSportType(sport.id) }
+                )
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -158,12 +225,14 @@ fun PreviewEditEquipmentDialog() {
         name = "Specialized Roubaix",
         linkedDeviceIds = listOf(1, 2),
         linkedDeviceNames = "Garmin HRM, Speed Sensor",
+        linkedSportTypeIds = listOf(1, 2),
+        linkedSportTypeNames = "Ride",
         frameType = 3, // Road
         firstUsed = "2023-01-15",
         lastUsed = "2024-03-08",
         statsData = mockStats,
         stravaName = "Specialized Roubaix",
-        stravaId = "12345678"
+        stravaId = "12345678",
     )
 
     MaterialTheme {
@@ -176,7 +245,8 @@ fun PreviewEditEquipmentDialog() {
                 DevicesDatabaseManager.SimpleSensorInfo(2, "Wahoo Speed"),
                 DevicesDatabaseManager.SimpleSensorInfo(3, "Stages Power"),
                 DevicesDatabaseManager.SimpleSensorInfo(4, "Polar H10")
-            )
+            ),
+            availableSportTypes = emptyList()
         )
     }
 }

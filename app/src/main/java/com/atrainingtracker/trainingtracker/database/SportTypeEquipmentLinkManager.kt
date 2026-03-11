@@ -4,6 +4,8 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import android.util.Log
+import androidx.compose.ui.layout.LookaheadScope
 import androidx.core.database.sqlite.transaction
 
 class SportTypeEquipmentLinkManager private constructor(context: Context) {
@@ -23,6 +25,8 @@ class SportTypeEquipmentLinkManager private constructor(context: Context) {
     private val db: SQLiteDatabase get() = dbHelper.writableDatabase
 
     companion object {
+        private const val DEBUG = true
+        private const val TAG = "SportTypeEquipmentLinkManager"
         private const val TABLE_NAME = "SportTypeEquipmentLink"
         private const val COLUMN_SPORT_ID = "sport_type_id"
         private const val COLUMN_EQUIP_ID = "equipment_id"
@@ -68,8 +72,10 @@ class SportTypeEquipmentLinkManager private constructor(context: Context) {
      * Replaces all sport type links for a specific piece of Equipment.
      */
     fun updateLinksForEquipment(equipmentId: Long, sportTypeIds: List<Long>) {
+        if (DEBUG) Log.i(TAG, "updateLinksForEquipment: $equipmentId, $sportTypeIds")
+
         db.transaction {
-            try {
+//            try {
                 delete(TABLE_NAME, "$COLUMN_EQUIP_ID = ?", arrayOf(equipmentId.toString()))
                 sportTypeIds.forEach { sportId ->
                     val cv = ContentValues().apply {
@@ -78,8 +84,8 @@ class SportTypeEquipmentLinkManager private constructor(context: Context) {
                     }
                     insert(TABLE_NAME, null, cv)
                 }
-            } finally {
-            }
+//            } finally {
+//            }
         }
     }
 
@@ -97,6 +103,8 @@ class SportTypeEquipmentLinkManager private constructor(context: Context) {
                 ids.add(cursor.getLong(0))
             }
         }
+
+        if (DEBUG) Log.i(TAG, "getEquipmentIdsForSport: $sportId, $ids")
         return ids
     }
 

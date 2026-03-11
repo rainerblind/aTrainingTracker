@@ -895,8 +895,11 @@
     <string name="equipment_configure_equipment">Ausrüstung konfigurieren</string>
     <string name="equipment_bike_type">Rad Typ</string>
     <string name="equipment_select_bike_type">Wähle Rad Typ</string>
-    <string name="equipment_no_sensors_linked">Keine verknüpften Sensoren</string>
     <string name="equipment_linked_sensors">Verknüpfte Sensoren</string>
+    <string name="equipment_no_sensors_linked">Keine verknüpften Sensoren</string>
+    <string name="equipment_sport_types">Sportarten:</string>
+    <string name="equipment_linked_sport_types">Verknüpfte Sportarten</string>
+    <string name="equipment_no_sports_linked">Keine</string>
 
 
     <!-- statistics -->
