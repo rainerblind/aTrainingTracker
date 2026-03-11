@@ -77,31 +77,21 @@ class SportTypeViewModel(application: Application) : AndroidViewModel(applicatio
     }
     
     
-    // TODO: we don't do this here. This must be done by the databaseManger / Helper.
     fun saveSportType(item: SportTypeItem) {
+        // forward to the database manager
         viewModelScope.launch(Dispatchers.IO) {
-            val db = dbSportTypeManager.database
+            dbSportTypeManager.updateSportType(
+                item.id,
+                item.name,
+                item.minSpeed,
+                item.maxSpeed,
+                item.stravaName,
+                item.tcxName,
+                item.gcName
+            )
 
-            val values = ContentValues().apply {
-                put(SportTypeDatabaseManager.SportType.UI_NAME, item.name)
-                put(SportTypeDatabaseManager.SportType.MIN_AVG_SPEED, item.minSpeed)
-                put(SportTypeDatabaseManager.SportType.MAX_AVG_SPEED, item.maxSpeed)
-                put(SportTypeDatabaseManager.SportType.STRAVA_NAME, item.stravaName)
-                put(SportTypeDatabaseManager.SportType.TCX_NAME, item.tcxName)
-                put(SportTypeDatabaseManager.SportType.GOLDEN_CHEETAH_NAME, item.gcName)
-            }
-
-            if (item.id == -1L) {
-                db.insert(SportTypeDatabaseManager.SportType.TABLE, null, values)
-            } else {
-                db.update(
-                    SportTypeDatabaseManager.SportType.TABLE,
-                    values,
-                    "${SportTypeDatabaseManager.SportType.C_ID}=?",
-                    arrayOf(item.id.toString())
-                )
-            }
-            loadSportTypes() // Refresh the list
+            // Refresh the list
+            loadSportTypes()
         }
     }
 

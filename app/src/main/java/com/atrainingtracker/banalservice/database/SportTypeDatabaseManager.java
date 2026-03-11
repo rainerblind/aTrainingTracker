@@ -385,6 +385,30 @@ public class SportTypeDatabaseManager {
         return result;
     }
 
+    public void updateSportType(long id, String name, Double minSpeed, Double maxSpeed, String stravaName, String tcxName, String gcName) {
+        SQLiteDatabase db = getDatabase();
+
+        ContentValues values = new ContentValues();
+        values.put(SportTypeDatabaseManager.SportType.UI_NAME, name);
+        values.put(SportTypeDatabaseManager.SportType.MIN_AVG_SPEED, minSpeed);
+        values.put(SportTypeDatabaseManager.SportType.MAX_AVG_SPEED, maxSpeed);
+        values.put(SportTypeDatabaseManager.SportType.STRAVA_NAME, stravaName);
+        values.put(SportTypeDatabaseManager.SportType.TCX_NAME, tcxName);
+        values.put(SportTypeDatabaseManager.SportType.GOLDEN_CHEETAH_NAME, gcName);
+
+        if (id == -1L) {
+            db.insert(SportTypeDatabaseManager.SportType.TABLE, null, values);
+        } else {
+            db.update(
+                    SportTypeDatabaseManager.SportType.TABLE,
+                    values,
+                    "${SportTypeDatabaseManager.SportType.C_ID}=?",
+                    new String[]{Long.toString(id)}
+            );
+        }
+    }
+
+
     public static boolean canDelete(long id) {
         return id < 0 || id > 3;
     }
