@@ -239,6 +239,36 @@ fun SportTypeCard(
                     }
                 }
 
+                if (item.linkedEquipmentNames.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        val equipmentIcon = when (item.bSportType) {
+                            BSportType.BIKE -> painterResource(R.drawable.ic_equipment_bike)
+                            BSportType.RUN -> painterResource(R.drawable.ic_equipment_shoe)
+                            else -> null
+                        }
+
+                        if (equipmentIcon != null) {
+                            Icon(
+                                painter = equipmentIcon,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.outline
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        Text(
+                            text = item.linkedEquipmentNames,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // MAPPING ZONE
@@ -277,36 +307,6 @@ fun SportTypeCard(
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                    }
-
-                    if (item.linkedEquipmentNames.isNotBlank()) {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            val equipmentIcon = when (item.bSportType) {
-                                BSportType.BIKE -> painterResource(R.drawable.ic_equipment_bike)
-                                BSportType.RUN -> painterResource(R.drawable.ic_equipment_shoe)
-                                else -> null
-                            }
-
-                            if (equipmentIcon != null) {
-                                Icon(
-                                    painter = equipmentIcon,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp),
-                                    tint = MaterialTheme.colorScheme.outline
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.width(8.dp))
-
-                            Text(
-                                text = item.linkedEquipmentNames,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
                     }
                 }
             }
