@@ -164,6 +164,22 @@ fun EditSportTypeDialog(
                     )
                 }
 
+                // linked equipment
+                if (availableEquipment.isNotEmpty()) {
+                    MultiSelectEquipmentSpinner(
+                        allEquipment = availableEquipment,
+                        selectedIds = selectedEquipIds,
+                        onToggleEquipment = { id ->
+                            selectedEquipIds = if (selectedEquipIds.contains(id)) {
+                                selectedEquipIds - id
+                            } else {
+                                selectedEquipIds + id
+                            }
+                        }
+                    )
+                }
+
+
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                 Text(stringResource(R.string.prefs_Export), style = MaterialTheme.typography.labelLarge)
 
@@ -193,26 +209,6 @@ fun EditSportTypeDialog(
                     onOptionSelected = { gcName = it }
                 )
 
-                // linked equipment
-                if (availableEquipment.isNotEmpty()) {
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                    Text(
-                        text = stringResource(R.string.sport_type_linked_equipment),
-                        style = MaterialTheme.typography.labelLarge,
-                    )
-
-                    MultiSelectEquipmentSpinner(
-                        allEquipment = availableEquipment, // Pass this from ViewModel
-                        selectedIds = selectedEquipIds,
-                        onToggleEquipment = { id ->
-                            selectedEquipIds = if (selectedEquipIds.contains(id)) {
-                                selectedEquipIds - id
-                            } else {
-                                selectedEquipIds + id
-                            }
-                        }
-                    )
-                }
             }
         },
         confirmButton = {
