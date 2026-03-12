@@ -255,7 +255,8 @@ fun EditSportTypeDialog(
                     label = "GoldenCheetah Name",
                     selectedOption = gcName,
                     options = gcNames.toList(),
-                    onOptionSelected = { gcName = it }
+                    onOptionSelected = { gcName = it },
+                    leadingIcon = { Icon(Icons.Default.Save, null) }
                 )
 
             }
