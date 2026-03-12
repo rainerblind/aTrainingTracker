@@ -167,6 +167,11 @@ fun EditSportTypeDialog(
                 // linked equipment
                 if (availableEquipment.isNotEmpty()) {
                     MultiSelectEquipmentSpinner(
+                        title = when (item.bSportType) {
+                            BSportType.BIKE -> stringResource(R.string.equipment_type_bike)
+                            BSportType.RUN -> stringResource(R.string.equipment_type_shoe)
+                            else -> stringResource(R.string.sport_type_equipment)
+                        },
                         allEquipment = availableEquipment,
                         selectedIds = selectedEquipIds,
                         onToggleEquipment = { id ->
@@ -289,6 +294,7 @@ fun SportTypeDropdown(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MultiSelectEquipmentSpinner(
+    title: String,
     allEquipment: List<EquipmentDbHelper.EquipmentData>,
     selectedIds: Set<Long>,
     onToggleEquipment: (Long) -> Unit
@@ -308,7 +314,7 @@ fun MultiSelectEquipmentSpinner(
             value = displayText,
             onValueChange = {},
             readOnly = true,
-            label = { Text(stringResource(R.string.sport_type_equipment)) },
+            label = { Text( title) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier
                 .menuAnchor()
