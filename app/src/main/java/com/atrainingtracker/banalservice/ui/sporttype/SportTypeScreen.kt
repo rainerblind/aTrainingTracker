@@ -185,7 +185,11 @@ fun SportTypeCard(
                 .fillMaxWidth()
                 .combinedClickable(
                     onClick = { onConfigClick(item) },
-                    onLongClick = { showMenu = true }
+                    onLongClick = {
+                        if (item.isEditable) {
+                            showMenu = true
+                        }
+                    }
                 )
                 .padding(16.dp)
             ) {
