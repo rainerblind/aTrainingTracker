@@ -144,7 +144,7 @@ class SportTypeViewModel(application: Application) : AndroidViewModel(applicatio
             dbSportTypeManager.delete(id)
 
             // also delete the links
-            dbSportTypeManager.delete(id)
+            dbLinksHelper.updateLinksForSportType(id, emptyList())
 
             loadSportTypes()
         }

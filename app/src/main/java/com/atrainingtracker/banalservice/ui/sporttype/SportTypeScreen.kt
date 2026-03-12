@@ -133,11 +133,9 @@ fun SportTypeScreen(
 
     // Edit Dialog
     itemToEdit?.let { item ->
-        val availableEquipment = viewModel.availableEquipment(item.bSportType)
-
         EditSportTypeDialog(
             item = item,
-            availableEquipment = availableEquipment,
+            viewModel = viewModel,
             onDismiss = { itemToEdit = null },
             onConfirm = { updatedItem ->
                 viewModel.saveSportType(updatedItem)

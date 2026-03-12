@@ -26,11 +26,11 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -43,12 +43,14 @@ import com.atrainingtracker.banalservice.BSportType
 
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditSportTypeDialog(
     item: SportTypeItem,
-    availableEquipment: List<EquipmentDbHelper.EquipmentData>,
+    viewModel: SportTypeViewModel,
     onDismiss: () -> Unit,
     onConfirm: (SportTypeItem) -> Unit
 ) {
@@ -67,9 +69,51 @@ fun EditSportTypeDialog(
     var tcxName by remember { mutableStateOf(item.tcxName) }
     var gcName by remember { mutableStateOf(item.gcName) }
 
+    // This will hold the equipment fetched from the DB based on the current bSportType
+    var availableEquipment by remember { mutableStateOf<List<EquipmentDbHelper.EquipmentData>>(emptyList()) }
+
+    // Automatically re-fetch equipment whenever bSportType changes
+    LaunchedEffect(bSportType) {
+        // Since availableEquipment(bSportType) performs a DB query,
+        // we run it in a background thread
+        val equip = withContext(Dispatchers.IO) {
+            viewModel.availableEquipment(bSportType)
+        }
+        availableEquipment = equip
+    }
     var selectedEquipIds by remember { mutableStateOf(item.linkedEquipmentIds.toSet()) }
 
     val speedUnit = stringResource(MyHelper.getSpeedUnitNameId())
+
+    fun onBaseTypeChanged(newBSportType: BSportType) {
+        bSportType = newBSportType
+        // Clear linked equipment
+        // Since Equipment is filtered by BSportType, old links (e.g. shoes for a bike)
+        // are invalid when the type changes.
+        selectedEquipIds = emptySet()
+
+        if (newBSportType == BSportType.RUN) {
+            stravaName = "Run"
+            tcxName = "Running"
+            gcName = "run"
+            minSpeed = formatSpeed(1.5) // 5.4 km/h
+            maxSpeed = formatSpeed(5.0) // 18 km/h
+        }
+        else if (newBSportType == BSportType.BIKE) {
+            stravaName = "Ride"
+            tcxName = "Biking"
+            gcName = "bike"
+            minSpeed = formatSpeed(4.0) // 14.4 km/h
+            maxSpeed = formatSpeed(15.0)// 54 km/h
+        }
+        else {
+            stravaName = "Workout"
+            tcxName = "Other"
+            gcName = "walk"
+            minSpeed = formatSpeed(0.0) // 0 km/h
+            maxSpeed = formatSpeed(1.0) // 5.4 km/h
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -124,20 +168,20 @@ fun EditSportTypeDialog(
                             expanded = expanded,
                             onDismissRequest = { expanded = false }
                         ) {
-                            bSportTypes.forEach { type ->
+                            bSportTypes.forEach { bSportType ->
                                 DropdownMenuItem(
                                     text = {
-                                        Text(stringResource(type.stringResId))
+                                        Text(stringResource(bSportType.stringResId))
                                     },
                                     leadingIcon = {
                                         Icon(
-                                            painter = painterResource(type.iconResId),
+                                            painter = painterResource(bSportType.iconResId),
                                             contentDescription = null,
                                             modifier = Modifier.size(24.dp)
                                         )
                                     },
                                     onClick = {
-                                        bSportType = type
+                                        onBaseTypeChanged(bSportType)
                                         expanded = false
                                     }
                                 )
@@ -167,7 +211,7 @@ fun EditSportTypeDialog(
                 // linked equipment
                 if (availableEquipment.isNotEmpty()) {
                     MultiSelectEquipmentSpinner(
-                        title = when (item.bSportType) {
+                        title = when (bSportType) {
                             BSportType.BIKE -> stringResource(R.string.equipment_type_bike)
                             BSportType.RUN -> stringResource(R.string.equipment_type_shoe)
                             else -> stringResource(R.string.sport_type_equipment)
