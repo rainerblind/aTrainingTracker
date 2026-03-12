@@ -226,6 +226,7 @@ fun EditSportTypeDialog(
                         bSportType = bSportType,
                         minSpeed = finalMin,
                         maxSpeed = finalMax,
+                        linkedEquipmentIds = selectedEquipIds.toList(),
                         stravaName = stravaName,
                         tcxName = tcxName,
                         gcName = gcName
@@ -314,7 +315,7 @@ fun MultiSelectEquipmentSpinner(
             value = displayText,
             onValueChange = {},
             readOnly = true,
-            label = { Text( title) },
+            label = { Text(title) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier
                 .menuAnchor()
@@ -329,13 +330,17 @@ fun MultiSelectEquipmentSpinner(
             allEquipment.forEach { item ->
                 DropdownMenuItem(
                     text = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(checked = selectedIds.contains(item.id), onCheckedChange = null)
+                        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                            Checkbox(
+                                checked = selectedIds.contains(item.id),
+                                onCheckedChange = null // Handled by MenuItem onClick
+                            )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(item.name)
                         }
                     },
-                    onClick = { onToggleEquipment(item.id) }
+                    onClick = { onToggleEquipment(item.id) },
+                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
                 )
             }
         }

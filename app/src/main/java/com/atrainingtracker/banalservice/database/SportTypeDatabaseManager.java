@@ -387,7 +387,7 @@ public class SportTypeDatabaseManager {
         return result;
     }
 
-    public void updateSportType(long id, String name, BSportType bSportType, Double minSpeed, Double maxSpeed, String stravaName, String tcxName, String gcName) {
+    public long updateSportType(long id, String name, BSportType bSportType, Double minSpeed, Double maxSpeed, String stravaName, String tcxName, String gcName) {
         if (DEBUG) Log.i(TAG, "updateSportType, id=" + id + ", name=" + name + ", bSportType=" + bSportType + ", minSpeed=" + minSpeed + ", maxSpeed=" + maxSpeed);
 
         SQLiteDatabase db = getDatabase();
@@ -401,8 +401,9 @@ public class SportTypeDatabaseManager {
         values.put(SportTypeDatabaseManager.SportType.TCX_NAME, tcxName);
         values.put(SportTypeDatabaseManager.SportType.GOLDEN_CHEETAH_NAME, gcName);
 
+        long resultId;
         if (id == -1L) {
-            db.insert(SportTypeDatabaseManager.SportType.TABLE, null, values);
+            resultId = db.insert(SportTypeDatabaseManager.SportType.TABLE, null, values);
         } else {
             db.update(
                     SportTypeDatabaseManager.SportType.TABLE,
@@ -410,7 +411,10 @@ public class SportTypeDatabaseManager {
                     SportTypeDatabaseManager.SportType.C_ID + "=?",
                     new String[]{Long.toString(id)}
             );
+            resultId = id;
         }
+
+        return resultId;
     }
 
     public static class SimpleSportTypeInfo {

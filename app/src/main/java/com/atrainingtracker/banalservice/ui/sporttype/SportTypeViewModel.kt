@@ -118,7 +118,7 @@ class SportTypeViewModel(application: Application) : AndroidViewModel(applicatio
     fun saveSportType(item: SportTypeItem) {
         // forward to the database manager
         viewModelScope.launch(Dispatchers.IO) {
-            dbSportTypeManager.updateSportType(
+            val actualId = dbSportTypeManager.updateSportType(
                 item.id,
                 item.name,
                 item.bSportType,
@@ -129,6 +129,11 @@ class SportTypeViewModel(application: Application) : AndroidViewModel(applicatio
                 item.gcName
             )
 
+            // also update the links
+            if (actualId != -1L) {
+                dbLinksHelper.updateLinksForSportType(actualId, item.linkedEquipmentIds)
+            }
+
             // Refresh the list
             loadSportTypes()
         }
@@ -137,6 +142,10 @@ class SportTypeViewModel(application: Application) : AndroidViewModel(applicatio
     fun deleteSportType(id: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             dbSportTypeManager.delete(id)
+
+            // also delete the links
+            dbSportTypeManager.delete(id)
+
             loadSportTypes()
         }
     }
