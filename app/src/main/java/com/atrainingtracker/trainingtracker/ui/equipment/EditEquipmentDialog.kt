@@ -80,17 +80,19 @@ fun EditEquipmentDialog(
                 )
 
                 // Multi-select for Sensors
-                MultiSelectSensorSpinner(
-                    allSensors = availableSensors,
-                    selectedIds = selectedSensorIds,
-                    onToggleSensor = { id ->
-                        selectedSensorIds = if (selectedSensorIds.contains(id)) {
-                            selectedSensorIds - id
-                        } else {
-                            selectedSensorIds + id
+                if (availableSensors.isNotEmpty()) {
+                    MultiSelectSensorSpinner(
+                        allSensors = availableSensors,
+                        selectedIds = selectedSensorIds,
+                        onToggleSensor = { id ->
+                            selectedSensorIds = if (selectedSensorIds.contains(id)) {
+                                selectedSensorIds - id
+                            } else {
+                                selectedSensorIds + id
+                            }
                         }
-                    }
-                )
+                    )
+                }
             }
         },
         confirmButton = {
