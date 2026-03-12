@@ -632,7 +632,7 @@
     <string name="configureWorkoutNameSchemes">Configure how your workouts should be named.</string>
     <string name="via_format">&#032;via %1$s</string>
     <string name="loop_around_format">&#032;to %1$s and back</string>
-    <string name="really_delete_workout_name_scheme">Do you really want to delete %1$s?</string>
+    <string name="really_delete_format">Do you really want to delete %1$s?</string>
     <string name="workout_name_scheme">Workout Name Scheme</string>
     <string name="workout_name_schemes">Workout Name Schemes</string>
     <string name="starred_run_segments">Run</string>

@@ -20,7 +20,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.AlertDialog
@@ -50,7 +49,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
-import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.ui.components.stats.RichStatsSheet
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
@@ -149,13 +147,13 @@ fun SportTypeScreen(
         AlertDialog(
             onDismissRequest = { itemToDelete = null },
             title = { Text(stringResource(R.string.delete)) },
-            text = { Text(stringResource(R.string.really_delete_workout_name_scheme, item.name)) },
+            text = { Text(stringResource(R.string.really_delete_format, item.name)) },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.deleteSportType(item.id)
                     itemToDelete = null
                 }) {
-                    Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.delete))
                 }
             },
             dismissButton = {
@@ -364,8 +362,7 @@ fun SportTypeCard(
             DropdownMenuItem(
                 text = {
                     Text(
-                        text = stringResource(R.string.delete),
-                        color = if (item.isEditable) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline
+                        text = stringResource(R.string.delete)
                     )
                 },
                 enabled = item.isEditable,
@@ -376,8 +373,7 @@ fun SportTypeCard(
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Delete,
-                        contentDescription = null,
-                        tint = if (item.isEditable) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline
+                        contentDescription = null
                     )
                 }
             )

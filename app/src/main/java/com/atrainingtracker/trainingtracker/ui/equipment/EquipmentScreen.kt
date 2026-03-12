@@ -64,6 +64,8 @@ fun EquipmentScreen(
 
     // State to track which item is being edited or having stats viewed
     var itemToConfigure by remember { mutableStateOf<EquipmentItem?>(null) }
+    var itemToDelete by remember { mutableStateOf<EquipmentItem?>(null) }
+
     // State for the Stats Sheet
     var statsToShow by remember { mutableStateOf<Pair<String, List<StatsData>>?>(null) }
 
@@ -122,7 +124,7 @@ fun EquipmentScreen(
                     // 3. Show the sheet
                     statsToShow = Pair(item.name, allStats)
                 },
-                onDelete = { item -> viewModel.deleteEquipment(item) }
+                onDelete = { itemToDelete = it }
             )
         }
     }
@@ -192,6 +194,26 @@ fun EquipmentScreen(
             onConfirm = { updated ->
                 viewModel.updateEquipment(updated)
                 itemToConfigure = null
+            }
+        )
+    }
+
+    // Delete Confirmation Dialog
+    itemToDelete?.let { item ->
+        AlertDialog(
+            onDismissRequest = { itemToDelete = null },
+            title = { Text(stringResource(R.string.delete)) },
+            text = { Text(stringResource(R.string.really_delete_format, item.name)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteEquipment(item)
+                    itemToDelete = null
+                }) {
+                    Text(stringResource(R.string.delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { itemToDelete = null }) { Text(stringResource(R.string.Cancel)) }
             }
         )
     }
