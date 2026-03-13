@@ -63,10 +63,10 @@ public class ActiveDevicesDbHelper extends SQLiteOpenHelper {
     }
 
     @NonNull
-    public List<Integer> getDatabaseIdsOfActiveDevices(long workoutId) {
+    public List<Long> getDatabaseIdsOfActiveDevices(long workoutId) {
         if (DEBUG) Log.d(TAG, "getDatabaseIdsOfActiveDevices workoutId=" + workoutId);
 
-        List<Integer> result = new LinkedList<>();
+        List<Long> result = new LinkedList<>();
         SQLiteDatabase db = getReadableDatabase();
         Cursor cursor = db.query(ActiveDevices.TABLE,
                 null,
@@ -82,7 +82,7 @@ public class ActiveDevicesDbHelper extends SQLiteOpenHelper {
                 do {
                     if (DEBUG)
                         Log.d(TAG, "adding " + cursor.getInt(index));
-                    result.add(cursor.getInt(index));
+                    result.add(cursor.getLong(index));
                 } while (cursor.moveToNext());
             }
         }

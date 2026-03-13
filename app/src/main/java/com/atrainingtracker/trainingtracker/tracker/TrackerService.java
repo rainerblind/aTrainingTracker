@@ -45,6 +45,7 @@ import com.atrainingtracker.banalservice.sensor.SensorData;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.sensor.SensorValueType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
+import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager;
 import com.atrainingtracker.trainingtracker.exporter.ExportManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.ActiveDevicesDbHelper;
@@ -58,6 +59,7 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.SortedSet;
@@ -408,18 +410,27 @@ public class TrackerService extends Service {
         LapsDatabaseManager.getInstance(this).saveLap(mWorkoutID, lapNr, lapTime, lapDistance, averageSpeed);
     }
 
+    /**
+     *  get the 'best' sport type based on the available equipment and average speed.
+     */
     protected long getSportTypeId() {
+        EquipmentAndSportTypeDiscoveryManager discoveryManager = EquipmentAndSportTypeDiscoveryManager.getInstance(this);
 
-        long sportTypeId = BANALService.getDefaultSportTypeId();
         if (mBanalService != null) {
             if (averageSpeedCalculateable()) {
-                sportTypeId = mBanalService.getSportTypeId(getAverageSpeed());
-            } else {
-                sportTypeId = mBanalService.getSportTypeId();
+                return discoveryManager.resolveSportType(
+                        new HashSet<>(mBanalService.getDatabaseIdsOfActiveDevices()),
+                        mBanalService.getBSportType(),
+                        getAverageSpeed());
+            }
+            else {
+                return discoveryManager.resolveSportType(
+                        new HashSet<>(mBanalService.getDatabaseIdsOfActiveDevices()),
+                        mBanalService.getBSportType());
             }
         }
 
-        return sportTypeId;
+        return BANALService.getDefaultSportTypeId();
     }
 
 

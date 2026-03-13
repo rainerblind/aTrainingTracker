@@ -89,7 +89,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     }
 
     @NonNull
-    protected List<String> getLinkedEquipment(@Nullable List<Integer> antDeviceIds) {
+    protected List<String> getLinkedEquipment(@Nullable List<Long> antDeviceIds) {
         if (DEBUG) Log.d(TAG, "getLinkedEquipment with antDeviceList");
 
         if (antDeviceIds == null || antDeviceIds.isEmpty()) {
@@ -377,6 +377,33 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
 
         return equipmentList;
     }
+
+    public List<Long> getLinkedEquipmentIdsFromDeviceId(long deviceId) {
+        if (DEBUG) Log.d(TAG, "getLinkedEquipmentIdsFromDeviceId: " + deviceId);
+
+        List<Long> equipmentList = new LinkedList<>();
+
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor linkCursor = db.query(LINKS,
+                null,
+                ANT_DEVICE_ID + "=?",
+                new String[]{Long.toString(deviceId)},
+                null,
+                null,
+                null);
+
+        if (linkCursor.moveToFirst()) {
+            if (DEBUG) Log.d(TAG, "got some linked equipment");
+            do {
+                equipmentList.add(linkCursor.getLong(linkCursor.getColumnIndex(EQUIPMENT_ID)));
+
+            } while (linkCursor.moveToNext());
+        }
+        linkCursor.close();
+
+        return equipmentList;
+    }
+
 
 
     public void setEquipmentLinks(int antDeviceId, @NonNull List<String> equipmentList) {

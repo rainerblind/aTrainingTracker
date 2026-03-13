@@ -20,8 +20,11 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.editworkout
 
 import android.app.Application
 import androidx.lifecycle.*
+import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
+import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
+import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDiffCallback
@@ -38,18 +41,38 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         WorkoutSummariesDatabaseManager.getInstance(application) }
     private val sportTypeDatabaseManager by lazy { SportTypeDatabaseManager.getInstance(application) }
 
+    private val discoveryManager by lazy { EquipmentAndSportTypeDiscoveryManager.getInstance(application) }
+    private val equipmentManager by lazy { EquipmentDbHelper(application) }
+
 
     // LiveData to hold the entire WorkoutData object. The UI will observe this.
-    val workoutData: LiveData<WorkoutData?>
+    // val workoutData: LiveData<WorkoutData?>
 
     val initialWorkoutLoaded: LiveData<WorkoutData> = repository.initialWorkoutLoaded
 
     // The current, stable state of the workout as known by the UI.
-    private var currentWorkoutState: WorkoutData? = null
+    public var currentWorkoutState: WorkoutData? = null
 
     // --- Two-tier cache system for remembering equipment choices ---
     private val sportNameEquipmentCache = mutableMapOf<String, String?>()
     private val bSportTypeEquipmentCache = mutableMapOf<BSportType, String?>()
+
+    // LiveData for the SportType spinner
+    private val _sportTypeNames = MutableLiveData<List<String>>()
+    val sportTypeNames: LiveData<List<String>> = _sportTypeNames
+
+    // LifeData for the Equipment spinner
+    private val _equipmentNames = MutableLiveData<List<String>>()
+    val equipmentNames: LiveData<List<String>> = _equipmentNames
+
+    // constants for the equipment spinner
+    val NO_EQUIPMENT = application.getString(R.string.equipment_none)
+    val ALL_EQUIPMENT = application.getString(R.string.equipment_all)
+    val ALL_SHOES = application.getString(R.string.equipment_all_shoes)
+    val ALL_BIKES = application.getString(R.string.equipment_all_bikes)
+    val ALL_SPORT_TYPES = application.getString(R.string.show_all_sport_types)
+
+
 
 
     // LiveData to emit specific update payloads ---
@@ -63,12 +86,14 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
 
 
     init {
-        workoutData = repository.getWorkoutById(workoutId)
+        // workoutData = repository.getWorkoutById(workoutId)
 
         // Tell the repository to load the initial data
         viewModelScope.launch {
             repository.loadWorkout(workoutId)
         }
+
+        initSuggestedSportAndEquipmentNames()
 
         // --- Prime the caches when the initial workout is loaded ---
         initialWorkoutLoaded.observeForever { initialWorkout ->
@@ -107,15 +132,119 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         }
     }
 
+    fun initSuggestedSportAndEquipmentNames() {
+        val bSportType = currentWorkoutState!!.sportData.bSportType
+
+        // get the linked sport types
+        var suggestedSportNames = discoveryManager.getLinkedSportTypeNames(workoutId)
+        if (suggestedSportNames.isEmpty()) {
+            // when the linked sport types are empty, use the speed-based guess
+            suggestedSportNames = discoveryManager.getSpeedBasedSportTypeNames(
+                bSportType,
+                currentWorkoutState!!.sportData.avgSpeedMps
+            )
+        }
+        // use the helper to finalize the sport names
+        finalizeSportNames(suggestedSportNames)
+
+
+        // get the set of linked equipment
+        var suggestedEquipmentNames = discoveryManager.getLinkedEquipmentNames(workoutId)
+        if (suggestedEquipmentNames.isEmpty()) {
+            // when the linked equipment is empty, try to get the equipment from the sport types
+            suggestedEquipmentNames = discoveryManager.getEquipmentNamesForSports(suggestedSportNames)
+        }
+        // use the helper to finalize the equipment names
+        finalizeEquipmentNames(suggestedEquipmentNames)
+    }
+
+    fun finalizeSportNames(sportNames: Set<String>) {
+        var suggestedSportNames = sportNames
+        val bSportType = currentWorkoutState!!.sportData.bSportType
+        val allSportTypes = sportTypeDatabaseManager.getSportTypesUiNameList(bSportType).toSet()
+
+        // when the suggested sport types are empty, we show all sport types instead
+        if (suggestedSportNames.isEmpty()) {
+            suggestedSportNames = allSportTypes
+        }
+
+        val suggestedSportNamesList = suggestedSportNames.toMutableList()
+
+        // we should add the 'show all' option if and only if the suggestedSportNames do not contain all possible sport types
+        if (suggestedSportNames != allSportTypes) {
+            suggestedSportNamesList.add(ALL_SPORT_TYPES)
+        }
+
+        _sportTypeNames.value = suggestedSportNamesList
+    }
+
+
+    fun finalizeEquipmentNames(equipmentNames: Set<String>) {
+        var suggestedEquipmentNames = equipmentNames
+        val bSportType = currentWorkoutState!!.sportData.bSportType
+        val allEquipment = equipmentManager.getEquipment(bSportType).toSet()
+
+        // when there is no equipment, we return an empty list
+        if (allEquipment.isEmpty()) {
+            _equipmentNames.value = emptyList()
+            return
+        }
+
+
+        if (suggestedEquipmentNames.isEmpty()) {
+            // when the suggested equipment is empty, we show all equipment instead
+            suggestedEquipmentNames = allEquipment
+        }
+
+        val suggestedEquipmentNamesList = suggestedEquipmentNames.toMutableList()
+
+        // we should add the 'show all' option if and only if the suggestedEquipmentNames do not contain all possible equipment
+        if (suggestedEquipmentNames != allEquipment) {
+            suggestedEquipmentNamesList.add(ALL_EQUIPMENT)
+        }
+
+        // add the option to select no equipment
+        suggestedEquipmentNamesList.add(0, NO_EQUIPMENT)
+
+        _equipmentNames.value = suggestedEquipmentNamesList
+    }
+
+    fun updateSuggestedSportNames(newEquipmentName: String?) {
+        if (newEquipmentName == null) {
+            return
+        }
+
+        finalizeSportNames(discoveryManager.getSportNamesForEquipment(newEquipmentName))
+    }
+
+    fun updateSuggestedEquipmentNames(newSportName: String) {
+        finalizeEquipmentNames(discoveryManager.getEquipmentNamesForSport(newSportName))
+    }
+
+    fun showAllSportTypes() {
+        finalizeSportNames(sportTypeDatabaseManager.getSportTypesUiNameList(currentWorkoutState!!.sportData.bSportType).toSet())
+    }
+
+    fun showAllEquipment() {
+        finalizeEquipmentNames(equipmentManager.getEquipment(currentWorkoutState!!.sportData.bSportType).toSet())
+    }
+
     fun updateWorkoutName(newName: String) {
         repository.updateWorkoutName(workoutId, newName)
     }
 
 
     // --- Smart handler for sport type changes ---
-    fun updateSportName(newSportName: String?) {
+    fun updateSportName(newSportName: String) {
         val workout = currentWorkoutState ?: return
-        if (newSportName == null || newSportName == workout.sportData.sportName) return
+
+        if (newSportName == ALL_SPORT_TYPES) {
+            showAllSportTypes()
+            return
+        }
+
+        if (newSportName == workout.sportData.sportName) return
+
 
         // first, get the new sportId and bSportType
         val newSportId = sportTypeDatabaseManager.getSportTypeIdFromUIName(newSportName)
@@ -125,20 +254,35 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         val cachedEquipment = sportNameEquipmentCache[newSportName] // 1. Check specific sport name
             ?: bSportTypeEquipmentCache[newBSportType]              // 2. Fallback to BSportType
 
+        updateSuggestedEquipmentNames(newSportName)
+
         // finally, call a repository method that updates the sport and equipment data
         repository.updateSportAndEquipment(workoutId, newSportName, newSportId, newBSportType, cachedEquipment)
     }
 
     // --- Smart handler for equipment changes ---
-    fun updateEquipmentName(newEquipmentName: String?) {
+    fun updateEquipmentName(selectedEquipmentName: String) {
         val workout = currentWorkoutState ?: return
+
+        // first, the special cases
+        // NO_EQIPMENT means equipment name = null
+        val newEquipmentName = if (selectedEquipmentName == NO_EQUIPMENT) null else selectedEquipmentName
+
+        if (newEquipmentName == ALL_EQUIPMENT) {
+            showAllEquipment()
+            return
+        }
+
         if (newEquipmentName == workout.equipmentData.equipmentName) return
+
 
         // first, cache the equipment name with the new user choice
         val currentSportName = workout.sportData.sportName
         val currentBSportType = workout.sportData.bSportType
         sportNameEquipmentCache[currentSportName] = newEquipmentName
         bSportTypeEquipmentCache[currentBSportType] = newEquipmentName
+
+        updateSuggestedSportNames(newEquipmentName)
 
         // then, call the repository method that updates the equipment data
         repository.updateEquipmentName(workoutId, newEquipmentName)
