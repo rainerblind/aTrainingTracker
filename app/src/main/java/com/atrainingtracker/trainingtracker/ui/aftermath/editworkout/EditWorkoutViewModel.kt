@@ -93,8 +93,6 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
             repository.loadWorkout(workoutId)
         }
 
-        initSuggestedSportAndEquipmentNames()
-
         // --- Prime the caches when the initial workout is loaded ---
         initialWorkoutLoaded.observeForever { initialWorkout ->
             // Only prime if the caches are empty to avoid overwriting user changes in the session
@@ -106,6 +104,8 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
                 sportNameEquipmentCache[initialSportName] = initialEquipmentName
                 bSportTypeEquipmentCache[initialBSportType] = initialEquipmentName
             }
+
+            initSuggestedSportAndEquipmentNames(initialWorkout.sportData.bSportType)
         }
 
         // Observe the single source of truth from the repository.
@@ -132,8 +132,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         }
     }
 
-    fun initSuggestedSportAndEquipmentNames() {
-        val bSportType = currentWorkoutState!!.sportData.bSportType
+    fun initSuggestedSportAndEquipmentNames(bSportType: BSportType) {
 
         // get the linked sport types
         var suggestedSportNames = discoveryManager.getLinkedSportTypeNames(workoutId)
