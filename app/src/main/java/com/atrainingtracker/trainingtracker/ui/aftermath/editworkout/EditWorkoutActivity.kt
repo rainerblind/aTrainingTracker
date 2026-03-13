@@ -85,7 +85,7 @@ class EditWorkoutActivity : AppCompatActivity() {
     private var mapComponent: MapComponent? = null
 
     companion object {
-        private val TAG = EditWorkoutActivity::class.java.simpleName
+        private val TAG = "EditWorkoutActivity"
         private var DEBUG = TrainingApplication.getDebug(true)
 
         const val EXTRA_SHOW_DETAILS = "com.atrainingtracker.trainingtracker.SHOW_DETAILS"
@@ -231,11 +231,11 @@ class EditWorkoutActivity : AppCompatActivity() {
         })
 
         viewModel.sportTypeNames.observe(this) { sportTypeNames ->
-            setupSportSpinner(sportTypeNames, viewModel.currentWorkoutState!!.sportData.sportName)
+            setupSportSpinner(sportTypeNames, viewModel.suggestedSportTypeName)
         }
 
         viewModel.equipmentNames.observe(this) { equipmentNames ->
-            setupEquipmentSpinner(equipmentNames, viewModel.currentWorkoutState!!.equipmentData.equipmentName)
+            setupEquipmentSpinner(equipmentNames, viewModel.suggestedEquipmentName)
         }
 
 
@@ -307,6 +307,7 @@ class EditWorkoutActivity : AppCompatActivity() {
 
                 // Simply, get the selected equipment and inform the viewModel
                 val selectedEquipment = parent?.getItemAtPosition(position) as String
+                if (DEBUG) Log.i(TAG, "OnItemSelected: Selected equipment: $selectedEquipment")
                 viewModel.updateEquipmentName(selectedEquipment)
             }
 
@@ -316,7 +317,7 @@ class EditWorkoutActivity : AppCompatActivity() {
         }
     }
 
-    private fun setupSportSpinner(sportTypeNames : List<String>, sportName: String) {
+    private fun setupSportSpinner(sportTypeNames: List<String>, sportName: String) {
         if (DEBUG) Log.i(TAG,"Setting up sport spinner, {sportTypeNames: $sportTypeNames, sportName: $sportName}")
 
         // Create the adapter and assign it to the spinner
@@ -353,7 +354,8 @@ class EditWorkoutActivity : AppCompatActivity() {
         equipmentAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         spinnerEquipment.adapter = equipmentAdapter
 
-        val selectionIndex = equipmentNames.indexOf(equipmentName).takeIf { it >= 0 } ?: 0
+        val selectionIndex = equipmentNames.indexOf(equipmentName).takeIf { it >= 0 } ?: 1 // on the second position, there will be the first real equipment (on first, there is no equipment).
+        if (DEBUG) Log.i(TAG, "setupEquipmentSpinner, {selectionIndex: $selectionIndex}")
         spinnerEquipment.setSelection(selectionIndex)
     }
 

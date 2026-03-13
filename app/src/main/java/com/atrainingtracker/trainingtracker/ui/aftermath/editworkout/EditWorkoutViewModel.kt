@@ -19,13 +19,16 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.editworkout
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.*
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.ui.aftermath.SportData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDiffCallback
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
@@ -34,7 +37,10 @@ import com.atrainingtracker.trainingtracker.ui.util.Event
 import kotlinx.coroutines.launch
 
 class EditWorkoutViewModel(application: Application, private val workoutId: Long) : AndroidViewModel(application) {
-
+    companion object {
+        private val TAG = "EditWorkoutViewModel"
+        private var DEBUG = TrainingApplication.getDebug(true)
+    }
     private val repository = WorkoutRepository.getInstance(application)
 
     private val workoutSummariesDatabaseManager by lazy {
@@ -60,10 +66,13 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     // LiveData for the SportType spinner
     private val _sportTypeNames = MutableLiveData<List<String>>()
     val sportTypeNames: LiveData<List<String>> = _sportTypeNames
+    lateinit var suggestedSportTypeName: String
 
     // LifeData for the Equipment spinner
     private val _equipmentNames = MutableLiveData<List<String>>()
     val equipmentNames: LiveData<List<String>> = _equipmentNames
+    var suggestedEquipmentName: String? = null
+
 
     // constants for the equipment spinner
     val NO_EQUIPMENT = application.getString(R.string.equipment_none)
@@ -105,7 +114,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
                 bSportTypeEquipmentCache[initialBSportType] = initialEquipmentName
             }
 
-            initSuggestedSportAndEquipmentNames(initialWorkout.sportData.bSportType)
+            initSuggestedSportAndEquipmentNames(initialWorkout)
         }
 
         // Observe the single source of truth from the repository.
@@ -132,7 +141,11 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         }
     }
 
-    fun initSuggestedSportAndEquipmentNames(bSportType: BSportType) {
+    fun initSuggestedSportAndEquipmentNames(initialWorkout: WorkoutData) {
+
+        val bSportType = initialWorkout.sportData.bSportType
+        suggestedSportTypeName = initialWorkout.sportData.sportName
+        suggestedEquipmentName = initialWorkout.equipmentData.equipmentName
 
         // get the linked sport types
         var suggestedSportNames = discoveryManager.getLinkedSportTypeNames(workoutId)
@@ -144,7 +157,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
             )
         }
         // use the helper to finalize the sport names
-        finalizeSportNames(suggestedSportNames)
+        finalizeSportNames(suggestedSportNames, initialWorkout.sportData.bSportType)
 
 
         // get the set of linked equipment
@@ -154,18 +167,23 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
             suggestedEquipmentNames = discoveryManager.getEquipmentNamesForSports(suggestedSportNames)
         }
         // use the helper to finalize the equipment names
-        finalizeEquipmentNames(suggestedEquipmentNames)
+        finalizeEquipmentNames(suggestedEquipmentNames, initialWorkout.sportData.bSportType)
     }
 
-    fun finalizeSportNames(sportNames: Set<String>) {
+    fun finalizeSportNames(sportNames: Set<String>, bSportType: BSportType) {
         var suggestedSportNames = sportNames
-        val bSportType = currentWorkoutState!!.sportData.bSportType
         val allSportTypes = sportTypeDatabaseManager.getSportTypesUiNameList(bSportType).toSet()
 
         // when the suggested sport types are empty, we show all sport types instead
         if (suggestedSportNames.isEmpty()) {
             suggestedSportNames = allSportTypes
         }
+
+        if (suggestedSportNames.size == 1) {
+            suggestedSportTypeName = suggestedSportNames.first()
+            suggestedSportNames = allSportTypes
+        }
+
 
         val suggestedSportNamesList = suggestedSportNames.toMutableList()
 
@@ -178,9 +196,10 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     }
 
 
-    fun finalizeEquipmentNames(equipmentNames: Set<String>) {
+    fun finalizeEquipmentNames(equipmentNames: Set<String>, bSportType: BSportType) {
+        if (DEBUG) Log.i(TAG, "finalizeEquipmentNames, {equipmentNames: $equipmentNames}")
+
         var suggestedEquipmentNames = equipmentNames
-        val bSportType = currentWorkoutState!!.sportData.bSportType
         val allEquipment = equipmentManager.getEquipment(bSportType).toSet()
 
         // when there is no equipment, we return an empty list
@@ -190,8 +209,15 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         }
 
 
+        // when the suggested equipment is empty, we show all equipment instead
         if (suggestedEquipmentNames.isEmpty()) {
-            // when the suggested equipment is empty, we show all equipment instead
+            suggestedEquipmentNames = allEquipment
+        }
+
+        // when the suggested equipment contains only one item, we set this equipment
+        if (suggestedEquipmentNames.size == 1) {
+            if (DEBUG) Log.i(TAG, "FTW: finalizeEquipmentNames, {setting equipment to: ${suggestedEquipmentNames.first()}}")
+            suggestedEquipmentName = suggestedEquipmentNames.first()
             suggestedEquipmentNames = allEquipment
         }
 
@@ -205,27 +231,43 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         // add the option to select no equipment
         suggestedEquipmentNamesList.add(0, NO_EQUIPMENT)
 
+        if (DEBUG) Log.i(TAG, "finalizeEquipmentNames, {suggestedEquipmentNamesList: $suggestedEquipmentNamesList}")
+
         _equipmentNames.value = suggestedEquipmentNamesList
     }
 
     fun updateSuggestedSportNames(newEquipmentName: String?) {
+        if (DEBUG) Log.i(TAG, "updateSuggestedSportNames, {newEquipmentName: $newEquipmentName}")
         if (newEquipmentName == null) {
             return
         }
 
-        finalizeSportNames(discoveryManager.getSportNamesForEquipment(newEquipmentName))
+        finalizeSportNames(
+            discoveryManager.getSportNamesForEquipment(newEquipmentName),
+            currentWorkoutState!!.sportData.bSportType
+            )
     }
 
     fun updateSuggestedEquipmentNames(newSportName: String) {
-        finalizeEquipmentNames(discoveryManager.getEquipmentNamesForSport(newSportName))
+        if (DEBUG) Log.i(TAG, "updateSuggestedEquipmentNames, {newSportName: $newSportName}")
+        finalizeEquipmentNames(
+            discoveryManager.getEquipmentNamesForSport(newSportName),
+            currentWorkoutState!!.sportData.bSportType
+        )
     }
 
     fun showAllSportTypes() {
-        finalizeSportNames(sportTypeDatabaseManager.getSportTypesUiNameList(currentWorkoutState!!.sportData.bSportType).toSet())
+        finalizeSportNames(
+            sportTypeDatabaseManager.getSportTypesUiNameList(currentWorkoutState!!.sportData.bSportType).toSet(),
+            currentWorkoutState!!.sportData.bSportType
+        )
     }
 
     fun showAllEquipment() {
-        finalizeEquipmentNames(equipmentManager.getEquipment(currentWorkoutState!!.sportData.bSportType).toSet())
+        finalizeEquipmentNames(
+            equipmentManager.getEquipment(currentWorkoutState!!.sportData.bSportType).toSet(),
+            currentWorkoutState!!.sportData.bSportType
+        )
     }
 
     fun updateWorkoutName(newName: String) {
@@ -253,10 +295,11 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         val cachedEquipment = sportNameEquipmentCache[newSportName] // 1. Check specific sport name
             ?: bSportTypeEquipmentCache[newBSportType]              // 2. Fallback to BSportType
 
-        updateSuggestedEquipmentNames(newSportName)
-
         // finally, call a repository method that updates the sport and equipment data
         repository.updateSportAndEquipment(workoutId, newSportName, newSportId, newBSportType, cachedEquipment)
+
+        suggestedSportTypeName = newSportName
+        updateSuggestedEquipmentNames(newSportName)
     }
 
     // --- Smart handler for equipment changes ---
@@ -281,10 +324,11 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         sportNameEquipmentCache[currentSportName] = newEquipmentName
         bSportTypeEquipmentCache[currentBSportType] = newEquipmentName
 
-        updateSuggestedSportNames(newEquipmentName)
-
         // then, call the repository method that updates the equipment data
         repository.updateEquipmentName(workoutId, newEquipmentName)
+
+        suggestedEquipmentName = newEquipmentName
+        updateSuggestedSportNames(newEquipmentName)
     }
 
 
