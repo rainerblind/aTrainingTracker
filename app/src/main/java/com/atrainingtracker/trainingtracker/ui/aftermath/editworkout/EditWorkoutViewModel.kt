@@ -64,6 +64,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     private val _sportTypeNames = MutableLiveData<List<String>>()
     val sportTypeNames: LiveData<List<String>> = _sportTypeNames
     lateinit var suggestedSportTypeName: String
+    var userSelectedSportTypeName: String? = null
     private var showAllSportTypes = false
     private var showAbsolutelyAllSportTypes = false
 
@@ -195,7 +196,9 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         }
         // when we found exactly one sport, we show all sports but preselect this one.
         if (suggestedSportNames.size == 1) {
-            suggestedSportTypeName = suggestedSportNames.first()
+            if (userSelectedSportTypeName == null) {  // but not when the user already selected one.
+                suggestedSportTypeName = suggestedSportNames.first()
+            }
             showAllSportTypes = true
         }
 
@@ -341,6 +344,10 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
 
         // finally, call a repository method that updates the sport and equipment data
         repository.updateSport(workoutId, newSportName, newSportId, newBSportType)
+
+        if (newSportName != suggestedSportTypeName) {
+            userSelectedSportTypeName = newSportName
+        }
 
         currentBSportType = newBSportType
         suggestedSportTypeName = newSportName
