@@ -36,6 +36,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.SecondaryScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -102,8 +104,11 @@ fun SportTypeScreen(
                     titleContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
-            // Material 3 TabRow
-            PrimaryTabRow(selectedTabIndex = pagerState.currentPage) {
+            SecondaryScrollableTabRow(
+                selectedTabIndex = pagerState.currentPage,
+                edgePadding = 16.dp, // Aligns first tab with content margins
+                containerColor = MaterialTheme.colorScheme.surface
+            ) {
                 tabs.forEachIndexed { index, tab ->
                     Tab(
                         selected = pagerState.currentPage == index,
@@ -162,9 +167,7 @@ fun SportTypeScreen(
             }
 
             LazyColumn(
-                modifier = Modifier
-                    .padding(padding)
-                    .fillMaxSize(),
+                modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp) // Matching Equipment spacing
             ) {
