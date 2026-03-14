@@ -97,30 +97,6 @@ public class SportTypeDatabaseManager {
         return result;
     }
 
-    @Deprecated // TODO: use the new methods in BSportType instead.
-    public int getBSportTypeIconId(long id) {
-        if (DEBUG) Log.i(TAG, "getBsportTypeIconId, id=" + id);
-
-        BSportType bSportType = getBSportType(id);
-
-        return switch (bSportType) {
-            case RUN -> R.drawable.bsport_run;
-            case BIKE -> R.drawable.bsport_bike;
-            default -> R.drawable.bsport_other;
-        };
-    }
-
-    public Drawable getBSportTypeIcon(Context context, long id, double scale) {
-        if (DEBUG) Log.i(TAG, "getBsportTypeIcon, id=" + id);
-
-        int drawableId = getBSportTypeIconId(id);
-
-        Bitmap icon = ((BitmapDrawable) ResourcesCompat.getDrawable(context.getResources(), drawableId, null)).getBitmap();
-        Bitmap iconScaled = Bitmap.createScaledBitmap(icon, (int) (icon.getWidth() * scale), (int) (icon.getHeight() * scale), false);
-
-        return new BitmapDrawable(context.getResources(), iconScaled);
-    }
-
     public List<String> getSportTypesUiNameList() {
         if (DEBUG) Log.i(TAG, "getSportTypesUiNameList");
 
