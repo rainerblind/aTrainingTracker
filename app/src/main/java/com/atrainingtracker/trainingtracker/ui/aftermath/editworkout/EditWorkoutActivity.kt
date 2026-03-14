@@ -354,7 +354,7 @@ class EditWorkoutActivity : AppCompatActivity() {
         equipmentAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         spinnerEquipment.adapter = equipmentAdapter
 
-        val selectionIndex = equipmentNames.indexOf(equipmentName).takeIf { it >= 0 } ?: 1 // on the second position, there will be the first real equipment (on first, there is no equipment).
+        val selectionIndex = equipmentNames.indexOf(equipmentName).takeIf { it >= 0 } ?: 0
         if (DEBUG) Log.i(TAG, "setupEquipmentSpinner, {selectionIndex: $selectionIndex}")
         spinnerEquipment.setSelection(selectionIndex)
     }

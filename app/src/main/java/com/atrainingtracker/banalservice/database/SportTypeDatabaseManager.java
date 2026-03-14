@@ -344,6 +344,7 @@ public class SportTypeDatabaseManager {
                 result = cursor.getString(cursor.getColumnIndex(col));
             }
         }
+        cursor.close();
 
         return result;
     }
