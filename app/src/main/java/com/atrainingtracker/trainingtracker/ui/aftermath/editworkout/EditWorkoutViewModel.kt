@@ -67,11 +67,14 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     private val _sportTypeNames = MutableLiveData<List<String>>()
     val sportTypeNames: LiveData<List<String>> = _sportTypeNames
     lateinit var suggestedSportTypeName: String
+    private var showAllSportTypes = false
+
 
     // LifeData for the Equipment spinner
     private val _equipmentNames = MutableLiveData<List<String>>()
     val equipmentNames: LiveData<List<String>> = _equipmentNames
     var suggestedEquipmentName: String? = null
+    private var showAllEquipment = false
 
 
     // constants for the equipment spinner
@@ -174,8 +177,8 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         var suggestedSportNames = sportNames
         val allSportTypes = sportTypeDatabaseManager.getSportTypesUiNameList(bSportType).toSet()
 
-        // when the suggested sport types are empty, we show all sport types instead
-        if (suggestedSportNames.isEmpty()) {
+        // when requested by the usee or the suggested sport types are empty, we show all sport types instead
+        if (showAllSportTypes || suggestedSportNames.isEmpty()) {
             suggestedSportNames = allSportTypes
         }
 
@@ -209,8 +212,8 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         }
 
 
-        // when the suggested equipment is empty, we show all equipment instead
-        if (suggestedEquipmentNames.isEmpty()) {
+        // when requested by the user or the suggested equipment is empty, we show all equipment instead
+        if (showAllEquipment || suggestedEquipmentNames.isEmpty() ) {
             suggestedEquipmentNames = allEquipment
         }
 
@@ -257,6 +260,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     }
 
     fun showAllSportTypes() {
+        showAllSportTypes = true  // remember this choice
         finalizeSportNames(
             sportTypeDatabaseManager.getSportTypesUiNameList(currentWorkoutState!!.sportData.bSportType).toSet(),
             currentWorkoutState!!.sportData.bSportType
@@ -264,6 +268,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     }
 
     fun showAllEquipment() {
+        showAllEquipment = true  // remember this choice
         finalizeEquipmentNames(
             equipmentManager.getEquipment(currentWorkoutState!!.sportData.bSportType).toSet(),
             currentWorkoutState!!.sportData.bSportType
