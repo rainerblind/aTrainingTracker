@@ -32,15 +32,10 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import com.atrainingtracker.R
-import com.atrainingtracker.banalservice.BSportType
-import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.TrainingApplication
-import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.atrainingtracker.trainingtracker.dialogs.EditFancyWorkoutNameDialog
-import com.atrainingtracker.trainingtracker.ui.aftermath.EquipmentData
-import com.atrainingtracker.trainingtracker.ui.aftermath.SportData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutUpdatePayload
 import com.atrainingtracker.trainingtracker.ui.components.map.MapComponent
@@ -236,6 +231,23 @@ class EditWorkoutActivity : AppCompatActivity() {
 
         viewModel.equipmentNames.observe(this) { equipmentNames ->
             setupEquipmentSpinner(equipmentNames, viewModel.suggestedEquipmentName)
+        }
+
+        viewModel.openSpinnerEvent.observe(this) { event ->
+            event.getContentIfNotHandled()?.let { type ->
+                when (type) {
+                    EditWorkoutViewModel.SpinnerType.SPORT -> {
+                        spinnerSportType.post {
+                            spinnerSportType.performClick()
+                        }
+                    }
+                    EditWorkoutViewModel.SpinnerType.EQUIPMENT -> {
+                        spinnerEquipment.post {
+                            spinnerEquipment.performClick()
+                        }
+                    }
+                }
+            }
         }
 
 

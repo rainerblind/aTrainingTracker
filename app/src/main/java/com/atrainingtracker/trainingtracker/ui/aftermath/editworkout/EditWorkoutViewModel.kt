@@ -74,6 +74,11 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     var suggestedEquipmentName: String? = null
     private var showAllEquipment = false
 
+    // Event to signal the View to open a specific spinner
+    private val _openSpinnerEvent = MutableLiveData<Event<SpinnerType>>()
+    val openSpinnerEvent: LiveData<Event<SpinnerType>> = _openSpinnerEvent
+
+    enum class SpinnerType { SPORT, EQUIPMENT }
 
     // constants for the equipment spinner
     val NO_EQUIPMENT = application.getString(R.string.equipment_none)
@@ -297,6 +302,9 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         finalizeSportNames(
             sportTypeDatabaseManager.getSportTypesUiNameList(currentBSportType).toSet(),
         )
+
+        // trigger the event to open the sport type spinner
+        _openSpinnerEvent.value = Event(SpinnerType.SPORT)
     }
 
     fun showAllEquipment() {
@@ -304,6 +312,9 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         finalizeEquipmentNames(
             equipmentManager.getEquipment(currentBSportType).toSet(),
         )
+
+        // trigger the event to open the equipment spinner
+        _openSpinnerEvent.value = Event(SpinnerType.EQUIPMENT)
     }
 
     fun updateWorkoutName(newName: String) {
