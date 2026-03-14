@@ -986,7 +986,7 @@
 
     <!-- Equipment -->
     <string name="equipment_management_title">Equipment</string>
-    <string name="equipment_management_title_full">Equipment Management</string>
+    <string name="equipment_management_title_full">Configure Equipment</string>
     <string name="equipment_management_summary">Configure your equipment</string>
     <string name="prefs_manage_bikes_title">Bikes</string>
     <string name="prefs_manage_bikes_summary">Configure all your bikes</string>
