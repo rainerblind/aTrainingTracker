@@ -28,7 +28,6 @@ import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
-import com.atrainingtracker.trainingtracker.ui.aftermath.SportData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDiffCallback
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
@@ -105,8 +104,6 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         }
 
         initialWorkoutLoaded.observeForever { initialWorkout ->
-            currentBSportType = initialWorkout.sportData.bSportType
-
             initSuggestedSportAndEquipmentNames(initialWorkout)
         }
 
@@ -136,6 +133,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
 
     fun initSuggestedSportAndEquipmentNames(initialWorkout: WorkoutData) {
 
+        currentBSportType = initialWorkout.sportData.bSportType
         suggestedSportTypeName = initialWorkout.sportData.sportName
         suggestedEquipmentName = initialWorkout.equipmentData.equipmentName
 
@@ -148,6 +146,13 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
                 initialWorkout.sportData.avgSpeedMps
             )
         }
+
+        // The stored sport type is not in the list (this happens when the user has changed the sport type) -> show all sport types.
+        if (!suggestedSportNames.contains(suggestedSportTypeName)) {
+            showAllSportTypes = true
+            suggestedSportNames = emptySet()
+        }
+
         // use the helper to finalize the sport names
         finalizeSportNames(suggestedSportNames)
 
@@ -158,6 +163,12 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
             // when the linked equipment is empty, try to get the equipment from the sport types
             suggestedEquipmentNames = discoveryManager.getEquipmentNamesForSports(suggestedSportNames)
         }
+
+        if (!suggestedEquipmentNames.contains(suggestedEquipmentName)) {
+            showAllEquipment = true
+            suggestedEquipmentNames = emptySet()
+        }
+
         // use the helper to finalize the equipment names
         finalizeEquipmentNames(suggestedEquipmentNames)
     }
@@ -238,7 +249,12 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
 
         // we should add the 'show all' option if and only if the suggestedEquipmentNames do not contain all possible equipment
         if (suggestedEquipmentNames != allEquipment) {
-            suggestedEquipmentNamesList.add(ALL_EQUIPMENT)
+            val allEquipmentName = when (currentBSportType) {
+                BSportType.BIKE -> ALL_BIKES
+                BSportType.RUN -> ALL_SHOES
+                else -> ALL_EQUIPMENT
+            }
+            suggestedEquipmentNamesList.add(allEquipmentName)
         }
 
         // add the option to select no equipment
@@ -313,7 +329,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         val newBSportType = sportTypeDatabaseManager.getBSportType(newSportId)
 
         // finally, call a repository method that updates the sport and equipment data
-        repository.updateSportAndEquipment(workoutId, newSportName, newSportId, newBSportType)
+        repository.updateSport(workoutId, newSportName, newSportId, newBSportType)
 
         currentBSportType = newBSportType
         suggestedSportTypeName = newSportName
@@ -329,7 +345,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         // NO_EQUIPMENT means equipment name = null
         val newEquipmentName = if (selectedEquipmentName == NO_EQUIPMENT) null else selectedEquipmentName
 
-        if (newEquipmentName == ALL_EQUIPMENT) {
+        if (newEquipmentName == ALL_EQUIPMENT || newEquipmentName == ALL_SHOES || newEquipmentName == ALL_BIKES) {
             showAllEquipment()
             return
         }

@@ -42,8 +42,8 @@ import java.util.List;
 
 public class SportTypeDatabaseManager {
 
-    private static final String TAG = SportTypeDatabaseManager.class.getName();
-    private static final boolean DEBUG = TrainingApplication.getDebug(false);
+    private static final String TAG = "SportTypeDatabaseManager";
+    private static final boolean DEBUG = TrainingApplication.getDebug(true);
 
     // --- Modern Singleton Pattern ---
     private static volatile SportTypeDatabaseManager cInstance;
