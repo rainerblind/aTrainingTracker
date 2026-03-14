@@ -30,6 +30,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.atrainingtracker.R;
+import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
@@ -76,10 +77,11 @@ public class WorkoutSummariesDatabaseManager {
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // some high level helper methods
     ////////////////////////////////////////////////////////////////////////////////////////////////
-    public void updateSportAndEquipment(long workoutId, long sportId, long equipmentId) {
+    public void updateSportAndEquipment(long workoutId, long sportId, BSportType bSportType, long equipmentId) {
 
         ContentValues values = new ContentValues();
         values.put(WorkoutSummaries.SPORT_ID, sportId);
+        values.put(WorkoutSummaries.B_SPORT, bSportType.name());
         if (equipmentId == -1) {  // when the equipmentId is -1, the link to the equipment is removed.
             values.putNull(WorkoutSummaries.EQUIPMENT_ID);
         }

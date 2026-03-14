@@ -3,15 +3,18 @@ package com.atrainingtracker.banalservice.ui.sporttype
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -23,12 +26,12 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.isEmpty
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringArrayResource
@@ -36,18 +39,25 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BSportType
 
 import com.atrainingtracker.trainingtracker.MyHelper
+import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditSportTypeDialog(
     item: SportTypeItem,
+    viewModel: SportTypeViewModel,
     onDismiss: () -> Unit,
     onConfirm: (SportTypeItem) -> Unit
 ) {
     fun formatSpeed(speed: Double): String = "%.2f".format(MyHelper.mps2userUnit(speed)).replace(",", ".")
 
     var name by remember { mutableStateOf(item.name) }
+    var bSportType by remember { mutableStateOf(item.bSportType) }
     var minSpeed by remember { mutableStateOf(formatSpeed(item.minSpeed)) }
     var maxSpeed by remember { mutableStateOf(formatSpeed(item.maxSpeed)) }
 
@@ -59,7 +69,51 @@ fun EditSportTypeDialog(
     var tcxName by remember { mutableStateOf(item.tcxName) }
     var gcName by remember { mutableStateOf(item.gcName) }
 
+    // This will hold the equipment fetched from the DB based on the current bSportType
+    var availableEquipment by remember { mutableStateOf<List<EquipmentDbHelper.EquipmentData>>(emptyList()) }
+
+    // Automatically re-fetch equipment whenever bSportType changes
+    LaunchedEffect(bSportType) {
+        // Since availableEquipment(bSportType) performs a DB query,
+        // we run it in a background thread
+        val equip = withContext(Dispatchers.IO) {
+            viewModel.availableEquipment(bSportType)
+        }
+        availableEquipment = equip
+    }
+    var selectedEquipIds by remember { mutableStateOf(item.linkedEquipmentIds.toSet()) }
+
     val speedUnit = stringResource(MyHelper.getSpeedUnitNameId())
+
+    fun onBaseTypeChanged(newBSportType: BSportType) {
+        bSportType = newBSportType
+        // Clear linked equipment
+        // Since Equipment is filtered by BSportType, old links (e.g. shoes for a bike)
+        // are invalid when the type changes.
+        selectedEquipIds = emptySet()
+
+        if (newBSportType == BSportType.RUN) {
+            stravaName = "Run"
+            tcxName = "Running"
+            gcName = "run"
+            minSpeed = formatSpeed(1.5) // 5.4 km/h
+            maxSpeed = formatSpeed(5.0) // 18 km/h
+        }
+        else if (newBSportType == BSportType.BIKE) {
+            stravaName = "Ride"
+            tcxName = "Biking"
+            gcName = "bike"
+            minSpeed = formatSpeed(4.0) // 14.4 km/h
+            maxSpeed = formatSpeed(15.0)// 54 km/h
+        }
+        else {
+            stravaName = "Workout"
+            tcxName = "Other"
+            gcName = "walk"
+            minSpeed = formatSpeed(0.0) // 0 km/h
+            maxSpeed = formatSpeed(1.0) // 5.4 km/h
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -82,6 +136,60 @@ fun EditSportTypeDialog(
                     singleLine = true
                 )
 
+                // --- Base Sport Type Selection ---
+                if (item.isEditable) {   // not for the basic sport types
+                    val bSportTypes = remember {
+                        listOf(BSportType.UNKNOWN, BSportType.RUN, BSportType.BIKE)
+                    }
+                    var expanded by remember { mutableStateOf(false) }
+
+                    ExposedDropdownMenuBox(
+                        expanded = expanded,
+                        onExpandedChange = { expanded = !expanded }
+                    ) {
+                        OutlinedTextField(
+                            value = stringResource(bSportType.stringResId),
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text(stringResource(R.string.basic_sport_type)) },
+                            leadingIcon = {
+                                Icon(
+                                    painter = painterResource(bSportType.iconResId),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                            modifier = Modifier
+                                .menuAnchor()
+                                .fillMaxWidth()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }
+                        ) {
+                            bSportTypes.forEach { bSportType ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(stringResource(bSportType.stringResId))
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(bSportType.iconResId),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    },
+                                    onClick = {
+                                        onBaseTypeChanged(bSportType)
+                                        expanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
                 // Speeds Row
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
@@ -99,6 +207,27 @@ fun EditSportTypeDialog(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                     )
                 }
+
+                // linked equipment
+                if (availableEquipment.isNotEmpty()) {
+                    MultiSelectEquipmentSpinner(
+                        title = when (bSportType) {
+                            BSportType.BIKE -> stringResource(R.string.equipment_type_bike)
+                            BSportType.RUN -> stringResource(R.string.equipment_type_shoe)
+                            else -> stringResource(R.string.sport_type_equipment)
+                        },
+                        allEquipment = availableEquipment,
+                        selectedIds = selectedEquipIds,
+                        onToggleEquipment = { id ->
+                            selectedEquipIds = if (selectedEquipIds.contains(id)) {
+                                selectedEquipIds - id
+                            } else {
+                                selectedEquipIds + id
+                            }
+                        }
+                    )
+                }
+
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                 Text(stringResource(R.string.prefs_Export), style = MaterialTheme.typography.labelLarge)
@@ -126,8 +255,10 @@ fun EditSportTypeDialog(
                     label = "GoldenCheetah Name",
                     selectedOption = gcName,
                     options = gcNames.toList(),
-                    onOptionSelected = { gcName = it }
+                    onOptionSelected = { gcName = it },
+                    leadingIcon = { Icon(Icons.Default.Save, null) }
                 )
+
             }
         },
         confirmButton = {
@@ -137,8 +268,10 @@ fun EditSportTypeDialog(
                     val finalMax = MyHelper.UserUnit2mps(maxSpeed.toDoubleOrNull() ?: 0.0)
                     onConfirm(item.copy(
                         name = name,
+                        bSportType = bSportType,
                         minSpeed = finalMin,
                         maxSpeed = finalMax,
+                        linkedEquipmentIds = selectedEquipIds.toList(),
                         stravaName = stravaName,
                         tcxName = tcxName,
                         gcName = gcName
@@ -197,6 +330,61 @@ fun SportTypeDropdown(
                         onOptionSelected(selectionOption)
                         expanded = false
                     },
+                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MultiSelectEquipmentSpinner(
+    title: String,
+    allEquipment: List<EquipmentDbHelper.EquipmentData>,
+    selectedIds: Set<Long>,
+    onToggleEquipment: (Long) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    val displayText = allEquipment
+        .filter { selectedIds.contains(it.id) }
+        .joinToString(", ") { it.name }
+        .ifEmpty { stringResource(R.string.sport_type_no_equipment_linked) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded }
+    ) {
+        OutlinedTextField(
+            value = displayText,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(title) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .menuAnchor()
+                .fillMaxWidth(),
+            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            allEquipment.forEach { item ->
+                DropdownMenuItem(
+                    text = {
+                        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                            Checkbox(
+                                checked = selectedIds.contains(item.id),
+                                onCheckedChange = null // Handled by MenuItem onClick
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(item.name)
+                        }
+                    },
+                    onClick = { onToggleEquipment(item.id) },
                     contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
                 )
             }

@@ -19,13 +19,15 @@
 package com.atrainingtracker.trainingtracker.ui.equipment
 
 import android.app.Application
-import android.icu.util.Calendar
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
+import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
+import com.atrainingtracker.trainingtracker.database.SportTypeEquipmentLinkManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsPeriodHelper
@@ -39,16 +41,20 @@ data class EquipmentItem(
     val name: String,
     val linkedDeviceIds: List<Long>,
     val linkedDeviceNames: String,
+    val linkedSportTypeIds: List<Long>,
+    val linkedSportTypeNames: String,
     val frameType: Int,
     val stravaName: String?,
     val stravaId: String?,
     val firstUsed: String?,
     val lastUsed: String?,
-    val statsData: StatsData
+    val statsData: StatsData,
 )
 
 class EquipmentViewModel(application: Application) : AndroidViewModel(application) {
     private val dbEquipmentHelper = EquipmentDbHelper(application)
+    private val dbLinksHelper = SportTypeEquipmentLinkManager.getInstance(application)
+    private val dbSportHelper = SportTypeDatabaseManager.getInstance(application)
     private val dbDevicesHelper = DevicesDatabaseManager.getInstance(application)
     private val dbSummariesManager = WorkoutSummariesDatabaseManager.getInstance(application)
 
@@ -61,6 +67,9 @@ class EquipmentViewModel(application: Application) : AndroidViewModel(applicatio
 
     val bikeSensors = dbDevicesHelper.getSensorsForSportType(BSportType.BIKE)
     val runSensors = dbDevicesHelper.getSensorsForSportType(BSportType.RUN)
+
+    val bikeSportTypes = dbSportHelper.getSportTypes(BSportType.BIKE)
+    val runSportTypes = dbSportHelper.getSportTypes(BSportType.RUN)
 
     fun loadEquipment() {
         viewModelScope.launch(Dispatchers.IO) {
@@ -75,6 +84,13 @@ class EquipmentViewModel(application: Application) : AndroidViewModel(applicatio
                         dbDevicesHelper.getDeviceName(deviceId)
                     }.joinToString(", ")
 
+                    // Resolve linked sport types
+                    val linkedSportTypeIds = dbLinksHelper.getSportTypeIdsForEquipment(data.id)
+                    val sportTypeNames = linkedSportTypeIds.mapNotNull { sportId ->
+                        dbSportHelper.getUIName(sportId)
+                    }.joinToString(", ")
+                    Log.i("EquipmentViewModel", "${data.id} ${data.name}: $sportTypeNames")
+
                     val stats = dbSummariesManager.getEquipmentStats(data.id)
 
                     // You can now access data.stravaName, data.frameType, etc.
@@ -83,6 +99,8 @@ class EquipmentViewModel(application: Application) : AndroidViewModel(applicatio
                         name = data.name,
                         linkedDeviceIds = linkedDeviceIds,
                         linkedDeviceNames = sensorNames,
+                        linkedSportTypeIds = linkedSportTypeIds,
+                        linkedSportTypeNames = sportTypeNames,
                         frameType = data.frameType,
                         stravaName = data.stravaName,
                         stravaId = data.stravaId,
@@ -119,13 +137,25 @@ class EquipmentViewModel(application: Application) : AndroidViewModel(applicatio
             dbEquipmentHelper.updateEquipment(
                 item.id, item.name, item.frameType, item.linkedDeviceIds
             )
+
+            // Update Sport Type links
+            dbLinksHelper.updateLinksForEquipment(item.id, item.linkedSportTypeIds)
+
             loadEquipment() // Refresh the list for the UI
         }
     }
 
-    fun addEquipment(name: String, frameType: Int, linkedIds: List<Long>) {
+    fun addEquipment(name: String, frameType: Int, linkedDeviceIds: List<Long>, linkedSportTypes: List<Long>) {
         viewModelScope.launch(Dispatchers.IO) {
-            dbEquipmentHelper.addEquipment(name, frameType, linkedIds)
+
+            // Add the equipment and get the new ID
+            val newEquipmentId = dbEquipmentHelper.addEquipment(name, frameType, linkedDeviceIds)
+
+            // If the insertion was successful, update the link table
+            if (newEquipmentId != -1L) {
+                dbLinksHelper.updateLinksForEquipment(newEquipmentId, linkedSportTypes)
+            }
+
             loadEquipment() // Refresh the list
         }
     }
@@ -133,6 +163,10 @@ class EquipmentViewModel(application: Application) : AndroidViewModel(applicatio
     fun deleteEquipment(item: EquipmentItem) {
         viewModelScope.launch(Dispatchers.IO) {
             dbEquipmentHelper.deleteEquipment(item.id)
+
+            // Clean up links
+            dbLinksHelper.updateLinksForEquipment(item.id, emptyList())
+
             loadEquipment() // Refresh the list
         }
     }

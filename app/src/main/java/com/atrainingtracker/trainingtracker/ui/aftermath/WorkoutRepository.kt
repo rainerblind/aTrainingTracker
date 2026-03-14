@@ -363,7 +363,7 @@ class WorkoutRepository private constructor(private val application: Application
         updateWorkoutInList(workoutId, updatedWorkout)
     }
 
-    fun updateSportAndEquipment(workoutId: Long, newSportName: String, newSportId: Long, newBSportType: BSportType, newEquipmentName: String?) {
+    fun updateSport(workoutId: Long, newSportName: String, newSportId: Long, newBSportType: BSportType) {
         val currentList = _allWorkouts.value ?: return
         val workoutToUpdate = currentList.find { it.id == workoutId } ?: return
         if (newSportName == workoutToUpdate.sportData.sportName) return
@@ -376,13 +376,11 @@ class WorkoutRepository private constructor(private val application: Application
                 sportName = newSportName
             ),
             equipmentData = workoutToUpdate.equipmentData.copy(
-                bSportType = newBSportType,
-                equipmentName = newEquipmentName
+                bSportType = newBSportType
             ),
             headerData = workoutToUpdate.headerData.copy(
                 bSportType = newBSportType,
-                sportName = newSportName,
-                equipmentName = newEquipmentName
+                sportName = newSportName
             ),
             detailsData = workoutToUpdate.detailsData.copy(
                 bSportType = newBSportType)
@@ -484,6 +482,7 @@ class WorkoutRepository private constructor(private val application: Application
             summariesManager.updateSportAndEquipment(
                 workoutId,
                 dataToSave.sportData.sportId,
+                dataToSave.sportData.bSportType,
                 equipmentId
             )
 

@@ -36,13 +36,14 @@ import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
 public class SportTypeDatabaseManager {
 
-    private static final String TAG = SportTypeDatabaseManager.class.getName();
-    private static final boolean DEBUG = TrainingApplication.getDebug(false);
+    private static final String TAG = "SportTypeDatabaseManager";
+    private static final boolean DEBUG = TrainingApplication.getDebug(true);
 
     // --- Modern Singleton Pattern ---
     private static volatile SportTypeDatabaseManager cInstance;
@@ -96,6 +97,7 @@ public class SportTypeDatabaseManager {
         return result;
     }
 
+    @Deprecated // TODO: use the new methods in BSportType instead.
     public int getBSportTypeIconId(long id) {
         if (DEBUG) Log.i(TAG, "getBsportTypeIconId, id=" + id);
 
@@ -342,6 +344,7 @@ public class SportTypeDatabaseManager {
                 result = cursor.getString(cursor.getColumnIndex(col));
             }
         }
+        cursor.close();
 
         return result;
     }
@@ -385,19 +388,23 @@ public class SportTypeDatabaseManager {
         return result;
     }
 
-    public void updateSportType(long id, String name, Double minSpeed, Double maxSpeed, String stravaName, String tcxName, String gcName) {
+    public long updateSportType(long id, String name, BSportType bSportType, Double minSpeed, Double maxSpeed, String stravaName, String tcxName, String gcName) {
+        if (DEBUG) Log.i(TAG, "updateSportType, id=" + id + ", name=" + name + ", bSportType=" + bSportType + ", minSpeed=" + minSpeed + ", maxSpeed=" + maxSpeed);
+
         SQLiteDatabase db = getDatabase();
 
         ContentValues values = new ContentValues();
         values.put(SportTypeDatabaseManager.SportType.UI_NAME, name);
+        values.put(SportType.BASE_SPORT_TYPE, bSportType.name());
         values.put(SportTypeDatabaseManager.SportType.MIN_AVG_SPEED, minSpeed);
         values.put(SportTypeDatabaseManager.SportType.MAX_AVG_SPEED, maxSpeed);
         values.put(SportTypeDatabaseManager.SportType.STRAVA_NAME, stravaName);
         values.put(SportTypeDatabaseManager.SportType.TCX_NAME, tcxName);
         values.put(SportTypeDatabaseManager.SportType.GOLDEN_CHEETAH_NAME, gcName);
 
+        long resultId;
         if (id == -1L) {
-            db.insert(SportTypeDatabaseManager.SportType.TABLE, null, values);
+            resultId = db.insert(SportTypeDatabaseManager.SportType.TABLE, null, values);
         } else {
             db.update(
                     SportTypeDatabaseManager.SportType.TABLE,
@@ -405,7 +412,59 @@ public class SportTypeDatabaseManager {
                     SportTypeDatabaseManager.SportType.C_ID + "=?",
                     new String[]{Long.toString(id)}
             );
+            resultId = id;
         }
+
+        return resultId;
+    }
+
+    public static class SimpleSportTypeInfo {
+        public final long id;
+        public final String name;
+
+        public SimpleSportTypeInfo(long id, String name) {
+            this.id = id;
+            this.name = name;
+        }
+    }
+
+    /**
+     * Returns a list of sensors filtered by the sport type.
+     *
+     * @param bSportType The sport type (Cycling, Running, etc.) to filter relevant sensors.
+     * @return A list of SimpleSensorInfo objects.
+     */
+    public List<SimpleSportTypeInfo> getSportTypes(BSportType bSportType) {
+        List<SimpleSportTypeInfo> sensors = new ArrayList<>();
+
+        // Basic selection: Get ID and Name
+        // We filter by Name to ensure we only show devices the user has actually named/identified
+        String selection = SportType.UI_NAME + " IS NOT NULL AND " + SportType.UI_NAME + " != ''";
+
+        if (bSportType == BSportType.BIKE) {
+            selection += " AND (" + SportType.BASE_SPORT_TYPE + " = '" + BSportType.BIKE + "')";
+        }
+        else if (bSportType == BSportType.RUN) {
+            selection += " AND (" + SportType.BASE_SPORT_TYPE + " = '" + BSportType.RUN + "')";
+        }
+
+        Cursor cursor = getDatabase().query(SportType.TABLE,
+                new String[]{SportType.C_ID, SportType.UI_NAME},
+                selection,
+                null, null, null, SportType.UI_NAME + " ASC");
+
+        int idCol = cursor.getColumnIndex(SportType.C_ID);
+        int nameCol = cursor.getColumnIndex(SportType.UI_NAME);
+
+        while (cursor.moveToNext()) {
+            sensors.add(new SimpleSportTypeInfo(
+                    cursor.getLong(idCol),
+                    cursor.getString(nameCol)
+            ));
+        }
+        cursor.close();
+
+        return sensors;
     }
 
 

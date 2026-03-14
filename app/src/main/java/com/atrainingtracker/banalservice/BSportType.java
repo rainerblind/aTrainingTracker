@@ -18,12 +18,35 @@
 
 package com.atrainingtracker.banalservice;
 
-// TODO: does it really make sense to have BSportType and TTSportType???
+
+import android.content.Context;
+import com.atrainingtracker.R;
+
 public enum BSportType {
-    UNKNOWN,
-    RUN,
-    BIKE,
-    CONFLICT;
+    UNKNOWN(R.drawable.bsport_other, R.string.sport_type_other),
+    RUN(R.drawable.bsport_run, R.string.sport_type_run),
+    BIKE(R.drawable.bsport_bike, R.string.sport_type_bike),
+    CONFLICT(R.drawable.bsport_other, R.string.sport_type_other);
+
+    private final int iconResId;
+    private final int stringResId;
+
+    BSportType(int iconResId, int stringResId) {
+        this.iconResId = iconResId;
+        this.stringResId = stringResId;
+    }
+
+    public int getIconResId() {
+        return iconResId;
+    }
+
+    public int getStringResId() {
+        return stringResId;
+    }
+
+    public String getName(Context context) {
+        return context.getString(stringResId);
+    }
 
     public BSportType or(BSportType other) {
         return BSportType.values()[(ordinal() | other.ordinal())];

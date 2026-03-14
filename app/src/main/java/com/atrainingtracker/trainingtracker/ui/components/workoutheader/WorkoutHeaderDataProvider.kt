@@ -61,7 +61,7 @@ class WorkoutHeaderDataProvider(
     fun createWorkoutHeaderData(cursor: Cursor): WorkoutHeaderData {
         val workoutName = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.WORKOUT_NAME))
         val sportId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPORT_ID))
-        val equipmentId = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.EQUIPMENT_ID))
+        val equipmentId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.EQUIPMENT_ID))
 
         val (date, time) = formatDateTime(cursor)
 

@@ -1,8 +1,6 @@
 package com.atrainingtracker.banalservice.ui.sporttype
 
 import android.app.Application
-import android.icu.util.Calendar
-import android.content.ContentValues
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
@@ -15,14 +13,41 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
+import com.atrainingtracker.trainingtracker.database.SportTypeEquipmentLinkManager
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsPeriodHelper
+
+data class SportTypeItem(
+    val id: Long,
+    val name: String,
+    val bSportType: BSportType,
+    val minSpeed: Double,
+    val maxSpeed: Double,
+    val stravaName: String,
+    val tcxName: String,
+    val gcName: String,
+    val linkedEquipmentIds: List<Long>,
+    val linkedEquipmentNames: String,
+    val isEditable: Boolean,
+    val firstUsed: String?,
+    val lastUsed: String?,
+    val statsData: StatsData
+)
 
 class SportTypeViewModel(application: Application) : AndroidViewModel(application) {
     private val dbSportTypeManager = SportTypeDatabaseManager.getInstance(application)
     private val dbSummariesManager = WorkoutSummariesDatabaseManager.getInstance(application)
+    private val dbLinksHelper = SportTypeEquipmentLinkManager.getInstance(application)
+    private val dbEquipmentHelper = EquipmentDbHelper(application)
+
 
     private val _sportTypes = MutableStateFlow<List<SportTypeItem>>(emptyList())
     val sportTypes: StateFlow<List<SportTypeItem>> = _sportTypes.asStateFlow()
+
+    fun availableEquipment(bSportType: BSportType): List<EquipmentDbHelper.EquipmentData> {
+        return dbEquipmentHelper.getEquipmentItems(bSportType)
+    }
 
     init {
         loadSportTypes()
@@ -41,16 +66,29 @@ class SportTypeViewModel(application: Application) : AndroidViewModel(applicatio
             cursor?.use {
                 while (it.moveToNext()) {
                     val id = it.getLong(it.getColumnIndexOrThrow(SportTypeDatabaseManager.SportType.C_ID))
+
+                    val linkedEquipIds = dbLinksHelper.getEquipmentIdsForSport(id)
+                    val linkedEquipmentNames = linkedEquipIds.mapNotNull { equipId ->
+                        dbEquipmentHelper.getEquipmentNameFromId(equipId)
+                    }.joinToString(", ")
+
                     val stats = dbSummariesManager.getSportTypeStats(id)
 
                     list.add(SportTypeItem(
                         id = id,
                         name = it.getString(it.getColumnIndexOrThrow(SportTypeDatabaseManager.SportType.UI_NAME)),
+                        bSportType = try {
+                            BSportType.valueOf(it.getString(it.getColumnIndexOrThrow(SportTypeDatabaseManager.SportType.BASE_SPORT_TYPE)))
+                        } catch (e: Exception) {
+                            BSportType.UNKNOWN
+                        },
                         minSpeed = it.getDouble(it.getColumnIndexOrThrow(SportTypeDatabaseManager.SportType.MIN_AVG_SPEED)),
                         maxSpeed = it.getDouble(it.getColumnIndexOrThrow(SportTypeDatabaseManager.SportType.MAX_AVG_SPEED)),
                         stravaName = it.getString(it.getColumnIndexOrThrow(SportTypeDatabaseManager.SportType.STRAVA_NAME)),
                         tcxName = it.getString(it.getColumnIndexOrThrow(SportTypeDatabaseManager.SportType.TCX_NAME)),
                         gcName = it.getString(it.getColumnIndexOrThrow(SportTypeDatabaseManager.SportType.GOLDEN_CHEETAH_NAME)),
+                        linkedEquipmentIds = linkedEquipIds,
+                        linkedEquipmentNames = linkedEquipmentNames,
                         isEditable = SportTypeDatabaseManager.canDelete(id),
                         firstUsed = stats.firstUsage?.substringBefore(" "),
                         lastUsed = stats.lastUsage?.substringBefore(" "),
@@ -80,15 +118,21 @@ class SportTypeViewModel(application: Application) : AndroidViewModel(applicatio
     fun saveSportType(item: SportTypeItem) {
         // forward to the database manager
         viewModelScope.launch(Dispatchers.IO) {
-            dbSportTypeManager.updateSportType(
+            val actualId = dbSportTypeManager.updateSportType(
                 item.id,
                 item.name,
+                item.bSportType,
                 item.minSpeed,
                 item.maxSpeed,
                 item.stravaName,
                 item.tcxName,
                 item.gcName
             )
+
+            // also update the links
+            if (actualId != -1L) {
+                dbLinksHelper.updateLinksForSportType(actualId, item.linkedEquipmentIds)
+            }
 
             // Refresh the list
             loadSportTypes()
@@ -98,6 +142,10 @@ class SportTypeViewModel(application: Application) : AndroidViewModel(applicatio
     fun deleteSportType(id: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             dbSportTypeManager.delete(id)
+
+            // also delete the links
+            dbLinksHelper.updateLinksForSportType(id, emptyList())
+
             loadSportTypes()
         }
     }

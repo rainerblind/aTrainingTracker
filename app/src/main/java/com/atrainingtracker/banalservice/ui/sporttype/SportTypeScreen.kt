@@ -48,7 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
 import com.atrainingtracker.R
-import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.ui.components.stats.RichStatsSheet
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
@@ -71,11 +71,14 @@ fun SportTypeScreen(
                 itemToEdit = SportTypeItem(
                     id = -1,
                     name = "",
+                    bSportType = BSportType.BIKE,
                     minSpeed = 4.2,
                     maxSpeed = 10.0,
                     stravaName = "Ride",
                     tcxName = "Biking",
                     gcName = "bike",
+                    linkedEquipmentIds = emptyList(),
+                    linkedEquipmentNames = "",
                     isEditable = true,
                     firstUsed = null,
                     lastUsed = null,
@@ -130,6 +133,7 @@ fun SportTypeScreen(
     itemToEdit?.let { item ->
         EditSportTypeDialog(
             item = item,
+            viewModel = viewModel,
             onDismiss = { itemToEdit = null },
             onConfirm = { updatedItem ->
                 viewModel.saveSportType(updatedItem)
@@ -143,13 +147,13 @@ fun SportTypeScreen(
         AlertDialog(
             onDismissRequest = { itemToDelete = null },
             title = { Text(stringResource(R.string.delete)) },
-            text = { Text(stringResource(R.string.really_delete_workout_name_scheme, item.name)) },
+            text = { Text(stringResource(R.string.really_delete_format, item.name)) },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.deleteSportType(item.id)
                     itemToDelete = null
                 }) {
-                    Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.delete))
                 }
             },
             dismissButton = {
@@ -181,7 +185,11 @@ fun SportTypeCard(
                 .fillMaxWidth()
                 .combinedClickable(
                     onClick = { onConfigClick(item) },
-                    onLongClick = { showMenu = true }
+                    onLongClick = {
+                        if (item.isEditable) {
+                            showMenu = true
+                        }
+                    }
                 )
                 .padding(16.dp)
             ) {
@@ -190,9 +198,8 @@ fun SportTypeCard(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    val icon = remember(item.id) {
-                        SportTypeDatabaseManager.getInstance(context)
-                            .getBSportTypeIcon(context, item.id, 1.0)
+                    val icon = remember(item.bSportType) {
+                        androidx.core.content.ContextCompat.getDrawable(context, item.bSportType.iconResId)
                     }
 
                     icon?.let {
@@ -230,6 +237,36 @@ fun SportTypeCard(
                             contentDescription = null,
                             modifier = Modifier.size(20.dp),
                             tint = MaterialTheme.colorScheme.outline
+                        )
+                    }
+                }
+
+                if (item.linkedEquipmentNames.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        val equipmentIcon = when (item.bSportType) {
+                            BSportType.BIKE -> painterResource(R.drawable.ic_equipment_bike)
+                            BSportType.RUN -> painterResource(R.drawable.ic_equipment_shoe)
+                            else -> null
+                        }
+
+                        if (equipmentIcon != null) {
+                            Icon(
+                                painter = equipmentIcon,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.outline
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        Text(
+                            text = item.linkedEquipmentNames,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -329,8 +366,7 @@ fun SportTypeCard(
             DropdownMenuItem(
                 text = {
                     Text(
-                        text = stringResource(R.string.delete),
-                        color = if (item.isEditable) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline
+                        text = stringResource(R.string.delete)
                     )
                 },
                 enabled = item.isEditable,
@@ -341,8 +377,7 @@ fun SportTypeCard(
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Delete,
-                        contentDescription = null,
-                        tint = if (item.isEditable) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline
+                        contentDescription = null
                     )
                 }
             )

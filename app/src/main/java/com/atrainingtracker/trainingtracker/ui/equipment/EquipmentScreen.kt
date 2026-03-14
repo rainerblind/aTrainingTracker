@@ -64,6 +64,8 @@ fun EquipmentScreen(
 
     // State to track which item is being edited or having stats viewed
     var itemToConfigure by remember { mutableStateOf<EquipmentItem?>(null) }
+    var itemToDelete by remember { mutableStateOf<EquipmentItem?>(null) }
+
     // State for the Stats Sheet
     var statsToShow by remember { mutableStateOf<Pair<String, List<StatsData>>?>(null) }
 
@@ -122,7 +124,7 @@ fun EquipmentScreen(
                     // 3. Show the sheet
                     statsToShow = Pair(item.name, allStats)
                 },
-                onDelete = { item -> viewModel.deleteEquipment(item) }
+                onDelete = { itemToDelete = it }
             )
         }
     }
@@ -133,6 +135,7 @@ fun EquipmentScreen(
     if (isAddingNew) {
         val isBikeTab = pagerState.currentPage == 0
         val availableSensors = if (isBikeTab) viewModel.bikeSensors else viewModel.runSensors
+        val availableSportTypes = if (isBikeTab) viewModel.bikeSportTypes else viewModel.runSportTypes
 
         // Create a blank template
         val newItem = EquipmentItem(
@@ -141,6 +144,8 @@ fun EquipmentScreen(
             frameType = if (isBikeTab) 3 else 0, // Default to Road (3) for bikes, 0 for shoes
             linkedDeviceIds = emptyList(),
             linkedDeviceNames = "",
+            linkedSportTypeIds = emptyList(),
+            linkedSportTypeNames = "",
             stravaName = null,
             stravaId = null,
             firstUsed = null,
@@ -157,10 +162,15 @@ fun EquipmentScreen(
         EditEquipmentDialog(
             item = newItem,
             availableSensors = availableSensors,
+            availableSportTypes = availableSportTypes,
             onDismiss = { isAddingNew = false },
             onConfirm = { addedItem ->
                 // Call add instead of update
-                viewModel.addEquipment(addedItem.name, addedItem.frameType, addedItem.linkedDeviceIds)
+                viewModel.addEquipment(
+                    addedItem.name,
+                    addedItem.frameType,
+                    addedItem.linkedDeviceIds,
+                    addedItem.linkedSportTypeIds)
                 isAddingNew = false
             }
         )
@@ -174,14 +184,36 @@ fun EquipmentScreen(
         } else {
             viewModel.runSensors
         }
+        val availableSportTypes = if (item.frameType > 0) viewModel.bikeSportTypes else viewModel.runSportTypes
 
         EditEquipmentDialog(
             item = item,
             availableSensors = availableSensors,
+            availableSportTypes = availableSportTypes,
             onDismiss = { itemToConfigure = null },
             onConfirm = { updated ->
                 viewModel.updateEquipment(updated)
                 itemToConfigure = null
+            }
+        )
+    }
+
+    // Delete Confirmation Dialog
+    itemToDelete?.let { item ->
+        AlertDialog(
+            onDismissRequest = { itemToDelete = null },
+            title = { Text(stringResource(R.string.delete)) },
+            text = { Text(stringResource(R.string.really_delete_format, item.name)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteEquipment(item)
+                    itemToDelete = null
+                }) {
+                    Text(stringResource(R.string.delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { itemToDelete = null }) { Text(stringResource(R.string.Cancel)) }
             }
         )
     }
@@ -289,9 +321,19 @@ fun EquipmentCard(
                         Text(
                             text = item.stravaName,
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+                }
+
+                // --- Linked Sport Types Line ---
+                if (item.linkedSportTypeNames.isNotBlank()) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "${stringResource(R.string.equipment_sport_types)} ${item.linkedSportTypeNames}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
 
                 // Sensors Line
@@ -387,7 +429,7 @@ fun StravaOriginalLogo() {
     Image(
         painter = painterResource(id = R.drawable.logo_square_strava),
         contentDescription = "Strava",
-        modifier = Modifier.height(18.dp),
+        modifier = Modifier.height(12.dp),
         contentScale = ContentScale.Fit
     )
 }
@@ -418,6 +460,8 @@ fun PreviewEquipmentCardLinked() {
                     name = "Specialized Epic MTB",
                     linkedDeviceIds = listOf(1, 2),
                     linkedDeviceNames = "Garmin HRM, Wahoo Speed",
+                    linkedSportTypeIds = listOf(1, 2),
+                    linkedSportTypeNames = "Ride",
                     frameType = 1, // MTB
                     stravaName = "My Epic",
                     stravaId = "b12345",
@@ -450,6 +494,8 @@ fun PreviewEquipmentCardSimple() {
                     name = "Asics Gel-Nimbus",
                     linkedDeviceIds = listOf(1, 2),
                     linkedDeviceNames = "",
+                    linkedSportTypeIds = listOf(1, 2),
+                    linkedSportTypeNames = "",
                     frameType = 0,
                     stravaName = null,
                     stravaId = null,
@@ -482,6 +528,8 @@ fun PreviewEquipmentCardEmpty() {
                     name = "New Road Bike",
                     linkedDeviceIds = listOf(3),
                     linkedDeviceNames = "Cycplus Speed",
+                    linkedSportTypeIds = listOf(1, 2),
+                    linkedSportTypeNames = "Ride",
                     frameType = 3, // Road
                     stravaName = null,
                     stravaId = null,
