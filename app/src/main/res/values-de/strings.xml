@@ -605,7 +605,7 @@
     <string name="startSearchOnlyManually">Nur manuell</string>
 
 
-    <string name="show_all_sport_types">Alle Sportarten</string>
+    <string name="show_all_sport_types">+ Alle Sportarten +</string>
     <string name="sport_types">Sportarten</string>
     <string name="configure_sport_types">Sportarten bearbeiten</string>
     <string name="select_sport_type_format">Wähle %1$s Sportarten</string>

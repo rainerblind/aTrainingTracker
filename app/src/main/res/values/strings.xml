@@ -679,7 +679,7 @@
     <string name="startSearchOnlyManually">only manually</string>
 
 
-    <string name="show_all_sport_types">all sport types</string>
+    <string name="show_all_sport_types">+ all sports +</string>
     <string name="sport_types">Sport Types</string>
     <string name="configure_sport_types">Configure Sport Types</string>
     <string name="average_speed_range_format" translatable="false">%1$.1f .. %2$.1f %3$s</string>
