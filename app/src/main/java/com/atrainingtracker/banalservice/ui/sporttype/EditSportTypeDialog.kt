@@ -42,6 +42,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 
 import com.atrainingtracker.trainingtracker.MyHelper
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -61,7 +62,17 @@ fun EditSportTypeDialog(
     var minSpeed by remember { mutableStateOf(formatSpeed(item.minSpeed)) }
     var maxSpeed by remember { mutableStateOf(formatSpeed(item.maxSpeed)) }
 
-    val stravaNames = stringArrayResource(R.array.Strava_Sport_Types_Strava_Names)
+    // val stravaNames = stringArrayResource(R.array.Strava_Sport_Types_Strava_Names)
+
+    // For Strava, we have to load both arrays: one for the UI labels, one for the Database values
+    val stravaUiNames = stringArrayResource(R.array.Strava_Sport_Types_UI_Names)
+    val stravaDbValues = stringArrayResource(R.array.Strava_Sport_Types_Strava_Names)
+
+    // Create a mapping to easily switch between them
+    // Map<DatabaseValue, UiName>
+    val stravaMap = remember(stravaUiNames, stravaDbValues) {
+        stravaDbValues.zip(stravaUiNames).toMap()
+    }
     val tcxNames = stringArrayResource(R.array.TCX_Sport_Types)
     val gcNames = stringArrayResource(R.array.GC_Sport_Types)
 
@@ -96,22 +107,22 @@ fun EditSportTypeDialog(
             stravaName = "Run"
             tcxName = "Running"
             gcName = "run"
-            minSpeed = formatSpeed(1.5) // 5.4 km/h
-            maxSpeed = formatSpeed(5.0) // 18 km/h
+            minSpeed = formatSpeed(TrainingApplication.getMaxWalkSpeed_mps())
+            maxSpeed = formatSpeed(TrainingApplication.getMaxRunSpeed_mps())
         }
         else if (newBSportType == BSportType.BIKE) {
             stravaName = "Ride"
             tcxName = "Biking"
             gcName = "bike"
-            minSpeed = formatSpeed(4.0) // 14.4 km/h
-            maxSpeed = formatSpeed(15.0)// 54 km/h
+            minSpeed = formatSpeed(TrainingApplication.getMaxRunSpeed_mps())
+            maxSpeed = formatSpeed(TrainingApplication.getMaxBikeSpeed_mps())
         }
         else {
             stravaName = "Workout"
             tcxName = "Other"
             gcName = "walk"
             minSpeed = formatSpeed(0.0) // 0 km/h
-            maxSpeed = formatSpeed(1.0) // 5.4 km/h
+            maxSpeed = formatSpeed(TrainingApplication.getMaxWalkSpeed_mps())
         }
     }
 
@@ -235,10 +246,24 @@ fun EditSportTypeDialog(
                 // Strava Mapping
                 SportTypeDropdown(
                     label = "Strava Sport Name",
-                    selectedOption = stravaName,
-                    options = stravaNames.toList(),
-                    onOptionSelected = { stravaName = it },
-                    leadingIcon = { Icon(painterResource(R.drawable.logo_square_strava), null, Modifier.size(18.dp), tint = Color.Unspecified) }
+                    // We display the UI Name corresponding to the stored Database value
+                    selectedOption = stravaMap[stravaName] ?: stravaName,
+                    options = stravaUiNames.toList(),
+                    onOptionSelected = { selectedUiName ->
+                        // Find the database value (key) that matches the selected UI name (value)
+                        val dbValue = stravaMap.entries.find { it.value == selectedUiName }?.key
+                        if (dbValue != null) {
+                            stravaName = dbValue
+                        }
+                    },
+                    leadingIcon = {
+                        Icon(
+                            painterResource(R.drawable.logo_square_strava),
+                            null,
+                            Modifier.size(18.dp),
+                            tint = Color.Unspecified
+                        )
+                    }
                 )
 
                 // TCX Mapping
