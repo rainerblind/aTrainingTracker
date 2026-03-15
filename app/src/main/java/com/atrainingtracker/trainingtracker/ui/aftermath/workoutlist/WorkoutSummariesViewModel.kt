@@ -21,7 +21,10 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.aftermath.DeletionProgress
@@ -37,6 +40,10 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
 
     val workouts: LiveData<List<WorkoutData>> = repository.allWorkouts
 
+    // Loading State
+    private val _isLoading = MutableLiveData<Boolean>(false)
+    val isLoading: LiveData<Boolean> = _isLoading
+
     //
     // LiveData to trigger showing the "Delete Old Workouts" dialog
     val showDeleteOldWorkoutsDialogEvent = SingleLiveEvent<Unit>()
@@ -48,9 +55,26 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
     val confirmDeleteWorkoutEvent = SingleLiveEvent<Long>()
 
     fun loadWorkouts() {
+        _isLoading.value = true // Show spinner
         // Use the ViewModel's coroutine scope to launch on a background thread.
         viewModelScope.launch(Dispatchers.IO) {
             repository.loadAllWorkouts()
+        }
+        _isLoading.value = false // Hide spinner
+    }
+
+    /**
+     * Returns a LiveData of workouts filtered by the base sport type.
+     * If null, returns all workouts.
+     */
+    fun getWorkoutsForTab(bSportType: BSportType?): LiveData<List<WorkoutData>> {
+        return if (bSportType == null) {
+            workouts
+        } else {
+            // Use the .map extension function directly on the LiveData object
+            workouts.map { list ->
+                list.filter { it.sportData.bSportType == bSportType }
+            }
         }
     }
 
