@@ -927,4 +927,11 @@
     <string name="sport_type_tab_run">Laufen</string>
     <string name="sport_type_tab_unknown">Andere Sportarten</string>
 
+    <!-- workout summaries tabs -->
+    <string name="workout_summaries_tab_all">Alle Einheiten</string>
+    <string name="workout_summaries_tab_bike">Radfahrten</string>
+    <string name="workout_summaries_tab_run">Läufe</string>
+    <string name="workout_summaries_tab_other">Andere</string>
+    <string name="workout_summaries_loading">Lade Einheiten</string>
+
 </resources>

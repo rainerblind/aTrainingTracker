@@ -27,22 +27,28 @@ import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewGroup.LayoutParams.MATCH_PARENT
+import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
+import androidx.compose.ui.semantics.text
 import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.observe
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.aftermath.DeletionProgress
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
+import com.google.android.material.tabs.TabLayoutMediator
 
 /**
  * A fragment that displays a list of workout summaries using a modern,
@@ -53,10 +59,10 @@ class WorkoutSummariesListFragment : Fragment() {
     // Use the Kotlin property delegate for a cleaner ViewModel initialization.
     private val viewModel: WorkoutSummariesViewModel by viewModels()
 
-    private lateinit var workoutAdapter: WorkoutSummariesAdapter
-    private lateinit var recyclerView: RecyclerView
-
     private lateinit var progressContainer: View // Will hold the ProgressBar and TextView
+
+    private lateinit var tabLayout: com.google.android.material.tabs.TabLayout
+    private lateinit var viewPager: androidx.viewpager2.widget.ViewPager2
     private lateinit var progressText: TextView
 
     override fun onCreateView(
@@ -66,16 +72,30 @@ class WorkoutSummariesListFragment : Fragment() {
     ): View {
         val context = requireContext()
 
-        // Programmatically create the RecyclerView, similar to the Java version.
-        recyclerView = RecyclerView(context).apply {
-            id = View.generateViewId() // For state restoration
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
-            setHasFixedSize(true) // Important for performance
-            layoutManager = LinearLayoutManager(context)
+        // 1. Root FrameLayout (to allow overlaying the progress bar)
+        val root = FrameLayout(context).apply {
+            layoutParams = ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT)
         }
+
+        // 2. Main Content Container (Tabs + Pager)
+        val contentContainer = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT)
+        }
+
+        tabLayout = com.google.android.material.tabs.TabLayout(context).apply {
+            layoutParams = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT)
+            tabMode = com.google.android.material.tabs.TabLayout.MODE_SCROLLABLE
+        }
+
+        viewPager = androidx.viewpager2.widget.ViewPager2(context).apply {
+            layoutParams = LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f)
+            // Essential: Generate a unique ID so FragmentManager can save/restore state
+            id = View.generateViewId()
+        }
+
+        contentContainer.addView(tabLayout)
+        contentContainer.addView(viewPager)
 
         // --- Create a container for the progress indicators ---
         progressContainer = LinearLayout(context).apply {
@@ -107,22 +127,30 @@ class WorkoutSummariesListFragment : Fragment() {
             addView(progressText)
         }
 
-        // Create the root FrameLayout
-        return FrameLayout(context).apply {
-            addView(recyclerView)
-            addView(progressContainer) // Add the container instead of just the ProgressBar
-        }
+        // Add everything to root
+        root.addView(contentContainer)
+        root.addView(progressContainer)
+
+        return root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        setupMenu()
-        setupRecyclerView()
-        observeViewModel()
+        val pagerAdapter = WorkoutPagerAdapter(this)
+        viewPager.adapter = pagerAdapter
 
-        // Trigger the initial data load.
-        viewModel.loadWorkouts()
+        TabLayoutMediator(tabLayout, viewPager) { tab, position ->
+            tab.text = when (pagerAdapter.getTabType(position)) {
+                null -> getString(R.string.workout_summaries_tab_all)
+                BSportType.RUN -> getString(R.string.workout_summaries_tab_run)
+                BSportType.BIKE -> getString(R.string.workout_summaries_tab_bike)
+                else -> getString(R.string.workout_summaries_tab_other)
+            }
+        }.attach()
+
+        setupMenu()
+        observeViewModel()
     }
 
     override fun onResume() {
@@ -154,29 +182,18 @@ class WorkoutSummariesListFragment : Fragment() {
         }, viewLifecycleOwner, Lifecycle.State.RESUMED)
     }
 
-    private fun setupRecyclerView() {
-        val isPlayAvailable = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(requireActivity()) == ConnectionResult.SUCCESS
-
-        // Initialize the new adapter.
-        workoutAdapter = WorkoutSummariesAdapter(
-            requireActivity(),
-            parentFragmentManager, // Correct fragment manager for dialogs
-            viewLifecycleOwner,
-            isPlayAvailable,
-            viewModel
-        )
-
-        // Set the adapter on the RecyclerView.
-        recyclerView.adapter = workoutAdapter
-    }
-
     private fun observeViewModel() {
-        // Observe the 'workouts' LiveData. The lambda is executed whenever the data changes.
-        // `viewLifecycleOwner` ensures the observer is active only when the view is.
-        viewModel.workouts.observe(viewLifecycleOwner) { workoutSummaries ->
-            // The ListAdapter will efficiently calculate differences and update the UI.
-            workoutAdapter.submitList(workoutSummaries)
+        // Observe loading state to show/hide progress
+        viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
+            if (isLoading) {
+                progressContainer.visibility = View.VISIBLE
+                progressText.text = getString(R.string.workout_summaries_loading)
+            }
+            else {
+                progressContainer.visibility = View.GONE
+            }
         }
+
 
         // Observe the delete command
         viewModel.confirmDeleteWorkoutEvent.observe(viewLifecycleOwner) { workoutId ->
@@ -191,12 +208,12 @@ class WorkoutSummariesListFragment : Fragment() {
             when (state) {
                 is DeletionProgress.Idle -> {
                     progressContainer.visibility = View.GONE
-                    recyclerView.alpha = 1.0f
+                    viewPager.alpha = 1.0f
                 }
                 is DeletionProgress.InProgress -> {
                     progressContainer.visibility = View.VISIBLE
                     progressText.text = getString(R.string.deleting_workout, state.workoutName)
-                    recyclerView.alpha = 0.5f // Keep the list dimmed
+                    viewPager.alpha = 0.5f // Keep the list dimmed
                 }
             }
         }
