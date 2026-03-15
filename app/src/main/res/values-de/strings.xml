@@ -922,5 +922,9 @@
     <string name="sport_type_linked_equipment">Verknüpfte Ausrüstung</string>
     <string name="sport_type_no_equipment_linked">Keine Ausrüstung verknüpft</string>
     <string name="sport_type_equipment">Ausrüstung</string>
+    <string name="sport_type_tab_all">Alle Sportarten</string>
+    <string name="sport_type_tab_bike">Radeln</string>
+    <string name="sport_type_tab_run">Laufen</string>
+    <string name="sport_type_tab_unknown">Andere Sportarten</string>
 
 </resources>

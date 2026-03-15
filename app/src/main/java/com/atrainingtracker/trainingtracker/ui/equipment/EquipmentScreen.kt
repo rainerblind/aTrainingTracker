@@ -83,7 +83,12 @@ fun EquipmentScreen(
         topBar = {
             Column {
                 TopAppBar(
-                    title = { Text(stringResource(R.string.equipment_management_title_full), style = MaterialTheme.typography.titleLarge) },
+                    title = {
+                        Text(
+                            text = stringResource(R.string.equipment_management_title_full),
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                    },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surface,
                         titleContentColor = MaterialTheme.colorScheme.onSurface

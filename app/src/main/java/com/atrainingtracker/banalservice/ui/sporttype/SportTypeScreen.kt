@@ -1,5 +1,6 @@
 package com.atrainingtracker.banalservice.ui.sporttype
 
+import androidx.activity.result.launch
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -17,6 +18,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
@@ -26,17 +29,25 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.SecondaryScrollableTabRow
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,33 +61,103 @@ import com.google.accompanist.drawablepainter.rememberDrawablePainter
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.MyHelper
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.components.stats.RichStatsSheet
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsSummaryBlock
+import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SportTypeScreen(
     viewModel: SportTypeViewModel
 ) {
     val sportTypes by viewModel.sportTypes.collectAsStateWithLifecycle()
+
+    // Define our tabs mapping to BSportType
+    val tabs = listOf(
+        stringResource(R.string.sport_type_tab_all) to null,
+        stringResource(R.string.sport_type_tab_bike) to BSportType.BIKE,
+        stringResource(R.string.sport_type_tab_run) to BSportType.RUN,
+        stringResource(R.string.sport_type_tab_unknown) to BSportType.UNKNOWN
+    )
+
+    val pagerState = rememberPagerState(pageCount = { tabs.size })
+    val coroutineScope = rememberCoroutineScope()
+
     var itemToEdit by remember { mutableStateOf<SportTypeItem?>(null) }
     var itemToDelete by remember { mutableStateOf<SportTypeItem?>(null) }
 
     var statsToShow by remember { mutableStateOf<Pair<String, List<StatsData>>?>(null) }
 
     Scaffold(
+        topBar = {
+            Column {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = stringResource(R.string.configure_sport_types),
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface
+                    )
+                )
+
+                SecondaryScrollableTabRow(selectedTabIndex = pagerState.currentPage) {
+                    tabs.forEachIndexed { index, tab ->
+                        Tab(
+                            selected = pagerState.currentPage == index,
+                            onClick = {
+                                coroutineScope.launch { pagerState.animateScrollToPage(index) }
+                            },
+                            text = { Text(text = tab.first) }
+                        )
+                    }
+                }
+            }
+        },
         floatingActionButton = {
             FloatingActionButton(onClick = {
+                // Get the BSportType associated with the currently visible tab
+                val currentTabType = tabs[pagerState.currentPage].second
+
+                // If on the "All" tab (null), default to BIKE
+                // otherwise use the specific tab's type.
+                val initialBSportType = currentTabType ?: BSportType.BIKE
+
                 // Create blank template for new item
                 itemToEdit = SportTypeItem(
                     id = -1,
                     name = "",
-                    bSportType = BSportType.BIKE,
-                    minSpeed = 4.2,
-                    maxSpeed = 10.0,
-                    stravaName = "Ride",
-                    tcxName = "Biking",
-                    gcName = "bike",
+                    bSportType = initialBSportType,
+                    minSpeed = when (initialBSportType) {
+                        BSportType.BIKE -> TrainingApplication.getMaxRunSpeed_mps()
+                        BSportType.RUN -> TrainingApplication.getMaxWalkSpeed_mps()
+                        else -> 0.0
+                    },
+                    maxSpeed = when (initialBSportType) {
+                        BSportType.BIKE -> TrainingApplication.getMaxBikeSpeed_mps()
+                        BSportType.RUN -> TrainingApplication.getMaxRunSpeed_mps()
+                        else -> TrainingApplication.getMaxWalkSpeed_mps()
+                    },
+                    stravaName = when (initialBSportType) {
+                        BSportType.BIKE -> "Ride"
+                        BSportType.RUN -> "Run"
+                        else -> "Workout"
+                    },
+                    tcxName = when (initialBSportType) {
+                        BSportType.BIKE -> "Biking"
+                        BSportType.RUN -> "Running"
+                        else -> "Other"
+                    },
+                    gcName = when (initialBSportType) {
+                        BSportType.BIKE -> "bike"
+                        BSportType.RUN -> "run"
+                        else -> "walk"
+                    },
                     linkedEquipmentIds = emptyList(),
                     linkedEquipmentNames = "",
                     isEditable = true,
@@ -95,27 +176,42 @@ fun SportTypeScreen(
             }
         }
     ) { padding ->
-        LazyColumn(
+        HorizontalPager(
+            state = pagerState,
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp) // Matching Equipment spacing
-        ) {
-            items(sportTypes, key = { it.id }) { item ->
-                SportTypeCard(
-                    item = item,
-                    onConfigClick = { itemToEdit = item },
-                    onStatsClick = { item ->
-                        // 1. Fetch detailed periods from ViewModel
-                        val periods = viewModel.getDetailedStats(item.id, item.firstUsed)
-                        // 2. Combine with the "Total" stats already in the item
-                        val allStats = listOf(item.statsData) + periods
-                        // 3. Show the sheet
-                        statsToShow = Pair(item.name, allStats)
-                    },
-                    onDelete = { itemToDelete = item }
-                )
+            verticalAlignment = Alignment.Top
+        ) { pageIndex ->
+            val targetBSportType = tabs[pageIndex].second
+
+            // Filter the list based on the tab's BSportType
+            val filteredList = if (targetBSportType == null) {
+                sportTypes
+            } else {
+                sportTypes.filter { it.bSportType == targetBSportType }
+            }
+
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp) // Matching Equipment spacing
+            ) {
+                items(filteredList, key = { it.id }) { item ->
+                    SportTypeCard(
+                        item = item,
+                        onConfigClick = { itemToEdit = item },
+                        onStatsClick = { item ->
+                            // 1. Fetch detailed periods from ViewModel
+                            val periods = viewModel.getDetailedStats(item.id, item.firstUsed)
+                            // 2. Combine with the "Total" stats already in the item
+                            val allStats = listOf(item.statsData) + periods
+                            // 3. Show the sheet
+                            statsToShow = Pair(item.name, allStats)
+                        },
+                        onDelete = { itemToDelete = item }
+                    )
+                }
             }
         }
     }
