@@ -91,37 +91,36 @@ fun SportTypeScreen(
 
     Scaffold(
         topBar = {
-            // Using TopAppBar just like in EquipmentScreen
-            TopAppBar(
-                title = {
-                    Text(
-                        text = stringResource(R.string.configure_sport_types),
-                        style = MaterialTheme.typography.titleLarge
+            Column {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = stringResource(R.string.configure_sport_types),
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface
                     )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface
                 )
-            )
-            SecondaryScrollableTabRow(
-                selectedTabIndex = pagerState.currentPage,
-                edgePadding = 16.dp, // Aligns first tab with content margins
-                containerColor = MaterialTheme.colorScheme.surface
-            ) {
-                tabs.forEachIndexed { index, tab ->
-                    Tab(
-                        selected = pagerState.currentPage == index,
-                        onClick = {
-                            coroutineScope.launch { pagerState.animateScrollToPage(index) }
-                        },
-                        text = { Text(text = tab.first) }
-                    )
+
+                SecondaryScrollableTabRow(selectedTabIndex = pagerState.currentPage) {
+                    tabs.forEachIndexed { index, tab ->
+                        Tab(
+                            selected = pagerState.currentPage == index,
+                            onClick = {
+                                coroutineScope.launch { pagerState.animateScrollToPage(index) }
+                            },
+                            text = { Text(text = tab.first) }
+                        )
+                    }
                 }
             }
         },
         floatingActionButton = {
             FloatingActionButton(onClick = {
+                // TODO: should depend on the selected tab
                 // Create blank template for new item
                 itemToEdit = SportTypeItem(
                     id = -1,
