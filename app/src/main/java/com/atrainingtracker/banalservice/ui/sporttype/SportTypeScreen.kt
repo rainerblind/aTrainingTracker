@@ -61,6 +61,7 @@ import com.google.accompanist.drawablepainter.rememberDrawablePainter
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.MyHelper
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.components.stats.RichStatsSheet
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsSummaryBlock
@@ -120,17 +121,43 @@ fun SportTypeScreen(
         },
         floatingActionButton = {
             FloatingActionButton(onClick = {
-                // TODO: should depend on the selected tab
+                // Get the BSportType associated with the currently visible tab
+                val currentTabType = tabs[pagerState.currentPage].second
+
+                // If on the "All" tab (null), default to BIKE
+                // otherwise use the specific tab's type.
+                val initialBSportType = currentTabType ?: BSportType.BIKE
+
                 // Create blank template for new item
                 itemToEdit = SportTypeItem(
                     id = -1,
                     name = "",
-                    bSportType = BSportType.BIKE,
-                    minSpeed = 4.2,
-                    maxSpeed = 10.0,
-                    stravaName = "Ride",
-                    tcxName = "Biking",
-                    gcName = "bike",
+                    bSportType = initialBSportType,
+                    minSpeed = when (initialBSportType) {
+                        BSportType.BIKE -> TrainingApplication.getMaxRunSpeed_mps()
+                        BSportType.RUN -> TrainingApplication.getMaxWalkSpeed_mps()
+                        else -> 0.0
+                    },
+                    maxSpeed = when (initialBSportType) {
+                        BSportType.BIKE -> TrainingApplication.getMaxBikeSpeed_mps()
+                        BSportType.RUN -> TrainingApplication.getMaxRunSpeed_mps()
+                        else -> TrainingApplication.getMaxWalkSpeed_mps()
+                    },
+                    stravaName = when (initialBSportType) {
+                        BSportType.BIKE -> "Ride"
+                        BSportType.RUN -> "Run"
+                        else -> "Workout"
+                    },
+                    tcxName = when (initialBSportType) {
+                        BSportType.BIKE -> "Biking"
+                        BSportType.RUN -> "Running"
+                        else -> "Other"
+                    },
+                    gcName = when (initialBSportType) {
+                        BSportType.BIKE -> "bike"
+                        BSportType.RUN -> "run"
+                        else -> "walk"
+                    },
                     linkedEquipmentIds = emptyList(),
                     linkedEquipmentNames = "",
                     isEditable = true,
