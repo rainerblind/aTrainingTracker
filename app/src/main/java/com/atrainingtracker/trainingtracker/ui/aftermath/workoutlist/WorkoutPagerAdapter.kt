@@ -9,8 +9,8 @@ class WorkoutPagerAdapter(fragment: Fragment) : FragmentStateAdapter(fragment) {
     // Define the tabs order and their filter types
     private val tabs = listOf(
         null,               // All
-        BSportType.RUN,     // Run
         BSportType.BIKE,    // Bike
+        BSportType.RUN,     // Run
         BSportType.UNKNOWN  // Other
     )
 

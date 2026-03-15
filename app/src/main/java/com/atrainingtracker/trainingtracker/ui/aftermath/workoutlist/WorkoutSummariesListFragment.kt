@@ -85,7 +85,7 @@ class WorkoutSummariesListFragment : Fragment() {
 
         tabLayout = com.google.android.material.tabs.TabLayout(context).apply {
             layoutParams = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT)
-            tabMode = com.google.android.material.tabs.TabLayout.MODE_FIXED
+            tabMode = com.google.android.material.tabs.TabLayout.MODE_SCROLLABLE
         }
 
         viewPager = androidx.viewpager2.widget.ViewPager2(context).apply {

@@ -1026,9 +1026,11 @@
     <string name="sport_type_tab_bike">Ride Types</string>
     <string name="sport_type_tab_run">Run Types</string>
     <string name="sport_type_tab_unknown">Other Sport Types</string>
+
+    <!-- workout summaries tabs -->
     <string name="workout_summaries_tab_all">All</string>
-    <string name="workout_summaries_tab_run">Runs</string>
     <string name="workout_summaries_tab_bike">Rides</string>
+    <string name="workout_summaries_tab_run">Runs</string>
     <string name="workout_summaries_tab_other">Other</string>
     <string name="workout_summaries_loading">Loading workouts</string>
 </resources>
