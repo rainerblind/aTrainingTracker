@@ -77,6 +77,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.RecyclerView
 import com.atrainingtracker.banalservice.ActivityType
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import kotlin.properties.Delegates
 
 class TrackingTabsFragment : Fragment() {
@@ -230,6 +231,11 @@ class TrackingTabsFragment : Fragment() {
                     }
                 }
             }
+        }
+
+        viewModel.navigateToTrackingTab.observe(viewLifecycleOwner) {
+            // Switch to the second tab (index 1)
+            viewPager.setCurrentItem(1, true)
         }
 
         viewModel.trackingViews.observe(viewLifecycleOwner) { trackingViews ->
@@ -501,6 +507,7 @@ class TrackingTabsFragment : Fragment() {
 
 
     companion object {
+        val DEBUG = TrainingApplication.getDebug(true)
         @JvmField
         val TAG = "TrackingTabsFragment"
         const val ARG_ACTIVITY_TYPE = "arg_activity_type"
