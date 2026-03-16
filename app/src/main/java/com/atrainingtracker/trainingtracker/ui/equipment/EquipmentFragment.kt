@@ -48,6 +48,7 @@ class EquipmentFragment : Fragment() {
                 ATrainingTrackerTheme {
                     EquipmentScreen(
                         viewModel = viewModel,
+                        initialTab = startingTab,
                         onNavigateToWorkouts = { stats ->
                             // When a stats block is clicked, navigate to the filtered workout list
                             navigateToFilteredWorkouts(stats)

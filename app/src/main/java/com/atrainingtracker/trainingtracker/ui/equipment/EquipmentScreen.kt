@@ -57,8 +57,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun EquipmentScreen(
     viewModel: EquipmentViewModel,
-    onNavigateToWorkouts: (StatsData) -> Unit,
-    initialTab: Int = 0
+    initialTab: Int,
+    onNavigateToWorkouts: (StatsData) -> Unit
 ) {
     val bikes by viewModel.bikes.collectAsState()
     val shoes by viewModel.shoes.collectAsState()
