@@ -60,6 +60,7 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
@@ -649,6 +650,11 @@ public class MainActivityWithNavigation
         }
 
         if (mFragment != null) {
+            // Clear the backstack before switching top-level fragments
+            // This prevents Preference fragments or other sub-screens from
+            // overlapping when the user presses 'Back' later.
+            getSupportFragmentManager().popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE);
+
             FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
             fragmentTransaction.replace(R.id.content, mFragment, tag);
             // if (addToBackStack) { fragmentTransaction.addToBackStack(null); }
@@ -756,10 +762,10 @@ public class MainActivityWithNavigation
     public boolean onPreferenceStartScreen(PreferenceFragmentCompat preferenceFragmentCompat, @NonNull PreferenceScreen preferenceScreen) {
         if (DEBUG) Log.i(TAG, "onPreferenceStartScreen: " + preferenceScreen.getKey());
         String key = preferenceScreen.getKey();
-        PreferenceFragmentCompat fragment = null;
+        Fragment fragment = null;
         switch (key) {
             case "root" -> fragment = new RootPrefsFragment();
-            case "search_settings" -> fragment = new SearchFragment();
+            case "sportTypes" -> fragment = new SportTypeListFragment();
             case "cloudUpload" -> fragment = new CloudUploadFragment();
             case TrainingApplication.PREFERENCE_SCREEN_STRAVA ->
                     fragment = new StravaUploadFragment();
@@ -767,41 +773,10 @@ public class MainActivityWithNavigation
                     fragment = new RunkeeperUploadFragment();
             case TrainingApplication.PREFERENCE_SCREEN_TRAINING_PEAKS ->
                     fragment = new TrainingpeaksUploadFragment();
-            case "sportTypes" -> {
-                FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
-                ft.replace(R.id.content, new SportTypeListFragment(), preferenceScreen.getKey());
-                ft.addToBackStack(preferenceScreen.getKey());
-                ft.commit();
-                return true;
-            }
-            case "manage_bikes", "manage_shoes" -> {
-                // Create the fragment instance
-                EquipmentFragment equipmentFragment = new EquipmentFragment();
-
-                // Pass the "starting_tab" extra from the preference to the fragment
-                // preferenceFragmentCompat.findPreference(key) gets the actual preference object
-                androidx.preference.Preference pref = preferenceFragmentCompat.findPreference(key);
-                if (pref != null) {
-                    equipmentFragment.setArguments(pref.getExtras());
-                }
-
-                // Perform the Fragment Transaction
-                FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
-                ft.replace(R.id.content, equipmentFragment, key);
-                ft.addToBackStack(key);
-                ft.commit();
-                return true;
-            }
-            case "fancyWorkoutNames" -> {
-                FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
-                ft.replace(R.id.content, new FancyWorkoutNameListFragment(), preferenceScreen.getKey());
-                ft.addToBackStack(preferenceScreen.getKey());
-                ft.commit();
-                return true;
-            }
+            case "search_settings" -> fragment = new SearchFragment();
+            case "fancyWorkoutNames" -> fragment = new FancyWorkoutNameListFragment();
             default -> Log.d(TAG, "WTF: unknown key");
         }
-
 
         if (fragment != null) {
             Bundle args = new Bundle();
