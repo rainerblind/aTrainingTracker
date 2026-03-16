@@ -235,7 +235,7 @@ class TrackingTabsFragment : Fragment() {
 
         viewModel.navigateToTrackingTab.observe(viewLifecycleOwner) {
             // Switch to the second tab (index 1)
-            viewPager.setCurrentItem(1, true)
+            viewPager.setCurrentItem(1, false)
         }
 
         viewModel.trackingViews.observe(viewLifecycleOwner) { trackingViews ->
