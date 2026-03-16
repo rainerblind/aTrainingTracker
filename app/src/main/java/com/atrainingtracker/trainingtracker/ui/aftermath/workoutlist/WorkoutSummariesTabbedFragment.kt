@@ -48,7 +48,7 @@ import com.google.android.material.tabs.TabLayoutMediator
  * A fragment that displays a list of workout summaries using a modern,
  * ViewModel-driven architecture with a RecyclerView.
  */
-class WorkoutSummariesListFragment : Fragment() {
+class WorkoutSummariesTabbedFragment : Fragment() {
 
     // Use the Kotlin property delegate for a cleaner ViewModel initialization.
     private val viewModel: WorkoutSummariesViewModel by viewModels()

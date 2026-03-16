@@ -93,7 +93,7 @@ import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManage
 import com.atrainingtracker.trainingtracker.dialogs.EnableBluetoothDialog;
 import com.atrainingtracker.trainingtracker.dialogs.GPSDisabledDialog;
 import com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialog;
-import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesListFragment;
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedFragment;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.MyLocationsFragment;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapTrackingFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.CloudUploadFragment;
@@ -615,8 +615,8 @@ public class MainActivityWithNavigation
 
             case R.id.drawer_workouts:
                 titleId = R.string.tab_workouts;
-                mFragment = new WorkoutSummariesListFragment();
-                tag = WorkoutSummariesListFragment.TAG;
+                mFragment = new WorkoutSummariesTabbedFragment();
+                tag = WorkoutSummariesTabbedFragment.TAG;
                 break;
 
             case R.id.drawer_my_sensors:

@@ -1,22 +1,14 @@
 package com.atrainingtracker.banalservice.ui.sporttype
 
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.activity.compose.setContent
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.platform.ComposeView
-import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import com.atrainingtracker.R
-import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutListChildFragment
-import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesListFragment
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesChildListFragment
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 class SportTypeListFragment : Fragment() {
@@ -45,7 +37,7 @@ class SportTypeListFragment : Fragment() {
      * defined in the clicked StatsData.
      */
     private fun navigateToFilteredWorkouts(stats: com.atrainingtracker.trainingtracker.ui.components.stats.StatsData) {
-        val fragment = WorkoutListChildFragment.newInstance(
+        val fragment = WorkoutSummariesChildListFragment.newInstance(
             sportTypeId = stats.filterSportTypeId,
             equipmentId = stats.filterEquipmentId,
             startS = stats.startTimeS,
