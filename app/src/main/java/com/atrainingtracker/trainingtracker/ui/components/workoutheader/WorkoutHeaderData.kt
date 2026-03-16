@@ -24,6 +24,7 @@ data class WorkoutHeaderData(
     val workoutName: String,
     val formattedDate: String,
     val formattedTime: String,
+    val startTimeS: Long,        // start time in seconds
     val bSportType: BSportType,  // necessary to get the icon and the text for an indoor activity
     var sportName: String,
     var equipmentName: String?,

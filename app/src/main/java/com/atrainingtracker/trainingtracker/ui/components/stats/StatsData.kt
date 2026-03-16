@@ -27,10 +27,21 @@ data class StatsData(
     val totalWorkouts: Int,
     val totalDistanceWithUnits: String,
     val timeWithUnits: String,
-    val totalAscentWithUnits: String
+    val totalAscentWithUnits: String,
+    // Navigation Metadata
+    val filterSportTypeId: Long? = null,    // The ID of the SportType in the DB
+    val filterEquipmentId: Long? = null,    // The ID of the Equipment in the DB
+    val startTimeS: Long? = null,          // From StatsPeriodHelper
+    val endTimeS: Long? = null             // From StatsPeriodHelper
 ) {
     companion object {
-        fun fromDatabase(title: String, stats: Stats): StatsData {
+        fun fromDatabase(title: String,
+                         stats: Stats,
+                         sportTypeId: Long? = null,
+                         equipmentId: Long? = null,
+                         startTimeS: Long? = null,
+                         endTimeS: Long? = null
+        ): StatsData {
             val distanceFormater = DistanceFormatter()
 
             return StatsData (
@@ -38,7 +49,12 @@ data class StatsData(
                 totalWorkouts = stats.count,
                 totalDistanceWithUnits = distanceFormater.format_with_units(stats.totalDistanceM),
                 timeWithUnits = TimeFormatter().format_with_units(stats.totalActiveTimeS),
-                totalAscentWithUnits = distanceFormater.format_with_units(stats.totalAscentM)
+                totalAscentWithUnits = distanceFormater.format_with_units(stats.totalAscentM),
+                // Pass the filters through
+                filterSportTypeId = sportTypeId,
+                filterEquipmentId = equipmentId,
+                startTimeS = startTimeS,
+                endTimeS = endTimeS
             )
         }
     }

@@ -18,6 +18,8 @@
 
 package com.atrainingtracker.trainingtracker.ui.components.stats
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -27,7 +29,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -38,8 +42,18 @@ import com.atrainingtracker.R
 fun StatsSummaryBlock(
     stats: StatsData,
     modifier: Modifier = Modifier,
+    onStatsClick: (StatsData) -> Unit
 ) {
-    Column(modifier = modifier.fillMaxWidth()) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = ripple(),
+                onClick = { onStatsClick(stats) }
+            )
+            .padding(vertical = 4.dp) // Add slight padding for touch target
+    ) {
         // Section Title (e.g., "All Time Stats")
         Text(
             text = stats.title,
@@ -119,7 +133,10 @@ fun PreviewStatsSummaryFull() {
         modifier = androidx.compose.ui.Modifier.padding(16.dp),
         color = androidx.compose.material3.MaterialTheme.colorScheme.surface
     ) {
-        StatsSummaryBlock(stats = mockData)
+        StatsSummaryBlock(
+            stats = mockData,
+            onStatsClick = {}
+        )
     }
 }
 
@@ -137,6 +154,9 @@ fun PreviewStatsSummaryMinimal() {
         modifier = androidx.compose.ui.Modifier.padding(16.dp),
         color = androidx.compose.material3.MaterialTheme.colorScheme.surface
     ) {
-        StatsSummaryBlock(stats = mockData)
+        StatsSummaryBlock(
+            stats = mockData,
+            onStatsClick = {}
+        )
     }
 }

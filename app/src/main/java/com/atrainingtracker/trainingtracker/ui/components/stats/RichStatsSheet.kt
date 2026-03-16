@@ -38,7 +38,8 @@ import androidx.compose.ui.unit.dp
 fun RichStatsSheet(
     title: String,
     periodStats: List<StatsData>,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onStatsClick: (StatsData) -> Unit
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -71,7 +72,11 @@ fun RichStatsSheet(
                     ) {
                         StatsSummaryBlock(
                             stats = stats,
-                            modifier = Modifier.padding(16.dp)
+                            modifier = Modifier.padding(16.dp),
+                            onStatsClick = {
+                                onDismiss() // Close sheet first
+                                onStatsClick(it)
+                            }
                         )
                     }
                 }

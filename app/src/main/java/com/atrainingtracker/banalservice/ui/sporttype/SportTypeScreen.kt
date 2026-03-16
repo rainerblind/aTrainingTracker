@@ -70,7 +70,8 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SportTypeScreen(
-    viewModel: SportTypeViewModel
+    viewModel: SportTypeViewModel,
+    onNavigateToWorkouts: (StatsData) -> Unit
 ) {
     val sportTypes by viewModel.sportTypes.collectAsStateWithLifecycle()
 
@@ -221,7 +222,11 @@ fun SportTypeScreen(
         RichStatsSheet(
             title = name,
             periodStats = data,
-            onDismiss = { statsToShow = null }
+            onDismiss = { statsToShow = null },
+            onStatsClick = { stats ->
+                // Trigger navigation via Activity or ViewModel event
+                onNavigateToWorkouts(stats)
+            }
         )
     }
 
@@ -447,7 +452,8 @@ fun SportTypeCard(
                     }
 
                     StatsSummaryBlock(
-                        stats = item.statsData
+                        stats = item.statsData,
+                        onStatsClick = { onStatsClick(item) }
                         )
                 }
                 Spacer(modifier = Modifier.height(16.dp))

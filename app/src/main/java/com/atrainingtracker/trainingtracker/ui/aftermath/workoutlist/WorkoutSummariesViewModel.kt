@@ -30,11 +30,14 @@ import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.aftermath.DeletionProgress
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 
 class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(application) {
+    companion object {
+        const val DEBUG = true
+        const val TAG = "WorkoutSummariesViewModel"
+    }
 
     private val repository = WorkoutRepository.getInstance(application)
 
@@ -54,26 +57,48 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
 
     val confirmDeleteWorkoutEvent = SingleLiveEvent<Long>()
 
+    // only load the workouts if the list of workouts is null or empty
+    fun loadWorkoutsIfNeeded() {
+        _isLoading.value = true // Show spinner
+        // Use the ViewModel's coroutine scope to launch on a background thread.
+        if (workouts.value == null || workouts.value?.isEmpty() == true) {
+            viewModelScope.launch {
+                repository.loadAllWorkouts()
+            }
+        }
+        _isLoading.value = false // Hide spinner
+    }
+
     fun loadWorkouts() {
         _isLoading.value = true // Show spinner
         // Use the ViewModel's coroutine scope to launch on a background thread.
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             repository.loadAllWorkouts()
         }
         _isLoading.value = false // Hide spinner
     }
 
     /**
-     * Returns a LiveData of workouts filtered by the base sport type.
+     * Returns a LiveData of workouts
      * If null, returns all workouts.
      */
-    fun getWorkoutsForTab(bSportType: BSportType?): LiveData<List<WorkoutData>> {
-        return if (bSportType == null) {
-            workouts
-        } else {
-            // Use the .map extension function directly on the LiveData object
-            workouts.map { list ->
-                list.filter { it.sportData.bSportType == bSportType }
+    fun getFilteredWorkouts(
+        bSportType: BSportType? = null,
+        sportTypeId: Long? = null,
+        equipmentId: Long? = null,
+        startTimeS: Long? = null,
+        endTimeS: Long? = null
+    ): LiveData<List<WorkoutData>> {
+        return workouts.map { list ->
+            list.filter { workout ->
+                val matchesBSport = bSportType == null || workout.sportData.bSportType == bSportType
+                val matchesSportId = sportTypeId == null || workout.sportData.sportId == sportTypeId
+                val matchesEquip = equipmentId == null || workout.equipmentData.equipmentId == equipmentId
+
+                val workoutTime = workout.headerData.startTimeS
+                val matchesTime = (startTimeS == null || workoutTime >= startTimeS) && (endTimeS == null || workoutTime <= endTimeS)
+
+                matchesBSport && matchesSportId && matchesEquip && matchesTime
             }
         }
     }
