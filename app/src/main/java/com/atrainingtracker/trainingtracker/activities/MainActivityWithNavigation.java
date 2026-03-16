@@ -158,7 +158,6 @@ public class MainActivityWithNavigation
     final BroadcastReceiver mStartTrackingReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            setTitle(R.string.Tracking);
             mNavigationView.getMenu().findItem(R.id.drawer_start_tracking).setTitle(R.string.Tracking);
         }
     };
@@ -168,14 +167,12 @@ public class MainActivityWithNavigation
     final BroadcastReceiver mPauseTrackingReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            setTitle(R.string.Paused);
             mNavigationView.getMenu().findItem(R.id.drawer_start_tracking).setTitle(R.string.Pause);
         }
     };
     final BroadcastReceiver mStopTrackingReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            setTitle(R.string.app_name);
             mNavigationView.getMenu().findItem(R.id.drawer_start_tracking).setTitle(R.string.Start);
 
             checkBatteryStatus();
@@ -594,7 +591,6 @@ public class MainActivityWithNavigation
 
         mFragment = null;
         String tag = null;
-        int titleId = R.string.app_name;
 
         switch (mSelectedFragmentId) {
             case R.id.drawer_start_tracking:
@@ -608,43 +604,36 @@ public class MainActivityWithNavigation
                 break;
 
             case R.id.drawer_segments:
-                titleId = R.string.segments;
                 mFragment = new StarredSegmentsTabbedContainer();
                 tag = StarredSegmentsTabbedContainer.TAG;
                 break;
 
             case R.id.drawer_workouts:
-                titleId = R.string.tab_workouts;
                 mFragment = new WorkoutSummariesTabbedFragment();
                 tag = WorkoutSummariesTabbedFragment.TAG;
                 break;
 
             case R.id.drawer_my_sensors:
-                titleId = R.string.devices_myRemoteDevices;
                 mFragment = DevicesTabbedContainerFragment.newInstance(Protocol.ALL, DeviceType.ALL, 2);
                 tag = DevicesTabbedContainerFragment.TAG;
                 break;
 
             case R.id.drawer_bikes:
-                titleId = R.string.equipment_management_title;
                 mFragment = EquipmentFragment.newInstance(0);
                 tag = EquipmentFragment.TAG;
                 break;
 
             case R.id.drawer_shoes:
-                titleId = R.string.equipment_management_title;
                 mFragment = EquipmentFragment.newInstance(1);
                 tag = EquipmentFragment.TAG;
                 break;
 
             case R.id.drawer_my_locations:
-                titleId = R.string.my_locations;
                 mFragment = new MyLocationsFragment();
                 tag = MyLocationsFragment.TAG;
                 break;
 
             case R.id.drawer_settings:
-                titleId = R.string.drawer__settings;
                 mFragment = new RootPrefsFragment();
                 tag = RootPrefsFragment.TAG;
                 break;
@@ -665,7 +654,6 @@ public class MainActivityWithNavigation
             // if (addToBackStack) { fragmentTransaction.addToBackStack(null); }
             fragmentTransaction.commit();
         }
-        setTitle(titleId);
 
         return true;
     }
@@ -712,12 +700,6 @@ public class MainActivityWithNavigation
     public void startPairing(@NonNull Protocol protocol) {
         if (DEBUG) Log.d(TAG, "startPairingActivity: " + protocol);
 
-        int titleId = switch (protocol) {
-            case ANT_PLUS -> R.string.pairing_ANT;
-            case BLUETOOTH_LE -> R.string.pairing_bluetooth;
-            default -> R.string.pairing_ANT;
-        };
-
         mFragment = DevicesTabbedContainerFragment.newInstance(protocol, null, 0);
         String tag = DevicesTabbedContainerFragment.TAG;
 
@@ -725,8 +707,6 @@ public class MainActivityWithNavigation
         fragmentTransaction.replace(R.id.content, mFragment, tag);
         fragmentTransaction.addToBackStack(null);
         fragmentTransaction.commit();
-
-        setTitle(titleId);
     }
 
     protected void checkBatteryStatus() {
