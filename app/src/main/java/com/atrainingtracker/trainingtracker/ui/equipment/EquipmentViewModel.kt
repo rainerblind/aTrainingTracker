@@ -108,7 +108,8 @@ class EquipmentViewModel(application: Application) : AndroidViewModel(applicatio
                         lastUsed = stats.lastUsage?.substringBefore(" "),
                         statsData = StatsData.fromDatabase(
                             title = getApplication<Application>().getString(R.string.stats_total),
-                            stats = stats
+                            stats = stats,
+                            equipmentId = data.id
                         )
                     )
                 }
@@ -125,7 +126,13 @@ class EquipmentViewModel(application: Application) : AndroidViewModel(applicatio
             firstUsageDate = firstUsageDate,
             fetchPeriod = { title, startS, endS ->
                 val raw = dbSummariesManager.getEquipmentStatsForPeriod(equipmentId, startS, endS)
-                StatsData.fromDatabase(title, raw)
+                StatsData.fromDatabase(
+                    title = title,
+                    stats = raw,
+                    equipmentId = equipmentId,
+                    startTimeS = startS,
+                    endTimeS = endS
+                )
             }
         )
     }

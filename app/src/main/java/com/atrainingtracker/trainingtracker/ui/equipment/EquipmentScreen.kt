@@ -57,6 +57,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun EquipmentScreen(
     viewModel: EquipmentViewModel,
+    onNavigateToWorkouts: (StatsData) -> Unit,
     initialTab: Int = 0
 ) {
     val bikes by viewModel.bikes.collectAsState()
@@ -228,7 +229,8 @@ fun EquipmentScreen(
         RichStatsSheet(
             title = name,
             periodStats = data,
-            onDismiss = { statsToShow = null }
+            onDismiss = { statsToShow = null },
+            onStatsClick = { onNavigateToWorkouts(it) }
         )
     }
 }
@@ -391,7 +393,8 @@ fun EquipmentCard(
                     }
 
                     StatsSummaryBlock(
-                        stats = item.statsData
+                        stats = item.statsData,
+                        onStatsClick = { onStatsClick(item) }
                     )
                 }
                 Spacer(modifier = Modifier.height(16.dp))

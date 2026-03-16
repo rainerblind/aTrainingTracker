@@ -22,5 +22,6 @@ import com.atrainingtracker.banalservice.BSportType
 
 data class EquipmentData (
     val bSportType: BSportType,
+    var equipmentId: Long, // either -1 or the equipmentId
     var equipmentName: String?
 )

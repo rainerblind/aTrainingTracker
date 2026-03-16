@@ -63,7 +63,8 @@ class WorkoutHeaderDataProvider(
         val sportId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPORT_ID))
         val equipmentId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.EQUIPMENT_ID))
 
-        val (date, time) = formatDateTime(cursor)
+        // Get the date, time, AND the raw timestamp
+        val dateTimeResult = formatDateTime(cursor)
 
         val sportTypeDatabaseManager = SportTypeDatabaseManager.getInstance(context)
         val bSportType = sportTypeDatabaseManager.getBSportType(sportId)
@@ -74,11 +75,11 @@ class WorkoutHeaderDataProvider(
         val trainer = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.TRAINER)) == 1
         val finished = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.FINISHED)) == 1
 
-
         return WorkoutHeaderData(
             workoutName = workoutName,
-            formattedDate = date,
-            formattedTime = time,
+            formattedDate = dateTimeResult.date,
+            formattedTime = dateTimeResult.time,
+            startTimeS = dateTimeResult.timestampS,
             bSportType = bSportType,
             sportName = sportName,
             equipmentName = equipmentName,
@@ -88,7 +89,9 @@ class WorkoutHeaderDataProvider(
         )
     }
 
-    private fun formatDateTime(cursor: Cursor): Pair<String, String> {
+    private data class DateTimeResult(val date: String, val time: String, val timestampS: Long)
+
+    private fun formatDateTime(cursor: Cursor): DateTimeResult {
         val startTimeString = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_START))
         val dbFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ROOT).apply {
             timeZone = TimeZone.getTimeZone("UTC")
@@ -98,10 +101,15 @@ class WorkoutHeaderDataProvider(
             val startTimeDate: Date = dbFormat.parse(startTimeString) ?: throw ParseException("Parsed date is null", 0)
             val localeDateFormat = java.text.DateFormat.getDateInstance(java.text.DateFormat.DEFAULT)
             val localeTimeFormat = java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT)
-            Pair(localeDateFormat.format(startTimeDate), localeTimeFormat.format(startTimeDate))
+
+            DateTimeResult(
+                date = localeDateFormat.format(startTimeDate),
+                time = localeTimeFormat.format(startTimeDate),
+                timestampS = startTimeDate.time / 1000 // Convert ms to seconds
+            )
         } catch (e: ParseException) {
             Log.e("WorkoutHeaderProvider", "Failed to parse date string: $startTimeString", e)
-            Pair(context.getString(R.string.invalid_date), "")
+            DateTimeResult(context.getString(R.string.invalid_date), "", 0L)
         }
     }
 }

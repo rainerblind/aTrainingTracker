@@ -26,6 +26,8 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutListChildFragment
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 class EquipmentFragment : Fragment() {
@@ -46,11 +48,33 @@ class EquipmentFragment : Fragment() {
                 ATrainingTrackerTheme {
                     EquipmentScreen(
                         viewModel = viewModel,
-                        initialTab = startingTab
+                        onNavigateToWorkouts = { stats ->
+                            // When a stats block is clicked, navigate to the filtered workout list
+                            navigateToFilteredWorkouts(stats)
+                        }
                     )
                 }
             }
         }
+    }
+
+
+    /**
+     * Navigates to the WorkoutSummariesListFragment with the filters
+     * defined in the clicked StatsData.
+     */
+    private fun navigateToFilteredWorkouts(stats: com.atrainingtracker.trainingtracker.ui.components.stats.StatsData) {
+        val fragment = WorkoutListChildFragment.newInstance(
+            sportTypeId = stats.filterSportTypeId,
+            equipmentId = stats.filterEquipmentId,
+            startS = stats.startTimeS,
+            endS = stats.endTimeS
+        )
+
+        parentFragmentManager.beginTransaction()
+            .replace(R.id.content, fragment) // Ensure this ID matches your Activity's container
+            .addToBackStack(null)
+            .commit()
     }
 
     override fun onResume() {

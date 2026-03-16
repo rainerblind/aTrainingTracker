@@ -37,6 +37,7 @@ class EquipmentDataProvider(
 
         return EquipmentData(
             bSportType = bSportType,
+            equipmentId = equipmentId,
             equipmentName = equipmentName
         )
     }

@@ -64,16 +64,26 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
     }
 
     /**
-     * Returns a LiveData of workouts filtered by the base sport type.
+     * Returns a LiveData of workouts
      * If null, returns all workouts.
      */
-    fun getWorkoutsForTab(bSportType: BSportType?): LiveData<List<WorkoutData>> {
-        return if (bSportType == null) {
-            workouts
-        } else {
-            // Use the .map extension function directly on the LiveData object
-            workouts.map { list ->
-                list.filter { it.sportData.bSportType == bSportType }
+    fun getFilteredWorkouts(
+        bSportType: BSportType? = null,
+        sportTypeId: Long? = null,
+        equipmentId: Long? = null,
+        startTimeS: Long? = null,
+        endTimeS: Long? = null
+    ): LiveData<List<WorkoutData>> {
+        return workouts.map { list ->
+            list.filter { workout ->
+                val matchesBSport = bSportType == null || workout.sportData.bSportType == bSportType
+                val matchesSportId = sportTypeId == null || workout.sportData.sportId == sportTypeId
+                val matchesEquip = equipmentId == null || workout.equipmentData.equipmentId == equipmentId
+
+                val workoutTime = workout.headerData.startTimeS
+                val matchesTime = (startTimeS == null || workoutTime >= startTimeS) && (endTimeS == null || workoutTime <= endTimeS)
+
+                matchesBSport && matchesSportId && matchesEquip && matchesTime
             }
         }
     }
