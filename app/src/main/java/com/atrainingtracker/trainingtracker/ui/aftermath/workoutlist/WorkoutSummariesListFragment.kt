@@ -15,7 +15,7 @@ import com.atrainingtracker.banalservice.BSportType
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 
-class WorkoutSummariesChildListFragment : Fragment() {
+class WorkoutSummariesListFragment : Fragment() {
     // Access the ViewModel of the Parent Fragment
     private val viewModel: WorkoutSummariesViewModel by activityViewModels()
     private lateinit var workoutAdapter: WorkoutSummariesAdapter
@@ -36,7 +36,7 @@ class WorkoutSummariesChildListFragment : Fragment() {
             equipmentId: Long? = null,
             startS: Long? = null,
             endS: Long? = null
-        ) = WorkoutSummariesChildListFragment().apply {
+        ) = WorkoutSummariesListFragment().apply {
             arguments = Bundle().apply {
                 putSerializable(ARG_BSPORT_TYPE, bSportType)
                 sportTypeId?.let { putLong(ARG_SPORT_ID, it) }

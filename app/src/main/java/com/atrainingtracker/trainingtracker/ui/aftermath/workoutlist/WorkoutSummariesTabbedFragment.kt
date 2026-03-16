@@ -50,6 +50,11 @@ import com.google.android.material.tabs.TabLayoutMediator
  */
 class WorkoutSummariesTabbedFragment : Fragment() {
 
+    companion object {
+        @JvmField
+        var TAG: String = "WorkoutSummariesTabbedFragment"
+    }
+
     // Use the Kotlin property delegate for a cleaner ViewModel initialization.
     private val viewModel: WorkoutSummariesViewModel by viewModels()
 
@@ -231,11 +236,5 @@ class WorkoutSummariesTabbedFragment : Fragment() {
             }
             .setNegativeButton(R.string.Cancel, null) // Do nothing on cancel
             .show()
-    }
-
-
-    companion object {
-        @JvmField
-        var TAG: String = "WorkoutSummariesListFragment"
     }
 }
