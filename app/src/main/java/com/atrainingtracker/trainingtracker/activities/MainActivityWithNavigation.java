@@ -60,6 +60,7 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
@@ -649,6 +650,11 @@ public class MainActivityWithNavigation
         }
 
         if (mFragment != null) {
+            // Clear the backstack before switching top-level fragments
+            // This prevents Preference fragments or other sub-screens from
+            // overlapping when the user presses 'Back' later.
+            getSupportFragmentManager().popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE);
+
             FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
             fragmentTransaction.replace(R.id.content, mFragment, tag);
             // if (addToBackStack) { fragmentTransaction.addToBackStack(null); }
