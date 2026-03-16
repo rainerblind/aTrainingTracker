@@ -30,11 +30,14 @@ import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.aftermath.DeletionProgress
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 
 class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(application) {
+    companion object {
+        const val DEBUG = true
+        const val TAG = "WorkoutSummariesViewModel"
+    }
 
     private val repository = WorkoutRepository.getInstance(application)
 
@@ -54,11 +57,13 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
 
     val confirmDeleteWorkoutEvent = SingleLiveEvent<Long>()
 
-    fun loadWorkouts() {
+    fun loadWorkoutsIfNeeded() {
         _isLoading.value = true // Show spinner
         // Use the ViewModel's coroutine scope to launch on a background thread.
-        viewModelScope.launch(Dispatchers.IO) {
-            repository.loadAllWorkouts()
+        if (workouts.value == null || workouts.value?.isEmpty() == true) {
+            viewModelScope.launch {
+                repository.loadAllWorkouts()
+            }
         }
         _isLoading.value = false // Hide spinner
     }

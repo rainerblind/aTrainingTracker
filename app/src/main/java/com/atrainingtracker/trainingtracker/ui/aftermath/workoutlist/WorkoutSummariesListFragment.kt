@@ -153,14 +153,6 @@ class WorkoutSummariesListFragment : Fragment() {
         observeViewModel()
     }
 
-    override fun onResume() {
-        super.onResume()
-        // Refresh data on resume, e.g., if details were changed in another activity.
-        // The ViewModel can internally prevent redundant loads if desired.
-        viewModel.loadWorkouts()
-    }
-
-
     private fun setupMenu() {
         // Add the MenuProvider to the Fragment's Lifecycle
         requireActivity().addMenuProvider(object : MenuProvider {

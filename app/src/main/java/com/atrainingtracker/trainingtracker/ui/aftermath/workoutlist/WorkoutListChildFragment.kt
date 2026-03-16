@@ -7,8 +7,6 @@ import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.fragment.app.viewModels
-import androidx.lifecycle.observe
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.atrainingtracker.banalservice.BSportType
@@ -27,6 +25,8 @@ class WorkoutListChildFragment : Fragment() {
         const val ARG_EQUIP_ID = "ARG_EQUIP_ID"
         const val ARG_START_S = "ARG_START_S"
         const val ARG_END_S = "ARG_END_S"
+        const val DEBUG = true
+        const val TAG = "WorkoutListChildFragment"
 
         fun newInstance(
             bSportType: BSportType? = null,
@@ -55,7 +55,9 @@ class WorkoutListChildFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        val filterType = arguments?.getSerializable("filter_type") as? BSportType
+
+        // Tell the ViewModel to ensure data is loaded from the DB
+        viewModel.loadWorkoutsIfNeeded()
 
         val isPlayAvailable = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(requireActivity()) == ConnectionResult.SUCCESS
 
