@@ -136,6 +136,9 @@ class WorkoutSummariesTabbedFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // Tell the ViewModel to ensure all data is loaded from the DB
+        viewModel.loadWorkouts()
+
         val pagerAdapter = WorkoutPagerAdapter(this)
         viewPager.adapter = pagerAdapter
 

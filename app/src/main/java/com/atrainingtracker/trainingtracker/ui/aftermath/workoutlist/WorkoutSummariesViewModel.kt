@@ -57,6 +57,7 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
 
     val confirmDeleteWorkoutEvent = SingleLiveEvent<Long>()
 
+    // only load the workouts if the list of workouts is null or empty
     fun loadWorkoutsIfNeeded() {
         _isLoading.value = true // Show spinner
         // Use the ViewModel's coroutine scope to launch on a background thread.
@@ -64,6 +65,15 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
             viewModelScope.launch {
                 repository.loadAllWorkouts()
             }
+        }
+        _isLoading.value = false // Hide spinner
+    }
+
+    fun loadWorkouts() {
+        _isLoading.value = true // Show spinner
+        // Use the ViewModel's coroutine scope to launch on a background thread.
+        viewModelScope.launch {
+            repository.loadAllWorkouts()
         }
         _isLoading.value = false // Hide spinner
     }
