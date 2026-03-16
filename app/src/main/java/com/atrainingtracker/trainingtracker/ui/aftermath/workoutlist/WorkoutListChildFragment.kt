@@ -5,10 +5,12 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
+import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
@@ -71,6 +73,11 @@ class WorkoutListChildFragment : Fragment() {
         )
         recyclerView.adapter = workoutAdapter
 
+        // Observe the delete command
+        viewModel.confirmDeleteWorkoutEvent.observe(viewLifecycleOwner) { workoutId ->
+            showDeleteConfirmationDialog(workoutId)
+        }
+
         // Retrieve arguments using constants
         val bSportType = arguments?.getSerializable(ARG_BSPORT_TYPE) as? BSportType
         val sportId = arguments?.getLong(ARG_SPORT_ID, -1)?.takeIf { it != -1L }
@@ -88,5 +95,20 @@ class WorkoutListChildFragment : Fragment() {
         ).observe(viewLifecycleOwner) { workouts ->
             workoutAdapter.submitList(workouts)
         }
+    }
+
+
+
+    private fun showDeleteConfirmationDialog(workoutId: Long) {
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.delete_workout)
+            .setMessage(R.string.really_delete_workout)
+            .setIcon(android.R.drawable.ic_menu_delete)
+            .setPositiveButton(R.string.delete_workout) { _, _ ->
+                // If user clicks "Delete", tell the ViewModel to proceed with the deletion.
+                viewModel.deleteWorkout(workoutId)
+            }
+            .setNegativeButton(R.string.cancel, null) // Do nothing on cancel
+            .show()
     }
 }

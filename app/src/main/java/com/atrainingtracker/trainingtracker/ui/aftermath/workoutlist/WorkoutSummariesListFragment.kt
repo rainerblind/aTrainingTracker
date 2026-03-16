@@ -35,19 +35,13 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
-import androidx.compose.ui.semantics.text
 import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.observe
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.aftermath.DeletionProgress
-import com.google.android.gms.common.ConnectionResult
-import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.material.tabs.TabLayoutMediator
 
 /**
@@ -187,11 +181,6 @@ class WorkoutSummariesListFragment : Fragment() {
         }
 
 
-        // Observe the delete command
-        viewModel.confirmDeleteWorkoutEvent.observe(viewLifecycleOwner) { workoutId ->
-            showDeleteConfirmationDialog(workoutId)
-        }
-
         viewModel.showDeleteOldWorkoutsDialogEvent.observe(viewLifecycleOwner) {
             showDeleteOldWorkoutsDialog()
         }
@@ -210,19 +199,6 @@ class WorkoutSummariesListFragment : Fragment() {
             }
         }
 
-    }
-
-    private fun showDeleteConfirmationDialog(workoutId: Long) {
-        AlertDialog.Builder(requireContext())
-            .setTitle(R.string.delete_workout)
-            .setMessage(R.string.really_delete_workout)
-            .setIcon(android.R.drawable.ic_menu_delete)
-            .setPositiveButton(R.string.delete_workout) { _, _ ->
-                // If user clicks "Delete", tell the ViewModel to proceed with the deletion.
-                viewModel.deleteWorkout(workoutId)
-            }
-            .setNegativeButton(R.string.cancel, null) // Do nothing on cancel
-            .show()
     }
 
     private fun showDeleteOldWorkoutsDialog() {
