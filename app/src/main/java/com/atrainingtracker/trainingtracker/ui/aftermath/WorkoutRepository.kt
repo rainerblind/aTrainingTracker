@@ -261,6 +261,25 @@ class WorkoutRepository private constructor(private val application: Application
                     val workout = mapper.fromCursor(cursor)
                     _initialWorkoutLoaded.postValue(workout)
 
+                    // First, we create a mutable copy
+                    val currentList = _allWorkouts.value?.toMutableList() ?: mutableListOf()
+
+                    // Then, we try to find if this workout
+                    val index = currentList.indexOfFirst { it.id == id }
+
+                    if (index != -1) {
+                        // Update the existing item
+                        currentList[index] = workout
+                    } else {
+                        // It's a new workout or wasn't in the list, add it
+                        currentList.add(workout)
+                        // Sort it
+                        currentList.sortByDescending { it.headerData.startTimeS }
+                    }
+
+                    // Finally, we post the updated list back to the observer
+                    _allWorkouts.postValue(currentList)
+
                     if (workout.extremaData.isCalculating) {
                         observeExtremaCalculation(id)
                     }
