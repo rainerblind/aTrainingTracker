@@ -1,6 +1,7 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -12,6 +13,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 
@@ -27,8 +29,8 @@ class WorkoutSummariesListFragment : Fragment() {
         const val ARG_EQUIP_ID = "ARG_EQUIP_ID"
         const val ARG_START_S = "ARG_START_S"
         const val ARG_END_S = "ARG_END_S"
-        const val DEBUG = true
         const val TAG = "WorkoutSummariesListFragment"
+        val DEBUG = TrainingApplication.getDebug(true)
 
         fun newInstance(
             bSportType: BSportType? = null,
@@ -48,6 +50,7 @@ class WorkoutSummariesListFragment : Fragment() {
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        if (DEBUG) Log.i(TAG, "onCreateView()")
         recyclerView = RecyclerView(requireContext()).apply {
             layoutParams = ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT)
             layoutManager = LinearLayoutManager(context)
@@ -57,6 +60,7 @@ class WorkoutSummariesListFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        if (DEBUG) Log.i(TAG, "onViewCreated()")
 
         // Tell the ViewModel to ensure data is loaded from the DB
         viewModel.loadWorkoutsIfNeeded()
@@ -85,6 +89,8 @@ class WorkoutSummariesListFragment : Fragment() {
         val startS = arguments?.getLong(ARG_START_S, -1L)?.takeIf { it != -1L }
         val endS = arguments?.getLong(ARG_END_S, -1L)?.takeIf { it != -1L }
 
+        if (DEBUG) Log.i(TAG, "onViewCreated(): bSportType=$bSportType, sportId=$sportId, equipId=$equipId, startS=$startS, endS=$endS")
+
         // Observe the filtered list
         viewModel.getFilteredWorkouts(
             bSportType = bSportType,
@@ -93,6 +99,7 @@ class WorkoutSummariesListFragment : Fragment() {
             startTimeS = startS,
             endTimeS = endS
         ).observe(viewLifecycleOwner) { workouts ->
+            Log.i(TAG, "observing filtered list: workouts=$workouts")
             workoutAdapter.submitList(workouts)
         }
     }
