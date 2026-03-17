@@ -259,16 +259,11 @@ class WorkoutRepository private constructor(private val application: Application
             summariesManager.getWorkoutCursor(id).use { cursor ->
                 if (cursor?.moveToFirst() == true) {
                     val workout = mapper.fromCursor(cursor)
-                    _allWorkouts.postValue(listOf(workout))
                     _initialWorkoutLoaded.postValue(workout)
 
-                    // eventually, observe the extrema calculation
                     if (workout.extremaData.isCalculating) {
-                        if (DEBUG) Log.i(TAG, "Starting to observe extrema calculation for workout ${workout.id} on main thread")
                         observeExtremaCalculation(id)
                     }
-                } else {
-                    _allWorkouts.postValue(emptyList())
                 }
             }
         }
