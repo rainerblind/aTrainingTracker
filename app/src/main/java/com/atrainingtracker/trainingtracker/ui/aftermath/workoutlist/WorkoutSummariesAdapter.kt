@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 
 import android.app.Activity
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.fragment.app.FragmentManager
@@ -47,6 +48,8 @@ class WorkoutSummariesAdapter(
 ) : ListAdapter<WorkoutData, SummaryViewHolder>(WorkoutDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SummaryViewHolder {
+        Log.i("WorkoutSummariesAdapter", "onCreateViewHolder()")
+
         val row = LayoutInflater.from(parent.context)
             .inflate(R.layout.workout_summaries_row, parent, false)
         // Create the ViewHolder and inject only the dependencies it needs for UI and event handling.
@@ -65,6 +68,8 @@ class WorkoutSummariesAdapter(
         position: Int,
         payloads: MutableList<Any>
     ) {
+        Log.i("WorkoutSummariesAdapter", "onBindViewHolder() payloads=$payloads")
+
         if (payloads.isEmpty()) {
             // If the payloads list is empty, it means this is a full bind.
             // We call the other onBindViewHolder to render the entire item from scratch.
@@ -100,6 +105,7 @@ class WorkoutSummariesAdapter(
     }
 
     override fun onBindViewHolder(holder: SummaryViewHolder, position: Int) {
+        Log.i("WorkoutSummariesAdapter", "onBindViewHolder() position=$position")
         val workoutSummary = getItem(position)
         holder.bind(workoutSummary)
     }

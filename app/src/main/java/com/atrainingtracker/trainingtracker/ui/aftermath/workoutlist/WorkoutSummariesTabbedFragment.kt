@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 
 import android.os.Bundle
 import android.text.InputType
+import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.Menu
@@ -37,10 +38,12 @@ import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.aftermath.DeletionProgress
 import com.google.android.material.tabs.TabLayoutMediator
 
@@ -51,8 +54,9 @@ import com.google.android.material.tabs.TabLayoutMediator
 class WorkoutSummariesTabbedFragment : Fragment() {
 
     companion object {
+        val DEBUG: Boolean = TrainingApplication.getDebug(true)
         @JvmField
-        var TAG: String = "WorkoutSummariesTabbedFragment"
+        val TAG: String = "WorkoutSummariesTabbedFragment"
     }
 
     // Use the Kotlin property delegate for a cleaner ViewModel initialization.
@@ -135,6 +139,7 @@ class WorkoutSummariesTabbedFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        if (DEBUG) Log.i(TAG, "onViewCreated()")
 
         // Tell the ViewModel to ensure all data is loaded from the DB
         viewModel.loadWorkouts()
@@ -187,7 +192,6 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                 progressContainer.visibility = View.GONE
             }
         }
-
 
         viewModel.showDeleteOldWorkoutsDialogEvent.observe(viewLifecycleOwner) {
             showDeleteOldWorkoutsDialog()
