@@ -213,6 +213,7 @@ class TrackingTabsFragment : Fragment() {
 
         // Observe the ActivityType from the ViewModel (which gets it from the repository)
         viewModel.activityType.observe(viewLifecycleOwner) { activityType ->
+            pagerAdapter.onActivityTypeChanged(activityType)
             attachTabLayoutMediator()
         }
 
@@ -423,6 +424,8 @@ class TrackingTabsFragment : Fragment() {
             ViewModelProvider(fragment).get(TrackingTabsViewModel::class.java)
         }
 
+        private var currentActivityType: ActivityType? = null
+
         fun updateTrackingViews(newViews: List<TrackingViewInfo>) {
             Log.i(TAG, "updateTrackingViews")
             this.trackingViews = newViews
@@ -487,8 +490,18 @@ class TrackingTabsFragment : Fragment() {
             }
         }
 
+        fun onActivityTypeChanged(newType: ActivityType) {
+            if (currentActivityType != newType) {
+                currentActivityType = newType
+                // This forces ViewPager2 to recreate fragments because the ID for position 0 will change
+                notifyDataSetChanged()
+            }
+        }
+
         override fun getItemId(position: Int): Long {
-            if (showControlTab && position == 0) return -1L
+            if (showControlTab && position == 0) {
+                return currentActivityType?.hashCode()?.toLong() ?: 0L
+            }
 
             val viewIndex = if (showControlTab) position - 1 else position
             return if (viewIndex >= 0 && viewIndex < trackingViews.size) {
