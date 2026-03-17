@@ -1033,4 +1033,7 @@
     <string name="workout_summaries_tab_run">Runs</string>
     <string name="workout_summaries_tab_other">Other</string>
     <string name="workout_summaries_loading">Loading workouts</string>
+
+    <!-- starred Strava segments -->
+    <string name="starred_segments__no_update_because_upload_to_strava_is_disabled">Not connected to Strava. -> No update of your starred Strava segments.</string>
 </resources>

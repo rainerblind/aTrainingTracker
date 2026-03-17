@@ -934,4 +934,6 @@
     <string name="workout_summaries_tab_other">Andere</string>
     <string name="workout_summaries_loading">Lade Einheiten</string>
 
+    <!-- starred Strava segments -->
+    <string name="starred_segments__no_update_because_upload_to_strava_is_disabled">Nicht mit Strava verbunden. -> Keine Aktualisierung deiner favorisiertne Segmente.</string>
 </resources>

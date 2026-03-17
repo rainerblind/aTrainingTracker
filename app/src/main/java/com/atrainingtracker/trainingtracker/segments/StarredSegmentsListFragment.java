@@ -277,7 +277,14 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
     private void initiateRefresh() {
         if (DEBUG) Log.i(TAG, "initiateRefresh");
 
-        new StravaSegmentsHelper(getContext()).getStarredStravaSegments(mSportTypeId);
+        if (TrainingApplication.uploadToStrava()) {
+            new StravaSegmentsHelper(getContext()).getStarredStravaSegments(mSportTypeId);
+        }
+        else {
+            // inform the user
+            Toast.makeText(getContext(), R.string.starred_segments__no_update_because_upload_to_strava_is_disabled, Toast.LENGTH_LONG).show();
+            onRefreshComplete();
+        }
     }
 
     private void onRefreshComplete() {
