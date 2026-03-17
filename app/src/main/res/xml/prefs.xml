@@ -283,7 +283,7 @@
                 android:title="@string/prefsNumberOfSearchTriesTitle"
                 android:defaultValue="3"
                 android:max="5"
-                android:min="1"
+                app:min="1"
                 app:showSeekBarValue="true"/>
 
             <!-- 2. Flatten the "Start Search" triggers into a category -->
