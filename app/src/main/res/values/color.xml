@@ -82,7 +82,7 @@
     <color name="little_boy_blue">#6CA0DC</color>
 
     <!-- pair button -->
-    <color name="pair_button_paired_background">#008000</color> <!-- "true" green -->
+    <color name="pair_button_paired_background">#4CAF50</color> <!-- Lighter, vibrant Material Green -->
     <color name="pair_button_unpaired_background">#E8F5E9</color> <!-- A much lighter, paler green -->
     <color name="pair_button_unpaired_text">#1B5E20</color> <!-- A very dark green for high contrast -->
     <color name="pair_button_paired_text">#FFFFFF</color> <!-- White for readability on solid green -->
