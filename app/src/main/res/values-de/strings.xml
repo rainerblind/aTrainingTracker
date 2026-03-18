@@ -70,10 +70,10 @@
     <string name="show_google_maps_licence">Google Maps Lizenz</string>
     <string name="play_services_not_installed">Google Play Services ist auf diesem Gerät nicht installiert.</string>
     <string name="Preferences">Einstellungen</string>
-    <string name="Start_Tracking">Aufzeichnung starten</string>
-    <string name="Stop_Tracking">Aufzeichnung beenden</string>
-    <string name="Pause_Tracking">Aufzeichnung pausieren</string>
-    <string name="Resume_Tracking">Aufzeichnung fortsetzen</string>
+    <string name="start_tracking">Aufzeichnung starten</string>
+    <string name="stop_tracking">Aufzeichnung beenden</string>
+    <string name="pause_tracking">Aufzeichnung pausieren</string>
+    <string name="resume_tracking">Aufzeichnung fortsetzen</string>
     <string name="start_or_resume_dialog_message">Die vorherige Aufzeichnung wurde nicht korrekt beendet.\n Soll eine neue Aufzeichnung angefangen oder die vorherige fortgesetzt werden? </string>
     <string name="start_new_workout">Neue starten</string>
     <string name="resume_workout">Vorherige fortsetzen</string>

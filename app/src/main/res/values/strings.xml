@@ -71,10 +71,10 @@
     <string name="show_google_maps_licence">Google Maps Legal Info</string>
     <string name="play_services_not_installed">Google Play services is not installed on this device.</string>
     <string name="Preferences">Preferences</string>
-    <string name="Start_Tracking">Start Tracking</string>
-    <string name="Stop_Tracking">Stop Tracking</string>
-    <string name="Pause_Tracking">Pause Tracking</string>
-    <string name="Resume_Tracking">Resume Tracking</string>
+    <string name="start_tracking">Start Tracking</string>
+    <string name="stop_tracking">Stop Tracking</string>
+    <string name="pause_tracking">Pause Tracking</string>
+    <string name="resume_tracking">Resume Tracking</string>
     <string name="start_or_resume_dialog_message">The previous workout was not finished properly.\n Do you want to start a new workout or resume the previous one?</string>
     <string name="start_new_workout">Start new</string>
     <string name="resume_workout">Resume prev.</string>
