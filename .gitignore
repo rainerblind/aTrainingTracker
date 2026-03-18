@@ -1,5 +1,11 @@
 # Local configuration file (sdk path, etc)
 local.properties
+secrets.properties
+
+# Release signing property file
+release.properties
+
+app/google-services.json
 
 # Gedit temp files
 *~
@@ -16,5 +22,3 @@ gen/
 # NetBeans IDE project files
 /.nb-gradle/private/
 
-# Release signing property file
-release.properties

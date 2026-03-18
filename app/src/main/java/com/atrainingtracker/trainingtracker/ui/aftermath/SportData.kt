@@ -24,5 +24,5 @@ data class SportData (
     val sportId: Long,
     val bSportType: BSportType,
     val sportName: String,
-    val avgSpeedMps: Float
+    val avgSpeedMps: Double
 )

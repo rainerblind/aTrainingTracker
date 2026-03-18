@@ -35,6 +35,7 @@ import com.atrainingtracker.trainingtracker.ui.tracking.LapEvent
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewInfo
+import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -89,6 +90,22 @@ class TrackingTabsViewModel(
             trackingRepository.getTrackingViewsFlow(currentActivityType)
         }
         .asLiveData(viewModelScope.coroutineContext + Dispatchers.Default)
+
+
+    // A SingleLiveEvent to navigate away from the control tracking tab to the first tracking tab when tracking is started.
+    val navigateToTrackingTab = SingleLiveEvent<Unit>()
+
+    init {
+        // Observe the tracking mode from the repository
+        viewModelScope.launch {
+            trackingRepository.trackingMode.asFlow().collect { mode ->
+                if (mode == TrackingMode.TRACKING) {
+                    Log.i("TrackingTabsViewModel", "Tracking started...")
+                    navigateToTrackingTab.call()
+                }
+            }
+        }
+    }
 
     // Method for the Fragment to set the explicit ActivityType
     fun setExplicitActivityType(type: ActivityType) {

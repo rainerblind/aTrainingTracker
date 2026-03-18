@@ -46,6 +46,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore.ZoneType
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore.Zone
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -59,7 +60,7 @@ class ZonesSettingsActivity : ComponentActivity() {
         val targetTab = intent.getIntExtra("TARGET_ZONE_TAB", 0)
 
         setContent {
-            MaterialTheme {
+            ATrainingTrackerTheme {
                 // Pass the initial tab to the route
                 SettingsScreenRoute(initialTab = targetTab)
             }

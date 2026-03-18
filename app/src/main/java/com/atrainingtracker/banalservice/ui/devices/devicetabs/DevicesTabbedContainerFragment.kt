@@ -124,6 +124,13 @@ class DevicesTabbedContainerFragment : Fragment() {
         TabLayoutMediator(binding.tabs, binding.pager) { tab, position ->
             tab.text = pagerAdapter.getPageTitle(position)
         }.attach()
+
+        //Set the initial tab from arguments
+        val startTab = arguments?.getInt(STARTING_TAB, 0) ?: 0
+        // Use post to ensure the ViewPager is fully laid out before switching tabs
+        binding.pager.post {
+            binding.pager.setCurrentItem(startTab, false)
+        }
     }
 
     override fun onPause() {
@@ -156,14 +163,17 @@ class DevicesTabbedContainerFragment : Fragment() {
     companion object {
         const val TAG = "DevicesTabContainer"
         private const val DEBUG = true // BANALService.getDebug(true)
+        private const val STARTING_TAB = "starting_tab"
 
         @JvmStatic
-        fun newInstance(protocol: Protocol, deviceType: DeviceType? = null): DevicesTabbedContainerFragment {
+        fun newInstance(protocol: Protocol, deviceType: DeviceType? = null, startingTab: Int = 0): DevicesTabbedContainerFragment {
             return DevicesTabbedContainerFragment().apply {
                 arguments = Bundle().apply {
                     putString(BANALService.PROTOCOL, protocol.name)
                     // Pass deviceType via arguments. SavedStateHandle will pick it up automatically.
                     deviceType?.let { putString(BANALService.DEVICE_TYPE, it.name) }
+                    // Save the starting tab index
+                    putInt(STARTING_TAB, startingTab)
                 }
             }
         }

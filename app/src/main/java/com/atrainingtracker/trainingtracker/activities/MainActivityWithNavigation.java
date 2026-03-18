@@ -43,12 +43,13 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 
-import com.atrainingtracker.banalservice.ui.SportTypeListFragment;
+import com.atrainingtracker.banalservice.ui.sporttype.SportTypeListFragment;
 import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedContainerFragment;
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFragmentFactory;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
 import com.atrainingtracker.trainingtracker.segments.StarredSegmentsTabbedContainer;
 import com.atrainingtracker.trainingtracker.tracker.TrackerService;
+import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentFragment;
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsFragment;
 import com.google.android.material.navigation.NavigationView;
 import androidx.core.app.ActivityCompat;
@@ -59,6 +60,7 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
@@ -92,7 +94,7 @@ import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManage
 import com.atrainingtracker.trainingtracker.dialogs.EnableBluetoothDialog;
 import com.atrainingtracker.trainingtracker.dialogs.GPSDisabledDialog;
 import com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialog;
-import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesListFragment;
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedFragment;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.MyLocationsFragment;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapTrackingFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.CloudUploadFragment;
@@ -157,7 +159,6 @@ public class MainActivityWithNavigation
     final BroadcastReceiver mStartTrackingReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            setTitle(R.string.Tracking);
             mNavigationView.getMenu().findItem(R.id.drawer_start_tracking).setTitle(R.string.Tracking);
         }
     };
@@ -167,14 +168,12 @@ public class MainActivityWithNavigation
     final BroadcastReceiver mPauseTrackingReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            setTitle(R.string.Paused);
             mNavigationView.getMenu().findItem(R.id.drawer_start_tracking).setTitle(R.string.Pause);
         }
     };
     final BroadcastReceiver mStopTrackingReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            setTitle(R.string.app_name);
             mNavigationView.getMenu().findItem(R.id.drawer_start_tracking).setTitle(R.string.Start);
 
             checkBatteryStatus();
@@ -259,16 +258,6 @@ public class MainActivityWithNavigation
         mNavigationView.setItemIconTintList(null);  // avoid converting the icons to black and white or gray and white
         mNavigationView.setNavigationItemSelectedListener(this);
 
-        if (!BANALService.isProtocolSupported(this, Protocol.BLUETOOTH_LE)) {
-            MenuItem menuItem = mNavigationView.getMenu().findItem(R.id.drawer_pairing_BTLE);
-            menuItem.setEnabled(false);
-            menuItem.setCheckable(false);
-        }
-
-        if (BANALService.isANTProperlyInstalled(this)) {
-            MenuItem menuItem = mNavigationView.getMenu().findItem(R.id.drawer_pairing_ant);
-            menuItem.setVisible(false);
-        }
 
         // getPermissions
         getPermissions(true);
@@ -603,7 +592,6 @@ public class MainActivityWithNavigation
 
         mFragment = null;
         String tag = null;
-        int titleId = R.string.app_name;
 
         switch (mSelectedFragmentId) {
             case R.id.drawer_start_tracking:
@@ -617,53 +605,36 @@ public class MainActivityWithNavigation
                 break;
 
             case R.id.drawer_segments:
-                titleId = R.string.segments;
                 mFragment = new StarredSegmentsTabbedContainer();
                 tag = StarredSegmentsTabbedContainer.TAG;
                 break;
 
             case R.id.drawer_workouts:
-                titleId = R.string.tab_workouts;
-                mFragment = new WorkoutSummariesListFragment();
-                tag = WorkoutSummariesListFragment.TAG;
-                break;
-
-            case R.id.drawer_pairing_ant:
-                titleId = R.string.pairing_ANT;
-                // fragment = DeviceTypeChoiceFragment.newInstance(Protocol.ANT_PLUS);
-                // tag = DeviceTypeChoiceFragment.TAG;
-
-                // Log.i(TAG, "PluginVersionString=" + AntPluginPcc.getInstalledPluginsVersionString(this));
-                // Log.i(TAG, "MissingDependencyName=" + AntPluginPcc.getMissingDependencyName());
-                // Log.i(TAG, "MissingDependencyPackageName=" + AntPluginPcc.getMissingDependencyPackageName());
-                // Log.i(TAG, "PATH_ANTPLUS_PLUGIN_PKG=" + AntPluginPcc.PATH_ANTPLUS_PLUGINS_PKG);
-
-                mFragment = DevicesTabbedContainerFragment.newInstance(Protocol.ANT_PLUS, null);
-                tag = DevicesTabbedContainerFragment.TAG;
-                break;
-
-            case R.id.drawer_pairing_BTLE:
-                titleId = R.string.pairing_bluetooth;
-                // fragment = DeviceTypeChoiceFragment.newInstance(Protocol.BLUETOOTH_LE);
-                // tag = DeviceTypeChoiceFragment.TAG;
-                mFragment = DevicesTabbedContainerFragment.newInstance(Protocol.BLUETOOTH_LE, null);
-                tag = DevicesTabbedContainerFragment.TAG;
+                mFragment = new WorkoutSummariesTabbedFragment();
+                tag = WorkoutSummariesTabbedFragment.TAG;
                 break;
 
             case R.id.drawer_my_sensors:
-                titleId = R.string.devices_myRemoteDevices;
-                mFragment = DevicesTabbedContainerFragment.newInstance(Protocol.ALL, DeviceType.ALL);
+                mFragment = DevicesTabbedContainerFragment.newInstance(Protocol.ALL, DeviceType.ALL, 2);
                 tag = DevicesTabbedContainerFragment.TAG;
                 break;
 
+            case R.id.drawer_bikes:
+                mFragment = EquipmentFragment.newInstance(0);
+                tag = EquipmentFragment.TAG;
+                break;
+
+            case R.id.drawer_shoes:
+                mFragment = EquipmentFragment.newInstance(1);
+                tag = EquipmentFragment.TAG;
+                break;
+
             case R.id.drawer_my_locations:
-                titleId = R.string.my_locations;
                 mFragment = new MyLocationsFragment();
                 tag = MyLocationsFragment.TAG;
                 break;
 
             case R.id.drawer_settings:
-                titleId = R.string.drawer__settings;
                 mFragment = new RootPrefsFragment();
                 tag = RootPrefsFragment.TAG;
                 break;
@@ -679,12 +650,16 @@ public class MainActivityWithNavigation
         }
 
         if (mFragment != null) {
+            // Clear the backstack before switching top-level fragments
+            // This prevents Preference fragments or other sub-screens from
+            // overlapping when the user presses 'Back' later.
+            getSupportFragmentManager().popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE);
+
             FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
             fragmentTransaction.replace(R.id.content, mFragment, tag);
             // if (addToBackStack) { fragmentTransaction.addToBackStack(null); }
             fragmentTransaction.commit();
         }
-        setTitle(titleId);
 
         return true;
     }
@@ -730,33 +705,15 @@ public class MainActivityWithNavigation
     @Override
     public void startPairing(@NonNull Protocol protocol) {
         if (DEBUG) Log.d(TAG, "startPairingActivity: " + protocol);
-        switch (protocol) {
-            case ANT_PLUS:
-                onNavigationItemSelected(mNavigationView.getMenu().findItem(R.id.drawer_pairing_ant));
-                // changeContentFragment(R.id.drawer_pairing_ant);
-                return;
 
-            case BLUETOOTH_LE:
-                onNavigationItemSelected(mNavigationView.getMenu().findItem(R.id.drawer_pairing_BTLE));
-                // changeContentFragment(R.id.drawer_pairing_BTLE);
-                return;
-        }
+        mFragment = DevicesTabbedContainerFragment.newInstance(protocol, null, 0);
+        String tag = DevicesTabbedContainerFragment.TAG;
 
-        Toast.makeText(getApplicationContext(), "TODO: must implement the startPairing for" + protocol.name(), Toast.LENGTH_SHORT).show();
+        FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
+        fragmentTransaction.replace(R.id.content, mFragment, tag);
+        fragmentTransaction.addToBackStack(null);
+        fragmentTransaction.commit();
     }
-
-    // @Override
-    // public void startWorkoutDetailsActivity(long workoutId, WorkoutDetailsActivity.SelectedFragment selectedFragment)
-    // {
-    //     if (DEBUG) Log.i(TAG, "startWorkoutDetailsActivity(" + workoutId + ")");
-
-    //     Bundle bundle = new Bundle();
-    //     bundle.putLong(WorkoutSummaries.WORKOUT_ID, workoutId);
-    //     bundle.putString(WorkoutDetailsActivity.SELECTED_FRAGMENT, selectedFragment.name());
-    //     Intent workoutDetailsIntent = new Intent(this, WorkoutDetailsActivity.class);
-    //     workoutDetailsIntent.putExtras(bundle);
-    //     startActivity(workoutDetailsIntent);
-    // }
 
     protected void checkBatteryStatus() {
         final List<DevicesDatabaseManager.NameAndBatteryPercentage> criticalBatteryDevices = DevicesDatabaseManager.getInstance(getApplicationContext()).getCriticalBatteryDevices(CRITICAL_BATTERY_LEVEL);
@@ -805,10 +762,10 @@ public class MainActivityWithNavigation
     public boolean onPreferenceStartScreen(PreferenceFragmentCompat preferenceFragmentCompat, @NonNull PreferenceScreen preferenceScreen) {
         if (DEBUG) Log.i(TAG, "onPreferenceStartScreen: " + preferenceScreen.getKey());
         String key = preferenceScreen.getKey();
-        PreferenceFragmentCompat fragment = null;
+        Fragment fragment = null;
         switch (key) {
             case "root" -> fragment = new RootPrefsFragment();
-            case "search_settings" -> fragment = new SearchFragment();
+            case "sportTypes" -> fragment = new SportTypeListFragment();
             case "cloudUpload" -> fragment = new CloudUploadFragment();
             case TrainingApplication.PREFERENCE_SCREEN_STRAVA ->
                     fragment = new StravaUploadFragment();
@@ -816,23 +773,10 @@ public class MainActivityWithNavigation
                     fragment = new RunkeeperUploadFragment();
             case TrainingApplication.PREFERENCE_SCREEN_TRAINING_PEAKS ->
                     fragment = new TrainingpeaksUploadFragment();
-            case "sportTypes" -> {
-                FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
-                ft.replace(R.id.content, new SportTypeListFragment(), preferenceScreen.getKey());
-                ft.addToBackStack(preferenceScreen.getKey());
-                ft.commit();
-                return true;
-            }
-            case "fancyWorkoutNames" -> {
-                FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
-                ft.replace(R.id.content, new FancyWorkoutNameListFragment(), preferenceScreen.getKey());
-                ft.addToBackStack(preferenceScreen.getKey());
-                ft.commit();
-                return true;
-            }
+            case "search_settings" -> fragment = new SearchFragment();
+            case "fancyWorkoutNames" -> fragment = new FancyWorkoutNameListFragment();
             default -> Log.d(TAG, "WTF: unknown key");
         }
-
 
         if (fragment != null) {
             Bundle args = new Bundle();

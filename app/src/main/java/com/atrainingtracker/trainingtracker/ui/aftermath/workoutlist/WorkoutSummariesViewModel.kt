@@ -21,23 +21,32 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.aftermath.DeletionProgress
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 
 class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(application) {
+    companion object {
+        const val DEBUG = true
+        const val TAG = "WorkoutSummariesViewModel"
+    }
 
     private val repository = WorkoutRepository.getInstance(application)
 
     val workouts: LiveData<List<WorkoutData>> = repository.allWorkouts
 
-    //
+    // Loading State
+    private val _isLoading = MutableLiveData<Boolean>(false)
+    val isLoading: LiveData<Boolean> = _isLoading
+
     // LiveData to trigger showing the "Delete Old Workouts" dialog
     val showDeleteOldWorkoutsDialogEvent = SingleLiveEvent<Unit>()
 
@@ -47,10 +56,49 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
 
     val confirmDeleteWorkoutEvent = SingleLiveEvent<Long>()
 
-    fun loadWorkouts() {
+    // only load the workouts if the list of workouts is null or empty
+    fun loadWorkoutsIfNeeded() {
+        _isLoading.value = true // Show spinner
         // Use the ViewModel's coroutine scope to launch on a background thread.
-        viewModelScope.launch(Dispatchers.IO) {
+        if (workouts.value == null || workouts.value?.isEmpty() == true) {
+            viewModelScope.launch {
+                repository.loadAllWorkouts()
+            }
+        }
+        _isLoading.value = false // Hide spinner
+    }
+
+    fun loadWorkouts() {
+        _isLoading.value = true // Show spinner
+        // Use the ViewModel's coroutine scope to launch on a background thread.
+        viewModelScope.launch {
             repository.loadAllWorkouts()
+        }
+        _isLoading.value = false // Hide spinner
+    }
+
+    /**
+     * Returns a LiveData of workouts
+     * If null, returns all workouts.
+     */
+    fun getFilteredWorkouts(
+        bSportType: BSportType? = null,
+        sportTypeId: Long? = null,
+        equipmentId: Long? = null,
+        startTimeS: Long? = null,
+        endTimeS: Long? = null
+    ): LiveData<List<WorkoutData>> {
+        return workouts.map { list ->
+            list.filter { workout ->
+                val matchesBSport = bSportType == null || workout.sportData.bSportType == bSportType
+                val matchesSportId = sportTypeId == null || workout.sportData.sportId == sportTypeId
+                val matchesEquip = equipmentId == null || workout.equipmentData.equipmentId == equipmentId
+
+                val workoutTime = workout.headerData.startTimeS
+                val matchesTime = (startTimeS == null || workoutTime >= startTimeS) && (endTimeS == null || workoutTime <= endTimeS)
+
+                matchesBSport && matchesSportId && matchesEquip && matchesTime
+            }
         }
     }
 

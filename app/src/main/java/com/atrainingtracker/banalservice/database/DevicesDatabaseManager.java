@@ -33,6 +33,7 @@ import androidx.annotation.Nullable;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
+import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.devices.BikePowerSensorsHelper;
 import com.atrainingtracker.banalservice.devices.DeviceType;
 import com.atrainingtracker.banalservice.devices.Manufacturer;
@@ -45,6 +46,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.dsi.ant.plugins.antplus.pcc.defines.BatteryStatus;
 
 import java.text.DateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
@@ -628,6 +630,58 @@ public class DevicesDatabaseManager {
                 null,
                 null,
                 null);
+    }
+
+    /**
+     * Simple data class to hold basic sensor identification.
+     */
+    public static class SimpleSensorInfo {
+        public final long id;
+        public final String name;
+
+        public SimpleSensorInfo(long id, String name) {
+            this.id = id;
+            this.name = name;
+        }
+    }
+
+    /**
+     * Returns a list of sensors filtered by the sport type.
+     *
+     * @param sportType The sport type (Cycling, Running, etc.) to filter relevant sensors.
+     * @return A list of SimpleSensorInfo objects.
+     */
+    public List<SimpleSensorInfo> getSensorsForSportType(BSportType sportType) {
+        List<SimpleSensorInfo> sensors = new ArrayList<>();
+
+        // Basic selection: Get ID and Name
+        // We filter by Name to ensure we only show devices the user has actually named/identified
+        String selection = DevicesDbHelper.NAME + " IS NOT NULL AND " + DevicesDbHelper.NAME + " != ''";
+
+        if (sportType == BSportType.BIKE) {
+            selection += " AND (" + DevicesDbHelper.DEVICE_TYPE + " LIKE 'BIKE%')";
+        }
+        else if (sportType == BSportType.RUN) {
+            selection += " AND (" + DevicesDbHelper.DEVICE_TYPE + " LIKE 'RUN%')";
+        }
+
+        Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
+                new String[]{DevicesDbHelper.C_ID, DevicesDbHelper.NAME},
+                selection,
+                null, null, null, DevicesDbHelper.NAME + " ASC");
+
+        int idCol = cursor.getColumnIndex(DevicesDbHelper.C_ID);
+        int nameCol = cursor.getColumnIndex(DevicesDbHelper.NAME);
+
+        while (cursor.moveToNext()) {
+            sensors.add(new SimpleSensorInfo(
+                    cursor.getLong(idCol),
+                    cursor.getString(nameCol)
+            ));
+        }
+        cursor.close();
+
+        return sensors;
     }
 
     public long getSpeedAndLocationGPSDeviceId() {

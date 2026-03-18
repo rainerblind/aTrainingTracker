@@ -52,7 +52,7 @@
     </string-array>
 
     <string-array name="Strava_Sport_Types_UI_Names">
-        <item>Training (Other)</item>
+        <item>Training (Andere)</item>
         <item>Radfahren</item>
         <item>Laufen</item>
         <item>Schwimmen</item>

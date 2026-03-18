@@ -418,10 +418,11 @@ public class DeviceManager {
 
                 BSportType bSportType = mBanalService.getUserSelectedBSportType();
 
-                // TODO: We should always search for BSportType.UNKNOWN devices!
                 if (!TrainingApplication.searchOnlyForSportSpecificDevices()                                       // either, the sport type is ignored
-                        || bSportType == null || bSportType == UNKNOWN                                              // or the sport type is not yet defined
-                        || bSportType == cMyRemoteDeviceCurrentlySearchingFor.getDeviceType().getSportType()) {     // or it is the correct sport type
+                        || bSportType == null || bSportType == UNKNOWN                                             // or the sport type is not yet defined
+                        || cMyRemoteDeviceCurrentlySearchingFor.getDeviceType().getSportType() == UNKNOWN          // or the device is not sport specific (e.g. a heart rate monitor)
+                        || bSportType == cMyRemoteDeviceCurrentlySearchingFor.getDeviceType().getSportType()       // or it is the correct sport type
+                ) {
                     if (DEBUG)
                         Log.i(TAG, "starting to search for the device at the head of the queue");
                     cMyRemoteDeviceCurrentlySearchingFor.startSearching();                                          // then, we start searching for this device.

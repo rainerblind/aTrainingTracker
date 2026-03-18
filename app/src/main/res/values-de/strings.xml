@@ -421,11 +421,14 @@
 
     <!-- others -->
     <string name="equipment_none">- Keins -</string>
-    <string name="equipment_all">+ Alle+ </string>
-    <string name="equipment_all_bikes">+ Alle Räder+ </string>
-    <string name="equipment_all_shoes">+ Alle Schuhe+ </string>
-    <string name="equipment_type_bike">Rad</string>
+    <string name="equipment_all">+ Alle +</string>
+    <string name="equipment_all_bikes">+ Alle Räder +</string>
+    <string name="equipment_all_shoes">+ Alle Schuhe +</string>
+    <string name="equipment_type_bike">Räder</string>
     <string name="equipment_type_shoe">Schuhe</string>
+    <string name="equipment_no_bikes">Keine Räder</string>
+    <string name="equipment_no_shoes">Keine Schuhe</string>
+
 
     <!-- dialogs -->
     <string name="SD_card_not_available">Entschuldigung, die SD Karte ist nicht verfügbar.</string>  <!-- TODO: umbenennen? -->
@@ -556,7 +559,7 @@
     <string name="configureWorkoutNameSchemes">Lege fest, wie deine Einheiten benannt werden sollen.</string>
     <string name="via_format">&#032;via %1$s</string>
     <string name="loop_around_format">&#032;nach %1$s und wieder zurück</string>
-    <string name="really_delete_workout_name_scheme">Willst du wirklich %1$s löschen?</string>
+    <string name="really_delete_format">Willst du wirklich %1$s löschen?</string>
     <string name="workout_name_scheme">Benennung der Einheiten</string>
     <string name="workout_name_schemes">Benennung der Einheiten</string>
     <string name="starred_run_segments">Laufen</string>
@@ -602,7 +605,7 @@
     <string name="startSearchOnlyManually">Nur manuell</string>
 
 
-    <string name="show_all_sport_types">Alle Sportarten</string>
+    <string name="show_all_sport_types">+ Alle Sportarten +</string>
     <string name="sport_types">Sportarten</string>
     <string name="configure_sport_types">Sportarten bearbeiten</string>
     <string name="select_sport_type_format">Wähle %1$s Sportarten</string>
@@ -871,6 +874,7 @@
     <!-- drawer -->
     <string name="drawer__training">Training</string>
     <string name="drawer__maps">Karten</string>
+    <string name="drawer__my_stuff">Mein Zeugs</string>
 
     <!-- sensor view settings -->
     <string name="source">Quelle</string>
@@ -880,4 +884,56 @@
     <string name="configure">Configure</string>
     <string name="tab_name">Name</string>
 
+    <!-- equipment -->
+    <string name="equipment_management_title">Ausrüstung</string>
+    <string name="equipment_management_title_full">Ausrüstung Bearbeiten</string>
+    <string name="equipment_management_summary">Ausrüstung bearbeiten</string>
+    <string name="prefs_manage_bikes_title">Räder</string>
+    <string name="prefs_manage_bikes_summary">Konfiguriere all deine Fahrräder</string>
+    <string name="prefs_manage_shoes_title">Schuhe</string>
+    <string name="prefs_manage_shoes_summary">Konfiguriere all deine Schuhe</string>
+    <string name="equipment_configure_equipment">Ausrüstung konfigurieren</string>
+    <string name="equipment_bike_type">Rad Typ</string>
+    <string name="equipment_select_bike_type">Wähle Rad Typ</string>
+    <string name="equipment_linked_sensors">Verknüpfte Sensoren</string>
+    <string name="equipment_no_sensors_linked">Keine verknüpften Sensoren</string>
+    <string name="equipment_sport_types">Sportarten:</string>
+    <string name="equipment_linked_sport_types">Verknüpfte Sportarten</string>
+    <string name="equipment_no_sports_linked">Keine</string>
+
+
+    <!-- statistics -->
+    <string name="stats_total">Gesamt</string>
+    <string name="stats_first_use">Erste Nutzung</string>
+    <string name="stats_last_use">Letzte Nutzung</string>
+    <string name="stats_first_activity">Erste Aktivität</string>
+    <string name="stats_last_activity">Letzte Aktivität</string>
+    <string name="stats_distance">Distanz</string>
+    <string name="stats_workouts">Einheiten</string>
+    <string name="stats_time">Zeit aktiv</string>
+    <string name="stats_ascent">Anstieg</string>
+    <string name="stats_this_week">Diese Woche</string>
+    <string name="stats_last_week">Letzte Woche</string>
+    <string name="stats_this_month">Diesen Monat</string>
+    <string name="stats_last_month">Letzten Monat</string>
+    <string name="stats_this_year">Dieses Jahr</string>
+
+    <!-- sport type -->
+    <string name="sport_type_linked_equipment">Verknüpfte Ausrüstung</string>
+    <string name="sport_type_no_equipment_linked">Keine Ausrüstung verknüpft</string>
+    <string name="sport_type_equipment">Ausrüstung</string>
+    <string name="sport_type_tab_all">Alle Sportarten</string>
+    <string name="sport_type_tab_bike">Radeln</string>
+    <string name="sport_type_tab_run">Laufen</string>
+    <string name="sport_type_tab_unknown">Andere Sportarten</string>
+
+    <!-- workout summaries tabs -->
+    <string name="workout_summaries_tab_all">Alle Einheiten</string>
+    <string name="workout_summaries_tab_bike">Radfahrten</string>
+    <string name="workout_summaries_tab_run">Läufe</string>
+    <string name="workout_summaries_tab_other">Andere</string>
+    <string name="workout_summaries_loading">Lade Einheiten</string>
+
+    <!-- starred Strava segments -->
+    <string name="starred_segments__no_update_because_upload_to_strava_is_disabled">Nicht mit Strava verbunden. -> Keine Aktualisierung deiner favorisiertne Segmente.</string>
 </resources>

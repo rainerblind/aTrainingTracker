@@ -51,10 +51,15 @@ class SingleLiveEvent<T> : MutableLiveData<T>() {
     }
 
     /**
-     * Used for cases where T is Void, to make calls cleaner.
+     * Used for cases where T is Unit (or Void), to make calls cleaner.
      */
     @MainThread
     fun call() {
-        value = null
+
+        // If T is Unit, we should send the Unit instance.
+        // If T is something else, we try to send null,
+        // but we cast it to T to satisfy the compiler.
+        @Suppress("UNCHECKED_CAST")
+        value = (Unit as? T) ?: null
     }
 }

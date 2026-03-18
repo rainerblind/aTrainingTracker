@@ -53,7 +53,7 @@
         android:title="@string/prefs_training_zones"
         android:summary="@string/prefs_training_zones_summary"
         android:layout="@layout/preference_category">
-        <!-- android:layout="@layout/preference_slim"/> -->
+
         <!-- android:icon="@drawable/ic_cardiology"/> -->
         <!-- android:icon="@drawable/ic_cardio_load"/> -->
         <!-- android:icon="@drawable/ic_heart_rate" /> ic_cell_5_bar-->
@@ -282,8 +282,8 @@
                 android:key="numberOfSearchTriesInt"
                 android:title="@string/prefsNumberOfSearchTriesTitle"
                 android:defaultValue="3"
-                android:max="10"
-                android:min="1"
+                android:max="5"
+                app:min="1"
                 app:showSeekBarValue="true"/>
 
             <!-- 2. Flatten the "Start Search" triggers into a category -->

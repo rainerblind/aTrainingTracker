@@ -21,7 +21,6 @@ package com.atrainingtracker.trainingtracker.database;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
-import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.BaseColumns;
@@ -31,11 +30,10 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.atrainingtracker.R;
+import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
-import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusRepository;
-import com.google.android.gms.maps.model.LatLng;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -79,10 +77,11 @@ public class WorkoutSummariesDatabaseManager {
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // some high level helper methods
     ////////////////////////////////////////////////////////////////////////////////////////////////
-    public void updateSportAndEquipment(long workoutId, long sportId, long equipmentId) {
+    public void updateSportAndEquipment(long workoutId, long sportId, BSportType bSportType, long equipmentId) {
 
         ContentValues values = new ContentValues();
         values.put(WorkoutSummaries.SPORT_ID, sportId);
+        values.put(WorkoutSummaries.B_SPORT, bSportType.name());
         if (equipmentId == -1) {  // when the equipmentId is -1, the link to the equipment is removed.
             values.putNull(WorkoutSummaries.EQUIPMENT_ID);
         }
@@ -125,10 +124,6 @@ public class WorkoutSummariesDatabaseManager {
                     null);
     }
 
-
-    public String getWorkoutName(long workoutId) {
-        return getString(workoutId, WorkoutSummaries.WORKOUT_NAME);
-    }
 
     public Cursor getWorkoutCursor(long workoutId) {
         return getDatabase().query(WorkoutSummaries.TABLE,
@@ -296,27 +291,6 @@ public class WorkoutSummariesDatabaseManager {
         return value;
     }
 
-
-    public boolean getBoolean(long workoutId, String key) {
-        if (DEBUG) Log.i(TAG, "getBoolean for workoutId: " + workoutId + ", " + key);
-
-        boolean result = false;
-
-        try( Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE,
-                new String[]{key},
-                WorkoutSummaries.C_ID + "=?",
-                new String[]{Long.toString(workoutId)},
-                null, null, null)) {
-
-            if (cursor.moveToFirst()) {
-                int value = cursor.getInt(cursor.getColumnIndexOrThrow(key));
-                result = value > 0;
-            }
-        }
-
-        return result;
-    }
-
     @Nullable
     public Double getExtremaValue(long workoutId, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType) {
         Double extremaValue = null;
@@ -339,82 +313,6 @@ public class WorkoutSummariesDatabaseManager {
         return extremaValue;
     }
 
-
-    /* currently unused code...
-    // TODO: make sport specific?
-    @NonNull
-    public static List<LatLng> getExtremaTypeLocations(@NonNull ExtremaType extremaType) {
-        if (DEBUG) Log.i(TAG, "getAllStartLocations");
-
-        List<LatLng> startLocations = new LinkedList<>();
-
-        SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance().getOpenDatabase();
-
-        Cursor latCursor = null;
-        Cursor lonCursor = null;
-        double latitude, longitude;
-
-        Cursor cursor = db.query(WorkoutSummaries.TABLE_EXTREMA_VALUES,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null);
-
-        while (cursor.moveToNext()) {
-
-            long workoutId = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.WORKOUT_ID));
-            if (DEBUG) Log.i(TAG, "getAllStartLocations: checking workoutId=" + workoutId);
-
-            latCursor = db.query(WorkoutSummaries.TABLE_EXTREMA_VALUES,
-                    null,
-                    WorkoutSummaries.WORKOUT_ID + "=? AND " + WorkoutSummaries.SENSOR_TYPE + "=? AND " + WorkoutSummaries.EXTREMA_TYPE + "=?",
-                    new String[]{Long.toString(workoutId), SensorType.LATITUDE.name(), extremaType.name()},
-                    null, null, null);
-            lonCursor = db.query(WorkoutSummaries.TABLE_EXTREMA_VALUES,
-                    null,
-                    WorkoutSummaries.WORKOUT_ID + "=? AND " + WorkoutSummaries.SENSOR_TYPE + "=? AND " + WorkoutSummaries.EXTREMA_TYPE + "=?",
-                    new String[]{Long.toString(workoutId), SensorType.LONGITUDE.name(), extremaType.name()},
-                    null, null, null);
-
-            if (latCursor.moveToFirst()
-                    && lonCursor.moveToFirst()
-                    && dataValid(latCursor, WorkoutSummaries.VALUE)
-                    && dataValid(lonCursor, WorkoutSummaries.VALUE)) {
-                latitude = latCursor.getDouble(latCursor.getColumnIndex(WorkoutSummaries.VALUE));
-                longitude = lonCursor.getDouble(latCursor.getColumnIndex(WorkoutSummaries.VALUE));
-                startLocations.add(new LatLng(latitude, longitude));
-                if (DEBUG) Log.i(TAG, "added start location");
-            } else if (DEBUG) {
-                Log.i(TAG, "did not add start location");
-            }
-
-            latCursor.close();
-            lonCursor.close();
-        }
-
-        cursor.close();
-        WorkoutSummariesDatabaseManager.getInstance().closeDatabase();
-
-        if (DEBUG) Log.i(TAG, "got " + startLocations.size() + " start locations");
-
-        return startLocations;
-    }
-     */
-
-
-    protected static boolean dataValid(@NonNull Cursor cursor, String string) {
-        if (cursor.getColumnIndex(string) == -1) {
-            if (DEBUG) Log.d(TAG, "dataValid: no such columnIndex!: " + string);
-            return false;
-        }
-        if (cursor.isNull(cursor.getColumnIndex(string))) {
-            if (DEBUG) Log.d(TAG, "dataValid: cursor.isNull = true for " + string);
-            return false;
-        }
-        return true;
-    }
 
     public void saveAccumulatedSensorTypes(long workoutId, @NonNull Iterable<SensorType> sensorTypes) {
         if (DEBUG) Log.i(TAG, "saveAccumulatedSensors for workoutId: " + workoutId);
@@ -454,29 +352,6 @@ public class WorkoutSummariesDatabaseManager {
     }
 
 
-    /**
-     * helper method to check whether there is some data
-     */
-
-    @NonNull
-    public List<Long> getWorkoutIds() {
-        List<Long> workoutIds = new LinkedList<>();
-
-        try(Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE,
-                new String[]{WorkoutSummaries.C_ID}, // columns
-                null, // columns,
-                null, // selection
-                null, null, null, null)) { // selectionArgs, groupBy, having, orderBy)
-
-            while (cursor.moveToNext()) {
-                long workoutId = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.C_ID));
-                workoutIds.add(workoutId);
-            }
-        }
-
-        return workoutIds;
-    }
-
     @NonNull
     public List<Long> getOldWorkouts(int days) {
         if (DEBUG) Log.i(TAG, "getOldWorkouts(" + days + ")");
@@ -498,23 +373,6 @@ public class WorkoutSummariesDatabaseManager {
         return oldWorkoutIds;
     }
 
-    @Nullable
-    public String getStartTime(long workoutId, String timeZone) {
-        if (DEBUG) Log.i(TAG, "getStartTime: workoutId=" + workoutId);
-        String startTime = null;
-
-        try(Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE, // table
-                new String[]{"datetime(" + WorkoutSummaries.TIME_START + ", '" + timeZone + "')"}, // columns
-                WorkoutSummaries.C_ID + "=?",  // selection
-                new String[]{Long.toString(workoutId)}, //selectionArgs,
-                null, null, null)) { // groupBy, having, orderBy)
-            if (cursor.moveToFirst()) {
-                startTime = cursor.getString(0);
-            }
-        }
-
-        return startTime;
-    }
 
     public String getStartTime(String fileBaseName, String timeZone) {
         if (DEBUG) Log.i(TAG, "getStartTime: fileBaseName=" + fileBaseName);
@@ -718,6 +576,125 @@ public class WorkoutSummariesDatabaseManager {
         getDatabase().delete(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS,
                 WorkoutSummaries.C_ID + " =? ",
                 new String[]{Long.toString(id)});
+    }
+
+
+    /**
+     * Getting some stats for an equipment or a sport type
+     */
+    public static class Stats {
+        public double totalDistanceM = 0;
+        public long totalActiveTimeS = 0;
+        public int totalAscentM = 0;
+        public String firstUsage = null;
+        public String lastUsage = null;
+        public int count = 0;
+    }
+
+    /**
+     * generic method to get the total Stats for a column=id
+     */
+    private Stats getStatsForColumn(String column, long id) {
+        Stats stats = new Stats();
+        SQLiteDatabase db = getDatabase();
+
+        String[] columns = {
+                "SUM(" + WorkoutSummaries.DISTANCE_TOTAL_m + ")",
+                "SUM(" + WorkoutSummaries.TIME_ACTIVE_s + ")",
+                "SUM(" + WorkoutSummaries.ASCENDING + ")",
+                "MIN(" + WorkoutSummaries.TIME_START + ")",
+                "MAX(" + WorkoutSummaries.TIME_START + ")",
+                "COUNT(*)" // count of workouts
+        };
+
+        Cursor cursor = db.query(
+                WorkoutSummaries.TABLE,
+                columns,
+                column + "=?",
+                new String[]{String.valueOf(id)},
+                null, null, null
+        );
+
+        if (cursor != null && cursor.moveToFirst()) {
+            stats.totalDistanceM = cursor.getDouble(0);
+            stats.totalActiveTimeS = cursor.getLong(1);
+            stats.totalAscentM = cursor.getInt(2);
+            stats.firstUsage = cursor.getString(3);
+            stats.lastUsage = cursor.getString(4);
+            stats.count = cursor.getInt(5); // Extract count
+            cursor.close();
+        }
+
+        return stats;
+    }
+
+    /**
+     * Aggregates workout statistics for a specific piece of equipment.
+     */
+    public Stats getEquipmentStats(long equipmentId) {
+        return getStatsForColumn(WorkoutSummaries.EQUIPMENT_ID, equipmentId);
+    }
+
+    /**
+     * Aggregates workout statistics for a specific sport type
+     */
+    public Stats getSportTypeStats(long sportTypeId) {
+        return getStatsForColumn(WorkoutSummaries.SPORT_ID, sportTypeId);
+    }
+
+
+    /**
+     * Generic method to get the Stats for a Period
+     */
+    public Stats getStatsForPeriod(String column, long equipmentId, long startTimeS, long endTimeS) {
+        Stats stats = new Stats();
+        SQLiteDatabase db = getDatabase();
+
+        String[] columns = {
+                "SUM(" + WorkoutSummaries.DISTANCE_TOTAL_m + ")",
+                "SUM(" + WorkoutSummaries.TIME_ACTIVE_s + ")",
+                "SUM(" + WorkoutSummaries.ASCENDING + ")",
+                "MIN(" + WorkoutSummaries.TIME_START + ")",
+                "MAX(" + WorkoutSummaries.TIME_START + ")",
+                "COUNT(*)"
+        };
+
+        // Compare DATETIME column against numeric unix timestamps
+        String selection = column + "=? AND " +
+                WorkoutSummaries.TIME_START + " >= datetime(?, 'unixepoch') AND " +
+                WorkoutSummaries.TIME_START + " <= datetime(?, 'unixepoch')";
+
+        String[] selectionArgs = {
+                String.valueOf(equipmentId),
+                String.valueOf(startTimeS),
+                String.valueOf(endTimeS)
+        };
+
+        try (Cursor cursor = db.query(WorkoutSummaries.TABLE, columns, selection, selectionArgs, null, null, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                stats.totalDistanceM = cursor.getDouble(0);
+                stats.totalActiveTimeS = cursor.getLong(1);
+                stats.totalAscentM = cursor.getInt(2);
+                stats.firstUsage = cursor.getString(3);
+                stats.lastUsage = cursor.getString(4);
+                stats.count = cursor.getInt(5);
+            }
+        }
+        return stats;
+    }
+
+    /**
+     * Aggregates statistics for a specific equipment within a time range.
+     */
+    public Stats getEquipmentStatsForPeriod(long equipmentId, long startTimeS, long endTimeS) {
+        return getStatsForPeriod(WorkoutSummaries.EQUIPMENT_ID, equipmentId, startTimeS, endTimeS);
+    }
+
+    /**
+     * Aggregates statistics for a specific sport type within a time range.
+     */
+    public Stats getSportTypeStatsForPeriod(long sportTypeId, long startTimeS, long endTimeS) {
+        return getStatsForPeriod(WorkoutSummaries.SPORT_ID, sportTypeId, startTimeS, endTimeS);
     }
 
 

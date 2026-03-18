@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.activities;
 
 
+import android.content.pm.ActivityInfo;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
@@ -117,8 +118,14 @@ public class SegmentDetailsActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
 
+        getWindow().getDecorView().setKeepScreenOn(TrainingApplication.keepScreenOn());
+
         if (TrainingApplication.NoUnlocking()) {
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED);
+        }
+
+        if (TrainingApplication.forcePortrait()) {
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         }
     }
 }

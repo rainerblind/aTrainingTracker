@@ -199,7 +199,7 @@ public class FancyWorkoutNameListFragment
 
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
         builder.setTitle(R.string.delete)
-                .setMessage(getContext().getString(R.string.really_delete_workout_name_scheme, fancyName))
+                .setMessage(getContext().getString(R.string.really_delete_format, fancyName))
                 .setIcon(android.R.drawable.ic_menu_delete)
                 .setPositiveButton(R.string.delete, new DialogInterface.OnClickListener() {
                     public void onClick(@NonNull DialogInterface dialog, int whichButton) {

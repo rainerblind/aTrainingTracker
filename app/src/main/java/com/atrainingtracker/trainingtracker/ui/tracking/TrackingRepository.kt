@@ -506,7 +506,7 @@ class TrackingRepository private constructor(private val application: Applicatio
         Log.i("TrackingRepository", "insertSensorFieldConfig: $tabViewId, $rowNr, $colNr")
 
         withContext(Dispatchers.IO) {
-            viewsDbManager.insertSensorFiledAt(
+            viewsDbManager.insertSensorFieldAt(
                 tabViewId,
                 rowNr,
                 colNr,

@@ -37,7 +37,7 @@
     <string name="devices_all_known_devices">Alle bekannten Sensoren</string>
 
     <!-- device_list -->
-    <string name="devices_myRemoteDevices">Meine Sensoren</string>
+    <string name="devices_myRemoteDevices">Sensoren</string>
     <!-- <string name="knownDevices">known devices</string> -->
     <string name="devices_newDevices">Neue Sensoren</string>
     <string name="devices_searchingForDevice">suche nach %1$s %2$s Sensoren</string>
