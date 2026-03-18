@@ -78,6 +78,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.RecyclerView
 import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingFragment
 import kotlin.properties.Delegates
 
 class TrackingTabsFragment : Fragment() {
@@ -480,7 +481,7 @@ class TrackingTabsFragment : Fragment() {
 
         override fun createFragment(position: Int): Fragment {
             return if (showControlTab && position == 0) {
-                ControlTrackingFragmentClassic()
+                ControlTrackingFragment()
             } else {
                 // If control tab is hidden, position 0 is trackingViews[0]
                 // If control tab is shown, position 1 is trackingViews[0]

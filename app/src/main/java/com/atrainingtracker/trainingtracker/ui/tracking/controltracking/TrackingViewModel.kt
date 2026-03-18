@@ -22,9 +22,6 @@ class TrackingViewModel(
 
     val isSearching: Boolean = true // TODO get Live Data / Flow from Repository
 
-
-
-
     /**************************************************
      * Control Sport Type
      */

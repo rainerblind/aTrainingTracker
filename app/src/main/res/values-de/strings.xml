@@ -24,6 +24,7 @@
     <string name="do_not_show_again">nicht mehr anzeigen</string>
     <string name="Cancel">Abbrechen</string>
     <string name="searching_for">suche nach</string>
+    <string name="searching_for_device_format">Suche nach  %1$s</string>
     <string name="default_device_name">irgendein ANT+ Sensor</string>
     <string name="waiting">warte</string>
     <string name="pairing_ANT">ANT+ Kopplung</string>

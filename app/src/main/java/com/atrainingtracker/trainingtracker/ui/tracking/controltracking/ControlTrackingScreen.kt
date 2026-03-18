@@ -27,7 +27,7 @@ import com.atrainingtracker.trainingtracker.TrackingMode
 @Composable
 fun ControlTrackingScreen(viewModel: TrackingViewModel) {
     val trackingMode = TrackingMode.TRACKING  // TODO: get from viewModel
-    val isSearching = true  // TODO: get from viewModel
+    val searchingFor = "Some Device"  // TODO: get from viewModel
 
     Column(
         modifier = Modifier
@@ -37,7 +37,7 @@ fun ControlTrackingScreen(viewModel: TrackingViewModel) {
     ) {
 
         SearchArea(
-            isSearching = isSearching,
+            searchingFor = searchingFor,
             onSearch = { viewModel.onSearchClicked() }
         )
 

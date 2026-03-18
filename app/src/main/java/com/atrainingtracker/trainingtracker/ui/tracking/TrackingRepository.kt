@@ -102,13 +102,13 @@ enum class ScreenMode {
  * It connects to the BANALService and the local database to provide a clean data source
  * for all ViewModels.
  */
-class TrackingRepository private constructor(private val application: Application) {
+class TrackingRepository private constructor(private val context: Context) {
 
     private val repositoryScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
-    private val viewsDbManager = TrackingViewsDatabaseManager.getInstance(application)
+    private val viewsDbManager = TrackingViewsDatabaseManager.getInstance(context)
     // Add a member for the DevicesDatabaseManager
-    private val devicesDbManager = DevicesDatabaseManager.getInstance(application)
+    private val devicesDbManager = DevicesDatabaseManager.getInstance(context)
 
     // This StateFlow acts as a signal. Changing its value will trigger a refresh of the sensor field data
     private val configUpdateTrigger = MutableStateFlow(0)
@@ -182,14 +182,14 @@ class TrackingRepository private constructor(private val application: Applicatio
         _trackingMode.postValue(TrackingMode.WAITING_FOR_BANAL_SERVICE)
 
         // Register the receiver to listen for changes from the TrainingApplication
-        application.registerReceiver(
+        context.registerReceiver(
             trackingModeReceiver,
             IntentFilter(TrainingApplication.TRACKING_STATE_CHANGED),
             Context.RECEIVER_NOT_EXPORTED // Specify that it only receives broadcasts from this app
         )
 
         // Register the receiver to listen for changes from the BANALService
-        application.registerReceiver(
+        context.registerReceiver(
             lapSummaryReceiver,
             IntentFilter(BANALService.LAP_SUMMARY),
             Context.RECEIVER_NOT_EXPORTED)
@@ -234,15 +234,15 @@ class TrackingRepository private constructor(private val application: Applicatio
     // Methods to bind and unbind to the BANALService
     fun bindToBANALService() {
         if (!isBoundToBanalService) {
-            val intent = Intent(application, BANALService::class.java)
+            val intent = Intent(context, BANALService::class.java)
             // BIND_AUTO_CREATE ensures the service is created if not already running
-            application.bindService(intent, banalServiceConnection, Context.BIND_AUTO_CREATE)
+            context.bindService(intent, banalServiceConnection, Context.BIND_AUTO_CREATE)
         }
     }
 
     fun unbindFromBANALService() {
         if (isBoundToBanalService) {
-            application.unbindService(banalServiceConnection)
+            context.unbindService(banalServiceConnection)
             isBoundToBanalService = false
             banalServiceComm = null
         }
@@ -291,7 +291,7 @@ class TrackingRepository private constructor(private val application: Applicatio
      * Loads the list of available tracking views for a given activity type from the database.
      */
     private fun getTrackingViews(activityType: ActivityType): List<TrackingViewInfo> {
-        val dbManager = TrackingViewsDatabaseManager.getInstance(application)
+        val dbManager = TrackingViewsDatabaseManager.getInstance(context)
         val viewList = mutableListOf<TrackingViewInfo>()
 
         val cursor = dbManager.database.query(
@@ -338,8 +338,8 @@ class TrackingRepository private constructor(private val application: Applicatio
 
     private fun fetchSensorFieldConfigs(tabViewId: Long): List<SensorFieldConfig> {
 
-        val dbManager = TrackingViewsDatabaseManager.getInstance(application)
-        val devicesDbManager = DevicesDatabaseManager.getInstance(application)
+        val dbManager = TrackingViewsDatabaseManager.getInstance(context)
+        val devicesDbManager = DevicesDatabaseManager.getInstance(context)
 
         val fieldList = mutableListOf<SensorFieldConfig>()
 
@@ -450,9 +450,9 @@ class TrackingRepository private constructor(private val application: Applicatio
     }
 
     fun requestNewLap() {
-        application.sendBroadcast(
+        context.sendBroadcast(
             Intent(TrainingApplication.REQUEST_NEW_LAP)
-                .setPackage(application.packageName)
+                .setPackage(context.packageName)
         )
     }
 
@@ -604,9 +604,9 @@ class TrackingRepository private constructor(private val application: Applicatio
         @Volatile
         private var INSTANCE: TrackingRepository? = null
 
-        fun getInstance(application: Application): TrackingRepository {
+        fun getInstance(context: Context): TrackingRepository {
             return INSTANCE ?: synchronized(this) {
-                val instance = TrackingRepository(application)
+                val instance = TrackingRepository(context)
                 INSTANCE = instance
                 instance
             }

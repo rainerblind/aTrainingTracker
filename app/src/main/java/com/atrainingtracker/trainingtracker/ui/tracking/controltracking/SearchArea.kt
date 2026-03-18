@@ -26,14 +26,17 @@ import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
 
 @Composable
-fun SearchArea(isSearching: Boolean, onSearch: () -> Unit) {
+fun SearchArea(
+    searchingFor: String?,  // The name of the device we are currently searching for; null when not searching.
+    onSearch: () -> Unit
+) {
     Row(
         modifier = Modifier.padding(vertical = 8.dp)
     ) {
         // The Search/Research Button
         OutlinedButton(
             onClick = onSearch,
-            enabled = !isSearching, // Disable while searching
+            enabled = searchingFor != null, // Disable while searching
             shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
             modifier = Modifier.padding(8.dp)
         ) {
@@ -57,7 +60,7 @@ fun SearchArea(isSearching: Boolean, onSearch: () -> Unit) {
             }
         }
 
-        if (isSearching) {
+        if (searchingFor != null) {
             Spacer(modifier = Modifier.height(8.dp))
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 CircularProgressIndicator(
@@ -67,9 +70,8 @@ fun SearchArea(isSearching: Boolean, onSearch: () -> Unit) {
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = stringResource(id = R.string.searching_for),   // TODO: add name of device we are searching for.
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontSize = 12.sp
+                    text = stringResource(id = R.string.searching_for_device_format, searchingFor),
+                    style = MaterialTheme.typography.headlineSmall
                 )
             }
         }
@@ -82,7 +84,7 @@ fun PreviewSearchAreaIdle() {
     MaterialTheme {
         Surface(modifier = Modifier.padding(16.dp)) {
             SearchArea(
-                isSearching = false,
+                searchingFor = null,
                 onSearch = {}
             )
         }
@@ -95,7 +97,7 @@ fun PreviewSearchAreaSearching() {
     MaterialTheme {
         Surface(modifier = Modifier.padding(16.dp)) {
             SearchArea(
-                isSearching = true,
+                searchingFor = "Some Device",
                 onSearch = {}
             )
         }
