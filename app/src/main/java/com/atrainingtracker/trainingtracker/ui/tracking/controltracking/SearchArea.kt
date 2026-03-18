@@ -1,5 +1,6 @@
 package com.atrainingtracker.trainingtracker.ui.tracking.controltracking
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -30,48 +31,50 @@ fun SearchArea(
     searchingFor: String?,  // The name of the device we are currently searching for; null when not searching.
     onSearch: () -> Unit
 ) {
-    Row(
-        modifier = Modifier.padding(vertical = 8.dp)
+    Column(
+        modifier = Modifier.padding(vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // The Search/Research Button
-        OutlinedButton(
-            onClick = onSearch,
-            enabled = searchingFor != null, // Disable while searching
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
-            modifier = Modifier.padding(8.dp)
-        ) {
-            // Using a Column inside the button to put text BELOW the image
+        if (searchingFor == null) {
+            // STATE: IDLE - Show the "No Shape" clickable icon/text
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(vertical = 4.dp)
+                modifier = Modifier
+                    .padding(8.dp)
+                    .clickable(
+                        onClick = onSearch
+                    )
+                    .padding(8.dp) // Some extra padding for a better touch target
             ) {
                 Icon(
                     painter = painterResource(id = R.drawable.research_icon),
                     contentDescription = null,
-                    modifier = Modifier.size(42.dp)
+                    modifier = Modifier.size(53.dp),
+                    tint = MaterialTheme.colorScheme.primary
                 )
-
                 Spacer(Modifier.height(4.dp))
-
                 Text(
                     text = stringResource(id = R.string.research),
-                    fontSize = 10.sp
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
         }
-
-        if (searchingFor != null) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        else {
+            // STATE: SEARCHING - Show progress and device name
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(16.dp)
+            ) {
                 CircularProgressIndicator(
-                    modifier = Modifier.size(24.dp),
+                    modifier = Modifier.size(36.dp),
                     strokeWidth = 2.dp,
                     color = MaterialTheme.colorScheme.primary
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.width(12.dp)) // Space between circle and text
                 Text(
                     text = stringResource(id = R.string.searching_for_device_format, searchingFor),
-                    style = MaterialTheme.typography.headlineSmall
+                    style = MaterialTheme.typography.titleLarge
                 )
             }
         }
