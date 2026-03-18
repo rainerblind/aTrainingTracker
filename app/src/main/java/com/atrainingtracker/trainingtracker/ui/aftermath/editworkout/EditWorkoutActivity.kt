@@ -19,9 +19,11 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.editworkout
 
 import android.app.Activity
+import android.content.pm.ActivityInfo
 import android.os.Bundle
 import android.util.Log
 import android.view.View
+import android.view.WindowManager
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
@@ -123,6 +125,22 @@ class EditWorkoutActivity : AppCompatActivity() {
 
         // Observe the LiveData from the ViewModel
         observeViewModel()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (DEBUG) Log.i(TAG, "onResume()")
+
+        getWindow().getDecorView().setKeepScreenOn(TrainingApplication.keepScreenOn());
+
+        if (TrainingApplication.NoUnlocking()) {
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED);
+        }
+
+        if (TrainingApplication.forcePortrait()) {
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        }
+
     }
 
     private fun findViews() {
