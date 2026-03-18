@@ -44,7 +44,14 @@ fun ControlTrackingScreen(viewModel: TrackingViewModel) {
         Spacer(modifier = Modifier.height(24.dp))
 
         // 3. Dynamic Control Buttons (Start/Pause/Stop)
-        ControlTrackingButton(trackingMode, viewModel)
+        ControlTrackingButton(
+            modifier = Modifier.fillMaxWidth(),
+            mode = trackingMode,
+            onStart = { viewModel.onStartTracking() },
+            onPause = { viewModel.onPauseTracking() },
+            onResume = { viewModel.onResumeTracking() },
+            onStop = { viewModel.onStopTracking() }
+        )
 
 
         Spacer(modifier = Modifier.height(16.dp))
