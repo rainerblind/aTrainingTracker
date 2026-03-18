@@ -67,41 +67,13 @@ fun ControlTrackingScreen(viewModel: TrackingViewModel) {
         Spacer(modifier = Modifier.height(24.dp))
 
         // 4. Pairing Buttons (Placed directly in this screen as requested)
-        PairingButtons(viewModel)
+        PairingButtons(
+            isAntSupported = viewModel.isAntProperlyInstalled(),
+            isBluetoothSupported = viewModel.isBluetoothSupported(),
+            onPairingClicked = { protocol -> viewModel.onPairingClicked(protocol) }
+        )
     }
 }
 
-@Composable
-fun PairingButtons(viewModel: TrackingViewModel) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly
-    ) {
-        // ANT+ Pairing Button
-        if (viewModel.isAntProperlyInstalled()) {
-            Button(onClick = { viewModel.onPairingClicked(Protocol.ANT_PLUS) }) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ant_logo),
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(text = stringResource(id = R.string.protocol_ant_plus))
-            }
-        }
 
-        // Bluetooth Pairing Button
-        if (viewModel.isBluetoothSupported()) {
-            Button(onClick = { viewModel.onPairingClicked(Protocol.BLUETOOTH_LE) }) {
-                Icon(
-                    painter = painterResource(id = R.drawable.logo_protocol_bluetooth), // Exact project drawable
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(text = stringResource(id = R.string.protocol_bluetooth))
-            }
-        }
-    }
-}
 
