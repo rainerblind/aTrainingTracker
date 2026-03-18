@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -26,9 +27,11 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 
 @Composable
-fun SportTypeSelector(viewModel: TrackingViewModel) {
-    val currentSport = BSportType.UNKNOWN  // TODO: get from viewModel
-
+fun SportTypeSelector(
+    currentSport: BSportType,
+    onSportSelected: (BSportType) -> Unit,
+    modifier: Modifier = Modifier
+) {
     // Parity with your current implementation's drawables and strings
     val sports = listOf(
         Triple(BSportType.RUN, R.drawable.bsport_run, R.string.sport_type_run),
@@ -37,7 +40,7 @@ fun SportTypeSelector(viewModel: TrackingViewModel) {
     )
 
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceEvenly,
@@ -48,7 +51,7 @@ fun SportTypeSelector(viewModel: TrackingViewModel) {
                 isSelected = currentSport == sport,
                 iconRes = iconRes,
                 labelRes = labelRes,
-                onClick = { viewModel.setSport(sport) }
+                onClick = { onSportSelected(sport) }
             )
         }
     }
@@ -64,59 +67,62 @@ private fun SportItem(
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .padding(horizontal = 4.dp)
             .clickable(onClick = onClick)
+            .padding(8.dp)
     ) {
         Icon(
             painter = painterResource(id = iconRes),
             contentDescription = null,
-            // Uses your theme's primary color when selected, otherwise a muted gray
-            tint = if (isSelected) MaterialTheme.colorScheme.primary else Color.Gray,
-            modifier = Modifier.size(32.dp)
+            // selected: No change, unselected: Muted Gray
+            tint = if (isSelected) Color.Unspecified else Color.Gray,
+            modifier = Modifier.size(60.dp)
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = stringResource(id = labelRes),
-            fontSize = 15.sp,
-            // Matches the high contrast text colors of your current UI
-            color = if (isSelected) Color.Black else Color.Gray
+            style = MaterialTheme.typography.labelMedium,
+            color = if (isSelected) MaterialTheme.colorScheme.onSurface else Color.Gray
         )
     }
 }
 
+// --- Previews ---
+
 @Preview(showBackground = true, name = "Sport Selector - Bike Selected")
 @Composable
-fun PreviewSportTypeSelector() {
+fun PreviewSportTypeSelectorBike() {
     MaterialTheme {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            // Mocking the Bike Selected state for the preview
-            SportPreviewItem(true, "BIKE")
-            SportPreviewItem(false, "RUN")
-            SportPreviewItem(false, "OTHER")
+        Surface {
+            SportTypeSelector(
+                currentSport = BSportType.BIKE,
+                onSportSelected = {}
+            )
         }
     }
 }
 
+@Preview(showBackground = true, name = "Sport Selector - Run Selected")
 @Composable
-private fun SportPreviewItem(isSelected: Boolean, label: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        // Placeholder box to represent the icon in preview
-        androidx.compose.foundation.layout.Box(
-            modifier = Modifier
-                .size(32.dp)
-                .background(
-                    if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else Color.LightGray
-                )
-        )
-        Text(
-            text = label,
-            fontSize = 15.sp,
-            color = if (isSelected) Color.Black else Color.Gray
-        )
+fun PreviewSportTypeSelectorRun() {
+    MaterialTheme {
+        Surface {
+            SportTypeSelector(
+                currentSport = BSportType.RUN,
+                onSportSelected = {}
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "Sport Selector - Other Selected")
+@Composable
+fun PreviewSportTypeSelectorOther() {
+    MaterialTheme {
+        Surface {
+            SportTypeSelector(
+                currentSport = BSportType.UNKNOWN,
+                onSportSelected = {}
+            )
+        }
     }
 }

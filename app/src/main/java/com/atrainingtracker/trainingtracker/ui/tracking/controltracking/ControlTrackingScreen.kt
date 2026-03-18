@@ -21,6 +21,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.trainingtracker.TrackingMode
 
@@ -55,7 +56,10 @@ fun ControlTrackingScreen(viewModel: TrackingViewModel) {
 
 
         Spacer(modifier = Modifier.height(16.dp))
-        SportTypeSelector(viewModel)
+        SportTypeSelector(
+            currentSport = BSportType.BIKE, // TODO: get from view model / live data
+            onSportSelected = { viewModel.setSport(it) }
+        )
 
         Spacer(modifier = Modifier.weight(1f))
 
