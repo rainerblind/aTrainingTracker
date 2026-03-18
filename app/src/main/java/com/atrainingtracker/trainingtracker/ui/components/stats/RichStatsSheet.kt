@@ -43,7 +43,8 @@ fun RichStatsSheet(
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false),
+        modifier = Modifier.fillMaxHeight() // Prevent an oscillation when the sheet is expanded
     ) {
         Column(
             modifier = Modifier
