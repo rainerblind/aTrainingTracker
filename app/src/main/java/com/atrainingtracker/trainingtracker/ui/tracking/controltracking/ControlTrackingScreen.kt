@@ -42,9 +42,13 @@ fun ControlTrackingScreen(viewModel: TrackingViewModel) {
             onSearch = { viewModel.onSearchClicked() }
         )
 
+        // TODO: Available Remote Devices
+
+        // TODO: Icons for the available sensors.
+
         Spacer(modifier = Modifier.height(24.dp))
 
-        // 3. Dynamic Control Buttons (Start/Pause/Stop)
+        // Dynamic Control Buttons (Start/Pause/Stop)
         ControlTrackingButton(
             modifier = Modifier.fillMaxWidth(),
             mode = trackingMode,
@@ -66,7 +70,7 @@ fun ControlTrackingScreen(viewModel: TrackingViewModel) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // 4. Pairing Buttons (Placed directly in this screen as requested)
+        // Pairing Buttons
         PairingButtons(
             isAntSupported = viewModel.isAntProperlyInstalled(),
             isBluetoothSupported = viewModel.isBluetoothSupported(),
