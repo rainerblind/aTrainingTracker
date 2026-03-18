@@ -45,9 +45,9 @@ import com.atrainingtracker.banalservice.helpers.UIHelper;
 import com.atrainingtracker.trainingtracker.TrackingMode;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 
-
-public class TrackingModeFragment extends Fragment {
-    private static final String TAG = TrackingModeFragment.class.getName();
+@Deprecated
+public class TrackingModeFragmentClassic extends Fragment {
+    private static final String TAG = TrackingModeFragmentClassic.class.getName();
     private static final boolean DEBUG = BANALService.getDebug(false);
 
     private LinearLayout mLLSensors;

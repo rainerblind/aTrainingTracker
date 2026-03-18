@@ -61,7 +61,7 @@ import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrackingMode
-import com.atrainingtracker.trainingtracker.fragments.ControlTrackingFragment
+import com.atrainingtracker.trainingtracker.fragments.ControlTrackingFragmentClassic
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.tracking.LapEvent
 import com.atrainingtracker.trainingtracker.ui.tracking.LapSummaryDialog
@@ -480,7 +480,7 @@ class TrackingTabsFragment : Fragment() {
 
         override fun createFragment(position: Int): Fragment {
             return if (showControlTab && position == 0) {
-                ControlTrackingFragment()
+                ControlTrackingFragmentClassic()
             } else {
                 // If control tab is hidden, position 0 is trackingViews[0]
                 // If control tab is shown, position 1 is trackingViews[0]

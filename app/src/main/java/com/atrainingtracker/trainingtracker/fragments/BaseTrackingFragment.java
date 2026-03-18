@@ -32,7 +32,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 
 public abstract class BaseTrackingFragment extends Fragment {
 
-    public static final String TAG = ControlTrackingFragment.class.getName();
+    public static final String TAG = ControlTrackingFragmentClassic.class.getName();
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
 
