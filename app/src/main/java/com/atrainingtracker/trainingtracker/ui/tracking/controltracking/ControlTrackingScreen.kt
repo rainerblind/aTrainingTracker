@@ -50,53 +50,47 @@ fun ControlTrackingScreen(
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Top Layout: [Research] | [ (SensorStatus) / (Devices + SearchArea) ]
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 8.dp),
-            verticalAlignment = Alignment.Top
+        // Top Layout: [Research] | [ (SensorStatus) / (SearchArea + Devices) ]
+        Box(modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp)
         ) {
-            // 1. Research Button on the far left
-            ResearchButton(
-                isEnabled = searchingFor == null && trackingMode != TrackingMode.TRACKING,
-                onClick = onSearch
-            )
+            // 1. Research Button - Anchored to the far left of the screen
+            Box(modifier = Modifier.align(Alignment.TopStart)) {
+                ResearchButton(
+                    isEnabled = searchingFor == null && trackingMode != TrackingMode.TRACKING,
+                    onClick = onSearch
+                )
+            }
 
-            Spacer(modifier = Modifier.width(8.dp))
-
-            // 2. Stacked Info on the right
+            // 2. The Information Area - Anchored to the MATHEMATICAL CENTER of the screen
             Column(
-                modifier = Modifier.weight(1f),
-                horizontalAlignment = Alignment.End // Aligns the status and devices to the right
+                modifier = Modifier.align(Alignment.TopCenter),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Top Stack: Sensor Status
+                // Top part: Sensors (Absolute Center)
                 SensorStatus(activeSensors = activeSensors)
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Bottom Stack: Devices and Search Status
-                Row(
+                // Bottom part: Status Text (Absolute Center) + Devices (Right of center area)
+                // We use another Box here to keep SearchArea centered while RemoteDevices is at the end
+                Box(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.End
+                    contentAlignment = Alignment.Center
                 ) {
-                    // SearchArea takes the remaining space to stay centered in its segment
-                    Box(
-                        modifier = Modifier.weight(1f),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        SearchArea(
-                            searchingFor = searchingFor,
-                            trackingMode = trackingMode
+                    SearchArea(
+                        searchingFor = searchingFor,
+                        trackingMode = trackingMode
+                    )
+
+                    // Anchors devices to the end of the screen width
+                    Box(modifier = Modifier.align(Alignment.CenterEnd)) {
+                        RemoteDevices(
+                            devices = devices,
+                            onDeviceClick = onDeviceClick
                         )
                     }
-
-                    // Remote Devices on the far right
-                    RemoteDevices(
-                        devices = devices,
-                        onDeviceClick = onDeviceClick
-                    )
                 }
             }
         }
