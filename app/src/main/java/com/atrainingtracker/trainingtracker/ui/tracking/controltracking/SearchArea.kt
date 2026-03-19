@@ -1,5 +1,7 @@
 package com.atrainingtracker.trainingtracker.ui.tracking.controltracking
 
+import android.content.res.Configuration
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,12 +10,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,8 +22,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 @Composable
 fun SearchArea(
@@ -82,28 +81,56 @@ fun SearchArea(
     }
 }
 
-@Preview(showBackground = true, name = "Idle State")
+// --- Previews ---
+
+// IDLE STATE PREVIEWS
+@Preview(showBackground = true, name = "Idle - Light")
 @Composable
 fun PreviewSearchAreaIdle() {
-    MaterialTheme {
-        Surface(modifier = Modifier.padding(16.dp)) {
-            SearchArea(
-                searchingFor = null,
-                onSearch = {}
-            )
+    // Replace with your actual project theme wrapper
+    ATrainingTrackerTheme {
+        Surface {
+            SearchArea(searchingFor = null, onSearch = {})
         }
     }
 }
 
-@Preview(showBackground = true, name = "Searching State")
+@Preview(
+    showBackground = true,
+    name = "Idle - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun PreviewSearchAreaIdleDark() {
+    // Using darkColorScheme logic (or pass darkTheme = true to your custom theme)
+    ATrainingTrackerTheme(darkTheme = true) {
+        Surface {
+            SearchArea(searchingFor = null, onSearch = {})
+        }
+    }
+}
+
+// SEARCHING STATE PREVIEWS
+@Preview(showBackground = true, name = "Searching - Light")
 @Composable
 fun PreviewSearchAreaSearching() {
-    MaterialTheme {
-        Surface(modifier = Modifier.padding(16.dp)) {
-            SearchArea(
-                searchingFor = "Some Device",
-                onSearch = {}
-            )
+    ATrainingTrackerTheme {
+        Surface {
+            SearchArea(searchingFor = "Polar H10", onSearch = {})
+        }
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "Searching - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun PreviewSearchAreaSearchingDark() {
+    ATrainingTrackerTheme(darkTheme = true) {
+        Surface {
+            SearchArea(searchingFor = "Polar H10", onSearch = {})
         }
     }
 }

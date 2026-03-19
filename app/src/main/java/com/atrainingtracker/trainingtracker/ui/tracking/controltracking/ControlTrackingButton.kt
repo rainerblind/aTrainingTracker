@@ -33,6 +33,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrackingMode
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 
 @Composable
@@ -116,7 +117,7 @@ private fun ControlItem(
             painter = painterResource(id = iconRes),
             contentDescription = null,
             modifier = Modifier.size(iconSize),
-            tint = Color.Unspecified // Keeps your original asset colors
+            tint = MaterialTheme.colorScheme.primary
         )
         Spacer(Modifier.height(8.dp))
         Text(
@@ -133,7 +134,7 @@ private fun ControlItem(
 @Preview(showBackground = true, name = "Start State")
 @Composable
 fun PreviewControlStart() {
-    MaterialTheme {
+    ATrainingTrackerTheme {
         Surface {
             ControlTrackingButton(
                 mode = TrackingMode.SEARCHING,
@@ -146,7 +147,7 @@ fun PreviewControlStart() {
 @Preview(showBackground = true, name = "Tracking State")
 @Composable
 fun PreviewControlTracking() {
-    MaterialTheme {
+    ATrainingTrackerTheme {
         Surface {
             ControlTrackingButton(
                 mode = TrackingMode.TRACKING,
@@ -159,7 +160,62 @@ fun PreviewControlTracking() {
 @Preview(showBackground = true, name = "Paused State")
 @Composable
 fun PreviewControlPaused() {
-    MaterialTheme {
+    ATrainingTrackerTheme {
+        Surface {
+            ControlTrackingButton(
+                mode = TrackingMode.PAUSED,
+                onStart = {}, onPause = {}, onResume = {}, onStop = {}
+            )
+        }
+    }
+}
+
+
+@Preview(showBackground = true, name = "Light Mode - Start")
+@Preview(
+    showBackground = true,
+    name = "Dark Mode - Start",
+    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun PreviewControlStartDark() {
+    ATrainingTrackerTheme {
+        Surface {
+            ControlTrackingButton(
+                mode = TrackingMode.WAITING_FOR_BANAL_SERVICE,
+                onStart = {}, onPause = {}, onResume = {}, onStop = {}
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "Light Mode - Tracking")
+@Preview(
+    showBackground = true,
+    name = "Dark Mode - Tracking",
+    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun PreviewControlTrackingDark() {
+    ATrainingTrackerTheme {
+        Surface {
+            ControlTrackingButton(
+                mode = TrackingMode.TRACKING,
+                onStart = {}, onPause = {}, onResume = {}, onStop = {}
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "Light Mode - Paused")
+@Preview(
+    showBackground = true,
+    name = "Dark Mode - Paused",
+    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun PreviewControlPausedDark() {
+    ATrainingTrackerTheme {
         Surface {
             ControlTrackingButton(
                 mode = TrackingMode.PAUSED,
