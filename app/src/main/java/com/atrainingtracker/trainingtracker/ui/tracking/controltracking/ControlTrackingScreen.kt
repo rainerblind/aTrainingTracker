@@ -14,6 +14,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -23,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.Protocol
+import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.TrackingMode
 
 @Composable
@@ -31,6 +33,7 @@ fun ControlTrackingScreen(viewModel: TrackingViewModel) {
     val searchingFor = "Some Device"  // TODO: get from viewModel
     val devices = listOf(
         RemoteDevice("1", "HRM-123", R.drawable.hr)) // TODO: get real data from the view model
+    val activeSensors  = emptySet<SensorType>() // TODO: get from viewModel
 
     Column(
         modifier = Modifier
@@ -52,7 +55,8 @@ fun ControlTrackingScreen(viewModel: TrackingViewModel) {
             onDeviceClick = { device -> viewModel.onDeviceClicked(device) }
         )
 
-        // TODO: Icons for the available sensors.
+        //Icons for the available sensors.
+        SensorStatusRow(activeSensors = activeSensors)
 
         Spacer(modifier = Modifier.height(24.dp))
 

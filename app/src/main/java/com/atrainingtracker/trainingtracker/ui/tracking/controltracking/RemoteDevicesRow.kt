@@ -73,6 +73,7 @@ private fun RemoteDeviceItem(
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurface
         )
+        // TODO: Add Battery State :)
     }
 }
 
