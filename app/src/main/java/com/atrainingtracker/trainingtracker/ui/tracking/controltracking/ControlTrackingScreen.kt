@@ -46,23 +46,29 @@ fun ControlTrackingScreen(
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // 1. Searching Area
-        SearchArea(
-            searchingFor = searchingFor,
-            bSportType = currentSport,
-            onSearch = onSearch
-        )
+        // Sensor Status Row
+        SensorStatusRow(activeSensors = activeSensors)
 
-        Spacer(modifier = Modifier.height(2.dp))
-
-        // 2. Available Remote Devices Row
+        // Available Remote Devices Row
         RemoteDevicesRow(
             devices = devices,
             onDeviceClick = onDeviceClick
         )
 
-        // 3. Sensor Status Row (Fixed order, dims if inactive)
-        SensorStatusRow(activeSensors = activeSensors)
+        //  Searching Area
+        SearchArea(
+            searchingFor = searchingFor,
+            bSportType = currentSport,
+            trackingMode = trackingMode
+        )
+
+        // The Research Button
+        ResearchButton(
+            isEnabled = true,
+            onClick = onSearch
+        )
+
+        Spacer(modifier = Modifier.height(2.dp))
 
 
         // Pushes the main control buttons to the bottom
