@@ -29,6 +29,7 @@ import com.atrainingtracker.R
 @Composable
 fun SearchArea(
     searchingFor: String?,  // The name of the device we are currently searching for; null when not searching.
+    // TODO: also pass something to show when we are Ready or Waiting for BANALService...
     onSearch: () -> Unit
 ) {
     Column(
