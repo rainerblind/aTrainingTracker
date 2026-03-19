@@ -1,24 +1,72 @@
 package com.atrainingtracker.trainingtracker.ui.tracking.controltracking
 
 import android.content.Context
+import androidx.activity.result.launch
+import androidx.compose.ui.input.key.type
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.Protocol
+import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
+import com.atrainingtracker.banalservice.helpers.UIHelper
 import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+
+// Data class to represent a remote device
+data class RemoteDeviceUIData(
+    val id: String,
+    val name: String,
+    val iconRes: Int
+)
+
 
 class ControlTrackingViewModel(
     private val repository: BANALServiceRepository,
     private val context: Context
 ) : ViewModel() {
 
-    val trackingMode = repository.trackingMode
 
-    val isSearching: Boolean = true // TODO get Live Data / Flow from Repository
+    val devicesDatabaseManager = DevicesDatabaseManager.getInstance(context)
+
+    val trackingMode = repository.trackingMode
+    val activeSensors = repository.activeSensors
+
+
+    // A cache of device data from the database
+    private var devicesCache: Map<Long, RemoteDeviceUIData> = emptyMap()
+
+    init {
+        // Load the database into the map once when the ViewModel starts
+        loadDevicesCache()
+    }
+
+    private fun loadDevicesCache() {
+        viewModelScope.launch(Dispatchers.IO) {
+            // No Cursors here! Just a clean list from the Manager.
+            val rawDevices = devicesDatabaseManager.allDevicesForCache
+
+            devicesCache = rawDevices.associate { item ->
+                item.id to RemoteDeviceUIData(
+                    id = item.id.toString(),
+                    name = item.name ?: "Unknown",
+                    iconRes = UIHelper.getIconId(item.type, item.protocol)
+                )
+            }
+        }
+    }
+
 
     /**************************************************
      * Control Sport Type
      */
-    // TODO Live Data or Flow for BSportType
+    val bSportType = repository.bSportType
     fun setSport(bSportType: BSportType) {
         // TODO: pass to repository
     }
@@ -26,8 +74,24 @@ class ControlTrackingViewModel(
     /*
      * Remote devices
      */
-    // TODO Live Data or Flow for RemoteDevices
-    fun onDeviceClicked(device: RemoteDevice) {
+    // This Flow combines the Service IDs with the Database Names/Icons
+    val remoteDevices: StateFlow<List<RemoteDeviceUIData>> = repository.foundDeviceIds
+        .map { ids ->
+            ids.map { id ->
+                devicesCache[id] ?: RemoteDeviceUIData(
+                    id = id.toString(),
+                    name = "New Sensor",
+                    iconRes = R.drawable.research_icon
+                )
+            }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    fun onDeviceClicked(device: RemoteDeviceUIData) {
         // TODO: pass to repository
     }
 
@@ -36,28 +100,23 @@ class ControlTrackingViewModel(
     /**************************************************
      * Searching
      */
-    // TODO: Provide Live Data or Flow for Searching
+    val searchingForDevice = repository.searchingForDevice
 
     fun onSearchClicked() {
         // TODO: pass to repository
     }
 
     fun isAntProperlyInstalled(): Boolean {
-        // TODO: pass to repository
-        return false
+        return BANALService.isANTProperlyInstalled(context)
     }
 
     fun isBluetoothSupported(): Boolean {
-        // TODO: pass to repository
-        return false
+        return BANALService.isProtocolSupported(context, Protocol.BLUETOOTH_LE)
     }
 
     fun onPairingClicked(protocol: Protocol) {
         // TODO: pass to repository
     }
-
-
-
 
 
     /***********************************************************************************************

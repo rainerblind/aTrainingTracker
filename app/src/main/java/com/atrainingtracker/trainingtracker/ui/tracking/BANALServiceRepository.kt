@@ -9,10 +9,13 @@ import android.content.ServiceConnection
 import android.os.IBinder
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.distinctUntilChanged
 import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.banalservice.BANALService
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.filters.FilterData
 import com.atrainingtracker.banalservice.filters.FilteredSensorData
+import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
@@ -20,11 +23,15 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
+
+
 
 /**
  * Represents a single lap event, holding the data needed for the summary dialog.
@@ -52,6 +59,7 @@ class BANALServiceRepository private constructor(private val context: Context) {
     private var isBoundToBanalService = false
 
 
+    // TODO: change to StateFlow?
     private val _activityType = MutableLiveData<ActivityType>(ActivityType.getDefaultActivityType())
     val activityType: LiveData<ActivityType> = _activityType
     // Note that we get the LiveData by observing the BANALServiceComm.activityType
@@ -59,6 +67,19 @@ class BANALServiceRepository private constructor(private val context: Context) {
     private val _allFilteredSensorData = MutableStateFlow<List<FilteredSensorData<*>>>(emptyList())
     val allFilteredSensorData: StateFlow<List<FilteredSensorData<*>>> = _allFilteredSensorData.asStateFlow()
     // Note that we get the filtered sensor data from the BANALServiceComm
+
+    // The name of the device the BANALService is currently searching for.
+    private val _searchingForDevice = MutableStateFlow<String?>(null)
+    val searchingForDevice: StateFlow<String?> = _searchingForDevice.asStateFlow()
+
+    private val _bSportType = MutableStateFlow<BSportType>(BSportType.UNKNOWN)
+    val bSportType: StateFlow<BSportType> = _bSportType.asStateFlow()
+
+    private val _foundDeviceIds = MutableStateFlow<List<Long>>(emptyList())
+    val foundDeviceIds: StateFlow<List<Long>> = _foundDeviceIds.asStateFlow()
+
+    private val _activeSensors = MutableStateFlow<Set<SensorType>>(emptySet())
+    val activeSensors: StateFlow<Set<SensorType>> = _activeSensors.asStateFlow()
 
 
     // -- Tracking mode
@@ -184,13 +205,20 @@ class BANALServiceRepository private constructor(private val context: Context) {
                     // Update the StateFlow using the .value property
                     _allFilteredSensorData.value = newSensorData
                 }
+
+                _searchingForDevice.value = banalServiceComm?.nameOfSearchingDevice
+                _bSportType.value = banalServiceComm?.bSportType!!
+                _foundDeviceIds.value = banalServiceComm?.idsOfFoundDevices!!
+                _activeSensors.value = banalServiceComm?.accumulatedSensorTypeSet!!
             }
         }
     }
 
-    public fun createFilter(filterData: FilterData) {
+    fun createFilter(filterData: FilterData) {
         if (banalServiceComm != null) banalServiceComm?.createFilter(filterData)
     }
+
+
 
     companion object {
         @Volatile

@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -27,13 +26,13 @@ import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 fun ControlTrackingScreen(
     trackingMode: TrackingMode,
     searchingFor: String?,
-    devices: List<RemoteDevice>,
+    devices: List<RemoteDeviceUIData>,
     activeSensors: Set<SensorType>,
     currentSport: BSportType,
     isAntSupported: Boolean,
     isBluetoothSupported: Boolean,
     onSearch: () -> Unit,
-    onDeviceClick: (RemoteDevice) -> Unit,
+    onDeviceClick: (RemoteDeviceUIData) -> Unit,
     onSportSelected: (BSportType) -> Unit,
     onStart: () -> Unit,
     onPause: () -> Unit,
@@ -112,7 +111,7 @@ fun PreviewControlTrackingScreen() {
             ControlTrackingScreen(
                 trackingMode = TrackingMode.WAITING_FOR_BANAL_SERVICE,
                 searchingFor = null,
-                devices = listOf(RemoteDevice("1", "Polar H10", R.drawable.hr)),
+                devices = listOf(RemoteDeviceUIData("1", "Polar H10", R.drawable.hr)),
                 activeSensors = setOf(SensorType.TIME_ACTIVE, SensorType.HR),
                 currentSport = BSportType.RUN,
                 isAntSupported = true,

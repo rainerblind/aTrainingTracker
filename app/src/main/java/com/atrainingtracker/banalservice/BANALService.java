@@ -57,6 +57,8 @@ import static com.atrainingtracker.trainingtracker.TrainingApplication.REQUEST_S
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 
+import javax.annotation.Nullable;
+
 public class BANALService
         extends Service {
     private static final boolean DEBUG = false;
@@ -295,6 +297,7 @@ public class BANALService
         setUserSelectedSportTypeId(SportTypeDatabaseManager.getSportTypeId(bSportType));
     }
 
+    @NonNull
     public BSportType getBSportType() {
         if (mHaveUserSelectedSportType) {
             return SportTypeDatabaseManager.getInstance(this).getBSportType(mUserSelectedSportTypeId);
@@ -529,6 +532,7 @@ public class BANALService
     public class BANALServiceComm extends Binder {
 
         // only when searching for paired device?
+        @Nullable
         public String getNameOfSearchingDevice() {
             return cDeviceManager.getNameOfSearchingDevice();
         }
@@ -582,6 +586,7 @@ public class BANALService
             return BANALService.this.getMainSensorStringValue(deviceID);
         }
 
+        @NonNull
         public BSportType getBSportType() {
             return BANALService.this.getBSportType();
         }

@@ -83,6 +83,39 @@ public class DevicesDatabaseManager {
     }
     // --- End of Singleton Pattern ---
 
+
+    // Simple helper class (can be a static inner class or separate file)
+    public static class RemoteDeviceUIDataCacheItem {
+        public long id;
+        public String name;
+        public DeviceType type;
+        public Protocol protocol;
+        public RemoteDeviceUIDataCacheItem(long id, String name, DeviceType type, Protocol protocol) {
+            this.id = id;
+            this.name = name;
+            this.type = type;
+            this.protocol = protocol;
+        }
+    }
+
+    public List<RemoteDeviceUIDataCacheItem> getAllDevicesForCache() {
+        List<RemoteDeviceUIDataCacheItem> list = new ArrayList<>();
+        Cursor cursor = getCursorForAllDevices();
+        if (cursor != null) {
+            while (cursor.moveToNext()) {
+                long id = cursor.getLong(cursor.getColumnIndex(DevicesDbHelper.C_ID));
+                String name = cursor.getString(cursor.getColumnIndex(DevicesDbHelper.NAME));
+                DeviceType deviceType = DeviceType.valueOf(cursor.getString(cursor.getColumnIndex(DevicesDbHelper.DEVICE_TYPE)));
+                Protocol protocol = Protocol.valueOf(cursor.getString(cursor.getColumnIndex(DevicesDbHelper.PROTOCOL)));
+                list.add(new RemoteDeviceUIDataCacheItem(id, name, deviceType, protocol));
+            }
+            cursor.close();
+        }
+        return list;
+    }
+
+
+
     public Cursor getDeviceCursor(long deviceId) {
         return getDatabase().query(DevicesDbHelper.DEVICES,
                 null,

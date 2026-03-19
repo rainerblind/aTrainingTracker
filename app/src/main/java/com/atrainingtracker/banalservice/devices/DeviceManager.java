@@ -77,6 +77,9 @@ import static com.atrainingtracker.banalservice.BSportType.UNKNOWN;
 
 import androidx.core.content.ContextCompat;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 
 public class DeviceManager {
     private static final String TAG = "DeviceManager";
@@ -439,6 +442,7 @@ public class DeviceManager {
         return cMyRemoteDeviceCurrentlySearchingFor;
     }
 
+    @Nullable
     public String getNameOfSearchingDevice() {
         return cMyRemoteDeviceCurrentlySearchingFor == null ? null : cMyRemoteDeviceCurrentlySearchingFor.getName();
     }
@@ -482,6 +486,7 @@ public class DeviceManager {
         searchForNextRemoteDevice();
     }
 
+    @Nonnull
     public BSportType getSportType() {
         if (DEBUG) Log.d(TAG, "getSportType");
 

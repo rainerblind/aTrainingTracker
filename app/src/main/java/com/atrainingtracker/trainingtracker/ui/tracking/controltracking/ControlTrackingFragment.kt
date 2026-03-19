@@ -5,6 +5,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModel
@@ -48,26 +51,35 @@ class ControlTrackingFragment : Fragment() {
                     }
                 )
 
+                // Collect StateFlows (using collectAsState)
+                val searchingFor by viewModel.searchingForDevice.collectAsState()
+                val devices by viewModel.remoteDevices.collectAsState()
+                val activeSensors by viewModel.activeSensors.collectAsState()
+                val bSportType by viewModel.bSportType.collectAsState()
+
+                // Collect LiveData (using observeAsState)
+                val trackingMode by viewModel.trackingMode.observeAsState(TrackingMode.WAITING_FOR_BANAL_SERVICE)
+
                 ATrainingTrackerTheme {
                     Surface {
-                    ControlTrackingScreen(
-                        trackingMode = TrackingMode.TRACKING,
-                        searchingFor = null,
-                        devices = emptyList(),
-                        activeSensors = emptySet(),
-                        currentSport = BSportType.RUN,
-                        isAntSupported = viewModel.isAntProperlyInstalled(),
-                        isBluetoothSupported = viewModel.isBluetoothSupported(),
-                        onSearch = { viewModel.onSearchClicked() },
-                        onDeviceClick = { viewModel.onDeviceClicked(it) },
-                        onSportSelected = { viewModel.setSport(it) },
-                        onStart = { viewModel.onStartTracking() },
-                        onPause = { viewModel.onPauseTracking() },
-                        onResume = { viewModel.onResumeTracking() },
-                        onStop = { viewModel.onStopTracking() },
-                        onPairingClicked = { viewModel.onPairingClicked(it) }
-                    )
-                }
+                        ControlTrackingScreen(
+                            trackingMode = trackingMode,
+                            searchingFor = searchingFor,
+                            devices = devices,
+                            activeSensors = activeSensors,
+                            currentSport = bSportType,
+                            isAntSupported = viewModel.isAntProperlyInstalled(),
+                            isBluetoothSupported = viewModel.isBluetoothSupported(),
+                            onSearch = { viewModel.onSearchClicked() },
+                            onDeviceClick = { viewModel.onDeviceClicked(it) },
+                            onSportSelected = { viewModel.setSport(it) },
+                            onStart = { viewModel.onStartTracking() },
+                            onPause = { viewModel.onPauseTracking() },
+                            onResume = { viewModel.onResumeTracking() },
+                            onStop = { viewModel.onStopTracking() },
+                            onPairingClicked = { viewModel.onPairingClicked(it) }
+                        )
+                    }
                 }
             }
         }

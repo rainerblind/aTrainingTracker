@@ -18,17 +18,11 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
-// Data class to represent a remote device
-data class RemoteDevice(
-    val id: String,
-    val name: String,
-    val iconRes: Int
-)
 
 @Composable
 fun RemoteDevicesRow(
-    devices: List<RemoteDevice>,
-    onDeviceClick: (RemoteDevice) -> Unit
+    devices: List<RemoteDeviceUIData>,
+    onDeviceClick: (RemoteDeviceUIData) -> Unit
 ) {
     // If no devices, don't show the row at all
     if (devices.isEmpty()) return
@@ -52,7 +46,7 @@ fun RemoteDevicesRow(
 
 @Composable
 private fun RemoteDeviceItem(
-    device: RemoteDevice,
+    device: RemoteDeviceUIData,
     onClick: () -> Unit
 ) {
     Column(
@@ -110,7 +104,7 @@ fun PreviewRemoteDeviceRowDark() {
 }
 
 private fun getMockDevices() = listOf(
-    RemoteDevice("1", "HRM-123", R.drawable.hr),
-    RemoteDevice("2", "Speed-X", R.drawable.bt_bike_cad),
-    RemoteDevice("3", "Cadence", R.drawable.bt_bike_pwr)
+    RemoteDeviceUIData("1", "HRM-123", R.drawable.hr),
+    RemoteDeviceUIData("2", "Speed-X", R.drawable.bt_bike_cad),
+    RemoteDeviceUIData("3", "Cadence", R.drawable.bt_bike_pwr)
 )
