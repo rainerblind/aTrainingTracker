@@ -11,7 +11,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.banalservice.BSportType
-import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingRepository
@@ -36,11 +35,11 @@ class ControlTrackingFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setContent {
                 // This correctly creates the ViewModel with its required dependencies
-                val viewModel: TrackingViewModel = viewModel(
+                val viewModel: ControlTrackingViewModel = viewModel(
                     factory = object : ViewModelProvider.Factory {
                         @Suppress("UNCHECKED_CAST")
                         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                            return TrackingViewModel(
+                            return ControlTrackingViewModel(
                                 repository,
                                 requireContext().applicationContext
                             ) as T

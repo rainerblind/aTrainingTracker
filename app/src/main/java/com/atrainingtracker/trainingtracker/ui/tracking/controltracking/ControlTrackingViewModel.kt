@@ -1,19 +1,12 @@
 package com.atrainingtracker.trainingtracker.ui.tracking.controltracking
 
-import android.bluetooth.BluetoothManager
 import android.content.Context
-import androidx.core.content.getSystemService
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.map
-import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingRepository
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
 
-class TrackingViewModel(
+class ControlTrackingViewModel(
     private val repository: TrackingRepository,
     private val context: Context
 ) : ViewModel() {
