@@ -27,8 +27,8 @@ fun SensorStatus(
         SensorType.ALTITUDE to R.drawable.ic_altitude,
         SensorType.DISTANCE_m to R.drawable.ic_distance,
         SensorType.SPEED_mps to R.drawable.ic_speed,
-        SensorType.HR to R.drawable.ic_heart_rate,
         SensorType.CADENCE to R.drawable.ic_cadence,
+        SensorType.HR to R.drawable.ic_heart_rate,
         SensorType.POWER to R.drawable.ic_power
     )
 
