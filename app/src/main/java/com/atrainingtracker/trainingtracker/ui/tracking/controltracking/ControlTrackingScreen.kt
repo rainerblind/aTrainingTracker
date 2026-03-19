@@ -55,7 +55,7 @@ fun ControlTrackingScreen(
             .fillMaxWidth()
             .padding(bottom = 8.dp)
         ) {
-            // 1. Research Button - Anchored to the far left of the screen
+            // Research Button - Anchored to the far left of the screen
             Box(modifier = Modifier.align(Alignment.TopStart)) {
                 ResearchButton(
                     isEnabled = searchingFor == null && trackingMode != TrackingMode.TRACKING,
@@ -63,7 +63,7 @@ fun ControlTrackingScreen(
                 )
             }
 
-            // 2. The Information Area - Anchored to the MATHEMATICAL CENTER of the screen
+            // The Information Area - Anchored to the MATHEMATICAL CENTER of the screen
             Column(
                 modifier = Modifier.align(Alignment.TopCenter),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -98,7 +98,7 @@ fun ControlTrackingScreen(
         // Pushes the main control buttons to the center
         Spacer(modifier = Modifier.weight(1f))
 
-        // 5. Large Control Buttons (Start/Pause/Stop)
+        // Large Control Buttons (Start/Pause/Stop)
         ControlTrackingButton(
             modifier = Modifier.fillMaxWidth(),
             mode = trackingMode,
@@ -108,18 +108,18 @@ fun ControlTrackingScreen(
             onStop = onStop
         )
 
-        // Pushes the main control buttons to the center
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.height(8.dp))
 
-        // 4. Sport Selection
+        // Sport Selection
         SportTypeSelector(
             currentSport = currentSport,
             onSportSelected = onSportSelected
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        // Pushes the main control buttons to the center
+        Spacer(modifier = Modifier.weight(1f))
 
-        // 6. Hardware Pairing Buttons
+        // Pairing Buttons
         PairingButtons(
             isAntSupported = isAntSupported,
             isBluetoothSupported = isBluetoothSupported,
