@@ -97,7 +97,8 @@ class TrackingFragment : Fragment() {
                                     application = requireActivity().application,
                                     sensorFieldId = fieldId,
                                     activityType = activityType,
-                                    repository = viewModel.trackingRepository,
+                                    trackingViewsRepository = viewModel.trackingViewsRepository,
+                                    banalServiceRepository = viewModel.banalServiceRepository,
                                     tabViewId = tabViewId,
                                     rowNr = -1,
                                     colNr = -1
@@ -121,7 +122,8 @@ class TrackingFragment : Fragment() {
                             viewModel = viewModel(
                                 factory = EditSensorFieldViewModelFactory(
                                     application = requireActivity().application,
-                                    repository = viewModel.trackingRepository,
+                                    trackingViewsRepository = viewModel.trackingViewsRepository,
+                                    banalServiceRepository = viewModel.banalServiceRepository,
                                     activityType = activityType,
                                     sensorFieldId = -1L, // Signal NEW mode
                                     tabViewId = tabViewId,

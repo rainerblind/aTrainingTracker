@@ -13,19 +13,20 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
-import com.atrainingtracker.trainingtracker.ui.tracking.TrackingRepository
+import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository
+import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
 
 class ControlTrackingFragment : Fragment() {
 
     // You likely have a way to get your repository, e.g., from your App class
     // or by instantiating it here if it doesn't exist yet.
-    private lateinit var repository: TrackingRepository
+    private lateinit var repository: BANALServiceRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Initialize your repository here.
         // Example: repository = (requireActivity().application as YourAppClass).repository
-        repository = TrackingRepository.getInstance(requireContext())
+        repository = BANALServiceRepository.getInstance(requireContext())
     }
 
     override fun onCreateView(

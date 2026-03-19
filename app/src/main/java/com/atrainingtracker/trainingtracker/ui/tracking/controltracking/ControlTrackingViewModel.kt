@@ -4,10 +4,10 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.Protocol
-import com.atrainingtracker.trainingtracker.ui.tracking.TrackingRepository
+import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository
 
 class ControlTrackingViewModel(
-    private val repository: TrackingRepository,
+    private val repository: BANALServiceRepository,
     private val context: Context
 ) : ViewModel() {
 
