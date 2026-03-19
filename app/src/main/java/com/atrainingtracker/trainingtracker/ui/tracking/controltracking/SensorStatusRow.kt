@@ -53,7 +53,7 @@ fun SensorStatusRow(
                     painter = painterResource(id = iconRes),
                     contentDescription = null,
                     modifier = Modifier.size(24.dp),
-                    tint = if (isAvailable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                    tint = if (isAvailable) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline
                 )
             }
         }
