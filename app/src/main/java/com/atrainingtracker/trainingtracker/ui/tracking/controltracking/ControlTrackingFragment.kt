@@ -4,11 +4,16 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.compose.material3.Surface
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.TrackingMode
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingRepository
 
 class ControlTrackingFragment : Fragment() {
@@ -43,10 +48,26 @@ class ControlTrackingFragment : Fragment() {
                     }
                 )
 
-                // Apply your Material Theme wrapper here if you have one
-                androidx.compose.material3.MaterialTheme {
-                    // Your new Compose Screen
-                    ControlTrackingScreen(viewModel)
+                ATrainingTrackerTheme {
+                    Surface {
+                    ControlTrackingScreen(
+                        trackingMode = TrackingMode.TRACKING,
+                        searchingFor = null,
+                        devices = emptyList(),
+                        activeSensors = emptySet(),
+                        currentSport = BSportType.RUN,
+                        isAntSupported = viewModel.isAntProperlyInstalled(),
+                        isBluetoothSupported = viewModel.isBluetoothSupported(),
+                        onSearch = { viewModel.onSearchClicked() },
+                        onDeviceClick = { viewModel.onDeviceClicked(it) },
+                        onSportSelected = { viewModel.setSport(it) },
+                        onStart = { viewModel.onStartTracking() },
+                        onPause = { viewModel.onPauseTracking() },
+                        onResume = { viewModel.onResumeTracking() },
+                        onStop = { viewModel.onStopTracking() },
+                        onPairingClicked = { viewModel.onPairingClicked(it) }
+                    )
+                }
                 }
             }
         }

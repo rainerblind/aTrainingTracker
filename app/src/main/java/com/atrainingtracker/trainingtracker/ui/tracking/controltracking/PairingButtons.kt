@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import android.content.res.Configuration
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.Protocol
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 @Composable
 fun PairingButtons(
@@ -73,7 +74,7 @@ private fun PairingItem(
             modifier = Modifier.size(48.dp),
             tint = Color.Unspecified
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(4.dp))
         Text(
             text = stringResource(id = labelRes),
             style = MaterialTheme.typography.labelMedium
@@ -86,7 +87,7 @@ private fun PairingItem(
 @Preview(showBackground = true, name = "Both Supported")
 @Composable
 fun PreviewPairingBoth() {
-    MaterialTheme {
+    ATrainingTrackerTheme {
         Surface {
             PairingButtons(
                 isAntSupported = true,
@@ -100,7 +101,7 @@ fun PreviewPairingBoth() {
 @Preview(showBackground = true, name = "Only Bluetooth")
 @Composable
 fun PreviewPairingBluetoothOnly() {
-    MaterialTheme {
+    ATrainingTrackerTheme {
         Surface {
             PairingButtons(
                 isAntSupported = false,
@@ -114,7 +115,7 @@ fun PreviewPairingBluetoothOnly() {
 @Preview(showBackground = true, name = "None Supported")
 @Composable
 fun PreviewPairingNone() {
-    MaterialTheme {
+    ATrainingTrackerTheme {
         Surface {
             PairingButtons(
                 isAntSupported = false,
@@ -133,7 +134,7 @@ fun PreviewPairingNone() {
 )
 @Composable
 fun PreviewPairingBothDark() {
-    MaterialTheme {
+    ATrainingTrackerTheme(darkTheme = true) {
         Surface {
             PairingButtons(isAntSupported = true, isBluetoothSupported = true, onPairingClicked = {})
         }
@@ -147,7 +148,7 @@ fun PreviewPairingBothDark() {
 )
 @Composable
 fun PreviewPairingBluetoothOnlyDark() {
-    MaterialTheme {
+    ATrainingTrackerTheme(darkTheme = true) {
         Surface {
             PairingButtons(isAntSupported = false, isBluetoothSupported = true, onPairingClicked = {})
         }
@@ -161,7 +162,7 @@ fun PreviewPairingBluetoothOnlyDark() {
 )
 @Composable
 fun PreviewPairingNoneDark() {
-    MaterialTheme {
+    ATrainingTrackerTheme(darkTheme = true) {
         Surface {
             PairingButtons(isAntSupported = false, isBluetoothSupported = false, onPairingClicked = {})
         }

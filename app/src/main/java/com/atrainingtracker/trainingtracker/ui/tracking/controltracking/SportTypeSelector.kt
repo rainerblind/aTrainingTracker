@@ -43,7 +43,7 @@ fun SportTypeSelector(
         modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly,
+        horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically
     ) {
         sports.forEach { (sport, iconRes, labelRes) ->
@@ -73,9 +73,8 @@ private fun SportItem(
         Icon(
             painter = painterResource(id = iconRes),
             contentDescription = null,
-            // selected: No change, unselected: Muted Gray
-            tint = if (isSelected) Color.Unspecified else Color.Gray,
-            modifier = Modifier.size(60.dp)
+            tint = if (isSelected) Color.Unspecified else Color.Gray, // selected: No change, unselected: Muted Gray
+            modifier = Modifier.size(48.dp)
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
