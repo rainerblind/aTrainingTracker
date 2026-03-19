@@ -20,7 +20,7 @@ import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 
 @Composable
-fun RemoteDevicesRow(
+fun RemoteDevices(
     devices: List<RemoteDeviceUIData>,
     onDeviceClick: (RemoteDeviceUIData) -> Unit
 ) {
@@ -82,7 +82,7 @@ fun PreviewRemoteDeviceRow() {
     // Usually located in ui.theme package
     ATrainingTrackerTheme(darkTheme = false) {
         Surface {
-            RemoteDevicesRow(devices = mockDevices, onDeviceClick = {})
+            RemoteDevices(devices = mockDevices, onDeviceClick = {})
         }
     }
 }
@@ -98,7 +98,7 @@ fun PreviewRemoteDeviceRowDark() {
     // Explicitly set darkTheme = true
     ATrainingTrackerTheme(darkTheme = true) {
         Surface {
-            RemoteDevicesRow(devices = mockDevices, onDeviceClick = {})
+            RemoteDevices(devices = mockDevices, onDeviceClick = {})
         }
     }
 }

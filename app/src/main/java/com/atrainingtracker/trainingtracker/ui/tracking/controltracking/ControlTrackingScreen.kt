@@ -1,6 +1,7 @@
 package com.atrainingtracker.trainingtracker.ui.tracking.controltracking
 
 import android.content.res.Configuration
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 
 import androidx.compose.foundation.layout.Column
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -48,34 +50,55 @@ fun ControlTrackingScreen(
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Sensor Status Row
-        SensorStatusRow(activeSensors = activeSensors)
-
-        // Combined Row: [Research] --- [Status Area] --- [Devices]
+        // Top Layout: [Research] | [ (SensorStatus) / (Devices + SearchArea) ]
         Row(
             modifier = Modifier
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+                .fillMaxWidth()
+                .padding(bottom = 8.dp),
+            verticalAlignment = Alignment.Top
         ) {
-            // Research Button on the left
+            // 1. Research Button on the far left
             ResearchButton(
                 isEnabled = searchingFor == null && trackingMode != TrackingMode.TRACKING,
                 onClick = onSearch
             )
 
-            // SearchArea in the middle (weighted to fill and center text)
-            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                SearchArea(
-                    searchingFor = searchingFor,
-                    trackingMode = trackingMode,
-                )
-            }
+            Spacer(modifier = Modifier.width(8.dp))
 
-            // Remote Devices on the right
-            RemoteDevicesRow(
-                devices = devices,
-                onDeviceClick = onDeviceClick
-            )
+            // 2. Stacked Info on the right
+            Column(
+                modifier = Modifier.weight(1f),
+                horizontalAlignment = Alignment.End // Aligns the status and devices to the right
+            ) {
+                // Top Stack: Sensor Status
+                SensorStatus(activeSensors = activeSensors)
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Bottom Stack: Devices and Search Status
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    // SearchArea takes the remaining space to stay centered in its segment
+                    Box(
+                        modifier = Modifier.weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        SearchArea(
+                            searchingFor = searchingFor,
+                            trackingMode = trackingMode
+                        )
+                    }
+
+                    // Remote Devices on the far right
+                    RemoteDevices(
+                        devices = devices,
+                        onDeviceClick = onDeviceClick
+                    )
+                }
+            }
         }
 
         // Pushes the main control buttons to the center

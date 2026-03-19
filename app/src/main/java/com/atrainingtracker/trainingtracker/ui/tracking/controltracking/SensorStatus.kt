@@ -16,7 +16,7 @@ import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 
 @Composable
-fun SensorStatusRow(
+fun SensorStatus(
     activeSensors: Set<SensorType>,
     modifier: Modifier = Modifier
 ) {
@@ -67,7 +67,7 @@ fun SensorStatusRow(
 fun PreviewSensorStatusRow() {
     ATrainingTrackerTheme {
         Surface {
-            SensorStatusRow(activeSensors = setOf(SensorType.TIME_ACTIVE, SensorType.HR))
+            SensorStatus(activeSensors = setOf(SensorType.TIME_ACTIVE, SensorType.HR))
         }
     }
 }
@@ -77,7 +77,7 @@ fun PreviewSensorStatusRow() {
 fun PreviewSensorStatusRowDark() {
     ATrainingTrackerTheme(darkTheme = true) {
         Surface {
-            SensorStatusRow(activeSensors = setOf(SensorType.TIME_ACTIVE, SensorType.DISTANCE_m))
+            SensorStatus(activeSensors = setOf(SensorType.TIME_ACTIVE, SensorType.DISTANCE_m))
         }
     }
 }
