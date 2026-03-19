@@ -30,6 +30,15 @@ class TrackingViewModel(
         // TODO: pass to repository
     }
 
+    /*
+     * Remote devices
+     */
+    // TODO Live Data or Flow for RemoteDevices
+    fun onDeviceClicked(device: RemoteDevice) {
+        // TODO: pass to repository
+    }
+
+
 
     /**************************************************
      * Searching

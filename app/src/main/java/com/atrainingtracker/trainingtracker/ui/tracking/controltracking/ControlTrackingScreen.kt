@@ -29,6 +29,8 @@ import com.atrainingtracker.trainingtracker.TrackingMode
 fun ControlTrackingScreen(viewModel: TrackingViewModel) {
     val trackingMode = TrackingMode.TRACKING  // TODO: get from viewModel
     val searchingFor = "Some Device"  // TODO: get from viewModel
+    val devices = listOf(
+        RemoteDevice("1", "HRM-123", R.drawable.hr)) // TODO: get real data from the view model
 
     Column(
         modifier = Modifier
@@ -36,13 +38,19 @@ fun ControlTrackingScreen(viewModel: TrackingViewModel) {
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-
+        // Searching State Area
         SearchArea(
             searchingFor = searchingFor,
             onSearch = { viewModel.onSearchClicked() }
         )
 
-        // TODO: Available Remote Devices
+        Spacer(modifier = Modifier.height(2.dp))
+
+        // Available Remote Devices
+        RemoteDevicesRow(
+            devices = devices,
+            onDeviceClick = { device -> viewModel.onDeviceClicked(device) }
+        )
 
         // TODO: Icons for the available sensors.
 
