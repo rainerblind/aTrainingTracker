@@ -4,6 +4,7 @@ import android.content.res.Configuration
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -33,41 +34,32 @@ import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 @Composable
 fun SearchArea(
     searchingFor: String?,
-    bSportType: BSportType,
-    onSearch: () -> Unit
+    trackingMode: TrackingMode,
+    bSportType: BSportType
 ) {
-    Row(
+    // Hide entirely when tracking or paused
+    if (trackingMode == TrackingMode.TRACKING || trackingMode == TrackingMode.PAUSED) {
+        return
+    }
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Start
+            .padding(vertical = 16.dp),
+        contentAlignment = Alignment.Center
     ) {
-        // Always on the left: The Research Button
-        ResearchButton(
-            isEnabled = searchingFor == null,
-            onSearch = onSearch
-        )
-
-        Spacer(modifier = Modifier.width(16.dp))
-
-        // Dynamic Status Area
-        Column(verticalArrangement = Arrangement.Center) {
-
-            if (searchingFor != null) {
-                StatusInfo(
-                    text = stringResource(R.string.searching_for_device_format, searchingFor),
-                    showProgress = true
-                )
-            }
-            else {
-                val actionText = stringResource(id = getReadyActionString(bSportType))
-                Text(
-                    text = actionText,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
+        if (searchingFor != null) {
+            StatusInfo(
+                text = stringResource(R.string.searching_for_device_format, searchingFor),
+                showProgress = true
+            )
+        } else {
+            val actionText = stringResource(id = getReadyActionString(bSportType))
+            Text(
+                text = actionText,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
         }
     }
 }
@@ -83,28 +75,7 @@ private fun getReadyActionString(type: BSportType): Int {
     }
 }
 
-@Composable
-private fun ResearchButton(isEnabled: Boolean, onSearch: () -> Unit) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .clickable(enabled = isEnabled, onClick = onSearch)
-            .padding(8.dp)
-    ) {
-        Icon(
-            painter = painterResource(id = R.drawable.research_icon),
-            contentDescription = null,
-            modifier = Modifier.size(48.dp),
-            tint = if (isEnabled) MaterialTheme.colorScheme.primary else Color.Gray.copy(alpha = 0.4f)
-        )
-        Spacer(Modifier.height(2.dp))
-        Text(
-            text = stringResource(id = R.string.research),
-            style = MaterialTheme.typography.labelSmall,
-            color = if (isEnabled) MaterialTheme.colorScheme.onSurface else Color.Gray
-        )
-    }
-}
+
 
 @Composable
 private fun StatusInfo(
@@ -138,14 +109,6 @@ private fun StatusInfo(
     }
 }
 
-private fun getSportIcon(type: BSportType): Int {
-    return when (type) {
-        BSportType.RUN -> R.drawable.bsport_run
-        BSportType.BIKE -> R.drawable.bsport_bike
-        else -> R.drawable.bsport_other
-    }
-}
-
 // --- Previews ---
 
 @Preview(showBackground = true, name = "Tracking - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
@@ -156,7 +119,7 @@ fun PreviewSearchAreaTrackingDark() {
             SearchArea(
                 searchingFor = null,
                 bSportType = BSportType.BIKE,
-                onSearch = {}
+                trackingMode = TrackingMode.TRACKING
             )
         }
     }
@@ -171,7 +134,7 @@ fun PreviewSearchAreaSearching() {
             SearchArea(
                 searchingFor = "Polar H10",
                 bSportType = BSportType.RUN,
-                onSearch = {}
+                trackingMode = TrackingMode.READY
             )
         }
     }
@@ -184,7 +147,7 @@ fun PreviewSearchAreaReady() {
             SearchArea(
                 searchingFor = null,
                 bSportType = BSportType.RUN,
-                onSearch = {}
+                trackingMode = TrackingMode.READY
             )
         }
     }
@@ -197,7 +160,7 @@ fun PreviewSearchAreaTracking() {
             SearchArea(
                 searchingFor = null,
                 bSportType = BSportType.RUN,
-                onSearch = {}
+                trackingMode = TrackingMode.TRACKING
             )
         }
     }
@@ -210,7 +173,7 @@ fun PreviewSearchAreaPaused() {
             SearchArea(
                 searchingFor = null,
                 bSportType = BSportType.RUN,
-                onSearch = {}
+                trackingMode = TrackingMode.PAUSED
             )
         }
     }
