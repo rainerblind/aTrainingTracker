@@ -13,11 +13,9 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository
-import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
 
 class ControlTrackingFragment : Fragment() {
 
@@ -58,7 +56,7 @@ class ControlTrackingFragment : Fragment() {
                 val bSportType by viewModel.bSportType.collectAsState()
 
                 // Collect LiveData (using observeAsState)
-                val trackingMode by viewModel.trackingMode.observeAsState(TrackingMode.WAITING_FOR_BANAL_SERVICE)
+                val trackingMode by viewModel.trackingMode.observeAsState(TrackingMode.READY)
 
                 ATrainingTrackerTheme {
                     Surface {

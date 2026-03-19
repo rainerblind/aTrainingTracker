@@ -147,7 +147,7 @@ public class TrackingModeFragmentClassic extends Fragment {
         // get a meaningful name for the sensorString and sportId
         String sensorString;
         long sportTypeId;
-        if (banalServiceComm == null) {
+        /* if (banalServiceComm == null) {
             trackingMode = TrackingMode.WAITING_FOR_BANAL_SERVICE;
             sensorString = "---------";
             sportTypeId = TrackingMode.WAITING_FOR_BANAL_SERVICE.getSportId(BSportType.UNKNOWN);
@@ -164,6 +164,7 @@ public class TrackingModeFragmentClassic extends Fragment {
         mTVTitle.setText(trackingMode.getTitleId());
         mTVSubTitle.setText(SportTypeDatabaseManager.getInstance(requireContext()).getUIName(sportTypeId));
         mTVSensors.setText(sensorString);
+         */
 
         // update the list of available sensors
         mLLSensors.removeAllViews();
@@ -180,10 +181,10 @@ public class TrackingModeFragmentClassic extends Fragment {
 
         // show the Searching View depending on the TrackingMode
         switch (trackingMode) {
-            case WAITING_FOR_BANAL_SERVICE:
-            case SEARCHING:
-                mPBSearching.setVisibility(View.VISIBLE);
-                break;
+            // case WAITING_FOR_BANAL_SERVICE:
+            // case SEARCHING:
+            //    mPBSearching.setVisibility(View.VISIBLE);
+            //    break;
 
             case READY:
             case TRACKING:

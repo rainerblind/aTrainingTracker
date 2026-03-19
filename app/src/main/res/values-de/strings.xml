@@ -937,4 +937,10 @@
 
     <!-- starred Strava segments -->
     <string name="starred_segments__no_update_because_upload_to_strava_is_disabled">Nicht mit Strava verbunden. -> Keine Aktualisierung deiner favorisiertne Segmente.</string>
+
+    <!-- Control tracking -->
+    <string name="control_tracking_connecting">Connecting…</string>
+    <string name="control_tracking_ready_run">Bereit zu Laufen</string>
+    <string name="control_tracking_ready_bike">Bereit zum Radeln</string>
+    <string name="control_tracking_ready_other">Bereit zum Training</string>
 </resources>

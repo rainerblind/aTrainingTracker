@@ -60,8 +60,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.atrainingtracker.R
-import com.atrainingtracker.trainingtracker.TrackingMode
-import com.atrainingtracker.trainingtracker.fragments.ControlTrackingFragmentClassic
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.tracking.LapEvent
 import com.atrainingtracker.trainingtracker.ui.tracking.LapSummaryDialog
@@ -77,6 +75,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.RecyclerView
 import com.atrainingtracker.banalservice.ActivityType
+import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingFragment
 import kotlin.properties.Delegates
@@ -259,7 +258,7 @@ class TrackingTabsFragment : Fragment() {
         }
 
         // Observe TrackingMode to update the tab text of the first tab (the control tracking fragment)
-        viewModel.trackingMode.observe(viewLifecycleOwner) { _ ->
+        viewModel.trackingMode.observe(viewLifecycleOwner) { trackingMode ->
             if (isExplicitMode) return@observe // when in explicit mode, there is no control tracking fragment, so we immediately return.
 
             if (::tabLayout.isInitialized && ::pagerAdapter.isInitialized) {

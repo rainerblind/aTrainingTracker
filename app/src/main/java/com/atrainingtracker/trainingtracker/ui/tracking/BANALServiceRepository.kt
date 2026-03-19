@@ -7,9 +7,9 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.ServiceConnection
 import android.os.IBinder
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.distinctUntilChanged
 import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.BSportType
@@ -23,11 +23,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 
@@ -121,7 +119,7 @@ class BANALServiceRepository private constructor(private val context: Context) {
         // Set a default value when the repository is created
         _activityType.postValue(ActivityType.getDefaultActivityType())
 
-        _trackingMode.postValue(TrackingMode.WAITING_FOR_BANAL_SERVICE)
+        _trackingMode.postValue(TrackingMode.READY)
 
         // Register the receiver to listen for changes from the TrainingApplication
         context.registerReceiver(
@@ -210,6 +208,9 @@ class BANALServiceRepository private constructor(private val context: Context) {
                 _bSportType.value = banalServiceComm?.bSportType!!
                 _foundDeviceIds.value = banalServiceComm?.idsOfFoundDevices!!
                 _activeSensors.value = banalServiceComm?.accumulatedSensorTypeSet!!
+
+                if (DEBUG) Log.i(TAG, "BANALService:\n _searchingForDevice.value: ${_searchingForDevice.value},\n _bSportType.value: ${_bSportType.value},\n _foundDeviceIds.value: ${_foundDeviceIds.value}},\n _activeSensors.value: ${_activeSensors.value}")
+                if (DEBUG) Log.i(TAG, "trackingMode: ${_trackingMode.value}")
             }
         }
     }
@@ -221,6 +222,9 @@ class BANALServiceRepository private constructor(private val context: Context) {
 
 
     companion object {
+        private const val TAG = "BANALServiceRepository"
+        private val DEBUG = BANALService.getDebug(true)
+
         @Volatile
         private var INSTANCE: BANALServiceRepository? = null
 

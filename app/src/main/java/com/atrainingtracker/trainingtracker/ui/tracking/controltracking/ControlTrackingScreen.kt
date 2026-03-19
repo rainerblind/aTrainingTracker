@@ -49,6 +49,7 @@ fun ControlTrackingScreen(
         // 1. Searching Area
         SearchArea(
             searchingFor = searchingFor,
+            bSportType = currentSport,
             onSearch = onSearch
         )
 
@@ -109,7 +110,7 @@ fun PreviewControlTrackingScreen() {
     ATrainingTrackerTheme {
         Surface {
             ControlTrackingScreen(
-                trackingMode = TrackingMode.WAITING_FOR_BANAL_SERVICE,
+                trackingMode = TrackingMode.READY,
                 searchingFor = null,
                 devices = listOf(RemoteDeviceUIData("1", "Polar H10", R.drawable.hr)),
                 activeSensors = setOf(SensorType.TIME_ACTIVE, SensorType.HR),
