@@ -35,7 +35,7 @@ fun RemoteDevicesRow(
             modifier = Modifier.fillMaxWidth(),
             // Center items when there are few, scroll when there are many
             horizontalArrangement = Arrangement.Center,
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)
         ) {
             items(devices) { device ->
                 RemoteDeviceItem(device = device, onClick = { onDeviceClick(device) })

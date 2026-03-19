@@ -35,7 +35,6 @@ import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 fun SearchArea(
     searchingFor: String?,
     trackingMode: TrackingMode,
-    bSportType: BSportType
 ) {
     // Hide entirely when tracking or paused
     if (trackingMode == TrackingMode.TRACKING || trackingMode == TrackingMode.PAUSED) {
@@ -45,7 +44,7 @@ fun SearchArea(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 16.dp),
+            .padding(vertical = 4.dp),
         contentAlignment = Alignment.Center
     ) {
         if (searchingFor != null) {
@@ -53,28 +52,9 @@ fun SearchArea(
                 text = stringResource(R.string.searching_for_device_format, searchingFor),
                 showProgress = true
             )
-        } else {
-            val actionText = stringResource(id = getReadyActionString(bSportType))
-            Text(
-                text = actionText,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
         }
     }
 }
-
-/**
- * Helper to map BSportType to the "ready" action strings from strings.xml
- */
-private fun getReadyActionString(type: BSportType): Int {
-    return when (type) {
-        BSportType.RUN -> R.string.control_tracking_ready_run
-        BSportType.BIKE -> R.string.control_tracking_ready_bike
-        else -> R.string.control_tracking_ready_other
-    }
-}
-
 
 
 @Composable
@@ -118,7 +98,6 @@ fun PreviewSearchAreaTrackingDark() {
         Surface {
             SearchArea(
                 searchingFor = null,
-                bSportType = BSportType.BIKE,
                 trackingMode = TrackingMode.TRACKING
             )
         }
@@ -133,7 +112,6 @@ fun PreviewSearchAreaSearching() {
         Surface {
             SearchArea(
                 searchingFor = "Polar H10",
-                bSportType = BSportType.RUN,
                 trackingMode = TrackingMode.READY
             )
         }
@@ -146,7 +124,6 @@ fun PreviewSearchAreaReady() {
         Surface {
             SearchArea(
                 searchingFor = null,
-                bSportType = BSportType.RUN,
                 trackingMode = TrackingMode.READY
             )
         }
@@ -159,7 +136,6 @@ fun PreviewSearchAreaTracking() {
         Surface {
             SearchArea(
                 searchingFor = null,
-                bSportType = BSportType.RUN,
                 trackingMode = TrackingMode.TRACKING
             )
         }
@@ -172,7 +148,6 @@ fun PreviewSearchAreaPaused() {
         Surface {
             SearchArea(
                 searchingFor = null,
-                bSportType = BSportType.RUN,
                 trackingMode = TrackingMode.PAUSED
             )
         }

@@ -30,7 +30,7 @@ fun PairingButtons(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 16.dp),
+            .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
     ) {

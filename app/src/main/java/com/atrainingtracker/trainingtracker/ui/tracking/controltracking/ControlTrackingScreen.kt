@@ -1,8 +1,10 @@
 package com.atrainingtracker.trainingtracker.ui.tracking.controltracking
 
 import android.content.res.Configuration
+import androidx.compose.foundation.layout.Box
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -49,29 +51,34 @@ fun ControlTrackingScreen(
         // Sensor Status Row
         SensorStatusRow(activeSensors = activeSensors)
 
-        // Available Remote Devices Row
-        RemoteDevicesRow(
-            devices = devices,
-            onDeviceClick = onDeviceClick
-        )
+        // Combined Row: [Research] --- [Status Area] --- [Devices]
+        Row(
+            modifier = Modifier
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Research Button on the left
+            ResearchButton(
+                isEnabled = searchingFor == null && trackingMode != TrackingMode.TRACKING,
+                onClick = onSearch
+            )
 
-        //  Searching Area
-        SearchArea(
-            searchingFor = searchingFor,
-            bSportType = currentSport,
-            trackingMode = trackingMode
-        )
+            // SearchArea in the middle (weighted to fill and center text)
+            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                SearchArea(
+                    searchingFor = searchingFor,
+                    trackingMode = trackingMode,
+                )
+            }
 
-        // The Research Button
-        ResearchButton(
-            isEnabled = true,
-            onClick = onSearch
-        )
+            // Remote Devices on the right
+            RemoteDevicesRow(
+                devices = devices,
+                onDeviceClick = onDeviceClick
+            )
+        }
 
-        Spacer(modifier = Modifier.height(2.dp))
-
-
-        // Pushes the main control buttons to the bottom
+        // Pushes the main control buttons to the center
         Spacer(modifier = Modifier.weight(1f))
 
         // 5. Large Control Buttons (Start/Pause/Stop)
@@ -84,7 +91,8 @@ fun ControlTrackingScreen(
             onStop = onStop
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        // Pushes the main control buttons to the center
+        Spacer(modifier = Modifier.weight(1f))
 
         // 4. Sport Selection
         SportTypeSelector(
@@ -92,7 +100,7 @@ fun ControlTrackingScreen(
             onSportSelected = onSportSelected
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         // 6. Hardware Pairing Buttons
         PairingButtons(

@@ -35,7 +35,7 @@ fun SensorStatusRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {

@@ -206,7 +206,7 @@ class BANALServiceRepository private constructor(private val context: Context) {
 
                 _searchingForDevice.value = banalServiceComm?.nameOfSearchingDevice
                 _bSportType.value = banalServiceComm?.bSportType!!
-                _foundDeviceIds.value = banalServiceComm?.idsOfFoundDevices!!
+                _foundDeviceIds.value = banalServiceComm?.databaseIdsOfActiveDevices!!
                 _activeSensors.value = banalServiceComm?.accumulatedSensorTypeSet!!
 
                 if (DEBUG) Log.i(TAG, "BANALService:\n _searchingForDevice.value: ${_searchingForDevice.value},\n _bSportType.value: ${_bSportType.value},\n _foundDeviceIds.value: ${_foundDeviceIds.value}},\n _activeSensors.value: ${_activeSensors.value}")

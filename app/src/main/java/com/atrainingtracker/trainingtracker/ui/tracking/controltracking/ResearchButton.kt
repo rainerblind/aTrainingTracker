@@ -24,7 +24,7 @@ fun ResearchButton(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
             .clickable(enabled = isEnabled, onClick = onClick)
-            .padding(12.dp) // Match PairingItem padding
+            .padding(4.dp)
     ) {
         Icon(
             painter = painterResource(id = R.drawable.research_icon),

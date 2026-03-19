@@ -83,7 +83,7 @@ import javax.annotation.Nullable;
 
 public class DeviceManager {
     private static final String TAG = "DeviceManager";
-    private static final boolean DEBUG = BANALService.getDebug(false);
+    private static final boolean DEBUG = BANALService.getDebug(true);
     protected static MyRemoteDevice cMyRemoteDeviceCurrentlySearchingFor = null;
     protected Context mContext;
     protected ClockDevice mClockDevice;
@@ -548,6 +548,7 @@ public class DeviceManager {
     }
 
     public List<Long> getIdsOfFoundDevices() {
+        if (DEBUG) Log.i(TAG, "getIdsOfFoundDevices: " + mFoundDevices.size() + " devices found");
         return mFoundDevices;
     }
 

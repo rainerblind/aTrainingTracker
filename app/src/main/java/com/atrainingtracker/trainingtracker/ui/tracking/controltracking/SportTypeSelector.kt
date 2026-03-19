@@ -42,7 +42,7 @@ fun SportTypeSelector(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -68,7 +68,7 @@ private fun SportItem(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .clickable(onClick = onClick)
-            .padding(8.dp)
+            .padding(4.dp)
     ) {
         Icon(
             painter = painterResource(id = iconRes),
