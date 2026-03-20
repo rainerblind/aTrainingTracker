@@ -1,9 +1,11 @@
 package com.atrainingtracker.trainingtracker.ui.tracking.controltracking
 
 import android.content.Context
+import android.content.Intent
 import androidx.activity.result.launch
 import androidx.compose.ui.input.key.type
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.application
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BANALService
@@ -11,6 +13,7 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.helpers.UIHelper
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
@@ -103,7 +106,10 @@ class ControlTrackingViewModel(
     val searchingForDevice = repository.searchingForDevice
 
     fun onSearchClicked() {
-        // TODO: pass to repository
+        val intent = Intent(TrainingApplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES).apply {
+            `package` = context.packageName
+        }
+        context.sendBroadcast(intent)
     }
 
     fun isAntProperlyInstalled(): Boolean {

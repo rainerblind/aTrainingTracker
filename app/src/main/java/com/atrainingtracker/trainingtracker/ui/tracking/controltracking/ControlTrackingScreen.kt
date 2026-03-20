@@ -59,14 +59,6 @@ fun ControlTrackingScreen(
             .fillMaxWidth()
             .padding(bottom = 8.dp)
         ) {
-            // Research Button - Anchored to the far left of the screen
-            Box(modifier = Modifier.align(Alignment.TopStart)) {
-                ResearchButton(
-                    isEnabled = searchingFor == null && trackingMode != TrackingMode.TRACKING,
-                    onClick = onSearch
-                )
-            }
-
             // The Information Area - Anchored to the MATHEMATICAL CENTER of the screen
             Column(
                 modifier = Modifier.align(Alignment.TopCenter),
@@ -92,6 +84,14 @@ fun ControlTrackingScreen(
                         )
                     }
                 }
+            }
+            // Research Button - Anchored to the far left of the screen
+            // note that this must be added at the end to get the clicking working...
+            Box(modifier = Modifier.align(Alignment.TopStart)) {
+                ResearchButton(
+                    isEnabled = searchingFor == null,
+                    onClick = onSearch
+                )
             }
         }
 
