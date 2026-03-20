@@ -16,6 +16,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 
@@ -104,7 +105,7 @@ fun PreviewRemoteDeviceRowDark() {
 }
 
 private fun getMockDevices() = listOf(
-    RemoteDeviceUIData("1", "HRM-123", R.drawable.hr),
-    RemoteDeviceUIData("2", "Speed-X", R.drawable.bt_bike_cad),
-    RemoteDeviceUIData("3", "Cadence", R.drawable.bt_bike_pwr)
+    RemoteDeviceUIData(1, deviceType = DeviceType.HRM, name = "HRM-123", R.drawable.hr),
+    RemoteDeviceUIData(2, deviceType = DeviceType.BIKE_SPEED, "Speed-X", R.drawable.bt_bike_spd),
+    RemoteDeviceUIData(3, deviceType = DeviceType.BIKE_POWER, "Cadence", R.drawable.bt_bike_pwr)
 )

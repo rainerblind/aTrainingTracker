@@ -16,6 +16,7 @@ import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
+import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.helpers.UIHelper
 import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedContainerFragment
 import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedContainerFragment.Companion.newInstance
@@ -34,11 +35,17 @@ import kotlin.concurrent.atomics.update
 
 // Data class to represent a remote device
 data class RemoteDeviceUIData(
-    val id: String,
+    val id: Long,
+    val deviceType: DeviceType,
     val name: String,
     val iconRes: Int
 )
 
+// Sealed class for navigation destinations
+sealed class ControlNavigation {
+    data class ToPairing(val protocol: Protocol) : ControlNavigation()
+    data class ToEditDevice(val deviceId: Long, val deviceType: DeviceType) : ControlNavigation()
+}
 
 class ControlTrackingViewModel(
     private val application: Application
@@ -52,7 +59,7 @@ class ControlTrackingViewModel(
     val repository = BANALServiceRepository.getInstance(application)
 
     // A channel for one-time events (like clicking a button to navigate)
-    private val _navigationEvent = MutableSharedFlow<Protocol>(replay = 0)
+    private val _navigationEvent = MutableSharedFlow<ControlNavigation>(replay = 0)
     val navigationEvent = _navigationEvent.asSharedFlow()
 
     val devicesDatabaseManager = DevicesDatabaseManager.getInstance(application)
@@ -93,7 +100,8 @@ class ControlTrackingViewModel(
 
             devicesCache = rawDevices.associate { item ->
                 item.id to RemoteDeviceUIData(
-                    id = item.id.toString(),
+                    id = item.id,
+                    deviceType = item.type,
                     name = item.name ?: "Unknown",
                     iconRes = UIHelper.getIconId(item.type, item.protocol)
                 )
@@ -119,7 +127,8 @@ class ControlTrackingViewModel(
         .map { ids ->
             ids.map { id ->
                 devicesCache[id] ?: RemoteDeviceUIData(
-                    id = id.toString(),
+                    id = id,
+                    deviceType = DeviceType.DUMMY,
                     name = "New Sensor",
                     iconRes = R.drawable.research_icon
                 )
@@ -132,7 +141,9 @@ class ControlTrackingViewModel(
         )
 
     fun onDeviceClicked(device: RemoteDeviceUIData) {
-        // TODO: pass to repository
+        viewModelScope.launch {
+            _navigationEvent.emit(ControlNavigation.ToEditDevice(device.id, device.deviceType))
+        }
     }
 
 
@@ -157,7 +168,7 @@ class ControlTrackingViewModel(
     fun onPairingClicked(protocol: Protocol) {
         viewModelScope.launch {
             if (DEBUG) Log.i(TAG, "onPairingClicked")
-            _navigationEvent.emit(protocol)
+            _navigationEvent.emit(ControlNavigation.ToPairing(protocol))
         }
     }
 

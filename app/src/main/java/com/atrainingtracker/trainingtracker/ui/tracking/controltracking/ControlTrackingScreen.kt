@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.Protocol
+import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
@@ -143,7 +144,7 @@ fun PreviewControlTrackingScreen() {
             ControlTrackingScreen(
                 trackingMode = TrackingMode.READY,
                 searchingFor = null,
-                devices = listOf(RemoteDeviceUIData("1", "Polar H10", R.drawable.hr)),
+                devices = listOf(RemoteDeviceUIData(1, deviceType = DeviceType.HRM, name = "Polar H10", R.drawable.hr)),
                 activeSensors = setOf(SensorType.TIME_ACTIVE, SensorType.HR),
                 currentSport = BSportType.RUN,
                 isAntSupported = true,

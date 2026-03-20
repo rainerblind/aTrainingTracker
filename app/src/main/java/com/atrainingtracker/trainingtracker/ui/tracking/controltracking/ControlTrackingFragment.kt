@@ -15,6 +15,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFragmentFactory
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
@@ -81,10 +82,14 @@ class ControlTrackingFragment : Fragment() {
 
                 // Handle Navigation directly in the Fragment
                 LaunchedEffect(Unit) {
-                    viewModel.navigationEvent.collect { protocol ->
-                        (activity as? MainActivityWithNavigation)?.startPairing(protocol)
-                        // TODO: is this really the best approach?
-                        /*
+                    viewModel.navigationEvent.collect { navigation ->
+                        when (navigation) {
+                            is ControlNavigation.ToPairing -> {
+                                (requireActivity() as? MainActivityWithNavigation)?.startPairing(
+                                    navigation.protocol
+                                )
+                                // TODO: is this really the best approach?
+                                /*
                         // 1. Create the new fragment instance
                         val pairingFragment = DevicesTabbedContainerFragment.newInstance(protocol)
 
@@ -93,6 +98,19 @@ class ControlTrackingFragment : Fragment() {
                             .addToBackStack(null) // This ensures the "Back" button returns you to the Tabs
                             .commit()
                          */
+
+                            }
+
+                            is ControlNavigation.ToEditDevice -> {
+                                val editDeviceDialog = EditDeviceFragmentFactory.create(
+                                    deviceId = navigation.deviceId,
+                                    deviceType = navigation.deviceType
+                                )
+
+                                // Show the dialog returned by the factory
+                                editDeviceDialog.show(parentFragmentManager, "EditDeviceDialog")
+                            }
+                        }
                     }
                 }
             }
