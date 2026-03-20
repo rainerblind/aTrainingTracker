@@ -50,7 +50,11 @@ fun ControlTrackingScreen(
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Top Layout: [Research] | [ (SensorStatus) / (SearchArea + Devices) ]
+        // Top part: Sensors
+        SensorStatus(activeSensors = activeSensors)
+
+        Spacer(modifier = Modifier.height(8.dp))
+
         Box(modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 8.dp)
@@ -68,10 +72,6 @@ fun ControlTrackingScreen(
                 modifier = Modifier.align(Alignment.TopCenter),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Top part: Sensors (Absolute Center)
-                SensorStatus(activeSensors = activeSensors)
-
-                Spacer(modifier = Modifier.height(8.dp))
 
                 // Bottom part: Status Text (Absolute Center) + Devices (Right of center area)
                 // We use another Box here to keep SearchArea centered while RemoteDevices is at the end

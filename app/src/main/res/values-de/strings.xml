@@ -191,14 +191,12 @@
     <string name="heart_rate_short">HF</string>
     <string name="lap_number">Lap Nummer</string>
     <string name="lap_number_short">Lap Nr</string>
-    <string name="latitude">Latitude</string>
-    <string name="latitude_short">lat.</string>
     <string name="line_distance">Luftlinie</string>
     <string name="line_distance_short">Luftlinie</string>
-    <string name="longitude">Longitude</string>
-    <string name="longitude_short">long.</string>
     <string name="pace">Tempo</string>
     <string name="pace_short">Tempo</string>
+    <string name="position">Position</string>
+    <string name="position_short">Pos.</string>
     <string name="power">Leistung</string>
     <string name="power_short">Leistung</string>
     <string name="speed">Geschwindigkeit</string>
