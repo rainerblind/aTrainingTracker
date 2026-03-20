@@ -1,10 +1,15 @@
 package com.atrainingtracker.trainingtracker.ui.tracking.controltracking
 
+import android.app.Application
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.util.Log
+import androidx.core.content.ContextCompat.registerReceiver
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.application
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BANALService
@@ -24,6 +29,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlin.concurrent.atomics.update
 
 
 // Data class to represent a remote device
@@ -35,7 +41,7 @@ data class RemoteDeviceUIData(
 
 
 class ControlTrackingViewModel(
-    private val context: Context
+    private val application: Application
 ) : ViewModel() {
 
     companion object {
@@ -43,13 +49,13 @@ class ControlTrackingViewModel(
         val TAG = "ControlTrackingViewModel"
     }
 
-    val repository = BANALServiceRepository.getInstance(context)
+    val repository = BANALServiceRepository.getInstance(application)
 
     // A channel for one-time events (like clicking a button to navigate)
     private val _navigationEvent = MutableSharedFlow<Protocol>(replay = 0)
     val navigationEvent = _navigationEvent.asSharedFlow()
 
-    val devicesDatabaseManager = DevicesDatabaseManager.getInstance(context)
+    val devicesDatabaseManager = DevicesDatabaseManager.getInstance(application)
 
     val trackingMode = repository.trackingMode
     val activeSensors = repository.activeSensors
@@ -58,14 +64,31 @@ class ControlTrackingViewModel(
     // A cache of device data from the database
     private var devicesCache: Map<Long, RemoteDeviceUIData> = emptyMap()
 
+    private val deviceReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == BANALService.NEW_DEVICE_FOUND_INTENT) {
+                loadDevicesCache()
+            }
+        }
+    }
+
     init {
         // Load the database into the map once when the ViewModel starts
         loadDevicesCache()
+
+        val filter = IntentFilter(BANALService.NEW_DEVICE_FOUND_INTENT)
+        application.registerReceiver(deviceReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
     }
+
+    override fun onCleared() {
+        super.onCleared()
+
+        application.unregisterReceiver(deviceReceiver)
+    }
+
 
     private fun loadDevicesCache() {
         viewModelScope.launch(Dispatchers.IO) {
-            // No Cursors here! Just a clean list from the Manager.
             val rawDevices = devicesDatabaseManager.allDevicesForCache
 
             devicesCache = rawDevices.associate { item ->
@@ -77,6 +100,7 @@ class ControlTrackingViewModel(
             }
         }
     }
+
 
 
     /**************************************************
@@ -123,11 +147,11 @@ class ControlTrackingViewModel(
     }
 
     fun isAntProperlyInstalled(): Boolean {
-        return BANALService.isANTProperlyInstalled(context)
+        return BANALService.isANTProperlyInstalled(application)
     }
 
     fun isBluetoothSupported(): Boolean {
-        return BANALService.isProtocolSupported(context, Protocol.BLUETOOTH_LE)
+        return BANALService.isProtocolSupported(application, Protocol.BLUETOOTH_LE)
     }
 
     fun onPairingClicked(protocol: Protocol) {
@@ -164,13 +188,9 @@ class ControlTrackingViewModel(
      */
     fun sendBroadcast(action: String) {
         val intent = Intent(action).apply {
-            `package` = context.packageName
+            `package` = application.packageName
         }
-        context.sendBroadcast(intent)
+        application.sendBroadcast(intent)
     }
-
-
-
-
 
 }

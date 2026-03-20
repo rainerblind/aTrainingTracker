@@ -40,9 +40,9 @@ class ControlTrackingFragment : Fragment() {
                     factory = object : ViewModelProvider.Factory {
                         @Suppress("UNCHECKED_CAST")
                         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                            return ControlTrackingViewModel(
-                                requireContext().applicationContext
-                            ) as T
+                            // Access the application object from the activity
+                            val application = requireActivity().application
+                            return ControlTrackingViewModel(application) as T
                         }
                     }
                 )
