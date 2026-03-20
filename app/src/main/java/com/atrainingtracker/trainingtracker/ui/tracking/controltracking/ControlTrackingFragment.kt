@@ -83,6 +83,7 @@ class ControlTrackingFragment : Fragment() {
                 LaunchedEffect(Unit) {
                     viewModel.navigationEvent.collect { protocol ->
                         (activity as? MainActivityWithNavigation)?.startPairing(protocol)
+                        // TODO: is this really the best approach?
                         /*
                         // 1. Create the new fragment instance
                         val pairingFragment = DevicesTabbedContainerFragment.newInstance(protocol)

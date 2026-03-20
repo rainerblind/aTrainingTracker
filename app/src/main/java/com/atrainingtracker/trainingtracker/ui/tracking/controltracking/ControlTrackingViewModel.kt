@@ -84,7 +84,7 @@ class ControlTrackingViewModel(
      */
     val bSportType = repository.bSportType
     fun setSport(bSportType: BSportType) {
-        // TODO: pass to repository
+        repository.setUserSelectedSportType(bSportType)
     }
 
     /*

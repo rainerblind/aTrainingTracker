@@ -219,6 +219,9 @@ class BANALServiceRepository private constructor(private val context: Context) {
         if (banalServiceComm != null) banalServiceComm?.createFilter(filterData)
     }
 
+    fun setUserSelectedSportType(bSportType: BSportType) {
+        if (banalServiceComm != null) banalServiceComm?.setUserSelectedSportType(bSportType)
+    }
 
 
     companion object {
