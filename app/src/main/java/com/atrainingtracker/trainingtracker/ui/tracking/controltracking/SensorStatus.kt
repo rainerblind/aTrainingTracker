@@ -4,6 +4,7 @@ import android.content.res.Configuration
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -21,16 +22,18 @@ fun SensorStatus(
     modifier: Modifier = Modifier
 ) {
     // Fixed order definition
-    val sensorDefinitions = listOf(
-        SensorType.TIME_ACTIVE to R.drawable.ic_time_active,
-        SensorType.LONGITUDE to R.drawable.ic_location,
-        SensorType.ALTITUDE to R.drawable.ic_altitude,
-        SensorType.DISTANCE_m to R.drawable.ic_distance,
-        SensorType.SPEED_mps to R.drawable.ic_speed,
-        SensorType.CADENCE to R.drawable.ic_cadence,
-        SensorType.HR to R.drawable.ic_heart_rate,
-        SensorType.POWER to R.drawable.ic_power
-    )
+    val sensorDefinitions = remember {
+        listOf(
+            SensorType.TIME_ACTIVE to R.drawable.ic_time_active,
+            SensorType.LONGITUDE to R.drawable.ic_location,
+            SensorType.ALTITUDE to R.drawable.ic_altitude,
+            SensorType.DISTANCE_m to R.drawable.ic_distance,
+            SensorType.SPEED_mps to R.drawable.ic_speed,
+            SensorType.CADENCE to R.drawable.ic_cadence,
+            SensorType.HR to R.drawable.ic_heart_rate,
+            SensorType.POWER to R.drawable.ic_power
+        )
+    }
 
     Row(
         modifier = modifier
