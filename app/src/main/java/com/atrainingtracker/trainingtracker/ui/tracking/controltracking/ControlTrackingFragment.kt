@@ -1,10 +1,12 @@
 package com.atrainingtracker.trainingtracker.ui.tracking.controltracking
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -14,26 +16,23 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.trainingtracker.TrackingMode
+import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository
 
 class ControlTrackingFragment : Fragment() {
 
-    // You likely have a way to get your repository, e.g., from your App class
-    // or by instantiating it here if it doesn't exist yet.
-    private lateinit var repository: BANALServiceRepository
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        // Initialize your repository here.
-        // Example: repository = (requireActivity().application as YourAppClass).repository
-        repository = BANALServiceRepository.getInstance(requireContext())
+    companion object {
+        private const val DEBUG = true
+        private const val TAG = "ControlTrackingFragment"
     }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        if (DEBUG) Log.i(TAG, "onCreateView")
+
         return ComposeView(requireContext()).apply {
             setContent {
                 // This correctly creates the ViewModel with its required dependencies
@@ -42,7 +41,6 @@ class ControlTrackingFragment : Fragment() {
                         @Suppress("UNCHECKED_CAST")
                         override fun <T : ViewModel> create(modelClass: Class<T>): T {
                             return ControlTrackingViewModel(
-                                repository,
                                 requireContext().applicationContext
                             ) as T
                         }
@@ -77,6 +75,23 @@ class ControlTrackingFragment : Fragment() {
                             onStop = { viewModel.onStopTracking() },
                             onPairingClicked = { viewModel.onPairingClicked(it) }
                         )
+                    }
+                }
+                Log.i(TAG, "c")
+
+                // Handle Navigation directly in the Fragment
+                LaunchedEffect(Unit) {
+                    viewModel.navigationEvent.collect { protocol ->
+                        (activity as? MainActivityWithNavigation)?.startPairing(protocol)
+                        /*
+                        // 1. Create the new fragment instance
+                        val pairingFragment = DevicesTabbedContainerFragment.newInstance(protocol)
+
+                        requireActivity().supportFragmentManager.beginTransaction()
+                            .replace(R.id.content, pairingFragment)
+                            .addToBackStack(null) // This ensures the "Back" button returns you to the Tabs
+                            .commit()
+                         */
                     }
                 }
             }

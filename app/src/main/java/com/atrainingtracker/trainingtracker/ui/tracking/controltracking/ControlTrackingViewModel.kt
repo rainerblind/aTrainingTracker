@@ -2,10 +2,9 @@ package com.atrainingtracker.trainingtracker.ui.tracking.controltracking
 
 import android.content.Context
 import android.content.Intent
-import androidx.activity.result.launch
-import androidx.compose.ui.input.key.type
+import android.util.Log
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.application
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BANALService
@@ -13,14 +12,19 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.helpers.UIHelper
+import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedContainerFragment
+import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedContainerFragment.Companion.newInstance
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+
 
 // Data class to represent a remote device
 data class RemoteDeviceUIData(
@@ -31,10 +35,19 @@ data class RemoteDeviceUIData(
 
 
 class ControlTrackingViewModel(
-    private val repository: BANALServiceRepository,
     private val context: Context
 ) : ViewModel() {
 
+    companion object {
+        val DEBUG = true
+        val TAG = "ControlTrackingViewModel"
+    }
+
+    val repository = BANALServiceRepository.getInstance(context)
+
+    // A channel for one-time events (like clicking a button to navigate)
+    private val _navigationEvent = MutableSharedFlow<Protocol>(replay = 0)
+    val navigationEvent = _navigationEvent.asSharedFlow()
 
     val devicesDatabaseManager = DevicesDatabaseManager.getInstance(context)
 
@@ -106,10 +119,7 @@ class ControlTrackingViewModel(
     val searchingForDevice = repository.searchingForDevice
 
     fun onSearchClicked() {
-        val intent = Intent(TrainingApplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES).apply {
-            `package` = context.packageName
-        }
-        context.sendBroadcast(intent)
+        sendBroadcast(TrainingApplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES)
     }
 
     fun isAntProperlyInstalled(): Boolean {
@@ -121,27 +131,46 @@ class ControlTrackingViewModel(
     }
 
     fun onPairingClicked(protocol: Protocol) {
-        // TODO: pass to repository
+        viewModelScope.launch {
+            if (DEBUG) Log.i(TAG, "onPairingClicked")
+            _navigationEvent.emit(protocol)
+        }
     }
 
 
     /***********************************************************************************************
      * Control Tracking
      */
+    // TODO: 1. create a tracking repository which sends these boradcasts.
+    // TODO: 2. Replace this sending of Broadcasts.
     fun onStartTracking() {
-        // TODO: pass to repository
+        sendBroadcast(TrainingApplication.REQUEST_START_TRACKING)
     }
 
     fun onPauseTracking() {
-        // TODO: pass to repository
+        sendBroadcast(TrainingApplication.REQUEST_PAUSE_TRACKING)
     }
 
     fun onResumeTracking() {
-        // TODO: pass to repository
+        sendBroadcast(TrainingApplication.REQUEST_RESUME_FROM_PAUSED)
     }
 
     fun onStopTracking() {
-        // TODO: pass to repository
+        sendBroadcast(TrainingApplication.REQUEST_STOP_TRACKING)
     }
+
+    /***********************************************************************************************
+     * Simple helper to send a broadcast
+     */
+    fun sendBroadcast(action: String) {
+        val intent = Intent(action).apply {
+            `package` = context.packageName
+        }
+        context.sendBroadcast(intent)
+    }
+
+
+
+
 
 }
