@@ -6,10 +6,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.util.Log
-import androidx.core.content.ContextCompat.registerReceiver
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.application
+import androidx.lifecycle.asFlow
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BANALService
@@ -18,19 +16,17 @@ import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.helpers.UIHelper
-import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedContainerFragment
-import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedContainerFragment.Companion.newInstance
+import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlin.concurrent.atomics.update
 
 
 // Data class to represent a remote device
@@ -56,7 +52,8 @@ class ControlTrackingViewModel(
         val TAG = "ControlTrackingViewModel"
     }
 
-    val repository = BANALServiceRepository.getInstance(application)
+    val banalServiceRepository = BANALServiceRepository.getInstance(application)
+    private val devicesRepository = DeviceDataRepository.getInstance(application)
 
     // A channel for one-time events (like clicking a button to navigate)
     private val _navigationEvent = MutableSharedFlow<ControlNavigation>(replay = 0)
@@ -64,74 +61,48 @@ class ControlTrackingViewModel(
 
     val devicesDatabaseManager = DevicesDatabaseManager.getInstance(application)
 
-    val trackingMode = repository.trackingMode
-    val activeSensors = repository.activeSensors
-
-
-    // A cache of device data from the database
-    private var devicesCache: Map<Long, RemoteDeviceUIData> = emptyMap()
-
-    private val deviceReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == BANALService.NEW_DEVICE_FOUND_INTENT) {
-                loadDevicesCache()
-            }
-        }
-    }
-
-    init {
-        // Load the database into the map once when the ViewModel starts
-        loadDevicesCache()
-
-        val filter = IntentFilter(BANALService.NEW_DEVICE_FOUND_INTENT)
-        application.registerReceiver(deviceReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-
-        application.unregisterReceiver(deviceReceiver)
-    }
-
-
-    private fun loadDevicesCache() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val rawDevices = devicesDatabaseManager.allDevicesForCache
-
-            devicesCache = rawDevices.associate { item ->
-                item.id to RemoteDeviceUIData(
-                    id = item.id,
-                    deviceType = item.type,
-                    name = item.name ?: "Unknown",
-                    iconRes = UIHelper.getIconId(item.type, item.protocol)
-                )
-            }
-        }
-    }
-
+    val trackingMode = banalServiceRepository.trackingMode
+    val activeSensors = banalServiceRepository.activeSensors
 
 
     /**************************************************
      * Control Sport Type
      */
-    val bSportType = repository.bSportType
+    val bSportType = banalServiceRepository.bSportType
     fun setSport(bSportType: BSportType) {
-        repository.setUserSelectedSportType(bSportType)
+        banalServiceRepository.setUserSelectedSportType(bSportType)
     }
 
     /*
      * Remote devices
      */
-    // This Flow combines the Service IDs with the Database Names/Icons
-    val remoteDevices: StateFlow<List<RemoteDeviceUIData>> = repository.foundDeviceIds
-        .map { ids ->
+    // 1. Convert the Repository LiveData (Single Source of Truth) to a Flow
+    private val allDevicesFromDb = devicesRepository.allDevices.asFlow()
+
+    // 2. Combine the IDs from the BANALService with the Data from the Database
+    val remoteDevices: StateFlow<List<RemoteDeviceUIData>> = banalServiceRepository.foundDeviceIds
+        .combine(allDevicesFromDb) { ids, dbDevices ->
             ids.map { id ->
-                devicesCache[id] ?: RemoteDeviceUIData(
-                    id = id,
-                    deviceType = DeviceType.DUMMY,
-                    name = "New Sensor",
-                    iconRes = R.drawable.research_icon
-                )
+                // Look for the device in the DB list
+                val dbDevice = dbDevices.find { it.id == id }
+
+                if (dbDevice != null) {
+                    // If found in DB, use the latest name and type
+                    RemoteDeviceUIData(
+                        id = dbDevice.id,
+                        deviceType = dbDevice.deviceType,
+                        name = dbDevice.deviceName ?: "Unknown Sensor",
+                        iconRes = UIHelper.getIconId(dbDevice.deviceType, dbDevice.protocol)
+                    )
+                } else {
+                    // Fallback if the device is found by service but not yet in DB
+                    RemoteDeviceUIData(
+                        id = id,
+                        deviceType = DeviceType.DUMMY,
+                        name = "New Sensor",
+                        iconRes = R.drawable.research_icon
+                    )
+                }
             }
         }
         .stateIn(
@@ -151,7 +122,7 @@ class ControlTrackingViewModel(
     /**************************************************
      * Searching
      */
-    val searchingForDevice = repository.searchingForDevice
+    val searchingForDevice = banalServiceRepository.searchingForDevice
 
     fun onSearchClicked() {
         sendBroadcast(TrainingApplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES)
