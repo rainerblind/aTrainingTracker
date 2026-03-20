@@ -219,7 +219,6 @@ class TrackingTabsFragment : Fragment() {
 
         // Observe the ActivityType from the ViewModel (which gets it from the repository)
         viewModel.activityType.observe(viewLifecycleOwner) { activityType ->
-            pagerAdapter.onActivityTypeChanged(activityType)
             attachTabLayoutMediator()
         }
 
@@ -432,8 +431,6 @@ class TrackingTabsFragment : Fragment() {
             ViewModelProvider(fragment).get(TrackingTabsViewModel::class.java)
         }
 
-        private var currentActivityType: ActivityType? = null
-
         fun updateTrackingViews(newViews: List<TrackingViewInfo>) {
             Log.i(TAG, "updateTrackingViews")
             this.trackingViews = newViews
@@ -474,7 +471,7 @@ class TrackingTabsFragment : Fragment() {
             Log.i(TAG, "createFragment, pos=$position")
 
             return if (showControlTab && position == 0) {
-                ControlTrackingFragmentClassic()
+                ControlTrackingFragment()
             } else {
                 // If control tab is hidden, position 0 is trackingViews[0]
                 // If control tab is shown, position 1 is trackingViews[0]
@@ -484,22 +481,10 @@ class TrackingTabsFragment : Fragment() {
             }
         }
 
-        fun onActivityTypeChanged(newType: ActivityType) {
-            if (DEBUG) Log.i(TAG, "onActivityTypeChanged")
-
-            if (currentActivityType != newType) {
-                currentActivityType = newType
-                // This forces ViewPager2 to recreate fragments because the ID for position 0 will change
-                notifyDataSetChanged()
-            }
-        }
-
         override fun getItemId(position: Int): Long {
-            if (DEBUG) Log.i(TAG, "getItemId, pos=$position, currentActivityType=$currentActivityType")
+            if (DEBUG) Log.i(TAG, "getItemId, pos=$position")
 
-            if (showControlTab && position == 0) {
-                return currentActivityType?.hashCode()?.toLong() ?: 0L
-            }
+            if (showControlTab && position == 0) { return -1L}
 
             val viewIndex = if (showControlTab) position - 1 else position
             return if (viewIndex >= 0 && viewIndex < trackingViews.size) {
