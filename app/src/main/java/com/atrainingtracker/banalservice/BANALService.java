@@ -18,7 +18,10 @@
 
 package com.atrainingtracker.banalservice;
 
+import android.Manifest;
 import android.app.Service;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -44,8 +47,6 @@ import com.atrainingtracker.banalservice.filters.FilteredSensorData;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.dsi.ant.plugins.antplus.pccbase.AntPluginPcc;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -57,9 +58,11 @@ import static com.atrainingtracker.trainingtracker.TrainingApplication.REQUEST_S
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 
+import javax.annotation.Nullable;
+
 public class BANALService
         extends Service {
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = true;
 
     /**
      * the Log TAG
@@ -198,8 +201,9 @@ public class BANALService
             case ANT_PLUS:
                 return isANTPluginServiceInstalled(context); // TODO: more precise test possible?
 
-            case BLUETOOTH_LE:
-                return context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE);
+            case BLUETOOTH_LE:  // HW available and have the permission.
+                return context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)
+                        && ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED;
 
             default:
                 return false;
@@ -295,6 +299,7 @@ public class BANALService
         setUserSelectedSportTypeId(SportTypeDatabaseManager.getSportTypeId(bSportType));
     }
 
+    @NonNull
     public BSportType getBSportType() {
         if (mHaveUserSelectedSportType) {
             return SportTypeDatabaseManager.getInstance(this).getBSportType(mUserSelectedSportTypeId);
@@ -381,16 +386,15 @@ public class BANALService
         sendBroadcast(intent);
     }
 
-    protected SensorType[] getSensorTypes()  // TODO: also change to Set?
-    {
-        if (DEBUG) Log.d(TAG, "getSensorTypes()");
+    protected Set<SensorType> getAvailableSensorTypeSet() {
 
-        ArrayList<SensorType> sensorTypeArrayList = new ArrayList<SensorType>();
+        Set<SensorType> sensorTypeSet = EnumSet.noneOf(SensorType.class);
+
         for (MySensor mySensor : cSensorManager.getSensors()) {
-            sensorTypeArrayList.add(mySensor.getSensorType());
+            sensorTypeSet.add(mySensor.getSensorType());
         }
 
-        return sensorTypeArrayList.toArray(new SensorType[]{});
+        return sensorTypeSet;
     }
 
     protected Set<SensorType> getAccumulatedSensorTypeSet() {
@@ -407,7 +411,7 @@ public class BANALService
 
         ActivityType result = ActivityType.getDefaultActivityType();
 
-        Set<SensorType> sensorTypes = EnumSet.copyOf(Arrays.asList(getSensorTypes()));
+        Set<SensorType> sensorTypes = getAvailableSensorTypeSet();
         BSportType sportType = getBSportType();
 
         switch (sportType) {
@@ -529,6 +533,7 @@ public class BANALService
     public class BANALServiceComm extends Binder {
 
         // only when searching for paired device?
+        @Nullable
         public String getNameOfSearchingDevice() {
             return cDeviceManager.getNameOfSearchingDevice();
         }
@@ -542,8 +547,8 @@ public class BANALService
         }
 
 
-        public SensorType[] getSensorTypes() {
-            return BANALService.this.getSensorTypes();
+        public Set<SensorType> getAvailableSensorTypeSet() {
+            return BANALService.this.getAvailableSensorTypeSet();
         }
 
         public Set<SensorType> getAccumulatedSensorTypeSet() {
@@ -582,6 +587,7 @@ public class BANALService
             return BANALService.this.getMainSensorStringValue(deviceID);
         }
 
+        @NonNull
         public BSportType getBSportType() {
             return BANALService.this.getBSportType();
         }

@@ -26,10 +26,12 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ActivityType
+import com.atrainingtracker.banalservice.filters.FilterData
 import com.atrainingtracker.banalservice.filters.FilterType
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldConfig
-import com.atrainingtracker.trainingtracker.ui.tracking.TrackingRepository
+import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -52,7 +54,8 @@ data class EditDialogUiState(
 
 class EditSensorFieldViewModel(
     application: Application,
-    private val repository: TrackingRepository,
+    private val trackingViewsRepository: TrackingViewsRepository,
+    private val banalServiceRepository: BANALServiceRepository,
     private val activityType: ActivityType,
     private val sensorFieldId: Long, // use -1L to signal "New Mode
     private val tabViewId: Long,
@@ -64,7 +67,7 @@ class EditSensorFieldViewModel(
     val uiState: StateFlow<EditDialogUiState> = _uiState.asStateFlow()
 
     // This flow will ONLY be used to receive updates from the database.
-    private val configFromRepoFlow = repository.getSensorFieldConfig(sensorFieldId).filterNotNull()
+    private val configFromRepoFlow = trackingViewsRepository.getSensorFieldConfig(sensorFieldId).filterNotNull()
     lateinit var initialConfig: SensorFieldConfig
 
     private val isNewField = sensorFieldId == -1L
@@ -268,35 +271,44 @@ class EditSensorFieldViewModel(
         val currentState = _uiState.value
         val sensorType = currentState.selectedSensorType ?: return
 
+        val newSourceDeviceName = currentState.selectedDeviceName
+        val newSensorType = sensorType
+        val newFilterType = getFinalFilterType()
+        val newFilterConstant = getFinalFilterConstant()
+
+        // when the filter has changed, the BANALService must create this filter.
+        val filterData = FilterData(newSourceDeviceName, newSensorType, newFilterType, newFilterConstant)
+        banalServiceRepository.createFilter(filterData)
+
         viewModelScope.launch {
             if (isNewField) {
-                 repository.insertSensorFieldConfig(
+                trackingViewsRepository.insertSensorFieldConfig(
                     tabViewId = tabViewId,
                     rowNr = rowNr,
                     colNr = colNr,
-                    newSensorType = sensorType,
+                    newSensorType = newSensorType,
                     newViewSize = currentState.selectedViewSize,
                     newSourceDeviceId = currentState.selectedDeviceId,
-                    newSourceDeviceName = currentState.selectedDeviceName,
-                    newFilterType = getFinalFilterType(),
-                    newFilterConstant = getFinalFilterConstant()
+                    newSourceDeviceName = newSourceDeviceName,
+                    newFilterType = newFilterType,
+                    newFilterConstant = newFilterConstant
                 )
             } else {
-                repository.updateSensorFieldConfig(
+                trackingViewsRepository.updateSensorFieldConfig(
                     sensorFieldId = sensorFieldId,
-                    newSensorType = sensorType,
+                    newSensorType = newSensorType,
                     newViewSize = currentState.selectedViewSize,
                     newSourceDeviceId = currentState.selectedDeviceId,
-                    newSourceDeviceName = currentState.selectedDeviceName,
-                    newFilterType = getFinalFilterType(),
-                    newFilterConstant = getFinalFilterConstant()
+                    newSourceDeviceName = newSourceDeviceName,
+                    newFilterType = newFilterType,
+                    newFilterConstant = newFilterConstant
                 )
             }
         }
     }
 
     private suspend fun getFullDeviceList(sensorType: SensorType): List<Pair<Long, String>> {
-        val deviceLists = repository.getDeviceLists(sensorType) ?: return listOf(-1L to getApplication<Application>().getString(R.string.bestSensor))
+        val deviceLists = trackingViewsRepository.getDeviceLists(sensorType) ?: return listOf(-1L to getApplication<Application>().getString(R.string.bestSensor))
         val context = getApplication<Application>().applicationContext
         val devices = deviceLists.deviceIds.zip(deviceLists.names).toMutableList()
         devices.add(0, -1L to context.getString(R.string.bestSensor))
@@ -306,7 +318,8 @@ class EditSensorFieldViewModel(
 
 class EditSensorFieldViewModelFactory(
     private val application: Application,
-    private val repository: TrackingRepository,
+    private val trackingViewsRepository: TrackingViewsRepository,
+    private val banalServiceRepository: BANALServiceRepository,
     private val activityType: ActivityType,
     private val sensorFieldId: Long,  // -1 means "New Mode"
     private val tabViewId: Long,
@@ -316,7 +329,8 @@ class EditSensorFieldViewModelFactory(
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(EditSensorFieldViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return EditSensorFieldViewModel(application, repository, activityType, sensorFieldId, tabViewId, rowNr, colNr) as T
+            return EditSensorFieldViewModel(application, trackingViewsRepository, banalServiceRepository,
+                activityType, sensorFieldId, tabViewId, rowNr, colNr) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

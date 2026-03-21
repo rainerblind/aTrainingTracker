@@ -81,6 +81,7 @@ class DeviceDataRepository private constructor(private val application: Applicat
     private val mapper by lazy { RawDeviceDataProvider(devicesDatabaseManager, equipmentDbHelper) }
 
     // access to the BANALService
+    // TODO: use the BANALServiceRepo instead.
     private var banalServiceComm: BANALService.BANALServiceComm? = null
     private var isBoundToBanalService = false
 

@@ -34,9 +34,10 @@ import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
+import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
-import com.atrainingtracker.trainingtracker.ui.tracking.TrackingRepository
+import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -58,7 +59,8 @@ data class TrackingScreenState(
  */
 class TrackingViewModel(
     private val application: Application,
-    val trackingRepository: TrackingRepository,
+    val trackingViewsRepository: TrackingViewsRepository,
+    val banalServiceRepository: BANALServiceRepository,
     private val viewId: Long
 ) : ViewModel() {
 
@@ -77,7 +79,7 @@ class TrackingViewModel(
     private val _pendingAddition = MutableStateFlow<AdditionParams?>(null)
     val pendingAddition = _pendingAddition.asStateFlow()
 
-    val screenMode: StateFlow<ScreenMode> = trackingRepository.screenMode
+    val screenMode: StateFlow<ScreenMode> = trackingViewsRepository.screenMode
 
     private val sharedPreferences: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(application)
     private val defaultZoneColor = Color(ContextCompat.getColor(application, R.color.color_background))
@@ -100,15 +102,15 @@ class TrackingViewModel(
     private fun loadActivityType() {
         viewModelScope.launch {
             // Use the new repository function to get the activity type
-            _activityType.value = trackingRepository.getActivityTypeForView(viewId)
+            _activityType.value = trackingViewsRepository.getActivityTypeForView(viewId)
         }
     }
 
     private fun loadSensorFieldStates() {
         viewModelScope.launch {
             //  Collect the flow for configuration changes
-            trackingRepository.getSensorFieldConfigsForView(viewId)
-                .combine(trackingRepository.allFilteredSensorData) { configs, allSensorData ->
+            trackingViewsRepository.getSensorFieldConfigsForView(viewId)
+                .combine(banalServiceRepository.allFilteredSensorData) { configs, allSensorData ->
                     // This whole block will re-execute whenever configs OR sensor data change
 
                     // --- Step 1: Create the base state from the latest configurations ---
@@ -138,7 +140,7 @@ class TrackingViewModel(
                     }
 
                     // --- Step 2: Apply live sensor data to the base state ---
-                    val activity = trackingRepository.activityType.value ?: return@combine baseFields // Use the LiveData value
+                    val activity = banalServiceRepository.activityType.value ?: return@combine baseFields // Use the LiveData value
                     val fieldsWithLiveData = applySensorData(baseFields, allSensorData, activity)
 
                     // Return the fully updated list
@@ -260,7 +262,7 @@ class TrackingViewModel(
 
     fun onDeleteSensorField(sensorFieldId: Long) {
         viewModelScope.launch {
-            trackingRepository.deleteSensorField(sensorFieldId)
+            trackingViewsRepository.deleteSensorField(sensorFieldId)
         }
     }
 
@@ -276,8 +278,9 @@ class TrackingViewModelFactory(
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(TrackingViewModel::class.java)) {
-            val repo = TrackingRepository.getInstance(application)
-            return TrackingViewModel(application, repo, viewId) as T
+            val trackingViewsRepo = TrackingViewsRepository.getInstance(application)
+            val banalServiceRepo = BANALServiceRepository.getInstance(application)
+            return TrackingViewModel(application, trackingViewsRepo, banalServiceRepo, viewId) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

@@ -27,6 +27,8 @@ import androidx.appcompat.app.AlertDialog;
 
 import android.annotation.SuppressLint;
 import android.app.Dialog;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothManager;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -91,7 +93,6 @@ import com.atrainingtracker.banalservice.filters.FilterData;
 import com.atrainingtracker.banalservice.helpers.BatteryStatusHelper;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
-import com.atrainingtracker.trainingtracker.dialogs.EnableBluetoothDialog;
 import com.atrainingtracker.trainingtracker.dialogs.GPSDisabledDialog;
 import com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialog;
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedFragment;
@@ -104,7 +105,6 @@ import com.atrainingtracker.trainingtracker.fragments.preferences.RunkeeperUploa
 import com.atrainingtracker.trainingtracker.fragments.preferences.SearchFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.StravaUploadFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.TrainingpeaksUploadFragment;
-import com.atrainingtracker.trainingtracker.interfaces.RemoteDevicesSettingsInterface;
 import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface;
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager;
 import com.atrainingtracker.trainingtracker.segments.StarredSegmentsListFragment;
@@ -125,14 +125,13 @@ public class MainActivityWithNavigation
         extends AppCompatActivity
         implements
         NavigationView.OnNavigationItemSelectedListener,
-        RemoteDevicesSettingsInterface,
         BANALService.GetBanalServiceInterface,
         PreferenceFragmentCompat.OnPreferenceStartScreenCallback,
         StarredSegmentsListFragment.StartSegmentDetailsActivityInterface,
         StartOrResumeInterface {
     public static final String SELECTED_FRAGMENT_ID = "SELECTED_FRAGMENT_ID";
     public static final String SELECTED_FRAGMENT = "SELECTED_FRAGMENT";
-    private static final boolean DEBUG = TrainingApplication.getDebug(false);
+    private static final boolean DEBUG = TrainingApplication.getDebug(true);
     private static final String TAG = "MainActivityWithNavigat";
     private static final int DEFAULT_SELECTED_FRAGMENT_ID = R.id.drawer_start_tracking;
     // private static final int REQUEST_ENABLE_BLUETOOTH            = 1;
@@ -267,6 +266,8 @@ public class MainActivityWithNavigation
             showInstallANTShitDialog();
         }
 
+        // No need to check for Bluetooth active since Bluetooth LE will work even if Bluetooth is deactivated.
+
         if (savedInstanceState != null) {
             mSelectedFragmentId = savedInstanceState.getInt(SELECTED_FRAGMENT_ID, DEFAULT_SELECTED_FRAGMENT_ID);
             mFragment = getSupportFragmentManager().getFragment(savedInstanceState, "mFragment");
@@ -326,6 +327,8 @@ public class MainActivityWithNavigation
                 new OnBackPressedCallback(true) {
                     @Override
                     public void handleOnBackPressed() {
+                        if (DEBUG) Log.i(TAG, "onBackPressed, entryCout=" + getSupportFragmentManager().getBackStackEntryCount());
+
                         if (mDrawerLayout.isDrawerOpen(GravityCompat.START)) {
                             mDrawerLayout.closeDrawer(GravityCompat.START);
                         }  if (getSupportFragmentManager().getBackStackEntryCount() > 0) {  // when showing "deeper fragments", we only want to go back one step and not completely to the start_tracking fragment
@@ -689,20 +692,6 @@ public class MainActivityWithNavigation
         }
     }
 
-    @Override
-    public void enableBluetoothRequest() {
-        if (DEBUG) Log.i(TAG, "enableBluetoothRequest");
-
-        showEnableBluetoothDialog();
-
-//        Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-//        enableBtIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-//        startActivityForResult(enableBtIntent, REQUEST_ENABLE_BLUETOOTH);
-
-
-    }
-
-    @Override
     public void startPairing(@NonNull Protocol protocol) {
         if (DEBUG) Log.d(TAG, "startPairingActivity: " + protocol);
 
@@ -822,11 +811,6 @@ public class MainActivityWithNavigation
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // showing several dialogs
     ////////////////////////////////////////////////////////////////////////////////////////////////
-
-    private void showEnableBluetoothDialog() {
-        EnableBluetoothDialog enableBluetoothDialog = new EnableBluetoothDialog();
-        enableBluetoothDialog.show(getSupportFragmentManager(), EnableBluetoothDialog.TAG);
-    }
 
     private void showInstallANTShitDialog() {
         InstallANTShitDialog installANTShitDialog = new InstallANTShitDialog();
