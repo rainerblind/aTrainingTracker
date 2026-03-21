@@ -20,6 +20,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrackingMode
@@ -114,7 +115,8 @@ private fun ControlItem(
             text = stringResource(id = labelRes),
             // style = MaterialTheme.typography.labelLarge,
             style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurface
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center
         )
     }
 }
