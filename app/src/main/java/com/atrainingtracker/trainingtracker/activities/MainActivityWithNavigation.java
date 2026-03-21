@@ -52,6 +52,7 @@ import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelpe
 import com.atrainingtracker.trainingtracker.segments.StarredSegmentsTabbedContainer;
 import com.atrainingtracker.trainingtracker.tracker.TrackerService;
 import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentFragment;
+import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository;
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsFragment;
 import com.google.android.material.navigation.NavigationView;
 import androidx.core.app.ActivityCompat;
@@ -797,8 +798,15 @@ public class MainActivityWithNavigation
         if (DEBUG) Log.i(TAG, "disconnectFromBANALService");
 
         if (mBanalServiceComm != null) {
-            unbindService(mBanalConnection);                                                        // TODO: on some devices, an exception is thrown here
+            unbindService(mBanalConnection);   // TODO: on some devices, an exception is thrown here
             mBanalServiceComm = null;
+        }
+
+        // when we are not tracking, we can stop the BANALService.
+        if (!TrainingApplication.isTracking()) {
+            if (DEBUG) Log.i(TAG, "Stopping BANALService process (not tracking)");
+
+            BANALServiceRepository.Companion.getInstance(this).unbindFromBANALService();
         }
     }
 
