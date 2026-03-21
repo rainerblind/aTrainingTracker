@@ -70,8 +70,6 @@ public enum ActivityType {
         switch (activityType) {
             case GENERIC_HR:
                 sensors = new SensorType[]{
-                        SensorType.ACCUMULATED_SENSORS,
-                        SensorType.ACCURACY,
                         SensorType.ALTITUDE,
                         SensorType.ASCENT,
                         SensorType.DESCENT,
@@ -84,7 +82,6 @@ public enum ActivityType {
                         SensorType.LAP_NR,
                         SensorType.PACE_spm,
                         SensorType.SPEED_mps,
-                        SensorType.SENSORS,
                         SensorType.TIME_OF_DAY,
                         SensorType.TIME_ACTIVE,
                         SensorType.TIME_LAP,
@@ -93,8 +90,6 @@ public enum ActivityType {
 
             case RUN_SPEED_AND_CADENCE:
                 sensors = new SensorType[]{
-                        SensorType.ACCUMULATED_SENSORS,
-                        SensorType.ACCURACY,
                         SensorType.ALTITUDE,
                         SensorType.ASCENT,
                         SensorType.DESCENT,
@@ -108,7 +103,6 @@ public enum ActivityType {
                         SensorType.LAP_NR,
                         SensorType.PACE_spm,
                         SensorType.SPEED_mps,
-                        SensorType.SENSORS,
                         SensorType.STRIDES,
                         SensorType.TIME_OF_DAY,
                         SensorType.TIME_ACTIVE,
@@ -118,8 +112,6 @@ public enum ActivityType {
 
             case BIKE_SPEED_AND_CADENCE:
                 sensors = new SensorType[]{
-                        SensorType.ACCUMULATED_SENSORS,
-                        SensorType.ACCURACY,
                         SensorType.ALTITUDE,
                         SensorType.ASCENT,
                         SensorType.DESCENT,
@@ -133,7 +125,6 @@ public enum ActivityType {
                         SensorType.LAP_NR,
                         // SensorType.PACE_spm,
                         SensorType.SPEED_mps,
-                        SensorType.SENSORS,
                         SensorType.TIME_OF_DAY,
                         SensorType.TIME_ACTIVE,
                         SensorType.TIME_LAP,
@@ -142,8 +133,6 @@ public enum ActivityType {
 
             case BIKE_POWER:
                 sensors = new SensorType[]{
-                        SensorType.ACCUMULATED_SENSORS,
-                        SensorType.ACCURACY,
                         SensorType.ALTITUDE,
                         SensorType.ASCENT,
                         SensorType.DESCENT,
@@ -162,7 +151,6 @@ public enum ActivityType {
                         SensorType.PEDAL_SMOOTHNESS,
                         SensorType.POWER,
                         SensorType.SPEED_mps,
-                        SensorType.SENSORS,
                         SensorType.TIME_OF_DAY,
                         SensorType.TIME_ACTIVE,
                         SensorType.TIME_LAP,
@@ -174,8 +162,6 @@ public enum ActivityType {
 
             default:
                 sensors = new SensorType[]{
-                        SensorType.ACCUMULATED_SENSORS,
-                        SensorType.ACCURACY,
                         SensorType.ALTITUDE,
                         SensorType.ASCENT,
                         SensorType.DESCENT,
@@ -186,7 +172,6 @@ public enum ActivityType {
                         SensorType.LAP_NR,
                         SensorType.PACE_spm,
                         SensorType.SPEED_mps,
-                        SensorType.SENSORS,
                         SensorType.TIME_OF_DAY,
                         SensorType.TIME_ACTIVE,
                         SensorType.TIME_LAP,
