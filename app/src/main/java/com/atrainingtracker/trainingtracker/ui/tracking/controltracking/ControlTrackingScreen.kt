@@ -65,27 +65,17 @@ fun ControlTrackingScreen(
                 modifier = Modifier.align(Alignment.TopCenter),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                SearchArea(
+                    searchingFor = searchingFor,
+                    trackingMode = trackingMode
+                )
 
-                // Bottom part: Status Text (Absolute Center) + Devices (Right of center area)
-                // We use another Box here to keep SearchArea centered while RemoteDevices is at the end
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    SearchArea(
-                        searchingFor = searchingFor,
-                        trackingMode = trackingMode
-                    )
-
-                    // Anchors devices to the end of the screen width
-                    Box(modifier = Modifier.align(Alignment.CenterEnd)) {
-                        RemoteDevices(
-                            devices = devices,
-                            onDeviceClick = onDeviceClick
-                        )
-                    }
-                }
+                RemoteDevices(
+                    devices = devices,
+                    onDeviceClick = onDeviceClick
+                )
             }
+
             // Research Button - Anchored to the far left of the screen
             // note that this must be added at the end to get the clicking working...
             Box(modifier = Modifier.align(Alignment.TopStart)) {
@@ -143,7 +133,7 @@ fun PreviewControlTrackingScreen() {
         Surface {
             ControlTrackingScreen(
                 trackingMode = TrackingMode.READY,
-                searchingFor = null,
+                searchingFor = "my spd",
                 devices = listOf(RemoteDeviceUIData(1, deviceType = DeviceType.HRM, name = "Polar H10", R.drawable.hr)),
                 activeSensors = setOf(SensorType.TIME_ACTIVE, SensorType.HR),
                 currentSport = BSportType.RUN,
