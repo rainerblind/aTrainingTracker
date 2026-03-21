@@ -80,12 +80,6 @@ class DeviceDataRepository private constructor(private val application: Applicat
     private val equipmentDbHelper by lazy { EquipmentDbHelper(application) }
     private val mapper by lazy { RawDeviceDataProvider(devicesDatabaseManager, equipmentDbHelper) }
 
-    // access to the BANALService
-    // TODO: use the BANALServiceRepo instead.
-    private var banalServiceComm: BANALService.BANALServiceComm? = null
-    private var isBoundToBanalService = false
-
-
     private val _allDevices = MutableLiveData<List<DeviceUiData>>()
     val allDevices: LiveData<List<DeviceUiData>> = _allDevices
 
@@ -93,7 +87,6 @@ class DeviceDataRepository private constructor(private val application: Applicat
         // Automatically load all devices when the repository is first created
         repositoryScope.launch {
             loadAllDevices()
-            bindToService()
         }
     }
 
@@ -118,118 +111,6 @@ class DeviceDataRepository private constructor(private val application: Applicat
     fun getDeviceType(deviceId: Long): DeviceType? {
         return allDevices.value?.find { it.id == deviceId }?.deviceType
     }
-
-    // Connection to BANALService and update mainValue and isAvailable...
-    private val banalServiceConnection = object : ServiceConnection {
-        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-            // This is called when the connection to the service has been established.
-            // We get the BANALServiceComm binder instance.
-            banalServiceComm = service as? BANALService.BANALServiceComm
-            isBoundToBanalService = banalServiceComm != null
-            if (isBoundToBanalService) {
-                // Once connected, start observing the service for data
-                startObservingServiceData()
-            }
-        }
-
-        override fun onServiceDisconnected(name: ComponentName?) {
-            // This is called when the service connection is lost unexpectedly
-            isBoundToBanalService = false
-            banalServiceComm = null
-        }
-    }
-
-    // Methods to bind and unbind from the ViewModel
-    fun bindToService() {
-        if (!isBoundToBanalService) {
-            val intent = Intent(application, BANALService::class.java)
-            // BIND_AUTO_CREATE ensures the service is created if not already running
-            application.bindService(intent, banalServiceConnection, Context.BIND_AUTO_CREATE)
-        }
-    }
-
-    fun unbindFromService() {
-        if (isBoundToBanalService) {
-            application.unbindService(banalServiceConnection)
-            isBoundToBanalService = false
-            banalServiceComm = null
-        }
-    }
-
-    // Observing the BANALService: This function will be called once the service is connected.
-    private fun startObservingServiceData() {
-        repositoryScope.launch {
-            flow {
-                while (true) {
-                    emit(Unit)
-                    delay(1000)
-                }
-            }.collect {
-                val currentKnownDevices = allDevices.value ?: emptyList()
-                if (banalServiceComm == null) return@collect // Service not bound yet
-
-                // --- DETECT NEWLY DISCOVERED DEVICES ---
-                val foundDeviceIds = banalServiceComm?.getIdsOfFoundDevices() ?: emptyList()
-                val newDeviceFound = foundDeviceIds.any { foundId ->
-                    currentKnownDevices.none { knownDevice -> knownDevice.id == foundId }
-                }
-
-                if (newDeviceFound) {
-                    // A new device was added to the DB. Reload our list to include it.
-                    Log.d(TAG, "New device(s) detected via getIdsOfFoundDevices, reloading from database.")
-                    loadAllDevices()
-                    return@collect // Exit this cycle; the next one will have the updated list.
-                }
-
-                // --- MERGE LOGIC ---
-                val activeDevices = banalServiceComm?.activeDevicesForUI ?: emptyList()
-
-                val mergedList = currentKnownDevices.map { knownDevice ->
-                    val activeDevice = activeDevices.find { it.deviceId == knownDevice.id }
-                    val isFound = foundDeviceIds.contains(knownDevice.id)
-
-                    if (activeDevice != null) {
-                        // SCENARIO A: Device is KNOWN and ACTIVELY sending data.
-                        val mainSensorData = activeDevice.mainSensorData
-                        val mainValue = mainSensorData.value + " " + application.getString(MyHelper.getUnitsId(mainSensorData.sensor))
-                        val allValues = activeDevice.allSensorData.map {
-                            application.getString(it.sensor.fullNameId) + ": " + it.value + " " + application.getString(
-                                MyHelper.getUnitsId(it.sensor))
-                        }
-                        knownDevice.copy(
-                            isAvailable = true,
-                            lastSeen = application.getString(R.string.devices_now),
-                            mainValue = mainValue,
-                            allValues = allValues
-                        )
-                    }
-                    else if (isFound) {
-                        // SCENARIO B: Device is KNOWN and was FOUND recently, but is not active right now.
-                        // We mark it as available but without live data.
-                        knownDevice.copy(
-                            isAvailable = true,
-                            lastSeen = application.getString(R.string.devices_now),
-                            mainValue = null, // No active data
-                            allValues = null  // No active data
-                        )
-                    }
-                    else {
-                        // SCENARIO C: Device is KNOWN but is neither ACTIVE nor FOUND. Mark as unavailable.
-                        knownDevice.copy(
-                            isAvailable = false,
-                            mainValue = null,
-                            allValues = null)
-                    }
-                }
-
-                // Only post an update if the list has actually changed.
-                if (mergedList != currentKnownDevices) {
-                    _allDevices.postValue(mergedList)
-                }
-            }
-        }
-    }
-
 
     /**
      * Refreshes the data for a single device by its ID. It loads the  raw data
