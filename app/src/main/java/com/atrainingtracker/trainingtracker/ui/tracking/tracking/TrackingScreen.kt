@@ -125,7 +125,7 @@ private fun MapPlaceholder(modifier: Modifier = Modifier) {
 }
 
 
-@Preview(showBackground = true, backgroundColor = 0xFF212121)
+@Preview(showBackground = true)
 @Composable
 fun TrackingScreenPreview() {
     ATrainingTrackerTheme {
