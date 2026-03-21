@@ -77,7 +77,6 @@ import androidx.recyclerview.widget.RecyclerView
 import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
-import com.atrainingtracker.trainingtracker.fragments.ControlTrackingFragmentClassic
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingFragment
 import kotlin.properties.Delegates
 

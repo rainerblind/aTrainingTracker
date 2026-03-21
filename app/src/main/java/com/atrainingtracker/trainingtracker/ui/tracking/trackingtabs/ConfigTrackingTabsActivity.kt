@@ -27,7 +27,6 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.Protocol
-import com.atrainingtracker.trainingtracker.interfaces.RemoteDevicesSettingsInterface
 import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface
 
 
@@ -37,7 +36,6 @@ import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface
  */
 class ConfigTrackingTabsActivity : AppCompatActivity(),
     BANALService.GetBanalServiceInterface,
-    RemoteDevicesSettingsInterface,
     StartOrResumeInterface {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -133,16 +131,6 @@ class ConfigTrackingTabsActivity : AppCompatActivity(),
 
     override fun registerConnectionStatusListener(listener: BANALService.GetBanalServiceInterface.ConnectionStatusListener?) {
         // Dummy implementation as in classic version
-    }
-
-    // --- RemoteDevicesSettingsInterface (StartPairingListener) ---
-    override fun startPairing(protocol: Protocol?) {
-        Log.i("ConfigActivity", "Pairing requested for $protocol")
-        // Implementation: Usually opens the pairing activity
-    }
-
-    override fun enableBluetoothRequest() {
-        // Implementation: Trigger system Bluetooth dialog
     }
 
     // --- StartOrResumeInterface ---

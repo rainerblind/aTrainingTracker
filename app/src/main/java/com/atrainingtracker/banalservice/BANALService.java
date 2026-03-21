@@ -18,7 +18,10 @@
 
 package com.atrainingtracker.banalservice;
 
+import android.Manifest;
 import android.app.Service;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -198,8 +201,9 @@ public class BANALService
             case ANT_PLUS:
                 return isANTPluginServiceInstalled(context); // TODO: more precise test possible?
 
-            case BLUETOOTH_LE:
-                return context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE);
+            case BLUETOOTH_LE:  // HW available and have the permission.
+                return context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)
+                        && ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED;
 
             default:
                 return false;

@@ -529,8 +529,6 @@
     <string name="paused_bike">Radfahren</string>
     <string name="paused_other">Trainieren</string>
     <string name="export_status">Exportstatus</string>
-    <string name="enable_bluetooth">Einschalten</string>
-    <string name="bluetooth_disabled_on_device">Im Moment is Bluetooth auf dem Gerät ausgeschaltet.  Um externe Sensoren zu koppeln muss Bluetooth eingeschaltet sein. \nSoll Bluetooth eingeschaltet werden?</string>
     <string name="LocationsActivityLabel">Locations</string>
     <string name="getting_start_locations">Suche nach Start Positionen.</string>
     <string name="average">mittel</string>
