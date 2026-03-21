@@ -40,7 +40,7 @@ import kotlinx.coroutines.launch
  */
 class EditDeviceViewModel(private val application: Application) : AndroidViewModel(application) {
 
-    private val repository = DeviceDataRepository.Companion.getInstance(application)
+    private val devicesRepository = DeviceDataRepository.Companion.getInstance(application)
 
     // The single source of truth for the UI. This holds the CURRENT state of the device being edited.
     private val _uiState = MutableLiveData<DeviceUiData?>()
@@ -54,8 +54,8 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
      */
     fun loadInitialDeviceData(deviceId: Long) {
         // No launch block is needed for this synchronous, main-safe call.
-        _uiState.value = repository.getDeviceSnapshotById(deviceId)
-        deviceData = repository.getDeviceById(deviceId)
+        _uiState.value = devicesRepository.getDeviceSnapshotById(deviceId)
+        deviceData = devicesRepository.getDeviceById(deviceId)
     }
 
     //--- dealing with wheel sizes
@@ -293,7 +293,7 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
         val finalState = _uiState.value ?: return
 
         viewModelScope.launch {
-            repository.updateDevice(finalState)
+            devicesRepository.updateDevice(finalState)
         }
     }
 
