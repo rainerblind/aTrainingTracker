@@ -44,8 +44,6 @@ import com.atrainingtracker.banalservice.filters.FilteredSensorData;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.dsi.ant.plugins.antplus.pccbase.AntPluginPcc;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -384,16 +382,15 @@ public class BANALService
         sendBroadcast(intent);
     }
 
-    protected SensorType[] getSensorTypes()  // TODO: also change to Set?
-    {
-        if (DEBUG) Log.d(TAG, "getSensorTypes()");
+    protected Set<SensorType> getAvailableSensorTypeSet() {
 
-        ArrayList<SensorType> sensorTypeArrayList = new ArrayList<SensorType>();
+        Set<SensorType> sensorTypeSet = EnumSet.noneOf(SensorType.class);
+
         for (MySensor mySensor : cSensorManager.getSensors()) {
-            sensorTypeArrayList.add(mySensor.getSensorType());
+            sensorTypeSet.add(mySensor.getSensorType());
         }
 
-        return sensorTypeArrayList.toArray(new SensorType[]{});
+        return sensorTypeSet;
     }
 
     protected Set<SensorType> getAccumulatedSensorTypeSet() {
@@ -410,7 +407,7 @@ public class BANALService
 
         ActivityType result = ActivityType.getDefaultActivityType();
 
-        Set<SensorType> sensorTypes = EnumSet.copyOf(Arrays.asList(getSensorTypes()));
+        Set<SensorType> sensorTypes = getAvailableSensorTypeSet();
         BSportType sportType = getBSportType();
 
         switch (sportType) {
@@ -546,8 +543,8 @@ public class BANALService
         }
 
 
-        public SensorType[] getSensorTypes() {
-            return BANALService.this.getSensorTypes();
+        public Set<SensorType> getAvailableSensorTypeSet() {
+            return BANALService.this.getAvailableSensorTypeSet();
         }
 
         public Set<SensorType> getAccumulatedSensorTypeSet() {
