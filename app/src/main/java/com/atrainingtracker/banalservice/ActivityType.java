@@ -28,6 +28,8 @@ import java.util.Arrays;
 
 public enum ActivityType {
     // Note that in the pase, we had some more ActivityTypes.  They have been removed on 07.03.2026.
+    // They most not be renamed since these names are uses as keys in the database for the tracking tabs.
+
     // GENERIC(BSportType.UNKNOWN, R.string.activity_type_multisport),
     GENERIC_HR(BSportType.UNKNOWN, R.string.activity_type_multisport_with_hr, R.drawable.bsport_other),
     // RUN_SPEED(BSportType.RUN, R.string.activity_type_run_speed, R.string.activity_type_short_run_speed),
