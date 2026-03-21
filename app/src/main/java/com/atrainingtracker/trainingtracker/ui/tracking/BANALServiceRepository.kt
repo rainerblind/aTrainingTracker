@@ -13,6 +13,7 @@ import androidx.lifecycle.MutableLiveData
 import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.devices.MyDevice
 import com.atrainingtracker.banalservice.filters.FilterData
 import com.atrainingtracker.banalservice.filters.FilteredSensorData
 import com.atrainingtracker.banalservice.sensor.SensorType
@@ -79,6 +80,8 @@ class BANALServiceRepository private constructor(private val context: Context) {
     private val _activeSensors = MutableStateFlow<Set<SensorType>>(emptySet())
     val activeSensors: StateFlow<Set<SensorType>> = _activeSensors.asStateFlow()
 
+    private val _activeDevicesForUI = MutableLiveData<List<MyDevice>>(emptyList())
+    val activeDevicesForUI: LiveData<List<MyDevice>> = _activeDevicesForUI
 
     // -- Tracking mode
     private val _trackingMode = MutableLiveData<TrackingMode>()
@@ -208,6 +211,8 @@ class BANALServiceRepository private constructor(private val context: Context) {
                 _bSportType.value = banalServiceComm?.bSportType!!
                 _foundDeviceIds.value = banalServiceComm?.databaseIdsOfActiveDevices!!
                 _activeSensors.value = banalServiceComm?.availableSensorTypeSet?.toSet() ?: emptySet()
+
+                _activeDevicesForUI.postValue(banalServiceComm?.activeDevicesForUI ?: emptyList())
 
                 if (DEBUG) Log.i(TAG, "BANALService:\n _searchingForDevice.value: ${_searchingForDevice.value},\n _bSportType.value: ${_bSportType.value},\n _foundDeviceIds.value: ${_foundDeviceIds.value}},\n _activeSensors.value: ${_activeSensors.value}")
                 if (DEBUG) Log.i(TAG, "trackingMode: ${_trackingMode.value}")
