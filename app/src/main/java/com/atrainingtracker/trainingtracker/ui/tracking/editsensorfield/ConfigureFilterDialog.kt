@@ -62,7 +62,7 @@ fun ConfigureFilterDialog(
     }
 
     Dialog(onDismissRequest = onDismissRequest) {
-        Surface(shape = MaterialTheme.shapes.large, tonalElevation = 8.dp) {
+        Surface(shape = MaterialTheme.shapes.large) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     text = stringResource(R.string.filter_configure_smoothing),
