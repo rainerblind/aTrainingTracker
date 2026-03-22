@@ -1,13 +1,11 @@
 package com.atrainingtracker.banalservice.ui.devices
 
 import android.app.Application
-import androidx.compose.animation.core.copy
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.map
 import com.atrainingtracker.R
-import com.atrainingtracker.banalservice.devices.MyDevice
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.trainingtracker.MyHelper
@@ -23,6 +21,13 @@ class GetMergedDevicesUseCase(
         addSource(dbRepo.allDevices) { update() }
         addSource(serviceRepo.activeDevicesForUI) { update() }
         addSource(serviceRepo.foundDeviceIds.asLiveData()) { update() }
+    }
+
+    /**
+     * Provides a live, merged object for the Edit View.
+     */
+    fun getMergedDeviceById(id: Long): LiveData<DeviceUiData?> {
+        return mergedDevices.map { list -> list.find { it.id == id } }
     }
 
     private fun MediatorLiveData<List<DeviceUiData>>.update() {

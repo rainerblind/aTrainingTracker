@@ -24,10 +24,12 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.ui.devices.GetMergedDevicesUseCase
 import com.atrainingtracker.banalservice.ui.devices.devicedata.BikePowerFeatures
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.banalservice.ui.devices.devicedata.PowerFeatureDisplay
+import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository
 import kotlinx.coroutines.launch
 
 /**
@@ -41,6 +43,17 @@ import kotlinx.coroutines.launch
 class EditDeviceViewModel(private val application: Application) : AndroidViewModel(application) {
 
     private val devicesRepository = DeviceDataRepository.Companion.getInstance(application)
+    private val banalServiceRepository = BANALServiceRepository.Companion.getInstance(application)
+
+    private val useCase = GetMergedDevicesUseCase(
+        devicesRepository,
+        banalServiceRepository,
+        application
+    )
+
+    // the device data with the data of its sensors.
+    // This must not used for editing the device since it would be updated every second with the value of the database.
+    lateinit var deviceLiveData : LiveData<DeviceUiData?>
 
     // The single source of truth for the UI. This holds the CURRENT state of the device being edited.
     private val _deviceSnapshot = MutableLiveData<DeviceUiData?>()
@@ -272,14 +285,14 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
      * It ensures we always work with a non-null state and posts the result.
      */
     private fun updateState(updateAction: (currentState: DeviceUiData) -> DeviceUiData) {
-        val currentState = _uiState.value
+        val currentState = _deviceSnapshot.value
         if (currentState != null) {
             val newState = updateAction(currentState)
 
             // Only update the LiveData if the new state is actually different from the old one.
             // This avoids/breaks an infinite loop at its source.
             if (newState != currentState) {
-                _uiState.value = newState
+                _deviceSnapshot.value = newState
             }
         }
     }
@@ -290,7 +303,7 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
      */
 
     fun saveChanges() {
-        val finalState = _uiState.value ?: return
+        val finalState = _deviceSnapshot.value ?: return
 
         viewModelScope.launch {
             devicesRepository.updateDevice(finalState)
