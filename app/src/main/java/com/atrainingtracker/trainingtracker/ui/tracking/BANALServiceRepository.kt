@@ -13,10 +13,13 @@ import androidx.lifecycle.MutableLiveData
 import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.Protocol
+import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.devices.MyDevice
 import com.atrainingtracker.banalservice.filters.FilterData
 import com.atrainingtracker.banalservice.filters.FilteredSensorData
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
@@ -226,6 +229,22 @@ class BANALServiceRepository private constructor(private val context: Context) {
 
     fun setUserSelectedSportType(bSportType: BSportType) {
         if (banalServiceComm != null) banalServiceComm?.setUserSelectedSportType(bSportType)
+    }
+
+    fun startSearching(protocol: Protocol, deviceType: DeviceType) {
+        val intent = Intent(BANALService.START_SEARCHING_FOR_NEW_DEVICES_INTENT).apply {
+            putExtra(BANALService.PROTOCOL, protocol.name)
+            putExtra(BANALService.DEVICE_TYPE, deviceType.name)
+            setPackage(context.packageName)
+        }
+            context.sendBroadcast(intent)
+    }
+
+    fun stopSearching() {
+        val intent = Intent(BANALService.STOP_SEARCHING_FOR_NEW_DEVICES_INTENT).apply {
+            setPackage(context.packageName)
+        }
+        context.sendBroadcast(intent)
     }
 
 
