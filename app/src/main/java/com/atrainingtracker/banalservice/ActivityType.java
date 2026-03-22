@@ -57,8 +57,12 @@ public enum ActivityType {
         return sportType;
     }
 
+    @Deprecated // use getUIName instead
     public int getTitleId() {
         return titleId;
+    }
+    public String getUIName(Context context) {
+        return context.getString(titleId);
     }
 
     public int getLogoId() {
