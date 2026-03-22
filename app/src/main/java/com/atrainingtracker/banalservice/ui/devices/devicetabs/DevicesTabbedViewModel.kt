@@ -19,7 +19,6 @@
 package com.atrainingtracker.banalservice.ui.devices.devicetabs
 
 import android.app.Application
-import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -89,7 +88,7 @@ class DevicesTabbedViewModel(
         val currentState = _uiState.value
         if (isSearching || currentState !is UiState.DisplayingTabs) return
 
-        banalServiceRepository.startSearching(protocol, currentState.deviceType)
+        banalServiceRepository.startSearchingForNewDevices(protocol, currentState.deviceType)
 
         isSearching = true
     }
@@ -100,7 +99,7 @@ class DevicesTabbedViewModel(
     fun stopSearching() {
         if (!isSearching) return
 
-        banalServiceRepository.stopSearching()
+        banalServiceRepository.stopSearchingForNewDevices()
 
         isSearching = false
     }

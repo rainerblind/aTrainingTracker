@@ -19,7 +19,6 @@ import com.atrainingtracker.banalservice.devices.MyDevice
 import com.atrainingtracker.banalservice.filters.FilterData
 import com.atrainingtracker.banalservice.filters.FilteredSensorData
 import com.atrainingtracker.banalservice.sensor.SensorType
-import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
@@ -231,7 +230,11 @@ class BANALServiceRepository private constructor(private val context: Context) {
         if (banalServiceComm != null) banalServiceComm?.setUserSelectedSportType(bSportType)
     }
 
-    fun startSearching(protocol: Protocol, deviceType: DeviceType) {
+    fun startSearchingForPairedDevices() {
+        sendBroadcast(TrainingApplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES)
+    }
+
+    fun startSearchingForNewDevices(protocol: Protocol, deviceType: DeviceType) {
         val intent = Intent(BANALService.START_SEARCHING_FOR_NEW_DEVICES_INTENT).apply {
             putExtra(BANALService.PROTOCOL, protocol.name)
             putExtra(BANALService.DEVICE_TYPE, deviceType.name)
@@ -240,12 +243,20 @@ class BANALServiceRepository private constructor(private val context: Context) {
             context.sendBroadcast(intent)
     }
 
-    fun stopSearching() {
-        val intent = Intent(BANALService.STOP_SEARCHING_FOR_NEW_DEVICES_INTENT).apply {
-            setPackage(context.packageName)
+    fun stopSearchingForNewDevices() {
+        sendBroadcast(BANALService.STOP_SEARCHING_FOR_NEW_DEVICES_INTENT)
+    }
+
+    /***********************************************************************************************
+     * Simple helper to send a broadcast
+     */
+    private fun sendBroadcast(action: String) {
+        val intent = Intent(action).apply {
+            `package` = context.packageName
         }
         context.sendBroadcast(intent)
     }
+
 
 
     companion object {
