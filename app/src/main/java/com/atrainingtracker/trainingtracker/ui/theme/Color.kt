@@ -83,4 +83,3 @@ val Zone2 = Color(0xFF008000) // Green
 val Zone3 = Color(0xFFFFA500) // Orange
 val Zone4 = Color(0xFFFF0000) // Red
 val Zone5 = Color(0xFF9400D3) // Dark Violet
-val DefaultBackgroundColor = Color(0xFF212121) // A neutral dark grey for default fields in dark theme

@@ -37,9 +37,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import com.atrainingtracker.trainingtracker.ui.theme.DefaultBackgroundColor
 import com.atrainingtracker.trainingtracker.ui.theme.Zone1
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.atrainingtracker.trainingtracker.ui.theme.LightBackground
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldView
@@ -156,9 +156,9 @@ private fun ColAdder(onClick: () -> Unit) {
 fun SensorGridScreenConfigPreview() {
     ATrainingTrackerTheme {
         val previewFields = listOf(
-            SensorFieldState(configHash = 1, sensorFieldId = 1, rowNr = 0, colNr = 0, viewSize = ViewSize.NORMAL, label = "Pace", value = "5:31", units = "/min", zoneColor = DefaultBackgroundColor, filterDescription = "GPS: 5s avg"),
+            SensorFieldState(configHash = 1, sensorFieldId = 1, rowNr = 0, colNr = 0, viewSize = ViewSize.NORMAL, label = "Pace", value = "5:31", units = "/min", zoneColor = LightBackground, filterDescription = "GPS: 5s avg"),
             SensorFieldState(configHash = 2, sensorFieldId = 2, rowNr = 0, colNr = 1, viewSize = ViewSize.NORMAL, label = "Heart Rate", value = "145", units = "bpm", zoneColor = Zone1, filterDescription = ""),
-            SensorFieldState(configHash = 3, sensorFieldId = 3, rowNr = 1, colNr = 0, viewSize = ViewSize.NORMAL, label = "Distance", value = "10.3", units = "km", zoneColor = DefaultBackgroundColor, filterDescription = "")
+            SensorFieldState(configHash = 3, sensorFieldId = 3, rowNr = 1, colNr = 0, viewSize = ViewSize.NORMAL, label = "Distance", value = "10.3", units = "km", zoneColor = LightBackground, filterDescription = "")
         )
         val mockActions = object : GridActions {
             override fun onEditField(fieldState: SensorFieldState) {}
@@ -180,9 +180,9 @@ fun SensorGridScreenConfigPreview() {
 fun SensorGridScreenTrackingPreview() {
     ATrainingTrackerTheme {
         val previewFields = listOf(
-            SensorFieldState(configHash = 1, sensorFieldId = 1, rowNr = 0, colNr = 0, viewSize = ViewSize.LARGE, label = "Pace", value = "5:31", units = "/min", zoneColor = DefaultBackgroundColor, filterDescription = "GPS: 5s avg"),
+            SensorFieldState(configHash = 1, sensorFieldId = 1, rowNr = 0, colNr = 0, viewSize = ViewSize.LARGE, label = "Pace", value = "5:31", units = "/min", zoneColor = LightBackground, filterDescription = "GPS: 5s avg"),
             SensorFieldState(configHash = 2, sensorFieldId = 2, rowNr = 0, colNr = 1, viewSize = ViewSize.LARGE, label = "Heart Rate", value = "145", zoneColor = Zone1, units = "bpm", filterDescription = ""),
-            SensorFieldState(configHash = 3, sensorFieldId = 3, rowNr = 1, colNr = 0, viewSize = ViewSize.NORMAL, label = "Distance", value = "10.3", units = "km", zoneColor = DefaultBackgroundColor, filterDescription = "")
+            SensorFieldState(configHash = 3, sensorFieldId = 3, rowNr = 1, colNr = 0, viewSize = ViewSize.NORMAL, label = "Distance", value = "10.3", units = "km", zoneColor = LightBackground, filterDescription = "")
         )
         val mockActions = object : GridActions {
             override fun onEditField(fieldState: SensorFieldState) {}
