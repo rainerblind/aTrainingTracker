@@ -47,6 +47,13 @@ val LightOutline = Color(0xFF74777F) // Suggested
 val LightInverseOnSurface = Color(0xFFF2F0F4) // Suggested
 val LightInverseSurface = Color(0xFF2F3033) // Suggested
 val LightPrimaryInverse = Color(0xFFA6C8FF) // Suggested
+val surfaceDimLight = Color(0xFFDDD9D9)
+val surfaceBrightLight = Color(0xFFFCF8F8)
+val surfaceContainerLowestLight = Color(0xFFFFFFFF)
+val surfaceContainerLowLight = Color(0xFFF7F3F2)
+val surfaceContainerLight = Color(0xFFFFFFFF)
+val surfaceContainerHighLight = Color(0xFFEBE7E7)
+val surfaceContainerHighestLight = Color(0xFFE5E2E1)
 
 // Dark Theme Colors (These are suggested Material 3 colors, you can customize them)
 val DarkPrimary = Color(0xFFA6C8FF)
@@ -75,6 +82,13 @@ val DarkOutline = Color(0xFF8E9099)
 val DarkInverseOnSurface = Color(0xFF1B1B1F)
 val DarkInverseSurface = Color(0xFFE3E2E6)
 val DarkPrimaryInverse = Color(0xFF3F81D1)
+val surfaceDimDark = Color(0xFF141313)
+val surfaceBrightDark = Color(0xFF3A3939)
+val surfaceContainerLowestDark = Color(0xFF0E0E0E)
+val surfaceContainerLowDark = Color(0xFF1C1B1C)
+val surfaceContainerDark = Color(0xFF201F20)
+val surfaceContainerHighDark = Color(0xFF2A2A2A)
+val surfaceContainerHighestDark = Color(0xFF353435)
 
 
 // Zone Colors from color.xml
