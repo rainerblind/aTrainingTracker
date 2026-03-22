@@ -465,30 +465,18 @@ public class TrackingViewsDatabaseManager {
 
             EnumMap<ActivityType, List<RowData>> viewMap = createViewMap();
             for (ActivityType activityType : viewMap.keySet()) {
-                addDefaultActivity(db, activityType, 1, viewMap.get(activityType));
+                // show the default tab with an lap button
+                addDefaultTab(db, activityType, mContext.getString(R.string.text_default), 1, true, false, viewMap.get(activityType));
+                // shot a tab with just some standard fields and the map but no lap button
+                addDefaultTab(db, activityType, mContext.getString(R.string.tab_map), 2, false, true, getDefaultStartRowDataList(activityType));
             }
             if (DEBUG) Log.d(TAG, "filled db");
         }
 
-        public long addDefaultActivity(@NonNull SQLiteDatabase db, @NonNull ActivityType activityType, int layoutNr, List<RowData> rowDataList) {
+        public long addDefaultTab(@NonNull SQLiteDatabase db, @NonNull ActivityType activityType, String name, int layoutNr, boolean showLapButton, boolean showMap, List<RowData> rowDataList) {
             if (DEBUG)
                 Log.i(TAG, "addDefaultActivity: activityType=" + activityType + ", layoutNr=" + layoutNr);
             long newViewId = -1;
-
-            String name = mContext.getString(R.string.default_device_name_format,
-                    mContext.getString(activityType.getTitleId()),
-                    mContext.getString(R.string.text_default));
-            Cursor cursor = db.query(VIEWS_TABLE,
-                    null,
-                    ACTIVITY_TYPE + "=?",
-                    new String[]{activityType.name()},
-                    null,
-                    null,
-                    null);
-            int numberOfDefaults = cursor.getCount();
-            if (numberOfDefaults > 0) {
-                name = mContext.getString(R.string.string_and_number_format, name, numberOfDefaults + 1);
-            }
 
             ContentValues values = new ContentValues();
 
@@ -496,8 +484,8 @@ public class TrackingViewsDatabaseManager {
             values.put(NAME, name);
             values.put(LAYOUT_NR, layoutNr);
             values.put(NEXT_POSITION, -1);  // insert an invalid value to indicate that this field is invalid
-            values.put(SHOW_LAP_BUTTON, 1);
-            values.put(SHOW_MAP, 0);
+            values.put(SHOW_LAP_BUTTON, showLapButton ? 1 : 0);
+            values.put(SHOW_MAP, showMap ? 1 : 0);
             values.put(FULL_SCREEN, 0);     // default will be to have no fullscreen mode
             values.put(SYSTEM_SETTING, 1);  // default will be to follow the systems settings
             values.put(DAY, 0);
@@ -614,6 +602,21 @@ public class TrackingViewsDatabaseManager {
             }
         }
 
+        @NonNull protected List<RowData> getDefaultStartRowDataList(ActivityType activityType) {
+            List<RowData> rowDataList = new LinkedList<>();
+            rowDataList.add(new RowData(SensorType.TIME_ACTIVE, ViewSize.SMALL, 1, 1));
+            rowDataList.add(new RowData(SensorType.TIME_OF_DAY, ViewSize.SMALL, 1, 2));
+            rowDataList.add(new RowData(SensorType.HR, ViewSize.LARGE, 2, 1));
+            if (activityType == ActivityType.RUN_SPEED_AND_CADENCE) {
+                rowDataList.add(new RowData(SensorType.PACE_spm, ViewSize.NORMAL, 3, 1));
+            }
+            else {
+                rowDataList.add(new RowData(SensorType.SPEED_mps, ViewSize.NORMAL, 3, 1));
+            }
+
+            return rowDataList;
+        }
+
         @NonNull
         protected EnumMap<ActivityType, List<RowData>> createViewMap() {
             if (DEBUG) Log.d(TAG, "createViewMap");
@@ -621,11 +624,7 @@ public class TrackingViewsDatabaseManager {
             List<RowData> rowDataList;
 
             // GENERIC_HR
-            rowDataList = new LinkedList<>();
-            rowDataList.add(new RowData(SensorType.TIME_ACTIVE, ViewSize.SMALL, 1, 1));
-            rowDataList.add(new RowData(SensorType.TIME_OF_DAY, ViewSize.SMALL, 1, 2));
-            rowDataList.add(new RowData(SensorType.HR, ViewSize.LARGE, 2, 1));
-            rowDataList.add(new RowData(SensorType.SPEED_mps, ViewSize.NORMAL, 3, 1));
+            rowDataList = getDefaultStartRowDataList(ActivityType.GENERIC_HR);
             rowDataList.add(new RowData(SensorType.DISTANCE_m, ViewSize.NORMAL, 4, 1));
             if (mHavePressureSensor) {
                 rowDataList.add(new RowData(SensorType.ALTITUDE, ViewSize.NORMAL, 4, 2));
@@ -633,11 +632,7 @@ public class TrackingViewsDatabaseManager {
             viewMap.put(ActivityType.GENERIC_HR, rowDataList);
 
             // RUN_SPEED_AND_CADENCE
-            rowDataList = new LinkedList<>();
-            rowDataList.add(new RowData(SensorType.TIME_ACTIVE, ViewSize.SMALL, 1, 1));
-            rowDataList.add(new RowData(SensorType.TIME_OF_DAY, ViewSize.SMALL, 1, 2));
-            rowDataList.add(new RowData(SensorType.HR, ViewSize.LARGE, 2, 1));
-            rowDataList.add(new RowData(SensorType.PACE_spm, ViewSize.SMALL, 3, 1));
+            rowDataList = getDefaultStartRowDataList(ActivityType.RUN_SPEED_AND_CADENCE);
             rowDataList.add(new RowData(SensorType.CADENCE, ViewSize.LARGE, 4, 1));
             rowDataList.add(new RowData(SensorType.DISTANCE_m, ViewSize.NORMAL, 5, 1));
             if (mHavePressureSensor) {
@@ -646,11 +641,7 @@ public class TrackingViewsDatabaseManager {
             viewMap.put(ActivityType.RUN_SPEED_AND_CADENCE, rowDataList);
 
             // BIKE_SPEED_AND_CADENCE
-            rowDataList = new LinkedList<>();
-            rowDataList.add(new RowData(SensorType.TIME_ACTIVE, ViewSize.SMALL, 1, 1));
-            rowDataList.add(new RowData(SensorType.TIME_OF_DAY, ViewSize.SMALL, 1, 2));
-            rowDataList.add(new RowData(SensorType.HR, ViewSize.LARGE, 2, 1));
-            rowDataList.add(new RowData(SensorType.SPEED_mps, ViewSize.LARGE, 3, 1));
+            rowDataList = getDefaultStartRowDataList(ActivityType.BIKE_SPEED_AND_CADENCE);
             rowDataList.add(new RowData(SensorType.CADENCE, ViewSize.LARGE, 4, 1));
             rowDataList.add(new RowData(SensorType.DISTANCE_m, ViewSize.NORMAL, 5, 1));
             if (mHavePressureSensor) {
@@ -659,14 +650,10 @@ public class TrackingViewsDatabaseManager {
             viewMap.put(ActivityType.BIKE_SPEED_AND_CADENCE, rowDataList);
 
             // BIKE_POWER
-            rowDataList = new LinkedList<>();
-            rowDataList.add(new RowData(SensorType.TIME_ACTIVE, ViewSize.SMALL, 1, 1));
-            rowDataList.add(new RowData(SensorType.TIME_OF_DAY, ViewSize.SMALL, 1, 2));
-            rowDataList.add(new RowData(SensorType.HR, ViewSize.LARGE, 2, 1));
+            rowDataList = getDefaultStartRowDataList(ActivityType.BIKE_POWER);
             rowDataList.add(new RowData(SensorType.POWER, ViewSize.XLARGE, 3, 1));
             rowDataList.add(new RowData(SensorType.CADENCE, ViewSize.LARGE, 4, 1));
             rowDataList.add(new RowData(SensorType.DISTANCE_m, ViewSize.NORMAL, 5, 1));
-            rowDataList.add(new RowData(SensorType.SPEED_mps, ViewSize.NORMAL, 5, 2));
             if (mHavePressureSensor) {
                 rowDataList.add(new RowData(SensorType.ALTITUDE, ViewSize.SMALL, 5, 3));
             }
