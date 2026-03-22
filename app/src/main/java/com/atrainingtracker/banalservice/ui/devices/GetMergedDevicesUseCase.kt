@@ -36,14 +36,14 @@ class GetMergedDevicesUseCase(
 
             when {
                 activeDevice != null -> {
-                    val main = activeDevice.mainSensorData
-                    val unit = application.getString(MyHelper.getUnitsId(main.sensor))
+                    val mainSensorData = activeDevice.mainSensorData
+                    val unit = application.getString(MyHelper.getUnitsId(mainSensorData.sensor))
                     knownDevice.copy(
                         isAvailable = true,
                         lastSeen = application.getString(R.string.devices_now),
-                        mainValue = "${main.value} $unit",
+                        mainValue = "${mainSensorData.value} $unit",
                         allValues = activeDevice.allSensorData.map {
-                            "${application.getString(it.sensor.fullNameId)}: ${it.value}"
+                            "${it.sensor.getFullName(application)}: ${it.value}"
                         }
                     )
                 }
