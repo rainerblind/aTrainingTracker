@@ -125,7 +125,7 @@ class ControlTrackingViewModel(
     val searchingForDevice = banalServiceRepository.searchingForDevice
 
     fun onSearchClicked() {
-        sendBroadcast(TrainingApplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES)
+        banalServiceRepository.startSearchingForPairedDevices()
     }
 
     fun isAntProperlyInstalled(): Boolean {

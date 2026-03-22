@@ -19,7 +19,6 @@
 package com.atrainingtracker.banalservice.ui.devices.devicetabs
 
 import android.app.Application
-import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -27,6 +26,7 @@ import androidx.lifecycle.SavedStateHandle
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository
 
 /**
  * Sealed class to represent the UI state in a clean and type-safe way.
@@ -44,6 +44,8 @@ class DevicesTabbedViewModel(
     application: Application,
     private val savedStateHandle: SavedStateHandle
 ) : AndroidViewModel(application) {
+
+    private val banalServiceRepository: BANALServiceRepository = BANALServiceRepository.getInstance(application)
 
     private val _uiState = MutableLiveData<UiState>()
     val uiState: LiveData<UiState> = _uiState
@@ -86,12 +88,8 @@ class DevicesTabbedViewModel(
         val currentState = _uiState.value
         if (isSearching || currentState !is UiState.DisplayingTabs) return
 
-        val intent = Intent(BANALService.START_SEARCHING_FOR_NEW_DEVICES_INTENT).apply {
-            putExtra(BANALService.PROTOCOL, protocol.name)
-            putExtra(BANALService.DEVICE_TYPE, currentState.deviceType.name)
-            setPackage(getApplication<Application>().packageName)
-        }
-        getApplication<Application>().sendBroadcast(intent)
+        banalServiceRepository.startSearchingForNewDevices(protocol, currentState.deviceType)
+
         isSearching = true
     }
 
@@ -101,10 +99,8 @@ class DevicesTabbedViewModel(
     fun stopSearching() {
         if (!isSearching) return
 
-        val intent = Intent(BANALService.STOP_SEARCHING_FOR_NEW_DEVICES_INTENT).apply {
-            setPackage(getApplication<Application>().packageName)
-        }
-        getApplication<Application>().sendBroadcast(intent)
+        banalServiceRepository.stopSearchingForNewDevices()
+
         isSearching = false
     }
 }

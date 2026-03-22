@@ -87,7 +87,7 @@ abstract class BaseEditDeviceFragment : DialogFragment() {
         val dialogIcon = customTitleView.findViewById<ImageView>(R.id.dialog_icon)
         val dialogTitle = customTitleView.findViewById<TextView>(R.id.dialog_title)
 
-        viewModel.uiState.observe(this) { deviceUiData ->
+        viewModel.deviceSnapshot.observe(this) { deviceUiData ->
             if (deviceUiData != null) {
                 // Set common title
                 dialogIcon.setImageResource(deviceUiData.deviceTypeIconRes)
@@ -99,7 +99,7 @@ abstract class BaseEditDeviceFragment : DialogFragment() {
             }
         }
 
-        viewModel.deviceData.observe(this) { deviceUiData ->
+        viewModel.deviceLiveData.observe(this) { deviceUiData ->
             if (deviceUiData != null) {
                 bindLiveSensorData(deviceUiData)
             }
@@ -107,6 +107,10 @@ abstract class BaseEditDeviceFragment : DialogFragment() {
     }
 
     fun bindLiveSensorData(data: DeviceUiData) {
+        binding.tvLastSeen.setText(if (data.lastSeen != null) data.lastSeen else getString(R.string.devices_last_seen_never))
+        binding.ivBatteryStatus.setImageResource(data.batteryStatusIconRes)
+        binding.availableIcon.setImageResource(if (data.isAvailable) R.drawable.ic_device_available else R.drawable.ic_device_not_available)
+
         if (data.isAvailable && data.mainValue != null) {
             // Device is active, show the live data section
             binding.liveDataLayout.visibility = View.VISIBLE
@@ -128,9 +132,6 @@ abstract class BaseEditDeviceFragment : DialogFragment() {
      */
     open fun bindUi(data: DeviceUiData) {
 
-        binding.tvLastSeen.setText(if (data.lastSeen != null) data.lastSeen else getString(R.string.devices_last_seen_never))
-        binding.ivBatteryStatus.setImageResource(data.batteryStatusIconRes)
-        binding.availableIcon.setImageResource(if (data.isAvailable) R.drawable.ic_device_available else R.drawable.ic_device_not_available)
         binding.tvManufacturer.setText(data.manufacturer)
 
         // only update the name if it has changed
