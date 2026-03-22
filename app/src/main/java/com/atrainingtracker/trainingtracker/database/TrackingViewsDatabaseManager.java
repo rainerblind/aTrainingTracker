@@ -465,12 +465,12 @@ public class TrackingViewsDatabaseManager {
 
             EnumMap<ActivityType, List<RowData>> viewMap = createViewMap();
             for (ActivityType activityType : viewMap.keySet()) {
-                addDefaultActivity(db, activityType, 1);
+                addDefaultActivity(db, activityType, 1, viewMap.get(activityType));
             }
             if (DEBUG) Log.d(TAG, "filled db");
         }
 
-        public long addDefaultActivity(@NonNull SQLiteDatabase db, @NonNull ActivityType activityType, int layoutNr) {
+        public long addDefaultActivity(@NonNull SQLiteDatabase db, @NonNull ActivityType activityType, int layoutNr, List<RowData> rowDataList) {
             if (DEBUG)
                 Log.i(TAG, "addDefaultActivity: activityType=" + activityType + ", layoutNr=" + layoutNr);
             long newViewId = -1;
@@ -490,9 +490,6 @@ public class TrackingViewsDatabaseManager {
                 name = mContext.getString(R.string.string_and_number_format, name, numberOfDefaults + 1);
             }
 
-            // OK, not the optimal way...
-            EnumMap<ActivityType, List<RowData>> viewMap = createViewMap();
-
             ContentValues values = new ContentValues();
 
             values.put(ACTIVITY_TYPE, activityType.name());
@@ -507,7 +504,7 @@ public class TrackingViewsDatabaseManager {
             values.put(NIGHT, 0);
             newViewId = db.insert(VIEWS_TABLE, null, values);
 
-            for (RowData rowData : viewMap.get(activityType)) {
+            for (RowData rowData : rowDataList) {
                 if (DEBUG)
                     Log.i(TAG, "adding new row: newViewId=" + newViewId + ", sensorType=" + rowData.sensorType.name());
 
