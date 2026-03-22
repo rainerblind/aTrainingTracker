@@ -602,17 +602,19 @@ public class TrackingViewsDatabaseManager {
             }
         }
 
-        @NonNull protected List<RowData> getDefaultStartRowDataList(ActivityType activityType) {
+        @NonNull
+        protected List<RowData> getDefaultStartRowDataList(ActivityType activityType) {
             List<RowData> rowDataList = new LinkedList<>();
             rowDataList.add(new RowData(SensorType.TIME_ACTIVE, ViewSize.SMALL, 1, 1));
             rowDataList.add(new RowData(SensorType.TIME_OF_DAY, ViewSize.SMALL, 1, 2));
-            rowDataList.add(new RowData(SensorType.HR, ViewSize.LARGE, 2, 1));
             if (activityType == ActivityType.RUN_SPEED_AND_CADENCE) {
-                rowDataList.add(new RowData(SensorType.PACE_spm, ViewSize.NORMAL, 3, 1));
+                rowDataList.add(new RowData(SensorType.PACE_spm, ViewSize.NORMAL, 2, 1));
             }
             else {
-                rowDataList.add(new RowData(SensorType.SPEED_mps, ViewSize.NORMAL, 3, 1));
+                rowDataList.add(new RowData(SensorType.SPEED_mps, ViewSize.NORMAL, 2, 1));
             }
+            rowDataList.add(new RowData(SensorType.DISTANCE_m, ViewSize.NORMAL, 2, 2));
+            rowDataList.add(new RowData(SensorType.HR, ViewSize.LARGE, 3, 1));
 
             return rowDataList;
         }
@@ -625,37 +627,41 @@ public class TrackingViewsDatabaseManager {
 
             // GENERIC_HR
             rowDataList = getDefaultStartRowDataList(ActivityType.GENERIC_HR);
-            rowDataList.add(new RowData(SensorType.DISTANCE_m, ViewSize.NORMAL, 4, 1));
+            rowDataList.add(new RowData(SensorType.ALTITUDE, ViewSize.NORMAL, 4, 1));
+            rowDataList.add(new RowData(SensorType.ASCENT, ViewSize.NORMAL, 4, 2));
             if (mHavePressureSensor) {
-                rowDataList.add(new RowData(SensorType.ALTITUDE, ViewSize.NORMAL, 4, 2));
+                // TODO: add slope and VAM when this is working properly
             }
             viewMap.put(ActivityType.GENERIC_HR, rowDataList);
 
             // RUN_SPEED_AND_CADENCE
             rowDataList = getDefaultStartRowDataList(ActivityType.RUN_SPEED_AND_CADENCE);
             rowDataList.add(new RowData(SensorType.CADENCE, ViewSize.LARGE, 4, 1));
-            rowDataList.add(new RowData(SensorType.DISTANCE_m, ViewSize.NORMAL, 5, 1));
+            rowDataList.add(new RowData(SensorType.ALTITUDE, ViewSize.NORMAL, 5, 1));
+            rowDataList.add(new RowData(SensorType.ASCENT, ViewSize.NORMAL, 5, 2));
             if (mHavePressureSensor) {
-                rowDataList.add(new RowData(SensorType.ALTITUDE, ViewSize.NORMAL, 5, 2));
+                // TODO: add slope and VAM when this is working properly
             }
             viewMap.put(ActivityType.RUN_SPEED_AND_CADENCE, rowDataList);
 
             // BIKE_SPEED_AND_CADENCE
             rowDataList = getDefaultStartRowDataList(ActivityType.BIKE_SPEED_AND_CADENCE);
             rowDataList.add(new RowData(SensorType.CADENCE, ViewSize.LARGE, 4, 1));
-            rowDataList.add(new RowData(SensorType.DISTANCE_m, ViewSize.NORMAL, 5, 1));
+            rowDataList.add(new RowData(SensorType.ALTITUDE, ViewSize.NORMAL, 5, 1));
+            rowDataList.add(new RowData(SensorType.ASCENT, ViewSize.NORMAL, 5, 2));
             if (mHavePressureSensor) {
-                rowDataList.add(new RowData(SensorType.ALTITUDE, ViewSize.NORMAL, 5, 2));
+                // TODO: add slope and VAM when this is working properly
             }
             viewMap.put(ActivityType.BIKE_SPEED_AND_CADENCE, rowDataList);
 
             // BIKE_POWER
             rowDataList = getDefaultStartRowDataList(ActivityType.BIKE_POWER);
-            rowDataList.add(new RowData(SensorType.POWER, ViewSize.XLARGE, 3, 1));
-            rowDataList.add(new RowData(SensorType.CADENCE, ViewSize.LARGE, 4, 1));
-            rowDataList.add(new RowData(SensorType.DISTANCE_m, ViewSize.NORMAL, 5, 1));
+            rowDataList.add(new RowData(SensorType.POWER, ViewSize.HUGE, 4, 1));
+            rowDataList.add(new RowData(SensorType.CADENCE, ViewSize.LARGE, 5, 1));
+            rowDataList.add(new RowData(SensorType.ALTITUDE, ViewSize.NORMAL, 6, 1));
+            rowDataList.add(new RowData(SensorType.ASCENT, ViewSize.NORMAL, 6, 2));
             if (mHavePressureSensor) {
-                rowDataList.add(new RowData(SensorType.ALTITUDE, ViewSize.SMALL, 5, 3));
+                // TODO: add slope and VAM when this is working properly
             }
             viewMap.put(ActivityType.BIKE_POWER, rowDataList);
 
