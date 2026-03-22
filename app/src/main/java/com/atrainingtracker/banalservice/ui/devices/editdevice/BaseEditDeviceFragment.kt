@@ -87,7 +87,7 @@ abstract class BaseEditDeviceFragment : DialogFragment() {
         val dialogIcon = customTitleView.findViewById<ImageView>(R.id.dialog_icon)
         val dialogTitle = customTitleView.findViewById<TextView>(R.id.dialog_title)
 
-        viewModel.uiState.observe(this) { deviceUiData ->
+        viewModel.deviceSnapshot.observe(this) { deviceUiData ->
             if (deviceUiData != null) {
                 // Set common title
                 dialogIcon.setImageResource(deviceUiData.deviceTypeIconRes)
@@ -99,7 +99,7 @@ abstract class BaseEditDeviceFragment : DialogFragment() {
             }
         }
 
-        viewModel.deviceData.observe(this) { deviceUiData ->
+        viewModel.deviceLiveData.observe(this) { deviceUiData ->
             if (deviceUiData != null) {
                 bindLiveSensorData(deviceUiData)
             }

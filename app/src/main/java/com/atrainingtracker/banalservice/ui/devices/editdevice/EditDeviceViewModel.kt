@@ -43,10 +43,9 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
     private val devicesRepository = DeviceDataRepository.Companion.getInstance(application)
 
     // The single source of truth for the UI. This holds the CURRENT state of the device being edited.
-    private val _uiState = MutableLiveData<DeviceUiData?>()
-    val uiState: LiveData<DeviceUiData?> = _uiState
+    private val _deviceSnapshot = MutableLiveData<DeviceUiData?>()
+    val deviceSnapshot: LiveData<DeviceUiData?> = _deviceSnapshot
 
-    lateinit var deviceData : LiveData<DeviceUiData?>
 
     /**
      * Loads the initial device data from the repository and populates the initial UI state.
@@ -54,8 +53,9 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
      */
     fun loadInitialDeviceData(deviceId: Long) {
         // No launch block is needed for this synchronous, main-safe call.
-        _uiState.value = devicesRepository.getDeviceSnapshotById(deviceId)
-        deviceData = devicesRepository.getDeviceById(deviceId)
+        _deviceSnapshot.value = devicesRepository.getDeviceSnapshotById(deviceId)
+        // _uiState.value = useCase.getMergedDeviceById(deviceId).value
+        deviceLiveData = useCase.getMergedDeviceById(deviceId)
     }
 
     //--- dealing with wheel sizes
