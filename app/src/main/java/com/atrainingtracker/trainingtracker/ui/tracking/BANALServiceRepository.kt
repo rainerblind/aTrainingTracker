@@ -220,6 +220,9 @@ class BANALServiceRepository private constructor(private val context: Context) {
                     _allFilteredSensorData.value = newSensorData
                 }
 
+                Log.i(TAG, "getIdsOfFoundDevices: ${banalServiceComm?.getIdsOfNewlyFoundDevices()}")
+                Log.i(TAG, "databaseIdsOfActiveDevices: ${banalServiceComm?.databaseIdsOfActiveDevices}")
+
                 _searchingForDevice.value = banalServiceComm?.nameOfSearchingDevice
                 _bSportType.value = banalServiceComm?.bSportType!!
                 _foundDeviceIds.value = banalServiceComm?.databaseIdsOfActiveDevices!!
@@ -227,7 +230,7 @@ class BANALServiceRepository private constructor(private val context: Context) {
 
                 _activeDevicesForUI.postValue(banalServiceComm?.activeDevicesForUI ?: emptyList())
 
-                if (DEBUG) Log.i(TAG, "BANALService:\n _searchingForDevice.value: ${_searchingForDevice.value},\n _bSportType.value: ${_bSportType.value},\n _foundDeviceIds.value: ${_foundDeviceIds.value}},\n _activeSensors.value: ${_activeSensors.value}")
+                if (DEBUG) Log.i(TAG, "BANALService:\n _searchingForDevice.value: ${_searchingForDevice.value},\n _bSportType.value: ${_bSportType.value},\n _foundDeviceIds.value: ${_foundDeviceIds.value},\n _activeSensors.value: ${_activeSensors.value}")
                 if (DEBUG) Log.i(TAG, "trackingMode: ${_trackingMode.value}")
             }
         }
