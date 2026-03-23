@@ -79,9 +79,14 @@ class BANALServiceRepository private constructor(private val context: Context) {
     private val _activeRemoteDevicesIds = MutableStateFlow<List<Long>>(emptyList())
     val activeRemoteDevicesIds: StateFlow<List<Long>> = _activeRemoteDevicesIds.asStateFlow()
 
+    // he newly found devices
+    private val _newlyFoundDevicesIds = MutableStateFlow<List<Long>>(emptyList())
+    val newlyFoundDevicesIds: StateFlow<List<Long>> = _newlyFoundDevicesIds.asStateFlow()
+
     private val _activeSensors = MutableStateFlow<Set<SensorType>>(emptySet())
     val activeSensors: StateFlow<Set<SensorType>> = _activeSensors.asStateFlow()
 
+    // all acitve devices (including the smartphones speed and location devices)
     private val _allActiveDevices = MutableLiveData<List<MyDevice>>(emptyList())
     val allActiveDevices: LiveData<List<MyDevice>> = _allActiveDevices
 
@@ -226,6 +231,7 @@ class BANALServiceRepository private constructor(private val context: Context) {
                 _searchingForDevice.value = banalServiceComm?.nameOfSearchingDevice
                 _bSportType.value = banalServiceComm?.bSportType!!
                 _activeRemoteDevicesIds.value = banalServiceComm?.databaseIdsOfActiveRemoteDevices!!
+                _newlyFoundDevicesIds.value = banalServiceComm?.getIdsOfNewlyFoundDevices()!!
                 _activeSensors.value = banalServiceComm?.availableSensorTypeSet?.toSet() ?: emptySet()
 
                 _allActiveDevices.postValue(banalServiceComm?.activeDevicesIncludingSpeedAndLocationDevices ?: emptyList())
