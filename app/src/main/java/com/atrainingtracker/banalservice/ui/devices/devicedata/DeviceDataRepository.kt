@@ -149,6 +149,17 @@ class DeviceDataRepository private constructor(private val application: Applicat
         }
     }
 
+    /**
+     * Called when a new device has been discovered and added to the database
+     * by the BANALService. This refreshes the local LiveData list.
+     */
+    fun handleNewDeviceFound() {
+        repositoryScope.launch {
+            if (DEBUG) Log.d(TAG, "New device broadcast received - reloading all devices")
+            loadAllDevices()
+        }
+    }
+
 
     /**
      * Updates a device's properties based on the final UI state.
