@@ -87,6 +87,9 @@
     <color name="pair_button_unpaired_text">#1B5E20</color> <!-- A very dark green for high contrast -->
     <color name="pair_button_paired_text">#FFFFFF</color> <!-- White for readability on solid green -->
 
+    <!-- lap button -->
+    <color name="lap_button_disabled_background">#E0E0E0</color>
+    <color name="lap_button_disabled_text">#A0A0A0</color>
 
     <!-- Heart Rate / Power Zone Colors -->
     <color name="zone_1">#7FFF00</color> <!-- Chartreuse -->

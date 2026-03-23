@@ -265,9 +265,28 @@ class TrackingTabsFragment : Fragment() {
         viewModel.trackingMode.observe(viewLifecycleOwner) { trackingMode ->
             if (isExplicitMode) return@observe // when in explicit mode, there is no control tracking fragment, so we immediately return.
 
+            // set the title
             if (::tabLayout.isInitialized && ::pagerAdapter.isInitialized) {
                 tabLayout.getTabAt(0)?.text = pagerAdapter.getPageTitle(0)
             }
+
+            // set enabled when tracking / disabled else
+            if (trackingMode == TrackingMode.TRACKING) {
+                lapButton.isEnabled = true
+                lapButton.alpha = 1.0f
+                // set to primary brand color
+                lapButton.setBackgroundColor(requireContext().getColor(R.color.color_primary))
+                lapButton.setTextColor(requireContext().getColor(R.color.color_on_primary))
+            }
+            else {
+                lapButton.isEnabled = false
+                // Make it look "ghosted" or disabled
+                lapButton.alpha = 0.5f
+                // Use a neutral/disabled grey
+                lapButton.setBackgroundColor(requireContext().getColor(R.color.lap_button_disabled_background))
+                lapButton.setTextColor(requireContext().getColor(R.color.lap_button_disabled_text))
+            }
+
         }
 
         // Observe ScreenMode to swap between Tracking and Configuration UI
