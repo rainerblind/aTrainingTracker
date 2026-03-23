@@ -62,7 +62,7 @@ class EditWorkoutActivity : AppCompatActivity() {
 
     // UI View References
     private lateinit var editWorkoutName: TextInputEditText
-    private lateinit var buttonAutoName: Button
+    // private lateinit var buttonAutoName: Button NO_MY_LOCATIONS
     private lateinit var spinnerSportType: Spinner
     private lateinit var spinnerEquipment: Spinner
     private lateinit var checkboxCommute: MaterialCheckBox
@@ -145,7 +145,9 @@ class EditWorkoutActivity : AppCompatActivity() {
 
     private fun findViews() {
         editWorkoutName = findViewById(R.id.editWorkoutName)
-        buttonAutoName = findViewById(R.id.buttonAutoName)
+
+        /* NO_MY_LOCATIONS
+        buttonAutoName = findViewById(R.id.buttonAutoName) */
 
         spinnerSportType = findViewById(R.id.spinnerSportType)
         spinnerEquipment = findViewById(R.id.spinnerEquipment)
@@ -412,9 +414,11 @@ class EditWorkoutActivity : AppCompatActivity() {
 
     private fun setupClickListeners() {
 
+        /* NO_MY_LOCATIONS
         buttonAutoName.setOnClickListener {
             showFancyWorkoutNameDialog()
         }
+         */
 
         checkboxCommute.setOnCheckedChangeListener { _, isChecked ->
             // Tell the ViewModel about the change
