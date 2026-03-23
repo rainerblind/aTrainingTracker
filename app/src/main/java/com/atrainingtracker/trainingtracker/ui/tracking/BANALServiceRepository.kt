@@ -151,6 +151,8 @@ class BANALServiceRepository private constructor(private val context: Context) {
     // Connection to BANALService and then observe it regularly.
     private val banalServiceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            if (DEBUG) Log.i(TAG, "onServiceConnected")
+
             // This is called when the connection to the service has been established.
             // We get the BANALServiceComm binder instance.
             banalServiceComm = service as? BANALService.BANALServiceComm
@@ -162,6 +164,8 @@ class BANALServiceRepository private constructor(private val context: Context) {
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
+            if (DEBUG) Log.i(TAG, "onServiceDisconnected")
+
             // This is called when the service connection is lost unexpectedly
             isBoundToBanalService = false
             banalServiceComm = null
@@ -170,6 +174,8 @@ class BANALServiceRepository private constructor(private val context: Context) {
 
     // Methods to bind and unbind to the BANALService
     fun bindToBANALService() {
+        if (DEBUG) Log.i(TAG, "bindToBANALService()")
+
         if (!isBoundToBanalService) {
             val intent = Intent(context, BANALService::class.java)
             // BIND_AUTO_CREATE ensures the service is created if not already running
@@ -178,6 +184,8 @@ class BANALServiceRepository private constructor(private val context: Context) {
     }
 
     fun unbindFromBANALService() {
+        if (DEBUG) Log.i(TAG, "unbindFromBANALService()")
+
         if (isBoundToBanalService) {
             context.unbindService(banalServiceConnection)
             isBoundToBanalService = false
@@ -187,6 +195,8 @@ class BANALServiceRepository private constructor(private val context: Context) {
 
     // Observing the BANALService: This function will be called once the service is connected.
     private fun startObservingBANALService() {
+        if (DEBUG) Log.i(TAG, "startObservingBANALService()")
+
         repositoryScope.launch {
             flow {
                 while (true) {
@@ -194,6 +204,7 @@ class BANALServiceRepository private constructor(private val context: Context) {
                     delay(1000)
                 }
             }.collect {
+                if (DEBUG) Log.i(TAG, "collecting (banalServiceComm = ${banalServiceComm})")
                 if (banalServiceComm == null) return@collect // Service not bound yet
 
                 // --- ACTIVITY TYPE ---

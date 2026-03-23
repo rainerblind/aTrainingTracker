@@ -436,6 +436,9 @@ public class MainActivityWithNavigation
             bindService(new Intent(this, BANALService.class), mBanalConnection, Context.BIND_AUTO_CREATE);
         }
 
+        // also tell the repository to bind.
+        BANALServiceRepository.Companion.getInstance(this).bindToBANALService();
+
         mHandler.removeCallbacks(mDisconnectFromBANALServiceRunnable);
 
         checkPreferences();
