@@ -635,11 +635,12 @@ public class MainActivityWithNavigation
                 mFragment = EquipmentFragment.newInstance(1);
                 tag = EquipmentFragment.TAG;
                 break;
-
+/* NO_MY_LOCATIONS
             case R.id.drawer_my_locations:
                 mFragment = new MyLocationsFragment();
                 tag = MyLocationsFragment.TAG;
                 break;
+ */
 
             case R.id.drawer_settings:
                 mFragment = new RootPrefsFragment();
