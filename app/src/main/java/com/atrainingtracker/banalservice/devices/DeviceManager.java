@@ -561,35 +561,6 @@ public class DeviceManager {
         return result;
     }
 
-    public List<Long> getDatabaseIdsOfActiveDevices(Protocol protocol, DeviceType deviceType) {
-        if (DEBUG) Log.i(TAG, "getDatabaseIdsOfActiveDevices");
-
-
-        List<Long> availableDevicesList = new LinkedList<>();
-
-        for (MyRemoteDevice remoteDevice : getRemoteDeviceList()) {
-            if ((protocol == Protocol.ALL || remoteDevice.getProtocol() == protocol)
-                    && (deviceType == DeviceType.ALL || remoteDevice.getDeviceType() == deviceType)
-                    && remoteDevice.isReceivingData()) {
-                if (DEBUG) Log.i(TAG, "adding " + remoteDevice.getName());
-                availableDevicesList.add(remoteDevice.getDeviceId());
-            }
-        }
-
-        Set<Long> availableDevicesSet = new HashSet<>();
-        availableDevicesSet.addAll(availableDevicesList);
-
-        if (DEBUG) Log.i(TAG, "now, we add the found devices");
-        for (long deviceId : mNewlyFoundDevices) {
-            if (!availableDevicesSet.contains(deviceId)) { // not yet in the list, so we add it
-                if (DEBUG) Log.i(TAG, "adding device Id " + deviceId);
-                availableDevicesList.add(deviceId);
-            }
-        }
-
-        return availableDevicesList;
-    }
-
     public LinkedList<MyRemoteDevice> getRemoteDeviceList() {
         if (DEBUG) Log.d(TAG, "getRemoteDeviceList");
 

@@ -611,10 +611,6 @@ public class BANALService
             return cDeviceManager.getDatabaseIdsOfActiveDevices();
         }
 
-        public List<Long> getDatabaseIdsOfActiveDevices(Protocol protocol, DeviceType deviceType) {
-            return cDeviceManager.getDatabaseIdsOfActiveDevices(protocol, deviceType);
-        }
-
         // only the remote devices (without the speed and location devices of the smartphone)
         public List<MyRemoteDevice> getActiveRemoteDevices() {
             return cDeviceManager.getActiveRemoteDevices();
