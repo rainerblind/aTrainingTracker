@@ -48,8 +48,8 @@ import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize
 interface GridActions {
     fun onEditField(fieldState: SensorFieldState)
     fun onDeleteField(fieldState: SensorFieldState)
-    fun onAddRow(atRow: Int)
-    fun onAddCol(atRow: Int, atCol: Int)
+    fun onAddRow(beforeRow: Int)
+    fun onAddCol(atRow: Int, beforeCol: Int)
 }
 
 /**
@@ -163,8 +163,8 @@ fun SensorGridScreenConfigPreview() {
         val mockActions = object : GridActions {
             override fun onEditField(fieldState: SensorFieldState) {}
             override fun onDeleteField(fieldState: SensorFieldState) {}
-            override fun onAddRow(atRow: Int) {}
-            override fun onAddCol(atRow: Int, atCol: Int) {}
+            override fun onAddRow(beforeRow: Int) {}
+            override fun onAddCol(atRow: Int, beforeCol: Int) {}
         }
         SensorGridScreen(
             state = TrackingScreenState(fields = previewFields),
@@ -187,8 +187,8 @@ fun SensorGridScreenTrackingPreview() {
         val mockActions = object : GridActions {
             override fun onEditField(fieldState: SensorFieldState) {}
             override fun onDeleteField(fieldState: SensorFieldState) {}
-            override fun onAddRow(atRow: Int) {}
-            override fun onAddCol(atRow: Int, atCol: Int) {}
+            override fun onAddRow(beforeRow: Int) {}
+            override fun onAddCol(atRow: Int, beforeCol: Int) {}
         }
         SensorGridScreen(
             state = TrackingScreenState(fields = previewFields),

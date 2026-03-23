@@ -132,6 +132,7 @@ public class TrackingViewsDatabaseManager {
             sql = "UPDATE " + TrackingViewsDbHelper.ROWS_TABLE +
                     " SET " + TrackingViewsDbHelper.ROW_NR + "=" + TrackingViewsDbHelper.ROW_NR + "+1" +
                     " WHERE " + TrackingViewsDbHelper.ROW_NR + " >= " + rowNr;
+            colNr = 1;  // now, that this row is freed, we can give the colNr the correct value.
         }
         else {  // new col -> add 1 to all cols with a larger colNr and the same rowNr
             sql = "UPDATE " + TrackingViewsDbHelper.ROWS_TABLE +
@@ -601,6 +602,10 @@ public class TrackingViewsDatabaseManager {
                 Log.i(TAG, "Successfully migrated TEXT_SIZE (int) to VIEW_SIZE (text).");
             }
         }
+
+        /*******************************************************************************************
+         * Note that we start to count from 1!
+         ******************************************************************************************/
 
         @NonNull
         protected List<RowData> getDefaultStartRowDataList(ActivityType activityType) {
