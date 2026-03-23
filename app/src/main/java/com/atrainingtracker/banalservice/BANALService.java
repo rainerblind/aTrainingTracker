@@ -606,7 +606,7 @@ public class BANALService
             BANALService.this.setUserSelectedBSportType(bSportType);
         }
 
-
+        // without the speed and location devices.
         public List<Long> getDatabaseIdsOfActiveDevices() {
             return cDeviceManager.getDatabaseIdsOfActiveDevices();
         }
@@ -617,7 +617,7 @@ public class BANALService
         }
 
         // including the location devices.
-        public List<MyDevice> getActiveDevicesForUI() {
+        public List<MyDevice> getActiveDevicesIncludingSpeedAndLocationDevices() {
             return cDeviceManager.getActiveDevicesIncludingSpeedAndLocationDevices();
         }
 

@@ -228,7 +228,7 @@ class BANALServiceRepository private constructor(private val context: Context) {
                 _foundDeviceIds.value = banalServiceComm?.databaseIdsOfActiveDevices!!
                 _activeSensors.value = banalServiceComm?.availableSensorTypeSet?.toSet() ?: emptySet()
 
-                _activeDevicesForUI.postValue(banalServiceComm?.activeDevicesForUI ?: emptyList())
+                _activeDevicesForUI.postValue(banalServiceComm?.activeDevicesIncludingSpeedAndLocationDevices ?: emptyList())
 
                 if (DEBUG) Log.i(TAG, "BANALService:\n _searchingForDevice.value: ${_searchingForDevice.value},\n _bSportType.value: ${_bSportType.value},\n _foundDeviceIds.value: ${_foundDeviceIds.value},\n _activeSensors.value: ${_activeSensors.value}")
                 if (DEBUG) Log.i(TAG, "trackingMode: ${_trackingMode.value}")
