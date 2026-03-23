@@ -19,6 +19,11 @@
 package com.atrainingtracker.banalservice.ui.devices.devicetabs
 
 import android.app.Application
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -26,6 +31,7 @@ import androidx.lifecycle.SavedStateHandle
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository
 
 /**
@@ -45,6 +51,17 @@ class DevicesTabbedViewModel(
     private val savedStateHandle: SavedStateHandle
 ) : AndroidViewModel(application) {
 
+    private val deviceDBRepository = DeviceDataRepository.getInstance(application)
+
+    private val deviceDiscoveryReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == BANALService.NEW_DEVICE_FOUND_INTENT) {
+                // Tell the repository to refresh its data from the DB
+                deviceDBRepository.handleNewDeviceFound()
+            }
+        }
+    }
+
     private val banalServiceRepository: BANALServiceRepository = BANALServiceRepository.getInstance(application)
 
     private val _uiState = MutableLiveData<UiState>()
@@ -56,6 +73,16 @@ class DevicesTabbedViewModel(
     private var isSearching = false
 
     init {
+        // Register the deviceDiscoveryReceiver
+        val filter = IntentFilter(BANALService.NEW_DEVICE_FOUND_INTENT)
+
+        // In Android 14+, we must specify RECEIVER_NOT_EXPORTED or EXPORTED
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            application.registerReceiver(deviceDiscoveryReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            application.registerReceiver(deviceDiscoveryReceiver, filter)
+        }
+
         // Check if deviceType was already saved (e.g., after process death)
         val savedDeviceType: DeviceType? = savedStateHandle.get<String>(BANALService.DEVICE_TYPE)?.let {
             DeviceType.valueOf(it)

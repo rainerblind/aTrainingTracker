@@ -20,8 +20,6 @@ package com.atrainingtracker.banalservice;
 
 import android.Manifest;
 import android.app.Service;
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -608,25 +606,23 @@ public class BANALService
             BANALService.this.setUserSelectedBSportType(bSportType);
         }
 
-
-        public List<Long> getDatabaseIdsOfActiveDevices() {
-            return cDeviceManager.getDatabaseIdsOfActiveDevices();
+        // without the speed and location devices.
+        public List<Long> getDatabaseIdsOfActiveRemoteDevices() {
+            return cDeviceManager.getDatabaseIdsOfActiveRemoteDevices();
         }
 
-        public List<Long> getDatabaseIdsOfActiveDevices(Protocol protocol, DeviceType deviceType) {
-            return cDeviceManager.getDatabaseIdsOfActiveDevices(protocol, deviceType);
-        }
-
+        // only the remote devices (without the speed and location devices of the smartphone)
         public List<MyRemoteDevice> getActiveRemoteDevices() {
             return cDeviceManager.getActiveRemoteDevices();
         }
 
-        public List<MyDevice> getActiveDevicesForUI() {
-            return cDeviceManager.getActiveDevicesForUI();
+        // including the location devices.
+        public List<MyDevice> getActiveDevicesIncludingSpeedAndLocationDevices() {
+            return cDeviceManager.getActiveDevicesIncludingSpeedAndLocationDevices();
         }
 
-        public List<Long> getIdsOfFoundDevices() {
-            return cDeviceManager.getIdsOfFoundDevices();
+        public List<Long> getIdsOfNewlyFoundDevices() {
+            return cDeviceManager.getIdsOfNewlyFoundDevices();
         }
 
         @NonNull
