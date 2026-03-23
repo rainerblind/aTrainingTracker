@@ -64,11 +64,9 @@ import com.google.android.gms.common.GooglePlayServicesUtil;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import static com.atrainingtracker.banalservice.BSportType.UNKNOWN;
 
@@ -549,7 +547,7 @@ public class DeviceManager {
         return mNewlyFoundDevices;
     }
 
-    public List<Long> getDatabaseIdsOfActiveDevices() {
+    public List<Long> getDatabaseIdsOfActiveRemoteDevices() {
         List<Long> result = new LinkedList<Long>();
 
         for (MyRemoteDevice remoteDevice : getRemoteDeviceList()) {

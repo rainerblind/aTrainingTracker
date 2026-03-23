@@ -76,14 +76,14 @@ class BANALServiceRepository private constructor(private val context: Context) {
     private val _bSportType = MutableStateFlow<BSportType>(BSportType.UNKNOWN)
     val bSportType: StateFlow<BSportType> = _bSportType.asStateFlow()
 
-    private val _foundDeviceIds = MutableStateFlow<List<Long>>(emptyList())
-    val foundDeviceIds: StateFlow<List<Long>> = _foundDeviceIds.asStateFlow()
+    private val _activeRemoteDevicesIds = MutableStateFlow<List<Long>>(emptyList())
+    val activeRemoteDevicesIds: StateFlow<List<Long>> = _activeRemoteDevicesIds.asStateFlow()
 
     private val _activeSensors = MutableStateFlow<Set<SensorType>>(emptySet())
     val activeSensors: StateFlow<Set<SensorType>> = _activeSensors.asStateFlow()
 
-    private val _activeDevicesForUI = MutableLiveData<List<MyDevice>>(emptyList())
-    val activeDevicesForUI: LiveData<List<MyDevice>> = _activeDevicesForUI
+    private val _allActiveDevices = MutableLiveData<List<MyDevice>>(emptyList())
+    val allActiveDevices: LiveData<List<MyDevice>> = _allActiveDevices
 
     // -- Tracking mode
     private val _trackingMode = MutableLiveData<TrackingMode>()
@@ -221,16 +221,16 @@ class BANALServiceRepository private constructor(private val context: Context) {
                 }
 
                 Log.i(TAG, "getIdsOfFoundDevices: ${banalServiceComm?.getIdsOfNewlyFoundDevices()}")
-                Log.i(TAG, "databaseIdsOfActiveDevices: ${banalServiceComm?.databaseIdsOfActiveDevices}")
+                Log.i(TAG, "databaseIdsOfActiveDevices: ${banalServiceComm?.databaseIdsOfActiveRemoteDevices}")
 
                 _searchingForDevice.value = banalServiceComm?.nameOfSearchingDevice
                 _bSportType.value = banalServiceComm?.bSportType!!
-                _foundDeviceIds.value = banalServiceComm?.databaseIdsOfActiveDevices!!
+                _activeRemoteDevicesIds.value = banalServiceComm?.databaseIdsOfActiveRemoteDevices!!
                 _activeSensors.value = banalServiceComm?.availableSensorTypeSet?.toSet() ?: emptySet()
 
-                _activeDevicesForUI.postValue(banalServiceComm?.activeDevicesIncludingSpeedAndLocationDevices ?: emptyList())
+                _allActiveDevices.postValue(banalServiceComm?.activeDevicesIncludingSpeedAndLocationDevices ?: emptyList())
 
-                if (DEBUG) Log.i(TAG, "BANALService:\n _searchingForDevice.value: ${_searchingForDevice.value},\n _bSportType.value: ${_bSportType.value},\n _foundDeviceIds.value: ${_foundDeviceIds.value},\n _activeSensors.value: ${_activeSensors.value}")
+                if (DEBUG) Log.i(TAG, "BANALService:\n _searchingForDevice.value: ${_searchingForDevice.value},\n _bSportType.value: ${_bSportType.value},\n _foundDeviceIds.value: ${_activeRemoteDevicesIds.value},\n _activeSensors.value: ${_activeSensors.value}")
                 if (DEBUG) Log.i(TAG, "trackingMode: ${_trackingMode.value}")
             }
         }

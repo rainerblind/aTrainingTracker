@@ -607,8 +607,8 @@ public class BANALService
         }
 
         // without the speed and location devices.
-        public List<Long> getDatabaseIdsOfActiveDevices() {
-            return cDeviceManager.getDatabaseIdsOfActiveDevices();
+        public List<Long> getDatabaseIdsOfActiveRemoteDevices() {
+            return cDeviceManager.getDatabaseIdsOfActiveRemoteDevices();
         }
 
         // only the remote devices (without the speed and location devices of the smartphone)

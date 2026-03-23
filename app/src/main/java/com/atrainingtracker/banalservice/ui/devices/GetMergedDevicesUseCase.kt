@@ -19,8 +19,8 @@ class GetMergedDevicesUseCase(
     // The single source of truth for the UI (List and Edit)
     val mergedDevices: LiveData<List<DeviceUiData>> = MediatorLiveData<List<DeviceUiData>>().apply {
         addSource(dbRepo.allDevices) { update() }
-        addSource(serviceRepo.activeDevicesForUI) { update() }
-        addSource(serviceRepo.foundDeviceIds.asLiveData()) { update() }
+        addSource(serviceRepo.allActiveDevices) { update() }
+        addSource(serviceRepo.activeRemoteDevicesIds.asLiveData()) { update() }
     }
 
     /**
@@ -32,8 +32,8 @@ class GetMergedDevicesUseCase(
 
     private fun MediatorLiveData<List<DeviceUiData>>.update() {
         val dbList = dbRepo.allDevices.value ?: return
-        val activeList = serviceRepo.activeDevicesForUI.value ?: emptyList()
-        val foundIds = serviceRepo.foundDeviceIds.value
+        val activeList = serviceRepo.allActiveDevices.value ?: emptyList()
+        val foundIds = serviceRepo.activeRemoteDevicesIds.value
 
         value = dbList.map { knownDevice ->
             val activeDevice = activeList.find { it.deviceId == knownDevice.id }

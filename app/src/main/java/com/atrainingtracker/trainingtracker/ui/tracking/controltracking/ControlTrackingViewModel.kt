@@ -1,10 +1,7 @@
 package com.atrainingtracker.trainingtracker.ui.tracking.controltracking
 
 import android.app.Application
-import android.content.BroadcastReceiver
-import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asFlow
@@ -24,7 +21,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -80,7 +76,7 @@ class ControlTrackingViewModel(
     private val allDevicesFromDb = devicesRepository.allDevices.asFlow()
 
     // 2. Combine the IDs from the BANALService with the Data from the Database
-    val remoteDevices: StateFlow<List<RemoteDeviceUIData>> = banalServiceRepository.foundDeviceIds
+    val remoteDevices: StateFlow<List<RemoteDeviceUIData>> = banalServiceRepository.activeRemoteDevicesIds
         .combine(allDevicesFromDb) { ids, dbDevices ->
             ids.map { id ->
                 // Look for the device in the DB list
