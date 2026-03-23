@@ -36,7 +36,7 @@ fun RemoteDevices(
             modifier = Modifier.fillMaxWidth(),
             // Center items when there are few, scroll when there are many
             horizontalArrangement = Arrangement.Center,
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)
+            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp)
         ) {
             items(devices) { device ->
                 RemoteDeviceItem(device = device, onClick = { onDeviceClick(device) })
@@ -54,7 +54,7 @@ private fun RemoteDeviceItem(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .clickable(onClick = onClick)
-            .padding(8.dp)
+            .padding(4.dp)
     ) {
         Icon(
             painter = painterResource(id = device.iconRes),

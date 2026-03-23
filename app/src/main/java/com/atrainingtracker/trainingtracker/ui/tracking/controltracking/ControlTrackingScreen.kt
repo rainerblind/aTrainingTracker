@@ -121,14 +121,14 @@ fun ControlTrackingScreen(
 
 // --- Previews ---
 
-@Preview(showBackground = true, name = "Light Mode - IDLE")
+@Preview(showBackground = true, name = "Light Mode - Searching")
 @Preview(
     showBackground = true,
-    name = "Dark Mode - IDLE",
+    name = "Dark Mode - Searching",
     uiMode = Configuration.UI_MODE_NIGHT_YES
 )
 @Composable
-fun PreviewControlTrackingScreen() {
+fun PreviewControlTrackingScreenSearching() {
     ATrainingTrackerTheme {
         Surface {
             ControlTrackingScreen(
@@ -145,6 +145,33 @@ fun PreviewControlTrackingScreen() {
         }
     }
 }
+
+@Preview(showBackground = true, name = "Light Mode - Not Searching")
+@Preview(
+    showBackground = true,
+    name = "Dark Mode - Not Searching",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun PreviewControlTrackingScreen() {
+    ATrainingTrackerTheme {
+        Surface {
+            ControlTrackingScreen(
+                trackingMode = TrackingMode.READY,
+                searchingFor = null,
+                devices = listOf(RemoteDeviceUIData(1, deviceType = DeviceType.HRM, name = "Polar H10", R.drawable.hr)),
+                activeSensors = setOf(SensorType.TIME_ACTIVE, SensorType.HR),
+                currentSport = BSportType.RUN,
+                isAntSupported = true,
+                isBluetoothSupported = true,
+                onSearch = {}, onDeviceClick = {}, onSportSelected = {},
+                onStart = {}, onPause = {}, onResume = {}, onStop = {}, onPairingClicked = {}
+            )
+        }
+    }
+}
+
+
 
 
 
