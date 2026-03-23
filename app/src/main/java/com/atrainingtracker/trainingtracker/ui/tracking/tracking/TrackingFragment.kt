@@ -148,13 +148,13 @@ class TrackingFragment : Fragment() {
                         override fun onDeleteField(fieldState: SensorFieldState) {
                             viewModel.onDeleteSensorField(fieldState.sensorFieldId)
                         }
-                        override fun onAddRow(atRow: Int) {
-                            Log.i(TAG, "onAddRow($atRow)")
-                            viewModel.onAddRow(atRow)
+                        override fun onAddRow(beforeRow: Int) {
+                            Log.i(TAG, "onAddRow($beforeRow)")
+                            viewModel.onAddRow(beforeRow)
                         }
-                        override fun onAddCol(atRow: Int, atCol: Int) {
-                            Log.i(TAG, "onAddCol($atRow, $atCol)")
-                            viewModel.onAddCol(atRow, atCol)
+                        override fun onAddCol(atRow: Int, beforeCol: Int) {
+                            Log.i(TAG, "onAddCol($atRow, $beforeCol)")
+                            viewModel.onAddCol(atRow, beforeCol)
                         }
                     }
 
