@@ -33,14 +33,8 @@ import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 @Composable
 fun SearchArea(
-    searchingFor: String?,
-    trackingMode: TrackingMode,
+    searchingFor: String?
 ) {
-    // Hide entirely when tracking or paused
-    if (trackingMode == TrackingMode.TRACKING || trackingMode == TrackingMode.PAUSED) {
-        return
-    }
-
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -97,8 +91,7 @@ fun PreviewSearchAreaTrackingDark() {
     ATrainingTrackerTheme(darkTheme = true) {
         Surface {
             SearchArea(
-                searchingFor = null,
-                trackingMode = TrackingMode.TRACKING
+                searchingFor = null
             )
         }
     }
@@ -111,8 +104,7 @@ fun PreviewSearchAreaSearching() {
     ATrainingTrackerTheme {
         Surface {
             SearchArea(
-                searchingFor = "Polar H10",
-                trackingMode = TrackingMode.READY
+                searchingFor = "Polar H10"
             )
         }
     }
@@ -123,8 +115,7 @@ fun PreviewSearchAreaReady() {
     ATrainingTrackerTheme {
         Surface {
             SearchArea(
-                searchingFor = null,
-                trackingMode = TrackingMode.READY
+                searchingFor = null
             )
         }
     }
@@ -135,8 +126,7 @@ fun PreviewSearchAreaTracking() {
     ATrainingTrackerTheme {
         Surface {
             SearchArea(
-                searchingFor = null,
-                trackingMode = TrackingMode.TRACKING
+                searchingFor = null
             )
         }
     }
@@ -147,8 +137,7 @@ fun PreviewSearchAreaPaused() {
     ATrainingTrackerTheme {
         Surface {
             SearchArea(
-                searchingFor = null,
-                trackingMode = TrackingMode.PAUSED
+                searchingFor = null
             )
         }
     }

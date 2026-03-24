@@ -66,8 +66,7 @@ fun ControlTrackingScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 SearchArea(
-                    searchingFor = searchingFor,
-                    trackingMode = trackingMode
+                    searchingFor = searchingFor
                 )
 
                 RemoteDevices(
