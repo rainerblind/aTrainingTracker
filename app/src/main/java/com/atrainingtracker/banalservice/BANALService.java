@@ -60,7 +60,7 @@ import javax.annotation.Nullable;
 
 public class BANALService
         extends Service {
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
 
     /**
      * the Log TAG
