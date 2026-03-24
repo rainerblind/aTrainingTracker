@@ -110,6 +110,48 @@ class TrackingViewsRepository private constructor(private val context: Context) 
 
     // --- Tracking Views ---
     /**
+     * Provides a flow of [TrackingViewInfo] for a specific tab ID.
+     * This will emit a new value whenever the [configUpdateTrigger] is incremented
+     * (e.g., after calling [updateShowMap]).
+     */
+    fun getTrackingViewInfoFlow(tabViewId: Long): Flow<TrackingViewInfo?> {
+        return configUpdateTrigger.map {
+            fetchTrackingViewInfo(tabViewId)
+        }.flowOn(Dispatchers.IO)
+    }
+
+    /**
+     * Helper to fetch a single row from the VIEWS_TABLE.
+     */
+    private fun fetchTrackingViewInfo(tabViewId: Long): TrackingViewInfo? {
+        val cursor = viewsDbManager.database.query(
+            TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEWS_TABLE,
+            arrayOf(
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID,
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.NAME,
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_MAP,
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LAP_BUTTON
+            ),
+            "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID}=?",
+            arrayOf(tabViewId.toString()),
+            null, null, null
+        )
+
+        cursor.use {
+            if (it.moveToFirst()) {
+                val id = it.getLong(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID))
+                val name = it.getString(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.NAME))
+                val showMap = it.getInt(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_MAP)) == 1
+                val showLapButton = it.getInt(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LAP_BUTTON)) == 1
+                return TrackingViewInfo(id, name, showMap, showLapButton)
+            }
+        }
+        return null
+    }
+
+
+
+    /**
      * A flow that emits the list of tracking views whenever the config changes.
      */
     fun getTrackingViewsFlow(activityType: ActivityType): Flow<List<TrackingViewInfo>> {

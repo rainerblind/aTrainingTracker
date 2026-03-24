@@ -50,7 +50,6 @@ class TrackingFragment : Fragment() {
 
     private var tabViewId: Long = -1L
 
-    private var showMapState by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,18 +58,11 @@ class TrackingFragment : Fragment() {
         // Get the viewId from the fragment's arguments
         arguments?.let {
             tabViewId = it.getLong(ARG_TAB_VIEW_ID) ?: 0
-            showMapState = it.getBoolean(ARG_SHOW_MAP) ?: false
         }
 
         // Create the ViewModel using our custom factory
         val factory = TrackingViewModelFactory(requireActivity().application, tabViewId)
         viewModel = ViewModelProvider(this, factory)[TrackingViewModel::class.java]
-    }
-
-    fun updateShowMap(show: Boolean) {
-        if (showMapState != show) {
-            showMapState = show
-        }
     }
 
     override fun onCreateView(
@@ -163,18 +155,19 @@ class TrackingFragment : Fragment() {
                         state = uiState,
                         screenMode = screenMode,
                         gridActions = gridActions, // Pass the actions object
-                        showMap = showMapState,
                         mapContent = {
-                            if (showMapState) { // Double-check just in case
+                            if (uiState.showMap) { // Double-check just in case
                                 AndroidView(
                                     factory = { context ->
-                                        val frameLayout = FrameLayout(context).apply { id = View.generateViewId() }
-                                        if (childFragmentManager.findFragmentById(frameLayout.id) == null) {
-                                            mapFragment = TrackOnMapTrackingAndFollowingFragment.newInstance()
-                                            childFragmentManager.beginTransaction()
-                                                .add(frameLayout.id, mapFragment!!)
-                                                .commit()
+                                        // Use a the static ID
+                                        val frameLayout = FrameLayout(context).apply {
+                                            id = R.id.map_container_id
                                         }
+                                        mapFragment = TrackOnMapTrackingAndFollowingFragment.newInstance()
+                                        childFragmentManager.beginTransaction()
+                                            .replace(R.id.map_container_id, mapFragment!!)
+                                            .commit()
+
                                         frameLayout
                                     },
                                     // The modifier here should fill the space provided by the parent Box in TrackingScreen.
@@ -192,17 +185,15 @@ class TrackingFragment : Fragment() {
         private const val DEBUG = true
         private const val TAG = "TrackingFragment"
         private const val ARG_TAB_VIEW_ID = "tab_view_id"
-        private const val ARG_SHOW_MAP = "show_map"
         /**
          * A factory method to create a new instance of this fragment
          * with the required viewId.
          */
         @JvmStatic
-        fun newInstance(tabViewId: Long, showMap: Boolean) =
+        fun newInstance(tabViewId: Long) =
             TrackingFragment().apply {
                 arguments = Bundle().apply {
                     putLong(ARG_TAB_VIEW_ID, tabViewId)
-                    putBoolean(ARG_SHOW_MAP, showMap)
                 }
             }
     }

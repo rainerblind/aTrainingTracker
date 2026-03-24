@@ -61,7 +61,6 @@ fun SensorGridScreen(
     state: TrackingScreenState,
     screenMode: ScreenMode,
     gridActions: GridActions,
-    showMap: Boolean = false,
     mapContent: @Composable () -> Unit = {}
 ) {
     Column(Modifier.fillMaxSize()) {
@@ -119,7 +118,7 @@ fun SensorGridScreen(
 
 
         // Conditionally display the map
-        if (showMap) {
+        if (state.showMap) {
             Box(modifier = Modifier.weight(1f)) {
                 mapContent()
             }
