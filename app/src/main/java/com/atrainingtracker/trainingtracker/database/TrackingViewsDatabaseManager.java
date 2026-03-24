@@ -656,9 +656,9 @@ public class TrackingViewsDatabaseManager {
                 }
                 case BIKE_POWER -> {
                     rowDataList.add(new RowData(SensorType.POWER, ViewSize.HUGE, 4, 1));
-                    rowDataList.add(new RowData(SensorType.CADENCE, ViewSize.LARGE, 5, 1));
-                    rowDataList.add(new RowData(SensorType.ALTITUDE, ViewSize.NORMAL, 6, 1));
-                    rowDataList.add(new RowData(SensorType.ASCENT, ViewSize.NORMAL, 6, 2));
+                    rowDataList.add(new RowData(SensorType.CADENCE, ViewSize.SMALL, 5, 1));
+                    rowDataList.add(new RowData(SensorType.ALTITUDE, ViewSize.SMALL, 6, 1));
+                    rowDataList.add(new RowData(SensorType.ASCENT, ViewSize.SMALL, 6, 2));
                 }
             }
 
