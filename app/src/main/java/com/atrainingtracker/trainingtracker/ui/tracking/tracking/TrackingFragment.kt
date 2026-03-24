@@ -172,20 +172,10 @@ class TrackingFragment : Fragment() {
                                         val frameLayout = FrameLayout(context).apply {
                                             id = R.id.map_container_id
                                         }
-
-                                        // Check if fragment already exists (important for restoration)
-                                        val existingFragment = childFragmentManager.findFragmentById(R.id.map_container_id)
-
-                                        if (existingFragment == null) {
-                                            if (DEBUG) Log.i(TAG, "Adding new map fragment to static ID")
-                                            mapFragment = TrackOnMapTrackingAndFollowingFragment.newInstance()
-                                            childFragmentManager.beginTransaction()
-                                                .replace(R.id.map_container_id, mapFragment!!)
-                                                .commit()
-                                        } else {
-                                            if (DEBUG) Log.i(TAG, "Re-using existing map fragment")
-                                            mapFragment = existingFragment as TrackOnMapTrackingAndFollowingFragment
-                                        }
+                                        mapFragment = TrackOnMapTrackingAndFollowingFragment.newInstance()
+                                        childFragmentManager.beginTransaction()
+                                            .replace(R.id.map_container_id, mapFragment!!)
+                                            .commit()
 
                                         frameLayout
                                     },
