@@ -34,9 +34,10 @@ import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
+import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
-import com.atrainingtracker.trainingtracker.ui.tracking.TrackingRepository
+import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -48,6 +49,7 @@ import java.util.Objects
  * The state for the entire tracking screen, containing a list of all sensor fields.
  */
 data class TrackingScreenState(
+    val showMap: Boolean = false,
     val fields: List<SensorFieldState> = emptyList()
 )
 
@@ -58,7 +60,8 @@ data class TrackingScreenState(
  */
 class TrackingViewModel(
     private val application: Application,
-    val trackingRepository: TrackingRepository,
+    val trackingViewsRepository: TrackingViewsRepository,
+    val banalServiceRepository: BANALServiceRepository,
     private val viewId: Long
 ) : ViewModel() {
 
@@ -77,7 +80,7 @@ class TrackingViewModel(
     private val _pendingAddition = MutableStateFlow<AdditionParams?>(null)
     val pendingAddition = _pendingAddition.asStateFlow()
 
-    val screenMode: StateFlow<ScreenMode> = trackingRepository.screenMode
+    val screenMode: StateFlow<ScreenMode> = trackingViewsRepository.screenMode
 
     private val sharedPreferences: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(application)
     private val defaultZoneColor = Color(ContextCompat.getColor(application, R.color.color_background))
@@ -100,54 +103,63 @@ class TrackingViewModel(
     private fun loadActivityType() {
         viewModelScope.launch {
             // Use the new repository function to get the activity type
-            _activityType.value = trackingRepository.getActivityTypeForView(viewId)
+            _activityType.value = trackingViewsRepository.getActivityTypeForView(viewId)
         }
     }
 
     private fun loadSensorFieldStates() {
         viewModelScope.launch {
-            //  Collect the flow for configuration changes
-            trackingRepository.getSensorFieldConfigsForView(viewId)
-                .combine(trackingRepository.allFilteredSensorData) { configs, allSensorData ->
-                    // This whole block will re-execute whenever configs OR sensor data change
+            combine(
+                trackingViewsRepository.getSensorFieldConfigsForView(viewId),
+                banalServiceRepository.allFilteredSensorData,
+                trackingViewsRepository.getTrackingViewInfoFlow(viewId)
+            ) { configs, allSensorData, viewInfo ->
+                // This whole block will re-execute whenever configs OR sensor data change
 
-                    // --- Step 1: Create the base state from the latest configurations ---
-                    val baseFields = configs.map { config ->
-                        val uniqueHash = Objects.hash(config.sensorType, config.filterType, config.filterConstant, config.sourceDeviceName)
-                        var filterDescription = config.filterType.getShortSummary(application, config.filterConstant)
-                        if (config.sourceDeviceName != null) {
-                            filterDescription = if (filterDescription.isNotEmpty()) {
-                                "${config.sourceDeviceName}: $filterDescription"
-                            } else {
-                                config.sourceDeviceName
-                            }
+                // --- Step 1: Create the base state from the latest configurations ---
+                val baseFields = configs.map { config ->
+                    val uniqueHash = Objects.hash(config.sensorType, config.filterType, config.filterConstant, config.sourceDeviceName)
+                    var filterDescription = config.filterType.getShortSummary(application, config.filterConstant)
+                    if (config.sourceDeviceName != null) {
+                        filterDescription = if (filterDescription.isNotEmpty()) {
+                            "${config.sourceDeviceName}: $filterDescription"
+                        } else {
+                            config.sourceDeviceName
                         }
-
-                        SensorFieldState(
-                            configHash = uniqueHash,
-                            sensorFieldId = config.sensorFieldId,
-                            rowNr = config.rowNr,
-                            colNr = config.colNr,
-                            viewSize = config.viewSize,
-                            label = application.getString(config.sensorType.shortNameId),
-                            filterDescription = filterDescription,
-                            value = "--",
-                            units = application.getString(MyHelper.getShortUnitsId(config.sensorType)),
-                            zoneColor = defaultZoneColor
-                        )
                     }
 
-                    // --- Step 2: Apply live sensor data to the base state ---
-                    val activity = trackingRepository.activityType.value ?: return@combine baseFields // Use the LiveData value
-                    val fieldsWithLiveData = applySensorData(baseFields, allSensorData, activity)
+                    SensorFieldState(
+                        configHash = uniqueHash,
+                        sensorFieldId = config.sensorFieldId,
+                        rowNr = config.rowNr,
+                        colNr = config.colNr,
+                        viewSize = config.viewSize,
+                        label = application.getString(config.sensorType.shortNameId),
+                        filterDescription = filterDescription,
+                        value = "--",
+                        units = application.getString(MyHelper.getShortUnitsId(config.sensorType)),
+                        zoneColor = defaultZoneColor
+                    )
+                }
 
-                    // Return the fully updated list
-                    fieldsWithLiveData
+                // --- Step 2: Apply live sensor data to the base state ---
+                val activity = banalServiceRepository.activityType.value
+                val finalFields = if (activity != null) {
+                    applySensorData(baseFields, allSensorData, activity)
+                } else {
+                    baseFields
                 }
-                .collect { updatedFields ->
-                    // Emit the new state to the UI
-                    _uiState.value = TrackingScreenState(fields = updatedFields)
-                }
+
+                // --- Step 3: Package everything into the TrackingScreenState ---
+                // We extract showMap from the viewInfo we just combined
+                TrackingScreenState(
+                    fields = finalFields,
+                    showMap = viewInfo?.showMap ?: false
+                )
+            }.collect { newState ->
+                // Emit the new state to the UI
+                _uiState.value = newState
+            }
         }
     }
 
@@ -260,7 +272,7 @@ class TrackingViewModel(
 
     fun onDeleteSensorField(sensorFieldId: Long) {
         viewModelScope.launch {
-            trackingRepository.deleteSensorField(sensorFieldId)
+            trackingViewsRepository.deleteSensorField(sensorFieldId)
         }
     }
 
@@ -276,8 +288,9 @@ class TrackingViewModelFactory(
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(TrackingViewModel::class.java)) {
-            val repo = TrackingRepository.getInstance(application)
-            return TrackingViewModel(application, repo, viewId) as T
+            val trackingViewsRepo = TrackingViewsRepository.getInstance(application)
+            val banalServiceRepo = BANALServiceRepository.getInstance(application)
+            return TrackingViewModel(application, trackingViewsRepo, banalServiceRepo, viewId) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

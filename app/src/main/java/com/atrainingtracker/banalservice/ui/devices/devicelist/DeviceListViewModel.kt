@@ -26,8 +26,10 @@ import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.banalservice.ui.devices.GetMergedDevicesUseCase
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
+import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.ui.util.Event
 import kotlinx.coroutines.launch
 
@@ -36,16 +38,23 @@ data class EditDeviceNavigationEvent(val deviceId: Long, val deviceType: DeviceT
 
 class DeviceListViewModel(private val application: Application) : AndroidViewModel(application) {
 
-    private val repository = DeviceDataRepository.Companion.getInstance(application)
+    private val devicesDBRepository = DeviceDataRepository.getInstance(application)
+    private val banalServiceRepository = BANALServiceRepository.getInstance(application)
 
-    // the single source of truth: the raw device list from the repository.
-    private val allDevices: LiveData<List<DeviceUiData>> = repository.allDevices
+    private val useCase = GetMergedDevicesUseCase(
+        devicesDBRepository,
+        banalServiceRepository,
+        application
+    )
+
+    // the single source of truth: the merged devices
+    private val allDevices = useCase.mergedDevices
 
     private val _navigateToEditDevice = MutableLiveData<Event<EditDeviceNavigationEvent>>()
     val navigateToEditDevice: LiveData<Event<EditDeviceNavigationEvent>> = _navigateToEditDevice
 
     fun onDeviceSelected(deviceId: Long) {
-        val deviceType = repository.getDeviceType(deviceId) // You'll need to create this simple method
+        val deviceType = devicesDBRepository.getDeviceType(deviceId)
         if (deviceType != null) {
             _navigateToEditDevice.postValue(Event(EditDeviceNavigationEvent(deviceId, deviceType)))
         }
@@ -80,18 +89,18 @@ class DeviceListViewModel(private val application: Application) : AndroidViewMod
     fun onPairedChanged(deviceId: Long, isPaired: Boolean) {
         viewModelScope.launch {
             // Find the current state of the device from the repository's cache
-            val currentState = repository.getDeviceSnapshotById(deviceId) ?: return@launch
+            val currentState = devicesDBRepository.getDeviceSnapshotById(deviceId) ?: return@launch
 
             // Create a new state with the isPaired property flipped
             val newState = currentState.copy(isPaired = !currentState.isPaired)
 
             // Tell the repository to save this new state. The repository will handle
             // the database update, sending the broadcast, and updating the LiveData.
-            repository.updateDevice(newState)
+            devicesDBRepository.updateDevice(newState)
         }
     }
 
     fun deleteDevice(deviceId: Long) {
-        repository.deleteDevice(deviceId)
+        devicesDBRepository.deleteDevice(deviceId)
     }
 }

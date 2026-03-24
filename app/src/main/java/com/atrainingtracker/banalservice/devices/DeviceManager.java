@@ -23,11 +23,8 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.SharedPreferences;
-import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.preference.PreferenceManager;
 import android.util.Log;
 
 import com.atrainingtracker.R;
@@ -67,20 +64,21 @@ import com.google.android.gms.common.GooglePlayServicesUtil;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import static com.atrainingtracker.banalservice.BSportType.UNKNOWN;
 
 import androidx.core.content.ContextCompat;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 
 public class DeviceManager {
     private static final String TAG = "DeviceManager";
-    private static final boolean DEBUG = BANALService.getDebug(false);
+    private static final boolean DEBUG = BANALService.getDebug(true);
     protected static MyRemoteDevice cMyRemoteDeviceCurrentlySearchingFor = null;
     protected Context mContext;
     protected ClockDevice mClockDevice;
@@ -98,7 +96,7 @@ public class DeviceManager {
     protected Map<Long, MyRemoteDevice> mMyRemoteDevices = new HashMap<Long, MyRemoteDevice>();
     protected Map<MyRemoteDevice, Integer> mMyRemoteDeviceTries = new HashMap<>();
     protected LinkedList<MyRemoteDevice> mSearchQueue = new LinkedList<MyRemoteDevice>();
-    protected LinkedList<Long> mFoundDevices = new LinkedList<>();
+    protected LinkedList<Long> mNewlyFoundDevices = new LinkedList<>();
     protected ANTSearchForNewDevicesEngineMultiDeviceSearch mAntAsyncSearchEngine = null;
     protected BTSearchForNewDevicesEngine mBTSearchForNewDevicesEngine = null;
     private final DevicesDatabaseManager mDevicesDatabaseManager;
@@ -198,7 +196,7 @@ public class DeviceManager {
                 }
             }
 
-            mFoundDevices.add(deviceId);
+            mNewlyFoundDevices.add(deviceId);
             sendNewDeviceFoundBroadcast(deviceId);
         }
     };
@@ -228,7 +226,7 @@ public class DeviceManager {
                 deviceId = mDevicesDatabaseManager.getDeviceId(deviceType, BluetoothMACAddress);
             }
 
-            mFoundDevices.add(deviceId);
+            mNewlyFoundDevices.add(deviceId);
             sendNewDeviceFoundBroadcast(deviceId);
         }
     };
@@ -439,6 +437,7 @@ public class DeviceManager {
         return cMyRemoteDeviceCurrentlySearchingFor;
     }
 
+    @Nullable
     public String getNameOfSearchingDevice() {
         return cMyRemoteDeviceCurrentlySearchingFor == null ? null : cMyRemoteDeviceCurrentlySearchingFor.getName();
     }
@@ -482,6 +481,7 @@ public class DeviceManager {
         searchForNextRemoteDevice();
     }
 
+    @Nonnull
     public BSportType getSportType() {
         if (DEBUG) Log.d(TAG, "getSportType");
 
@@ -533,7 +533,7 @@ public class DeviceManager {
         return result;
     }
 
-    public List<MyDevice> getActiveDevicesForUI() {
+    public List<MyDevice> getActiveDevicesIncludingSpeedAndLocationDevices() {
         List<MyDevice> result = new LinkedList<>();
 
         result.addAll(getActiveRemoteDevices());
@@ -542,11 +542,12 @@ public class DeviceManager {
         return result;
     }
 
-    public List<Long> getIdsOfFoundDevices() {
-        return mFoundDevices;
+    public List<Long> getIdsOfNewlyFoundDevices() {
+        if (DEBUG) Log.i(TAG, "getIdsOfNewlyFoundDevices: " + mNewlyFoundDevices.size() + " devices found");
+        return mNewlyFoundDevices;
     }
 
-    public List<Long> getDatabaseIdsOfActiveDevices() {
+    public List<Long> getDatabaseIdsOfActiveRemoteDevices() {
         List<Long> result = new LinkedList<Long>();
 
         for (MyRemoteDevice remoteDevice : getRemoteDeviceList()) {
@@ -556,35 +557,6 @@ public class DeviceManager {
         }
 
         return result;
-    }
-
-    public List<Long> getDatabaseIdsOfActiveDevices(Protocol protocol, DeviceType deviceType) {
-        if (DEBUG) Log.i(TAG, "getDatabaseIdsOfActiveDevices");
-
-
-        List<Long> availableDevicesList = new LinkedList<>();
-
-        for (MyRemoteDevice remoteDevice : getRemoteDeviceList()) {
-            if ((protocol == Protocol.ALL || remoteDevice.getProtocol() == protocol)
-                    && (deviceType == DeviceType.ALL || remoteDevice.getDeviceType() == deviceType)
-                    && remoteDevice.isReceivingData()) {
-                if (DEBUG) Log.i(TAG, "adding " + remoteDevice.getName());
-                availableDevicesList.add(remoteDevice.getDeviceId());
-            }
-        }
-
-        Set<Long> availableDevicesSet = new HashSet<>();
-        availableDevicesSet.addAll(availableDevicesList);
-
-        if (DEBUG) Log.i(TAG, "now, we add the found devices");
-        for (long deviceId : mFoundDevices) {
-            if (!availableDevicesSet.contains(deviceId)) { // not yet in the list, so we add it
-                if (DEBUG) Log.i(TAG, "adding device Id " + deviceId);
-                availableDevicesList.add(deviceId);
-            }
-        }
-
-        return availableDevicesList;
     }
 
     public LinkedList<MyRemoteDevice> getRemoteDeviceList() {
@@ -859,7 +831,7 @@ public class DeviceManager {
     public void startSearchForNewRemoteDevices(Protocol protocol, DeviceType deviceType) {
         if (DEBUG) Log.i(TAG, "startSearchForNewRemoteDevices");
 
-        mFoundDevices.clear();
+        mNewlyFoundDevices.clear();
 
         switch (protocol) {
             case ANT_PLUS:
@@ -890,7 +862,7 @@ public class DeviceManager {
     public void stopSearchForNewRemoteDevices() {
         if (DEBUG) Log.i(TAG, "stopSearchForNewRemoteDevices");
 
-        mFoundDevices.clear();
+        mNewlyFoundDevices.clear();
 
         // ANT_PLUS:
         if (mAntAsyncSearchEngine != null) {

@@ -419,13 +419,13 @@ public class TrackerService extends Service {
         if (mBanalService != null) {
             if (averageSpeedCalculateable()) {
                 return discoveryManager.resolveSportType(
-                        new HashSet<>(mBanalService.getDatabaseIdsOfActiveDevices()),
+                        new HashSet<>(mBanalService.getDatabaseIdsOfActiveRemoteDevices()),
                         mBanalService.getBSportType(),
                         getAverageSpeed());
             }
             else {
                 return discoveryManager.resolveSportType(
-                        new HashSet<>(mBanalService.getDatabaseIdsOfActiveDevices()),
+                        new HashSet<>(mBanalService.getDatabaseIdsOfActiveRemoteDevices()),
                         mBanalService.getBSportType());
             }
         }
@@ -526,7 +526,7 @@ public class TrackerService extends Service {
         SQLiteDatabase activeDevicesDb = new ActiveDevicesDbHelper(this).getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(ActiveDevices.WORKOUT_ID, mWorkoutID);
-        for (long deviceDbId : mBanalService.getDatabaseIdsOfActiveDevices()) {
+        for (long deviceDbId : mBanalService.getDatabaseIdsOfActiveRemoteDevices()) {
             if (DEBUG) Log.d(TAG, "adding deviceId " + deviceDbId + " to list of active devices");
             values.put(ActiveDevices.DEVICE_DB_ID, deviceDbId);
             activeDevicesDb.insert(ActiveDevices.TABLE, null, values);

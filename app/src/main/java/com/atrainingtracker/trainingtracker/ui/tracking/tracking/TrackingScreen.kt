@@ -35,10 +35,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import com.atrainingtracker.trainingtracker.ui.theme.DefaultBackgroundColor
 import com.atrainingtracker.trainingtracker.ui.theme.Zone1
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.atrainingtracker.trainingtracker.ui.theme.LightBackground
+import com.atrainingtracker.trainingtracker.ui.theme.Zone3
+import com.atrainingtracker.trainingtracker.ui.theme.Zone4
+import com.atrainingtracker.trainingtracker.ui.theme.Zone5
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldView
@@ -125,7 +127,7 @@ private fun MapPlaceholder(modifier: Modifier = Modifier) {
 }
 
 
-@Preview(showBackground = true, backgroundColor = 0xFF212121)
+@Preview(showBackground = true)
 @Composable
 fun TrackingScreenPreview() {
     ATrainingTrackerTheme {
@@ -136,7 +138,7 @@ fun TrackingScreenPreview() {
                 viewSize = ViewSize.SMALL,
                 label = "Pace",
                 filterDescription = "10s", value = "5:31", units = "/km",
-                zoneColor = DefaultBackgroundColor
+                zoneColor = LightBackground
             ),
             // Row 0, Col 1
             SensorFieldState(
@@ -144,7 +146,7 @@ fun TrackingScreenPreview() {
                 viewSize = ViewSize.LARGE,
                 label = "Distance",
                 filterDescription = "Total", value = "10.34", units = "km",
-                zoneColor = DefaultBackgroundColor
+                zoneColor = LightBackground
             ),
             // Row 1, Col 0
             SensorFieldState(
@@ -152,7 +154,7 @@ fun TrackingScreenPreview() {
                 viewSize = ViewSize.LARGE,
                 label = "Heart Rate",
                 filterDescription = "inst.", value = "145", units = "bpm",
-                zoneColor = Zone1
+                zoneColor = Zone3
             ),
             // Row 2, Col 0
             SensorFieldState(
@@ -160,7 +162,7 @@ fun TrackingScreenPreview() {
                 viewSize = ViewSize.XLARGE,
                 label = "Power",
                 filterDescription = "3s", value = "280", units = "W",
-                zoneColor = DefaultBackgroundColor
+                zoneColor = Zone5
             )
         )
         TrackingScreen(

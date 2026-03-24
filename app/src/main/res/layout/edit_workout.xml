@@ -38,8 +38,8 @@
             android:layout_height="wrap_content"
             android:layout_marginEnd="8dp"
             android:hint="@string/hint_workout_name"
-            app:layout_constraintEnd_toStartOf="@+id/buttonAutoName"
             app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent">
 
             <com.google.android.material.textfield.TextInputEditText
@@ -49,6 +49,8 @@
                 android:inputType="textCapSentences" />
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- NO_MY_LOCATIONS
+        TODO: replace the above's End_toEndOf constraint with :app:layout_constraintEnd_toStartOf="@+id/buttonAutoName"
         <com.google.android.material.button.MaterialButton
             android:id="@+id/buttonAutoName"
             android:layout_width="wrap_content"
@@ -59,6 +61,7 @@
             app:layout_constraintStart_toEndOf="@+id/layoutWorkoutName"
             app:layout_constraintTop_toTopOf="@+id/layoutWorkoutName"
             tools:ignore="ContentDescription" />
+            -->
 
         <!-- Row 2: Sport and Equipment Spinners -->
         <Spinner
@@ -162,17 +165,27 @@
                 android:inputType="textCapSentences" />
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- Save Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/buttonSave"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="@string/buttonSaveWorkoutText"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/layoutMethod" />
 
         <!-- Placeholder for Workout Details (Distance, Time, Ascent, etc.) -->
         <include
             android:id="@+id/workout_details_include"
             layout="@layout/workout_summary__details"
-            android:layout_marginTop="-8dp"
+            android:layout_marginTop="8dp"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/layoutMethod" />
+            app:layout_constraintTop_toBottomOf="@id/buttonSave" />
 
 
         <!-- Container for Extrema Values -->
@@ -196,18 +209,6 @@
             app:layout_constraintTop_toBottomOf="@id/extrema_values_include"
             map:liteMode="true"
             map:mapType="none" />
-
-
-        <!-- Save Button -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/buttonSave"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:text="@string/buttonSaveWorkoutText"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/mapView_include" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.core.widget.NestedScrollView>

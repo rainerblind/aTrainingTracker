@@ -60,8 +60,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.atrainingtracker.R
-import com.atrainingtracker.trainingtracker.TrackingMode
-import com.atrainingtracker.trainingtracker.fragments.ControlTrackingFragment
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.tracking.LapEvent
 import com.atrainingtracker.trainingtracker.ui.tracking.LapSummaryDialog
@@ -77,7 +75,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.RecyclerView
 import com.atrainingtracker.banalservice.ActivityType
+import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingFragment
 import kotlin.properties.Delegates
 
 class TrackingTabsFragment : Fragment() {
@@ -96,6 +96,8 @@ class TrackingTabsFragment : Fragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (DEBUG) Log.i(TAG, "onCreate")
+
         setHasOptionsMenu(true)
     }
 
@@ -119,11 +121,14 @@ class TrackingTabsFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
+        if (DEBUG) Log.i(TAG, "onCreateView")
+
         return inflater.inflate(R.layout.fragment_tabbed_container, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        if (DEBUG) Log.i(TAG, "onViewCreated")
 
         val factory = TrackingTabsViewModelFactory(requireActivity().application)
         viewModel = ViewModelProvider(this, factory).get(TrackingTabsViewModel::class.java)
@@ -213,7 +218,6 @@ class TrackingTabsFragment : Fragment() {
 
         // Observe the ActivityType from the ViewModel (which gets it from the repository)
         viewModel.activityType.observe(viewLifecycleOwner) { activityType ->
-            pagerAdapter.onActivityTypeChanged(activityType)
             attachTabLayoutMediator()
         }
 
@@ -258,12 +262,31 @@ class TrackingTabsFragment : Fragment() {
         }
 
         // Observe TrackingMode to update the tab text of the first tab (the control tracking fragment)
-        viewModel.trackingMode.observe(viewLifecycleOwner) { _ ->
+        viewModel.trackingMode.observe(viewLifecycleOwner) { trackingMode ->
             if (isExplicitMode) return@observe // when in explicit mode, there is no control tracking fragment, so we immediately return.
 
+            // set the title
             if (::tabLayout.isInitialized && ::pagerAdapter.isInitialized) {
                 tabLayout.getTabAt(0)?.text = pagerAdapter.getPageTitle(0)
             }
+
+            // set enabled when tracking / disabled else
+            if (trackingMode == TrackingMode.TRACKING) {
+                lapButton.isEnabled = true
+                lapButton.alpha = 1.0f
+                // set to primary brand color
+                lapButton.setBackgroundColor(requireContext().getColor(R.color.color_primary))
+                lapButton.setTextColor(requireContext().getColor(R.color.color_on_primary))
+            }
+            else {
+                lapButton.isEnabled = false
+                // Make it look "ghosted" or disabled
+                lapButton.alpha = 0.5f
+                // Use a neutral/disabled grey
+                lapButton.setBackgroundColor(requireContext().getColor(R.color.lap_button_disabled_background))
+                lapButton.setTextColor(requireContext().getColor(R.color.lap_button_disabled_text))
+            }
+
         }
 
         // Observe ScreenMode to swap between Tracking and Configuration UI
@@ -284,6 +307,8 @@ class TrackingTabsFragment : Fragment() {
                 showLapDialog = true
             }
         }
+
+        Log.i(TAG, "End of onViewCreated")
     }
 
     private fun updateConfigHeader(composeView: ComposeView) {
@@ -424,8 +449,6 @@ class TrackingTabsFragment : Fragment() {
             ViewModelProvider(fragment).get(TrackingTabsViewModel::class.java)
         }
 
-        private var currentActivityType: ActivityType? = null
-
         fun updateTrackingViews(newViews: List<TrackingViewInfo>) {
             Log.i(TAG, "updateTrackingViews")
             this.trackingViews = newViews
@@ -434,24 +457,8 @@ class TrackingTabsFragment : Fragment() {
 
             // Trigger the fragment to re-attach the mediator to show the new tabs
             fragment.attachTabLayoutMediator()
+            if (DEBUG) Log.i(TAG, "updateTrackingViews: $trackingViews")
         }
-
-        /*
-        override fun onBindViewHolder(
-            holder: FragmentViewHolder,
-            position: Int,
-            payloads: MutableList<Any>
-        ) {
-            if (position > 0) { // Skip the Control tab
-                val fragment = fragment.childFragmentManager.findFragmentByTag("f" + holder.itemId) as? TrackingFragment
-                val viewInfo = trackingViews[position - 1]
-
-                // Push the new value into the existing fragment
-                fragment?.updateShowMap(viewInfo.showMap)
-            }
-            super.onBindViewHolder(holder, position, payloads)
-        }
-         */
 
         fun getPageTitle(position: Int): CharSequence {
             return if (showControlTab && position == 0) {
@@ -479,6 +486,8 @@ class TrackingTabsFragment : Fragment() {
         }
 
         override fun createFragment(position: Int): Fragment {
+            Log.i(TAG, "createFragment, pos=$position")
+
             return if (showControlTab && position == 0) {
                 ControlTrackingFragment()
             } else {
@@ -486,22 +495,14 @@ class TrackingTabsFragment : Fragment() {
                 // If control tab is shown, position 1 is trackingViews[0]
                 val viewIndex = if (showControlTab) position - 1 else position
                 val viewInfo = trackingViews[viewIndex]
-                TrackingFragment.newInstance(viewInfo.tabViewId, viewInfo.showMap)
-            }
-        }
-
-        fun onActivityTypeChanged(newType: ActivityType) {
-            if (currentActivityType != newType) {
-                currentActivityType = newType
-                // This forces ViewPager2 to recreate fragments because the ID for position 0 will change
-                notifyDataSetChanged()
+                TrackingFragment.newInstance(viewInfo.tabViewId)
             }
         }
 
         override fun getItemId(position: Int): Long {
-            if (showControlTab && position == 0) {
-                return currentActivityType?.hashCode()?.toLong() ?: 0L
-            }
+            if (DEBUG) Log.i(TAG, "getItemId, pos=$position")
+
+            if (showControlTab && position == 0) { return -1L}
 
             val viewIndex = if (showControlTab) position - 1 else position
             return if (viewIndex >= 0 && viewIndex < trackingViews.size) {
@@ -512,6 +513,8 @@ class TrackingTabsFragment : Fragment() {
         }
 
         override fun containsItem(itemId: Long): Boolean {
+            if (DEBUG) Log.i(TAG, "containsItem, itemId=$itemId")
+
             if (showControlTab && itemId == -1L) return true
             return trackingViews.any { it.tabViewId == itemId }
         }

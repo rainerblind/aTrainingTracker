@@ -339,15 +339,17 @@
 
         </PreferenceScreen>
 
+        <!-- NO_MY_LOCATIONS
         <PreferenceScreen
             android:key="fancyWorkoutNames"
             android:summary="@string/configureWorkoutNameSchemes"
             android:title="@string/workout_name_schemes"
             android:layout="@layout/preference_slim">
             <Preference>
-                <!-- just a dummy entry -->
+
             </Preference>
         </PreferenceScreen>
+        -->
     </PreferenceCategory>
 
 </PreferenceScreen>

@@ -24,6 +24,7 @@
     <string name="do_not_show_again">nicht mehr anzeigen</string>
     <string name="Cancel">Abbrechen</string>
     <string name="searching_for">suche nach</string>
+    <string name="searching_for_device_format">Suche nach  %1$s</string>
     <string name="default_device_name">irgendein ANT+ Sensor</string>
     <string name="waiting">warte</string>
     <string name="pairing_ANT">ANT+ Kopplung</string>
@@ -70,10 +71,10 @@
     <string name="show_google_maps_licence">Google Maps Lizenz</string>
     <string name="play_services_not_installed">Google Play Services ist auf diesem Gerät nicht installiert.</string>
     <string name="Preferences">Einstellungen</string>
-    <string name="Start_Tracking">Aufzeichnung starten</string>
-    <string name="Stop_Tracking">Aufzeichnung beenden</string>
-    <string name="Pause_Tracking">Aufzeichnung pausieren</string>
-    <string name="Resume_Tracking">Aufzeichnung fortsetzen</string>
+    <string name="start_tracking">Aufzeichnung starten</string>
+    <string name="stop_tracking">Aufzeichnung beenden</string>
+    <string name="pause_tracking">Aufzeichnung pausieren</string>
+    <string name="resume_tracking">Aufzeichnung fortsetzen</string>
     <string name="start_or_resume_dialog_message">Die vorherige Aufzeichnung wurde nicht korrekt beendet.\n Soll eine neue Aufzeichnung angefangen oder die vorherige fortgesetzt werden? </string>
     <string name="start_new_workout">Neue starten</string>
     <string name="resume_workout">Vorherige fortsetzen</string>
@@ -190,14 +191,12 @@
     <string name="heart_rate_short">HF</string>
     <string name="lap_number">Lap Nummer</string>
     <string name="lap_number_short">Lap Nr</string>
-    <string name="latitude">Latitude</string>
-    <string name="latitude_short">lat.</string>
     <string name="line_distance">Luftlinie</string>
     <string name="line_distance_short">Luftlinie</string>
-    <string name="longitude">Longitude</string>
-    <string name="longitude_short">long.</string>
     <string name="pace">Tempo</string>
     <string name="pace_short">Tempo</string>
+    <string name="position">Position</string>
+    <string name="position_short">Pos.</string>
     <string name="power">Leistung</string>
     <string name="power_short">Leistung</string>
     <string name="speed">Geschwindigkeit</string>
@@ -353,6 +352,7 @@
     <string name="tab_start">Start</string>
     <string name="tab_tracking">Aufzeichnung</string>
     <string name="tab_map">Karte</string>
+    <string name="tab_laps">Runden</string>
     <string name="tab_workouts">Einheiten</string>
 
 
@@ -530,8 +530,6 @@
     <string name="paused_bike">Radfahren</string>
     <string name="paused_other">Trainieren</string>
     <string name="export_status">Exportstatus</string>
-    <string name="enable_bluetooth">Einschalten</string>
-    <string name="bluetooth_disabled_on_device">Im Moment is Bluetooth auf dem Gerät ausgeschaltet.  Um externe Sensoren zu koppeln muss Bluetooth eingeschaltet sein. \nSoll Bluetooth eingeschaltet werden?</string>
     <string name="LocationsActivityLabel">Locations</string>
     <string name="getting_start_locations">Suche nach Start Positionen.</string>
     <string name="average">mittel</string>
@@ -936,4 +934,10 @@
 
     <!-- starred Strava segments -->
     <string name="starred_segments__no_update_because_upload_to_strava_is_disabled">Nicht mit Strava verbunden. -> Keine Aktualisierung deiner favorisiertne Segmente.</string>
+
+    <!-- Control tracking -->
+    <string name="control_tracking_connecting">Connecting…</string>
+    <string name="control_tracking_ready_run">Bereit zu Laufen</string>
+    <string name="control_tracking_ready_bike">Bereit zum Radeln</string>
+    <string name="control_tracking_ready_other">Bereit zum Training</string>
 </resources>

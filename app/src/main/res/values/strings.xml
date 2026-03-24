@@ -24,6 +24,7 @@
     <string name="do_not_show_again">don\'t show again</string>
     <string name="Cancel">Cancel</string>
     <string name="searching_for">searching for</string>
+    <string name="searching_for_device_format">searching for %1$s</string>
     <string name="default_device_name">some ANT+ device</string>
     <string name="waiting">waiting</string>
     <string name="pairing_ANT">ANT+ Pairing</string>
@@ -71,10 +72,10 @@
     <string name="show_google_maps_licence">Google Maps Legal Info</string>
     <string name="play_services_not_installed">Google Play services is not installed on this device.</string>
     <string name="Preferences">Preferences</string>
-    <string name="Start_Tracking">Start Tracking</string>
-    <string name="Stop_Tracking">Stop Tracking</string>
-    <string name="Pause_Tracking">Pause Tracking</string>
-    <string name="Resume_Tracking">Resume Tracking</string>
+    <string name="start_tracking">Start Tracking</string>
+    <string name="stop_tracking">Stop Tracking</string>
+    <string name="pause_tracking">Pause Tracking</string>
+    <string name="resume_tracking">Resume Tracking</string>
     <string name="start_or_resume_dialog_message">The previous workout was not finished properly.\n Do you want to start a new workout or resume the previous one?</string>
     <string name="start_new_workout">Start new</string>
     <string name="resume_workout">Resume prev.</string>
@@ -247,14 +248,12 @@
     <string name="heart_rate_short">HR</string>
     <string name="lap_number">lap number</string>
     <string name="lap_number_short">lap nr</string>
-    <string name="latitude">latitude</string>
-    <string name="latitude_short">lat.</string>
     <string name="line_distance">line distance</string>
     <string name="line_distance_short">line dist.</string>
-    <string name="longitude">longitude</string>
-    <string name="longitude_short">long.</string>
     <string name="pace">pace</string>
     <string name="pace_short">pace</string>
+    <string name="position">position</string>
+    <string name="position_short">pos.</string>
     <string name="power">power</string>
     <string name="power_short">power</string>
     <string name="speed">speed</string>
@@ -420,6 +419,7 @@
     <string name="tab_start">Start</string>
     <string name="tab_tracking">Tracking</string>
     <string name="tab_map">Map</string>
+    <string name="tab_laps">Laps</string>
     <string name="tab_workouts">Workouts</string>
 
 
@@ -597,8 +597,6 @@
     <string name="paused_bike"> a ride</string>
     <string name="paused_other">training</string>
     <string name="export_status">Export Status</string>
-    <string name="enable_bluetooth">Enable</string>
-    <string name="bluetooth_disabled_on_device">Bluetooth is currently disabled on this device.  In order to pair a Bluetooth device, you have to enable Bluetooth.  \nDo you want to enable Bluetooth?</string>
     <string name="LocationsActivityLabel">Locations</string>
     <string name="getting_start_locations">Looking for start locations.</string>
     <string name="GPS" translatable="false">GPS</string>
@@ -1036,4 +1034,10 @@
 
     <!-- starred Strava segments -->
     <string name="starred_segments__no_update_because_upload_to_strava_is_disabled">Not connected to Strava. -> No update of your starred Strava segments.</string>
+
+    <!-- Control tracking -->
+    <string name="control_tracking_connecting">Connecting…</string>
+    <string name="control_tracking_ready_run">Ready to run</string>
+    <string name="control_tracking_ready_bike">Ready to ride</string>
+    <string name="control_tracking_ready_other">Ready to train</string>
 </resources>
