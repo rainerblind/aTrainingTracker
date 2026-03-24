@@ -168,13 +168,25 @@ class TrackingFragment : Fragment() {
                             if (showMapState) { // Double-check just in case
                                 AndroidView(
                                     factory = { context ->
-                                        val frameLayout = FrameLayout(context).apply { id = View.generateViewId() }
-                                        if (childFragmentManager.findFragmentById(frameLayout.id) == null) {
+                                        // Use a the static ID
+                                        val frameLayout = FrameLayout(context).apply {
+                                            id = R.id.map_container_id
+                                        }
+
+                                        // Check if fragment already exists (important for restoration)
+                                        val existingFragment = childFragmentManager.findFragmentById(R.id.map_container_id)
+
+                                        if (existingFragment == null) {
+                                            if (DEBUG) Log.i(TAG, "Adding new map fragment to static ID")
                                             mapFragment = TrackOnMapTrackingAndFollowingFragment.newInstance()
                                             childFragmentManager.beginTransaction()
-                                                .add(frameLayout.id, mapFragment!!)
+                                                .replace(R.id.map_container_id, mapFragment!!)
                                                 .commit()
+                                        } else {
+                                            if (DEBUG) Log.i(TAG, "Re-using existing map fragment")
+                                            mapFragment = existingFragment as TrackOnMapTrackingAndFollowingFragment
                                         }
+
                                         frameLayout
                                     },
                                     // The modifier here should fill the space provided by the parent Box in TrackingScreen.
