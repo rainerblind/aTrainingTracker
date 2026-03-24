@@ -82,16 +82,16 @@ public enum ActivityType {
                         SensorType.VERTICAL_SPEED,
                         SensorType.SLOPE,
                         // SensorType.CALORIES,
-                        SensorType.DISTANCE_m,
-                        SensorType.DISTANCE_m_LAP,
                         SensorType.HR,
-                        SensorType.LAP_NR,
+                        SensorType.DISTANCE_m,
                         SensorType.PACE_spm,
                         SensorType.SPEED_mps,
                         SensorType.TIME_OF_DAY,
                         SensorType.TIME_ACTIVE,
+                        SensorType.TIME_TOTAL,
+                        SensorType.LAP_NR,
                         SensorType.TIME_LAP,
-                        SensorType.TIME_TOTAL};
+                        SensorType.DISTANCE_m_LAP};
                 break;
 
             case RUN_SPEED_AND_CADENCE:
@@ -101,19 +101,19 @@ public enum ActivityType {
                         SensorType.DESCENT,
                         SensorType.VERTICAL_SPEED,
                         SensorType.SLOPE,
+                        SensorType.HR,
                         SensorType.CADENCE,
                         SensorType.CALORIES,
                         SensorType.DISTANCE_m,
-                        SensorType.DISTANCE_m_LAP,
-                        SensorType.HR,
-                        SensorType.LAP_NR,
                         SensorType.PACE_spm,
                         SensorType.SPEED_mps,
                         SensorType.STRIDES,
                         SensorType.TIME_OF_DAY,
                         SensorType.TIME_ACTIVE,
+                        SensorType.TIME_TOTAL,
+                        SensorType.LAP_NR,
                         SensorType.TIME_LAP,
-                        SensorType.TIME_TOTAL};
+                        SensorType.DISTANCE_m_LAP};
                 break;
 
             case BIKE_SPEED_AND_CADENCE:
@@ -123,18 +123,18 @@ public enum ActivityType {
                         SensorType.DESCENT,
                         SensorType.VERTICAL_SPEED,
                         SensorType.SLOPE,
+                        SensorType.HR,
                         SensorType.CADENCE,
                         // SensorType.CALORIES,
                         SensorType.DISTANCE_m,
-                        SensorType.DISTANCE_m_LAP,
-                        SensorType.HR,
-                        SensorType.LAP_NR,
                         // SensorType.PACE_spm,
                         SensorType.SPEED_mps,
                         SensorType.TIME_OF_DAY,
                         SensorType.TIME_ACTIVE,
+                        SensorType.TIME_TOTAL,
+                        SensorType.LAP_NR,
                         SensorType.TIME_LAP,
-                        SensorType.TIME_TOTAL};
+                        SensorType.DISTANCE_m_LAP};
                 break;
 
             case BIKE_POWER:
@@ -144,26 +144,26 @@ public enum ActivityType {
                         SensorType.DESCENT,
                         SensorType.VERTICAL_SPEED,
                         SensorType.SLOPE,
+                        SensorType.HR,
                         SensorType.CADENCE,
                         // SensorType.CALORIES,
-                        SensorType.DISTANCE_m,
-                        SensorType.DISTANCE_m_LAP,
-                        SensorType.HR,
-                        SensorType.LAP_NR,
                         // SensorType.PACE_spm,
                         SensorType.PEDAL_POWER_BALANCE,
                         SensorType.PEDAL_SMOOTHNESS_L,
                         SensorType.PEDAL_SMOOTHNESS_R,
                         SensorType.PEDAL_SMOOTHNESS,
                         SensorType.POWER,
+                        SensorType.DISTANCE_m,
                         SensorType.SPEED_mps,
                         SensorType.TIME_OF_DAY,
                         SensorType.TIME_ACTIVE,
-                        SensorType.TIME_LAP,
                         SensorType.TIME_TOTAL,
                         SensorType.TORQUE,
                         SensorType.TORQUE_EFFECTIVENESS_L,
-                        SensorType.TORQUE_EFFECTIVENESS_R};
+                        SensorType.TORQUE_EFFECTIVENESS_R,
+                        SensorType.LAP_NR,
+                        SensorType.TIME_LAP,
+                        SensorType.DISTANCE_m_LAP};
                 break;
 
             default:
@@ -174,14 +174,14 @@ public enum ActivityType {
                         SensorType.VERTICAL_SPEED,
                         SensorType.SLOPE,
                         SensorType.DISTANCE_m,
-                        SensorType.DISTANCE_m_LAP,
-                        SensorType.LAP_NR,
                         SensorType.PACE_spm,
                         SensorType.SPEED_mps,
                         SensorType.TIME_OF_DAY,
                         SensorType.TIME_ACTIVE,
+                        SensorType.TIME_TOTAL,
+                        SensorType.LAP_NR,
                         SensorType.TIME_LAP,
-                        SensorType.TIME_TOTAL};
+                        SensorType.DISTANCE_m_LAP};
                 break;
         }
 
