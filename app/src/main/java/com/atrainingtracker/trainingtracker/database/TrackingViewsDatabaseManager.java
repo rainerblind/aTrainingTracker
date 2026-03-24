@@ -467,9 +467,10 @@ public class TrackingViewsDatabaseManager {
             EnumMap<ActivityType, List<RowData>> viewMap = createViewMap();
             for (ActivityType activityType : viewMap.keySet()) {
                 // show the default tab with an lap button
-                addDefaultTab(db, activityType, mContext.getString(R.string.text_default), 1, true, false, viewMap.get(activityType));
+                addDefaultTab(db, activityType, mContext.getString(R.string.text_default), 1, false, false, viewMap.get(activityType));
                 // shot a tab with just some standard fields and the map but no lap button
                 addDefaultTab(db, activityType, mContext.getString(R.string.tab_map), 2, false, true, getDefaultStartRowDataList(activityType));
+                addDefaultTab(db, activityType, mContext.getString(R.string.tab_laps), 3, true, false, getDefaultLapRowDataList(activityType));
             }
             if (DEBUG) Log.d(TAG, "filled db");
         }
@@ -620,6 +621,46 @@ public class TrackingViewsDatabaseManager {
             }
             rowDataList.add(new RowData(SensorType.DISTANCE_m, ViewSize.NORMAL, 2, 2));
             rowDataList.add(new RowData(SensorType.HR, ViewSize.LARGE, 3, 1));
+
+            return rowDataList;
+        }
+
+        @NonNull
+        protected List<RowData> getDefaultLapRowDataList(ActivityType activityType) {
+            List<RowData> rowDataList = new LinkedList<>();
+            rowDataList.add(new RowData(SensorType.TIME_LAP, ViewSize.SMALL, 1, 1));
+            rowDataList.add(new RowData(SensorType.LAP_NR, ViewSize.SMALL, 1, 2));
+            if (activityType == ActivityType.RUN_SPEED_AND_CADENCE) {
+                rowDataList.add(new RowData(SensorType.PACE_spm, ViewSize.NORMAL, 2, 1));
+            }
+            else {
+                rowDataList.add(new RowData(SensorType.SPEED_mps, ViewSize.NORMAL, 2, 1));
+            }
+            rowDataList.add(new RowData(SensorType.DISTANCE_m_LAP, ViewSize.NORMAL, 2, 2));
+            rowDataList.add(new RowData(SensorType.HR, ViewSize.LARGE, 3, 1));
+
+            switch (activityType) {
+                case GENERIC_HR -> {
+                    rowDataList.add(new RowData(SensorType.ALTITUDE, ViewSize.NORMAL, 4, 1));
+                    rowDataList.add(new RowData(SensorType.ASCENT, ViewSize.NORMAL, 4, 2));
+                }
+                case RUN_SPEED_AND_CADENCE -> {
+                    rowDataList.add(new RowData(SensorType.CADENCE, ViewSize.LARGE, 4, 1));
+                    rowDataList.add(new RowData(SensorType.ALTITUDE, ViewSize.NORMAL, 5, 1));
+                    rowDataList.add(new RowData(SensorType.ASCENT, ViewSize.NORMAL, 5, 2));
+                }
+                case BIKE_SPEED_AND_CADENCE -> {
+                    rowDataList.add(new RowData(SensorType.CADENCE, ViewSize.LARGE, 4, 1));
+                    rowDataList.add(new RowData(SensorType.ALTITUDE, ViewSize.NORMAL, 5, 1));
+                    rowDataList.add(new RowData(SensorType.ASCENT, ViewSize.NORMAL, 5, 2));
+                }
+                case BIKE_POWER -> {
+                    rowDataList.add(new RowData(SensorType.POWER, ViewSize.HUGE, 4, 1));
+                    rowDataList.add(new RowData(SensorType.CADENCE, ViewSize.LARGE, 5, 1));
+                    rowDataList.add(new RowData(SensorType.ALTITUDE, ViewSize.NORMAL, 6, 1));
+                    rowDataList.add(new RowData(SensorType.ASCENT, ViewSize.NORMAL, 6, 2));
+                }
+            }
 
             return rowDataList;
         }
