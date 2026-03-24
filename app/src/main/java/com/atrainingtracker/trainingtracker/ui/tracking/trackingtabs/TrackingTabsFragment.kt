@@ -495,7 +495,7 @@ class TrackingTabsFragment : Fragment() {
                 // If control tab is shown, position 1 is trackingViews[0]
                 val viewIndex = if (showControlTab) position - 1 else position
                 val viewInfo = trackingViews[viewIndex]
-                TrackingFragment.newInstance(viewInfo.tabViewId, viewInfo.showMap)
+                TrackingFragment.newInstance(viewInfo.tabViewId)
             }
         }
 

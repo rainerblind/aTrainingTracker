@@ -49,6 +49,7 @@ import java.util.Objects
  * The state for the entire tracking screen, containing a list of all sensor fields.
  */
 data class TrackingScreenState(
+    val showMap: Boolean = false,
     val fields: List<SensorFieldState> = emptyList()
 )
 
@@ -108,48 +109,57 @@ class TrackingViewModel(
 
     private fun loadSensorFieldStates() {
         viewModelScope.launch {
-            //  Collect the flow for configuration changes
-            trackingViewsRepository.getSensorFieldConfigsForView(viewId)
-                .combine(banalServiceRepository.allFilteredSensorData) { configs, allSensorData ->
-                    // This whole block will re-execute whenever configs OR sensor data change
+            combine(
+                trackingViewsRepository.getSensorFieldConfigsForView(viewId),
+                banalServiceRepository.allFilteredSensorData,
+                trackingViewsRepository.getTrackingViewInfoFlow(viewId)
+            ) { configs, allSensorData, viewInfo ->
+                // This whole block will re-execute whenever configs OR sensor data change
 
-                    // --- Step 1: Create the base state from the latest configurations ---
-                    val baseFields = configs.map { config ->
-                        val uniqueHash = Objects.hash(config.sensorType, config.filterType, config.filterConstant, config.sourceDeviceName)
-                        var filterDescription = config.filterType.getShortSummary(application, config.filterConstant)
-                        if (config.sourceDeviceName != null) {
-                            filterDescription = if (filterDescription.isNotEmpty()) {
-                                "${config.sourceDeviceName}: $filterDescription"
-                            } else {
-                                config.sourceDeviceName
-                            }
+                // --- Step 1: Create the base state from the latest configurations ---
+                val baseFields = configs.map { config ->
+                    val uniqueHash = Objects.hash(config.sensorType, config.filterType, config.filterConstant, config.sourceDeviceName)
+                    var filterDescription = config.filterType.getShortSummary(application, config.filterConstant)
+                    if (config.sourceDeviceName != null) {
+                        filterDescription = if (filterDescription.isNotEmpty()) {
+                            "${config.sourceDeviceName}: $filterDescription"
+                        } else {
+                            config.sourceDeviceName
                         }
-
-                        SensorFieldState(
-                            configHash = uniqueHash,
-                            sensorFieldId = config.sensorFieldId,
-                            rowNr = config.rowNr,
-                            colNr = config.colNr,
-                            viewSize = config.viewSize,
-                            label = application.getString(config.sensorType.shortNameId),
-                            filterDescription = filterDescription,
-                            value = "--",
-                            units = application.getString(MyHelper.getShortUnitsId(config.sensorType)),
-                            zoneColor = defaultZoneColor
-                        )
                     }
 
-                    // --- Step 2: Apply live sensor data to the base state ---
-                    val activity = banalServiceRepository.activityType.value ?: return@combine baseFields // Use the LiveData value
-                    val fieldsWithLiveData = applySensorData(baseFields, allSensorData, activity)
+                    SensorFieldState(
+                        configHash = uniqueHash,
+                        sensorFieldId = config.sensorFieldId,
+                        rowNr = config.rowNr,
+                        colNr = config.colNr,
+                        viewSize = config.viewSize,
+                        label = application.getString(config.sensorType.shortNameId),
+                        filterDescription = filterDescription,
+                        value = "--",
+                        units = application.getString(MyHelper.getShortUnitsId(config.sensorType)),
+                        zoneColor = defaultZoneColor
+                    )
+                }
 
-                    // Return the fully updated list
-                    fieldsWithLiveData
+                // --- Step 2: Apply live sensor data to the base state ---
+                val activity = banalServiceRepository.activityType.value
+                val finalFields = if (activity != null) {
+                    applySensorData(baseFields, allSensorData, activity)
+                } else {
+                    baseFields
                 }
-                .collect { updatedFields ->
-                    // Emit the new state to the UI
-                    _uiState.value = TrackingScreenState(fields = updatedFields)
-                }
+
+                // --- Step 3: Package everything into the TrackingScreenState ---
+                // We extract showMap from the viewInfo we just combined
+                TrackingScreenState(
+                    fields = finalFields,
+                    showMap = viewInfo?.showMap ?: false
+                )
+            }.collect { newState ->
+                // Emit the new state to the UI
+                _uiState.value = newState
+            }
         }
     }
 
