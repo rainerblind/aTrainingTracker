@@ -35,6 +35,7 @@ import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
+import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
 import com.atrainingtracker.trainingtracker.ui.map.MapState
 import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
@@ -153,6 +154,18 @@ class TrackingViewModel(
                 val bearing = allSensorData.find { it.sensorType == SensorType.BEARING }?.value as? Float ?: 0f
                 val speed = allSensorData.find { it.sensorType == SensorType.SPEED_mps }?.value as? Float ?: 0f
 
+                val currentTrack = banalServiceRepository.currentTrack.value
+                val markerList = mutableListOf<LocationMarker>()
+                if (currentTrack.isNotEmpty()) {
+                    markerList.add(
+                        LocationMarker(
+                            position = currentTrack.first(),
+                            iconResId = R.drawable.start_logo_map,
+                            title = application.getString(R.string.Start)
+                        )
+                    )
+                }
+
                 // --- Step 4: Package everything into the TrackingScreenState ---
                 TrackingScreenState(
                     fields = finalFields,
@@ -161,7 +174,8 @@ class TrackingViewModel(
                         bearing = bearing,
                         speed = speed,
                         isFollowMeEnabled = true,
-                        currentTrack = banalServiceRepository.currentTrack.value
+                        currentTrack = currentTrack,
+                        markers = markerList
                     )
                 )
             }.collect { newState ->

@@ -3,6 +3,7 @@ package com.atrainingtracker.trainingtracker.ui.map
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -47,12 +48,22 @@ data class MapSegment(
     val path: List<LatLng>,
 )
 
+data class LocationMarker(
+    val position: LatLng,
+    @DrawableRes val iconResId: Int,
+    val title: String? = null,
+    val rotation: Float = 0f,
+    val flat: Boolean = false,
+    val anchor: Offset = Offset(0.5f, 0.5f)
+)
+
 data class MapState(
     val bearing: Float = 0f,
     val speed: Float = 0f,
     val isFollowMeEnabled: Boolean = true,
     val currentTrack: List<LatLng> = emptyList(),
     val segments: List<MapSegment> = emptyList(),
+    val markers: List<LocationMarker> = emptyList()
 )
 
 @Composable
@@ -95,13 +106,6 @@ fun ATrainingTrackerMap(
         )
     }
 
-    val arrowIcon = bitmapDescriptorFromVector(
-        context,
-        R.drawable.ic_navigation_arrow,
-        isInitialized = isMapInitialized
-        )
-    // val currentLocationIcon = BitmapDescriptorFactory.fromResource(R.drawable.arrowhead)
-    val currentLocationIcon = arrowIcon
 
     // Dynamic zoom based on speed (m/s)
     //         max_zoom - gain * speed
@@ -123,7 +127,13 @@ fun ATrainingTrackerMap(
         }
     }
 
+    val iconCache = remember(isMapInitialized) { mutableMapOf<Int, BitmapDescriptor>() }
+
     if (isMapInitialized) {
+        val arrowIcon = iconCache.getOrPut(R.drawable.ic_navigation_arrow) {
+            bitmapDescriptorFromVector(context, R.drawable.ic_navigation_arrow, true)!!
+        }
+
         GoogleMap(
             modifier = modifier,
             cameraPositionState = cameraPositionState,
@@ -183,11 +193,26 @@ fun ATrainingTrackerMap(
                 }
             }
 
+            // 2. Draw Generic Markers from the list
+            mapState.markers.forEach { markerData ->
+                val descriptor = iconCache.getOrPut(markerData.iconResId) {
+                    BitmapDescriptorFactory.fromResource(markerData.iconResId)
+                }
+                Marker(
+                    state = MarkerState(position = markerData.position),
+                    icon = descriptor,
+                    title = markerData.title,
+                    rotation = markerData.rotation,
+                    flat = markerData.flat,
+                    anchor = markerData.anchor
+                )
+            }
+
             // 3. Current Location Marker
             currentLocation?.let {
                 Marker(
                     state = MarkerState(position = it),
-                    icon = currentLocationIcon,
+                    icon = arrowIcon,
                     rotation = mapState.bearing,
                     flat = true,
                     anchor = Offset(0.5f, 0.5f)
