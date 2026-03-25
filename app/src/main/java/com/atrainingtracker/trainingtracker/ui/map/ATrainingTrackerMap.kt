@@ -35,6 +35,7 @@ import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.segments.SegmentHelper
 import com.atrainingtracker.trainingtracker.ui.theme.StravaOrange
 
 data class MapSegment(
@@ -185,8 +186,8 @@ fun bitmapDescriptorFromVector(
 private fun calculateOrthogonalLine(point: LatLng, nextPoint: LatLng): List<LatLng> {
     val halfLengthMeters = 7.5 // Total 15m line
 
-    val latDegreeInMeters = 111132.0
-    val lonDegreeInMeters = 111132.0 * Math.cos(Math.toRadians(point.latitude))
+    val latDegreeInMeters = SegmentHelper.LatitudeDegreeInMeters(point)
+    val lonDegreeInMeters = SegmentHelper.LongitudeDegreeInMeters(point)
 
     val deltaLatM = (nextPoint.latitude - point.latitude) * latDegreeInMeters
     val deltaLonM = (nextPoint.longitude - point.longitude) * lonDegreeInMeters
