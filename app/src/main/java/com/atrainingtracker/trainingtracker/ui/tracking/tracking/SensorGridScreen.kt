@@ -46,6 +46,8 @@ import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldView
 import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize
+import com.google.android.gms.maps.model.LatLng
+import kotlinx.coroutines.flow.StateFlow
 
 interface GridActions {
     fun onEditField(fieldState: SensorFieldState)
@@ -63,7 +65,7 @@ fun SensorGridScreen(
     state: TrackingScreenState,
     screenMode: ScreenMode,
     gridActions: GridActions,
-    mapContent: @Composable () -> Unit = {}
+    currentLocationFlow: StateFlow<LatLng?>
 ) {
     Column(Modifier.fillMaxSize()) {
         val fieldsByRow = state.fields.groupBy { it.rowNr }
@@ -123,6 +125,7 @@ fun SensorGridScreen(
         if (state.showMap) {
             ATrainingTrackerMap(
                 mapState = state.mapState,
+                currentLocationFlow = currentLocationFlow,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
@@ -154,6 +157,9 @@ private fun ColAdder(onClick: () -> Unit) {
 }
 
 
+val dummyLocationFlow = kotlinx.coroutines.flow.MutableStateFlow(
+    com.google.android.gms.maps.model.LatLng(48.8566, 2.3522) // Paris, for example
+)
 // Preview for Configuration Mode
 @Preview(showBackground = true, name = "Config Mode")
 @Composable
@@ -173,7 +179,8 @@ fun SensorGridScreenConfigPreview() {
         SensorGridScreen(
             state = TrackingScreenState(fields = previewFields),
             screenMode = ScreenMode.CONFIGURATION,
-            gridActions = mockActions
+            gridActions = mockActions,
+            currentLocationFlow = dummyLocationFlow
         )
     }
 }
@@ -197,7 +204,8 @@ fun SensorGridScreenTrackingPreview() {
         SensorGridScreen(
             state = TrackingScreenState(fields = previewFields),
             screenMode = ScreenMode.TRACKING,
-            gridActions = mockActions
+            gridActions = mockActions,
+            currentLocationFlow = dummyLocationFlow
         )
     }
 }

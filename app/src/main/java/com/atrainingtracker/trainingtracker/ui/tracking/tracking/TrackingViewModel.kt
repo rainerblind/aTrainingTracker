@@ -29,6 +29,7 @@ import androidx.preference.PreferenceManager
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.filters.FilterType
 import com.atrainingtracker.banalservice.filters.FilteredSensorData
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.MyHelper
@@ -146,17 +147,21 @@ class TrackingViewModel(
 
                 // --- Step 2: Apply live sensor data to the base state ---
                 val activity = banalServiceRepository.activityType.value
-                val finalFields = if (activity != null) {
-                    applySensorData(baseFields, allSensorData, activity)
-                } else {
-                    baseFields
-                }
+                val finalFields = applySensorData(baseFields, allSensorData, activity)
 
-                // --- Step 3: Package everything into the TrackingScreenState ---
-                // We extract showMap from the viewInfo we just combined
+
+                val bearing = allSensorData.find { it.sensorType == SensorType.BEARING }?.value as? Float ?: 0f
+                val speed = allSensorData.find { it.sensorType == SensorType.SPEED_mps }?.value as? Float ?: 0f
+
+                // --- Step 4: Package everything into the TrackingScreenState ---
                 TrackingScreenState(
                     fields = finalFields,
-                    showMap = viewInfo?.showMap ?: false
+                    showMap = viewInfo?.showMap ?: false,
+                    mapState = MapState(
+                        bearing = bearing,
+                        speed = speed,
+                        isFollowMeEnabled = true // Default to true
+                    )
                 )
             }.collect { newState ->
                 // Emit the new state to the UI

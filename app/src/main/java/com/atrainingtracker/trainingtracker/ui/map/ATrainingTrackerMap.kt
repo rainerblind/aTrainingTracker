@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
@@ -39,6 +40,7 @@ import com.google.maps.android.compose.rememberCameraPositionState
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.segments.SegmentHelper
 import com.atrainingtracker.trainingtracker.ui.theme.StravaOrange
+import kotlinx.coroutines.flow.StateFlow
 
 data class MapSegment(
     val id: Long,
@@ -46,7 +48,6 @@ data class MapSegment(
 )
 
 data class MapState(
-    val currentLocation: LatLng? = null,
     val bearing: Float = 0f,
     val speed: Float = 0f,
     val isFollowMeEnabled: Boolean = true,
@@ -57,9 +58,13 @@ data class MapState(
 @Composable
 fun ATrainingTrackerMap(
     mapState: MapState,
+    currentLocationFlow: StateFlow<LatLng?>,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+
+    // Collect the location state with lifecycle awareness
+    val currentLocation by currentLocationFlow.collectAsStateWithLifecycle()
 
     // CRITICAL: Initialize Maps SDK to prevent IBitmapDescriptorFactory crash
     var isMapInitialized by remember { androidx.compose.runtime.mutableStateOf(false) }
@@ -83,7 +88,12 @@ fun ATrainingTrackerMap(
         return
     }
 
-    val cameraPositionState = rememberCameraPositionState()
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(
+            currentLocation ?: LatLng(0.0, 0.0),
+            16f
+        )
+    }
 
     val arrowIcon = bitmapDescriptorFromVector(
         context,
@@ -94,20 +104,18 @@ fun ATrainingTrackerMap(
     val currentLocationIcon = arrowIcon
 
     // Dynamic zoom based on speed (m/s)
-    val targetZoom = when {
-        mapState.speed > 8.0f -> 14f // Fast (Cycling)
-        mapState.speed > 3.0f -> 16f // Running
-        else -> 18f                  // Walking
-    }
+    //         max_zoom - gain * speed
+    val targetZoom = 21 - 0.3f * mapState.speed
 
     // Auto-follow logic
-    LaunchedEffect(mapState.currentLocation, mapState.bearing, targetZoom) {
-        if (mapState.isFollowMeEnabled && mapState.currentLocation != null) {
+    LaunchedEffect(currentLocation, mapState.bearing, targetZoom) {
+        if (mapState.isFollowMeEnabled && currentLocation != null) {
             cameraPositionState.animate(
                 CameraUpdateFactory.newCameraPosition(
                     CameraPosition.builder()
-                        .target(mapState.currentLocation)
+                        .target(currentLocation!!)
                         .bearing(mapState.bearing)
+                        .tilt(90f)
                         .zoom(targetZoom)
                         .build()
                 )
@@ -176,7 +184,7 @@ fun ATrainingTrackerMap(
             }
 
             // 3. Current Location Marker
-            mapState.currentLocation?.let {
+            currentLocation?.let {
                 Marker(
                     state = MarkerState(position = it),
                     icon = currentLocationIcon,
@@ -244,26 +252,4 @@ private fun calculateBearing(start: LatLng, end: LatLng): Double {
     val y = Math.sin(dLon) * Math.cos(lat2)
     val x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon)
     return (Math.toDegrees(Math.atan2(y, x)) + 360.0) % 360.0
-}
-
-
-@Preview(showBackground = true)
-@Composable
-fun ATrainingTrackerMapPreview() {
-    val dummyState = MapState(
-        currentLocation = LatLng(48.1351, 11.5820), // Munich
-        speed = 5.0f,
-        currentTrack = listOf(
-            LatLng(48.1351, 11.5820),
-            LatLng(48.1360, 11.5830)
-        )
-    )
-
-    // This will show a placeholder in the IDE, but verify layout
-    ATrainingTrackerMap(
-        mapState = dummyState,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(300.dp)
-    )
 }

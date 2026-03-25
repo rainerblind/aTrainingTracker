@@ -155,26 +155,7 @@ class TrackingFragment : Fragment() {
                         state = uiState,
                         screenMode = screenMode,
                         gridActions = gridActions, // Pass the actions object
-                        mapContent = {
-                            if (uiState.showMap) { // Double-check just in case
-                                AndroidView(
-                                    factory = { context ->
-                                        // Use a the static ID
-                                        val frameLayout = FrameLayout(context).apply {
-                                            id = R.id.map_container_id
-                                        }
-                                        mapFragment = TrackOnMapTrackingAndFollowingFragment.newInstance()
-                                        childFragmentManager.beginTransaction()
-                                            .replace(R.id.map_container_id, mapFragment!!)
-                                            .commit()
-
-                                        frameLayout
-                                    },
-                                    // The modifier here should fill the space provided by the parent Box in TrackingScreen.
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
-                        }
+                        currentLocationFlow = viewModel.banalServiceRepository.currentLocation
                     )
                 }
             }

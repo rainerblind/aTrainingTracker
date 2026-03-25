@@ -22,6 +22,7 @@ import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
+import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -85,9 +86,13 @@ class BANALServiceRepository private constructor(private val context: Context) {
     private val _activeSensors = MutableStateFlow<Set<SensorType>>(emptySet())
     val activeSensors: StateFlow<Set<SensorType>> = _activeSensors.asStateFlow()
 
-    // all acitve devices (including the smartphones speed and location devices)
+    // all active devices (including the smartphones speed and location devices)
     private val _allActiveDevices = MutableLiveData<List<MyDevice>>(emptyList())
     val allActiveDevices: LiveData<List<MyDevice>> = _allActiveDevices
+
+    // StateFlow for the current location
+    private val _currentLocation = MutableStateFlow<LatLng?>(null)
+    val currentLocation: StateFlow<LatLng?> = _currentLocation.asStateFlow()
 
     // -- Tracking mode
     private val _trackingMode = MutableLiveData<TrackingMode>()
@@ -232,6 +237,23 @@ class BANALServiceRepository private constructor(private val context: Context) {
                 _activeSensors.value = banalServiceComm?.availableSensorTypeSet?.toSet() ?: emptySet()
 
                 _allActiveDevices.postValue(banalServiceComm?.activeDevicesIncludingSpeedAndLocationDevices ?: emptyList())
+
+                // get the current location
+                val latData = banalServiceComm?.getBestSensorData(SensorType.LATITUDE)
+                val lonData = banalServiceComm?.getBestSensorData(SensorType.LONGITUDE)
+
+                if (latData?.value is Double && lonData?.value is Double) {
+                    Log.i(TAG, "got a location")
+
+                    val newLocation = LatLng(
+                        latData.value as Double,
+                        lonData.value as Double
+                    )
+                    // Only update if the location actually changed to save UI re-compositions
+                    if (_currentLocation.value != newLocation) {
+                        _currentLocation.value = newLocation
+                    }
+                }
 
                 if (DEBUG) Log.i(TAG, "BANALService:\n _searchingForDevice.value: ${_searchingForDevice.value},\n _bSportType.value: ${_bSportType.value},\n _foundDeviceIds.value: ${_activeRemoteDevicesIds.value},\n _activeSensors.value: ${_activeSensors.value}")
                 if (DEBUG) Log.i(TAG, "trackingMode: ${_trackingMode.value}")
