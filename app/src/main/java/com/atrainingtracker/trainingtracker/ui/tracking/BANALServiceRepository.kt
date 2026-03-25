@@ -94,6 +94,10 @@ class BANALServiceRepository private constructor(private val context: Context) {
     private val _currentLocation = MutableStateFlow<LatLng?>(null)
     val currentLocation: StateFlow<LatLng?> = _currentLocation.asStateFlow()
 
+    // --- Current Track (Breadcrumbs for the Map Polyline) ---
+    private val _currentTrack = MutableStateFlow<List<LatLng>>(emptyList())
+    val currentTrack: StateFlow<List<LatLng>> = _currentTrack.asStateFlow()
+
     // -- Tracking mode
     private val _trackingMode = MutableLiveData<TrackingMode>()
     val trackingMode: LiveData<TrackingMode> = _trackingMode
@@ -252,6 +256,9 @@ class BANALServiceRepository private constructor(private val context: Context) {
                     // Only update if the location actually changed to save UI re-compositions
                     if (_currentLocation.value != newLocation) {
                         _currentLocation.value = newLocation
+                        if (TrainingApplication.isTracking()) {
+                            _currentTrack.value = currentTrack.value + newLocation
+                        }
                     }
                 }
 

@@ -149,7 +149,7 @@ class TrackingViewModel(
                 val activity = banalServiceRepository.activityType.value
                 val finalFields = applySensorData(baseFields, allSensorData, activity)
 
-
+                // TODO: might not be the best approach since we might have several sensors...
                 val bearing = allSensorData.find { it.sensorType == SensorType.BEARING }?.value as? Float ?: 0f
                 val speed = allSensorData.find { it.sensorType == SensorType.SPEED_mps }?.value as? Float ?: 0f
 
@@ -160,7 +160,8 @@ class TrackingViewModel(
                     mapState = MapState(
                         bearing = bearing,
                         speed = speed,
-                        isFollowMeEnabled = true // Default to true
+                        isFollowMeEnabled = true,
+                        currentTrack = banalServiceRepository.currentTrack.value
                     )
                 )
             }.collect { newState ->
