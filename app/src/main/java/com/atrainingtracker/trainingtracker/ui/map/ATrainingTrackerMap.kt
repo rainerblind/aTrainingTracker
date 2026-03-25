@@ -57,7 +57,7 @@ fun ATrainingTrackerMap(
     mapState: MapState,
     modifier: Modifier = Modifier
 ) {
-    // 1. FIX: Prevents Render Issues/Crashes in Android Studio Preview
+    // Prevents Render Issues/Crashes in Android Studio Preview
     if (LocalInspectionMode.current) {
         Box(
             modifier = modifier.background(Color.LightGray),
