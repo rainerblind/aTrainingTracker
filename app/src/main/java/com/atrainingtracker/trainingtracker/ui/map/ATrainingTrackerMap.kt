@@ -124,14 +124,14 @@ fun ATrainingTrackerMap(
                 jointType = JointType.ROUND
             )
 
-            if (segment.path.size >= 2) {
+            if (segment.path.size >= 6) {
                 // Draw Start Orthogonal Line
-                val startLine = calculateOrthogonalLine(segment.path[0], segment.path[1])
+                val startLine = calculateOrthogonalLine(segment.path[0], segment.path[5])
                 Polyline(points = startLine, color = StravaOrange, width = 8f)
 
                 // Draw Finish Orthogonal Line
                 val lastIdx = segment.path.lastIndex
-                val finishLine = calculateOrthogonalLine(segment.path[lastIdx], segment.path[lastIdx - 1])
+                val finishLine = calculateOrthogonalLine(segment.path[lastIdx], segment.path[lastIdx - 5])
                 Polyline(points = finishLine, color = StravaOrange, width = 8f)
             }
 
