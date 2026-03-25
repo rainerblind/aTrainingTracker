@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -57,6 +59,19 @@ fun ATrainingTrackerMap(
     mapState: MapState,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+
+    // CRITICAL: Initialize Maps SDK to prevent IBitmapDescriptorFactory crash
+    var isMapInitialized by remember { androidx.compose.runtime.mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        com.google.android.gms.maps.MapsInitializer.initialize(
+            context,
+            com.google.android.gms.maps.MapsInitializer.Renderer.LATEST
+        ) {
+            isMapInitialized = true // Now it is safe to use BitmapDescriptorFactory
+        }
+    }
+
     // Prevents Render Issues/Crashes in Android Studio Preview
     if (LocalInspectionMode.current) {
         Box(
@@ -70,16 +85,19 @@ fun ATrainingTrackerMap(
 
     val cameraPositionState = rememberCameraPositionState()
 
-    val context = LocalContext.current
-    val arrowIcon = bitmapDescriptorFromVector(context, R.drawable.ic_navigation_arrow)
-    val currentLocationIcon = BitmapDescriptorFactory.fromResource(R.drawable.arrowhead)
-
+    val arrowIcon = bitmapDescriptorFromVector(
+        context,
+        R.drawable.ic_navigation_arrow,
+        isInitialized = isMapInitialized
+        )
+    // val currentLocationIcon = BitmapDescriptorFactory.fromResource(R.drawable.arrowhead)
+    val currentLocationIcon = arrowIcon
 
     // Dynamic zoom based on speed (m/s)
     val targetZoom = when {
         mapState.speed > 8.0f -> 14f // Fast (Cycling)
         mapState.speed > 3.0f -> 16f // Running
-        else -> 18f                 // Walking
+        else -> 18f                  // Walking
     }
 
     // Auto-follow logic
@@ -97,73 +115,76 @@ fun ATrainingTrackerMap(
         }
     }
 
-    GoogleMap(
-        modifier = modifier,
-        cameraPositionState = cameraPositionState,
-        properties = MapProperties(mapType = MapType.TERRAIN),
-        uiSettings = MapUiSettings(zoomControlsEnabled = false)
-    ) {
-        // 1. Draw Current Track
-        if (mapState.currentTrack.isNotEmpty()) {
-            Polyline(
-                points = mapState.currentTrack,
-                color = Color.Blue,
-                width = 10f,
-                jointType = JointType.ROUND
-            )
-        }
-
-
-        // 2. Draw Segments with Start/Finish Orthogonal Lines and Direction Markers
-        mapState.segments.forEach { segment ->
-            // Draw the segment path itself (Strava Orange)
-            Polyline(
-                points = segment.path,
-                color = StravaOrange,
-                width = 12f,
-                jointType = JointType.ROUND
-            )
-
-            if (segment.path.size >= 6) {
-                // Draw Start Orthogonal Line
-                val startLine = calculateOrthogonalLine(segment.path[0], segment.path[5])
-                Polyline(points = startLine, color = StravaOrange, width = 8f)
-
-                // Draw Finish Orthogonal Line
-                val lastIdx = segment.path.lastIndex
-                val finishLine = calculateOrthogonalLine(segment.path[lastIdx], segment.path[lastIdx - 5])
-                Polyline(points = finishLine, color = StravaOrange, width = 8f)
+    if (isMapInitialized) {
+        GoogleMap(
+            modifier = modifier,
+            cameraPositionState = cameraPositionState,
+            properties = MapProperties(mapType = MapType.TERRAIN),
+            uiSettings = MapUiSettings(zoomControlsEnabled = false)
+        ) {
+            // 1. Draw Current Track
+            if (mapState.currentTrack.isNotEmpty()) {
+                Polyline(
+                    points = mapState.currentTrack,
+                    color = Color.Blue,
+                    width = 10f,
+                    jointType = JointType.ROUND
+                )
             }
 
-            // Draw Direction Markers (Arrows) every 20 points
-            segment.path.windowed(size = 2, step = 20).forEach { pair ->
-                val start = pair[0]
-                val end = pair[1]
-                val midPoint = LatLng(
-                    (start.latitude + end.latitude) / 2.0,
-                    (start.longitude + end.longitude) / 2.0
-                )
-                val segmentBearing = calculateBearing(start, end)
 
+            // 2. Draw Segments with Start/Finish Orthogonal Lines and Direction Markers
+            mapState.segments.forEach { segment ->
+                // Draw the segment path itself (Strava Orange)
+                Polyline(
+                    points = segment.path,
+                    color = StravaOrange,
+                    width = 12f,
+                    jointType = JointType.ROUND
+                )
+
+                if (segment.path.size >= 6) {
+                    // Draw Start Orthogonal Line
+                    val startLine = calculateOrthogonalLine(segment.path[0], segment.path[5])
+                    Polyline(points = startLine, color = StravaOrange, width = 8f)
+
+                    // Draw Finish Orthogonal Line
+                    val lastIdx = segment.path.lastIndex
+                    val finishLine =
+                        calculateOrthogonalLine(segment.path[lastIdx], segment.path[lastIdx - 5])
+                    Polyline(points = finishLine, color = StravaOrange, width = 8f)
+                }
+
+                // Draw Direction Markers (Arrows) every 20 points
+                segment.path.windowed(size = 2, step = 20).forEach { pair ->
+                    val start = pair[0]
+                    val end = pair[1]
+                    val midPoint = LatLng(
+                        (start.latitude + end.latitude) / 2.0,
+                        (start.longitude + end.longitude) / 2.0
+                    )
+                    val segmentBearing = calculateBearing(start, end)
+
+                    Marker(
+                        state = MarkerState(position = midPoint),
+                        icon = arrowIcon,
+                        rotation = segmentBearing.toFloat(),
+                        flat = true,
+                        anchor = Offset(0.5f, 0.5f)
+                    )
+                }
+            }
+
+            // 3. Current Location Marker
+            mapState.currentLocation?.let {
                 Marker(
-                    state = MarkerState(position = midPoint),
-                    icon = arrowIcon,
-                    rotation = segmentBearing.toFloat(),
+                    state = MarkerState(position = it),
+                    icon = currentLocationIcon,
+                    rotation = mapState.bearing,
                     flat = true,
                     anchor = Offset(0.5f, 0.5f)
                 )
             }
-        }
-
-        // 3. Current Location Marker
-        mapState.currentLocation?.let {
-            Marker(
-                state = MarkerState(position = it),
-                icon = currentLocationIcon,
-                rotation = mapState.bearing,
-                flat = true,
-                anchor = Offset(0.5f, 0.5f)
-            )
         }
     }
 }
@@ -171,14 +192,22 @@ fun ATrainingTrackerMap(
 @Composable
 fun bitmapDescriptorFromVector(
     context: Context,
-    vectorResId: Int
+    vectorResId: Int,
+    isInitialized: Boolean // New parameter
 ): BitmapDescriptor? {
-    return remember(vectorResId) {
-        val drawable = ContextCompat.getDrawable(context, vectorResId) ?: return@remember null
-        drawable.setBounds(0, 0, drawable.intrinsicWidth, drawable.intrinsicHeight)
-        val bm = Bitmap.createBitmap(drawable.intrinsicWidth, drawable.intrinsicHeight, Bitmap.Config.ARGB_8888)
+    // 4. Gate the creation
+    return remember(vectorResId, isInitialized) {
+        if (!isInitialized) return@remember null
+
+        val drawable = ContextCompat.getDrawable(context, vectorResId)?.mutate() ?: return@remember null
+
+        val px = (32 * context.resources.displayMetrics.density).toInt()
+        drawable.setBounds(0, 0, px, px)
+        val bm = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bm)
         drawable.draw(canvas)
+
+        // Safe to call now!
         BitmapDescriptorFactory.fromBitmap(bm)
     }
 }

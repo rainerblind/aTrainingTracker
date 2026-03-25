@@ -34,6 +34,7 @@ import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
+import com.atrainingtracker.trainingtracker.ui.map.MapState
 import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
@@ -50,7 +51,8 @@ import java.util.Objects
  */
 data class TrackingScreenState(
     val showMap: Boolean = false,
-    val fields: List<SensorFieldState> = emptyList()
+    val fields: List<SensorFieldState> = emptyList(),
+    val mapState: MapState = MapState()
 )
 
 /**

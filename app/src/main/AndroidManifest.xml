@@ -52,6 +52,7 @@
         android:enableOnBackInvokedCallback="true"
         android:resizeableActivity="true"
         tools:targetApi="tiramisu">
+        <uses-library android:name="org.apache.http.legacy" android:required="false" />
         <meta-data
             android:name="com.google.android.maps.v2.API_KEY"
             android:value="${MAPS_API_KEY}" />  <!-- stored under secrets.properties -->

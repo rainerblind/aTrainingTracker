@@ -37,6 +37,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
 import com.atrainingtracker.trainingtracker.ui.theme.Zone1
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.LightBackground
@@ -119,9 +121,12 @@ fun SensorGridScreen(
 
         // Conditionally display the map
         if (state.showMap) {
-            Box(modifier = Modifier.weight(1f)) {
-                mapContent()
-            }
+            ATrainingTrackerMap(
+                mapState = state.mapState,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            )
         }
     }
 }
