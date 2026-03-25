@@ -109,7 +109,7 @@ fun ATrainingTrackerMap(
 
     // Dynamic zoom based on speed (m/s)
     //         max_zoom - gain * speed
-    val targetZoom = 21 - 0.3f * mapState.speed
+    val targetZoom = (20f - 0.1f * mapState.speed).coerceIn(14f, 20f)
 
     // Auto-follow logic
     LaunchedEffect(currentLocation, mapState.bearing, targetZoom) {
@@ -119,10 +119,11 @@ fun ATrainingTrackerMap(
                     CameraPosition.builder()
                         .target(currentLocation!!)
                         .bearing(mapState.bearing)
-                        .tilt(90f)
+                        .tilt(70f)
                         .zoom(targetZoom)
                         .build()
-                )
+                ),
+                durationMs = 1000 // Matches our 1s polling interval for smooth movement
             )
         }
     }

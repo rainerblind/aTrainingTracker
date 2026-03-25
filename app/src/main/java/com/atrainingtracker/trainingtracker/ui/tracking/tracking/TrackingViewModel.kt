@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.tracking.tracking
 
 import android.app.Application
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.compose.ui.graphics.Color
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
@@ -150,9 +151,8 @@ class TrackingViewModel(
                 val activity = banalServiceRepository.activityType.value
                 val finalFields = applySensorData(baseFields, allSensorData, activity)
 
-                // TODO: might not be the best approach since we might have several sensors...
-                val bearing = allSensorData.find { it.sensorType == SensorType.BEARING }?.value as? Float ?: 0f
-                val speed = allSensorData.find { it.sensorType == SensorType.SPEED_mps }?.value as? Float ?: 0f
+                val bearing = allSensorData.find { it.sensorType == SensorType.BEARING && it.deviceName == null && it.filterType == FilterType.INSTANTANEOUS }?.value as? Double ?: 0.0
+                val speed = allSensorData.find { it.sensorType == SensorType.SPEED_mps && it.deviceName == null && it.filterType == FilterType.INSTANTANEOUS }?.value as? Double ?: 0.0
 
                 val currentTrack = banalServiceRepository.currentTrack.value
                 val markerList = mutableListOf<LocationMarker>()
@@ -171,8 +171,8 @@ class TrackingViewModel(
                     fields = finalFields,
                     showMap = viewInfo?.showMap ?: false,
                     mapState = MapState(
-                        bearing = bearing,
-                        speed = speed,
+                        bearing = bearing.toFloat(),
+                        speed = speed.toFloat(),
                         isFollowMeEnabled = true,
                         currentTrack = currentTrack,
                         markers = markerList
