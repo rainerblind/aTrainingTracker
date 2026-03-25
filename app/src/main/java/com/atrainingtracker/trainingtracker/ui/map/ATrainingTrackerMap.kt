@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -18,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.tooling.preview.Preview
@@ -149,45 +151,62 @@ fun ATrainingTrackerMap(
             }
 
 
-            // 2. Draw Segments with Start/Finish Orthogonal Lines and Direction Markers
+            // 2. Draw Segments
+            val currentZoom = cameraPositionState.position.zoom
             mapState.segments.forEach { segment ->
-                // Draw the segment path itself (Strava Orange)
+                // Segment Color based on Sport Type
+
                 Polyline(
                     points = segment.path,
-                    color = StravaOrange,
+                    color = StravaOrange.copy(alpha = 0.7f),
                     width = 12f,
                     jointType = JointType.ROUND
                 )
 
+                // Only draw direction hints if zoomed in enough (e.g., zoom > 14)
+                if (currentZoom > 14f) {
+                    // Make segment arrows smaller as we zoom out
+                    val hintSize = when {
+                        currentZoom > 17f -> 20 // Large
+                        currentZoom > 15f -> 14 // Medium
+                        else -> 10              // Small
+                    }
+
+                    val hintIcon = bitmapDescriptorFromVector(
+                        context,
+                        R.drawable.ic_navigation_arrow,
+                        isMapInitialized,
+                        sizeDp = hintSize
+                    )
+
+                    segment.path.windowed(size = 2, step = 20).forEach { pair ->
+                        val midPoint = LatLng(
+                            (pair[0].latitude + pair[1].latitude) / 2.0,
+                            (pair[0].longitude + pair[1].longitude) / 2.0
+                        )
+                        val segmentBearing = calculateBearing(pair[0], pair[1])
+
+                        hintIcon?.let {
+                            Marker(
+                                state = MarkerState(position = midPoint),
+                                icon = it,
+                                rotation = segmentBearing.toFloat(),
+                                flat = true,
+                                anchor = Offset(0.5f, 0.5f),
+                                alpha = 0.4f // Make hints slightly transparent
+                            )
+                        }
+                    }
+                }
+
+                // Draw Start/Finish lines
                 if (segment.path.size >= 6) {
-                    // Draw Start Orthogonal Line
                     val startLine = calculateOrthogonalLine(segment.path[0], segment.path[5])
                     Polyline(points = startLine, color = StravaOrange, width = 8f)
 
-                    // Draw Finish Orthogonal Line
                     val lastIdx = segment.path.lastIndex
-                    val finishLine =
-                        calculateOrthogonalLine(segment.path[lastIdx], segment.path[lastIdx - 5])
+                    val finishLine = calculateOrthogonalLine(segment.path[lastIdx], segment.path[lastIdx - 5])
                     Polyline(points = finishLine, color = StravaOrange, width = 8f)
-                }
-
-                // Draw Direction Markers (Arrows) every 20 points
-                segment.path.windowed(size = 2, step = 20).forEach { pair ->
-                    val start = pair[0]
-                    val end = pair[1]
-                    val midPoint = LatLng(
-                        (start.latitude + end.latitude) / 2.0,
-                        (start.longitude + end.longitude) / 2.0
-                    )
-                    val segmentBearing = calculateBearing(start, end)
-
-                    Marker(
-                        state = MarkerState(position = midPoint),
-                        icon = arrowIcon,
-                        rotation = segmentBearing.toFloat(),
-                        flat = true,
-                        anchor = Offset(0.5f, 0.5f)
-                    )
                 }
             }
 
@@ -208,12 +227,21 @@ fun ATrainingTrackerMap(
 
             // 3. Current Location Marker
             currentLocation?.let {
+                val locationIcon = bitmapDescriptorFromVector(
+                    context,
+                    R.drawable.ic_navigation_arrow, // High-contrast, large arrow
+                    isMapInitialized,
+                    sizeDp = 42,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+
                 Marker(
                     state = MarkerState(position = it),
-                    icon = arrowIcon,
+                    icon = locationIcon,
                     rotation = mapState.bearing,
                     flat = true,
-                    anchor = Offset(0.5f, 0.5f)
+                    anchor = Offset(0.5f, 0.5f),
+                    zIndex = 1.0f // Ensure it's always on top of segments
                 )
             }
         }
@@ -224,21 +252,28 @@ fun ATrainingTrackerMap(
 fun bitmapDescriptorFromVector(
     context: Context,
     vectorResId: Int,
-    isInitialized: Boolean // New parameter
+    isInitialized: Boolean,
+    sizeDp: Int = 32,
+    tint: Color? = null
 ): BitmapDescriptor? {
-    // 4. Gate the creation
-    return remember(vectorResId, isInitialized) {
+    return remember(vectorResId, isInitialized, sizeDp, tint) {
         if (!isInitialized) return@remember null
 
         val drawable = ContextCompat.getDrawable(context, vectorResId)?.mutate() ?: return@remember null
 
-        val px = (32 * context.resources.displayMetrics.density).toInt()
+        // Apply tint if provided
+        tint?.let {
+            drawable.setTint(it.toArgb())
+        }
+
+        // Scale based on device density and requested DP
+        val px = (sizeDp * context.resources.displayMetrics.density).toInt()
         drawable.setBounds(0, 0, px, px)
+
         val bm = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bm)
         drawable.draw(canvas)
 
-        // Safe to call now!
         BitmapDescriptorFactory.fromBitmap(bm)
     }
 }
