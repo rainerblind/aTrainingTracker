@@ -41,9 +41,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 // helper class to navigate the fragment container after adding or deletion of a tab
@@ -64,17 +66,21 @@ class TrackingTabsViewModel(
     private val _explicitActivityType = MutableStateFlow<ActivityType?>(null)
 
     // activityType prefers the explicit type over the repository's live type.
-    val activityType: LiveData<ActivityType> = _explicitActivityType
+    val activityType: StateFlow<ActivityType> = _explicitActivityType
         .flatMapLatest { explicit ->
             if (explicit != null) {
                 // If the user selected a type (e.g. in Config Activity), stay on it.
                 kotlinx.coroutines.flow.flowOf(explicit)
             } else {
                 // Otherwise, follow the live sensor service (Classic Tracking mode)
-                banalServiceRepository.activityType.asFlow()
+                banalServiceRepository.activityType
             }
         }
-        .asLiveData(viewModelScope.coroutineContext)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = ActivityType.getDefaultActivityType()
+        )
 
     val trackingMode: LiveData<TrackingMode> = banalServiceRepository.trackingMode
     val lapEvent: LiveData<LapEvent> = banalServiceRepository.lapEvent
@@ -87,11 +93,15 @@ class TrackingTabsViewModel(
     // Note that the trackingViews depends on our "smart" activityType above,
     // effectively decoupling it from BANALService when an explicit type is provided.
     @OptIn(ExperimentalCoroutinesApi::class)
-    val trackingViews: LiveData<List<TrackingViewInfo>> = activityType.asFlow()
+    val trackingViews: StateFlow<List<TrackingViewInfo>> = activityType
         .flatMapLatest { currentActivityType ->
             trackingViewsRepository.getTrackingViewsFlow(currentActivityType)
         }
-        .asLiveData(viewModelScope.coroutineContext + Dispatchers.Default)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
 
 
     // A SingleLiveEvent to navigate away from the control tracking tab to the first tracking tab when tracking is started.

@@ -60,10 +60,9 @@ class BANALServiceRepository private constructor(private val context: Context) {
     private var isBoundToBanalService = false
 
 
-    // TODO: change to StateFlow?
-    private val _activityType = MutableLiveData<ActivityType>(ActivityType.getDefaultActivityType())
-    val activityType: LiveData<ActivityType> = _activityType
-    // Note that we get the LiveData by observing the BANALServiceComm.activityType
+    private val _activityType = MutableStateFlow<ActivityType>(ActivityType.getDefaultActivityType())
+    val activityType: StateFlow<ActivityType> = _activityType
+    // Note that we get the data by observing the BANALServiceComm.activityType
 
     private val _allFilteredSensorData = MutableStateFlow<List<FilteredSensorData<*>>>(emptyList())
     val allFilteredSensorData: StateFlow<List<FilteredSensorData<*>>> = _allFilteredSensorData.asStateFlow()
@@ -127,8 +126,6 @@ class BANALServiceRepository private constructor(private val context: Context) {
 
     init {
         // Set a default value when the repository is created
-        _activityType.postValue(ActivityType.getDefaultActivityType())
-
         _trackingMode.postValue(TrackingMode.READY)
 
         // Register the receiver to listen for changes from the TrainingApplication
@@ -215,7 +212,7 @@ class BANALServiceRepository private constructor(private val context: Context) {
                 // --- ACTIVITY TYPE ---
                 val newActivityType = banalServiceComm?.activityType
                 if (_activityType.value != newActivityType) {
-                    _activityType.postValue(newActivityType!!)
+                    _activityType.value = newActivityType!!
                 }
 
                 // -- filtered sensor data --
