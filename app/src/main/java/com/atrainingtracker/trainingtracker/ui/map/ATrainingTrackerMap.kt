@@ -3,19 +3,23 @@ package com.atrainingtracker.trainingtracker.ui.map
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import com.atrainingtracker.R
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
@@ -30,6 +34,8 @@ import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
+import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.theme.StravaOrange
 
 data class MapSegment(
     val id: Long,
@@ -37,14 +43,12 @@ data class MapSegment(
 )
 
 data class MapState(
-    val showMap: Boolean = false,
     val currentLocation: LatLng? = null,
     val bearing: Float = 0f,
     val speed: Float = 0f,
     val isFollowMeEnabled: Boolean = true,
-    val mainTrack: List<LatLng> = emptyList(),
+    val currentTrack: List<LatLng> = emptyList(),
     val segments: List<MapSegment> = emptyList(),
-    val showSegments: Boolean = true
 )
 
 @Composable
@@ -52,6 +56,17 @@ fun ATrainingTrackerMap(
     mapState: MapState,
     modifier: Modifier = Modifier
 ) {
+    // 1. FIX: Prevents Render Issues/Crashes in Android Studio Preview
+    if (LocalInspectionMode.current) {
+        Box(
+            modifier = modifier.background(Color.LightGray),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("Map Placeholder (Renders on Device)")
+        }
+        return
+    }
+
     val cameraPositionState = rememberCameraPositionState()
 
     val context = LocalContext.current
@@ -87,10 +102,10 @@ fun ATrainingTrackerMap(
         properties = MapProperties(mapType = MapType.TERRAIN),
         uiSettings = MapUiSettings(zoomControlsEnabled = false)
     ) {
-        // 1. Draw Main Track
-        if (mapState.mainTrack.isNotEmpty()) {
+        // 1. Draw Current Track
+        if (mapState.currentTrack.isNotEmpty()) {
             Polyline(
-                points = mapState.mainTrack,
+                points = mapState.currentTrack,
                 color = Color.Blue,
                 width = 10f,
                 jointType = JointType.ROUND
@@ -99,45 +114,43 @@ fun ATrainingTrackerMap(
 
 
         // 2. Draw Segments with Start/Finish Orthogonal Lines and Direction Markers
-        if (mapState.showSegments) {
-            mapState.segments.forEach { segment ->
-                // Draw the segment path itself (Strava Orange)
-                Polyline(
-                    points = segment.path,
-                    color = Color(0xFFFC4C02),
-                    width = 12f,
-                    jointType = JointType.ROUND
+        mapState.segments.forEach { segment ->
+            // Draw the segment path itself (Strava Orange)
+            Polyline(
+                points = segment.path,
+                color = StravaOrange,
+                width = 12f,
+                jointType = JointType.ROUND
+            )
+
+            if (segment.path.size >= 2) {
+                // Draw Start Orthogonal Line
+                val startLine = calculateOrthogonalLine(segment.path[0], segment.path[1])
+                Polyline(points = startLine, color = StravaOrange, width = 8f)
+
+                // Draw Finish Orthogonal Line
+                val lastIdx = segment.path.lastIndex
+                val finishLine = calculateOrthogonalLine(segment.path[lastIdx], segment.path[lastIdx - 1])
+                Polyline(points = finishLine, color = StravaOrange, width = 8f)
+            }
+
+            // Draw Direction Markers (Arrows) every 20 points
+            segment.path.windowed(size = 2, step = 20).forEach { pair ->
+                val start = pair[0]
+                val end = pair[1]
+                val midPoint = LatLng(
+                    (start.latitude + end.latitude) / 2.0,
+                    (start.longitude + end.longitude) / 2.0
                 )
+                val segmentBearing = calculateBearing(start, end)
 
-                if (segment.path.size >= 2) {
-                    // Draw Start Orthogonal Line
-                    val startLine = calculateOrthogonalLine(segment.path[0], segment.path[1])
-                    Polyline(points = startLine, color = Color(0xFFFC4C02), width = 8f)
-
-                    // Draw Finish Orthogonal Line
-                    val lastIdx = segment.path.lastIndex
-                    val finishLine = calculateOrthogonalLine(segment.path[lastIdx], segment.path[lastIdx - 1])
-                    Polyline(points = finishLine, color = Color(0xFFFC4C02), width = 8f)
-                }
-
-                // Draw Direction Markers (Arrows) every 20 points
-                segment.path.windowed(size = 2, step = 20).forEach { pair ->
-                    val start = pair[0]
-                    val end = pair[1]
-                    val midPoint = LatLng(
-                        (start.latitude + end.latitude) / 2.0,
-                        (start.longitude + end.longitude) / 2.0
-                    )
-                    val segmentBearing = calculateBearing(start, end)
-
-                    Marker(
-                        state = MarkerState(position = midPoint),
-                        icon = arrowIcon,
-                        rotation = segmentBearing.toFloat(),
-                        flat = true,
-                        anchor = Offset(0.5f, 0.5f)
-                    )
-                }
+                Marker(
+                    state = MarkerState(position = midPoint),
+                    icon = arrowIcon,
+                    rotation = segmentBearing.toFloat(),
+                    flat = true,
+                    anchor = Offset(0.5f, 0.5f)
+                )
             }
         }
 
@@ -208,10 +221,9 @@ private fun calculateBearing(start: LatLng, end: LatLng): Double {
 @Composable
 fun ATrainingTrackerMapPreview() {
     val dummyState = MapState(
-        showMap = true,
         currentLocation = LatLng(48.1351, 11.5820), // Munich
         speed = 5.0f,
-        mainTrack = listOf(
+        currentTrack = listOf(
             LatLng(48.1351, 11.5820),
             LatLng(48.1360, 11.5830)
         )
