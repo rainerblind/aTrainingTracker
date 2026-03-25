@@ -34,6 +34,8 @@ import com.atrainingtracker.banalservice.filters.FilterType
 import com.atrainingtracker.banalservice.filters.FilteredSensorData
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.MyHelper
+import com.atrainingtracker.trainingtracker.segments.MapSegment
+import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
 import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
@@ -86,6 +88,8 @@ class TrackingViewModel(
     val pendingAddition = _pendingAddition.asStateFlow()
 
     val screenMode: StateFlow<ScreenMode> = trackingViewsRepository.screenMode
+
+    private val starredSegments: List<MapSegment> = SegmentsDatabaseManager.getInstance(application).getAllSegments()
 
     private val sharedPreferences: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(application)
     private val defaultZoneColor = Color(ContextCompat.getColor(application, R.color.color_background))
@@ -175,6 +179,7 @@ class TrackingViewModel(
                         speed = speed.toFloat(),
                         isFollowMeEnabled = true,
                         currentTrack = currentTrack,
+                        segments = starredSegments,
                         markers = markerList
                     )
                 )

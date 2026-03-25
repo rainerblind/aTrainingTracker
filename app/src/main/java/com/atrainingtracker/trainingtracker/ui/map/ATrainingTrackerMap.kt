@@ -39,14 +39,11 @@ import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.segments.MapSegment
 import com.atrainingtracker.trainingtracker.segments.SegmentHelper
 import com.atrainingtracker.trainingtracker.ui.theme.StravaOrange
 import kotlinx.coroutines.flow.StateFlow
 
-data class MapSegment(
-    val id: Long,
-    val path: List<LatLng>,
-)
 
 data class LocationMarker(
     val position: LatLng,
