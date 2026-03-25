@@ -126,10 +126,6 @@ fun ATrainingTrackerMap(
     val iconCache = remember(isMapInitialized) { mutableMapOf<Int, BitmapDescriptor>() }
 
     if (isMapInitialized) {
-        val arrowIcon = iconCache.getOrPut(R.drawable.ic_navigation_arrow) {
-            bitmapDescriptorFromVector(context, R.drawable.ic_navigation_arrow, true)!!
-        }
-
         GoogleMap(
             modifier = modifier,
             cameraPositionState = cameraPositionState,
