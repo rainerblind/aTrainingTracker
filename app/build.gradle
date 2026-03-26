@@ -45,8 +45,8 @@ android {
         minSdkVersion 26 // Android 8
         targetSdkVersion 35 // Android 15
         multiDexEnabled = true
-        versionName = "4.9.7"
-        versionCode = 231
+        versionName = "4.9.8"
+        versionCode = 232
     }
 
     signingConfigs {
