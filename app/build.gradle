@@ -118,11 +118,11 @@ dependencies {
     implementation 'androidx.activity:activity-compose:1.12.2'
 
     implementation 'com.google.android.material:material:1.13.0'
-    implementation 'com.google.android.gms:play-services-maps:19.2.0'
+    implementation 'com.google.android.gms:play-services-maps:20.0.0'
     implementation 'com.google.android.gms:play-services-location:21.3.0'
     implementation "com.google.accompanist:accompanist-drawablepainter:0.37.3"
-
-    implementation platform('com.google.firebase:firebase-bom:34.7.0')
+    implementation "com.google.maps.android:maps-compose:8.2.2"
+    implementation platform('com.google.firebase:firebase-bom:34.11.0')
     implementation 'com.google.firebase:firebase-analytics' // No version needed with BOM
 
     implementation 'com.dropbox.core:dropbox-core-sdk:7.0.0'

@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.segments;
 
 import android.content.Context;
+import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
@@ -27,9 +28,15 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
+import com.atrainingtracker.banalservice.ActivityType;
+import com.atrainingtracker.banalservice.BSportType;
+import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
+import com.google.android.gms.maps.model.LatLng;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 public class SegmentsDatabaseManager {
     private static final String TAG = SegmentsDatabaseManager.class.getName();
@@ -69,6 +76,55 @@ public class SegmentsDatabaseManager {
     public static boolean doesDatabaseExist(@NonNull Context context) {
         File dbFile = context.getDatabasePath(SegmentsDbHelper.DB_NAME);
         return dbFile.exists();
+    }
+
+
+
+    public List<MapSegment> getAllSegments() {
+        List<MapSegment> segments = new ArrayList<>();
+        SQLiteDatabase db = getDatabase();    // 1. Get all starred segments
+        Cursor cursor = db.query(Segments.TABLE_STARRED_SEGMENTS, null, null, null, null, null, null);
+
+        SportTypeDatabaseManager sportTypeMgr = SportTypeDatabaseManager.getInstance(mContext);
+
+        while (cursor.moveToNext()) {
+            long id = cursor.getLong(cursor.getColumnIndexOrThrow(Segments.SEGMENT_ID));
+            String name = cursor.getString(cursor.getColumnIndexOrThrow(Segments.SEGMENT_NAME));
+
+            // 3. Get the Strava activity type string (e.g., "Ride", "Run")
+            String stravaName = cursor.getString(cursor.getColumnIndexOrThrow(Segments.ACTIVITY_TYPE));
+
+            // 4. Use your new method for the translation
+            // This will check the DB first, then the TTSportType enum defaults
+            BSportType sportType = sportTypeMgr.getBSportTypeFromStravaName(stravaName);
+
+            // 5. Fetch the GPS path (stream) for this segment
+            List<LatLng> path = getSegmentPath(id);
+
+            // 6. Create the MapSegment object
+            segments.add(new MapSegment(id, name, sportType, path));
+        }
+        cursor.close();
+
+        return segments;
+    }
+
+    private List<LatLng> getSegmentPath(long segmentId) {
+        List<LatLng> points = new ArrayList<>();
+        SQLiteDatabase db = getDatabase();
+        Cursor c = db.query(Segments.TABLE_SEGMENT_STREAMS,
+                new String[]{Segments.LATITUDE, Segments.LONGITUDE},
+                Segments.SEGMENT_ID + "=?", new String[]{String.valueOf(segmentId)},
+                null, null, Segments.C_ID + " ASC");
+
+        while (c.moveToNext()) {
+            points.add(new LatLng(
+                    c.getDouble(c.getColumnIndexOrThrow(Segments.LATITUDE)),
+                    c.getDouble(c.getColumnIndexOrThrow(Segments.LONGITUDE))
+            ));
+        }
+        c.close();
+        return points;
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
