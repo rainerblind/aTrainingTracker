@@ -23,20 +23,14 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.FrameLayout
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.R
-import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapTrackingAndFollowingFragment
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
 import com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldDialog
@@ -45,8 +39,9 @@ import com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSens
 class TrackingFragment : Fragment() {
 
     private lateinit var viewModel: TrackingViewModel
-
-    private var mapFragment: TrackOnMapTrackingAndFollowingFragment? = null
+    private val mapViewModel: TrackingMapViewModel by activityViewModels {
+        TrackingMapViewModelFactory(requireActivity().application)
+    }
 
     private var tabViewId: Long = -1L
 
@@ -153,6 +148,7 @@ class TrackingFragment : Fragment() {
                     // 6. Pass the current screenMode to the SensorGridScreen
                     SensorGridScreen(
                         state = uiState,
+                        mapViewModel = mapViewModel,
                         screenMode = screenMode,
                         gridActions = gridActions, // Pass the actions object
                         currentLocationFlow = viewModel.banalServiceRepository.currentLocation
