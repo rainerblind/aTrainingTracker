@@ -12,6 +12,12 @@ import com.google.android.gms.maps.model.BitmapDescriptor
 
 class TrackingMapViewModel(application: Application) : AndroidViewModel(application) {
 
+    var userMarker: com.google.android.gms.maps.model.Marker? = null
+    var trackPolyline: com.google.android.gms.maps.model.Polyline? = null
+
+    // has for the 'static' segments and markers.
+    var staticDataHash: Int =0
+
     // The single MapView instance shared by all fragments
     val sharedMapView: MapView by lazy {
         MapView(application, GoogleMapOptions().apply {

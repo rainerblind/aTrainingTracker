@@ -12,6 +12,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -68,6 +71,21 @@ fun ATrainingTrackerMap(
     val currentLocation by currentLocationFlow.collectAsStateWithLifecycle()
     val primaryColor = MaterialTheme.colorScheme.primary
 
+    // Cache the locationIcon bitmap
+    var locationIcon by remember { mutableStateOf<BitmapDescriptor?>(null) }
+    var directionIconSmall by remember { mutableStateOf<BitmapDescriptor?>(null) }
+    var directionIconMed by remember { mutableStateOf<BitmapDescriptor?>(null) }
+    var directionIconLarge by remember { mutableStateOf<BitmapDescriptor?>(null) }
+
+    // Initialize icons inside LaunchedEffect (Safe from IBitmapDescriptorFactory error)
+    LaunchedEffect(primaryColor) {
+        // This runs after the composition has started, ensuring Maps SDK is likely ready
+        locationIcon = bitmapDescriptorFromVectorInternal(context, R.drawable.ic_navigation_arrow, 42, primaryColor)
+        directionIconSmall = bitmapDescriptorFromVectorInternal(context, R.drawable.ic_navigation_arrow, 10, Color.White)
+        directionIconMed = bitmapDescriptorFromVectorInternal(context, R.drawable.ic_navigation_arrow, 14, Color.White)
+        directionIconLarge = bitmapDescriptorFromVectorInternal(context, R.drawable.ic_navigation_arrow, 20, Color.White)
+    }
+
     // Prevents Render Issues in Android Studio Preview
     if (LocalInspectionMode.current) {
         Box(modifier = modifier.background(Color.LightGray), contentAlignment = Alignment.Center) {
@@ -108,69 +126,90 @@ fun ATrainingTrackerMap(
     AndroidView(
         modifier = modifier,
         factory = {
-            // 1. Get the shared MapView from the ViewModel
             val mapView = mapViewModel.sharedMapView
-
-            // 2. Re-parenting: If the view was attached to a previous tab, remove it
             (mapView.parent as? ViewGroup)?.removeView(mapView)
-
             mapView
         },
         update = { mapView ->
-            val locationIcon = bitmapDescriptorFromVectorInternal(
-                context,
-                R.drawable.ic_navigation_arrow,
-                42,
-                primaryColor
-            )
+            // 3. Only draw if the icons are actually ready
+            val currentLocIcon = locationIcon ?: return@AndroidView
 
-            // 3. Update the content of the singleton map
             mapView.getMapAsync { googleMap ->
-                updateGoogleMapContent(
-                    googleMap,
-                    mapState,
-                    currentLocation,
-                    context,
-                    mapState.segments,
-                    locationIcon
-                )
+                val currentDataHash = mapState.segments.hashCode() + mapState.markers.hashCode()
+
+                if (mapViewModel.staticDataHash != currentDataHash) {
+                    googleMap.clear()
+                    mapViewModel.userMarker = null
+                    mapViewModel.trackPolyline = null
+
+                    drawSegments(
+                        googleMap,
+                        mapState.segments,
+                        directionIconSmall,
+                        directionIconMed,
+                        directionIconLarge
+                    )
+
+                    mapState.markers.forEach { markerData ->
+                        googleMap.addMarker(MarkerOptions()
+                            .position(markerData.position)
+                            .icon(BitmapDescriptorFactory.fromResource(markerData.iconResId))
+                            .rotation(markerData.rotation)
+                            .flat(markerData.flat)
+                            .anchor(markerData.anchor.x, markerData.anchor.y))
+                    }
+                    mapViewModel.staticDataHash = currentDataHash
+                }
+
+                // --- LAYER 2: SEMI-DYNAMIC (The Track) ---
+                if (mapState.currentTrack.isNotEmpty()) {
+                    val trackLine = mapViewModel.trackPolyline
+                    if (trackLine == null) {
+                        mapViewModel.trackPolyline = googleMap.addPolyline(
+                            PolylineOptions()
+                                .addAll(mapState.currentTrack)
+                                .color(Color.Blue.toArgb())
+                                .width(10f)
+                                .jointType(JointType.ROUND)
+                        )
+                    } else {
+                        trackLine.points = mapState.currentTrack
+                    }
+                }
+
+                // --- LAYER 3: DYNAMIC (User Location) ---
+                currentLocation?.let { loc ->
+                    val marker = mapViewModel.userMarker
+                    if (marker == null) {
+                        mapViewModel.userMarker = googleMap.addMarker(
+                            MarkerOptions()
+                                .position(loc)
+                                .icon(currentLocIcon) // Use local ready icon
+                                .rotation(mapState.bearing)
+                                .flat(true)
+                                .anchor(0.5f, 0.5f)
+                                .zIndex(2.0f)
+                        )
+                    } else {
+                        marker.position = loc
+                        marker.rotation = mapState.bearing
+                    }
+                }
             }
         }
     )
 }
 
-/**
- * Helper to draw all layers onto the singleton GoogleMap instance.
- */
-private fun updateGoogleMapContent(
+private fun drawSegments(
     googleMap: GoogleMap,
-    state: MapState,
-    currentLocation: LatLng?,
-    context: Context,
     segments: List<MapSegment>,
-    locationIcon: BitmapDescriptor?
+    directionSmall: BitmapDescriptor?, directionMed: BitmapDescriptor?, directionLarge: BitmapDescriptor?
 ) {
-    googleMap.clear() // Remove old state before redrawing current frame
-
-    // Disable default UI for a clean "Navigation" look
     googleMap.uiSettings.isZoomControlsEnabled = false
-
-    // 1. Draw Current Track
-    if (state.currentTrack.isNotEmpty()) {
-        googleMap.addPolyline(
-            PolylineOptions()
-                .addAll(state.currentTrack)
-                .color(Color.Blue.toArgb())
-                .width(10f)
-                .jointType(JointType.ROUND)
-        )
-    }
-
-    // 2. Draw Segments
     val currentZoom = googleMap.cameraPosition.zoom
-    segments.forEach { segment ->
 
-        // Segment Path
+    segments.forEach { segment ->
+        // Main Path
         googleMap.addPolyline(
             PolylineOptions()
                 .addAll(segment.path)
@@ -179,17 +218,18 @@ private fun updateGoogleMapContent(
                 .jointType(JointType.ROUND)
         )
 
-        // Direction Hints
+        // Select direcion icon based on zoom level
         if (currentZoom > 14f) {
-            val hintSize = if (currentZoom > 17f) 20 else if (currentZoom > 15f) 14 else 10
-            val hintIcon = bitmapDescriptorFromVectorInternal(context, R.drawable.ic_navigation_arrow, hintSize, Color.White)
+            val icon = when {
+                currentZoom > 17f -> directionLarge
+                currentZoom > 15f -> directionMed
+                else -> directionSmall
+            }
 
             segment.path.windowed(2, 20).forEach { pair ->
-                val midPoint = LatLng((pair[0].latitude + pair[1].latitude) / 2.0, (pair[0].longitude + pair[1].longitude) / 2.0)
-                googleMap.addMarker(
-                    MarkerOptions()
-                    .position(midPoint)
-                    .icon(hintIcon)
+                googleMap.addMarker(MarkerOptions()
+                    .position(LatLng((pair[0].latitude + pair[1].latitude) / 2.0, (pair[0].longitude + pair[1].longitude) / 2.0))
+                    .icon(icon)
                     .rotation(calculateBearing(pair[0], pair[1]).toFloat())
                     .flat(true)
                     .anchor(0.5f, 0.5f)
@@ -204,30 +244,8 @@ private fun updateGoogleMapContent(
             googleMap.addPolyline(PolylineOptions().addAll(calculateOrthogonalLine(segment.path[last], segment.path[last-5])).color(StravaOrange.toArgb()).width(8f))
         }
     }
-
-
-    // 3. Draw Generic Markers
-    state.markers.forEach { marker ->
-        googleMap.addMarker(MarkerOptions()
-            .position(marker.position)
-            .icon(BitmapDescriptorFactory.fromResource(marker.iconResId))
-            .rotation(marker.rotation)
-            .flat(marker.flat)
-            .anchor(marker.anchor.x, marker.anchor.y))
-    }
-
-    currentLocation?.let { loc ->
-        googleMap.addMarker(
-            MarkerOptions()
-                .position(loc)
-                .icon(locationIcon)
-                .rotation(state.bearing)
-                .flat(true)
-                .anchor(0.5f, 0.5f)
-                .zIndex(1.0f)
-        )
-    }
 }
+
 
 /**
  * Internal helper for icon generation outside of Composable scope
