@@ -40,7 +40,7 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
     protected MySensor<Double> mLongitudeSensor;
     protected MySensor<Double> mLatitudeSensor;
     protected MySensor<Double> mAccuracySensor;
-    protected MySensor<Number> mBearingSensor;
+    protected MySensor<Double> mBearingSensor;
     protected MySensor<Double> mAltitudeSensor;
     protected MySensor<Double> mSpeedSensor;
     protected MySensor<Double> mLineDistanceSensor;
@@ -85,7 +85,7 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
         mLongitudeSensor = new MySensor<Double>(this, SensorType.LONGITUDE);
         mLatitudeSensor = new MySensor<Double>(this, SensorType.LATITUDE);
         mAccuracySensor = new MySensor<Double>(this, SensorType.ACCURACY);
-        mBearingSensor = new MySensor<Number>(this, SensorType.BEARING);
+        mBearingSensor = new MySensor<Double>(this, SensorType.BEARING);
         mAltitudeSensor = new MySensor<Double>(this, SensorType.ALTITUDE);
         mSpeedSensor = new MySensor<Double>(this, SensorType.SPEED_mps);
         mPaceSensor = new MySensor<Double>(this, SensorType.PACE_spm);
@@ -131,7 +131,7 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
                 mLongitudeSensor.newValue(location.getLongitude());
                 mLatitudeSensor.newValue(location.getLatitude());
                 mAccuracySensor.newValue(location.getAccuracy() + 0.0);
-                mBearingSensor.newValue(location.getBearing());
+                mBearingSensor.newValue(location.getBearing() + 0.0);
                 mAltitudeSensor.newValue(location.getAltitude());
                 mLineDistanceSensor.newValue(location.distanceTo(mStartLocation) + 0.0);
 

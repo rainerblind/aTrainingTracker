@@ -155,9 +155,6 @@ class TrackingViewModel(
                 val activity = banalServiceRepository.activityType.value
                 val finalFields = applySensorData(baseFields, allSensorData, activity)
 
-                val bearing = allSensorData.find { it.sensorType == SensorType.BEARING && it.deviceName == null && it.filterType == FilterType.INSTANTANEOUS }?.value as? Double ?: 0.0
-                val speed = allSensorData.find { it.sensorType == SensorType.SPEED_mps && it.deviceName == null && it.filterType == FilterType.INSTANTANEOUS }?.value as? Double ?: 0.0
-
                 val currentTrack = banalServiceRepository.currentTrack.value
                 val markerList = mutableListOf<LocationMarker>()
                 if (currentTrack.isNotEmpty()) {
@@ -175,8 +172,8 @@ class TrackingViewModel(
                     fields = finalFields,
                     showMap = viewInfo?.showMap ?: false,
                     mapState = MapState(
-                        bearing = bearing.toFloat(),
-                        speed = speed.toFloat(),
+                        speed = banalServiceRepository.currentSpeed.value?.toFloat() ?: 0f,
+                        bearing = banalServiceRepository.currentBearing.value?.toFloat() ?: 0f,
                         isFollowMeEnabled = true,
                         currentTrack = currentTrack,
                         segments = starredSegments,

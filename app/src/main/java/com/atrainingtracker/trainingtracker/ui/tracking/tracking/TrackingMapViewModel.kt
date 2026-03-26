@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModelProvider
 import com.google.android.gms.maps.GoogleMapOptions
 import com.google.android.gms.maps.MapView
 import com.google.android.gms.maps.GoogleMap
+import com.google.android.gms.maps.model.BitmapDescriptor
 
 class TrackingMapViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -21,6 +22,10 @@ class TrackingMapViewModel(application: Application) : AndroidViewModel(applicat
             onResume()
         }
     }
+
+    // 2. Persistent state to prevent "Zoom from Space" on every swipe
+    // This allows the map to "remember" where it was even when not visible
+    var isInitialPositionSet: Boolean = false
 
     // Clean up when the activity finally dies
     override fun onCleared() {

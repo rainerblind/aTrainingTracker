@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -75,6 +76,33 @@ fun ATrainingTrackerMap(
         return
     }
 
+    LaunchedEffect(currentLocation, mapState.bearing, mapState.speed) {
+        if (mapState.isFollowMeEnabled && currentLocation != null) {
+            val targetZoom = (20f - 0.1f * mapState.speed).coerceIn(14f, 20f)
+
+            mapViewModel.sharedMapView.getMapAsync { googleMap ->
+                // SNAP to position if it's the very first time
+                if (!mapViewModel.isInitialPositionSet) {
+                    googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation!!, 16f))
+                    mapViewModel.isInitialPositionSet = true
+                }
+
+                googleMap.animateCamera(
+                    CameraUpdateFactory.newCameraPosition(
+                        CameraPosition.builder()
+                            .target(currentLocation!!)
+                            .bearing(mapState.bearing)
+                            .zoom(targetZoom)
+                            .tilt(70f)
+                            .build()
+                    ),
+                    400, // Reduced duration for snappier response
+                    null
+                )
+            }
+        }
+    }
+
     // THE SINGLETON MAP LOGIC:
     // Instead of GoogleMap {}, we use AndroidView to "plug in" the shared MapView instance.
     AndroidView(
@@ -89,6 +117,13 @@ fun ATrainingTrackerMap(
             mapView
         },
         update = { mapView ->
+            val locationIcon = bitmapDescriptorFromVectorInternal(
+                context,
+                R.drawable.ic_navigation_arrow,
+                42,
+                primaryColor
+            )
+
             // 3. Update the content of the singleton map
             mapView.getMapAsync { googleMap ->
                 updateGoogleMapContent(
@@ -97,7 +132,7 @@ fun ATrainingTrackerMap(
                     currentLocation,
                     context,
                     mapState.segments,
-                    primaryColor
+                    locationIcon
                 )
             }
         }
@@ -113,13 +148,12 @@ private fun updateGoogleMapContent(
     currentLocation: LatLng?,
     context: Context,
     segments: List<MapSegment>,
-    primaryColor: Color
+    locationIcon: BitmapDescriptor?
 ) {
     googleMap.clear() // Remove old state before redrawing current frame
 
     // Disable default UI for a clean "Navigation" look
     googleMap.uiSettings.isZoomControlsEnabled = false
-    googleMap.setMapStyle(null) // Reset to default Terrain if needed
 
     // 1. Draw Current Track
     if (state.currentTrack.isNotEmpty()) {
@@ -171,6 +205,7 @@ private fun updateGoogleMapContent(
         }
     }
 
+
     // 3. Draw Generic Markers
     state.markers.forEach { marker ->
         googleMap.addMarker(MarkerOptions()
@@ -181,24 +216,16 @@ private fun updateGoogleMapContent(
             .anchor(marker.anchor.x, marker.anchor.y))
     }
 
-    // 4. Current Location Marker & Camera Follow
     currentLocation?.let { loc ->
-        val locationIcon = bitmapDescriptorFromVectorInternal(context, R.drawable.ic_navigation_arrow, 42, primaryColor)
-
-        googleMap.addMarker(MarkerOptions()
-            .position(loc)
-            .icon(locationIcon)
-            .rotation(state.bearing)
-            .flat(true)
-            .anchor(0.5f, 0.5f)
-            .zIndex(1.0f))
-
-        if (state.isFollowMeEnabled) {
-            val targetZoom = (20f - 0.1f * state.speed).coerceIn(14f, 20f)
-            googleMap.animateCamera(CameraUpdateFactory.newCameraPosition(
-                CameraPosition.builder().target(loc).bearing(state.bearing).tilt(70f).zoom(targetZoom).build()
-            ), 1000, null)
-        }
+        googleMap.addMarker(
+            MarkerOptions()
+                .position(loc)
+                .icon(locationIcon)
+                .rotation(state.bearing)
+                .flat(true)
+                .anchor(0.5f, 0.5f)
+                .zIndex(1.0f)
+        )
     }
 }
 

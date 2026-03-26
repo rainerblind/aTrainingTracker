@@ -94,6 +94,14 @@ class BANALServiceRepository private constructor(private val context: Context) {
     private val _currentLocation = MutableStateFlow<LatLng?>(null)
     val currentLocation: StateFlow<LatLng?> = _currentLocation.asStateFlow()
 
+    // StateFlow for the current speed
+    private val _currentSpeed = MutableStateFlow<Double?>(null)
+    val currentSpeed: StateFlow<Double?> = _currentSpeed.asStateFlow()
+
+    // StateFlow for the current bearing
+    private val _currentBearing = MutableStateFlow<Double?>(null)
+    val currentBearing: StateFlow<Double?> = _currentBearing.asStateFlow()
+
     // --- Current Track (Breadcrumbs for the Map Polyline) ---
     private val _currentTrack = MutableStateFlow<List<LatLng>>(emptyList())
     val currentTrack: StateFlow<List<LatLng>> = _currentTrack.asStateFlow()
@@ -261,6 +269,9 @@ class BANALServiceRepository private constructor(private val context: Context) {
                         }
                     }
                 }
+
+                _currentSpeed.value = banalServiceComm?.getBestSensorData(SensorType.SPEED_mps)?.value as Double?
+                _currentBearing.value = banalServiceComm?.getBestSensorData(SensorType.BEARING)?.value as Double?
 
                 if (DEBUG) Log.i(TAG, "BANALService:\n _searchingForDevice.value: ${_searchingForDevice.value},\n _bSportType.value: ${_bSportType.value},\n _foundDeviceIds.value: ${_activeRemoteDevicesIds.value},\n _activeSensors.value: ${_activeSensors.value}")
                 if (DEBUG) Log.i(TAG, "trackingMode: ${_trackingMode.value}")
