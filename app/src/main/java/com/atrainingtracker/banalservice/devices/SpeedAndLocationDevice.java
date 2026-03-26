@@ -95,8 +95,8 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
 
         addSensor(mLongitudeSensor);
         addSensor(mLatitudeSensor);
-        addSensor(mAltitudeSensor);
         addSensor(mAccuracySensor);
+        addSensor(mBearingSensor);
         addSensor(mAltitudeSensor);
         addSensor(mSpeedSensor);
         addSensor(mLineDistanceSensor);
