@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.tracking.tracking
 
+import android.app.Application
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -36,7 +37,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
+import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
 import com.atrainingtracker.trainingtracker.ui.theme.Zone1
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.LightBackground
@@ -44,6 +47,8 @@ import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldView
 import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize
+import com.google.android.gms.maps.model.LatLng
+import kotlinx.coroutines.flow.StateFlow
 
 interface GridActions {
     fun onEditField(fieldState: SensorFieldState)
@@ -61,7 +66,8 @@ fun SensorGridScreen(
     state: TrackingScreenState,
     screenMode: ScreenMode,
     gridActions: GridActions,
-    mapContent: @Composable () -> Unit = {}
+    currentLocationFlow: StateFlow<LatLng?>,
+    mapViewModel: TrackingMapViewModel
 ) {
     Column(Modifier.fillMaxSize()) {
         val fieldsByRow = state.fields.groupBy { it.rowNr }
@@ -119,9 +125,14 @@ fun SensorGridScreen(
 
         // Conditionally display the map
         if (state.showMap) {
-            Box(modifier = Modifier.weight(1f)) {
-                mapContent()
-            }
+            ATrainingTrackerMap(
+                mapState = state.mapState,
+                mapViewModel = mapViewModel,
+                currentLocationFlow = currentLocationFlow,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            )
         }
     }
 }
@@ -149,10 +160,16 @@ private fun ColAdder(onClick: () -> Unit) {
 }
 
 
+val dummyLocationFlow = kotlinx.coroutines.flow.MutableStateFlow(
+    com.google.android.gms.maps.model.LatLng(48.8566, 2.3522) // Paris, for example
+)
+
 // Preview for Configuration Mode
 @Preview(showBackground = true, name = "Config Mode")
 @Composable
 fun SensorGridScreenConfigPreview() {
+    val context = LocalContext.current
+    val previewMapViewModel = TrackingMapViewModel(context.applicationContext as Application)
     ATrainingTrackerTheme {
         val previewFields = listOf(
             SensorFieldState(configHash = 1, sensorFieldId = 1, rowNr = 0, colNr = 0, viewSize = ViewSize.NORMAL, label = "Pace", value = "5:31", units = "/min", zoneColor = LightBackground, filterDescription = "GPS: 5s avg"),
@@ -168,7 +185,9 @@ fun SensorGridScreenConfigPreview() {
         SensorGridScreen(
             state = TrackingScreenState(fields = previewFields),
             screenMode = ScreenMode.CONFIGURATION,
-            gridActions = mockActions
+            gridActions = mockActions,
+            currentLocationFlow = dummyLocationFlow,
+            mapViewModel = previewMapViewModel
         )
     }
 }
@@ -177,6 +196,8 @@ fun SensorGridScreenConfigPreview() {
 @Preview(showBackground = true, name = "Tracking Mode")
 @Composable
 fun SensorGridScreenTrackingPreview() {
+    val context = LocalContext.current
+    val previewMapViewModel = TrackingMapViewModel(context.applicationContext as Application)
     ATrainingTrackerTheme {
         val previewFields = listOf(
             SensorFieldState(configHash = 1, sensorFieldId = 1, rowNr = 0, colNr = 0, viewSize = ViewSize.LARGE, label = "Pace", value = "5:31", units = "/min", zoneColor = LightBackground, filterDescription = "GPS: 5s avg"),
@@ -192,7 +213,9 @@ fun SensorGridScreenTrackingPreview() {
         SensorGridScreen(
             state = TrackingScreenState(fields = previewFields),
             screenMode = ScreenMode.TRACKING,
-            gridActions = mockActions
+            gridActions = mockActions,
+            currentLocationFlow = dummyLocationFlow,
+            previewMapViewModel
         )
     }
 }

@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.tracking.tracking
 
 import android.app.Application
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.compose.ui.graphics.Color
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
@@ -29,11 +30,16 @@ import androidx.preference.PreferenceManager
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.filters.FilterType
 import com.atrainingtracker.banalservice.filters.FilteredSensorData
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.MyHelper
+import com.atrainingtracker.trainingtracker.segments.MapSegment
+import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
+import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
+import com.atrainingtracker.trainingtracker.ui.map.MapState
 import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
@@ -50,7 +56,8 @@ import java.util.Objects
  */
 data class TrackingScreenState(
     val showMap: Boolean = false,
-    val fields: List<SensorFieldState> = emptyList()
+    val fields: List<SensorFieldState> = emptyList(),
+    val mapState: MapState = MapState()
 )
 
 /**
@@ -81,6 +88,8 @@ class TrackingViewModel(
     val pendingAddition = _pendingAddition.asStateFlow()
 
     val screenMode: StateFlow<ScreenMode> = trackingViewsRepository.screenMode
+
+    private val starredSegments: List<MapSegment> = SegmentsDatabaseManager.getInstance(application).getAllSegments()
 
     private val sharedPreferences: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(application)
     private val defaultZoneColor = Color(ContextCompat.getColor(application, R.color.color_background))
@@ -144,17 +153,32 @@ class TrackingViewModel(
 
                 // --- Step 2: Apply live sensor data to the base state ---
                 val activity = banalServiceRepository.activityType.value
-                val finalFields = if (activity != null) {
-                    applySensorData(baseFields, allSensorData, activity)
-                } else {
-                    baseFields
+                val finalFields = applySensorData(baseFields, allSensorData, activity)
+
+                val currentTrack = banalServiceRepository.currentTrack.value
+                val markerList = mutableListOf<LocationMarker>()
+                if (currentTrack.isNotEmpty()) {
+                    markerList.add(
+                        LocationMarker(
+                            position = currentTrack.first(),
+                            iconResId = R.drawable.start_logo_map,
+                            title = application.getString(R.string.Start)
+                        )
+                    )
                 }
 
-                // --- Step 3: Package everything into the TrackingScreenState ---
-                // We extract showMap from the viewInfo we just combined
+                // --- Step 4: Package everything into the TrackingScreenState ---
                 TrackingScreenState(
                     fields = finalFields,
-                    showMap = viewInfo?.showMap ?: false
+                    showMap = viewInfo?.showMap ?: false,
+                    mapState = MapState(
+                        speed = banalServiceRepository.currentSpeed.value?.toFloat() ?: 0f,
+                        bearing = banalServiceRepository.currentBearing.value?.toFloat() ?: 0f,
+                        isFollowMeEnabled = true,
+                        currentTrack = currentTrack,
+                        segments = starredSegments,
+                        markers = markerList
+                    )
                 )
             }.collect { newState ->
                 // Emit the new state to the UI

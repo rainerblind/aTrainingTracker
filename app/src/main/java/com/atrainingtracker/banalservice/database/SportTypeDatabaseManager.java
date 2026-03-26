@@ -443,6 +443,54 @@ public class SportTypeDatabaseManager {
         return sensors;
     }
 
+    /**
+     * Translates a Strava activity name (e.g., "Ride", "Run") to the internal BSportType
+     * by querying the database's mapping table.
+     *
+     * @param stravaName The activity type string received from Strava.
+     * @return The corresponding BSportType, or BSportType.UNKNOWN if no match is found.
+     */
+    @NonNull
+    public BSportType getBSportTypeFromStravaName(String stravaName) {
+        if (stravaName == null || stravaName.isEmpty()) {
+            return BSportType.UNKNOWN;
+        }
+
+        BSportType result = null;
+        SQLiteDatabase db = getDatabase();
+
+        // Query the table for a row where the Strava name matches
+        // We use BASE_SPORT_TYPE to find the enum mapping
+        Cursor cursor = db.query(SportType.TABLE,
+                new String[]{SportType.BASE_SPORT_TYPE},
+                SportType.STRAVA_NAME + "=? COLLATE NOCASE",
+                new String[]{stravaName},
+                null, null, null);
+
+        if (cursor.moveToFirst()) {
+            String bSportTypeName = cursor.getString(cursor.getColumnIndexOrThrow(SportType.BASE_SPORT_TYPE));
+            try {
+                result = BSportType.valueOf(bSportTypeName);
+            } catch (IllegalArgumentException e) {
+                Log.e(TAG, "Invalid BSportType in database: " + bSportTypeName);
+            }
+        }
+        cursor.close();
+
+        // Not found in the database. Use the hardcoded TTSportType mapping as a fallback
+        if (result == null) {
+            for (TTSportType ttType : TTSportType.values()) {
+                if (ttType.getStravaName().equalsIgnoreCase(stravaName)) {
+                    result = ttType.getBSportType();
+                    break;
+                }
+            }
+        }
+
+        // Final fallback if neither DB nor Enum contains the name
+        return result != null ? result : BSportType.UNKNOWN;
+    }
+
 
     public static boolean canDelete(long id) {
         return id < 0 || id > 3;

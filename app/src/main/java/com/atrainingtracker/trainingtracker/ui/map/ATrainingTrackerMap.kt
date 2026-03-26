@@ -1,0 +1,295 @@
+package com.atrainingtracker.trainingtracker.ui.map
+
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.view.ViewGroup
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.BitmapDescriptor
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.JointType
+import com.google.android.gms.maps.model.LatLng
+import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.segments.MapSegment
+import com.atrainingtracker.trainingtracker.segments.SegmentHelper
+import com.atrainingtracker.trainingtracker.ui.theme.StravaOrange
+import com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingMapViewModel
+import com.google.android.gms.maps.GoogleMap
+import com.google.android.gms.maps.model.MarkerOptions
+import com.google.android.gms.maps.model.PolylineOptions
+import kotlinx.coroutines.flow.StateFlow
+
+
+data class LocationMarker(
+    val position: LatLng,
+    @DrawableRes val iconResId: Int,
+    val title: String? = null,
+    val rotation: Float = 0f,
+    val flat: Boolean = false,
+    val anchor: Offset = Offset(0.5f, 0.5f)
+)
+
+data class MapState(
+    val bearing: Float = 0f,
+    val speed: Float = 0f,
+    val isFollowMeEnabled: Boolean = true,
+    val currentTrack: List<LatLng> = emptyList(),
+    val segments: List<MapSegment> = emptyList(),
+    val markers: List<LocationMarker> = emptyList()
+)
+
+@Composable
+fun ATrainingTrackerMap(
+    mapState: MapState,
+    mapViewModel: TrackingMapViewModel,
+    currentLocationFlow: StateFlow<LatLng?>,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val currentLocation by currentLocationFlow.collectAsStateWithLifecycle()
+    val primaryColor = MaterialTheme.colorScheme.primary
+
+    // Cache the locationIcon bitmap
+    var locationIcon by remember { mutableStateOf<BitmapDescriptor?>(null) }
+    var directionIconSmall by remember { mutableStateOf<BitmapDescriptor?>(null) }
+    var directionIconMed by remember { mutableStateOf<BitmapDescriptor?>(null) }
+    var directionIconLarge by remember { mutableStateOf<BitmapDescriptor?>(null) }
+
+    // Initialize icons inside LaunchedEffect (Safe from IBitmapDescriptorFactory error)
+    LaunchedEffect(primaryColor) {
+        // This runs after the composition has started, ensuring Maps SDK is likely ready
+        locationIcon = bitmapDescriptorFromVectorInternal(context, R.drawable.ic_navigation_arrow, 42, primaryColor)
+        directionIconSmall = bitmapDescriptorFromVectorInternal(context, R.drawable.ic_navigation_arrow, 10, Color.White)
+        directionIconMed = bitmapDescriptorFromVectorInternal(context, R.drawable.ic_navigation_arrow, 14, Color.White)
+        directionIconLarge = bitmapDescriptorFromVectorInternal(context, R.drawable.ic_navigation_arrow, 20, Color.White)
+    }
+
+    // Prevents Render Issues in Android Studio Preview
+    if (LocalInspectionMode.current) {
+        Box(modifier = modifier.background(Color.LightGray), contentAlignment = Alignment.Center) {
+            Text("Map Singleton (Renders on Device)")
+        }
+        return
+    }
+
+    LaunchedEffect(currentLocation, mapState.bearing, mapState.speed) {
+        if (mapState.isFollowMeEnabled && currentLocation != null) {
+            val targetZoom = (20f - 0.1f * mapState.speed).coerceIn(14f, 20f)
+
+            mapViewModel.sharedMapView.getMapAsync { googleMap ->
+                // SNAP to position if it's the very first time
+                if (!mapViewModel.isInitialPositionSet) {
+                    googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation!!, 16f))
+                    mapViewModel.isInitialPositionSet = true
+                }
+
+                googleMap.animateCamera(
+                    CameraUpdateFactory.newCameraPosition(
+                        CameraPosition.builder()
+                            .target(currentLocation!!)
+                            .bearing(mapState.bearing)
+                            .zoom(targetZoom)
+                            .tilt(70f)
+                            .build()
+                    ),
+                    400, // Reduced duration for snappier response
+                    null
+                )
+            }
+        }
+    }
+
+    // THE SINGLETON MAP LOGIC:
+    // Instead of GoogleMap {}, we use AndroidView to "plug in" the shared MapView instance.
+    AndroidView(
+        modifier = modifier,
+        factory = {
+            val mapView = mapViewModel.sharedMapView
+            (mapView.parent as? ViewGroup)?.removeView(mapView)
+            mapView
+        },
+        update = { mapView ->
+            // 3. Only draw if the icons are actually ready
+            val currentLocIcon = locationIcon ?: return@AndroidView
+
+            mapView.getMapAsync { googleMap ->
+                val currentDataHash = mapState.segments.hashCode() + mapState.markers.hashCode()
+
+                if (mapViewModel.staticDataHash != currentDataHash) {
+                    googleMap.clear()
+                    mapViewModel.userMarker = null
+                    mapViewModel.trackPolyline = null
+
+                    drawSegments(
+                        googleMap,
+                        mapState.segments,
+                        directionIconSmall,
+                        directionIconMed,
+                        directionIconLarge
+                    )
+
+                    mapState.markers.forEach { markerData ->
+                        googleMap.addMarker(MarkerOptions()
+                            .position(markerData.position)
+                            .icon(BitmapDescriptorFactory.fromResource(markerData.iconResId))
+                            .rotation(markerData.rotation)
+                            .flat(markerData.flat)
+                            .anchor(markerData.anchor.x, markerData.anchor.y))
+                    }
+                    mapViewModel.staticDataHash = currentDataHash
+                }
+
+                // --- LAYER 2: SEMI-DYNAMIC (The Track) ---
+                if (mapState.currentTrack.isNotEmpty()) {
+                    val trackLine = mapViewModel.trackPolyline
+                    if (trackLine == null) {
+                        mapViewModel.trackPolyline = googleMap.addPolyline(
+                            PolylineOptions()
+                                .addAll(mapState.currentTrack)
+                                .color(Color.Blue.toArgb())
+                                .width(10f)
+                                .jointType(JointType.ROUND)
+                        )
+                    } else {
+                        trackLine.points = mapState.currentTrack
+                    }
+                }
+
+                // --- LAYER 3: DYNAMIC (User Location) ---
+                currentLocation?.let { loc ->
+                    val marker = mapViewModel.userMarker
+                    if (marker == null) {
+                        mapViewModel.userMarker = googleMap.addMarker(
+                            MarkerOptions()
+                                .position(loc)
+                                .icon(currentLocIcon) // Use local ready icon
+                                .rotation(mapState.bearing)
+                                .flat(true)
+                                .anchor(0.5f, 0.5f)
+                                .zIndex(2.0f)
+                        )
+                    } else {
+                        marker.position = loc
+                        marker.rotation = mapState.bearing
+                    }
+                }
+            }
+        }
+    )
+}
+
+private fun drawSegments(
+    googleMap: GoogleMap,
+    segments: List<MapSegment>,
+    directionSmall: BitmapDescriptor?, directionMed: BitmapDescriptor?, directionLarge: BitmapDescriptor?
+) {
+    googleMap.uiSettings.isZoomControlsEnabled = false
+    val currentZoom = googleMap.cameraPosition.zoom
+
+    segments.forEach { segment ->
+        // Main Path
+        googleMap.addPolyline(
+            PolylineOptions()
+                .addAll(segment.path)
+                .color(StravaOrange.copy(alpha = 0.7f).toArgb())
+                .width(12f)
+                .jointType(JointType.ROUND)
+        )
+
+        // Select direcion icon based on zoom level
+        if (currentZoom > 14f) {
+            val icon = when {
+                currentZoom > 17f -> directionLarge
+                currentZoom > 15f -> directionMed
+                else -> directionSmall
+            }
+
+            segment.path.windowed(2, 20).forEach { pair ->
+                googleMap.addMarker(MarkerOptions()
+                    .position(LatLng((pair[0].latitude + pair[1].latitude) / 2.0, (pair[0].longitude + pair[1].longitude) / 2.0))
+                    .icon(icon)
+                    .rotation(calculateBearing(pair[0], pair[1]).toFloat())
+                    .flat(true)
+                    .anchor(0.5f, 0.5f)
+                    .alpha(0.4f))
+            }
+        }
+
+        // Start/Finish Lines
+        if (segment.path.size >= 6) {
+            googleMap.addPolyline(PolylineOptions().addAll(calculateOrthogonalLine(segment.path[0], segment.path[5])).color(StravaOrange.toArgb()).width(8f))
+            val last = segment.path.lastIndex
+            googleMap.addPolyline(PolylineOptions().addAll(calculateOrthogonalLine(segment.path[last], segment.path[last-5])).color(StravaOrange.toArgb()).width(8f))
+        }
+    }
+}
+
+
+/**
+ * Internal helper for icon generation outside of Composable scope
+ */
+private fun bitmapDescriptorFromVectorInternal(context: Context, resId: Int, sizeDp: Int, tint: Color?): BitmapDescriptor? {
+    val drawable = ContextCompat.getDrawable(context, resId)?.mutate() ?: return null
+    tint?.let { drawable.setTint(it.toArgb()) }
+    val px = (sizeDp * context.resources.displayMetrics.density).toInt()
+    drawable.setBounds(0, 0, px, px)
+    val bm = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888)
+    drawable.draw(Canvas(bm))
+    return BitmapDescriptorFactory.fromBitmap(bm)
+}
+
+private fun calculateOrthogonalLine(point: LatLng, nextPoint: LatLng): List<LatLng> {
+    val halfLengthMeters = 7.5 // Total 15m line
+
+    val latDegreeInMeters = SegmentHelper.LatitudeDegreeInMeters(point)
+    val lonDegreeInMeters = SegmentHelper.LongitudeDegreeInMeters(point)
+
+    val deltaLatM = (nextPoint.latitude - point.latitude) * latDegreeInMeters
+    val deltaLonM = (nextPoint.longitude - point.longitude) * lonDegreeInMeters
+
+    val length = Math.sqrt(deltaLatM * deltaLatM + deltaLonM * deltaLonM)
+    if (length == 0.0) return emptyList()
+
+    val scaledDeltaLat = halfLengthMeters * deltaLatM / length
+    val scaledDeltaLon = halfLengthMeters * deltaLonM / length
+
+    return listOf(
+        LatLng(point.latitude + scaledDeltaLon / latDegreeInMeters,
+            point.longitude - scaledDeltaLat / lonDegreeInMeters),
+        LatLng(point.latitude - scaledDeltaLon / latDegreeInMeters,
+            point.longitude + scaledDeltaLat / lonDegreeInMeters)
+    )
+}
+
+private fun calculateBearing(start: LatLng, end: LatLng): Double {
+    val lat1 = Math.toRadians(start.latitude)
+    val lon1 = Math.toRadians(start.longitude)
+    val lat2 = Math.toRadians(end.latitude)
+    val lon2 = Math.toRadians(end.longitude)
+    val dLon = lon2 - lon1
+    val y = Math.sin(dLon) * Math.cos(lat2)
+    val x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon)
+    return (Math.toDegrees(Math.atan2(y, x)) + 360.0) % 360.0
+}

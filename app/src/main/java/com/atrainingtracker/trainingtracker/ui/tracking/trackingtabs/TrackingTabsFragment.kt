@@ -216,11 +216,14 @@ class TrackingTabsFragment : Fragment() {
             }
         })
 
-        // Observe the ActivityType from the ViewModel (which gets it from the repository)
-        viewModel.activityType.observe(viewLifecycleOwner) { activityType ->
-            attachTabLayoutMediator()
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.activityType.collect { activityType ->
+                    if (DEBUG) Log.i(TAG, "ActivityType updated: $activityType")
+                    attachTabLayoutMediator()
+                }
+            }
         }
-
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -243,21 +246,21 @@ class TrackingTabsFragment : Fragment() {
             viewPager.setCurrentItem(1, false)
         }
 
-        viewModel.trackingViews.observe(viewLifecycleOwner) { trackingViews ->
-            if (::pagerAdapter.isInitialized) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.trackingViews.collect { trackingViews ->
+                    if (::pagerAdapter.isInitialized) {
+                        pagerAdapter.updateTrackingViews(trackingViews)
 
-                // note that we call notifyDatasetChanged already here...
-                pagerAdapter.updateTrackingViews(trackingViews)
-
-                // For renames/settings, we don't want to jump pages, just refresh visuals
-                if (::tabLayout.isInitialized) {
-                    for (i in 0 until tabLayout.tabCount) {
-                        tabLayout.getTabAt(i)?.text = pagerAdapter.getPageTitle(i)
+                        if (::tabLayout.isInitialized) {
+                            for (i in 0 until tabLayout.tabCount) {
+                                tabLayout.getTabAt(i)?.text = pagerAdapter.getPageTitle(i)
+                            }
+                        }
+                        updateLapButtonVisibility()
+                        updateConfigHeader(configHeader)
                     }
                 }
-
-                updateLapButtonVisibility()
-                updateConfigHeader(configHeader)
             }
         }
 
