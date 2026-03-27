@@ -145,6 +145,7 @@ fun ATrainingTrackerMap(
                     drawSegments(
                         googleMap,
                         mapState.segments,
+                        context,
                         directionIconSmall,
                         directionIconMed,
                         directionIconLarge
@@ -203,6 +204,7 @@ fun ATrainingTrackerMap(
 private fun drawSegments(
     googleMap: GoogleMap,
     segments: List<MapSegment>,
+    context: Context,
     directionSmall: BitmapDescriptor?, directionMed: BitmapDescriptor?, directionLarge: BitmapDescriptor?
 ) {
     googleMap.uiSettings.isZoomControlsEnabled = false
@@ -218,7 +220,7 @@ private fun drawSegments(
                 .jointType(JointType.ROUND)
         )
 
-        // Select direcion icon based on zoom level
+        // Select direction icon based on zoom level
         if (currentZoom > 14f) {
             val icon = when {
                 currentZoom > 17f -> directionLarge
@@ -237,11 +239,43 @@ private fun drawSegments(
             }
         }
 
-        // Start/Finish Lines
+        // Start/Finish Lines with name of the segment
         if (segment.path.size >= 6) {
-            googleMap.addPolyline(PolylineOptions().addAll(calculateOrthogonalLine(segment.path[0], segment.path[5])).color(StravaOrange.toArgb()).width(8f))
-            val last = segment.path.lastIndex
-            googleMap.addPolyline(PolylineOptions().addAll(calculateOrthogonalLine(segment.path[last], segment.path[last-5])).color(StravaOrange.toArgb()).width(8f))
+            val startPt = segment.path[0]
+            val startNext = segment.path[5]
+            val endPt = segment.path.last()
+            val endPrev = segment.path[segment.path.size - 6]
+
+            // Orthogonal Lines
+            googleMap.addPolyline(PolylineOptions().addAll(calculateOrthogonalLine(startPt, startNext)).color(StravaOrange.toArgb()).width(8f))
+            googleMap.addPolyline(PolylineOptions().addAll(calculateOrthogonalLine(endPt, endPrev)).color(StravaOrange.toArgb()).width(8f))
+
+            // Labels (Only at high zoom)
+            if (currentZoom > 14f) {
+                val startBearing = calculateBearing(startPt, startNext).toFloat()
+                val endBearing = calculateBearing(endPrev, endPt).toFloat()
+
+                // START: Positioned "Below" (Behind) the line
+                // Rotation (startBearing - 90) aligns the width of the text with the orthogonal line.
+                // An anchor V of -0.2f pushes the bitmap "down" the path direction.
+                googleMap.addMarker(MarkerOptions()
+                    .position(startPt)
+                    .icon(createTextMarkerBitmap(context, segment.name, "🚩"))
+                    .rotation(startBearing)
+                    .anchor(0.5f, -0.2f)
+                    .flat(true)
+                )
+
+                // FINISH: Positioned "Above" (Ahead) the line
+                // An anchor V of 1.2f pushes the bitmap "up" further past the finish point.
+                googleMap.addMarker(MarkerOptions()
+                    .position(endPt)
+                    .icon(createTextMarkerBitmap(context, segment.name, "🏁"))
+                    .rotation(endBearing)
+                    .anchor(0.5f, 1.2f)
+                    .flat(true)
+                )
+            }
         }
     }
 }
@@ -258,6 +292,38 @@ private fun bitmapDescriptorFromVectorInternal(context: Context, resId: Int, siz
     val bm = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888)
     drawable.draw(Canvas(bm))
     return BitmapDescriptorFactory.fromBitmap(bm)
+}
+
+/**
+ * Generates a Bitmap containing an emoji and text to be used as a marker.
+ */
+private fun createTextMarkerBitmap(context: Context, text: String, emoji: String): BitmapDescriptor? {
+    val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+        color = android.graphics.Color.BLACK
+        textSize = 32f * context.resources.displayMetrics.density
+        typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+    }
+
+    val fullText = "$emoji $text"
+    val baseline = -paint.ascent()
+    val width = (paint.measureText(fullText) + 0.5f).toInt()
+    val height = (baseline + paint.descent() + 0.5f).toInt()
+
+    val image = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(image)
+
+    // Draw white shadow/outline for better readability on map
+    paint.style = android.graphics.Paint.Style.STROKE
+    paint.strokeWidth = 4f
+    paint.color = android.graphics.Color.WHITE
+    canvas.drawText(fullText, 0f, baseline, paint)
+
+    // Draw actual text
+    paint.style = android.graphics.Paint.Style.FILL
+    paint.color = android.graphics.Color.BLACK
+    canvas.drawText(fullText, 0f, baseline, paint)
+
+    return BitmapDescriptorFactory.fromBitmap(image)
 }
 
 private fun calculateOrthogonalLine(point: LatLng, nextPoint: LatLng): List<LatLng> {
