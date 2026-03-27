@@ -46,7 +46,7 @@ import com.google.android.gms.maps.model.PolylineOptions;
 
 import java.util.List;
 
-
+@Deprecated // use ATrainingTrackerMap.kt instead
 public class TrackOnMapTrackingFragment
         extends TrackOnMapBaseFragment {
     public static final String TAG = TrackOnMapTrackingFragment.class.getName();

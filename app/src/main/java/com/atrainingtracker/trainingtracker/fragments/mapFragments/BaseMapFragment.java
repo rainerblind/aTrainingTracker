@@ -54,6 +54,7 @@ import java.util.List;
 // TrackOnMapTrackingFragment: tracking map, with location and track and updates and start marker,listen to newWorkoutIdIntent...
 // TrackOnMapAftermathFragment: aftermath map,without location,with track,without updates,with all markers
 
+@Deprecated // migrate to ATrainingTackerMap.kt
 public abstract class BaseMapFragment
         extends SupportMapFragment
         implements OnMapReadyCallback {

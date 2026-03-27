@@ -51,6 +51,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 
+@Deprecated // use ATrainingTrackerMap.kt instead
 public abstract class TrackOnMapBaseFragment
         extends BaseMapFragment {
     public static final String TAG = TrackOnMapBaseFragment.class.getName();

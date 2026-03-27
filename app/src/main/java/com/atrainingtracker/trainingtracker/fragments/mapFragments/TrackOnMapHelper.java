@@ -49,6 +49,7 @@ import java.util.HashMap;
 /**
  * Created by rainer on 29.03.16.
  */
+@Deprecated // use ATrainingTrackerMap.kt instead
 public class TrackOnMapHelper {
     private static final String TAG = TrackOnMapHelper.class.getName();
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
