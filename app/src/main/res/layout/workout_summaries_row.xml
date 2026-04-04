@@ -50,6 +50,17 @@
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
+        <include
+            android:id="@+id/workout_description_include"
+            layout="@layout/workout_summary__description"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/workout_header_include"
+            tools:visibility="visible" />
+
         <!-- Placeholder for Workout Details (Distance, Time, Ascent, etc.) -->
         <include
             android:id="@+id/workout_details_include"
@@ -59,7 +70,7 @@
             android:layout_height="wrap_content"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/workout_header_include" />
+            app:layout_constraintTop_toBottomOf="@id/workout_description_include" />
 
         <!-- Container for Extrema Values -->
         <include
@@ -71,17 +82,6 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/workout_details_include" />
 
-        <include
-            android:id="@+id/workout_description_include"
-            layout="@layout/workout_summary__description"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:visibility="gone"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/extrema_values_include"
-            tools:visibility="visible" />
-
         <!-- MapView is now positioned below the new extrema container -->
         <com.google.android.gms.maps.MapView
             android:id="@+id/workout_summaries_mapView"
@@ -89,7 +89,7 @@
             android:layout_height="180dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/workout_description_include"
+            app:layout_constraintTop_toBottomOf="@id/extrema_values_include"
             map:liteMode="true"
             map:mapType="none" />
 
