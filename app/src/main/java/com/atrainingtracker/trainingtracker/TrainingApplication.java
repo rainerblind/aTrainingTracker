@@ -1019,7 +1019,8 @@ public class TrainingApplication extends Application {
         );
 
         // start EditWorkoutActivity
-        startEditWorkoutActivity(mWorkoutID, true); // here, the EditWorkoutActivity shall show the details, extrema values and the map.
+        // startEditWorkoutActivity(mWorkoutID, true); // here, the EditWorkoutActivity shall show the details, extrema values and the map.
+        startEditWorkoutActivity(mWorkoutID, false); // although, the user might want to see the statistics as early as possible, showing them here leads to an inconsistency.  Thus, we daactivate this feature.
         mNotificationManager.cancel(TRACKING_NOTIFICATION_ID);
     }
 
