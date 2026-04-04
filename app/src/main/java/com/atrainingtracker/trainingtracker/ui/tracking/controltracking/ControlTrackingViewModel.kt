@@ -125,7 +125,7 @@ class ControlTrackingViewModel(
     }
 
     fun isAntProperlyInstalled(): Boolean {
-        return BANALService.isANTProperlyInstalled(application)
+        return BANALService.areAllANTServicesInstalled(application)
     }
 
     fun isBluetoothSupported(): Boolean {

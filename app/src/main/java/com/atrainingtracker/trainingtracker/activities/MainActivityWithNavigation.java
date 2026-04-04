@@ -27,8 +27,6 @@ import androidx.appcompat.app.AlertDialog;
 
 import android.annotation.SuppressLint;
 import android.app.Dialog;
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothManager;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -97,7 +95,6 @@ import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManage
 import com.atrainingtracker.trainingtracker.dialogs.GPSDisabledDialog;
 import com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialog;
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedFragment;
-import com.atrainingtracker.trainingtracker.fragments.mapFragments.MyLocationsFragment;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapTrackingFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.CloudUploadFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.FancyWorkoutNameListFragment;
@@ -263,7 +260,7 @@ public class MainActivityWithNavigation
         getPermissions(true);
 
         // check ANT+ installation
-        if (TrainingApplication.checkANTInstallation() && BANALService.isANTProperlyInstalled(this)) {
+        if (TrainingApplication.checkANTInstallation() && !BANALService.areAllANTServicesInstalled(this)) {
             showInstallANTShitDialog();
         }
 
