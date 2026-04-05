@@ -50,6 +50,7 @@ import java.util.HashMap;
 /**
  * Created by rainer on 29.03.16.
  */
+@Deprecated // use ATrainingTackerMap instead
 public class SegmentOnMapHelper {
     private static final String TAG = SegmentOnMapHelper.class.getName();
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
