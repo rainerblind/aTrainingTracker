@@ -1,8 +1,10 @@
 package com.atrainingtracker.trainingtracker.ui.map
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.util.Log
 import android.view.ViewGroup
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
@@ -32,8 +34,10 @@ import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.JointType
 import com.google.android.gms.maps.model.LatLng
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.activities.SegmentDetailsActivity
 import com.atrainingtracker.trainingtracker.segments.MapSegment
 import com.atrainingtracker.trainingtracker.segments.SegmentHelper
+import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.theme.StravaOrange
 import com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingMapViewModel
 import com.google.android.gms.maps.GoogleMap
@@ -210,15 +214,27 @@ private fun drawSegments(
     googleMap.uiSettings.isZoomControlsEnabled = false
     val currentZoom = googleMap.cameraPosition.zoom
 
+    // TODO: Don't start the activity from there.  This should be done by the fragment/viewModel instaead?
+    googleMap.setOnPolylineClickListener { polyline ->
+        val segmentId = polyline.tag as? Long
+        if (segmentId != null) {
+            val intent = Intent(context, SegmentDetailsActivity::class.java)
+            intent.putExtra(SegmentsDatabaseManager.Segments.SEGMENT_ID, segmentId)
+            context.startActivity(intent)
+        }
+    }
+
     segments.forEach { segment ->
         // Main Path
-        googleMap.addPolyline(
+        val polyline = googleMap.addPolyline(
             PolylineOptions()
                 .addAll(segment.path)
                 .color(StravaOrange.copy(alpha = 0.7f).toArgb())
                 .width(12f)
                 .jointType(JointType.ROUND)
+                .clickable(true)
         )
+        polyline.tag = segment.id // Store ID for the click listener
 
         // Select direction icon based on zoom level
         if (currentZoom > 14f) {
@@ -251,6 +267,7 @@ private fun drawSegments(
             googleMap.addPolyline(PolylineOptions().addAll(calculateOrthogonalLine(endPt, endPrev)).color(StravaOrange.toArgb()).width(8f))
 
             // Labels (Only at high zoom)
+            Log.i("ATrainingTrackerMap", "currentZoom=" + currentZoom)
             if (currentZoom > 14f) {
                 val startBearing = calculateBearing(startPt, startNext).toFloat()
                 val endBearing = calculateBearing(endPrev, endPt).toFloat()
@@ -300,7 +317,7 @@ private fun bitmapDescriptorFromVectorInternal(context: Context, resId: Int, siz
 private fun createTextMarkerBitmap(context: Context, text: String, emoji: String): BitmapDescriptor? {
     val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
         color = android.graphics.Color.BLACK
-        textSize = 24f * context.resources.displayMetrics.density
+        textSize = 18f * context.resources.displayMetrics.density
         typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.NORMAL)
     }
 

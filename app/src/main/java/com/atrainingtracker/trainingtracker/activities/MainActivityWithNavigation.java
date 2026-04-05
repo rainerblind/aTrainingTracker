@@ -52,6 +52,7 @@ import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelpe
 import com.atrainingtracker.trainingtracker.segments.StarredSegmentsTabbedContainer;
 import com.atrainingtracker.trainingtracker.tracker.TrackerService;
 import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentFragment;
+import com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrack;
 import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository;
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsFragment;
 import com.google.android.material.navigation.NavigationView;
@@ -607,8 +608,8 @@ public class MainActivityWithNavigation
                 break;
 
             case R.id.drawer_map:
-                mFragment = TrackOnMapTrackingFragment.newInstance();
-                tag = TrackOnMapTrackingFragment.TAG;
+                mFragment = MapFragmentWithTrack.newInstance();
+                tag = MapFragmentWithTrack.TAG;
                 break;
 
             case R.id.drawer_segments:
