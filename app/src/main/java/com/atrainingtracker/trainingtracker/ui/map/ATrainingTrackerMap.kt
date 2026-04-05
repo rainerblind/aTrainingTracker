@@ -99,28 +99,31 @@ fun ATrainingTrackerMap(
     }
 
     LaunchedEffect(currentLocation, mapState.bearing, mapState.speed) {
-        if (mapState.isFollowMeEnabled && currentLocation != null) {
-            val targetZoom = (20f - 0.1f * mapState.speed).coerceIn(14f, 20f)
 
-            mapViewModel.sharedMapView.getMapAsync { googleMap ->
+        mapViewModel.sharedMapView.getMapAsync { googleMap ->
+            if (currentLocation != null) {
                 // SNAP to position if it's the very first time
                 if (!mapViewModel.isInitialPositionSet) {
                     googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation!!, 16f))
                     mapViewModel.isInitialPositionSet = true
                 }
 
-                googleMap.animateCamera(
-                    CameraUpdateFactory.newCameraPosition(
-                        CameraPosition.builder()
-                            .target(currentLocation!!)
-                            .bearing(mapState.bearing)
-                            .zoom(targetZoom)
-                            .tilt(70f)
-                            .build()
-                    ),
-                    400, // Reduced duration for snappier response
-                    null
-                )
+                if (mapState.isFollowMeEnabled && currentLocation != null) {
+                    val targetZoom = (20f - 0.1f * mapState.speed).coerceIn(14f, 20f)
+
+                    googleMap.animateCamera(
+                        CameraUpdateFactory.newCameraPosition(
+                            CameraPosition.builder()
+                                .target(currentLocation!!)
+                                .bearing(mapState.bearing)
+                                .zoom(targetZoom)
+                                .tilt(70f)
+                                .build()
+                        ),
+                        400, // Reduced duration for snappier response
+                        null
+                    )
+                }
             }
         }
     }
