@@ -32,7 +32,7 @@ class MapFragmentWithTrack : Fragment() {
     }
 
     private val viewModel: MapFragmentWithTrackViewModel by viewModels()
-    private val mapViewModel: TrackingMapViewModel by viewModels({ requireActivity() })
+    private val mapViewModel: TrackingMapViewModel by viewModels()
 
 
     override fun onCreateView(
