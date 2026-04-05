@@ -156,7 +156,7 @@ fun ATrainingTrackerMap(
                         zoomInt
 
                 if (mapViewModel.staticDataHash != currentDataHash) {
-                    googleMap.clear()
+                    googleMap.clear()                        // TODO: Unfortunately, this clear does not always remove all markers...
                     mapViewModel.userMarker = null
                     mapViewModel.trackPolyline = null
 
