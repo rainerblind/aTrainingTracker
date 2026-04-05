@@ -281,7 +281,6 @@ private fun drawSegments(
             googleMap.addPolyline(PolylineOptions().addAll(calculateOrthogonalLine(endPt, endPrev)).color(StravaOrange.toArgb()).width(8f))
 
             // Labels (Only at high zoom)
-            Log.i("ATrainingTrackerMap", "currentZoom=" + currentZoom)
             if (currentZoom > 14f) {
                 val startBearing = calculateBearing(startPt, startNext).toFloat()
                 val endBearing = calculateBearing(endPrev, endPt).toFloat()
@@ -296,7 +295,7 @@ private fun drawSegments(
                 // An anchor V of -0.2f pushes the bitmap "down" the path direction.
                 googleMap.addMarker(MarkerOptions()
                     .position(startPt)
-                    .icon(createTextMarkerBitmap(context, segment.name, "🚩"))
+                    .icon(createTextMarkerBitmap(context, segment.name, "🚩", textSize))
                     .rotation(startBearing)
                     .anchor(0.5f, -0.2f)
                     .flat(true)
