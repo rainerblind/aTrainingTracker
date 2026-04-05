@@ -14,6 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -80,6 +81,7 @@ fun ATrainingTrackerMap(
     var directionIconSmall by remember { mutableStateOf<BitmapDescriptor?>(null) }
     var directionIconMed by remember { mutableStateOf<BitmapDescriptor?>(null) }
     var directionIconLarge by remember { mutableStateOf<BitmapDescriptor?>(null) }
+    var currentZoomState by remember { mutableFloatStateOf(0f) }
 
     // Initialize icons inside LaunchedEffect (Safe from IBitmapDescriptorFactory error)
     LaunchedEffect(primaryColor) {
@@ -101,6 +103,10 @@ fun ATrainingTrackerMap(
     LaunchedEffect(currentLocation, mapState.bearing, mapState.speed) {
 
         mapViewModel.sharedMapView.getMapAsync { googleMap ->
+            googleMap.setOnCameraMoveListener {
+                currentZoomState = googleMap.cameraPosition.zoom
+            }
+
             if (currentLocation != null) {
                 // SNAP to position if it's the very first time
                 if (!mapViewModel.isInitialPositionSet) {
@@ -141,8 +147,13 @@ fun ATrainingTrackerMap(
             // 3. Only draw if the icons are actually ready
             val currentLocIcon = locationIcon ?: return@AndroidView
 
+            val zoomInt = currentZoomState.toInt()
+
             mapView.getMapAsync { googleMap ->
-                val currentDataHash = mapState.segments.hashCode() + mapState.markers.hashCode()
+
+                val currentDataHash = mapState.segments.hashCode() +
+                        mapState.markers.hashCode() +
+                        zoomInt
 
                 if (mapViewModel.staticDataHash != currentDataHash) {
                     googleMap.clear()
@@ -275,6 +286,11 @@ private fun drawSegments(
                 val startBearing = calculateBearing(startPt, startNext).toFloat()
                 val endBearing = calculateBearing(endPrev, endPt).toFloat()
 
+                val textSize = when {
+                    currentZoom > 17f -> 22f
+                    currentZoom > 15f -> 18f
+                    else -> 14f
+                }
                 // START: Positioned "Below" (Behind) the line
                 // Rotation (startBearing - 90) aligns the width of the text with the orthogonal line.
                 // An anchor V of -0.2f pushes the bitmap "down" the path direction.
@@ -290,7 +306,7 @@ private fun drawSegments(
                 // An anchor V of 1.2f pushes the bitmap "up" further past the finish point.
                 googleMap.addMarker(MarkerOptions()
                     .position(endPt)
-                    .icon(createTextMarkerBitmap(context, segment.name, "🏁"))
+                    .icon(createTextMarkerBitmap(context, segment.name, "🏁", textSize))
                     .rotation(endBearing)
                     .anchor(0.5f, 1.2f)
                     .flat(true)
@@ -317,10 +333,10 @@ private fun bitmapDescriptorFromVectorInternal(context: Context, resId: Int, siz
 /**
  * Generates a Bitmap containing an emoji and text to be used as a marker.
  */
-private fun createTextMarkerBitmap(context: Context, text: String, emoji: String): BitmapDescriptor? {
+private fun createTextMarkerBitmap(context: Context, text: String, emoji: String, textSizeIn: Float): BitmapDescriptor? {
     val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
         color = android.graphics.Color.BLACK
-        textSize = 18f * context.resources.displayMetrics.density
+        textSize = textSizeIn * context.resources.displayMetrics.density
         typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.NORMAL)
     }
 
