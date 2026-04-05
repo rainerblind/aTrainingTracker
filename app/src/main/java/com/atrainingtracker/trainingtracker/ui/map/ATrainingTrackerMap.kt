@@ -300,8 +300,8 @@ private fun bitmapDescriptorFromVectorInternal(context: Context, resId: Int, siz
 private fun createTextMarkerBitmap(context: Context, text: String, emoji: String): BitmapDescriptor? {
     val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
         color = android.graphics.Color.BLACK
-        textSize = 32f * context.resources.displayMetrics.density
-        typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+        textSize = 24f * context.resources.displayMetrics.density
+        typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.NORMAL)
     }
 
     val fullText = "$emoji $text"
