@@ -296,9 +296,9 @@ private fun drawSegments(
                 googleMap.addMarker(MarkerOptions()
                     .position(startPt)
                     .icon(createTextMarkerBitmap(context, segment.name, "🚩", textSize))
-                    .rotation(startBearing)
+                    // .rotation(startBearing)
                     .anchor(0.5f, -0.2f)
-                    .flat(true)
+                    .flat(false)
                 )
 
                 // FINISH: Positioned "Above" (Ahead) the line
@@ -306,9 +306,9 @@ private fun drawSegments(
                 googleMap.addMarker(MarkerOptions()
                     .position(endPt)
                     .icon(createTextMarkerBitmap(context, segment.name, "🏁", textSize))
-                    .rotation(endBearing)
+                    // .rotation(endBearing)
                     .anchor(0.5f, 1.2f)
-                    .flat(true)
+                    .flat(false)
                 )
             }
         }
