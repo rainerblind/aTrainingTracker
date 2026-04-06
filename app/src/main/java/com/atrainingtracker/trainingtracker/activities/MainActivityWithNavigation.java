@@ -737,7 +737,7 @@ public class MainActivityWithNavigation
         if (DEBUG) Log.i(TAG, "startSegmentDetailsActivity: segmentId=" + segmentId);
 
         Bundle bundle = new Bundle();
-        bundle.putLong(SegmentsDatabaseManager.Segments.SEGMENT_ID, segmentId);
+        bundle.putLong(SegmentsDatabaseManager.Segments.STRAVA_SEGMENT_ID, segmentId);
         Intent segmentDetailsIntent = new Intent(this, SegmentDetailsActivity.class);
         segmentDetailsIntent.putExtras(bundle);
         startActivity(segmentDetailsIntent);

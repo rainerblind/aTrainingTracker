@@ -88,7 +88,7 @@ public class SegmentsDatabaseManager {
         SportTypeDatabaseManager sportTypeMgr = SportTypeDatabaseManager.getInstance(mContext);
 
         while (cursor.moveToNext()) {
-            long id = cursor.getLong(cursor.getColumnIndexOrThrow(Segments.SEGMENT_ID));
+            long id = cursor.getLong(cursor.getColumnIndexOrThrow(Segments.STRAVA_SEGMENT_ID));
             String name = cursor.getString(cursor.getColumnIndexOrThrow(Segments.SEGMENT_NAME));
 
             // 3. Get the Strava activity type string (e.g., "Ride", "Run")
@@ -114,7 +114,7 @@ public class SegmentsDatabaseManager {
         SQLiteDatabase db = getDatabase();
         Cursor c = db.query(Segments.TABLE_SEGMENT_STREAMS,
                 new String[]{Segments.LATITUDE, Segments.LONGITUDE},
-                Segments.SEGMENT_ID + "=?", new String[]{String.valueOf(segmentId)},
+                Segments.STRAVA_SEGMENT_ID + "=?", new String[]{String.valueOf(segmentId)},
                 null, null, Segments.C_ID + " ASC");
 
         while (c.moveToNext()) {
@@ -162,7 +162,7 @@ public class SegmentsDatabaseManager {
 
         // for TABLE_STARRED_SEGMENTS
         public static final String C_ID = BaseColumns._ID;
-        public static final String SEGMENT_ID = "SegmentId";     // id: 	integer
+        public static final String STRAVA_SEGMENT_ID = "SegmentId";     // id: 	integer
         public static final String RESOURCE_STATE = "ResourceState"; // resource_state: 	integer // resource_state: 	integer
         public static final String SEGMENT_NAME = "SegmentName";   // name: 	string
         public static final String ACTIVITY_TYPE = "ActivityType";  // activity_type: 	string ‘Ride’ or ‘Run’
@@ -204,7 +204,7 @@ public class SegmentsDatabaseManager {
         public static final int DB_VERSION = 5; // updated 11.01.2026: add PR_TIME
         protected static final String CREATE_TABLE_STARRED_SEGMENTS_V2 = "create table " + Segments.TABLE_STARRED_SEGMENTS + " ("
                 + Segments.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
-                + Segments.SEGMENT_ID + " int, "
+                + Segments.STRAVA_SEGMENT_ID + " int, "
                 + Segments.RESOURCE_STATE + " int, "
                 + Segments.SEGMENT_NAME + " text, "
                 + Segments.ACTIVITY_TYPE + " text, "  // activity_type: 	string ‘Ride’ or ‘Run’
@@ -229,7 +229,7 @@ public class SegmentsDatabaseManager {
 
         protected static final String CREATE_TABLE_SEGMENT_STREAMS_V1 = "create table " + Segments.TABLE_SEGMENT_STREAMS + " ("
                 + Segments.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
-                + Segments.SEGMENT_ID + " int, "
+                + Segments.STRAVA_SEGMENT_ID + " int, "
                 + Segments.DISTANCE + " real, "
                 + Segments.ALTITUDE + " real, "
                 + Segments.LATITUDE + " real, "

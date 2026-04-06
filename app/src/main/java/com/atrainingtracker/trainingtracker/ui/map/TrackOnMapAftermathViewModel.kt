@@ -20,9 +20,6 @@ package com.atrainingtracker.trainingtracker.ui.map
 
 import android.app.Application
 import android.util.Log
-import androidx.activity.result.launch
-import androidx.compose.animation.core.copy
-import androidx.lifecycle.application
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.sensor.SensorType
@@ -30,7 +27,7 @@ import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
-import com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingMapViewModel
+import com.atrainingtracker.trainingtracker.ui.tracking.tracking.MapViewModel
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,7 +35,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class TrackOnMapAftermathViewModel(application: Application) : TrackingMapViewModel(application) {
+class TrackOnMapAftermathViewModel(application: Application) : MapViewModel(application) {
 
     private val _aftermathState = MutableStateFlow(MapState(isFollowMeEnabled = false))
     val aftermathState = _aftermathState.asStateFlow()

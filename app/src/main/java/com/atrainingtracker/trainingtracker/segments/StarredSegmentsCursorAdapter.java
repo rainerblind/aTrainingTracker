@@ -52,7 +52,7 @@ import java.util.Locale;
  */
 
 public class StarredSegmentsCursorAdapter extends CursorAdapter {
-    protected static final String[] FROM = {Segments.SEGMENT_ID, Segments.C_ID, Segments.SEGMENT_NAME, Segments.CITY, Segments.COUNTRY, Segments.DISTANCE, Segments.AVERAGE_GRADE, Segments.MAXIMUM_GRADE, Segments.ELEVATION_LOW, Segments.ELEVATION_HIGH, Segments.CLIMB_CATEGORY, Segments.PR_TIME};
+    protected static final String[] FROM = {Segments.STRAVA_SEGMENT_ID, Segments.C_ID, Segments.SEGMENT_NAME, Segments.CITY, Segments.COUNTRY, Segments.DISTANCE, Segments.AVERAGE_GRADE, Segments.MAXIMUM_GRADE, Segments.ELEVATION_LOW, Segments.ELEVATION_HIGH, Segments.CLIMB_CATEGORY, Segments.PR_TIME};
     private final String TAG = StarredSegmentsCursorAdapter.class.getSimpleName();
     private final boolean DEBUG = TrainingApplication.getDebug(false);
     protected final Activity mActivity;
@@ -95,7 +95,7 @@ public class StarredSegmentsCursorAdapter extends CursorAdapter {
     public void bindView(@NonNull View view, @NonNull Context context, @NonNull Cursor cursor) {
         final ViewHolder viewHolder = (ViewHolder) view.getTag();
 
-        final long segmentId = cursor.getLong(cursor.getColumnIndex(Segments.SEGMENT_ID));
+        final long segmentId = cursor.getLong(cursor.getColumnIndex(Segments.STRAVA_SEGMENT_ID));
         viewHolder.segmentId = segmentId;
 
         viewHolder.tvName.setText(cursor.getString(cursor.getColumnIndex(Segments.SEGMENT_NAME)));

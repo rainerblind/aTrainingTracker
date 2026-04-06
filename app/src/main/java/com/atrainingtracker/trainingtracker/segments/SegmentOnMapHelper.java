@@ -113,7 +113,7 @@ public class SegmentOnMapHelper {
 
                 // Create an Intent to start SegmentDetailsActivity
                 Intent intent = new Intent(context, SegmentDetailsActivity.class);
-                intent.putExtra(SegmentsDatabaseManager.Segments.SEGMENT_ID, clickedSegmentId);
+                intent.putExtra(Segments.STRAVA_SEGMENT_ID, clickedSegmentId);
 
                 // Start the activity
                 context.startActivity(intent);
@@ -162,7 +162,7 @@ public class SegmentOnMapHelper {
 
         SQLiteDatabase db = SegmentsDatabaseManager.getInstance(context).getDatabase();
         Cursor cursor = db.query(Segments.TABLE_SEGMENT_STREAMS, null,
-                Segments.SEGMENT_ID + "=?", new String[]{segmentId + ""},
+                Segments.STRAVA_SEGMENT_ID + "=?", new String[]{segmentId + ""},
                 null, null, null);
 
         LatLng latLng;

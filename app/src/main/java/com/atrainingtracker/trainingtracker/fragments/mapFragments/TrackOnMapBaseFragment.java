@@ -195,9 +195,9 @@ public abstract class TrackOnMapBaseFragment
                 null, null, null);
 
         while (cursor.moveToNext()) {
-            showSegmentOnMap(cursor.getLong(cursor.getColumnIndex(SegmentsDatabaseManager.Segments.SEGMENT_ID)), false);
+            showSegmentOnMap(cursor.getLong(cursor.getColumnIndex(SegmentsDatabaseManager.Segments.STRAVA_SEGMENT_ID)), false);
             if (DEBUG)
-                Log.i(TAG, "segmentId=" + cursor.getLong(cursor.getColumnIndex(SegmentsDatabaseManager.Segments.SEGMENT_ID)) +
+                Log.i(TAG, "segmentId=" + cursor.getLong(cursor.getColumnIndex(SegmentsDatabaseManager.Segments.STRAVA_SEGMENT_ID)) +
                         ", segment name=" + cursor.getString(cursor.getColumnIndex(SegmentsDatabaseManager.Segments.SEGMENT_NAME)));
         }
     }
@@ -222,7 +222,7 @@ public abstract class TrackOnMapBaseFragment
     protected void addSegmentStartAndFinishMarker(long segmentId, boolean zoomToStart) {
         SQLiteDatabase db = SegmentsDatabaseManager.getInstance(requireContext()).getDatabase();
         Cursor cursor = db.query(SegmentsDatabaseManager.Segments.TABLE_STARRED_SEGMENTS, null,
-                SegmentsDatabaseManager.Segments.SEGMENT_ID + "=?", new String[]{segmentId + ""},
+                SegmentsDatabaseManager.Segments.STRAVA_SEGMENT_ID + "=?", new String[]{segmentId + ""},
                 null, null, null);
         if (cursor.moveToFirst()) {
 
@@ -245,7 +245,7 @@ public abstract class TrackOnMapBaseFragment
     protected void addSegmentDirectionMarkers(long segmentId, boolean zoomToStart) {
         SQLiteDatabase db = SegmentsDatabaseManager.getInstance(requireContext()).getDatabase();
         Cursor cursor = db.query(SegmentsDatabaseManager.Segments.TABLE_SEGMENT_STREAMS, null,
-                SegmentsDatabaseManager.Segments.SEGMENT_ID + "=?", new String[]{segmentId + ""},
+                SegmentsDatabaseManager.Segments.STRAVA_SEGMENT_ID + "=?", new String[]{segmentId + ""},
                 null, null, null);
 
         if (zoomToStart && cursor.moveToFirst()) {
@@ -295,13 +295,13 @@ public abstract class TrackOnMapBaseFragment
         SQLiteDatabase db = SegmentsDatabaseManager.getInstance(requireContext()).getDatabase();
 
         Cursor cursor = db.query(SegmentsDatabaseManager.Segments.TABLE_SEGMENT_STREAMS, null,
-                SegmentsDatabaseManager.Segments.SEGMENT_ID + "=?", new String[]{segmentId + ""},
+                SegmentsDatabaseManager.Segments.STRAVA_SEGMENT_ID + "=?", new String[]{segmentId + ""},
                 null, null,
                 SegmentsDatabaseManager.Segments.DISTANCE + " ASC", START_AND_FINISH_LINE_POINTS);
         addOrthogonalLine(cursor);
 
         cursor = db.query(SegmentsDatabaseManager.Segments.TABLE_SEGMENT_STREAMS, null,
-                SegmentsDatabaseManager.Segments.SEGMENT_ID + "=?", new String[]{segmentId + ""},
+                SegmentsDatabaseManager.Segments.STRAVA_SEGMENT_ID + "=?", new String[]{segmentId + ""},
                 null, null,
                 SegmentsDatabaseManager.Segments.C_ID + " DESC", START_AND_FINISH_LINE_POINTS);   // using DISTANCE does not work :-(
         addOrthogonalLine(cursor);

@@ -23,33 +23,23 @@ import android.content.pm.ActivityInfo;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
-import com.google.android.material.navigation.NavigationView;
 
-import androidx.activity.OnBackPressedCallback;
+import com.atrainingtracker.trainingtracker.ui.segments.SimpleSegmentOnMapFragment;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.graphics.Insets;
-import androidx.core.view.OnApplyWindowInsetsListener;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
-import androidx.core.view.GravityCompat;
-import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.appcompat.app.ActionBar;
-import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import android.util.Log;
 import android.view.MenuItem;
-import android.view.View;
-import android.view.ViewGroup;
 import android.view.WindowManager;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager;
-import com.atrainingtracker.trainingtracker.segments.SimpleSegmentOnMapFragment;
 
 
 public class SegmentDetailsActivity extends AppCompatActivity {
@@ -69,14 +59,14 @@ public class SegmentDetailsActivity extends AppCompatActivity {
         if (DEBUG) Log.d(TAG, "onCreate");
 
         Bundle bundle = this.getIntent().getExtras();
-        mSegmentId = bundle.getLong(SegmentsDatabaseManager.Segments.SEGMENT_ID);
+        mSegmentId = bundle.getLong(SegmentsDatabaseManager.Segments.STRAVA_SEGMENT_ID);
         if (DEBUG) Log.d(TAG, "got segment id: " + mSegmentId);
 
         // set the title
         SQLiteDatabase db = SegmentsDatabaseManager.getInstance(this).getDatabase();
         Cursor cursor = db.query(SegmentsDatabaseManager.Segments.TABLE_STARRED_SEGMENTS,
                 new String[]{SegmentsDatabaseManager.Segments.SEGMENT_NAME},
-                SegmentsDatabaseManager.Segments.SEGMENT_ID + "=?", new String[]{mSegmentId + ""},
+                SegmentsDatabaseManager.Segments.STRAVA_SEGMENT_ID + "=?", new String[]{mSegmentId + ""},
                 null, null, null);
         if (cursor.moveToFirst()) {
             String segmentName = cursor.getString(0);

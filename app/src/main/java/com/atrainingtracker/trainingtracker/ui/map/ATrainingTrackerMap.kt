@@ -22,7 +22,6 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.util.Log
 import android.view.ViewGroup
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
@@ -38,7 +37,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
@@ -56,9 +54,8 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.activities.SegmentDetailsActivity
 import com.atrainingtracker.trainingtracker.segments.SegmentHelper
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager
-import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.StravaOrange
-import com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingMapViewModel
+import com.atrainingtracker.trainingtracker.ui.tracking.tracking.MapViewModel
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.Marker
@@ -72,7 +69,7 @@ import kotlinx.coroutines.flow.StateFlow
 @Composable
 fun ATrainingTrackerMap(
     mapState: MapState,
-    mapViewModel: TrackingMapViewModel,
+    mapViewModel: MapViewModel,
     currentLocationFlow: StateFlow<LatLng?>,
     modifier: Modifier = Modifier
 ) {
@@ -105,13 +102,15 @@ fun ATrainingTrackerMap(
     }
 
     // Only trigger this if we are NOT in "Follow Me" mode (e.g., Aftermath screen)
-    LaunchedEffect(mapState.tracks, mapState.markers) {
-        if (!mapState.isFollowMeEnabled && (mapState.tracks.isNotEmpty() || mapState.markers.isNotEmpty())) {
+    LaunchedEffect(mapState.tracks, mapState.markers, mapState.segments) {
+        if (!mapState.isFollowMeEnabled &&
+            (mapState.tracks.isNotEmpty() || mapState.markers.isNotEmpty() || mapState.segments.isNotEmpty())) {
+
             mapViewModel.sharedMapView.getMapAsync { googleMap ->
                 val builder = LatLngBounds.Builder()
                 var hasPoints = false
 
-                // Include all points from all tracks
+                // 1. Include all points from all tracks
                 mapState.tracks.forEach { track ->
                     track.path.forEach {
                         builder.include(it)
@@ -119,7 +118,15 @@ fun ATrainingTrackerMap(
                     }
                 }
 
-                // Include all marker positions
+                // 2. Include all points from all segments (this fits the start/finish lines too)
+                mapState.segments.forEach { segment ->
+                    segment.path.forEach {
+                        builder.include(it)
+                        hasPoints = true
+                    }
+                }
+
+                // 3. Include all sensor marker positions
                 mapState.markers.forEach { marker ->
                     builder.include(marker.position)
                     hasPoints = true
@@ -343,7 +350,7 @@ private fun drawSegments(
         val segmentId = polyline.tag as? Long
         if (segmentId != null) {
             val intent = Intent(context, SegmentDetailsActivity::class.java)
-            intent.putExtra(SegmentsDatabaseManager.Segments.SEGMENT_ID, segmentId)
+            intent.putExtra(SegmentsDatabaseManager.Segments.STRAVA_SEGMENT_ID, segmentId)
             context.startActivity(intent)
         }
     }
@@ -353,8 +360,8 @@ private fun drawSegments(
         val polyline = googleMap.addPolyline(
             PolylineOptions()
                 .addAll(segment.path)
-                .color(StravaOrange.copy(alpha = 0.7f).toArgb())
-                .width(12f)
+                .color(StravaOrange.toArgb())
+                .width(8f)
                 .jointType(JointType.ROUND)
                 .clickable(true)
         )
@@ -475,7 +482,7 @@ private fun createTextMarkerBitmap(context: Context, text: String, emoji: String
 }
 
 private fun calculateOrthogonalLine(point: LatLng, nextPoint: LatLng): List<LatLng> {
-    val halfLengthMeters = 7.5 // Total 15m line
+    val halfLengthMeters = 10 // Total 20m line
 
     val latDegreeInMeters = SegmentHelper.LatitudeDegreeInMeters(point)
     val lonDegreeInMeters = SegmentHelper.LongitudeDegreeInMeters(point)

@@ -39,7 +39,7 @@ import com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSens
 class TrackingFragment : Fragment() {
 
     private lateinit var viewModel: TrackingViewModel
-    private val mapViewModel: TrackingMapViewModel by activityViewModels {
+    private val mapViewModel: MapViewModel by activityViewModels {
         TrackingMapViewModelFactory(requireActivity().application)
     }
 

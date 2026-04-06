@@ -30,7 +30,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
-import com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingMapViewModel
+import com.atrainingtracker.trainingtracker.ui.tracking.tracking.MapViewModel
 
 /**
  * Fragment that displays the map with current track and segments.
@@ -50,7 +50,7 @@ class MapFragmentWithTrack : Fragment() {
     }
 
     private val viewModel: MapFragmentWithTrackViewModel by viewModels()
-    private val mapViewModel: TrackingMapViewModel by viewModels()
+    private val mapViewModel: MapViewModel by viewModels()
 
 
     override fun onCreateView(
