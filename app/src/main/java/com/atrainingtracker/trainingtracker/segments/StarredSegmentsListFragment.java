@@ -36,7 +36,6 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.AbsListView;
 import android.widget.ListView;
 import android.widget.Toast;
 
@@ -47,7 +46,6 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaSegmentsHelper;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaSegmentsIntentService;
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager.Segments;
-import com.google.android.gms.maps.GoogleMap;
 
 
 public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
@@ -164,7 +162,7 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
                 if (DEBUG) Log.i(TAG, "startSegmentDetailsActivity(" + segmentId + ")");
 
                 Bundle bundle = new Bundle();
-                bundle.putLong(Segments.SEGMENT_ID, segmentId);
+                bundle.putLong(Segments.STRAVA_SEGMENT_ID, segmentId);
                 Intent segmentDetailsIntent = new Intent(getContext(), SegmentDetailsActivity.class);
                 segmentDetailsIntent.putExtras(bundle);
                 startActivity(segmentDetailsIntent);
@@ -249,7 +247,7 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
         if (DEBUG) Log.i(TAG, "onListItemClick, position=" + position + ", id=" + id);
 
         mStarredSegmentsCursor.moveToPosition(position);
-        int segmentId = mStarredSegmentsCursor.getInt(mStarredSegmentsCursor.getColumnIndex(Segments.SEGMENT_ID));
+        int segmentId = mStarredSegmentsCursor.getInt(mStarredSegmentsCursor.getColumnIndex(Segments.STRAVA_SEGMENT_ID));
         if (DEBUG) Log.i(TAG, "segmentId=" + segmentId);
 
         startSegmentDetailsActivityInterface.startSegmentDetailsActivity(segmentId);

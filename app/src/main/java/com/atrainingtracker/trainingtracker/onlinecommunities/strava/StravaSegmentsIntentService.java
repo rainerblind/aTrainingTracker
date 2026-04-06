@@ -46,10 +46,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.HashSet;
-import java.util.Locale;
 import java.util.Set;
 
 /**
@@ -286,11 +283,11 @@ public class StravaSegmentsIntentService extends IntentService {
         HashSet<Long> newSegmentIdSet = new HashSet<>();
 
         Cursor cursor = db.query(Segments.TABLE_STARRED_SEGMENTS,
-                new String[]{Segments.SEGMENT_ID},
+                new String[]{Segments.STRAVA_SEGMENT_ID},
                 Segments.ACTIVITY_TYPE + "=?", new String[]{mStravaSportName},
                 null, null, null);
         while (cursor.moveToNext()) {
-            segmentIdSet.add(cursor.getLong(cursor.getColumnIndex(Segments.SEGMENT_ID)));
+            segmentIdSet.add(cursor.getLong(cursor.getColumnIndex(Segments.STRAVA_SEGMENT_ID)));
         }
         cursor.close();
 
@@ -351,12 +348,12 @@ public class StravaSegmentsIntentService extends IntentService {
                         long segmentId = segmentJsonObject.getInt(ID);
                         newSegmentIdSet.add(segmentId);
 
-                        if (segmentIdSet.contains(segmentId) && false) {
+                        if (segmentIdSet.contains(segmentId)) {
                             // nothing to do?
                         } else {
 
                             contentValues.clear();
-                            contentValues.put(Segments.SEGMENT_ID, segmentId);
+                            contentValues.put(Segments.STRAVA_SEGMENT_ID, segmentId);
 
                             JSONArray latLng = segmentJsonObject.getJSONArray(START_LATLNG);
                             contentValues.put(Segments.START_LATITUDE, latLng.getDouble(0));
@@ -430,7 +427,7 @@ public class StravaSegmentsIntentService extends IntentService {
         // TODO: do something like 'flush' before we send the broadcast???
         Intent intent = new Intent(NEW_STARRED_SEGMENT_INTENT)
                 .putExtra(SPORT_TYPE_ID, mSportTypeId)
-                .putExtra(Segments.SEGMENT_ID, segmentId)
+                .putExtra(Segments.STRAVA_SEGMENT_ID, segmentId)
                 .setPackage(getPackageName());
         sendBroadcast(intent);
     }
@@ -476,8 +473,8 @@ public class StravaSegmentsIntentService extends IntentService {
 
         SQLiteDatabase db = SegmentsDatabaseManager.getInstance(this).getDatabase();
 
-        db.delete(Segments.TABLE_SEGMENT_STREAMS, Segments.SEGMENT_ID + "=?", new String[]{segmentId + ""});
-        db.delete(Segments.TABLE_STARRED_SEGMENTS, Segments.SEGMENT_ID + "=?", new String[]{segmentId + ""});
+        db.delete(Segments.TABLE_SEGMENT_STREAMS, Segments.STRAVA_SEGMENT_ID + "=?", new String[]{segmentId + ""});
+        db.delete(Segments.TABLE_STARRED_SEGMENTS, Segments.STRAVA_SEGMENT_ID + "=?", new String[]{segmentId + ""});
     }
 
 }
