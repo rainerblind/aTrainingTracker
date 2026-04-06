@@ -30,6 +30,10 @@ import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.aftermath.DeletionProgress
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.atrainingtracker.trainingtracker.ui.map.Roughness
+import com.atrainingtracker.trainingtracker.ui.map.TrackType
+import com.atrainingtracker.trainingtracker.ui.tracking.tracking.MapViewModel
+import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.launch
 
 
@@ -101,6 +105,15 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
             }
         }
     }
+
+    /**
+     * Fetches track points for a specific workout using the repository.
+     * Replaces the logic previously handled by TrackOnMapHelper.
+     */
+    suspend fun getWorkoutTrackPoints(workoutId: Long): List<LatLng> {
+        return repository.getWorkoutTrackPoints(workoutId, Roughness.MEDIUM, TrackType.BEST)
+    }
+
 
     fun onDeleteWorkoutClicked(id: Long) {
         // Post an event to the LiveData. The fragment will observe this

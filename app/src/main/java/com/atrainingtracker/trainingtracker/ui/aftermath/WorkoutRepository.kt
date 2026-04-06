@@ -42,6 +42,7 @@ import kotlinx.coroutines.withContext
 
 import com.atrainingtracker.trainingtracker.database.WorkoutDeletionHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
 import com.atrainingtracker.trainingtracker.exporter.ExportManager
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.helpers.CalcExtremaWorker
@@ -50,7 +51,10 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.Des
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderDataProvider
+import com.atrainingtracker.trainingtracker.ui.map.Roughness
+import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
+import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
@@ -98,6 +102,7 @@ class WorkoutRepository private constructor(private val application: Application
     // Helper instances, initialized lazily
     private val deletionHelper by lazy { WorkoutDeletionHelper(application) }
     private val summariesManager by lazy { WorkoutSummariesDatabaseManager.getInstance(application) }
+    private val samplesManager by lazy { WorkoutSamplesDatabaseManager.getInstance(application) }
     private val equipmentDbHelper by lazy { EquipmentDbHelper(application) }
     private val sportTypeDatabaseManager by lazy { SportTypeDatabaseManager.getInstance(application) }
     private val exportManager by lazy { ExportManager(application) }
@@ -158,6 +163,39 @@ class WorkoutRepository private constructor(private val application: Application
                 } // TODO: we might want to reload all workouts here.
             }
         }
+    }
+
+    suspend fun getWorkoutTrackPoints(
+        workoutId: Long,
+        roughness: Roughness,
+        trackType: TrackType
+    ): List<LatLng> = withContext(Dispatchers.IO) {
+
+        val points = mutableListOf<LatLng>()
+
+        // 1. Get the base file name (same as TrackOnMapHelper)
+        val baseFileName = summariesManager.getBaseFileName(workoutId)
+            ?: return@withContext emptyList()
+
+        // 2. Access the Samples database
+        val db = samplesManager.database
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+
+        val latName = trackType.latitudeColumn
+        val lonName = trackType.longitudeColumn
+
+        db.query(tableName, null, null, null, null, null, null).use { cursor ->
+            // 3. Replicate the Roughness stepSize logic
+            while (cursor.move(roughness.stepSize)) {
+                val latIdx = cursor.getColumnIndex(latName)
+                val lonIdx = cursor.getColumnIndex(lonName)
+
+                if (latIdx != -1 && lonIdx != -1 && !cursor.isNull(latIdx) && !cursor.isNull(lonIdx)) {
+                    points.add(LatLng(cursor.getDouble(latIdx), cursor.getDouble(lonIdx)))
+                }
+            }
+        }
+        points
     }
 
 

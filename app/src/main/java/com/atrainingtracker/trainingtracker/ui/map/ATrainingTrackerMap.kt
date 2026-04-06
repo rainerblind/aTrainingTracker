@@ -71,7 +71,8 @@ fun ATrainingTrackerMap(
     mapState: MapState,
     mapViewModel: MapViewModel,
     currentLocationFlow: StateFlow<LatLng?>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onMapClick: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val currentLocation by currentLocationFlow.collectAsStateWithLifecycle()
@@ -135,8 +136,7 @@ fun ATrainingTrackerMap(
                 if (hasPoints) {
                     try {
                         val bounds = builder.build()
-                        // 100px padding around the edges
-                        val padding = (100 * context.resources.displayMetrics.density).toInt()
+                        val padding = (25 * context.resources.displayMetrics.density).toInt()
                         googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, padding))
                     } catch (e: IllegalStateException) {
                         // Handle case where bounds couldn't be built
@@ -196,6 +196,9 @@ fun ATrainingTrackerMap(
             val zoomInt = currentZoomState.toInt()
 
             mapView.getMapAsync { googleMap ->
+                googleMap.setOnMapClickListener {
+                    onMapClick?.invoke()
+                }
 
                 val currentDataHash = mapState.segments.hashCode() +
                         mapState.markers.hashCode() +

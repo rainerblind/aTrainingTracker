@@ -20,13 +20,22 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 
 import android.app.Activity
 import android.view.View
+import androidx.activity.result.launch
 import androidx.appcompat.widget.PopupMenu
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.viewModelScope
 import androidx.recyclerview.widget.RecyclerView
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
+import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusViewHolder
 import com.atrainingtracker.trainingtracker.ui.components.map.MapComponent
@@ -38,7 +47,15 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.Extrema
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaValuesViewHolder
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderData
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderViewHolder
+import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
+import com.atrainingtracker.trainingtracker.ui.map.MapState
+import com.atrainingtracker.trainingtracker.ui.map.MapTrack
+import com.atrainingtracker.trainingtracker.ui.map.TrackType
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.atrainingtracker.trainingtracker.ui.tracking.tracking.MapViewModel
 import com.google.android.gms.maps.MapView
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 
 /**
  * The ViewHolder for a single workout summary row. It contains all the sub-component
@@ -46,7 +63,7 @@ import com.google.android.gms.maps.MapView
  */
 class SummaryViewHolder(
     row: View,
-    activity: Activity,
+    private val activity: Activity,
     private val fragmentManager: FragmentManager,
     private val lifecycleOwner: LifecycleOwner,
     isPlayServiceAvailable: Boolean,
@@ -60,7 +77,9 @@ class SummaryViewHolder(
     private val descriptionViewHolder: DescriptionViewHolder?
     private val extremaValuesViewHolder: ExtremaValuesViewHolder?
     private val exportStatusViewHolder: ExportStatusViewHolder?
-    private val mapComponent: MapComponent?
+
+    private val mapComposeView: ComposeView?
+    private val rowMapState = MutableStateFlow(MapState(isFollowMeEnabled = false))
 
     // The current data for this specific row, set during bind().
     private lateinit var workoutSummary: WorkoutData
@@ -74,7 +93,7 @@ class SummaryViewHolder(
         val descriptionView = row.findViewById<View>(R.id.workout_description_include)
         val extremaView = row.findViewById<View>(R.id.extrema_values_include)
         val exportStatusView = row.findViewById<View>(R.id.export_status_include)
-        val mapView = row.findViewById<MapView>(R.id.workout_summaries_mapView)
+        mapComposeView = row.findViewById(R.id.workout_summaries_map_compose)
 
         // --- Create Component ViewHolders ---
         headerViewHolder = headerView?.let { WorkoutHeaderViewHolder(it) }
@@ -87,13 +106,24 @@ class SummaryViewHolder(
         setupMenuButtonClickListeners(headerViewHolder?.menuButton)
 
         // --- Initialize Map Component ---
-        mapComponent = if (isPlayServiceAvailable && mapView != null) {
-            MapComponent(mapView, activity) { workoutId ->
-                TrainingApplication.startTrackOnMapAftermathActivity(activity, workoutId)
+        val mapViewModel = MapViewModel(application = activity.application)
+        if (isPlayServiceAvailable && mapComposeView != null) {
+            mapComposeView.setContent {
+                ATrainingTrackerTheme {
+                    val state by rowMapState.collectAsState()
+
+                    // 2. Use the new ATrainingTrackerMap
+                    ATrainingTrackerMap(
+                        mapState = state,
+                        mapViewModel = mapViewModel,
+                        currentLocationFlow = MutableStateFlow(null), // Static row
+                        modifier = Modifier.fillMaxSize(),
+                        onMapClick = { TrainingApplication.startTrackOnMapAftermathActivity(activity, workoutSummary.id) }
+                    )
+                }
             }
         } else {
-            mapView?.visibility = View.GONE
-            null
+            mapComposeView?.visibility = View.GONE
         }
 
         // --- Setup Listeners (Event Handling) ---
@@ -165,6 +195,8 @@ class SummaryViewHolder(
         }
     }
 
+    private var mapLoadJob: kotlinx.coroutines.Job? = null
+
     /**
      * Binds a pre-composed WorkoutSummary object to the views. This is called for each item.
      */
@@ -179,8 +211,28 @@ class SummaryViewHolder(
         extremaValuesViewHolder?.bind(summary.extremaData)
         exportStatusViewHolder?.bind(summary.fileBaseName)
 
-        // Bind the map component
-        mapComponent?.bind(summary.id, MapContentType.WORKOUT_TRACK)
+        // Load the map track points asynchronously
+        // Reset state and cancel previous load to prevent "ghost" tracks from recycled rows
+        mapLoadJob?.cancel()
+        rowMapState.value = MapState(isFollowMeEnabled = false)
+
+        mapLoadJob = lifecycleOwner.lifecycleScope.launch {
+            val points = viewModel.getWorkoutTrackPoints(summary.id)
+
+            if (points.isNotEmpty()) {
+                rowMapState.value = MapState(
+                    tracks = listOf(
+                        MapTrack(
+                            id = summary.id,
+                            path = points,
+                            type = TrackType.BEST,
+                            isVisible = true
+                        )
+                    ),
+                    isFollowMeEnabled = false
+                )
+            }
+        }
 
         if (!summary.headerData.finished) {
             contentContainer?.alpha = 0.5f
