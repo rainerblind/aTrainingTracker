@@ -23,7 +23,7 @@ import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.ui.map.MapState
-import com.atrainingtracker.trainingtracker.ui.tracking.tracking.MapViewModel
+import com.atrainingtracker.trainingtracker.ui.map.MapViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow

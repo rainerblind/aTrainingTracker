@@ -198,17 +198,5 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/workout_details_include" />
 
-
-        <!-- MapView is now positioned below the new extrema container -->
-        <com.google.android.gms.maps.MapView
-            android:id="@+id/mapView_include"
-            android:layout_width="0dp"
-            android:layout_height="180dp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/extrema_values_include"
-            map:liteMode="true"
-            map:mapType="none" />
-
     </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.core.widget.NestedScrollView>
