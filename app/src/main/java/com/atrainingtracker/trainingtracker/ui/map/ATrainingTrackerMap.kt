@@ -88,9 +88,9 @@ fun ATrainingTrackerMap(
     LaunchedEffect(primaryColor) {
         // This runs after the composition has started, ensuring Maps SDK is likely ready
         locationIcon = bitmapDescriptorFromVectorInternal(context, R.drawable.ic_navigation_arrow, 42, primaryColor)
-        directionIconSmall = bitmapDescriptorFromVectorInternal(context, R.drawable.ic_navigation_arrow, 10, Color.White)
-        directionIconMed = bitmapDescriptorFromVectorInternal(context, R.drawable.ic_navigation_arrow, 14, Color.White)
-        directionIconLarge = bitmapDescriptorFromVectorInternal(context, R.drawable.ic_navigation_arrow, 20, Color.White)
+        directionIconSmall = bitmapDescriptorFromVectorInternal(context, R.drawable.ic_navigation_arrow, 12, primaryColor)
+        directionIconMed = bitmapDescriptorFromVectorInternal(context, R.drawable.ic_navigation_arrow, 16, primaryColor)
+        directionIconLarge = bitmapDescriptorFromVectorInternal(context, R.drawable.ic_navigation_arrow, 22, primaryColor)
     }
 
     // Prevents Render Issues in Android Studio Preview
@@ -385,7 +385,7 @@ private fun drawSegments(
                     .rotation(calculateBearing(pair[0], pair[1]).toFloat())
                     .flat(true)
                     .anchor(0.5f, 0.5f)
-                    .alpha(0.4f))
+                    .alpha(0.7f))
             }
         }
 
