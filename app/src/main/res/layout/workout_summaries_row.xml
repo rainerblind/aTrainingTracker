@@ -82,24 +82,13 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/workout_details_include" />
 
-        <include
-            android:id="@+id/workout_description_include"
-            layout="@layout/workout_summary__description"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:visibility="gone"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/extrema_values_include"
-            tools:visibility="visible" />
-
         <androidx.compose.ui.platform.ComposeView
             android:id="@+id/workout_summaries_map_compose"
             android:layout_width="0dp"
             android:layout_height="180dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/workout_description_include"
+            app:layout_constraintTop_toBottomOf="@id/extrema_values_include"
             />
 
         <include
