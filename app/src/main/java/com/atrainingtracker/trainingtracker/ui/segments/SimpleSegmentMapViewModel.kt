@@ -42,16 +42,17 @@ class SimpleSegmentMapViewModel(application: Application) : MapViewModel(applica
     /**
      * Loads a single segment into the map state using the Repository.
      */
-    fun loadSegment(segmentId: Long) {
+    fun loadSegment(segmentId: Long, showStartAndFinishText: Boolean = false) {
         viewModelScope.launch(Dispatchers.IO) {
             // Get the segment from our new repository (uses in-memory cache if available)
             val segment = segmentsRepository.getSegmentById(segmentId)
-            Log.i("SimpleSegmentMapViewModel", "loadSegment: segment=$segment")
 
             withContext(Dispatchers.Main) {
                 _mapState.value = _mapState.value.copy(
-                    // If segment is found, put it in a list, otherwise empty list
-                    segments = segment?.let { listOf(it) } ?: emptyList(),
+                    // We copy the segment to apply the visibility flag for markers/text
+                    segments = segment?.let {
+                        listOf(it.copy(showStartAndFinishText = showStartAndFinishText))
+                    } ?: emptyList(),
                     isFollowMeEnabled = false
                 )
             }

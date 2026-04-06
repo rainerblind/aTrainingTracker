@@ -98,6 +98,7 @@ data class MapSegment(
     val name: String,
     val bSportType: BSportType,
     val path: List<LatLng>,
+    val showStartAndFinishText: Boolean = true
 )
 
 enum class Roughness(val stepSize: Int) {

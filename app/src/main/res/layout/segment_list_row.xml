@@ -37,16 +37,13 @@
         android:layout_height="wrap_content"
         android:background="?android:attr/selectableItemBackground">
 
-        <!-- Lite-mode MapView -->
-        <com.google.android.gms.maps.MapView
-            android:id="@+id/mapViewSegment"
+        <androidx.compose.ui.platform.ComposeView
+            android:id="@+id/map_compose_segment"
             android:layout_width="120dp"
             android:layout_height="0dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            map:liteMode="true"
-            map:mapType="none"/>
+            app:layout_constraintTop_toTopOf="parent"/>
 
         <!-- Climb Category Chip (Overlay) -->
         <TextView
@@ -63,8 +60,8 @@
             android:textColor="@android:color/white"
             android:textSize="12sp"
             android:textStyle="bold"
-            app:layout_constraintStart_toStartOf="@id/mapViewSegment"
-            app:layout_constraintTop_toTopOf="@id/mapViewSegment"
+            app:layout_constraintStart_toStartOf="@id/map_compose_segment"
+            app:layout_constraintTop_toTopOf="@id/map_compose_segment"
             tools:text="Cat 1" />
 
         <!-- Segment Name -->
@@ -79,7 +76,7 @@
             android:textAppearance="@style/TextAppearance.AppCompat.Subhead"
             android:textStyle="bold"
             app:layout_constraintEnd_toStartOf="@+id/layout_pr"
-            app:layout_constraintStart_toEndOf="@id/mapViewSegment"
+            app:layout_constraintStart_toEndOf="@id/map_compose_segment"
             app:layout_constraintTop_toTopOf="parent"
             tools:text="Epic Mountain Climb"/>
 

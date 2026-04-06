@@ -102,7 +102,7 @@ public class SegmentsDatabaseManager {
             List<LatLng> path = getSegmentPath(id);
 
             // 6. Create the MapSegment object
-            segments.add(new MapSegment(id, name, sportType, path));
+            segments.add(new MapSegment(id, name, sportType, path, true));
         }
         cursor.close();
 

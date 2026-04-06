@@ -24,6 +24,7 @@ import android.database.Cursor;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.compose.ui.platform.ComposeView;
 import androidx.cursoradapter.widget.CursorAdapter;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -38,14 +39,15 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaSegmentsHelper;
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager.Segments;
-import com.atrainingtracker.trainingtracker.ui.components.map.MapComponent;
-import com.atrainingtracker.trainingtracker.ui.components.map.MapContentType;
+import com.atrainingtracker.trainingtracker.ui.segments.SimpleSegmentMapViewModel;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.maps.MapView;
 
 import java.text.SimpleDateFormat;
 import java.util.Locale;
+
+import kotlinx.coroutines.flow.MutableStateFlow;
 
 /**
  * Created by rainer on 10.08.16.
@@ -82,76 +84,82 @@ public class StarredSegmentsCursorAdapter extends CursorAdapter {
     @NonNull
     @Override
     public View newView(Context context, Cursor cursor, ViewGroup parent) {
-        if (DEBUG) Log.i(TAG, "newView");
+        View row = LayoutInflater.from(context).inflate(R.layout.segment_list_row, parent, false);
 
-        View row = LayoutInflater.from(context).inflate(R.layout.segment_list_row, null);
-
-        ViewHolder viewHolder = new ViewHolder(row, mActivity);
+        // Use the new Kotlin ViewHolder
+        StarredSegmentViewHolder viewHolder = new StarredSegmentViewHolder(
+                row,
+                mActivity,
+                segmentId -> {
+                    if (mShowSegmentDetailsListener != null) {
+                        mShowSegmentDetailsListener.startSegmentDetailsActivity(segmentId);
+                    }
+                    return null; // Return for Kotlin Function1 compatibility in Java
+                }
+        );
         row.setTag(viewHolder);
         return row;
     }
 
-    @Override
+        @Override
     public void bindView(@NonNull View view, @NonNull Context context, @NonNull Cursor cursor) {
-        final ViewHolder viewHolder = (ViewHolder) view.getTag();
+        final StarredSegmentViewHolder viewHolder = (StarredSegmentViewHolder) view.getTag();
 
         final long segmentId = cursor.getLong(cursor.getColumnIndex(Segments.STRAVA_SEGMENT_ID));
-        viewHolder.segmentId = segmentId;
 
-        viewHolder.tvName.setText(cursor.getString(cursor.getColumnIndex(Segments.SEGMENT_NAME)));
+        viewHolder.getTvName().setText(cursor.getString(cursor.getColumnIndex(Segments.SEGMENT_NAME)));
 
         int prTimeInSeconds = cursor.getInt(cursor.getColumnIndex(Segments.PR_TIME));
         if (prTimeInSeconds > 0) {
-            viewHolder.layoutPr.setVisibility(View.VISIBLE);
-            viewHolder.tvPrTime.setText(timeFormatter.format(prTimeInSeconds)); // Use a formatting helper
+            viewHolder.getLayoutPr().setVisibility(View.VISIBLE);
+            viewHolder.getTvPrTime().setText(timeFormatter.format(prTimeInSeconds)); // Use a formatting helper
         } else {
-            viewHolder.layoutPr.setVisibility(View.GONE);
+            viewHolder.getLayoutPr().setVisibility(View.GONE);
         }
 
         // Set the city text
         String city = cursor.getString(cursor.getColumnIndex(SegmentsDatabaseManager.Segments.CITY));
         if (city != null && !city.isEmpty()) {
-            viewHolder.tvCity.setText(city);
-            viewHolder.tvCity.setVisibility(View.VISIBLE);
+            viewHolder.getTvCity().setText(city);
+            viewHolder.getTvCity().setVisibility(View.VISIBLE);
         } else {
             // Hide the view if there is no city data to avoid an empty space
-           viewHolder.tvCity.setVisibility(View.GONE);
+           viewHolder.getTvCity().setVisibility(View.GONE);
         }
 
-        viewHolder.tvDistance.setText(distanceFormatter.format_with_units(cursor.getDouble(cursor.getColumnIndex(Segments.DISTANCE))));
+        viewHolder.getTvDistance().setText(distanceFormatter.format_with_units(cursor.getDouble(cursor.getColumnIndex(Segments.DISTANCE))));
 
         // Prepend the Unicode symbol for average (Ø) to the text.
         String avgGradeText = String.format(Locale.getDefault(), "\u00D8 %.1f%%", cursor.getDouble(cursor.getColumnIndex(Segments.AVERAGE_GRADE)));
-        viewHolder.tvAverageGrade.setText(avgGradeText);
+        viewHolder.getTvAverageGrade().setText(avgGradeText);
 
         float maxGrade = cursor.getFloat(cursor.getColumnIndexOrThrow(SegmentsDatabaseManager.Segments.MAXIMUM_GRADE));
-        viewHolder.tvMaxGrade.setText(String.format(Locale.US, "%.1f%% Max", maxGrade));
+        viewHolder.getTvMaxGrade().setText(String.format(Locale.US, "%.1f%% Max", maxGrade));
 
         int climbCategory = cursor.getInt(cursor.getColumnIndex(Segments.CLIMB_CATEGORY));
         if (climbCategory > 0) {
-            viewHolder.tvClimbCategory.setText(StravaHelper.translateClimbCategory(climbCategory));
-            viewHolder.tvClimbCategory.setVisibility(View.VISIBLE);
+            viewHolder.getTvClimbCategory().setText(StravaHelper.translateClimbCategory(climbCategory));
+            viewHolder.getTvClimbCategory().setVisibility(View.VISIBLE);
         } else {
             // Hide the chip if the category is 0 or less (not available)
-            viewHolder.tvClimbCategory.setVisibility(View.GONE);
+            viewHolder.getTvClimbCategory().setVisibility(View.GONE);
         }
 
         // Calculate and set Elevation Gain
         double elevHigh = cursor.getDouble(cursor.getColumnIndex(Segments.ELEVATION_HIGH));
         double elevLow = cursor.getDouble(cursor.getColumnIndex(Segments.ELEVATION_LOW));
         long elevationGain = Math.round(elevHigh - elevLow);
-        viewHolder.tvElevationGain.setText(String.format(Locale.getDefault(), "%d m", elevationGain));
-        viewHolder.tvElevationMin.setText(String.format(Locale.getDefault(), "%d m", Math.round(elevLow)));
-        viewHolder.tvElevationMax.setText(String.format(Locale.getDefault(), "%d m", Math.round(elevHigh)));
+        viewHolder.getTvElevationGain().setText(String.format(Locale.getDefault(), "%d m", elevationGain));
+        viewHolder.getTvElevationMin().setText(String.format(Locale.getDefault(), "%d m", Math.round(elevLow)));
+        viewHolder.getTvElevationMax().setText(String.format(Locale.getDefault(), "%d m", Math.round(elevHigh)));
 
         if (isPlayServiceAvailable) {
-            // Simply delegate to the universal MapComponent
-            viewHolder.mapComponent.bind(segmentId, MapContentType.SEGMENT_TRACK);
+            viewHolder.getViewModel().loadSegment(segmentId, false);
         } else {
-            viewHolder.mapComponent.setVisible(false);
+            viewHolder.getMapComposeView().setVisibility(View.GONE);
         }
 
-        viewHolder.rowView.setOnClickListener(v -> {
+        viewHolder.getRowView().setOnClickListener(v -> {
             mShowSegmentDetailsListener.startSegmentDetailsActivity(segmentId);
         });
     }
@@ -187,49 +195,5 @@ public class StarredSegmentsCursorAdapter extends CursorAdapter {
 
     public interface ShowSegmentDetailsInterface {
         void startSegmentDetailsActivity(long segmentId);
-    }
-
-    public class ViewHolder {
-
-        long segmentId;
-        final View rowView;
-        final TextView tvClimbCategory;
-        final TextView tvName;
-        final View layoutPr; // The LinearLayout for the PR
-        final TextView tvPrTime;
-        final TextView tvCity;
-        final TextView tvDistance;
-        final TextView tvAverageGrade;
-        final TextView tvMaxGrade;
-        final TextView tvElevationGain;
-        final TextView tvElevationMin;
-        final TextView tvElevationMax;
-        final MapComponent mapComponent;
-
-
-        public ViewHolder(View row, Activity activity) {
-            // Find all views
-            rowView = row;
-            tvClimbCategory = row.findViewById(R.id.textViewCategoryChip);
-            tvName = row.findViewById(R.id.textViewSegmentName);
-            layoutPr = row.findViewById(R.id.layout_pr);
-            tvPrTime = row.findViewById(R.id.textViewPrTime);
-            tvCity = row.findViewById(R.id.textViewCity);
-            tvDistance = row.findViewById(R.id.textViewDistance);
-            tvAverageGrade = row.findViewById(R.id.textViewAvgGrade);
-            tvElevationGain = row.findViewById(R.id.textViewElevationGain);
-            tvElevationMin = row.findViewById(R.id.textViewElevationMin);
-            tvElevationMax = row.findViewById(R.id.textViewElevationMax);
-            tvMaxGrade = row.findViewById(R.id.textViewMaxGrade);
-
-            MapView mapView = row.findViewById(R.id.mapViewSegment);
-
-            // Create the MapComponent, passing the map's click listener logic
-            mapComponent = new MapComponent(mapView, activity, segmentId -> {
-                mShowSegmentDetailsListener.startSegmentDetailsActivity(segmentId);
-                return null;
-            });
-        }
-
     }
 }

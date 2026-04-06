@@ -136,7 +136,7 @@ fun ATrainingTrackerMap(
                     try {
                         val bounds = builder.build()
                         val padding = (25 * context.resources.displayMetrics.density).toInt()
-                        googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, padding))
+                        googleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, padding))
                     } catch (e: IllegalStateException) {
                         // Handle case where bounds couldn't be built
                     }
@@ -401,7 +401,8 @@ private fun drawSegments(
             googleMap.addPolyline(PolylineOptions().addAll(calculateOrthogonalLine(endPt, endPrev)).color(StravaOrange.toArgb()).width(8f))
 
             // Labels (Only at high zoom)
-            if (currentZoom > 14f) {
+            if (currentZoom > 14f
+                && segment.showStartAndFinishText) {
                 val startBearing = calculateBearing(startPt, startNext).toFloat()
                 val endBearing = calculateBearing(endPrev, endPt).toFloat()
 
