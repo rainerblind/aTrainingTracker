@@ -31,7 +31,7 @@ import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapBas
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.Polyline;
 
-
+@Deprecated
 public class SimpleSegmentOnMapFragment
         extends TrackOnMapBaseFragment {
     public static final String TAG = SimpleSegmentOnMapFragment.class.getName();
