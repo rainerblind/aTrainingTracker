@@ -9,11 +9,19 @@ import com.google.android.gms.maps.GoogleMapOptions
 import com.google.android.gms.maps.MapView
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.BitmapDescriptor
+import com.google.android.gms.maps.model.Marker
+import com.google.android.gms.maps.model.Polyline
 
 class TrackingMapViewModel(application: Application) : AndroidViewModel(application) {
 
-    var userMarker: com.google.android.gms.maps.model.Marker? = null
-    var trackPolyline: com.google.android.gms.maps.model.Polyline? = null
+    var userMarker: Marker? = null
+    var trackPolyline: Polyline? = null
+
+    // Track markers manually to ensure they are removed
+    val activeSegmentMarkers = mutableListOf<Marker>()
+
+    // If you also want to manage polylines manually
+    val activeSegmentPolylines = mutableListOf<Polyline>()
 
     // has for the 'static' segments and markers.
     var staticDataHash: Int =0

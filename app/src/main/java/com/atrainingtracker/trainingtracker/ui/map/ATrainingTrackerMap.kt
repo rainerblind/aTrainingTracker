@@ -42,7 +42,9 @@ import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.theme.StravaOrange
 import com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingMapViewModel
 import com.google.android.gms.maps.GoogleMap
+import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
+import com.google.android.gms.maps.model.Polyline
 import com.google.android.gms.maps.model.PolylineOptions
 import kotlinx.coroutines.flow.StateFlow
 
@@ -156,7 +158,16 @@ fun ATrainingTrackerMap(
                         zoomInt
 
                 if (mapViewModel.staticDataHash != currentDataHash) {
+                    // MANUALLY REMOVE EVERYTHING
+                    mapViewModel.activeSegmentMarkers.forEach { it.remove() }
+                    mapViewModel.activeSegmentMarkers.clear()
+
+                    mapViewModel.activeSegmentPolylines.forEach { it.remove() }
+                    mapViewModel.activeSegmentPolylines.clear()
+
+                    // still call googleMap.clear()
                     googleMap.clear()                        // TODO: Unfortunately, this clear does not always remove all markers...
+
                     mapViewModel.userMarker = null
                     mapViewModel.trackPolyline = null
 
@@ -164,6 +175,8 @@ fun ATrainingTrackerMap(
                         googleMap,
                         mapState.segments,
                         context,
+                        mapViewModel.activeSegmentMarkers,   // Pass list to store new markers
+                        mapViewModel.activeSegmentPolylines,
                         directionIconSmall,
                         directionIconMed,
                         directionIconLarge
@@ -223,6 +236,8 @@ private fun drawSegments(
     googleMap: GoogleMap,
     segments: List<MapSegment>,
     context: Context,
+    markerList: MutableList<Marker>,
+    polylineList: MutableList<Polyline>,
     directionSmall: BitmapDescriptor?, directionMed: BitmapDescriptor?, directionLarge: BitmapDescriptor?
 ) {
     googleMap.uiSettings.isZoomControlsEnabled = false
@@ -249,6 +264,7 @@ private fun drawSegments(
                 .clickable(true)
         )
         polyline.tag = segment.id // Store ID for the click listener
+        polylineList.add(polyline)
 
         // Select direction icon based on zoom level
         if (currentZoom > 14f) {
@@ -293,23 +309,25 @@ private fun drawSegments(
                 // START: Positioned "Below" (Behind) the line
                 // Rotation (startBearing - 90) aligns the width of the text with the orthogonal line.
                 // An anchor V of -0.2f pushes the bitmap "down" the path direction.
-                googleMap.addMarker(MarkerOptions()
+                val startMarker = googleMap.addMarker(MarkerOptions()
                     .position(startPt)
                     .icon(createTextMarkerBitmap(context, segment.name, "🚩", textSize))
                     // .rotation(startBearing)
                     .anchor(0.5f, -0.2f)
                     .flat(false)
                 )
+                startMarker?.let { markerList.add(it) }
 
                 // FINISH: Positioned "Above" (Ahead) the line
                 // An anchor V of 1.2f pushes the bitmap "up" further past the finish point.
-                googleMap.addMarker(MarkerOptions()
+                val finishMarker = googleMap.addMarker(MarkerOptions()
                     .position(endPt)
                     .icon(createTextMarkerBitmap(context, segment.name, "🏁", textSize))
                     // .rotation(endBearing)
                     .anchor(0.5f, 1.2f)
                     .flat(false)
                 )
+                finishMarker?.let { markerList.add(it) }
             }
         }
     }
