@@ -36,12 +36,13 @@ import com.google.android.gms.maps.model.JointType
 import com.google.android.gms.maps.model.LatLng
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.activities.SegmentDetailsActivity
-import com.atrainingtracker.trainingtracker.segments.MapSegment
 import com.atrainingtracker.trainingtracker.segments.SegmentHelper
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.StravaOrange
 import com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingMapViewModel
 import com.google.android.gms.maps.GoogleMap
+import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.Polyline
@@ -49,23 +50,6 @@ import com.google.android.gms.maps.model.PolylineOptions
 import kotlinx.coroutines.flow.StateFlow
 
 
-data class LocationMarker(
-    val position: LatLng,
-    @DrawableRes val iconResId: Int,
-    val title: String? = null,
-    val rotation: Float = 0f,
-    val flat: Boolean = false,
-    val anchor: Offset = Offset(0.5f, 0.5f)
-)
-
-data class MapState(
-    val bearing: Float = 0f,
-    val speed: Float = 0f,
-    val isFollowMeEnabled: Boolean = true,
-    val currentTrack: List<LatLng> = emptyList(),
-    val segments: List<MapSegment> = emptyList(),
-    val markers: List<LocationMarker> = emptyList()
-)
 
 @Composable
 fun ATrainingTrackerMap(
@@ -100,6 +84,41 @@ fun ATrainingTrackerMap(
             Text("Map Singleton (Renders on Device)")
         }
         return
+    }
+
+    // Only trigger this if we are NOT in "Follow Me" mode (e.g., Aftermath screen)
+    LaunchedEffect(mapState.tracks, mapState.markers) {
+        if (!mapState.isFollowMeEnabled && (mapState.tracks.isNotEmpty() || mapState.markers.isNotEmpty())) {
+            mapViewModel.sharedMapView.getMapAsync { googleMap ->
+                val builder = LatLngBounds.Builder()
+                var hasPoints = false
+
+                // Include all points from all tracks
+                mapState.tracks.forEach { track ->
+                    track.path.forEach {
+                        builder.include(it)
+                        hasPoints = true
+                    }
+                }
+
+                // Include all marker positions
+                mapState.markers.forEach { marker ->
+                    builder.include(marker.position)
+                    hasPoints = true
+                }
+
+                if (hasPoints) {
+                    try {
+                        val bounds = builder.build()
+                        // 100px padding around the edges
+                        val padding = (100 * context.resources.displayMetrics.density).toInt()
+                        googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, padding))
+                    } catch (e: IllegalStateException) {
+                        // Handle case where bounds couldn't be built
+                    }
+                }
+            }
+        }
     }
 
     LaunchedEffect(currentLocation, mapState.bearing, mapState.speed) {
@@ -183,14 +202,36 @@ fun ATrainingTrackerMap(
                     )
 
                     mapState.markers.forEach { markerData ->
+                        // Convert Vector to Bitmap if needed
+                        val icon = createSensorMarker(
+                            context = context,
+                            iconResId = markerData.iconResId,
+                            pinColor = primaryColor, // The teardrop is your primary color
+                            iconColor = Color.White   // The sensor icon is white
+                        )
+
                         googleMap.addMarker(MarkerOptions()
                             .position(markerData.position)
-                            .icon(BitmapDescriptorFactory.fromResource(markerData.iconResId))
+                            .icon(icon) // Use the converted Bitmap
+                            .title(markerData.title)
                             .rotation(markerData.rotation)
                             .flat(markerData.flat)
-                            .anchor(markerData.anchor.x, markerData.anchor.y))
+                            //.anchor(markerData.anchor.x, markerData.anchor.y)
+                        )
                     }
+
                     mapViewModel.staticDataHash = currentDataHash
+                }
+
+                mapState.tracks.forEach { track ->
+                    if (track.isVisible && track.path.isNotEmpty()) {
+                        googleMap.addPolyline(PolylineOptions()
+                            .addAll(track.path)
+                            .color(track.color.toArgb())
+                            .zIndex(track.zIndex)
+                            .width(5f)
+                        )
+                    }
                 }
 
                 // --- LAYER 2: SEMI-DYNAMIC (The Track) ---
@@ -230,6 +271,42 @@ fun ATrainingTrackerMap(
             }
         }
     )
+}
+
+fun createSensorMarker(
+    context: Context,
+    @DrawableRes iconResId: Int,
+    pinColor: Color,
+    iconColor: Color = Color.White
+): BitmapDescriptor? {
+    val density = context.resources.displayMetrics.density
+    val size = (36 * density).toInt() // Total size of the marker
+    val iconSize = (18 * density).toInt() // Size of the sensor icon inside
+
+    // 1. Create the Bitmap
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+
+    // 2. Draw the "Pin" Background (The teardrop shape)
+    val pinDrawable = ContextCompat.getDrawable(context, R.drawable.ic_map_pin_base) // You need a teardrop XML
+    pinDrawable?.let {
+        it.setTint(pinColor.toArgb())
+        it.setBounds(0, 0, size, size)
+        it.draw(canvas)
+    }
+
+    // 3. Draw the Sensor Icon on top
+    val sensorDrawable = ContextCompat.getDrawable(context, iconResId)
+    sensorDrawable?.let {
+        it.setTint(iconColor.toArgb())
+        // Center the icon in the upper part of the pin
+        val left = (size - iconSize) / 2
+        val top = (size - iconSize) / 3
+        it.setBounds(left, top, left + iconSize, top + iconSize)
+        it.draw(canvas)
+    }
+
+    return BitmapDescriptorFactory.fromBitmap(bitmap)
 }
 
 private fun drawSegments(

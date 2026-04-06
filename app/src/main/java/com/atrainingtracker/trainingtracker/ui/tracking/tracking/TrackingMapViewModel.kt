@@ -5,14 +5,27 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import com.atrainingtracker.trainingtracker.ui.map.MapState
 import com.google.android.gms.maps.GoogleMapOptions
 import com.google.android.gms.maps.MapView
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.Polyline
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
-class TrackingMapViewModel(application: Application) : AndroidViewModel(application) {
+open class TrackingMapViewModel(application: Application) : AndroidViewModel(application) {
+
+    // The reactive state of the map
+    private val _mapState = MutableStateFlow(MapState())
+    val mapState: StateFlow<MapState> = _mapState.asStateFlow()
+
+    // Function to update state (used by Activity or Fragment)
+    fun updateMapState(newState: MapState) {
+        _mapState.value = newState
+    }
 
     var userMarker: Marker? = null
     var trackPolyline: Polyline? = null

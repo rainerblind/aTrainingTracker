@@ -28,10 +28,10 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
-import com.atrainingtracker.banalservice.ActivityType;
 import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
+import com.atrainingtracker.trainingtracker.ui.map.MapSegment;
 import com.google.android.gms.maps.model.LatLng;
 
 import java.io.File;

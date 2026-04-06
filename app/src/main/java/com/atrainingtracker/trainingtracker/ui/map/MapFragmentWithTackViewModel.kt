@@ -4,13 +4,9 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
-import com.atrainingtracker.trainingtracker.segments.MapSegment
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository
-import com.google.android.gms.maps.MapView
 import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.Marker
-import com.google.android.gms.maps.model.Polyline
 import kotlinx.coroutines.flow.*
 
 
