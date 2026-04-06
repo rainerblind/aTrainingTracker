@@ -348,7 +348,7 @@ public class StravaSegmentsIntentService extends IntentService {
                         long segmentId = segmentJsonObject.getInt(ID);
                         newSegmentIdSet.add(segmentId);
 
-                        if (segmentIdSet.contains(segmentId) && false) {
+                        if (segmentIdSet.contains(segmentId)) {
                             // nothing to do?
                         } else {
 
