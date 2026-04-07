@@ -339,6 +339,7 @@
 
         </PreferenceScreen>
 
+        <!-- hidden because it does not work properly with the available classic Pebble :(
         <PreferenceScreen
             android:icon="@drawable/icon_pebble"
             android:key="pebbleScreen"
@@ -364,6 +365,7 @@
                 <intent android:action="com.atrainingtracker.trainingtracker.smartwatch.pebble.ConfigPebbleViewsActivity" />
             </Preference>
         </PreferenceScreen>
+        -->
 
         <!-- NO_MY_LOCATIONS
         <PreferenceScreen

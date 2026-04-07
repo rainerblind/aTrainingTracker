@@ -90,7 +90,7 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
         mExport = this.getPreferenceScreen().findPreference(TrainingApplication.SP_EXPORT_FORMATS);
         mCloudUpload = this.getPreferenceScreen().findPreference(TrainingApplication.CLOUD_UPLOAD);
 
-        mPebble = this.getPreferenceScreen().findPreference(TrainingApplication.PEBBLE_SCREEN);
+        // mPebble = this.getPreferenceScreen().findPreference(TrainingApplication.PEBBLE_SCREEN);
 
         mDisplayOptions = this.getPreferenceScreen().findPreference(TrainingApplication.SP_DISPLAY_OPTIONS);
     }
@@ -118,7 +118,7 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
         mCloudUpload.setSummary(cloudUploadSummary());
 
         mDisplayOptions.setSummary(displayOptionsSummary());
-        mPebble.setSummary(pebbleSummary());
+        // mPebble.setSummary(pebbleSummary());
 
         mSharedPreferences.registerOnSharedPreferenceChangeListener(this);
     }
@@ -203,6 +203,7 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
             }
         }
 
+        /*
         if (TrainingApplication.SP_PEBBLE_WATCHAPP.equals(key)) {
             mPebble.setSummary(pebbleSummary());
             getActivity().onContentChanged();
@@ -212,6 +213,7 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
             mPebble.setSummary(pebbleSummary());
             getActivity().onContentChanged();
         }
+        */
 
     }
 
