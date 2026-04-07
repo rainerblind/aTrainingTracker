@@ -23,7 +23,9 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -33,6 +35,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
+import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -80,12 +83,25 @@ class SimpleSegmentOnMapFragment : Fragment() {
                     // Static view: we don't need live GPS updates here
                     val noLocation = remember { MutableStateFlow<LatLng?>(null) }
 
-                    ATrainingTrackerMap(
-                        mapState = mapState,
-                        mapViewModel = viewModel,
-                        currentLocationFlow = noLocation,
-                        modifier = Modifier.fillMaxSize()
-                    )
+                    // Use a Column to stack Map on top and Profile on bottom
+                    Column(modifier = Modifier.fillMaxSize()) {
+
+                        ATrainingTrackerMap(
+                            mapState = mapState,
+                            mapViewModel = viewModel,
+                            currentLocationFlow = noLocation,
+                            // This now works because it is inside a Column
+                            modifier = Modifier.weight(3f)
+                        )
+
+                        // The Elevation Profile at the bottom
+                        mapState.segments.firstOrNull()?.let { segment ->
+                            ElevationProfile(
+                                pathPoints = segment.path,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
                 }
             }
         }
