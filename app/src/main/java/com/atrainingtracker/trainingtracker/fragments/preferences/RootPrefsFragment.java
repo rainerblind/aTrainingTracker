@@ -46,7 +46,7 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
 
 
     @Nullable
-    private Preference mZonesRunHR, mZonesBikeHR, mZonesBikePower, mExport, mCloudUpload, mDisplayOptions;
+    private Preference mZonesRunHR, mZonesBikeHR, mZonesBikePower, mExport, mCloudUpload, mDisplayOptions, mPebble;
 
     private SharedPreferences mSharedPreferences;
     private SettingsDataStore mSettingsDataStore;
@@ -90,6 +90,8 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
         mExport = this.getPreferenceScreen().findPreference(TrainingApplication.SP_EXPORT_FORMATS);
         mCloudUpload = this.getPreferenceScreen().findPreference(TrainingApplication.CLOUD_UPLOAD);
 
+        mPebble = this.getPreferenceScreen().findPreference(TrainingApplication.PEBBLE_SCREEN);
+
         mDisplayOptions = this.getPreferenceScreen().findPreference(TrainingApplication.SP_DISPLAY_OPTIONS);
     }
 
@@ -116,7 +118,7 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
         mCloudUpload.setSummary(cloudUploadSummary());
 
         mDisplayOptions.setSummary(displayOptionsSummary());
-
+        mPebble.setSummary(pebbleSummary());
 
         mSharedPreferences.registerOnSharedPreferenceChangeListener(this);
     }
@@ -199,6 +201,16 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
             if (getActivity() != null) {
                 getActivity().runOnUiThread(() -> mDisplayOptions.setSummary(displaySummary));
             }
+        }
+
+        if (TrainingApplication.SP_PEBBLE_WATCHAPP.equals(key)) {
+            mPebble.setSummary(pebbleSummary());
+            getActivity().onContentChanged();
+        }
+
+        if (TrainingApplication.SP_PEBBLE_SUPPORT.equals(key)) {
+            mPebble.setSummary(pebbleSummary());
+            getActivity().onContentChanged();
         }
 
     }
@@ -292,5 +304,15 @@ public class RootPrefsFragment extends PreferenceFragmentCompat
             string = "";
         }
         return string;
+    }
+
+
+    @NonNull
+    protected String pebbleSummary() {
+        if (TrainingApplication.pebbleSupport()) {
+            return getString(TrainingApplication.getPebbleWatchapp().getUiId());
+        } else {
+            return getString(R.string.prefsDoNotUsePebble);
+        }
     }
 }

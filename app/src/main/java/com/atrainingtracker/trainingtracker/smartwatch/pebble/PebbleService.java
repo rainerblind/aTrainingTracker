@@ -66,7 +66,7 @@ import java.util.UUID;
 // TODO create super class for similar services???
 public class PebbleService extends Service {
     private static final String TAG = "PebbleService";
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = true;
 
 
     private static final int MAX_STRING_SIZE = 14;
@@ -331,7 +331,7 @@ public class PebbleService extends Service {
 
     protected ActivityType getActivityType() {
         if (banalService == null) {
-            return ActivityType.GENERIC;
+            return ActivityType.GENERIC_HR;
         } else {
             return banalService.getActivityType();
         }
@@ -448,7 +448,7 @@ public class PebbleService extends Service {
         String layoutName = PebbleDatabaseManager.getInstance(this).getName(mViewId);
         if (DEBUG) Log.d(TAG, "layoutName = " + layoutName);
         data.addString(LAYOUT_NAME, cutString(layoutName));
-        data.addString(ACTIVITY_TYPE, cutString(getString(getActivityType().getShortTitleId())));
+        data.addString(ACTIVITY_TYPE, cutString(getString(getActivityType().getTitleId())));
 
         SensorType sensorType = mSensorTypeList.get(1);
         data.addString(DESCRIPTION_1, cutString(getString(sensorType.getShortNameId()) + ":"));

@@ -446,12 +446,6 @@ public class PebbleDatabaseManager {
                     result.add(SensorType.LAP_NR);       // 5
                     break;
 
-                case BIKE_SPEED:
-                    result.add(SensorType.TIME_ACTIVE);  // 1
-                    result.add(SensorType.HR);           // 2
-                    result.add(SensorType.SPEED_mps);    // 3
-                    break;
-
                 case GENERIC_HR:
                     //noinspection DuplicateBranchesInSwitch
                     result.add(SensorType.TIME_ACTIVE); // 1
@@ -466,21 +460,6 @@ public class PebbleDatabaseManager {
                     result.add(SensorType.CADENCE);     // 4
                     result.add(SensorType.LAP_NR);      // 5
                     break;
-
-                // does not exist in reality
-//    	case RUN_SPEED:
-//            result.add(SensorType.TIME_ACTIVE); // 1
-//            result.add(SensorType.HR);          // 2
-//            result.add(SensorType.PACE_spm);    // 3
-//            break;
-
-                case GENERIC:
-                default:
-                    result.add(SensorType.TIME_ACTIVE); // 1
-                    result.add(SensorType.SPEED_mps);   // 2
-                    result.add(SensorType.DISTANCE_m);  // 3
-                    break;
-
             }
 
             return result;
