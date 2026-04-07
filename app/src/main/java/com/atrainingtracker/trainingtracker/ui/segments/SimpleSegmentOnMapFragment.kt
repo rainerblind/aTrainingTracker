@@ -91,7 +91,7 @@ class SimpleSegmentOnMapFragment : Fragment() {
                             mapViewModel = viewModel,
                             currentLocationFlow = noLocation,
                             // This now works because it is inside a Column
-                            modifier = Modifier.weight(3f)
+                            modifier = Modifier.weight(2f)
                         )
 
                         // The Elevation Profile at the bottom
