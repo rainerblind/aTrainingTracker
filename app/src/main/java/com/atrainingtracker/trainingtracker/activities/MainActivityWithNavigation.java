@@ -46,6 +46,7 @@ import android.os.IBinder;
 import com.atrainingtracker.banalservice.ui.sporttype.SportTypeListFragment;
 import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedContainerFragment;
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFragmentFactory;
+import com.atrainingtracker.trainingtracker.fragments.preferences.PebbleScreenFragment;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
 import com.atrainingtracker.trainingtracker.segments.StarredSegmentsTabbedContainer;
 import com.atrainingtracker.trainingtracker.tracker.TrackerService;
@@ -764,6 +765,7 @@ public class MainActivityWithNavigation
                     fragment = new RunkeeperUploadFragment();
             case TrainingApplication.PREFERENCE_SCREEN_TRAINING_PEAKS ->
                     fragment = new TrainingpeaksUploadFragment();
+            case "pebbleScreen" -> fragment = new PebbleScreenFragment();
             case "search_settings" -> fragment = new SearchFragment();
             case "fancyWorkoutNames" -> fragment = new FancyWorkoutNameListFragment();
             default -> Log.d(TAG, "WTF: unknown key");
