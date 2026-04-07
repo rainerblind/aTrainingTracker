@@ -32,6 +32,7 @@ import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment;
+import com.atrainingtracker.trainingtracker.ui.map.PathPoint;
 import com.google.android.gms.maps.model.LatLng;
 
 import java.io.File;
@@ -99,7 +100,7 @@ public class SegmentsDatabaseManager {
             BSportType sportType = sportTypeMgr.getBSportTypeFromStravaName(stravaName);
 
             // 5. Fetch the GPS path (stream) for this segment
-            List<LatLng> path = getSegmentPath(id);
+            List<PathPoint> path = getSegmentPath(id);
 
             // 6. Create the MapSegment object
             segments.add(new MapSegment(id, name, sportType, path, true));
@@ -109,19 +110,29 @@ public class SegmentsDatabaseManager {
         return segments;
     }
 
-    private List<LatLng> getSegmentPath(long segmentId) {
-        List<LatLng> points = new ArrayList<>();
+    private List<PathPoint> getSegmentPath(long segmentId) {
+        List<PathPoint> points = new ArrayList<>();
         SQLiteDatabase db = getDatabase();
         Cursor c = db.query(Segments.TABLE_SEGMENT_STREAMS,
-                new String[]{Segments.LATITUDE, Segments.LONGITUDE},
+                new String[]{Segments.DISTANCE, Segments.LATITUDE, Segments.LONGITUDE, Segments.ALTITUDE},
                 Segments.STRAVA_SEGMENT_ID + "=?", new String[]{String.valueOf(segmentId)},
                 null, null, Segments.C_ID + " ASC");
 
+        int dist_index = c.getColumnIndexOrThrow(Segments.DISTANCE);
+        int lat_index = c.getColumnIndexOrThrow(Segments.LATITUDE);
+        int lon_index = c.getColumnIndexOrThrow(Segments.LONGITUDE);
+        int alt_index = c.getColumnIndexOrThrow(Segments.ALTITUDE);
+
         while (c.moveToNext()) {
-            points.add(new LatLng(
-                    c.getDouble(c.getColumnIndexOrThrow(Segments.LATITUDE)),
-                    c.getDouble(c.getColumnIndexOrThrow(Segments.LONGITUDE))
-            ));
+            points.add(
+                    new PathPoint(
+                            c.getFloat(dist_index),
+                            new LatLng(
+                                    c.getDouble(lat_index),
+                                    c.getDouble(lon_index)),
+                            c.getFloat(alt_index)
+                    )
+            );
         }
         c.close();
         return points;
