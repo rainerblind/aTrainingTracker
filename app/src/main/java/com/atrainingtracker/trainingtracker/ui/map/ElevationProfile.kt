@@ -68,46 +68,59 @@ fun ElevationProfile(
 
         // --- 1. Draw Axes Labels ---
         drawIntoCanvas { canvas ->
-            // Altitude labels (Min/Max)
+            val textHeightBuffer = textPaint.textSize // pixels to avoid overlap vertically
+            val textWidthBuffer = 80f // pixels to avoid overlap horizontally
+
+            // Altitude labels (Min/Max) - Fixed boundaries
             canvas.nativeCanvas.drawText("${minAlt.toInt()} m", -85f, height, textPaint)
             canvas.nativeCanvas.drawText("${maxAlt.toInt()} m", -85f, 10f, textPaint)
 
-            // Distance labels (Start/End)
-            // canvas.nativeCanvas.drawText("0 km", 0f, height + 40f, textPaint)
+            // Distance label (End) - Fixed boundary
             canvas.nativeCanvas.drawText("${String.format("%.1f", totalDist / 1000f)} km", width - 60f, height + 40f, textPaint)
-            // TODO: convert to Imperial...
 
             // Distance labels (Ticks every 1km)
             val kmStep = 1000f
             var currentKm = 0f
             while (currentKm <= totalDist) {
                 val x = (currentKm / totalDist) * width
-                // Draw a small tick line
-                canvas.nativeCanvas.drawLine(x, height, x, height + 10f, textPaint)
-                // Label every 1km or 5km depending on total length
-                if (totalDist < 10000f || currentKm % 5000f == 0f) {
-                    val label = "${(currentKm / 1000).toInt()} km"
-                    canvas.nativeCanvas.drawText(label, x - 20f, height + 40f, textPaint)
+
+                // Only draw if NOT too close to the 0 start or the calculated end label
+                val isTooCloseToStart = x < 40f
+                val isTooCloseToEnd = (width - x) < textWidthBuffer
+
+                if (!isTooCloseToStart && !isTooCloseToEnd) {
+                    canvas.nativeCanvas.drawLine(x, height, x, height + 10f, textPaint)
+                    if (totalDist < 10000f || currentKm % 5000f == 0f) {
+                        val label = "${(currentKm / 1000).toInt()} km"
+                        canvas.nativeCanvas.drawText(label, x - 20f, height + 40f, textPaint)
+                    }
                 }
                 currentKm += kmStep
             }
 
             // Altitude labels (Ticks every 100m)
             val altStep = 100f
-            // Start at the first multiple of 100m above minAlt
             var currentAlt = (Math.ceil(minAlt.toDouble() / altStep) * altStep).toFloat()
             while (currentAlt <= maxAlt) {
                 val y = height - ((currentAlt - minAlt) / altRange) * height
-                // Draw a small tick line
-                canvas.nativeCanvas.drawLine(-10f, y, 0f, y, textPaint)
-                // Draw horizontal grid line (optional, very subtle)
-                canvas.nativeCanvas.drawLine(0f, y, width, y, Paint().apply {
-                    color = colorScheme.onSurfaceVariant.toArgb()
-                    alpha = 30
-                    strokeWidth = 1f
-                })
 
-                canvas.nativeCanvas.drawText("${currentAlt.toInt()} m", -85f, y + 10f, textPaint)
+                // Only draw if NOT too close to the min altitude (bottom) or max altitude (top)
+                val isTooCloseToBottom = (height - y) < textHeightBuffer
+                val isTooCloseToTop = y < textHeightBuffer
+
+                if (!isTooCloseToBottom && !isTooCloseToTop) {
+                    // Draw a small tick line
+                    canvas.nativeCanvas.drawLine(-10f, y, 0f, y, textPaint)
+
+                    // Draw horizontal grid line
+                    canvas.nativeCanvas.drawLine(0f, y, width, y, Paint().apply {
+                        color = colorScheme.onSurfaceVariant.toArgb()
+                        alpha = 30
+                        strokeWidth = 1f
+                    })
+
+                    canvas.nativeCanvas.drawText("${currentAlt.toInt()} m", -85f, y + 10f, textPaint)
+                }
                 currentAlt += altStep
             }
         }
