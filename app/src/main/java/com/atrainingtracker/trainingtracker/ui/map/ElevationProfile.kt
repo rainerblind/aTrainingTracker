@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
@@ -146,7 +147,8 @@ fun ElevationProfile(
                 grade < 5f -> Zone2
                 grade < 10f -> Zone3
                 grade < 15f -> Zone4
-                else -> Zone5
+                grade < 20f -> Zone5
+                else -> Color.Black
             }
 
             // Draw the fill segment
