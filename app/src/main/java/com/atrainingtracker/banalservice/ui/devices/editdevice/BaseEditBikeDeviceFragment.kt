@@ -58,7 +58,12 @@ abstract class BaseEditBikeDeviceFragment : BaseEditDeviceFragment() {
         super.setupEventListeners()
 
         binding.groupCalibration.etCalibrationFactor.doOnTextChanged { text, _, _, _ ->
-            viewModel.onWheelCircumferenceChanged(text.toString().toInt())
+            try {
+                viewModel.onWheelCircumferenceChanged(text.toString().toInt())
+            }
+            catch (NumberFormatException: Exception) {
+                viewModel.onWheelCircumferenceChanged(0)
+            }
         }
 
         // TODO: add listeners for specific views

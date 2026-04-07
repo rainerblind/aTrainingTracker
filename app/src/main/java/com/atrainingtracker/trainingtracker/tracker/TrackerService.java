@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.tracker;
 
+import android.app.Notification;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -26,9 +27,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.content.pm.ServiceInfo;
 import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
+import android.os.Build;
 import android.os.IBinder;
 import android.util.Log;
 
@@ -298,7 +301,13 @@ public class TrackerService extends Service {
                 .setPackage(this.getPackageName());
         this.sendBroadcast(trackingStartedIntent);
 
-        this.startForeground(TrainingApplication.TRACKING_NOTIFICATION_ID, mTrainingApplication.getSearchingAndTrackingNotification());
+        Notification notification = mTrainingApplication.getSearchingAndTrackingNotification();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) { // API 29+
+            // Use this overload on newer Android versions, mandatory for API 34+
+            startForeground(TrainingApplication.TRACKING_NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+        } else {
+            startForeground(TrainingApplication.TRACKING_NOTIFICATION_ID, notification);
+        }
 
 
         // We want this service to continue running until it is explicitly stopped, so return sticky.

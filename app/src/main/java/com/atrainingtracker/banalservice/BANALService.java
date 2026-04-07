@@ -188,16 +188,17 @@ public class BANALService
         return context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_USB_HOST);
     }
 
-    public static boolean isANTProperlyInstalled(Context context) {
-        return (!isANTPluginServiceInstalled(context)
-                || !isANTRadioServiceInstalled()
-                || !hasUsbHostFeature(context) & isANTUSBServiceInstalled());
+    public static boolean areAllANTServicesInstalled(Context context) {
+        return isANTPluginServiceInstalled(context)
+                && isANTRadioServiceInstalled()
+                // && hasUsbHostFeature(context)
+                && isANTUSBServiceInstalled();
     }
 
     public static boolean isProtocolSupported(Context context, Protocol protocol) {
         switch (protocol) {
             case ANT_PLUS:
-                return isANTPluginServiceInstalled(context); // TODO: more precise test possible?
+                return areAllANTServicesInstalled(context); // TODO: more precise test possible?
 
             case BLUETOOTH_LE:  // HW available and have the permission.
                 return context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)

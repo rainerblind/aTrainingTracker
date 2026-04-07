@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
+import com.atrainingtracker.trainingtracker.ui.map.MapViewModel
 import com.atrainingtracker.trainingtracker.ui.theme.Zone1
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.LightBackground
@@ -67,7 +68,7 @@ fun SensorGridScreen(
     screenMode: ScreenMode,
     gridActions: GridActions,
     currentLocationFlow: StateFlow<LatLng?>,
-    mapViewModel: TrackingMapViewModel
+    mapViewModel: MapViewModel
 ) {
     Column(Modifier.fillMaxSize()) {
         val fieldsByRow = state.fields.groupBy { it.rowNr }
@@ -169,7 +170,7 @@ val dummyLocationFlow = kotlinx.coroutines.flow.MutableStateFlow(
 @Composable
 fun SensorGridScreenConfigPreview() {
     val context = LocalContext.current
-    val previewMapViewModel = TrackingMapViewModel(context.applicationContext as Application)
+    val previewMapViewModel = MapViewModel(context.applicationContext as Application)
     ATrainingTrackerTheme {
         val previewFields = listOf(
             SensorFieldState(configHash = 1, sensorFieldId = 1, rowNr = 0, colNr = 0, viewSize = ViewSize.NORMAL, label = "Pace", value = "5:31", units = "/min", zoneColor = LightBackground, filterDescription = "GPS: 5s avg"),
@@ -197,7 +198,7 @@ fun SensorGridScreenConfigPreview() {
 @Composable
 fun SensorGridScreenTrackingPreview() {
     val context = LocalContext.current
-    val previewMapViewModel = TrackingMapViewModel(context.applicationContext as Application)
+    val previewMapViewModel = MapViewModel(context.applicationContext as Application)
     ATrainingTrackerTheme {
         val previewFields = listOf(
             SensorFieldState(configHash = 1, sensorFieldId = 1, rowNr = 0, colNr = 0, viewSize = ViewSize.LARGE, label = "Pace", value = "5:31", units = "/min", zoneColor = LightBackground, filterDescription = "GPS: 5s avg"),

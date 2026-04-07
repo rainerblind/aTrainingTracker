@@ -45,6 +45,17 @@
         android:name="android.hardware.location.gps"
         android:required="true" />
 
+    <queries>
+        <!-- ANT+ Plugins Service -->
+        <package android:name="com.dsi.ant.plugins.antplus" />
+        <!-- ANT Radio Service -->
+        <package android:name="com.dsi.ant.service.socket" />
+        <!-- ANT USB Service -->
+        <package android:name="com.dsi.ant.usbservice" />
+        <!-- Google Play Services -->
+        <package android:name="com.google.android.gms" />
+    </queries>
+
     <application
         android:name=".trainingtracker.TrainingApplication"
         android:icon="@drawable/logo"

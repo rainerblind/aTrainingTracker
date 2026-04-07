@@ -40,8 +40,6 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseMan
 import com.atrainingtracker.trainingtracker.dialogs.EditFancyWorkoutNameDialog
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutUpdatePayload
-import com.atrainingtracker.trainingtracker.ui.components.map.MapComponent
-import com.atrainingtracker.trainingtracker.ui.components.map.MapContentType
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsViewHolder
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaValuesViewHolder
 import com.atrainingtracker.trainingtracker.ui.util.EventObserver
@@ -58,7 +56,6 @@ class EditWorkoutActivity : AppCompatActivity() {
 
     private var showDetails = false
     private var showExtrema = false
-    private var showMap = false
 
     // UI View References
     private lateinit var editWorkoutName: TextInputEditText
@@ -79,7 +76,6 @@ class EditWorkoutActivity : AppCompatActivity() {
 
     private var detailsViewHolder: WorkoutDetailsViewHolder? = null
     private var extremaValuesViewHolder: ExtremaValuesViewHolder? = null
-    private var mapComponent: MapComponent? = null
 
     companion object {
         private val TAG = "EditWorkoutActivity"
@@ -87,8 +83,6 @@ class EditWorkoutActivity : AppCompatActivity() {
 
         const val EXTRA_SHOW_DETAILS = "com.atrainingtracker.trainingtracker.SHOW_DETAILS"
         const val EXTRA_SHOW_EXTREMA = "com.atrainingtracker.trainingtracker.SHOW_EXTREMA"
-        const val EXTRA_SHOW_MAP = "com.atrainingtracker.trainingtracker.SHOW_MAP"
-
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -102,7 +96,6 @@ class EditWorkoutActivity : AppCompatActivity() {
         workoutId = intent.getLongExtra(WorkoutSummaries.WORKOUT_ID, -1)
         showDetails = intent.getBooleanExtra(EXTRA_SHOW_DETAILS, false)
         showExtrema = intent.getBooleanExtra(EXTRA_SHOW_EXTREMA, false)
-        showMap = intent.getBooleanExtra(EXTRA_SHOW_MAP, false)
 
         // Ensure we have a valid workoutId before proceeding
         if (workoutId == -1L) {
@@ -171,21 +164,6 @@ class EditWorkoutActivity : AppCompatActivity() {
             extremaValuesViewHolder = extremaView?.let { ExtremaValuesViewHolder(it) }
         } else {
             extremaView.visibility = View.GONE
-        }
-
-
-        val mapView = findViewById<MapView>(R.id.mapView_include)
-        if (showMap) {
-            val isPlayAvailable = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(this) == ConnectionResult.SUCCESS
-            if (isPlayAvailable) {
-                mapComponent = MapComponent(mapView, this) { workoutId ->
-                    TrainingApplication.startTrackOnMapAftermathActivity(this, workoutId);
-                }
-            } else {
-                mapView.visibility = View.GONE
-            }
-        } else {
-            mapView.visibility = View.GONE
         }
 
         buttonSave = findViewById(R.id.buttonSave)
@@ -311,7 +289,6 @@ class EditWorkoutActivity : AppCompatActivity() {
 
         // details and the map.
         detailsViewHolder?.bind(wd.detailsData)
-        mapComponent?.bind(workoutId, MapContentType.WORKOUT_TRACK)
     }
 
     private fun setupSportSpinnerOnItemSelected() {

@@ -63,7 +63,6 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseMan
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapHelper;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaSegmentsHelper;
-import com.atrainingtracker.trainingtracker.segments.SegmentOnMapHelper;
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager;
 import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutActivity;
 import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapAftermathActivity;
@@ -188,7 +187,6 @@ public class TrainingApplication extends Application {
     private final IntentFilter mSearchingFinishedFilter = new IntentFilter(BANALService.SEARCHING_FINISHED_FOR_ALL_INTENT);
     private final IntentFilter mSearchingStartedFilter = new IntentFilter(BANALService.SEARCHING_STARTED_FOR_ONE_INTENT);
     public TrackOnMapHelper trackOnMapHelper;
-    public SegmentOnMapHelper segmentOnMapHelper;
     private final HashMap<Long, Boolean> mSegmentListUpdating = new HashMap<>();
     private long mWorkoutID = -1;
     protected final BroadcastReceiver mTrackingStartedReceiver = new BroadcastReceiver() {
@@ -723,7 +721,6 @@ public class TrainingApplication extends Application {
         cAppContext = getApplicationContext();
 
         trackOnMapHelper = new TrackOnMapHelper();
-        segmentOnMapHelper = new SegmentOnMapHelper();
 
         mNotificationSummary = getString(R.string.searching);
 
@@ -1019,7 +1016,8 @@ public class TrainingApplication extends Application {
         );
 
         // start EditWorkoutActivity
-        startEditWorkoutActivity(mWorkoutID, true); // here, the EditWorkoutActivity shall show the details, extrema values and the map.
+        // startEditWorkoutActivity(mWorkoutID, true); // here, the EditWorkoutActivity shall show the details, extrema values and the map.
+        startEditWorkoutActivity(mWorkoutID, false); // although, the user might want to see the statistics as early as possible, showing them here leads to an inconsistency.  Thus, we daactivate this feature.
         mNotificationManager.cancel(TRACKING_NOTIFICATION_ID);
     }
 

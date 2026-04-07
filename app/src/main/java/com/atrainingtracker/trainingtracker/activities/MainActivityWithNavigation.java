@@ -27,8 +27,6 @@ import androidx.appcompat.app.AlertDialog;
 
 import android.annotation.SuppressLint;
 import android.app.Dialog;
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothManager;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -52,6 +50,7 @@ import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelpe
 import com.atrainingtracker.trainingtracker.segments.StarredSegmentsTabbedContainer;
 import com.atrainingtracker.trainingtracker.tracker.TrackerService;
 import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentFragment;
+import com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrack;
 import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository;
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsFragment;
 import com.google.android.material.navigation.NavigationView;
@@ -97,8 +96,6 @@ import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManage
 import com.atrainingtracker.trainingtracker.dialogs.GPSDisabledDialog;
 import com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialog;
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedFragment;
-import com.atrainingtracker.trainingtracker.fragments.mapFragments.MyLocationsFragment;
-import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapTrackingFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.CloudUploadFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.FancyWorkoutNameListFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.RootPrefsFragment;
@@ -263,7 +260,7 @@ public class MainActivityWithNavigation
         getPermissions(true);
 
         // check ANT+ installation
-        if (TrainingApplication.checkANTInstallation() && BANALService.isANTProperlyInstalled(this)) {
+        if (TrainingApplication.checkANTInstallation() && !BANALService.areAllANTServicesInstalled(this)) {
             showInstallANTShitDialog();
         }
 
@@ -607,8 +604,8 @@ public class MainActivityWithNavigation
                 break;
 
             case R.id.drawer_map:
-                mFragment = TrackOnMapTrackingFragment.newInstance();
-                tag = TrackOnMapTrackingFragment.TAG;
+                mFragment = MapFragmentWithTrack.newInstance();
+                tag = MapFragmentWithTrack.TAG;
                 break;
 
             case R.id.drawer_segments:
@@ -740,7 +737,7 @@ public class MainActivityWithNavigation
         if (DEBUG) Log.i(TAG, "startSegmentDetailsActivity: segmentId=" + segmentId);
 
         Bundle bundle = new Bundle();
-        bundle.putLong(SegmentsDatabaseManager.Segments.SEGMENT_ID, segmentId);
+        bundle.putLong(SegmentsDatabaseManager.Segments.STRAVA_SEGMENT_ID, segmentId);
         Intent segmentDetailsIntent = new Intent(this, SegmentDetailsActivity.class);
         segmentDetailsIntent.putExtras(bundle);
         startActivity(segmentDetailsIntent);
