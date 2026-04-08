@@ -62,34 +62,14 @@ public class SegmentDetailsActivity extends AppCompatActivity {
         mSegmentId = bundle.getLong(SegmentsDatabaseManager.Segments.STRAVA_SEGMENT_ID);
         if (DEBUG) Log.d(TAG, "got segment id: " + mSegmentId);
 
-        // set the title
-        SQLiteDatabase db = SegmentsDatabaseManager.getInstance(this).getDatabase();
-        Cursor cursor = db.query(SegmentsDatabaseManager.Segments.TABLE_STARRED_SEGMENTS,
-                new String[]{SegmentsDatabaseManager.Segments.SEGMENT_NAME},
-                SegmentsDatabaseManager.Segments.STRAVA_SEGMENT_ID + "=?", new String[]{mSegmentId + ""},
-                null, null, null);
-        if (cursor.moveToFirst()) {
-            String segmentName = cursor.getString(0);
-            setTitle(segmentName);
-        }
-        cursor.close();
-
-        setContentView(R.layout.segment_details);
-
-        Toolbar toolbar = findViewById(R.id.apps_toolbar);
-        setSupportActionBar(toolbar);
-
-        final ActionBar supportAB = getSupportActionBar();
-        // supportAB.setHomeAsUpIndicator(R.drawable.abc_ic_ab_back_mtrl_am_alpha);
-        supportAB.setDisplayHomeAsUpEnabled(true);
-
-
+        // Remove setContentView(R.layout.segment_details);
+        // We use android.R.id.content which is the root view of every activity
         Fragment fragment = SimpleSegmentOnMapFragment.newInstance(mSegmentId);
         String tag = SimpleSegmentOnMapFragment.TAG;
 
-        FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
-        fragmentTransaction.replace(R.id.content, fragment, tag);
-        fragmentTransaction.commit();
+        getSupportFragmentManager().beginTransaction()
+                .replace(android.R.id.content, fragment, tag)
+                .commit();
     }
 
     @Override

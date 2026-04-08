@@ -130,7 +130,7 @@ public class StarredSegmentsCursorAdapter extends CursorAdapter {
         viewHolder.getTvDistance().setText(distanceFormatter.format_with_units(cursor.getDouble(cursor.getColumnIndex(Segments.DISTANCE))));
 
         // Prepend the Unicode symbol for average (Ø) to the text.
-        String avgGradeText = String.format(Locale.getDefault(), "\u00D8 %.1f%%", cursor.getDouble(cursor.getColumnIndex(Segments.AVERAGE_GRADE)));
+        String avgGradeText = String.format(Locale.getDefault(), "Ø %.1f%%", cursor.getDouble(cursor.getColumnIndex(Segments.AVERAGE_GRADE)));
         viewHolder.getTvAverageGrade().setText(avgGradeText);
 
         float maxGrade = cursor.getFloat(cursor.getColumnIndexOrThrow(SegmentsDatabaseManager.Segments.MAXIMUM_GRADE));

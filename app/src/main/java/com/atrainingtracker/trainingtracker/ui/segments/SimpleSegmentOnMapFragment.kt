@@ -77,14 +77,15 @@ class SimpleSegmentOnMapFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setContent {
                 ATrainingTrackerTheme {
-                    // 3. Observe the state from ViewModel
                     val mapState by viewModel.mapState.collectAsState()
-
-                    // Static view: we don't need live GPS updates here
+                    val summary by viewModel.segmentSummary.collectAsState()
                     val noLocation = remember { MutableStateFlow<LatLng?>(null) }
 
                     // Use a Column to stack Map on top and Profile on bottom
                     Column(modifier = Modifier.fillMaxSize()) {
+                        summary?.let {
+                            SegmentSummaryHeader(summary = it)
+                        }
 
                         ATrainingTrackerMap(
                             mapState = mapState,

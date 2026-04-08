@@ -30,7 +30,10 @@ import androidx.annotation.NonNull;
 
 import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
+import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter;
+import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
+import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment;
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint;
 import com.google.android.gms.maps.model.LatLng;
@@ -38,6 +41,7 @@ import com.google.android.gms.maps.model.LatLng;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class SegmentsDatabaseManager {
     private static final String TAG = SegmentsDatabaseManager.class.getName();
@@ -136,6 +140,62 @@ public class SegmentsDatabaseManager {
         }
         c.close();
         return points;
+    }
+
+    /**
+     * Fetches summary details for a specific segment and formats them into a SegmentSummary object.
+     */
+    public SegmentSummary getSegmentSummary(long segmentId) {
+        SQLiteDatabase db = getDatabase();
+        SegmentSummary summary = null;
+
+        Cursor cursor = db.query(
+                Segments.TABLE_STARRED_SEGMENTS,
+                null, // Fetch all columns defined in your projection
+                Segments.STRAVA_SEGMENT_ID + "=?",
+                new String[]{String.valueOf(segmentId)},
+                null, null, null
+        );
+
+        if (cursor.moveToFirst()) {
+            // 1. Get Activity Type/Sport
+            SportTypeDatabaseManager sportTypeMgr = SportTypeDatabaseManager.getInstance(mContext);
+            String activityType = cursor.getString(cursor.getColumnIndexOrThrow(Segments.ACTIVITY_TYPE));
+            BSportType sportType = sportTypeMgr.getBSportTypeFromStravaName(activityType);
+
+            // 2. Extract raw values
+            double distance = cursor.getDouble(cursor.getColumnIndexOrThrow(Segments.DISTANCE));
+            double avgGrade = cursor.getDouble(cursor.getColumnIndexOrThrow(Segments.AVERAGE_GRADE));
+            double maxGrade = cursor.getDouble(cursor.getColumnIndexOrThrow(Segments.MAXIMUM_GRADE));
+            double elevLow = cursor.getDouble(cursor.getColumnIndexOrThrow(Segments.ELEVATION_LOW));
+            double elevHigh = cursor.getDouble(cursor.getColumnIndexOrThrow(Segments.ELEVATION_HIGH));
+            int prTimeSeconds = cursor.getInt(cursor.getColumnIndexOrThrow(Segments.PR_TIME));
+            int climbCategory = cursor.getInt(cursor.getColumnIndexOrThrow(Segments.CLIMB_CATEGORY));
+            String city = cursor.getString(cursor.getColumnIndexOrThrow(Segments.CITY));
+            String name = cursor.getString(cursor.getColumnIndexOrThrow(Segments.SEGMENT_NAME));
+
+            // 3. Format strings
+            DistanceFormatter df = new DistanceFormatter();
+            TimeFormatter tf = new TimeFormatter();
+
+            summary = new SegmentSummary(
+                    segmentId,
+                    name,
+                    sportType,
+                    climbCategory > 0 ? StravaHelper.translateClimbCategory(climbCategory) : "",
+                    prTimeSeconds > 0 ? tf.format(prTimeSeconds) : "",
+                    (city != null && !city.isEmpty()) ? city : "",
+                    df.format_with_units(distance),
+                    String.format(Locale.getDefault(), "Ø %.1f%%", avgGrade),
+                    String.format(Locale.getDefault(), "%.1f%% Max", maxGrade),
+                    String.format(Locale.getDefault(), "%d m", Math.round(elevHigh - elevLow)),
+                    String.format(Locale.getDefault(), "%d m", Math.round(elevLow)),
+                    String.format(Locale.getDefault(), "%d m", Math.round(elevHigh))
+            );
+        }
+        cursor.close();
+
+        return summary;
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////

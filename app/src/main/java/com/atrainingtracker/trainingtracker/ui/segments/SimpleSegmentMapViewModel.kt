@@ -21,11 +21,13 @@ package com.atrainingtracker.trainingtracker.ui.segments
 import android.app.Application
 import android.util.Log
 import androidx.lifecycle.viewModelScope
+import com.atrainingtracker.trainingtracker.segments.SegmentSummary
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.ui.map.MapState
 import com.atrainingtracker.trainingtracker.ui.map.MapViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -39,6 +41,9 @@ class SimpleSegmentMapViewModel(application: Application) : MapViewModel(applica
     private val _mapState = MutableStateFlow(MapState(isFollowMeEnabled = false))
     val mapState = _mapState.asStateFlow()
 
+    private val _segmentSummary = MutableStateFlow<SegmentSummary?>(null)
+    val segmentSummary: StateFlow<SegmentSummary?> = _segmentSummary.asStateFlow()
+
     /**
      * Loads a single segment into the map state using the Repository.
      */
@@ -46,6 +51,8 @@ class SimpleSegmentMapViewModel(application: Application) : MapViewModel(applica
         viewModelScope.launch(Dispatchers.IO) {
             // Get the segment from our new repository (uses in-memory cache if available)
             val segment = segmentsRepository.getSegmentById(segmentId)
+
+            _segmentSummary.value = segmentsRepository.getSegmentSummary(segmentId)
 
             withContext(Dispatchers.Main) {
                 _mapState.value = _mapState.value.copy(
