@@ -45,8 +45,8 @@ android {
         minSdkVersion 26 // Android 8
         targetSdkVersion 35 // Android 15
         multiDexEnabled = true
-        versionName = "4.9.9"
-        versionCode = 233
+        versionName = "4.9.10"
+        versionCode = 234
     }
 
     signingConfigs {
@@ -109,6 +109,7 @@ dependencies {
     implementation 'org.apache.httpcomponents:httpcore:4.4.16'
     implementation 'org.apache.httpcomponents:httpmime:4.5.14'
 
+    implementation 'com.getpebble:pebblekit:4.0.1'
     implementation files('../ANT-Android-SDKs/ANT+_Android_SDK/API/antpluginlib_3-9-0.aar')
 
     implementation 'androidx.preference:preference:1.2.1'

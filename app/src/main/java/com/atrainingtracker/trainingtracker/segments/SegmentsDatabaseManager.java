@@ -30,13 +30,18 @@ import androidx.annotation.NonNull;
 
 import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
+import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter;
+import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
+import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment;
+import com.atrainingtracker.trainingtracker.ui.map.PathPoint;
 import com.google.android.gms.maps.model.LatLng;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class SegmentsDatabaseManager {
     private static final String TAG = SegmentsDatabaseManager.class.getName();
@@ -99,7 +104,7 @@ public class SegmentsDatabaseManager {
             BSportType sportType = sportTypeMgr.getBSportTypeFromStravaName(stravaName);
 
             // 5. Fetch the GPS path (stream) for this segment
-            List<LatLng> path = getSegmentPath(id);
+            List<PathPoint> path = getSegmentPath(id);
 
             // 6. Create the MapSegment object
             segments.add(new MapSegment(id, name, sportType, path, true));
@@ -109,22 +114,88 @@ public class SegmentsDatabaseManager {
         return segments;
     }
 
-    private List<LatLng> getSegmentPath(long segmentId) {
-        List<LatLng> points = new ArrayList<>();
+    private List<PathPoint> getSegmentPath(long segmentId) {
+        List<PathPoint> points = new ArrayList<>();
         SQLiteDatabase db = getDatabase();
         Cursor c = db.query(Segments.TABLE_SEGMENT_STREAMS,
-                new String[]{Segments.LATITUDE, Segments.LONGITUDE},
+                new String[]{Segments.DISTANCE, Segments.LATITUDE, Segments.LONGITUDE, Segments.ALTITUDE},
                 Segments.STRAVA_SEGMENT_ID + "=?", new String[]{String.valueOf(segmentId)},
                 null, null, Segments.C_ID + " ASC");
 
+        int dist_index = c.getColumnIndexOrThrow(Segments.DISTANCE);
+        int lat_index = c.getColumnIndexOrThrow(Segments.LATITUDE);
+        int lon_index = c.getColumnIndexOrThrow(Segments.LONGITUDE);
+        int alt_index = c.getColumnIndexOrThrow(Segments.ALTITUDE);
+
         while (c.moveToNext()) {
-            points.add(new LatLng(
-                    c.getDouble(c.getColumnIndexOrThrow(Segments.LATITUDE)),
-                    c.getDouble(c.getColumnIndexOrThrow(Segments.LONGITUDE))
-            ));
+            points.add(
+                    new PathPoint(
+                            c.getFloat(dist_index),
+                            new LatLng(
+                                    c.getDouble(lat_index),
+                                    c.getDouble(lon_index)),
+                            c.getFloat(alt_index)
+                    )
+            );
         }
         c.close();
         return points;
+    }
+
+    /**
+     * Fetches summary details for a specific segment and formats them into a SegmentSummary object.
+     */
+    public SegmentSummary getSegmentSummary(long segmentId) {
+        SQLiteDatabase db = getDatabase();
+        SegmentSummary summary = null;
+
+        Cursor cursor = db.query(
+                Segments.TABLE_STARRED_SEGMENTS,
+                null, // Fetch all columns defined in your projection
+                Segments.STRAVA_SEGMENT_ID + "=?",
+                new String[]{String.valueOf(segmentId)},
+                null, null, null
+        );
+
+        if (cursor.moveToFirst()) {
+            // 1. Get Activity Type/Sport
+            SportTypeDatabaseManager sportTypeMgr = SportTypeDatabaseManager.getInstance(mContext);
+            String activityType = cursor.getString(cursor.getColumnIndexOrThrow(Segments.ACTIVITY_TYPE));
+            BSportType sportType = sportTypeMgr.getBSportTypeFromStravaName(activityType);
+
+            // 2. Extract raw values
+            double distance = cursor.getDouble(cursor.getColumnIndexOrThrow(Segments.DISTANCE));
+            double avgGrade = cursor.getDouble(cursor.getColumnIndexOrThrow(Segments.AVERAGE_GRADE));
+            double maxGrade = cursor.getDouble(cursor.getColumnIndexOrThrow(Segments.MAXIMUM_GRADE));
+            double elevLow = cursor.getDouble(cursor.getColumnIndexOrThrow(Segments.ELEVATION_LOW));
+            double elevHigh = cursor.getDouble(cursor.getColumnIndexOrThrow(Segments.ELEVATION_HIGH));
+            int prTimeSeconds = cursor.getInt(cursor.getColumnIndexOrThrow(Segments.PR_TIME));
+            int climbCategory = cursor.getInt(cursor.getColumnIndexOrThrow(Segments.CLIMB_CATEGORY));
+            String city = cursor.getString(cursor.getColumnIndexOrThrow(Segments.CITY));
+            String name = cursor.getString(cursor.getColumnIndexOrThrow(Segments.SEGMENT_NAME));
+
+            // 3. Format strings
+            DistanceFormatter df = new DistanceFormatter();
+            TimeFormatter tf = new TimeFormatter();
+
+            summary = new SegmentSummary(
+                    segmentId,
+                    name,
+                    sportType,
+                    climbCategory > 0 ? StravaHelper.translateClimbCategory(climbCategory) : "",
+                    prTimeSeconds > 0 ? tf.format(prTimeSeconds) : "",
+                    (city != null && !city.isEmpty()) ? city : "",
+                    df.format_with_units(distance),
+                    String.format(Locale.getDefault(), "Ø %.1f%%", avgGrade),
+                    String.format(Locale.getDefault(), "%.1f%% Max", maxGrade),
+                    String.format(Locale.getDefault(), "%d m", Math.round(elevHigh - elevLow)),
+                    String.format(Locale.getDefault(), "%d m", Math.round(elevLow)),
+                    String.format(Locale.getDefault(), "%d m", Math.round(elevHigh))
+            );
+        }
+        cursor.close();
+
+        return summary;
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////

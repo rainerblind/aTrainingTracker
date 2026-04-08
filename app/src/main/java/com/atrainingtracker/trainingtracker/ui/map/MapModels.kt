@@ -78,6 +78,13 @@ data class LocationMarker(
     val iconDescriptor: BitmapDescriptor? = null
 )
 
+/* Data class to encapsulate a single point in a track */
+data class PathPoint(
+    val distance: Float,
+    val latLng: LatLng,
+    val altitude: Float
+)
+
 /**
  * Encapsulates a single track polyline with its metadata.
  */
@@ -97,7 +104,7 @@ data class MapSegment(
     val id: Long,
     val name: String,
     val bSportType: BSportType,
-    val path: List<LatLng>,
+    val path: List<PathPoint>,
     val showStartAndFinishText: Boolean = true
 )
 

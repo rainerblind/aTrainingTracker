@@ -52,6 +52,7 @@
     <string name="edit_calibration_factor">Kalibrierungsfaktor eingeben</string>
     <string name="delete">löschen</string>
     <string name="delete_device">Sensor löschen</string>
+    <string name="delete_pebble_view">Pebble Ansicht löschen</string>
     <string name="delete_tracking_view">Ansicht löschen</string>
     <string name="delete_workout">Trainingseinheit löschen</string>
     <string name="deleteOldWorkouts">Alte Einheiten löschen</string>
@@ -59,6 +60,7 @@
     <string name="delete_sensor">löschen</string>
     <string name="really_delete_workout">Willst du diese Trainingseinheit wirklich löchen?</string>
     <string name="really_delete_location">Willst du diesen Ort wirklich löchen?</string>
+    <string name="really_delete_pebble_view_format">Willst du die Pebble Ansicht "%1$s" wirklich löschen?</string>
     <string name="really_delete_view_format">Willst du die Ansicht "%1$s" wirklich löschen?</string>
     <string name="deleting_please_wait">Lösche die Einheit …\nbitte warten</string>
     <string name="deleting_workout">Lösche: %1$s…</string>)
@@ -103,6 +105,12 @@
 
     <string name="guess_commute_and_trainer">Rate pendeln und indoor trainer</string>
 
+    <string name="install_pebble_watchapp_title">Pebble Watchapp installieren</string>
+    <string name="install_pebble_watchapp_text">Um dies zu nutzen, muss die entsprechende Pebble Watchapp installierte sein.</string>
+    <string name="install_pebble_watchapp_now">OK, jetzt intallieren</string>
+    <string name="pebble_build_in">Standard Pebble Watchapp</string>
+    <string name="pebble_a_training_tracker_watchapp">a Training Tracker Watchapp</string>
+
     <string name="install_ant_plugin_message">Um ANT+ zu nutzen muss der ANT+ Plugin Service installiert sein.</string>
     <string name="install_ant_plugin_ok">OK, jetzt installieren</string>
 
@@ -118,6 +126,8 @@
     <string name="value_unit_int_string">%1$d %2$s</string>
     <string name="distance_distanceUnit_sport_time_format">%1$s %2$s %3$s in %4$s</string>
     <string name="location_extrema_format">%1$s %2$s: %3$s %4$s</string>
+
+    <string name="configure_pebble_view">Pebble Anzeige anpassen: %1$s</string>
 
     <!--  ActivityType -->
     <string name="activity_type_bike_power">Rad Leistung</string>
@@ -278,6 +288,8 @@
     <string name="ExportDetailsActivityLabel">Details exportieren</string>
     <string name="TrackingFragmentConfigListActivityLabel">Anzeigen konfigurieren</string>
     <string name="TrackingFragmentConfigActivityLabel">Anzeige konfigurieren</string>
+    <string name="PebbleConfigListActivityLabel">Pebble Anzeigen konfigurieren</string>
+    <string name="PebbleConfigActivityLabel">Pebble Anzeige konfigurieren</string>
     <string name="AltitudeCorrectionListActivityLabel">Höhenkorrektur</string>
     <string name="DeviceChoiceActivityLabel">Koppeln</string>
     <string name="PairingActivityLabel">Koppeln</string>
@@ -317,6 +329,13 @@
     <string name="prefShowUnitsTitle">Einheiten anzeigen</string>
 
     <string name="prefsConfigureDisplaysTitle">Tracking Tabs</string>
+
+    <string name="prefsDoNotUsePebble">Keine Pebble verwenden</string>
+    <string name="prefsPebbleSupportTitle">Pebble Support</string>
+    <string name="prefsPebbleSupportSummary">Zeige Werte auf der Pebble an</string>
+    <string name="prefsPebbleWatchappsTitle">Pebble Watchapp</string>
+    <string name="prefsPebbleWatchappsSummary">Standard</string>
+    <string name="prefsConfigurePebbleDisplaysTitle">Pebble Anzeigen konfigurieren</string>
 
     <string name="prefsExportTitle">Datei Export</string>
     <string name="prefsExportSummary">Dateiformate zu denen die Einheiten exportiert werden</string>

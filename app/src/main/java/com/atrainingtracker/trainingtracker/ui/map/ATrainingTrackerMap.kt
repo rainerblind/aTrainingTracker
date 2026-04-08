@@ -121,7 +121,7 @@ fun ATrainingTrackerMap(
                 // 2. Include all points from all segments (this fits the start/finish lines too)
                 mapState.segments.forEach { segment ->
                     segment.path.forEach {
-                        builder.include(it)
+                        builder.include(it.latLng)
                         hasPoints = true
                     }
                 }
@@ -361,7 +361,7 @@ private fun drawSegments(
         // Main Path
         val polyline = googleMap.addPolyline(
             PolylineOptions()
-                .addAll(segment.path)
+                .addAll( segment.path.map { it.latLng })
                 .color(StravaOrange.toArgb())
                 .width(8f)
                 .jointType(JointType.ROUND)
@@ -380,9 +380,9 @@ private fun drawSegments(
 
             segment.path.windowed(2, 20).forEach { pair ->
                 googleMap.addMarker(MarkerOptions()
-                    .position(LatLng((pair[0].latitude + pair[1].latitude) / 2.0, (pair[0].longitude + pair[1].longitude) / 2.0))
+                    .position(LatLng((pair[0].latLng.latitude + pair[1].latLng.latitude) / 2.0, (pair[0].latLng.longitude + pair[1].latLng.longitude) / 2.0))
                     .icon(icon)
-                    .rotation(calculateBearing(pair[0], pair[1]).toFloat())
+                    .rotation(calculateBearing(pair[0].latLng, pair[1].latLng).toFloat())
                     .flat(true)
                     .anchor(0.5f, 0.5f)
                     .alpha(0.7f))
@@ -397,14 +397,14 @@ private fun drawSegments(
             val endPrev = segment.path[segment.path.size - 6]
 
             // Orthogonal Lines
-            googleMap.addPolyline(PolylineOptions().addAll(calculateOrthogonalLine(startPt, startNext)).color(StravaOrange.toArgb()).width(8f))
-            googleMap.addPolyline(PolylineOptions().addAll(calculateOrthogonalLine(endPt, endPrev)).color(StravaOrange.toArgb()).width(8f))
+            googleMap.addPolyline(PolylineOptions().addAll(calculateOrthogonalLine(startPt.latLng, startNext.latLng)).color(StravaOrange.toArgb()).width(8f))
+            googleMap.addPolyline(PolylineOptions().addAll(calculateOrthogonalLine(endPt.latLng, endPrev.latLng)).color(StravaOrange.toArgb()).width(8f))
 
             // Labels (Only at high zoom)
             if (currentZoom > 14f
                 && segment.showStartAndFinishText) {
-                val startBearing = calculateBearing(startPt, startNext).toFloat()
-                val endBearing = calculateBearing(endPrev, endPt).toFloat()
+                val startBearing = calculateBearing(startPt.latLng, startNext.latLng).toFloat()
+                val endBearing = calculateBearing(endPrev.latLng, endPt.latLng).toFloat()
 
                 val textSize = when {
                     currentZoom > 17f -> 22f
@@ -415,7 +415,7 @@ private fun drawSegments(
                 // Rotation (startBearing - 90) aligns the width of the text with the orthogonal line.
                 // An anchor V of -0.2f pushes the bitmap "down" the path direction.
                 val startMarker = googleMap.addMarker(MarkerOptions()
-                    .position(startPt)
+                    .position(startPt.latLng)
                     .icon(createTextMarkerBitmap(context, segment.name, "🚩", textSize))
                     // .rotation(startBearing)
                     .anchor(0.5f, -0.2f)
@@ -426,7 +426,7 @@ private fun drawSegments(
                 // FINISH: Positioned "Above" (Ahead) the line
                 // An anchor V of 1.2f pushes the bitmap "up" further past the finish point.
                 val finishMarker = googleMap.addMarker(MarkerOptions()
-                    .position(endPt)
+                    .position(endPt.latLng)
                     .icon(createTextMarkerBitmap(context, segment.name, "🏁", textSize))
                     // .rotation(endBearing)
                     .anchor(0.5f, 1.2f)

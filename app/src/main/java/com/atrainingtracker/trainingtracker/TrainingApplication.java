@@ -58,6 +58,9 @@ import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation;
 import com.atrainingtracker.trainingtracker.exporter.FileFormat;
 import com.atrainingtracker.trainingtracker.helpers.CalcExtremaWorker;
+import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleService;
+import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleServiceBuildIn;
+import com.atrainingtracker.trainingtracker.smartwatch.pebble.Watchapp;
 import com.atrainingtracker.trainingtracker.tracker.TrackerService;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapHelper;
@@ -130,6 +133,13 @@ public class TrainingApplication extends Application {
     public static final String SPORT = "sport";
     public static final String SENSOR_NAMES = "sensorNames";
     public static final String GC_SENSORS = "GCSensors";
+
+
+    public static final String PEBBLE_SCREEN = "pebbleScreen";
+    public static final String SP_PEBBLE_SUPPORT = "PebbleSupport";
+    public static final String SP_PEBBLE_WATCHAPP = "listPebbleWatchapps";
+    public static final String SP_SHOW_PEBBLE_INSTALL_DIALOG = "showPebbleInstallDialog";
+    public static final String SP_CONFIGURE_PEBBLE_DISPLAY = "configurePebbleDisplays";
 
     protected static final String NOTIFICATION_CHANNEL__TRACKING = "NOTIFICATION_CHANNEL__TRACKING";
     protected static final String NOTIFICATION_CHANNEL__TRACKING_2 = "NOTIFICATION_CHANNEL__TRACKING_2";
@@ -271,6 +281,60 @@ public class TrainingApplication extends Application {
 
         if (DEBUG) Log.i(TAG, uri + "is NOT installed");
         return false;
+    }
+
+    /* Pebble support */
+    @Nullable
+    private Watchapp startedWatchapp = null;
+    public static boolean pebbleSupport() {
+        return cSharedPreferences.getBoolean(SP_PEBBLE_SUPPORT, false);
+    }
+
+    @NonNull
+    public static Watchapp getPebbleWatchapp() {
+        return Watchapp.valueOf(cSharedPreferences.getString(SP_PEBBLE_WATCHAPP, Watchapp.BUILD_IN.name()));
+    }
+
+    public static boolean showPebbleInstallDialog() {
+        return cSharedPreferences.getBoolean(SP_SHOW_PEBBLE_INSTALL_DIALOG, true);
+    }
+
+    public static void setShowPebbleInstallDialog(boolean value) {
+        cSharedPreferences.edit().putBoolean(SP_SHOW_PEBBLE_INSTALL_DIALOG, value).apply();
+    }
+
+    public void startPebbleWatchapp() {
+        if (DEBUG) Log.d(TAG, "startPebbleWatchapp()");
+        if (pebbleSupport() && startedWatchapp == null) {
+            switch (getPebbleWatchapp()) {
+                case BUILD_IN:
+                    if (DEBUG) Log.d(TAG, "starting build in Pebble Watchapp Service");
+                    startService(new Intent(this, PebbleServiceBuildIn.class));
+                    break;
+
+                case TRAINING_TRACKER:
+                    if (DEBUG) Log.d(TAG, "starting Training Tracker Pebble Watchapp Service");
+                    startService(new Intent(this, PebbleService.class));
+                    break;
+            }
+            startedWatchapp = getPebbleWatchapp();
+        }
+    }
+
+    public void stopPebbleWatchapp() {
+        if (DEBUG) Log.d(TAG, "stopPebbleWatchapp()");
+        if (startedWatchapp != null) {
+            switch (startedWatchapp) {
+                case BUILD_IN:
+                    stopService(new Intent(this, PebbleServiceBuildIn.class));
+                    break;
+
+                case TRAINING_TRACKER:
+                    stopService(new Intent(this, PebbleService.class));
+                    break;
+            }
+        }
+        startedWatchapp = null;
     }
 
     public static Context getAppContext() {
@@ -950,6 +1014,7 @@ public class TrainingApplication extends Application {
             intent.putExtra(TrackerService.START_TYPE, TrackerService.StartType.START_NORMAL.name());
         }
         startService(intent);
+        startPebbleWatchapp();
 
         cTrackingMode = TrackingMode.TRACKING;
         notifyTrackingStateChanged();
@@ -981,6 +1046,7 @@ public class TrainingApplication extends Application {
     }
 
     protected void stopTracking() {
+        stopPebbleWatchapp();
 
         stopService(new Intent(this, TrackerService.class));
 

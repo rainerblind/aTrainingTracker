@@ -107,7 +107,8 @@ abstract public class BTLEBikeDevice extends MyBTLEDevice {
             // TODO: what to do when these values are negative?
 
             // calc speed and distance
-            if (mLastWheelRevolutionsValid) {
+            if (mLastWheelRevolutionsValid
+                    && mSpeedSensor != null) {  // necessary because there was a crash with this case in production.
                 if (wheelEventTime > mLastWheelEventTime) {  // avoiding negative values
                     mIdenticalWheelTime = 0;
 
