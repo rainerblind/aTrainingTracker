@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.segments
 
 import android.content.Context
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,6 +28,21 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+data class SegmentSummary(
+    val stravaId: Long,
+    val name: String,
+    val bSportType: BSportType,
+    val climbCategory: String,
+    val prTime: String,
+    val city: String,
+    val distance: String,
+    val averageGrade: String,
+    val maxGrade: String,
+    val elevationGain: String,
+    val elevationMin: String,
+    val elevationMax: String,
+)
 
 class SegmentsRepository private constructor(context: Context) {
 
@@ -61,6 +77,14 @@ class SegmentsRepository private constructor(context: Context) {
         // Ensure data is loaded before filtering
         val segments = _allSegments.first { it != null }
         segments?.find { it.id == segmentId }
+    }
+
+    /**
+     * Fetches the summary details for a specific segment.
+     */
+    suspend fun getSegmentSummary(segmentId: Long): SegmentSummary? = withContext(Dispatchers.IO) {
+        // This assumes your dbManager has a corresponding method to return this data class
+        dbManager.getSegmentSummary(segmentId)
     }
 
     /**

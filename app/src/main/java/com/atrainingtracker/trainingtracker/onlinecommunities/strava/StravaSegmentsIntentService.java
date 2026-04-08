@@ -131,9 +131,7 @@ public class StravaSegmentsIntentService extends IntentService {
                 .appendPath(V3)
                 .appendPath(streamType.urlPart)
                 .appendPath(id + "")
-                .appendPath(STREAMS)
-                .appendPath(streamType.requestStreamTypes)
-                .appendQueryParameter(SERIES_TYPE, TIME);
+                .appendPath(STREAMS);
         String stravaUrl = builder.build().toString();
 
         HttpClient httpClient = new DefaultHttpClient();
