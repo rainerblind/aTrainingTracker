@@ -18,7 +18,7 @@
 
 package com.atrainingtracker.banalservice.devices.ant_plus;
 
-import androidx.appcompat.app.AlertDialog;
+import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnClickListener;
@@ -50,8 +50,6 @@ import com.dsi.ant.plugins.antplus.pccbase.PccReleaseHandle;
 
 import java.math.BigDecimal;
 import java.util.EnumSet;
-
-//import de.rainerblind.MyAntPlusApp;
 
 // TODO: where/when to register and unregister the sensors
 
@@ -210,6 +208,7 @@ public abstract class MyANTDevice extends MyRemoteDevice {
 
         if (mContext == null) {
             Log.d(TAG, "WTF: mContext == null");
+            return;
         }
 
         AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(mContext);
