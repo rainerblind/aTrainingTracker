@@ -100,6 +100,17 @@ class SegmentsRepository private constructor(context: Context) {
 
     private val _liveSegments = mutableMapOf<Long, LiveSegment>()
 
+    // The public StateFlow for the UI to observe
+    private val _liveSegmentsFlow = MutableStateFlow<List<LiveSegment>>(emptyList())
+    val liveSegments: StateFlow<List<LiveSegment>> = _liveSegmentsFlow
+
+    /**
+     * Helper to sync the internal map state to the external StateFlow
+     */
+    private fun syncLiveSegments() {
+        _liveSegmentsFlow.value = _liveSegments.values.toList()
+    }
+
     init {
         if (DEBUG) Log.i(TAG, "init")
 
@@ -351,6 +362,8 @@ class SegmentsRepository private constructor(context: Context) {
                 }
             }
         }
+
+        syncLiveSegments()
     }
 
     private fun crossProduct(a: LatLng, b: LatLng, c: LatLng): Double {

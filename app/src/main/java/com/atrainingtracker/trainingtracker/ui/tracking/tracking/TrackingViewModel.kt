@@ -34,6 +34,7 @@ import com.atrainingtracker.banalservice.filters.FilteredSensorData
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager
+import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
 import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
@@ -68,6 +69,7 @@ class TrackingViewModel(
     private val application: Application,
     val trackingViewsRepository: TrackingViewsRepository,
     val banalServiceRepository: BANALServiceRepository,
+    val segmentsRepository: SegmentsRepository,
     private val viewId: Long
 ) : ViewModel() {
 
@@ -313,7 +315,8 @@ class TrackingViewModelFactory(
         if (modelClass.isAssignableFrom(TrackingViewModel::class.java)) {
             val trackingViewsRepo = TrackingViewsRepository.getInstance(application)
             val banalServiceRepo = BANALServiceRepository.getInstance(application)
-            return TrackingViewModel(application, trackingViewsRepo, banalServiceRepo, viewId) as T
+            val segmentsRepository = SegmentsRepository.getInstance(application)
+            return TrackingViewModel(application, trackingViewsRepo, banalServiceRepo, segmentsRepository, viewId) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
