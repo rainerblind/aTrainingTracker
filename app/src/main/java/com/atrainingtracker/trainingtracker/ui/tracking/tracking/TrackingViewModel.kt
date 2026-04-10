@@ -97,6 +97,7 @@ class TrackingViewModel(
     private val starredSegments: List<MapSegment> = SegmentsDatabaseManager.getInstance(application).getAllMapSegments()
 
     // Filter the segments from the repository:
+    // TODO: also filter for activity type.
     val liveSegments: StateFlow<List<LiveSegment>> = segmentsRepository.liveSegments
         .map { allSegments ->
             allSegments.filter { segment ->

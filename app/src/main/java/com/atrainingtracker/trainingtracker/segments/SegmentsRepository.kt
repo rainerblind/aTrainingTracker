@@ -22,6 +22,8 @@ import android.content.Context
 import android.util.Log
 import com.google.maps.android.PolyUtil
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
+import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository
@@ -62,11 +64,11 @@ enum class LiveSegmentStatus {
 
 data class LiveSegmentData(
     var segmentStatus: LiveSegmentStatus,
-    var timeOnSegment: Int = -1,
-    var distanceToStart: Double = Double.MAX_VALUE,
-    var distanceOnSegment: Double = -1.0,
-    var distanceToEnd: Double = Double.MAX_VALUE,
-    var distanceToSegment: Double = Double.MAX_VALUE,
+    var timeOnSegment: String = "--:--",
+    var distanceToStart: String = "--",
+    var distanceOnSegment: String = "--",
+    var distanceToEnd: String = "--",
+    var distanceToSegment: String = "--"
 )
 
 data class LiveSegmentMath(
@@ -115,6 +117,8 @@ class SegmentsRepository private constructor(context: Context) {
         }
     }
 
+    private val tf = TimeFormatter()
+    private val df = DistanceFormatter()
 
     private val dbManager = SegmentsDatabaseManager.getInstance(context)
 
@@ -257,7 +261,7 @@ class SegmentsRepository private constructor(context: Context) {
                     if (DEBUG) Log.i(TAG, "  Segment is close to start: ${liveSegment.summary.name}")
 
                     liveSegment.liveData.segmentStatus = LiveSegmentStatus.APPROACHING
-                    liveSegment.liveData.distanceToStart = distanceToStart
+                    liveSegment.liveData.distanceToStart = df.format_with_units(distanceToStart)
                 }
 
                 // crossing the start line
@@ -283,7 +287,7 @@ class SegmentsRepository private constructor(context: Context) {
                     if (DEBUG) Log.i(TAG, "  We are close to the finish line: ${liveSegment.summary.name}")
 
                     liveSegment.liveData.segmentStatus = LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH
-                    liveSegment.liveData.distanceToEnd = distanceToEnd
+                    liveSegment.liveData.distanceToEnd = df.format_with_units(distanceToEnd)
                 }
                 // crossing the finish line
                 if ((liveSegment.liveData.segmentStatus == LiveSegmentStatus.ON_SEGMENT || liveSegment.liveData.segmentStatus == LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH)
@@ -307,12 +311,15 @@ class SegmentsRepository private constructor(context: Context) {
                 || liveSegment.liveData.segmentStatus == LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH) {
                 if (DEBUG) Log.i(TAG, "  we are on this segment.  Thus, we update it ...")
 
-                liveSegment.liveData.timeOnSegment = ((System.currentTimeMillis() - liveSegment.math.startTime_ms) / 1000).toInt()
-                liveSegment.liveData.distanceOnSegment = currentDistance - liveSegment.math.startDistance
+                val timeOnSegment = (System.currentTimeMillis() - liveSegment.math.startTime_ms) / 1000
+                liveSegment.liveData.timeOnSegment = tf.format_with_units(timeOnSegment)
+
+                val distanceOnSegment = currentDistance - liveSegment.math.startDistance
+                liveSegment.liveData.distanceOnSegment = df.format_with_units(distanceOnSegment)
 
                 // find the index that matches the current distance
                 while (liveSegment.math.indexOfDistance < liveSegment.path.size - 1
-                    && liveSegment.path[liveSegment.math.indexOfDistance].distance <= liveSegment.liveData.distanceOnSegment
+                    && liveSegment.path[liveSegment.math.indexOfDistance].distance <= distanceOnSegment
                 ) {
                     liveSegment.math.indexOfDistance++
                 }
@@ -330,7 +337,7 @@ class SegmentsRepository private constructor(context: Context) {
                 } else {
                     0.0  // simply 0.
                 }
-                liveSegment.liveData.distanceToSegment = distanceToSegment
+                liveSegment.liveData.distanceToSegment = df.format_with_units(distanceToSegment)
 
                 // if distance to segment is too far away, we set its state to FAR_FAR_AWAY
                 if (distanceToSegment > SEGMENT_DISTANCE_THRESHOLD) {

@@ -32,12 +32,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.segments.LiveSegmentData
+import com.atrainingtracker.trainingtracker.segments.LiveSegmentStatus
 import com.atrainingtracker.trainingtracker.segments.SegmentSummary
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 @Composable
 fun SegmentSummaryHeader(
     summary: SegmentSummary,
+    liveSegmentData: LiveSegmentData? = null,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -104,13 +107,70 @@ fun SegmentSummaryHeader(
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
                                     text = summary.prTime,
-                                    style = MaterialTheme.typography.bodyMedium,
+                                    style = MaterialTheme.typography.bodyLarge,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
                         }
                     }
                 }
+            }
+            // --- LIVE DATA SECTION ---
+            // Placed between the header and the static stats
+            if (liveSegmentData != null) {
+                Spacer(modifier = Modifier.height(6.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Left: Distance Progress (Matches static distance alignment)
+                    Column {
+                        Text(
+                            text = "PROGRESS",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = liveSegmentData.distanceOnSegment,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Remaining: ${liveSegmentData.distanceToEnd}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "Offset: ${liveSegmentData.distanceToSegment}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    // Right: Live Time (Matches PR time alignment)
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = "ELAPSED",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = liveSegmentData.timeOnSegment,
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                Spacer(modifier = Modifier.height(6.dp))
             }
 
             Spacer(modifier = Modifier.height(6.dp))
@@ -219,6 +279,37 @@ fun PreviewSegmentSummaryMinimal() {
                 elevationGain = "5 m",
                 elevationMin = "34 m",
                 elevationMax = "39 m"
+            )
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Live Effort View (Close to finish)")
+@Composable
+fun PreviewSegmentSummaryLive() {
+    ATrainingTrackerTheme {
+        SegmentSummaryHeader(
+            summary = SegmentSummary(
+                stravaId = 12345L,
+                name = "Alpe d'Huez Climb",
+                bSportType = BSportType.BIKE,
+                climbCategory = "HC",
+                prTime_raw = 2720,
+                prTime = "45:20",
+                city = "Bourg d'Oisans",
+                distance = "13.80 km",
+                averageGrade = "Ø 8.1%",
+                maxGrade = "12.0% Max",
+                elevationGain = "1073 m",
+                elevationMin = "720 m",
+                elevationMax = "1793 m"
+            ),
+            liveSegmentData = LiveSegmentData(
+                segmentStatus = LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH,
+                timeOnSegment = "12:45",
+                distanceOnSegment = "3.20 km",
+                distanceToEnd = "10.60 km",
+                distanceToSegment = "3 m"
             )
         )
     }

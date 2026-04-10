@@ -95,17 +95,16 @@ private fun LiveSegmentItem(segment: LiveSegment) {
             when (segment.liveData.segmentStatus) {
                 LiveSegmentStatus.APPROACHING -> {
                     val summary = "${segment.summary.distance} ${segment.summary.averageGrade}"
-                    val formattedDistanceToStart = df.format_with_units(segment.liveData.distanceToStart)
 
                     Text(
-                        text = "Start in $formattedDistanceToStart • $summary",
+                        text = "Start in ${segment.liveData.distanceToStart} • $summary",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                     )
                 }
 
                 LiveSegmentStatus.ON_SEGMENT, LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH -> {
-                    val distDone = df.format_with_units(segment.liveData.distanceOnSegment)
+                    val distDone = segment.liveData.distanceOnSegment
                     val distOff = "${segment.liveData.distanceToSegment.toInt()}m off"
 
                     var subtitle = "$distDone • $distOff"
@@ -116,9 +115,9 @@ private fun LiveSegmentItem(segment: LiveSegment) {
 
                     Text(
                         text = subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (segment.liveData.distanceToSegment > 20) Color.Red else MaterialTheme.colorScheme.primary,
-                        fontWeight = if (segment.liveData.distanceToSegment > 20) FontWeight.Bold else FontWeight.Normal
+                        style = MaterialTheme.typography.bodySmall
+                        // color = if (segment.liveData.distanceToSegment > 20) Color.Red else MaterialTheme.colorScheme.primary,
+                        // fontWeight = if (segment.liveData.distanceToSegment > 20) FontWeight.Bold else FontWeight.Normal
                     )
                 }
                 else -> {}
@@ -126,15 +125,13 @@ private fun LiveSegmentItem(segment: LiveSegment) {
         }
 
         // Timer Display (Only if active)
-        if (segment.liveData.timeOnSegment >= 0) {
-            val tf = TimeFormatter()
-            Text(
-                text = tf.format_with_units(segment.liveData.timeOnSegment),
-                style = MaterialTheme.typography.headlineMedium,
-                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(start = 8.dp)
-            )
-        }
+        val tf = TimeFormatter()
+        Text(
+            text = segment.liveData.timeOnSegment,
+            style = MaterialTheme.typography.headlineMedium,
+            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(start = 8.dp)
+        )
     }
 }
