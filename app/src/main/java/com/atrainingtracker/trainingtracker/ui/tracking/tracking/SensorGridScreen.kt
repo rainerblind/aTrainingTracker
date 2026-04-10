@@ -76,7 +76,7 @@ fun SensorGridScreen(
     mapViewModel: MapViewModel
 ) {
     // 1. Collect the segments from the StateFlow
-    val activeSegments by liveSegments.collectAsState()
+    val liveSegments by liveSegments.collectAsState()
 
     // 2. Wrap everything in a Box to allow overlaying
     Box(Modifier.fillMaxSize()) {
@@ -145,7 +145,7 @@ fun SensorGridScreen(
         // 3. Add the Overlay on top (only in tracking mode)
         if (screenMode == ScreenMode.TRACKING) {
             LiveSegmentOverlay(
-                segments = activeSegments,
+                liveSegments = liveSegments,
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.BottomCenter)

@@ -186,6 +186,7 @@ fun PreviewSegmentSummaryFull() {
                 name = "Alpe d'Huez Climb",
                 bSportType = BSportType.BIKE,
                 climbCategory = "HC",
+                prTime_raw = 45 * 60 + 20,
                 prTime = "45:20",
                 city = "Bourg d'Oisans",
                 distance = "13.80 km",
@@ -209,6 +210,7 @@ fun PreviewSegmentSummaryMinimal() {
                 name = "Short Flat Sprint",
                 bSportType = BSportType.BIKE,
                 climbCategory = "", // Empty category
+                prTime_raw = -1,
                 prTime = "",   // Empty/Placeholder PR
                 city = "Berlin",
                 distance = "1.20 km",

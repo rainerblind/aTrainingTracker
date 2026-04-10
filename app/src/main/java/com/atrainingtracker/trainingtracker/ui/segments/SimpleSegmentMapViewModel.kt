@@ -19,7 +19,6 @@
 package com.atrainingtracker.trainingtracker.ui.segments
 
 import android.app.Application
-import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.trainingtracker.segments.SegmentSummary
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
@@ -50,7 +49,7 @@ class SimpleSegmentMapViewModel(application: Application) : MapViewModel(applica
     fun loadSegment(segmentId: Long, showStartAndFinishText: Boolean = false) {
         viewModelScope.launch(Dispatchers.IO) {
             // Get the segment from our new repository (uses in-memory cache if available)
-            val segment = segmentsRepository.getSegmentById(segmentId)
+            val segment = segmentsRepository.getMapSegmentById(segmentId)
 
             _segmentSummary.value = segmentsRepository.getSegmentSummary(segmentId)
 

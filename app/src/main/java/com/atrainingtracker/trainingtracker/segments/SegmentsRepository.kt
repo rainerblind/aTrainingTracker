@@ -41,6 +41,7 @@ data class SegmentSummary(
     val name: String,
     val bSportType: BSportType,
     val climbCategory: String,
+    val prTime_raw: Int,
     val prTime: String,
     val city: String,
     val distance: String,
@@ -51,36 +52,38 @@ data class SegmentSummary(
     val elevationMax: String,
 )
 
-// data class with the values to calculate whether we are currently on a segment
-private data class LiveSegmentState(
-    val stravaId: Long,
-    val path: List<PathPoint>,
-    val start: LatLng,             // The start point of the segment
-    val start_a: LatLng,           // one end of the start line
-    val start_b: LatLng,           // the other end of the start line
-    val start_cross_n: Double,     // the cross product of the 'next' point to the start line
-    var start_cross_loc: Double,   // the cross product of the current/past location to the start line
-    var onSegment: Boolean,        // whether we are currently on the segment
-    var startTime: Long,           // the time when we started the segment
-    var startDistance: Double,     // the distance, when we started the segment
-    var indexOfDistance: Int,      // index of the segment flow of the current distance
-    val end: LatLng,               // the end point of the segment
-    val end_a: LatLng,             // one end of the finish line
-    val end_b: LatLng,             // the other end of the finish line
-    val end_cross_p: Double,       // the cross product of the 'previous' point to the finish line
-    var end_cross_loc: Double,     // the cross product of the current/past location to the finish line
-)
+enum class LiveSegmentStatus {
+    FAR_FAR_AWAY,
+    APPROACHING,
+    ON_SEGMENT,
+    ON_SEGMENT_CLOSE_TO_FINISH,
+    FINISHED
+}
 
 // data class with the resulting data for a segment (time and distance)
 data class LiveSegment(
-    val stravaId: Long,
-    val name: String,
-    val prTime: String,
-    var distanceToStart: Double = Double.MAX_VALUE,
+    val segmentSummary: SegmentSummary,
+    val path: List<PathPoint>,
+    var liveSegmentStatus: LiveSegmentStatus,
     var timeOnSegment: Int = -1,
+    var distanceToStart: Double = Double.MAX_VALUE,
     var distanceOnSegment: Double = -1.0,
     var distanceToEnd: Double = Double.MAX_VALUE,
     var distanceToSegment: Double = Double.MAX_VALUE,
+
+    internal val start: LatLng,             // The start point of the segment
+    internal val start_a: LatLng,           // one end of the start line
+    internal val start_b: LatLng,           // the other end of the start line
+    internal val start_cross_n: Double,     // the cross product of the 'next' point to the start line
+    internal var start_cross_loc: Double,   // the cross product of the current/past location to the start line
+    internal val end: LatLng,               // the end point of the segment
+    internal val end_a: LatLng,             // one end of the finish line
+    internal val end_b: LatLng,             // the other end of the finish line
+    internal val end_cross_p: Double,       // the cross product of the 'previous' point to the finish line
+    internal var end_cross_loc: Double,     // the cross product of the current/past location to the finish line
+    internal var startTime_ms: Long,        // the time (in milliseconds) when we started the segment
+    internal var startDistance: Double,     // the distance, when we started the segment
+    internal var indexOfDistance: Int      // index of the segment flow of the current distance
 )
 
 class SegmentsRepository private constructor(context: Context) {
@@ -93,44 +96,35 @@ class SegmentsRepository private constructor(context: Context) {
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     // In-memory cache of segments
-    private val _allSegments = MutableStateFlow<List<MapSegment>?>(null)
+    private var _allMapSegments = MutableStateFlow<List<MapSegment>?>(null)
 
-    // In-memory cache of live calculation states
-    private val _liveSegmentStates = mutableMapOf<Long, LiveSegmentState>()
-
-    private val _liveSegments = mutableMapOf<Long, LiveSegment>()
-
-    // The public StateFlow for the UI to observe
-    private val _liveSegmentsFlow = MutableStateFlow<List<LiveSegment>>(emptyList())
-    val liveSegments: StateFlow<List<LiveSegment>> = _liveSegmentsFlow
-
-    /**
-     * Helper to sync the internal map state to the external StateFlow
-     */
-    private fun syncLiveSegments() {
-        _liveSegmentsFlow.value = _liveSegments.values.toList()
-    }
+    private val _liveSegments = MutableStateFlow(emptyList<LiveSegment>())
+    val liveSegments: StateFlow<List<LiveSegment>> = _liveSegments
 
     init {
         if (DEBUG) Log.i(TAG, "init")
 
         // Load segments from DB into memory immediately upon creation
         repositoryScope.launch {
-            val segments = dbManager.allSegments ?: emptyList()
-            _allSegments.value = segments
+            _allMapSegments.value = dbManager.getAllMapSegments()
 
-            // Calculate LiveStates for all loaded segments
-            segments.forEach { segment ->
-                calculateInitialLiveSegmentState(segment)?.let { state ->
-                    _liveSegmentStates[segment.id] = state
+            val segmentSummaries = dbManager.getAllSegmentSummaries()
+
+            // Calculate LiveSegments for all loaded segments
+            segmentSummaries.forEach { segmentSummary ->
+                val path = dbManager.getSegmentPath(segmentSummary.stravaId)
+
+                calculateInitialLiveSegmentState(segmentSummary, path)?.let { liveSegment ->
+                    _liveSegments.value += liveSegment
                 }
             }
 
             // 2. Observe the BANALServiceRepository for Location and Bearing updates
             launch {
                 banalRepo.currentLocation.collect { location ->
-                    if (location != null) {
-                        updateSegmentProximity(location)
+                    val currentDistance = banalRepo.currentDistance.value
+                    if (location != null && currentDistance != null) {
+                        updateLiveSegments(location, currentDistance)
                     }
                 }
             }
@@ -140,17 +134,17 @@ class SegmentsRepository private constructor(context: Context) {
     /**
      * Fetches all segments. If they haven't loaded yet, it waits for the background task.
      */
-    suspend fun getAllSegments(): List<MapSegment> = withContext(Dispatchers.IO) {
+    suspend fun getAllMapSegments(): List<MapSegment> = withContext(Dispatchers.IO) {
         // Wait until the flow has a non-null value (meaning DB load finished)
-        _allSegments.first { it != null } ?: emptyList()
+        _allMapSegments.first { it != null } ?: emptyList()
     }
 
     /**
      * Fetches a specific segment by its ID from the in-memory cache.
      */
-    suspend fun getSegmentById(segmentId: Long): MapSegment? = withContext(Dispatchers.IO) {
+    suspend fun getMapSegmentById(segmentId: Long): MapSegment? = withContext(Dispatchers.IO) {
         // Ensure data is loaded before filtering
-        val segments = _allSegments.first { it != null }
+        val segments = _allMapSegments.first { it != null }
         segments?.find { it.id == segmentId }
     }
 
@@ -159,7 +153,7 @@ class SegmentsRepository private constructor(context: Context) {
      */
     suspend fun getSegmentSummary(segmentId: Long): SegmentSummary? = withContext(Dispatchers.IO) {
         // This assumes your dbManager has a corresponding method to return this data class
-        dbManager.getSegmentSummary(segmentId)
+        dbManager.getSegmentSummary(segmentId)  // TODO: rewrite: use the LiveSegmentData instead.
     }
 
     /**
@@ -167,7 +161,7 @@ class SegmentsRepository private constructor(context: Context) {
      */
     fun refreshSegments() {
         repositoryScope.launch {
-            _allSegments.value = dbManager.allSegments ?: emptyList()
+            _allMapSegments.value = dbManager.allMapSegments ?: emptyList()
         }
     }
 
@@ -175,8 +169,7 @@ class SegmentsRepository private constructor(context: Context) {
      * Calculates the virtual gates (start/finish lines) and distances for a segment.
      * The gates are perpendicular to the path direction.
      */
-    private fun calculateInitialLiveSegmentState(segment: MapSegment): LiveSegmentState? {
-        val path = segment.path
+    private fun calculateInitialLiveSegmentState(segmentSummary: SegmentSummary, path: List<PathPoint>): LiveSegment? {
         if (path.size < 6) return null
 
         val start = path.first().latLng
@@ -192,21 +185,20 @@ class SegmentsRepository private constructor(context: Context) {
         val endA = LatLng(end.latitude + (end.longitude - prevToEnd.longitude), end.longitude - (end.latitude - prevToEnd.latitude))
         val endB = LatLng(end.latitude - (end.longitude - prevToEnd.longitude), end.longitude + (end.latitude - prevToEnd.latitude))
 
-
-        // 3. Pre-calculate cross products for start/end points
+        // 3. Pre-calculate cross products for next start/ prev end points
         val startCrossN = crossProduct(startA, startB, next)
         val endCrossP = crossProduct(endA, endB, prevToEnd)
 
-        return LiveSegmentState(
-            stravaId = segment.id,
+        return LiveSegment(
+            segmentSummary = segmentSummary,
             path = path,
             start = start,
             start_a = startA,
             start_b = startB,
             start_cross_n = startCrossN,
             start_cross_loc = 0.0, // Initial state
-            onSegment = false,  // not yet on the segment
-            startTime = -1,
+            liveSegmentStatus = LiveSegmentStatus.FAR_FAR_AWAY,
+            startTime_ms = -1,
             startDistance = 0.0,
             indexOfDistance = 0,
             end = end,
@@ -218,152 +210,111 @@ class SegmentsRepository private constructor(context: Context) {
     }
 
     /**
-     * Updates the start_dist_loc and end_dist_loc for every segment
-     * whenever the user's location changes.
+     * Updates the live segment data whenever the user's location changes.
      */
-    private fun updateSegmentProximity(currentLocation: LatLng) {
-        if (DEBUG) Log.i(TAG, "updateSegmentProximity...")
+    private fun updateLiveSegments(currentLocation: LatLng, currentDistance: Double) {
+        if (DEBUG) Log.i(TAG, "updateLiveSegments ...")
 
-        _liveSegmentStates.values.forEach { state ->
-            val start_cross_loc = crossProduct(state.start_a, state.start_b, currentLocation)
-            val distanceToStart = PolyUtil.distanceToLine(currentLocation, state.start_a, state.start_b)
-            val end_cross_loc = crossProduct(state.end_a, state.end_b, currentLocation)
-            val distanceToEnd = PolyUtil.distanceToLine(currentLocation, state.end_a, state.end_b)
+        _liveSegments.value.forEach { liveSegment ->
+            if (DEBUG) Log.i(TAG, "  checking segment: ${liveSegment.segmentSummary.name}")
+
+            val start_cross_loc = crossProduct(liveSegment.start_a, liveSegment.start_b, currentLocation)
+            val distanceToStart = PolyUtil.distanceToLine(currentLocation, liveSegment.start_a, liveSegment.start_b)
+            val end_cross_loc = crossProduct(liveSegment.end_a, liveSegment.end_b, currentLocation)
+            val distanceToEnd = PolyUtil.distanceToLine(currentLocation, liveSegment.end_a, liveSegment.end_b)
+
+            if (DEBUG) Log.i(TAG, "  distanceToStart: ${distanceToStart}, distanceToEnd: ${distanceToEnd}")
+            if (DEBUG) Log.i(TAG, "  start_cross_loc: ${start_cross_loc}, end_cross_loc: ${end_cross_loc}")
 
             // close to start
-            if (start_cross_loc.sign != state.start_cross_n.sign  // different sign as the 'first' point in the segment -> on the other side of the start line
-                && distanceToStart <= SEGMENT_START_DISTANCE_THRESHOLD) {  // close enough to the start line
-                if (DEBUG) Log.i(TAG, "updateSegmentProximity: A segment is close to start: ${state.stravaId}")
+            if (distanceToStart <= SEGMENT_START_DISTANCE_THRESHOLD) {
+                if (start_cross_loc.sign != liveSegment.start_cross_n.sign) {  // different sign as the 'first' point in the segment -> on the other side of the start line
+                    if (DEBUG) Log.i(TAG, "  Segment is close to start: ${liveSegment.segmentSummary.name}")
 
-                if (!_liveSegments.containsKey(state.stravaId)) {
-                    // Find the base segment to get the Name and PR
-                    val baseSegment = _allSegments.value?.find { it.id == state.stravaId }
-                    _liveSegments[state.stravaId] = LiveSegment(
-                        stravaId = state.stravaId,
-                        name = baseSegment?.name ?: "Unknown",
-                        prTime = "--:--", // TODO: This must be pulled from the database or cache or ...
-                        distanceToStart = distanceToStart,
-                        timeOnSegment = 0,
-                        distanceOnSegment = 0.0,
-                        distanceToEnd = Double.MAX_VALUE,
-                        distanceToSegment = distanceToStart
-                    )
-                } else {
-                    // Update existing "approaching" segment distance
-                    _liveSegments[state.stravaId]?.let { liveSegment ->
-                        _liveSegments[state.stravaId] = liveSegment.copy(
-                            distanceToStart = distanceToStart,
-                            distanceToSegment = distanceToStart)
-                    }
+                    liveSegment.liveSegmentStatus = LiveSegmentStatus.APPROACHING
+                    liveSegment.distanceToStart = distanceToStart
+                }
+
+                // crossing the start line
+                else if (liveSegment.start_cross_loc.sign != start_cross_loc.sign    // sign has changed -> crossed the start line
+                    && start_cross_loc.sign == liveSegment.start_cross_n.sign) {     // same sign as the 'first' point in the segment -> crossed the start line in the right direction
+                    // && distanceToStart <= SEGMENT_DISTANCE_THRESHOLD) {           // TODO: does this make sense here?
+                    if (DEBUG) Log.i(TAG, "  We crossed the start line of : ${liveSegment.segmentSummary.name}")
+
+                    // remember the startTime and startDistance
+                    liveSegment.liveSegmentStatus = LiveSegmentStatus.ON_SEGMENT
+                    liveSegment.startTime_ms = System.currentTimeMillis()
+                    liveSegment.startDistance = banalRepo.currentDistance.value ?: 0.0
                 }
             }
-
-            else if (_liveSegments.containsKey(state.stravaId)       // already added to the list of liveSegments.
-                && !state.onSegment                                  // but we are not on the segment
-                && start_cross_loc.sign != state.start_cross_n.sign  // different sign as the 'first' point in the segment -> on the other side of the start line
-                && distanceToStart > SEGMENT_START_DISTANCE_THRESHOLD  // far away from the start line
-            ) {
-                // clean up ->
-                if (DEBUG) Log.i(TAG, "updateSegmentProximity: Not yet started segment will be removed: ${state.stravaId}")
-                _liveSegments.remove(state.stravaId)
-            }
-
-            // crossing the start line
-            else if (state.start_cross_loc.sign != start_cross_loc.sign // sign has changed -> crossed the start line
-                && start_cross_loc.sign == state.start_cross_n.sign  // same sign as the 'first' point in the segment -> crossed the start line in the right direction
-                && distanceToStart <= SEGMENT_DISTANCE_THRESHOLD) {  // close enough to the start line
-                // -> really crossed the start line
-                if (DEBUG) Log.i(TAG, "updateSegmentProximity: We crossed the start line: ${state.stravaId}")
-
-                // remember the startTime and startDistance
-                state.onSegment = true
-                state.startTime = System.currentTimeMillis()
-                state.startDistance = banalRepo.currentDistance.value ?: 0.0
-
-                // set the distanceToStart to 0.0.
-                _liveSegments[state.stravaId]?.let { liveSegment ->
-                    _liveSegments[state.stravaId] = liveSegment.copy(
-                        distanceToStart = 0.0)
-                }
+            else if (liveSegment.liveSegmentStatus == LiveSegmentStatus.APPROACHING) {  // no longer close to start but formerly approaching
+                liveSegment.liveSegmentStatus = LiveSegmentStatus.FAR_FAR_AWAY          // -> mark as far far away
             }
 
             // close to the finish line
-            else if (end_cross_loc.sign == state.end_cross_p.sign // same sign as the 'last' point in the segment -> not yet over the finish line
-                && distanceToEnd <= SEGMENT_END_DISTANCE_THRESHOLD) {
-                if (DEBUG) Log.i(TAG, "updateSegmentProximity: We are close to the finish line: ${state.stravaId}")
+            if (distanceToEnd <= SEGMENT_END_DISTANCE_THRESHOLD) {
+                if ((liveSegment.liveSegmentStatus == LiveSegmentStatus.ON_SEGMENT || liveSegment.liveSegmentStatus == LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH)
+                    && end_cross_loc.sign == liveSegment.end_cross_p.sign) { // same sign as the 'last' point in the segment -> not yet over the finish line
+                    if (DEBUG) Log.i(TAG, "  We are close to the finish line: ${liveSegment.segmentSummary.name}")
 
-                _liveSegments[state.stravaId]?.let { liveSegment ->
-                    _liveSegments[state.stravaId] = liveSegment.copy(distanceToEnd = distanceToEnd)
+                    liveSegment.liveSegmentStatus = LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH
+                    liveSegment.distanceToEnd = distanceToEnd
+                }
+                // crossing the finish line
+                if ((liveSegment.liveSegmentStatus == LiveSegmentStatus.ON_SEGMENT || liveSegment.liveSegmentStatus == LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH)
+                    && liveSegment.end_cross_loc.sign != end_cross_loc.sign       // sign has changed -> crossed the finish line
+                    && end_cross_loc.sign != liveSegment.end_cross_p.sign) {   // different sign as the 'last' point in the segment -> crossed the finish line in the right direction
+                    // && distanceToEnd <= SEGMENT_DISTANCE_THRESHOLD) {       // close enough
+
+                    if (DEBUG) Log.i(TAG, "  We crossed the finish line: ${liveSegment.segmentSummary.name}")
+
+                    liveSegment.liveSegmentStatus = LiveSegmentStatus.FINISHED
                 }
             }
 
-            // crossing the finish line
-            else if (state.end_cross_loc.sign != end_cross_loc.sign  // sign has changed -> crossed the finish line
-                && end_cross_loc.sign != state.end_cross_p.sign      // different sign as the 'last' point in the segment -> crossed the finish line in the right direction
-                && distanceToEnd <= SEGMENT_DISTANCE_THRESHOLD) { // close enough
+            // Now, remember the cross products
+            liveSegment.start_cross_loc = start_cross_loc
+            liveSegment.end_cross_loc = end_cross_loc
 
-                if (DEBUG) Log.i(TAG, "updateSegmentProximity: We crossed the finish line: ${state.stravaId}")
 
-                // simply remove the segment from the map
-                if (_liveSegments.containsKey(state.stravaId)) {
-                    _liveSegments.remove(state.stravaId)
+             // update the liveSegments
+            if (liveSegment.liveSegmentStatus == LiveSegmentStatus.ON_SEGMENT
+                || liveSegment.liveSegmentStatus == LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH) {
+                if (DEBUG) Log.i(TAG, "  we are on this segment.  Thus, we update it ...")
+
+                liveSegment.timeOnSegment = ((System.currentTimeMillis() - liveSegment.startTime_ms) / 1000).toInt()
+                liveSegment.distanceOnSegment = currentDistance - liveSegment.startDistance
+
+                // find the index that matches the current distance
+                while (liveSegment.indexOfDistance < liveSegment.path.size - 1
+                    && liveSegment.path[liveSegment.indexOfDistance].distance <= liveSegment.distanceOnSegment
+                ) {
+                    liveSegment.indexOfDistance++
                 }
-            }
+                // -> indexOfDistance is such that it points to the distance that is bigger than the current distance
+                // when we assume that the first distance in the segment stream is zero and the distance on segment is zero, when we just start the segment,
+                // we should get indexOfDistance = 1
 
-            // finally, remember the cross products
-            state.start_cross_loc = start_cross_loc
-            state.end_cross_loc = end_cross_loc
-
-
-            /*
-             * update the liveSegments
-             */
-
-            val currentLocation = banalRepo.currentLocation.value!!
-            val currentDistance = banalRepo.currentDistance.value!!
-
-            //Loop over all liveSegments
-            // update time, distance on segment, and distance to segment, ...
-            // remove segments that are too far away.
-            for (liveSegment in _liveSegments.values) {
-                if (DEBUG) Log.i(TAG, "updateSegmentProximity: Updating liveSegment: ${liveSegment.stravaId}")
-
-                val liveSegmentState = _liveSegmentStates[liveSegment.stravaId]!!
-
-                if (liveSegmentState.onSegment) {
-                    val timeOnSegment =
-                        (System.currentTimeMillis() - liveSegmentState.startTime) / 1000
-                    val distanceOnSegment =
-                        currentDistance - liveSegmentState.startDistance
-
-                    // find the index that matches the current distance
-                    while (liveSegmentState.path[liveSegmentState.indexOfDistance].distance < distanceOnSegment
-                        && liveSegmentState.indexOfDistance < liveSegmentState.path.size - 1
-                    ) {
-                        liveSegmentState.indexOfDistance++
-                    }
-                    // -> indexOfDistance is such that it points to the distance that is bigger than the current distance
-
-                    // get the distance of the current location to the segment
-                    val distanceToSegment = PolyUtil.distanceToLine(
+                // get the distance of the current location to the segment
+                val distanceToSegment = if (liveSegment.indexOfDistance > 0) {
+                    PolyUtil.distanceToLine(
                         currentLocation,
-                        liveSegmentState.path[liveSegmentState.indexOfDistance - 1].latLng,
-                        liveSegmentState.path[liveSegmentState.indexOfDistance].latLng
+                        liveSegment.path[liveSegment.indexOfDistance -1].latLng,
+                        liveSegment.path[liveSegment.indexOfDistance].latLng
                     )
+                } else {
+                    0.0  // simply 0.
+                }
+                liveSegment.distanceToSegment = distanceToSegment
 
-                    liveSegment.timeOnSegment = timeOnSegment.toInt()
-                    liveSegment.distanceOnSegment = distanceOnSegment
-                    liveSegment.distanceToSegment = distanceToSegment
-
-                    // if distance to segment is too far away, remove the segment from the map
-                    if (distanceToSegment > SEGMENT_DISTANCE_THRESHOLD) {
-                        _liveSegments.remove(liveSegment.stravaId)
-                    }
+                // if distance to segment is too far away, we set its state to FAR_FAR_AWAY
+                if (distanceToSegment > SEGMENT_DISTANCE_THRESHOLD) {
+                    liveSegment.liveSegmentStatus = LiveSegmentStatus.FAR_FAR_AWAY
                 }
             }
         }
 
-        syncLiveSegments()
+        _liveSegments.value = _liveSegments.value.toList() // This forces the StateFlow to emit
     }
 
     private fun crossProduct(a: LatLng, b: LatLng, c: LatLng): Double {

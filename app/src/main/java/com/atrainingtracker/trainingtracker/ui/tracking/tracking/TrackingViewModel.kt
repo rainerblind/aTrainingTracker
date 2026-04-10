@@ -20,7 +20,6 @@ package com.atrainingtracker.trainingtracker.ui.tracking.tracking
 
 import android.app.Application
 import android.content.SharedPreferences
-import android.util.Log
 import androidx.compose.ui.graphics.Color
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
@@ -33,6 +32,8 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.filters.FilteredSensorData
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.MyHelper
+import com.atrainingtracker.trainingtracker.segments.LiveSegment
+import com.atrainingtracker.trainingtracker.segments.LiveSegmentStatus
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
@@ -45,9 +46,12 @@ import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.Objects
 
@@ -69,7 +73,7 @@ class TrackingViewModel(
     private val application: Application,
     val trackingViewsRepository: TrackingViewsRepository,
     val banalServiceRepository: BANALServiceRepository,
-    val segmentsRepository: SegmentsRepository,
+    segmentsRepository: SegmentsRepository,
     private val viewId: Long
 ) : ViewModel() {
 
@@ -90,7 +94,19 @@ class TrackingViewModel(
 
     val screenMode: StateFlow<ScreenMode> = trackingViewsRepository.screenMode
 
-    private val starredSegments: List<MapSegment> = SegmentsDatabaseManager.getInstance(application).getAllSegments()
+    private val starredSegments: List<MapSegment> = SegmentsDatabaseManager.getInstance(application).getAllMapSegments()
+
+    // Filter the segments from the repository:
+    val liveSegments: StateFlow<List<LiveSegment>> = segmentsRepository.liveSegments
+        .map { allSegments ->
+            allSegments.filter { segment ->
+                segment.liveSegmentStatus != LiveSegmentStatus.FAR_FAR_AWAY
+            }
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
 
     private val sharedPreferences: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(application)
     private val defaultZoneColor = Color(ContextCompat.getColor(application, R.color.color_background))

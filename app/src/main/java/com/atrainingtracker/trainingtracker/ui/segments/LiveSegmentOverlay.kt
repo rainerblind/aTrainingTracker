@@ -31,22 +31,28 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
+import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
 import com.atrainingtracker.trainingtracker.segments.LiveSegment
+import com.atrainingtracker.trainingtracker.segments.LiveSegmentStatus
+import com.atrainingtracker.trainingtracker.segments.SegmentSummary
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.google.android.gms.maps.model.LatLng
 
 @Composable
 fun LiveSegmentOverlay(
-    segments: List<LiveSegment>,
+    liveSegments: List<LiveSegment>,
     modifier: Modifier = Modifier
 ) {
-    // Only show if there are segments in proximity
     AnimatedVisibility(
-        visible = segments.isNotEmpty(),
-        enter = slideInVertically() + fadeIn(),
-        exit = slideOutVertically() + fadeOut(),
+        visible = liveSegments.isNotEmpty(),
+        enter = slideInVertically { -it } + fadeIn(),
+        exit = slideOutVertically { -it } + fadeOut(),
         modifier = modifier
     ) {
         Column(
@@ -55,7 +61,7 @@ fun LiveSegmentOverlay(
                 .padding(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            segments.forEach { segment ->
+            liveSegments.forEach { segment ->
                 LiveSegmentItem(segment)
             }
         }
@@ -68,85 +74,129 @@ private fun LiveSegmentItem(segment: LiveSegment) {
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.92f),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.94f),
                 shape = RoundedCornerShape(12.dp)
             )
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
+            // Segment Name
             Text(
-                text = segment.name,
+                text = segment.segmentSummary.name,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1
             )
 
-            val subtitle = if (segment.timeOnSegment >= 0) {
-                // Currently on the segment
-                val km = segment.distanceOnSegment / 1000.0
-                "${String.format("%.2f", km)} km done"
-            } else {
-                // Approaching the segment
-                "Start in ${segment.distanceToStart.toInt()}m"
-            }
+            val df = DistanceFormatter()
 
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-            )
+            // Dynamic Info based on status
+            when (segment.liveSegmentStatus) {
+                LiveSegmentStatus.APPROACHING -> {
+                    val summary = "${segment.segmentSummary.distance} ${segment.segmentSummary.averageGrade}"
+                    val formattedDistanceToStart = df.format_with_units(segment.distanceToStart)
+
+                    Text(
+                        text = "Start in $formattedDistanceToStart • $summary",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                    )
+                }
+
+                LiveSegmentStatus.ON_SEGMENT, LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH -> {
+                    val distDone = df.format_with_units(segment.distanceOnSegment)
+                    val distOff = "${segment.distanceToSegment.toInt()}m off"
+
+                    var subtitle = "$distDone • $distOff"
+
+                    if (segment.liveSegmentStatus == LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH) {
+                        subtitle += " • Finish in ${segment.distanceToEnd.toInt()}m"
+                    }
+
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (segment.distanceToSegment > 20) Color.Red else MaterialTheme.colorScheme.primary,
+                        fontWeight = if (segment.distanceToSegment > 20) FontWeight.Bold else FontWeight.Normal
+                    )
+                }
+                else -> {}
+            }
         }
 
         // Timer Display (Only if active)
         if (segment.timeOnSegment >= 0) {
-            val minutes = segment.timeOnSegment / 60
-            val seconds = segment.timeOnSegment % 60
+            val tf = TimeFormatter()
             Text(
-                text = String.format("%02d:%02d", minutes, seconds),
-                style = MaterialTheme.typography.headlineSmall,
+                text = tf.format_with_units(segment.timeOnSegment),
+                style = MaterialTheme.typography.headlineMedium,
                 fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = 8.dp)
             )
         }
     }
 }
 
-@Preview(showBackground = true, name = "Approaching Segment")
+// Helper to create a dummy SegmentSummary for Previews
+private fun createPreviewSummary(name: String, dist: String, grade: String) = SegmentSummary(
+    stravaId = 123L,
+    name = name,
+    bSportType = BSportType.BIKE,
+    climbCategory = "HC",
+    prTime_raw = 600,
+    prTime = "10:00",
+    city = "Munich",
+    distance = dist,
+    averageGrade = grade,
+    maxGrade = "12%",
+    elevationGain = "300m",
+    elevationMin = "500m",
+    elevationMax = "800m"
+)
+
+private val dummyLatLng = LatLng(0.0, 0.0)
+
+@Preview(showBackground = true, name = "Approaching")
 @Composable
 fun PreviewApproaching() {
     ATrainingTrackerTheme {
-        val segments = listOf(
-            LiveSegment(
-                stravaId = 1,
-                name = "Kesselberg Climb",
-                prTime = "12:30",
-                distanceToStart = 145.0,
-                timeOnSegment = -1
-            )
-        )
-        Box(Modifier.fillMaxWidth().padding(16.dp)) {
-            LiveSegmentOverlay(segments = segments)
+        val summary = createPreviewSummary("Kesselberg", "2.5 km", "4.2%")
+        val segment = LiveSegment(
+            segmentSummary = summary,
+            path = emptyList(),
+            liveSegmentStatus = LiveSegmentStatus.APPROACHING,
+            start = dummyLatLng, start_a = dummyLatLng, start_b = dummyLatLng, start_cross_n = 0.0, start_cross_loc = 0.0,
+            end = dummyLatLng, end_a = dummyLatLng, end_b = dummyLatLng, end_cross_p = 0.0, end_cross_loc = 0.0,
+            startTime_ms = -1, startDistance = 0.0, indexOfDistance = 0
+        ).apply {
+            distanceToStart = 145.0
         }
+
+        LiveSegmentOverlay(liveSegments = listOf(segment))
     }
 }
 
-@Preview(showBackground = true, name = "Active Segment")
+@Preview(showBackground = true, name = "On Segment Near Finish")
 @Composable
-fun PreviewActive() {
+fun PreviewOnSegment() {
     ATrainingTrackerTheme {
-        val segments = listOf(
-            LiveSegment(
-                stravaId = 2,
-                name = "Sector 4 Sprint",
-                prTime = "01:15",
-                distanceToStart = 0.0,
-                timeOnSegment = 74,
-                distanceOnSegment = 850.0
-            )
-        )
-        Box(Modifier.fillMaxWidth().padding(16.dp)) {
-            LiveSegmentOverlay(segments = segments)
+        val summary = createPreviewSummary("Sector 4 Sprint", "1.2 km", "0.5%")
+        val segment = LiveSegment(
+            segmentSummary = summary,
+            path = emptyList(),
+            liveSegmentStatus = LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH,
+            start = dummyLatLng, start_a = dummyLatLng, start_b = dummyLatLng, start_cross_n = 0.0, start_cross_loc = 0.0,
+            end = dummyLatLng, end_a = dummyLatLng, end_b = dummyLatLng, end_cross_p = 0.0, end_cross_loc = 0.0,
+            startTime_ms = System.currentTimeMillis() - 45000, startDistance = 0.0, indexOfDistance = 0
+        ).apply {
+            timeOnSegment = 45
+            distanceOnSegment = 1050.0
+            distanceToSegment = 2.0
+            distanceToEnd = 150.0
         }
+
+        LiveSegmentOverlay(liveSegments = listOf(segment))
     }
 }

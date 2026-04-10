@@ -33,7 +33,7 @@ class MapFragmentWithTrackViewModel(application: Application) : AndroidViewModel
     private val repository = BANALServiceRepository.getInstance(application)
 
     // Segments from DB
-    private val starredSegments: List<MapSegment> = SegmentsDatabaseManager.getInstance(application).allSegments
+    private val starredSegments: List<MapSegment> = SegmentsDatabaseManager.getInstance(application).allMapSegments
 
     // --- Simplified Reactive State ---
     val mapState: StateFlow<MapState> = repository.currentTrack

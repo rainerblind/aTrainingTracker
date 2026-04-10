@@ -154,7 +154,7 @@ class TrackingFragment : Fragment() {
                         screenMode = screenMode,
                         gridActions = gridActions, // Pass the actions object
                         currentLocationFlow = viewModel.banalServiceRepository.currentLocation,
-                        liveSegments = viewModel.segmentsRepository.liveSegments
+                        liveSegments = viewModel.liveSegments
                     )
                 }
             }
