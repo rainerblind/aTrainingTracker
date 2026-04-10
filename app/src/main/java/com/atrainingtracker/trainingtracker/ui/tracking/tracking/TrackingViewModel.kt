@@ -100,7 +100,7 @@ class TrackingViewModel(
     val liveSegments: StateFlow<List<LiveSegment>> = segmentsRepository.liveSegments
         .map { allSegments ->
             allSegments.filter { segment ->
-                segment.liveSegmentStatus != LiveSegmentStatus.FAR_FAR_AWAY
+                segment.liveData.segmentStatus != LiveSegmentStatus.FAR_FAR_AWAY
             }
         }.stateIn(
             scope = viewModelScope,
