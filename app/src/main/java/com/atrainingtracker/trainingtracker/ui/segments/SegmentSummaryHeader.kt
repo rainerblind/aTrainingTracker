@@ -130,7 +130,7 @@ fun SegmentSummaryHeader(
                     // Left: Distance Progress (Matches static distance alignment)
                     Column {
                         Text(
-                            text = "PROGRESS",
+                            text = "PROGRESS",  // should depend on the LiveSegmentStatus: Approaching, On Segment, Close To Finish, Finished
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -308,7 +308,7 @@ fun PreviewSegmentSummaryLive() {
                 segmentStatus = LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH,
                 timeOnSegment = "12:45",
                 distanceOnSegment = "3.20 km",
-                distanceToEnd = "10.60 km",
+                distanceToEnd = "400 m",
                 distanceToSegment = "3 m"
             )
         )

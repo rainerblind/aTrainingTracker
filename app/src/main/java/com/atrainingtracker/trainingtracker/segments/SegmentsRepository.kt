@@ -305,7 +305,8 @@ class SegmentsRepository private constructor(context: Context) {
             liveSegment.math.start_cross_loc = start_cross_loc
             liveSegment.math.end_cross_loc = end_cross_loc
 
-
+            // TODO: always calculate the remaining distance based on the distance of the segment and the distance on the segment?
+            // but there should be no hard jump -> use weights ..
              // update the liveSegments
             if (liveSegment.liveData.segmentStatus == LiveSegmentStatus.ON_SEGMENT
                 || liveSegment.liveData.segmentStatus == LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH) {
