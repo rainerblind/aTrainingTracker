@@ -124,7 +124,6 @@ fun SensorGridScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f) // Give the grid/map area flexible height
                         .verticalScroll(rememberScrollState()),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
