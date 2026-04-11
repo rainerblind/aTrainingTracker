@@ -26,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -130,34 +131,37 @@ fun SegmentSummaryHeader(
                     // Left: Distance Progress (Matches static distance alignment)
                     Column {
                         Text(
-                            text = "PROGRESS",  // should depend on the LiveSegmentStatus: Approaching, On Segment, Close To Finish, Finished
+                            text = liveSegmentData.segmentStatus.label(),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary
                         )
-                        Text(
-                            text = liveSegmentData.distanceOnSegment,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Remaining: ${liveSegmentData.distanceToEnd}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = "Offset: ${liveSegmentData.distanceToSegment}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        if (liveSegmentData.segmentStatus == LiveSegmentStatus.APPROACHING) {
+                            Text(
+                                text = stringResource(id = R.string.segment_status_start_in, liveSegmentData.distanceToStart),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        else if (liveSegmentData.segmentStatus == LiveSegmentStatus.ON_SEGMENT ||
+                            liveSegmentData.segmentStatus == LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH) {
+                            Text(
+                                text = liveSegmentData.distanceOnSegment,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = stringResource(id = R.string.segment_status_remaining, liveSegmentData.remainingDistance),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                text = stringResource(id = R.string.segment_status_offset, liveSegmentData.segmentOffset),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
 
                     // Right: Live Time (Matches PR time alignment)
                     Column(horizontalAlignment = Alignment.End) {
-                        Text(
-                            text = "ELAPSED",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
                         Text(
                             text = liveSegmentData.timeOnSegment,
                             style = MaterialTheme.typography.headlineSmall,
@@ -212,6 +216,11 @@ fun SegmentSummaryHeader(
 }
 
 @Composable
+fun LiveSegmentStatus.label(): String {
+    return stringResource(id = this.resId)
+}
+
+@Composable
 private fun StatItem(iconRes: Int, value: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
@@ -250,6 +259,7 @@ fun PreviewSegmentSummaryFull() {
                 prTime = "45:20",
                 city = "Bourg d'Oisans",
                 distance = "13.80 km",
+                distance_raw = 13800.0,
                 averageGrade = "Ø 8.1%",
                 maxGrade = "12.0% Max",
                 elevationGain = "1073 m",
@@ -274,11 +284,45 @@ fun PreviewSegmentSummaryMinimal() {
                 prTime = "",   // Empty/Placeholder PR
                 city = "Berlin",
                 distance = "1.20 km",
+                distance_raw = 1200.0,
                 averageGrade = "Ø 0.5%",
                 maxGrade = "1.2% Max",
                 elevationGain = "5 m",
                 elevationMin = "34 m",
                 elevationMax = "39 m"
+            )
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Live Effort View (Approaching)")
+@Composable
+fun PreviewSegmentSummaryLiveApproaching() {
+    ATrainingTrackerTheme {
+        SegmentSummaryHeader(
+            summary = SegmentSummary(
+                stravaId = 12345L,
+                name = "Alpe d'Huez Climb",
+                bSportType = BSportType.BIKE,
+                climbCategory = "HC",
+                prTime_raw = 2720,
+                prTime = "45:20",
+                city = "Bourg d'Oisans",
+                distance = "13.80 km",
+                distance_raw = 13800.0,
+                averageGrade = "Ø 8.1%",
+                maxGrade = "12.0% Max",
+                elevationGain = "1073 m",
+                elevationMin = "720 m",
+                elevationMax = "1793 m"
+            ),
+            liveSegmentData = LiveSegmentData(
+                segmentStatus = LiveSegmentStatus.APPROACHING,
+                distanceToStart = "222 m",
+                timeOnSegment = "--",
+                distanceOnSegment = "--",
+                remainingDistance = "--",
+                segmentOffset = "--"
             )
         )
     }
@@ -298,6 +342,7 @@ fun PreviewSegmentSummaryLive() {
                 prTime = "45:20",
                 city = "Bourg d'Oisans",
                 distance = "13.80 km",
+                distance_raw = 13800.0,
                 averageGrade = "Ø 8.1%",
                 maxGrade = "12.0% Max",
                 elevationGain = "1073 m",
@@ -308,8 +353,8 @@ fun PreviewSegmentSummaryLive() {
                 segmentStatus = LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH,
                 timeOnSegment = "12:45",
                 distanceOnSegment = "3.20 km",
-                distanceToEnd = "400 m",
-                distanceToSegment = "3 m"
+                remainingDistance = "400 m",
+                segmentOffset = "3 m"
             )
         )
     }

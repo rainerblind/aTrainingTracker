@@ -31,18 +31,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
 import com.atrainingtracker.trainingtracker.segments.LiveSegment
 import com.atrainingtracker.trainingtracker.segments.LiveSegmentStatus
-import com.atrainingtracker.trainingtracker.segments.SegmentSummary
-import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
-import com.google.android.gms.maps.model.LatLng
 
 @Composable
 fun LiveSegmentOverlay(
@@ -105,12 +99,12 @@ private fun LiveSegmentItem(segment: LiveSegment) {
 
                 LiveSegmentStatus.ON_SEGMENT, LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH -> {
                     val distDone = segment.liveData.distanceOnSegment
-                    val distOff = "${segment.liveData.distanceToSegment.toInt()}m off"
+                    val distOff = "${segment.liveData.segmentOffset}m off"
 
                     var subtitle = "$distDone • $distOff"
 
                     if (segment.liveData.segmentStatus == LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH) {
-                        subtitle += " • Finish in ${segment.liveData.distanceToEnd.toInt()}m"
+                        subtitle += " • Finish in ${segment.liveData.remainingDistance.toInt()}m"
                     }
 
                     Text(

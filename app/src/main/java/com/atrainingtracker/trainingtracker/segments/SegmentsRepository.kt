@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.segments
 
 import android.content.Context
 import android.util.Log
+import com.atrainingtracker.R
 import com.google.maps.android.PolyUtil
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
@@ -47,6 +48,7 @@ data class SegmentSummary(
     val prTime: String,
     val city: String,
     val distance: String,
+    val distance_raw: Double,
     val averageGrade: String,
     val maxGrade: String,
     val elevationGain: String,
@@ -54,12 +56,12 @@ data class SegmentSummary(
     val elevationMax: String,
 )
 
-enum class LiveSegmentStatus {
-    FAR_FAR_AWAY,
-    APPROACHING,
-    ON_SEGMENT,
-    ON_SEGMENT_CLOSE_TO_FINISH,
-    FINISHED
+enum class LiveSegmentStatus(val resId: Int) {
+    FAR_FAR_AWAY(R.string.segment_status_far_far_away),
+    APPROACHING(R.string.segment_status_approaching),
+    ON_SEGMENT(R.string.segment_status_on_segment),
+    ON_SEGMENT_CLOSE_TO_FINISH(R.string.segment_status_near_finish),
+    FINISHED(R.string.segment_status_finished)
 }
 
 data class LiveSegmentData(
@@ -67,8 +69,8 @@ data class LiveSegmentData(
     var timeOnSegment: String = "--:--",
     var distanceToStart: String = "--",
     var distanceOnSegment: String = "--",
-    var distanceToEnd: String = "--",
-    var distanceToSegment: String = "--"
+    var remainingDistance: String = "--",
+    var segmentOffset: String = "--"
 )
 
 data class LiveSegmentMath(
@@ -102,9 +104,9 @@ class SegmentsRepository private constructor(context: Context) {
         val DEBUG = true
         val TAG = "SegmentsRepository"
 
-        val SEGMENT_DISTANCE_THRESHOLD = 20 // m   distance between the current location and the segment to decide whether we are on the segment
-        val SEGMENT_START_DISTANCE_THRESHOLD = 200 // m   distance between the current location and the start line to show that we are approaching a segment start
-        val SEGMENT_END_DISTANCE_THRESHOLD = 500 // m   distance between the current location and the finish line to show that we are approaching the finish line
+        val SEGMENT_DISTANCE_THRESHOLD = 50 // m          distance between the current location and the segment to decide whether we are on the segment
+        val SEGMENT_START_DISTANCE_THRESHOLD = 250 // m   distance between the current location and the start line to show that we are approaching a segment start
+        val SEGMENT_END_DISTANCE_THRESHOLD = 500 // m     distance between the current location and the finish line to show that we are approaching the finish line
 
 
         @Volatile
@@ -287,7 +289,6 @@ class SegmentsRepository private constructor(context: Context) {
                     if (DEBUG) Log.i(TAG, "  We are close to the finish line: ${liveSegment.summary.name}")
 
                     liveSegment.liveData.segmentStatus = LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH
-                    liveSegment.liveData.distanceToEnd = df.format_with_units(distanceToEnd)
                 }
                 // crossing the finish line
                 if ((liveSegment.liveData.segmentStatus == LiveSegmentStatus.ON_SEGMENT || liveSegment.liveData.segmentStatus == LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH)
@@ -318,6 +319,14 @@ class SegmentsRepository private constructor(context: Context) {
                 val distanceOnSegment = currentDistance - liveSegment.math.startDistance
                 liveSegment.liveData.distanceOnSegment = df.format_with_units(distanceOnSegment)
 
+                // The reimainingDistance can be calculated by subtracting the distance on the segment form the segments distance.
+                // When we are close to the finish line, this difference will be no longer precise.
+                // To get a remainingDistance of zero at the finish line, we use a linear combination of this difference and the line distance to the finish line when we are close to the finish line.
+                val lambda = (distanceToEnd/SEGMENT_END_DISTANCE_THRESHOLD).coerceAtMost(1.0)
+                val remainingDistance = (liveSegment.summary.distance_raw - distanceOnSegment)*lambda + (1-lambda)*distanceToEnd
+                liveSegment.liveData.remainingDistance = df.format_with_units(remainingDistance)
+
+
                 // find the index that matches the current distance
                 while (liveSegment.math.indexOfDistance < liveSegment.path.size - 1
                     && liveSegment.path[liveSegment.math.indexOfDistance].distance <= distanceOnSegment
@@ -338,7 +347,7 @@ class SegmentsRepository private constructor(context: Context) {
                 } else {
                     0.0  // simply 0.
                 }
-                liveSegment.liveData.distanceToSegment = df.format_with_units(distanceToSegment)
+                liveSegment.liveData.segmentOffset = df.format_with_units(distanceToSegment)
 
                 // if distance to segment is too far away, we set its state to FAR_FAR_AWAY
                 if (distanceToSegment > SEGMENT_DISTANCE_THRESHOLD) {

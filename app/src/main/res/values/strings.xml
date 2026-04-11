@@ -1060,4 +1060,14 @@
     <string name="control_tracking_ready_run">Ready to run</string>
     <string name="control_tracking_ready_bike">Ready to ride</string>
     <string name="control_tracking_ready_other">Ready to train</string>
+
+    <!-- live segments -->
+    <string name="segment_status_far_far_away">Far far away</string>
+    <string name="segment_status_approaching">Approaching</string>
+    <string name="segment_status_on_segment">On Segment</string>
+    <string name="segment_status_near_finish">Near Finish</string>
+    <string name="segment_status_finished">Finished</string>
+    <string name="segment_status_start_in">Start in: %1$s</string>
+    <string name="segment_status_remaining">Remaining: %1$s</string>
+    <string name="segment_status_offset">Offset: %1$s</string>
 </resources>
