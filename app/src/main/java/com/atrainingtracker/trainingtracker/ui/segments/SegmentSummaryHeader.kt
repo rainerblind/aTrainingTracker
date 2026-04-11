@@ -46,12 +46,13 @@ fun SegmentSummaryHeader(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
             // --- TOP ROW: Name and City on Left, Category and PR on Right ---
             Row(
@@ -116,66 +117,6 @@ fun SegmentSummaryHeader(
                     }
                 }
             }
-            // --- LIVE DATA SECTION ---
-            // Placed between the header and the static stats
-            if (liveSegmentData != null) {
-                Spacer(modifier = Modifier.height(6.dp))
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                Spacer(modifier = Modifier.height(6.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Left: Distance Progress (Matches static distance alignment)
-                    Column {
-                        Text(
-                            text = liveSegmentData.segmentStatus.label(),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        if (liveSegmentData.segmentStatus == LiveSegmentStatus.APPROACHING) {
-                            Text(
-                                text = stringResource(id = R.string.segment_status_start_in, liveSegmentData.distanceToStart),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        else if (liveSegmentData.segmentStatus == LiveSegmentStatus.ON_SEGMENT ||
-                            liveSegmentData.segmentStatus == LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH) {
-                            Text(
-                                text = liveSegmentData.distanceOnSegment,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = stringResource(id = R.string.segment_status_remaining, liveSegmentData.remainingDistance),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text(
-                                text = stringResource(id = R.string.segment_status_offset, liveSegmentData.segmentOffset),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-
-                    // Right: Live Time (Matches PR time alignment)
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text(
-                            text = liveSegmentData.timeOnSegment,
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(6.dp))
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                Spacer(modifier = Modifier.height(6.dp))
-            }
 
             Spacer(modifier = Modifier.height(6.dp))
 
@@ -211,6 +152,63 @@ fun SegmentSummaryHeader(
                 VerticalDivider()
                 StatItem(R.drawable.ic_altitude_max, summary.elevationMax)
             }
+
+            // --- LIVE DATA SECTION ---
+            if (liveSegmentData != null) {
+                Spacer(modifier = Modifier.height(6.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Left: Distance Progress (Matches static distance alignment)
+                    Column {
+                        Text(
+                            text = liveSegmentData.segmentStatus.label(),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        if (liveSegmentData.segmentStatus == LiveSegmentStatus.APPROACHING) {
+                            Text(
+                                text = stringResource(id = R.string.segment_status_start_in, liveSegmentData.distanceToStart),
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        else if (liveSegmentData.segmentStatus == LiveSegmentStatus.ON_SEGMENT ||
+                            liveSegmentData.segmentStatus == LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH) {
+                            Text(
+                                text = liveSegmentData.distanceOnSegment,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = stringResource(id = R.string.segment_status_remaining, liveSegmentData.remainingDistance),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                text = stringResource(id = R.string.segment_status_offset, liveSegmentData.segmentOffset),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    // Right: Live Time (Matches PR time alignment)
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = liveSegmentData.timeOnSegment,
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+
         }
     }
 }
