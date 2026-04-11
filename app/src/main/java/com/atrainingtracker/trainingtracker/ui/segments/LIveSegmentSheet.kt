@@ -34,7 +34,7 @@ import kotlinx.coroutines.flow.StateFlow
 
 
 @Composable
-fun LiveSegmentSheetContent(
+fun LiveSegmentSheet(
     liveSegment: LiveSegment,
     mapState: MapState,
     mapViewModel: MapViewModel,
