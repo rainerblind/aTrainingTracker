@@ -65,12 +65,12 @@ enum class LiveSegmentStatus(val resId: Int) {
 }
 
 data class LiveSegmentData(
-    var segmentStatus: LiveSegmentStatus,
-    var timeOnSegment: String = "--:--",
-    var distanceToStart: String = "--",
-    var distanceOnSegment: String = "--",
-    var remainingDistance: String = "--",
-    var segmentOffset: String = "--"
+    val segmentStatus: LiveSegmentStatus,
+    val timeOnSegment: String = "--:--",
+    val distanceToStart: String = "--",
+    val distanceOnSegment: String = "--",
+    val remainingDistance: String = "--",
+    val segmentOffset: String = "--"
 )
 
 data class LiveSegmentMath(
@@ -246,8 +246,10 @@ class SegmentsRepository private constructor(context: Context) {
     private fun updateLiveSegments(currentLocation: LatLng, currentDistance: Double) {
         if (DEBUG) Log.i(TAG, "updateLiveSegments ...")
 
-        _liveSegments.value.forEach { liveSegment ->
+        _liveSegments.value = _liveSegments.value.map { liveSegment ->
             if (DEBUG) Log.i(TAG, "  checking segment: ${liveSegment.summary.name}")
+
+            var newSegmentStatus = liveSegment.liveData.segmentStatus
 
             val start_cross_loc = crossProduct(liveSegment.math.start_a, liveSegment.math.start_b, currentLocation)
             val distanceToStart = PolyUtil.distanceToLine(currentLocation, liveSegment.math.start_a, liveSegment.math.start_b)
@@ -262,8 +264,7 @@ class SegmentsRepository private constructor(context: Context) {
                 if (start_cross_loc.sign != liveSegment.math.start_cross_n.sign) {  // different sign as the 'first' point in the segment -> on the other side of the start line
                     if (DEBUG) Log.i(TAG, "  Segment is close to start: ${liveSegment.summary.name}")
 
-                    liveSegment.liveData.segmentStatus = LiveSegmentStatus.APPROACHING
-                    liveSegment.liveData.distanceToStart = df.format_with_units(distanceToStart)
+                    newSegmentStatus = LiveSegmentStatus.APPROACHING
                 }
 
                 // crossing the start line
@@ -273,13 +274,15 @@ class SegmentsRepository private constructor(context: Context) {
                     if (DEBUG) Log.i(TAG, "  We crossed the start line of : ${liveSegment.summary.name}")
 
                     // remember the startTime and startDistance
-                    liveSegment.liveData.segmentStatus = LiveSegmentStatus.ON_SEGMENT
                     liveSegment.math.startTime_ms = System.currentTimeMillis()
                     liveSegment.math.startDistance = banalRepo.currentDistance.value ?: 0.0
+
+                    newSegmentStatus = LiveSegmentStatus.ON_SEGMENT
                 }
             }
             else if (liveSegment.liveData.segmentStatus == LiveSegmentStatus.APPROACHING) {  // no longer close to start but formerly approaching
-                liveSegment.liveData.segmentStatus = LiveSegmentStatus.FAR_FAR_AWAY          // -> mark as far far away
+                // -> mark as far far away
+                newSegmentStatus = LiveSegmentStatus.FAR_FAR_AWAY
             }
 
             // close to the finish line
@@ -288,7 +291,7 @@ class SegmentsRepository private constructor(context: Context) {
                     && end_cross_loc.sign == liveSegment.math.end_cross_p.sign) { // same sign as the 'last' point in the segment -> not yet over the finish line
                     if (DEBUG) Log.i(TAG, "  We are close to the finish line: ${liveSegment.summary.name}")
 
-                    liveSegment.liveData.segmentStatus = LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH
+                    newSegmentStatus = LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH
                 }
                 // crossing the finish line
                 if ((liveSegment.liveData.segmentStatus == LiveSegmentStatus.ON_SEGMENT || liveSegment.liveData.segmentStatus == LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH)
@@ -298,7 +301,7 @@ class SegmentsRepository private constructor(context: Context) {
 
                     if (DEBUG) Log.i(TAG, "  We crossed the finish line: ${liveSegment.summary.name}")
 
-                    liveSegment.liveData.segmentStatus = LiveSegmentStatus.FINISHED
+                    newSegmentStatus = LiveSegmentStatus.FINISHED
                 }
             }
 
@@ -306,25 +309,26 @@ class SegmentsRepository private constructor(context: Context) {
             liveSegment.math.start_cross_loc = start_cross_loc
             liveSegment.math.end_cross_loc = end_cross_loc
 
-            // TODO: always calculate the remaining distance based on the distance of the segment and the distance on the segment?
-            // but there should be no hard jump -> use weights ..
-             // update the liveSegments
-            if (liveSegment.liveData.segmentStatus == LiveSegmentStatus.ON_SEGMENT
-                || liveSegment.liveData.segmentStatus == LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH) {
+            if (newSegmentStatus == LiveSegmentStatus.APPROACHING) {
+                liveSegment.copy(
+                    liveData = LiveSegmentData(
+                        segmentStatus = LiveSegmentStatus.APPROACHING,
+                        distanceToStart = df.format_with_units(distanceToStart)
+                    )
+                )
+            }
+            else if (newSegmentStatus == LiveSegmentStatus.ON_SEGMENT
+                || newSegmentStatus == LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH) {
                 if (DEBUG) Log.i(TAG, "  we are on this segment.  Thus, we update it ...")
 
                 val timeOnSegment = (System.currentTimeMillis() - liveSegment.math.startTime_ms) / 1000
-                liveSegment.liveData.timeOnSegment = tf.format_with_units(timeOnSegment)
-
                 val distanceOnSegment = currentDistance - liveSegment.math.startDistance
-                liveSegment.liveData.distanceOnSegment = df.format_with_units(distanceOnSegment)
 
                 // The reimainingDistance can be calculated by subtracting the distance on the segment form the segments distance.
                 // When we are close to the finish line, this difference will be no longer precise.
                 // To get a remainingDistance of zero at the finish line, we use a linear combination of this difference and the line distance to the finish line when we are close to the finish line.
                 val lambda = (distanceToEnd/SEGMENT_END_DISTANCE_THRESHOLD).coerceAtMost(1.0)
                 val remainingDistance = (liveSegment.summary.distance_raw - distanceOnSegment)*lambda + (1-lambda)*distanceToEnd
-                liveSegment.liveData.remainingDistance = df.format_with_units(remainingDistance)
 
 
                 // find the index that matches the current distance
@@ -347,22 +351,34 @@ class SegmentsRepository private constructor(context: Context) {
                 } else {
                     0.0  // simply 0.
                 }
-                liveSegment.liveData.segmentOffset = df.format_with_units(distanceToSegment)
 
                 // if distance to segment is too far away, we set its state to FAR_FAR_AWAY
                 if (distanceToSegment > SEGMENT_DISTANCE_THRESHOLD) {
-                    liveSegment.liveData.segmentStatus = LiveSegmentStatus.FAR_FAR_AWAY
+                    liveSegment.copy(
+                        liveData = LiveSegmentData(
+                            segmentStatus = LiveSegmentStatus.FAR_FAR_AWAY,
+                        )
+                    )
+                }
+                else {
+                    liveSegment.copy(
+                        liveData = LiveSegmentData(
+                            segmentStatus = newSegmentStatus,
+                            timeOnSegment = tf.format_with_units(timeOnSegment),
+                            distanceOnSegment = df.format_with_units(distanceOnSegment),
+                            remainingDistance = df.format_with_units(remainingDistance),
+                            segmentOffset = df.format_with_units(distanceToSegment)
+                        )
+                    )
                 }
             }
+            else {
+                liveSegment
+            }
         }
-
-        _liveSegments.value = _liveSegments.value.toList() // This forces the StateFlow to emit
     }
 
     private fun crossProduct(a: LatLng, b: LatLng, c: LatLng): Double {
         return (b.latitude - a.latitude) * (c.longitude - a.longitude) - (b.longitude - a.longitude) * (c.latitude - a.latitude)
     }
-
-
-
 }
