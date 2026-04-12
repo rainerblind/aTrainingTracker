@@ -179,29 +179,25 @@ fun SegmentSummaryHeader(
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.primary
                         )
-                        if (liveSegmentData.segmentStatus == LiveSegmentStatus.APPROACHING) {
-                            Text(
-                                text = stringResource(id = R.string.segment_status_start_in, liveSegmentData.distanceToStart),
-                                style = MaterialTheme.typography.titleLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        else if (liveSegmentData.segmentStatus == LiveSegmentStatus.ON_SEGMENT ||
-                            liveSegmentData.segmentStatus == LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH) {
-                            Text(
-                                text = liveSegmentData.distanceOnSegment,
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = stringResource(id = R.string.segment_status_remaining, liveSegmentData.remainingDistance),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text(
-                                text = stringResource(id = R.string.segment_status_offset, liveSegmentData.segmentOffset),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        Text(
+                            text = if (liveSegmentData.segmentStatus == LiveSegmentStatus.APPROACHING) {
+                                stringResource(id = R.string.segment_status_start_in, liveSegmentData.distanceToStart)
+                            }
+                            else {
+                                liveSegmentData.distanceOnSegment
+                            },
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = stringResource(id = R.string.segment_status_remaining, liveSegmentData.remainingDistance),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            text = stringResource(id = R.string.segment_status_offset, liveSegmentData.segmentOffset),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
 
                     // Right: Live Time (Matches PR time alignment)

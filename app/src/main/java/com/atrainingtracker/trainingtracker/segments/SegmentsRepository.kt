@@ -313,7 +313,8 @@ class SegmentsRepository private constructor(context: Context) {
                 liveSegment.copy(
                     liveData = LiveSegmentData(
                         segmentStatus = LiveSegmentStatus.APPROACHING,
-                        distanceToStart = df.format_with_units(distanceToStart)
+                        distanceToStart = df.format_with_units(distanceToStart),
+                        remainingDistance = df.format_with_units(liveSegment.summary.distance_raw + distanceToStart)
                     )
                 )
             }
@@ -329,7 +330,6 @@ class SegmentsRepository private constructor(context: Context) {
                 // To get a remainingDistance of zero at the finish line, we use a linear combination of this difference and the line distance to the finish line when we are close to the finish line.
                 val lambda = (distanceToEnd/SEGMENT_END_DISTANCE_THRESHOLD).coerceAtMost(1.0)
                 val remainingDistance = (liveSegment.summary.distance_raw - distanceOnSegment)*lambda + (1-lambda)*distanceToEnd
-
 
                 // find the index that matches the current distance
                 while (liveSegment.math.indexOfDistance < liveSegment.path.size - 1
