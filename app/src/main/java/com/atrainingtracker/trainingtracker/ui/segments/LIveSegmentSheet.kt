@@ -22,8 +22,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.atrainingtracker.trainingtracker.segments.LiveSegment
 import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
@@ -43,17 +46,35 @@ fun LiveSegmentSheet(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .fillMaxHeight()
+            .background(MaterialTheme.colorScheme.surface)
     ) {
-        // 1. Header (The "Peek" part)
+        // --- Drag Handle (The horizontal line) ---
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 12.dp, bottom = 8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Surface(
+                modifier = Modifier.size(width = 32.dp, height = 4.dp),
+                color = MaterialTheme.colorScheme.outlineVariant,
+                shape = MaterialTheme.shapes.extraLarge
+            ) {}
+        }
+
+        // --- Header with live data ---
         SegmentSummaryHeader(
             summary = liveSegment.summary,
-            liveSegmentData = liveSegment.liveData
+            liveSegmentData = liveSegment.liveData,
+            modifier = Modifier.padding(top = 4.dp)
         )
 
-        HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
+        HorizontalDivider(
+            thickness = 1.dp,
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+        )
 
-        // 2. Map (2/3 of remaining space)
+        // --- Map (2/3 of remaining space) ---
         ATrainingTrackerMap(
             mapState = mapState,
             mapViewModel = mapViewModel,
@@ -63,10 +84,11 @@ fun LiveSegmentSheet(
                 .weight(2f)
         )
 
-        // 3. Elevation Profile (1/3 of remaining space)
+        // --- Elevation Profile (1/3 of remaining space) ---
         ElevationProfile(
             pathPoints = liveSegment.path,
-            // currentDistance = liveSegment.liveData.distanceOnSegment,
+            // Pass the raw distance double to the profile for the progress marker
+            // currentDistance = liveSegment.liveData.distanceOnSegmentRaw,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)

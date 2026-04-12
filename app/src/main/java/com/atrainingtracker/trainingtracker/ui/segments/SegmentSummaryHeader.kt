@@ -68,11 +68,19 @@ fun SegmentSummaryHeader(
                         fontWeight = FontWeight.Bold,
                         maxLines = 2
                     )
-                    Text(
-                        text = summary.city,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    if (liveSegmentData == null) {
+                        Text(
+                            text = summary.city,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        Text(
+                            text = "Live Segment",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
 
                 // 2. Right Column: Category (Top) and PR (Bottom)
