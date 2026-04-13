@@ -73,7 +73,6 @@ fun LiveSegmentSheet(
             currentDistance = liveSegment.liveData.distanceOnSegment_raw,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(8.dp)
         )
     }
 }
