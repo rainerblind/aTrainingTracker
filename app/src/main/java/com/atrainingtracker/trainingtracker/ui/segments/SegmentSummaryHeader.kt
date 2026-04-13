@@ -52,7 +52,7 @@ fun SegmentSummaryHeader(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .padding(8.dp)
         ) {
             // --- TOP ROW: Name and City on Left, Category and PR on Right ---
             Row(
@@ -60,7 +60,7 @@ fun SegmentSummaryHeader(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.Top // Align to top so metadata stays pinned if title wraps
             ) {
-                // 1. Left Column: Name and City
+                // 1. Left Column: Name and City of Live Segment state
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = summary.name,
@@ -76,8 +76,8 @@ fun SegmentSummaryHeader(
                         )
                     } else {
                         Text(
-                            text = "Live Segment",
-                            style = MaterialTheme.typography.bodyMedium,
+                            text = liveSegmentData.segmentStatus.label(),
+                            style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -126,43 +126,45 @@ fun SegmentSummaryHeader(
                 }
             }
 
-            Spacer(modifier = Modifier.height(6.dp))
+            if (liveSegmentData == null) {
+                Spacer(modifier = Modifier.height(6.dp))
 
-            // --- ROW 1: Distance ---
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                StatItem(R.drawable.ic_distance, summary.distance)
-            }
+                // --- ROW 1: Distance ---
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    StatItem(R.drawable.ic_distance, summary.distance)
+                }
 
-            Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
-            // --- ROW 2: Grades (Avg and Max) ---
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                StatItem(R.drawable.ic_grade, summary.averageGrade)
-                VerticalDivider()
-                Text(text = summary.maxGrade, style = MaterialTheme.typography.bodyMedium)
-            }
+                // --- ROW 2: Grades (Avg and Max) ---
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    StatItem(R.drawable.ic_grade, summary.averageGrade)
+                    VerticalDivider()
+                    Text(text = summary.maxGrade, style = MaterialTheme.typography.bodyMedium)
+                }
 
-            Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
-            // --- ROW 3: Elevations (Gain, Min, Max) ---
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_altitude),
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.width(4.dp))
+                // --- ROW 3: Elevations (Gain, Min, Max) ---
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_altitude),
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
 
-                StatItem(R.drawable.ic_elevation_gain, summary.elevationGain)
-                VerticalDivider()
-                StatItem(R.drawable.ic_altitude_min, summary.elevationMin)
-                VerticalDivider()
-                StatItem(R.drawable.ic_altitude_max, summary.elevationMax)
+                    StatItem(R.drawable.ic_elevation_gain, summary.elevationGain)
+                    VerticalDivider()
+                    StatItem(R.drawable.ic_altitude_min, summary.elevationMin)
+                    VerticalDivider()
+                    StatItem(R.drawable.ic_altitude_max, summary.elevationMax)
+                }
             }
 
             // --- LIVE DATA SECTION ---
-            if (liveSegmentData != null) {
+            else {
                 Spacer(modifier = Modifier.height(6.dp))
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 Spacer(modifier = Modifier.height(6.dp))
@@ -174,11 +176,6 @@ fun SegmentSummaryHeader(
                 ) {
                     // Left: Distance Progress (Matches static distance alignment)
                     Column {
-                        Text(
-                            text = liveSegmentData.segmentStatus.label(),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary
-                        )
                         Text(
                             text = if (liveSegmentData.segmentStatus == LiveSegmentStatus.APPROACHING) {
                                 stringResource(id = R.string.segment_status_start_in, liveSegmentData.distanceToStart)
