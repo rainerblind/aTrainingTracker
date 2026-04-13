@@ -186,13 +186,25 @@ fun SegmentSummaryHeader(
                             else {
                                 liveSegmentData.distanceOnSegment
                             },
-                            style = MaterialTheme.typography.titleLarge,
+                            style = if (liveSegmentData.segmentStatus != LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH) {
+                                MaterialTheme.typography.titleLarge
+                            }
+                            else {
+                                MaterialTheme.typography.bodyLarge
+                            },
                             fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = stringResource(id = R.string.segment_status_remaining, liveSegmentData.remainingDistance),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            style = if (liveSegmentData.segmentStatus == LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH) {
+                                MaterialTheme.typography.titleLarge
+                            }
+                            else {
+                                MaterialTheme.typography.bodyLarge
+                            },
+
+                            fontWeight = FontWeight.Bold
+                        )
                         Text(
                             text = stringResource(id = R.string.segment_status_offset, liveSegmentData.segmentOffset),
                             style = MaterialTheme.typography.bodyMedium,
@@ -325,6 +337,38 @@ fun PreviewSegmentSummaryLiveApproaching() {
                 distanceOnSegment = "--",
                 remainingDistance = "--",
                 segmentOffset = "--"
+            )
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Live Effort View (On Segment)")
+@Composable
+fun PreviewSegmentSummaryLiveOnSegment() {
+    ATrainingTrackerTheme {
+        SegmentSummaryHeader(
+            summary = SegmentSummary(
+                stravaId = 12345L,
+                name = "Alpe d'Huez Climb",
+                bSportType = BSportType.BIKE,
+                climbCategory = "HC",
+                prTime_raw = 2720,
+                prTime = "45:20",
+                city = "Bourg d'Oisans",
+                distance = "13.80 km",
+                distance_raw = 13800.0,
+                averageGrade = "Ø 8.1%",
+                maxGrade = "12.0% Max",
+                elevationGain = "1073 m",
+                elevationMin = "720 m",
+                elevationMax = "1793 m"
+            ),
+            liveSegmentData = LiveSegmentData(
+                segmentStatus = LiveSegmentStatus.ON_SEGMENT,
+                timeOnSegment = "2:45",
+                distanceOnSegment = "1.20 km",
+                remainingDistance = "12.80 m",
+                segmentOffset = "3 m"
             )
         )
     }
