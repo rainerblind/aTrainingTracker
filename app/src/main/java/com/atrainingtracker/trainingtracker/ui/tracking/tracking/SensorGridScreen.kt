@@ -98,15 +98,12 @@ fun SensorGridScreen(
         scaffoldState = scaffoldState,
         sheetDragHandle = null, // Removes the large top spacer entirely
         // Only show sheet if we are in tracking mode and have an active segment
-        sheetPeekHeight = if (activeSegment != null && screenMode == ScreenMode.TRACKING) 280.dp else 0.dp,
+        sheetPeekHeight = if (activeSegment != null && screenMode == ScreenMode.TRACKING) 180.dp else 0.dp,
         sheetSwipeEnabled = activeSegment != null,
         sheetContent = {
             if (activeSegment != null) {
                 LiveSegmentSheet(
-                    liveSegment = activeSegment,
-                    mapState = state.mapState,
-                    mapViewModel = mapViewModel,
-                    currentLocationFlow = currentLocationFlow
+                    liveSegment = activeSegment
                 )
             } else {
                 Box(Modifier

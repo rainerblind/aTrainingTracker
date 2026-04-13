@@ -38,21 +38,19 @@ import kotlinx.coroutines.flow.StateFlow
 
 @Composable
 fun LiveSegmentSheet(
-    liveSegment: LiveSegment,
-    mapState: MapState,
-    mapViewModel: MapViewModel,
-    currentLocationFlow: StateFlow<LatLng?>
+    liveSegment: LiveSegment
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .fillMaxHeight(0.5f)
             .background(MaterialTheme.colorScheme.surface)
     ) {
         // --- Drag Handle (The horizontal line) ---
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 12.dp, bottom = 8.dp),
+                .padding(vertical = 8.dp),
             contentAlignment = Alignment.Center
         ) {
             Surface(
@@ -65,23 +63,7 @@ fun LiveSegmentSheet(
         // --- Header with live data ---
         SegmentSummaryHeader(
             summary = liveSegment.summary,
-            liveSegmentData = liveSegment.liveData,
-            modifier = Modifier.padding(top = 4.dp)
-        )
-
-        HorizontalDivider(
-            thickness = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-        )
-
-        // --- Map (2/3 of remaining space) ---
-        ATrainingTrackerMap(
-            mapState = mapState,
-            mapViewModel = mapViewModel,
-            currentLocationFlow = currentLocationFlow,
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(2f)
+            liveSegmentData = liveSegment.liveData
         )
 
         // --- Elevation Profile (1/3 of remaining space) ---
@@ -91,8 +73,6 @@ fun LiveSegmentSheet(
             // currentDistance = liveSegment.liveData.distanceOnSegmentRaw,
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f)
-                .background(MaterialTheme.colorScheme.surface)
                 .padding(8.dp)
         )
     }
