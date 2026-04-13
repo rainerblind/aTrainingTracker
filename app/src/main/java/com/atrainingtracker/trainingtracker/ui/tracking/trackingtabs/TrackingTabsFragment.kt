@@ -377,19 +377,32 @@ class TrackingTabsFragment : Fragment() {
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(
-                        checked = viewInfo.showMap,
-                        onCheckedChange = { viewModel.onUpdateShowMap(viewInfo.tabViewId, it) }
-                    )
-                    Text(stringResource(R.string.showMap), style = MaterialTheme.typography.labelSmall)
+                    // Vertical Stack of Checkboxes
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(
+                                checked = viewInfo.showMap,
+                                onCheckedChange = { viewModel.onUpdateShowMap(viewInfo.tabViewId, it) }
+                            )
+                            Text(stringResource(R.string.showMap), style = MaterialTheme.typography.labelSmall)
+                        }
 
-                    Checkbox(
-                        checked = viewInfo.showLapButton,
-                        onCheckedChange = { viewModel.onUpdateShowLapButton(viewInfo.tabViewId, it) }
-                    )
-                    Text(stringResource(R.string.showLapButton), style = MaterialTheme.typography.labelSmall)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(
+                                checked = viewInfo.showLiveSegments,
+                                onCheckedChange = { viewModel.onUpdateShowLiveSegments(viewInfo.tabViewId, it) }
+                            )
+                            Text(stringResource(R.string.showLiveSegments), style = MaterialTheme.typography.labelSmall)
+                        }
 
-                    Spacer(Modifier.width(8.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(
+                                checked = viewInfo.showLapButton,
+                                onCheckedChange = { viewModel.onUpdateShowLapButton(viewInfo.tabViewId, it) }
+                            )
+                            Text(stringResource(R.string.showLapButton), style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
 
                     IconButton(
                         onClick = { viewModel.onDeleteTab(viewInfo.tabViewId) }

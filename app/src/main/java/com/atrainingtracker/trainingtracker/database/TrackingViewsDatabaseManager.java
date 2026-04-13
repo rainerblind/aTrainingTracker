@@ -177,6 +177,10 @@ public class TrackingViewsDatabaseManager {
         updateBoolean(viewId, TrackingViewsDbHelper.SHOW_LAP_BUTTON, showLapButton);
     }
 
+    public void updateShowLiveSegments(long viewId, boolean showLiveSegments) {
+        updateBoolean(viewId, TrackingViewsDbHelper.SHOW_LIVE_SEGMENTS, showLiveSegments);
+    }
+
     public void deleteSensorField(long sensorFieldId) {
         if (DEBUG) Log.i(TAG, "deleteSensorField(" + sensorFieldId + ")");
 
@@ -313,7 +317,8 @@ public class TrackingViewsDatabaseManager {
         // public static final int DB_VERSION = 5;       // upgraded to version 5 at 14.03.2018
         // public static final int DB_VERSION = 6;       // upgraded to version 6 at 17.04.2018
         // public static final int DB_VERSION = 7;       // upgraded to version 7 at 15.10.2019
-        public static final int DB_VERSION = 8;  // upgraded to version 8 at 25.02.2026
+        // public static final int DB_VERSION = 8;       // upgraded to version 8 at 25.02.2026
+        public static final int DB_VERSION = 9;  // upgraded to version 9 at 12.04.2026: Adding Live Segments
         public static final String VIEWS_TABLE = "ViewsTable";                // the table for the different 'tabs'
         public static final String ROWS_TABLE = "LayoutRowsTable";            // the table for the sensor fields within each tab
         public static final String C_ID = BaseColumns._ID;
@@ -349,6 +354,9 @@ public class TrackingViewsDatabaseManager {
         protected static final String DAY = "Day";                       // no longer supported
         protected static final String NIGHT = "Night";                   // no longer supported
 
+        // new in V9 -> Live Segments
+        public static final String SHOW_LIVE_SEGMENTS = "ShowLiveSegments";
+
         @Deprecated
         protected static final String CREATE_VIEWS_TABLE_V1 = "create table " + VIEWS_TABLE + " ("
                 + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -376,6 +384,8 @@ public class TrackingViewsDatabaseManager {
                 + NEXT_POSITION + " int, "
                 + SHOW_LAP_BUTTON + " int, "
                 + SHOW_MAP + " int)";
+
+        @Deprecated
         protected static final String CREATE_VIEWS_TABLE_V7 = "create table " + VIEWS_TABLE + " ("
                 + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                 // + VIEW_ID       + " INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -389,6 +399,20 @@ public class TrackingViewsDatabaseManager {
                 + SYSTEM_SETTING + " int, "
                 + DAY + " int, "
                 + NIGHT + " int)";
+        protected static final String CREATE_VIEWS_TABLE_V9 = "create table " + VIEWS_TABLE + " ("
+                + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                // + VIEW_ID       + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + ACTIVITY_TYPE + " text, "
+                + NAME + " text, "
+                + LAYOUT_NR + " int, "
+                + NEXT_POSITION + " int, "
+                + SHOW_LAP_BUTTON + " int, "
+                + SHOW_MAP + " int, "
+                + FULL_SCREEN + " int, "
+                + SYSTEM_SETTING + " int, "
+                + DAY + " int, "
+                + NIGHT + " int, "
+                + SHOW_LIVE_SEGMENTS + " int)";
 
         @Deprecated
         protected static final String CREATE_LAYOUTS_TABLE_V3 = "create table " + ROWS_TABLE + " ("
@@ -457,10 +481,10 @@ public class TrackingViewsDatabaseManager {
 
         @Override
         public void onCreate(@NonNull SQLiteDatabase db) {
-            db.execSQL(CREATE_VIEWS_TABLE_V7);
+            db.execSQL(CREATE_VIEWS_TABLE_V9);
             db.execSQL(CREATE_LAYOUTS_TABLE_V8);
 
-            if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_VIEWS_TABLE_V7);
+            if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_VIEWS_TABLE_V9);
             if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_LAYOUTS_TABLE_V8);
 
 
@@ -469,15 +493,15 @@ public class TrackingViewsDatabaseManager {
             EnumMap<ActivityType, List<RowData>> viewMap = createViewMap();
             for (ActivityType activityType : viewMap.keySet()) {
                 // show the default tab with an lap button
-                addDefaultTab(db, activityType, mContext.getString(R.string.text_default), 1, false, false, viewMap.get(activityType));
+                addDefaultTab(db, activityType, mContext.getString(R.string.text_default), 1, false, false, true, viewMap.get(activityType));
                 // shot a tab with just some standard fields and the map but no lap button
-                addDefaultTab(db, activityType, mContext.getString(R.string.tab_map), 2, false, true, getDefaultStartRowDataList(activityType));
-                addDefaultTab(db, activityType, mContext.getString(R.string.tab_laps), 3, true, false, getDefaultLapRowDataList(activityType));
+                addDefaultTab(db, activityType, mContext.getString(R.string.tab_map), 2, false, true, false, getDefaultStartRowDataList(activityType));
+                addDefaultTab(db, activityType, mContext.getString(R.string.tab_laps), 3, true, false, false, getDefaultLapRowDataList(activityType));
             }
             if (DEBUG) Log.d(TAG, "filled db");
         }
 
-        public long addDefaultTab(@NonNull SQLiteDatabase db, @NonNull ActivityType activityType, String name, int layoutNr, boolean showLapButton, boolean showMap, List<RowData> rowDataList) {
+        public long addDefaultTab(@NonNull SQLiteDatabase db, @NonNull ActivityType activityType, String name, int layoutNr, boolean showLapButton, boolean showMap, boolean showLiveSegments, List<RowData> rowDataList) {
             if (DEBUG)
                 Log.i(TAG, "addDefaultActivity: activityType=" + activityType + ", layoutNr=" + layoutNr);
             long newViewId = -1;
@@ -494,6 +518,7 @@ public class TrackingViewsDatabaseManager {
             values.put(SYSTEM_SETTING, 1);  // default will be to follow the systems settings
             values.put(DAY, 0);
             values.put(NIGHT, 0);
+            values.put(SHOW_LIVE_SEGMENTS, showLiveSegments ? 1 : 0);
             newViewId = db.insert(VIEWS_TABLE, null, values);
 
             for (RowData rowData : rowDataList) {
@@ -603,6 +628,18 @@ public class TrackingViewsDatabaseManager {
                         "WHEN 80 THEN 'XLARGE' " +
                         "ELSE 'NORMAL' END;"); // Default to 'NORMAL' for any unexpected values.
                 Log.i(TAG, "Successfully migrated TEXT_SIZE (int) to VIEW_SIZE (text).");
+            }
+
+            if (oldVersion < 9) {
+                Log.i(TAG, "Upgrading database from version 8 to 9");
+
+                // add the new SHOW_LIVE_SEGMENTS column
+                addColumn(db, VIEWS_TABLE, SHOW_LIVE_SEGMENTS, "int");
+
+                // set the SHOW_LIVE_SEGMENTS column to 1
+                ContentValues contentValues = new ContentValues();
+                contentValues.put(SHOW_LIVE_SEGMENTS, 1);
+                db.update(VIEWS_TABLE, contentValues, null, null);
             }
         }
 

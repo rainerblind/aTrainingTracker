@@ -146,6 +146,12 @@ class TrackingTabsViewModel(
         }
     }
 
+    fun onUpdateShowLiveSegments(tabViewId: Long, showLiveSegments: Boolean) {
+        viewModelScope.launch {
+            trackingViewsRepository.updateShowLiveSegments(tabViewId, showLiveSegments)
+        }
+    }
+
     fun onUpdateShowMap(tabViewId: Long, showMap: Boolean) {
         viewModelScope.launch {
             trackingViewsRepository.updateShowMap(tabViewId,showMap)

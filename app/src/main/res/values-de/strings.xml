@@ -529,6 +529,7 @@
     <string name="delete_view">entfernen</string>
     <string name="add_view_after">neu</string>
     <string name="EditTrackingView">Bearbeiten</string>
+    <string name="showLiveSegments">Live Segments</string>
     <string name="showLapButton">Lap Knopf</string>
     <string name="select_device_type">wähle Sensor Typ</string>
     <string name="Preview">Vorschau</string>
