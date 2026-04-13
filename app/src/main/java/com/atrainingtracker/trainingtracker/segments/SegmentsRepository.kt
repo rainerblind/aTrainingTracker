@@ -69,6 +69,7 @@ data class LiveSegmentData(
     val timeOnSegment: String = "--:--",
     val distanceToStart: String = "--",
     val distanceOnSegment: String = "--",
+    val distanceOnSegment_raw: Double = 0.0,
     val remainingDistance: String = "--",
     val segmentOffset: String = "--"
 )
@@ -400,6 +401,7 @@ class SegmentsRepository private constructor(context: Context) {
                                 segmentStatus = newSegmentStatus,
                                 timeOnSegment = tf.format_with_units(timeOnSegment),
                                 distanceOnSegment = df.format_with_units(distanceOnSegment),
+                                distanceOnSegment_raw = distanceOnSegment,
                                 remainingDistance = df.format_with_units(remainingDistance),
                                 segmentOffset = df.format_with_units(distanceToSegment)
                             )
@@ -417,6 +419,7 @@ class SegmentsRepository private constructor(context: Context) {
                                 segmentStatus = newSegmentStatus,
                                 timeOnSegment = tf.format_with_units(timeOnSegment),
                                 distanceOnSegment = df.format_with_units(distanceOnSegment),
+                                distanceOnSegment_raw = distanceOnSegment,
                                 remainingDistance = df.format_with_units(0),
                                 segmentOffset = df.format_with_units(distanceToEnd)
                             )

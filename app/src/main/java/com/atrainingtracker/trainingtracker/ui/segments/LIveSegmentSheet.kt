@@ -66,11 +66,11 @@ fun LiveSegmentSheet(
             liveSegmentData = liveSegment.liveData
         )
 
-        // --- Elevation Profile (1/3 of remaining space) ---
+        // --- Elevation Profile ---
         ElevationProfile(
             pathPoints = liveSegment.path,
             // Pass the raw distance double to the profile for the progress marker
-            // currentDistance = liveSegment.liveData.distanceOnSegmentRaw,
+            currentDistance = liveSegment.liveData.distanceOnSegment_raw,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(8.dp)
