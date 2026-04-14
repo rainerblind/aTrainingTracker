@@ -195,6 +195,13 @@ public class MainActivityWithNavigation
         }
     };
 
+    private final BroadcastReceiver mAntAdapterMissingReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            showANTAdapterMissingDialog();
+        }
+    };
+
 
     public void showSpecificInstallANTDialog() {
         Context context = this;
@@ -213,6 +220,24 @@ public class MainActivityWithNavigation
             }
         });
         alertDialogBuilder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.dismiss();
+            }
+        });
+
+        final AlertDialog waitDialog = alertDialogBuilder.create();
+        waitDialog.show();
+    }
+
+    public void showANTAdapterMissingDialog() {
+        Context context = this;
+
+        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
+        alertDialogBuilder.setTitle("Missing ANT Adapter");
+        alertDialogBuilder.setMessage("The ANT interface is missing an ANT adapter.  Probably, you Smartphone does not have build in ANT support.  You can fix this with the help of an USB ANT Dongle that is connected via an OTG adapter and installing the ANT USB Service ...");
+        alertDialogBuilder.setCancelable(true);
+        alertDialogBuilder.setNeutralButton("OK", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 dialog.dismiss();
@@ -497,6 +522,7 @@ public class MainActivityWithNavigation
         ContextCompat.registerReceiver(this, mStopTrackingReceiver, new IntentFilter(TrainingApplication.REQUEST_STOP_TRACKING), ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mTrackingStoppedReceiver, new IntentFilter(TrackerService.TRACKING_FINISHED_INTENT), ContextCompat.RECEIVER_NOT_EXPORTED);
         registerReceiver(mAntDependencyReceiver, new IntentFilter("com.atrainingtracker.ANT_DEPENDENCY_MISSING"), Context.RECEIVER_NOT_EXPORTED);
+        registerReceiver(mAntAdapterMissingReceiver, new IntentFilter("com.atrainingtracker.ADAPTER_NOT_DETECTED"), Context.RECEIVER_NOT_EXPORTED);
     }
 
     // method to verify the preferences
@@ -602,7 +628,7 @@ public class MainActivityWithNavigation
         } catch (IllegalArgumentException ignored) {}
 
         unregisterReceiver(mAntDependencyReceiver);
-
+        unregisterReceiver(mAntAdapterMissingReceiver);
 
         mHandler.postDelayed(mDisconnectFromBANALServiceRunnable, WAITING_TIME_BEFORE_DISCONNECTING);
     }

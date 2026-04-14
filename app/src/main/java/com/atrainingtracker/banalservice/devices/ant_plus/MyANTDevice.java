@@ -203,7 +203,7 @@ public abstract class MyANTDevice extends MyRemoteDevice {
 //    	} 
 //    }
 
-    private void dependencyNotInstalled() {
+    private void sendBroadcast(String intentAction) {
         myLog("dependencyNotInstalled()");
 
         if (mContext == null) {
@@ -212,7 +212,7 @@ public abstract class MyANTDevice extends MyRemoteDevice {
         }
 
         // Since we can not show a dialog here, we notify the app via a broadcast
-        Intent intent = new Intent("com.atrainingtracker.ANT_DEPENDENCY_MISSING");
+        Intent intent = new Intent(intentAction);
         intent.setPackage(mContext.getPackageName());
         intent.putExtra("dependency_name", AntPluginPcc.getMissingDependencyName());
         intent.putExtra("package_name", AntPluginPcc.getMissingDependencyPackageName());
@@ -397,7 +397,7 @@ public abstract class MyANTDevice extends MyRemoteDevice {
                     break;
 
                 case DEPENDENCY_NOT_INSTALLED:
-                    dependencyNotInstalled();
+                    sendBroadcast("com.atrainingtracker.ANT_DEPENDENCY_MISSING");
                     break;
 
                 case CHANNEL_NOT_AVAILABLE:
@@ -407,6 +407,7 @@ public abstract class MyANTDevice extends MyRemoteDevice {
                 case USER_CANCELLED:
                     break;
                 case ADAPTER_NOT_DETECTED:
+                    sendBroadcast("com.atrainingtracker.ADAPTER_NOT_DETECTED");
                     break;
                 case ALREADY_SUBSCRIBED:
                     break;
