@@ -49,6 +49,7 @@ import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 fun ControlTrackingButton(
     modifier: Modifier = Modifier,
     mode: TrackingMode,
+    enabled: Boolean = true,
     onStart: () -> Unit,
     onPause: () -> Unit,
     onResume: () -> Unit,
@@ -61,7 +62,6 @@ fun ControlTrackingButton(
     ) { targetMode ->
         when (targetMode) {
             TrackingMode.TRACKING -> {
-                // PAUSE BUTTON (No Shape, Vertical)
                 ControlItem(
                     iconRes = R.drawable.control_pause,
                     labelRes = R.string.pause_tracking,
@@ -71,7 +71,6 @@ fun ControlTrackingButton(
             }
 
             TrackingMode.PAUSED -> {
-                // RESUME & STOP BUTTONS (No Shape, Vertical)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly,
@@ -98,42 +97,45 @@ fun ControlTrackingButton(
                     iconRes = R.drawable.control_start,
                     labelRes = R.string.start_tracking,
                     onClick = onStart,
-                    iconSize = 100.dp
+                    iconSize = 100.dp,
+                    enabled = enabled // Pass down
                 )
             }
         }
     }
 }
 
-/**
- * Helper component to maintain consistency across all control actions.
- * No shape, vertical layout, large icon.
- */
 @Composable
 private fun ControlItem(
     iconRes: Int,
     labelRes: Int,
     onClick: () -> Unit,
-    iconSize: androidx.compose.ui.unit.Dp
+    iconSize: androidx.compose.ui.unit.Dp,
+    enabled: Boolean = true
 ) {
+    // Determine the alpha based on the enabled state
+    val contentAlpha = if (enabled) 1f else 0.38f
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .clickable(onClick = onClick)
+            // Only allow clicking if enabled is true
+            .clickable(enabled = enabled, onClick = onClick)
             .padding(8.dp)
     ) {
         Icon(
             painter = painterResource(id = iconRes),
             contentDescription = null,
             modifier = Modifier.size(iconSize),
-            tint = MaterialTheme.colorScheme.primary
+            // Apply alpha to the tint
+            tint = MaterialTheme.colorScheme.primary.copy(alpha = contentAlpha)
         )
         Spacer(Modifier.height(8.dp))
         Text(
             text = stringResource(id = labelRes),
-            // style = MaterialTheme.typography.labelLarge,
             style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurface,
+            // Apply alpha to the text color
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
             textAlign = TextAlign.Center
         )
     }
