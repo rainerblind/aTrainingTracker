@@ -207,10 +207,10 @@ public class MainActivityWithNavigation
         Context context = this;
 
         AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
-        alertDialogBuilder.setTitle("Missing Dependency");
-        alertDialogBuilder.setMessage("The required application\n\"" + AntPluginPcc.getMissingDependencyName() + "\"\n is not installed. Do you want to launch the Play Store to search for it?");
+        alertDialogBuilder.setTitle(R.string.ant_missing_dependency_title);
+        alertDialogBuilder.setMessage(getString(R.string.ant_missing_dependency_message, AntPluginPcc.getMissingDependencyName()));
         alertDialogBuilder.setCancelable(true);
-        alertDialogBuilder.setPositiveButton("Go to Store", new DialogInterface.OnClickListener() {
+        alertDialogBuilder.setPositiveButton(R.string.go_to_store, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 Intent startStore = new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + AntPluginPcc.getMissingDependencyPackageName()));
@@ -219,7 +219,7 @@ public class MainActivityWithNavigation
                 context.startActivity(startStore);
             }
         });
-        alertDialogBuilder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+        alertDialogBuilder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 dialog.dismiss();
@@ -234,10 +234,10 @@ public class MainActivityWithNavigation
         Context context = this;
 
         AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
-        alertDialogBuilder.setTitle("Missing ANT Adapter");
-        alertDialogBuilder.setMessage("The ANT interface is missing an ANT adapter.  Probably, you Smartphone does not have build in ANT support.  You can fix this with the help of an USB ANT Dongle that is connected via an OTG adapter and installing the ANT USB Service ...");
+        alertDialogBuilder.setTitle(R.string.ant_missing_adapter_title);
+        alertDialogBuilder.setMessage(R.string.ant_missing_adapter_message);
         alertDialogBuilder.setCancelable(true);
-        alertDialogBuilder.setNeutralButton("OK", new DialogInterface.OnClickListener() {
+        alertDialogBuilder.setNeutralButton(R.string.OK, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 dialog.dismiss();

@@ -1071,4 +1071,14 @@
     <string name="segment_status_start_in">Start in: %1$s</string>
     <string name="segment_status_remaining">Remaining: %1$s</string>
     <string name="segment_status_offset">Offset: %1$s</string>
+
+    <!-- ANT(+) Plugins -->
+    <string name="ant_general_explanation">When everything is properly installed, you can couple your ANT+ devices.  Therefore, you need the right hard- and software.
+        When you are one of the view, who has a phone with build in ANT+ support, you just have to install the remaining ANT Plugins.
+        When your phone does not support ANT+ directly, you need an USB ANT dongle and an USB OTG adapter (USB-C to USB adapter) and, obviously, also the ANT plugins.</string>
+    <string name="ant_missing_adapter_title">Missing ANT Adapter</string>
+    <string name="ant_missing_adapter_message">The ANT interface is missing an ANT adapter.  Probably, you Smartphone does not have build in ANT support.  You can fix this with the help of an USB ANT Dongle that is connected via an OTG adapter and installing the ANT USB Service.</string>
+    <string name="ant_missing_dependency_title">Missing Dependency</string>
+    <string name="ant_missing_dependency_message">The required application\n\"%1$s\"\n is not installed. Do you want to launch the Play Store to search for it?</string>
+    <string name="go_to_store">Go to Play Store</string>
 </resources>
