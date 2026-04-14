@@ -80,7 +80,7 @@ public class StravaSegmentsIntentService extends IntentService {
     protected static final String AUTHORIZATION = "Authorization";
     protected static final String BEARER = "Bearer";
     private static final String TAG = StravaSegmentsIntentService.class.getName();
-    private static final boolean DEBUG = TrainingApplication.getDebug(false);
+    private static final boolean DEBUG = TrainingApplication.getDebug(true);
     private static final String ID = "id";
     private static final String RESOURCE_STATE = "resource_state";
     private static final String NAME = "name";

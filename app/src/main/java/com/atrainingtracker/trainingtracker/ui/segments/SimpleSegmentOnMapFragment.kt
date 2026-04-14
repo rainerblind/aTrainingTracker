@@ -99,6 +99,7 @@ class SimpleSegmentOnMapFragment : Fragment() {
                         mapState.segments.firstOrNull()?.let { segment ->
                             ElevationProfile(
                                 pathPoints = segment.path,
+                                currentDistance = null,
                                 modifier = Modifier.weight(1f)
                             )
                         }

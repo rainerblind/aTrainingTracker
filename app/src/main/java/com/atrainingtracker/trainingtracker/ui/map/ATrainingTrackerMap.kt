@@ -51,6 +51,7 @@ import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.JointType
 import com.google.android.gms.maps.model.LatLng
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.activities.SegmentDetailsActivity
 import com.atrainingtracker.trainingtracker.segments.SegmentHelper
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager
@@ -201,6 +202,8 @@ fun ATrainingTrackerMap(
 
                 val currentDataHash = mapState.segments.hashCode() +
                         mapState.markers.hashCode() +
+                        mapState.activeLiveSegmentIds.hashCode() +
+                        mapState.isFollowMeEnabled.hashCode() +
                         zoomInt
 
                 if (mapViewModel.staticDataHash != currentDataHash) {
@@ -220,6 +223,8 @@ fun ATrainingTrackerMap(
                     drawSegments(
                         googleMap,
                         mapState.segments,
+                        activeLiveSegmentIds = mapState.activeLiveSegmentIds,
+                        isFollowMeEnabled = mapState.isFollowMeEnabled,
                         context,
                         mapViewModel.activeSegmentMarkers,   // Pass list to store new markers
                         mapViewModel.activeSegmentPolylines,
@@ -339,6 +344,8 @@ fun createSensorMarker(
 private fun drawSegments(
     googleMap: GoogleMap,
     segments: List<MapSegment>,
+    activeLiveSegmentIds: Set<Long>,
+    isFollowMeEnabled: Boolean,
     context: Context,
     markerList: MutableList<Marker>,
     polylineList: MutableList<Polyline>,
@@ -358,19 +365,27 @@ private fun drawSegments(
     }
 
     segments.forEach { segment ->
-        // Main Path
+        val isLive = activeLiveSegmentIds.contains(segment.id)
+
+        // Logic: Full color if followMe is OFF OR if the segment is LIVE.
+        // Transparent only if followMe is ON and the segment is NOT live.
+        val alpha = if (!isFollowMeEnabled || isLive) 1.0f else 0.3f
+        val strokeWidth = if (isLive && isFollowMeEnabled) 12f else 8f
+        val zIndex = if (isLive && isFollowMeEnabled) 1.0f else 0.0f
+
         val polyline = googleMap.addPolyline(
             PolylineOptions()
-                .addAll( segment.path.map { it.latLng })
-                .color(StravaOrange.toArgb())
-                .width(8f)
+                .addAll(segment.path.map { it.latLng })
+                .color(StravaOrange.copy(alpha = alpha).toArgb())
+                .width(strokeWidth)
                 .jointType(JointType.ROUND)
                 .clickable(true)
+                .zIndex(zIndex)
         )
-        polyline.tag = segment.id // Store ID for the click listener
+        polyline.tag = segment.id
         polylineList.add(polyline)
 
-        // Select direction icon based on zoom level
+        // Direction arrows and labels follow the same alpha
         if (currentZoom > 14f) {
             val icon = when {
                 currentZoom > 17f -> directionLarge
@@ -378,14 +393,20 @@ private fun drawSegments(
                 else -> directionSmall
             }
 
-            segment.path.windowed(2, 20).forEach { pair ->
-                googleMap.addMarker(MarkerOptions()
-                    .position(LatLng((pair[0].latLng.latitude + pair[1].latLng.latitude) / 2.0, (pair[0].latLng.longitude + pair[1].latLng.longitude) / 2.0))
-                    .icon(icon)
-                    .rotation(calculateBearing(pair[0].latLng, pair[1].latLng).toFloat())
-                    .flat(true)
-                    .anchor(0.5f, 0.5f)
-                    .alpha(0.7f))
+            // Only draw direction arrows for live segments or high zoom levels to maintain performance
+            if (isLive || currentZoom > 16f) {
+                segment.path.windowed(2, 20).forEach { pair ->
+                    googleMap.addMarker(MarkerOptions()
+                        .position(LatLng((pair[0].latLng.latitude + pair[1].latLng.latitude) / 2.0,
+                            (pair[0].latLng.longitude + pair[1].latLng.longitude) / 2.0))
+                        .icon(icon)
+                        .rotation(calculateBearing(pair[0].latLng, pair[1].latLng).toFloat())
+                        .flat(true)
+                        .anchor(0.5f, 0.5f)
+                        .alpha(alpha)
+                        .zIndex(zIndex)
+                    )
+                }
             }
         }
 
@@ -397,8 +418,8 @@ private fun drawSegments(
             val endPrev = segment.path[segment.path.size - 6]
 
             // Orthogonal Lines
-            googleMap.addPolyline(PolylineOptions().addAll(calculateOrthogonalLine(startPt.latLng, startNext.latLng)).color(StravaOrange.toArgb()).width(8f))
-            googleMap.addPolyline(PolylineOptions().addAll(calculateOrthogonalLine(endPt.latLng, endPrev.latLng)).color(StravaOrange.toArgb()).width(8f))
+            googleMap.addPolyline(PolylineOptions().addAll(calculateOrthogonalLine(startPt.latLng, startNext.latLng)).color(StravaOrange.copy(alpha = alpha).toArgb()).width(strokeWidth))
+            googleMap.addPolyline(PolylineOptions().addAll(calculateOrthogonalLine(endPt.latLng, endPrev.latLng)).color(StravaOrange.copy(alpha = alpha).toArgb()).width(strokeWidth))
 
             // Labels (Only at high zoom)
             if (currentZoom > 14f
@@ -411,14 +432,20 @@ private fun drawSegments(
                     currentZoom > 15f -> 18f
                     else -> 14f
                 }
+                val sportIconRes = if (segment.bSportType == BSportType.RUN) {
+                    R.drawable.bsport_run
+                } else {
+                    R.drawable.bsport_bike
+                }
                 // START: Positioned "Below" (Behind) the line
                 // Rotation (startBearing - 90) aligns the width of the text with the orthogonal line.
                 // An anchor V of -0.2f pushes the bitmap "down" the path direction.
                 val startMarker = googleMap.addMarker(MarkerOptions()
                     .position(startPt.latLng)
-                    .icon(createTextMarkerBitmap(context, segment.name, "🚩", textSize))
+                    .icon(createTextMarkerBitmap(context, segment.name, "🚩", textSize, sportIconRes))
                     // .rotation(startBearing)
                     .anchor(0.5f, -0.2f)
+                    .alpha(alpha)
                     .flat(false)
                 )
                 startMarker?.let { markerList.add(it) }
@@ -427,9 +454,10 @@ private fun drawSegments(
                 // An anchor V of 1.2f pushes the bitmap "up" further past the finish point.
                 val finishMarker = googleMap.addMarker(MarkerOptions()
                     .position(endPt.latLng)
-                    .icon(createTextMarkerBitmap(context, segment.name, "🏁", textSize))
+                    .icon(createTextMarkerBitmap(context, segment.name, "🏁", textSize, sportIconRes))
                     // .rotation(endBearing)
                     .anchor(0.5f, 1.2f)
+                    .alpha(alpha)
                     .flat(false)
                 )
                 finishMarker?.let { markerList.add(it) }
@@ -453,35 +481,78 @@ private fun bitmapDescriptorFromVectorInternal(context: Context, resId: Int, siz
 }
 
 /**
- * Generates a Bitmap containing an emoji and text to be used as a marker.
+ * Generates a Bitmap containing a Sport Icon, Text, and an Emoji.
+ * Format: [Icon] [Text] [Emoji]
  */
-private fun createTextMarkerBitmap(context: Context, text: String, emoji: String, textSizeIn: Float): BitmapDescriptor? {
+private fun createTextMarkerBitmap(
+    context: Context,
+    text: String,
+    emoji: String,
+    textSizeIn: Float,
+    @DrawableRes iconResId: Int// ? = null
+): BitmapDescriptor? {
+    val density = context.resources.displayMetrics.density
+    val scaledTextSize = textSizeIn * density
+
     val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
         color = android.graphics.Color.BLACK
-        textSize = textSizeIn * context.resources.displayMetrics.density
+        textSize = scaledTextSize
         typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.NORMAL)
     }
 
-    val fullText = "$emoji $text"
-    val baseline = -paint.ascent()
-    val width = (paint.measureText(fullText) + 0.5f).toInt()
-    val height = (baseline + paint.descent() + 0.5f).toInt()
+    // 1. Prepare the Sport Icon
+    val iconSize = (scaledTextSize * 1.2f).toInt() // Slightly larger than text
+    val iconBitmap = iconResId?.let { res ->
+        ContextCompat.getDrawable(context, res)?.let { drawable ->
+            val bm = Bitmap.createBitmap(iconSize, iconSize, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bm)
+            drawable.setBounds(0, 0, iconSize, iconSize)
+            // drawable.setTint(android.graphics.Color.BLACK) // Match text color
+            drawable.draw(canvas)
+            bm
+        }
+    }
 
-    val image = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-    val canvas = Canvas(image)
+    // 2. Calculate Dimensions
+    val fullText = "$text $emoji" // Emoji moved to the end
+    val textWidth = paint.measureText(fullText)
+    val iconPadding = if (iconBitmap != null) 3f * density else 0f
+    val totalWidth = (iconSize.toFloat() + iconPadding + textWidth + 4f).toInt()
 
-    // Draw white shadow/outline for better readability on map
-    paint.style = android.graphics.Paint.Style.STROKE
-    paint.strokeWidth = 4f
-    paint.color = android.graphics.Color.WHITE
-    canvas.drawText(fullText, 0f, baseline, paint)
+    val fontMetrics = paint.fontMetrics
+    val height = (fontMetrics.bottom - fontMetrics.top + 0.5f).toInt()
+    val baseline = -fontMetrics.top
 
-    // Draw actual text
-    paint.style = android.graphics.Paint.Style.FILL
-    paint.color = android.graphics.Color.BLACK
-    canvas.drawText(fullText, 0f, baseline, paint)
+    // 3. Create Result Bitmap
+    val resultImage = Bitmap.createBitmap(totalWidth, height, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(resultImage)
 
-    return BitmapDescriptorFactory.fromBitmap(image)
+    // 4. Draw Shadow/Outline for visibility
+    val shadowPaint = android.graphics.Paint(paint).apply {
+        style = android.graphics.Paint.Style.STROKE
+        strokeWidth = 2f * density
+        color = android.graphics.Color.WHITE
+    }
+
+    val textX = if (iconBitmap != null) iconSize + iconPadding else 0f
+
+    // Draw Outline
+    canvas.drawText(fullText, textX, baseline, shadowPaint)
+
+    // 5. Draw Icon
+    iconBitmap?.let {
+        // Draw a small white glow behind the icon
+        val glowPaint = android.graphics.Paint().apply {
+            colorFilter = android.graphics.PorterDuffColorFilter(android.graphics.Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN)
+        }
+        canvas.drawBitmap(it, 2f, (height - iconSize) / 2f, glowPaint) // Background glow
+        canvas.drawBitmap(it, 0f, (height - iconSize) / 2f, null)
+    }
+
+    // 6. Draw Actual Text
+    canvas.drawText(fullText, textX, baseline, paint)
+
+    return BitmapDescriptorFactory.fromBitmap(resultImage)
 }
 
 private fun calculateOrthogonalLine(point: LatLng, nextPoint: LatLng): List<LatLng> {

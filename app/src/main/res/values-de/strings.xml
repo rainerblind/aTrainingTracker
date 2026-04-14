@@ -529,6 +529,7 @@
     <string name="delete_view">entfernen</string>
     <string name="add_view_after">neu</string>
     <string name="EditTrackingView">Bearbeiten</string>
+    <string name="showLiveSegments">Live Segments</string>
     <string name="showLapButton">Lap Knopf</string>
     <string name="select_device_type">wähle Sensor Typ</string>
     <string name="Preview">Vorschau</string>
@@ -959,4 +960,25 @@
     <string name="control_tracking_ready_run">Bereit zu Laufen</string>
     <string name="control_tracking_ready_bike">Bereit zum Radeln</string>
     <string name="control_tracking_ready_other">Bereit zum Training</string>
+
+    <!-- live segments -->
+    <string name="segment_status_far_far_away">Weit weit entfernt</string>
+    <string name="segment_status_approaching">Anpirschen</string>
+    <string name="segment_status_on_segment">Auf Segment</string>
+    <string name="segment_status_near_finish">Ziel in Sicht</string>
+    <string name="segment_status_finished">Geschafft</string>
+    <string name="segment_status_start_in">Start in: %1$s</string>
+    <string name="segment_status_remaining">Ziel in: %1$s</string>
+    <string name="segment_status_offset">Daneben: %1$s</string>
+
+    <!-- ANT(+) Plugins -->
+    <string name="ant_general_explanation">Wenn alles korrekt installiert ist, kannst Du deine ANT+ Sensoren koppeln.  Dazu benötigst Du jedoch die richtige Hard- und Software.
+        Falls Du zu den Glücklichen gehörst, deren Smartphone direkt ANT+ unterstützt, musst Du nur noch die notwendigen ANT Plugins installieren.
+        Wenn dein Smartphone ANT+ nicht direkt unterstützt, kannst du dir einen USB ANT Dongle besorgen und diesen mittels eines USB OTG Adapters (USB-C to USB Adapter) verbinden.  Auch hier musst Du dann natürlich noch die ANT Plugins installieren.</string>
+    <string name="ant_missing_adapter_title">Fehlender ANT Adapter</string>
+    <string name="ant_missing_adapter_message">Das ANT Interface meldet uns einen fehlenden ANT Adapter zurück.  Vermutlich hat dein Smartphone keine direkte ANT+ Unterstützung.  Du kannst dennoch ANT+ Sensoren koppeln, wenn Du dir einen USB ANT Dongle besorgst, den Du über einen OTG Adapter mit dem Smartphone verbindest (und dann auch noch den ANT USB Service intalliert hast).</string>
+    <string name="ant_missing_dependency_title">Fehlende Abhängigkeit</string>
+    <string name="ant_missing_dependency_message">Die notwendige Application\n\"%1$s\"\n ist nicht installiert.  Sollen wir im Play Store nach dieser suchen?</string>
+    <string name="go_to_store">Zum Play Store</string>
+
 </resources>

@@ -54,6 +54,7 @@ import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentFragment;
 import com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrack;
 import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository;
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsFragment;
+import com.dsi.ant.plugins.antplus.pccbase.AntPluginPcc;
 import com.google.android.material.navigation.NavigationView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -153,6 +154,7 @@ public class MainActivityWithNavigation
     @Nullable
     protected BANALService.BANALServiceComm mBanalServiceComm = null;
     final LinkedList<ConnectionStatusListener> mConnectionStatusListeners = new LinkedList<>();
+
     /* Broadcast Receiver to adapt the title based on the tracking state */
     final BroadcastReceiver mStartTrackingReceiver = new BroadcastReceiver() {
         @Override
@@ -185,6 +187,77 @@ public class MainActivityWithNavigation
             onNavigationItemSelected(mNavigationView.getMenu().findItem(mSelectedFragmentId));
         }
     };
+
+    private final BroadcastReceiver mAntDependencyReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            showSpecificInstallANTDialog();
+        }
+    };
+
+    private final BroadcastReceiver mAntAdapterMissingReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            showANTAdapterMissingDialog();
+        }
+    };
+
+
+    boolean showingSpecificInstallANTDialog = false;
+    public void showSpecificInstallANTDialog() {
+        if (showingSpecificInstallANTDialog) {
+            return;
+        }
+        else {
+            showingSpecificInstallANTDialog = true;
+        }
+
+        Context context = this;
+
+        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
+        alertDialogBuilder.setTitle(R.string.ant_missing_dependency_title);
+        alertDialogBuilder.setMessage(getString(R.string.ant_missing_dependency_message, AntPluginPcc.getMissingDependencyName()));
+        alertDialogBuilder.setCancelable(true);
+        alertDialogBuilder.setPositiveButton(R.string.go_to_store, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                Intent startStore = new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + AntPluginPcc.getMissingDependencyPackageName()));
+                startStore.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+                context.startActivity(startStore);
+            }
+        });
+        alertDialogBuilder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.dismiss();
+            }
+        });
+
+        final AlertDialog waitDialog = alertDialogBuilder.create();
+        waitDialog.show();
+    }
+
+    public void showANTAdapterMissingDialog() {
+        Context context = this;
+
+        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
+        alertDialogBuilder.setTitle(R.string.ant_missing_adapter_title);
+        alertDialogBuilder.setMessage(R.string.ant_missing_adapter_message);
+        alertDialogBuilder.setCancelable(true);
+        alertDialogBuilder.setNeutralButton(R.string.OK, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.dismiss();
+            }
+        });
+
+        final AlertDialog waitDialog = alertDialogBuilder.create();
+        waitDialog.show();
+    }
+
+
+
 
     private IntentFilter mStartTrackingFilter;
     private boolean mAlreadyTriedToRequestDropboxToken = false;
@@ -456,6 +529,8 @@ public class MainActivityWithNavigation
         ContextCompat.registerReceiver(this, mPauseTrackingReceiver, new IntentFilter(TrainingApplication.REQUEST_PAUSE_TRACKING), ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mStopTrackingReceiver, new IntentFilter(TrainingApplication.REQUEST_STOP_TRACKING), ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mTrackingStoppedReceiver, new IntentFilter(TrackerService.TRACKING_FINISHED_INTENT), ContextCompat.RECEIVER_NOT_EXPORTED);
+        registerReceiver(mAntDependencyReceiver, new IntentFilter("com.atrainingtracker.ANT_DEPENDENCY_MISSING"), Context.RECEIVER_NOT_EXPORTED);
+        registerReceiver(mAntAdapterMissingReceiver, new IntentFilter("com.atrainingtracker.ADAPTER_NOT_DETECTED"), Context.RECEIVER_NOT_EXPORTED);
     }
 
     // method to verify the preferences
@@ -560,6 +635,8 @@ public class MainActivityWithNavigation
             unregisterReceiver(mTrackingStoppedReceiver);
         } catch (IllegalArgumentException ignored) {}
 
+        unregisterReceiver(mAntDependencyReceiver);
+        unregisterReceiver(mAntAdapterMissingReceiver);
 
         mHandler.postDelayed(mDisconnectFromBANALServiceRunnable, WAITING_TIME_BEFORE_DISCONNECTING);
     }

@@ -20,7 +20,6 @@ package com.atrainingtracker.trainingtracker.ui.tracking.tracking
 
 import android.app.Application
 import android.content.SharedPreferences
-import android.util.Log
 import androidx.compose.ui.graphics.Color
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
@@ -33,7 +32,10 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.filters.FilteredSensorData
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.MyHelper
+import com.atrainingtracker.trainingtracker.segments.LiveSegment
+import com.atrainingtracker.trainingtracker.segments.LiveSegmentStatus
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager
+import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
 import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
@@ -44,9 +46,12 @@ import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.Objects
 
@@ -68,6 +73,7 @@ class TrackingViewModel(
     private val application: Application,
     val trackingViewsRepository: TrackingViewsRepository,
     val banalServiceRepository: BANALServiceRepository,
+    segmentsRepository: SegmentsRepository,
     private val viewId: Long
 ) : ViewModel() {
 
@@ -88,7 +94,49 @@ class TrackingViewModel(
 
     val screenMode: StateFlow<ScreenMode> = trackingViewsRepository.screenMode
 
-    private val starredSegments: List<MapSegment> = SegmentsDatabaseManager.getInstance(application).getAllSegments()
+    private val starredSegments: List<MapSegment> = SegmentsDatabaseManager.getInstance(application).getAllMapSegments()
+
+    // Filter and sort the segments from the repository:
+    // TODO: also filter for activity type.
+    val activeLiveSegments: StateFlow<List<LiveSegment>> = combine(
+        segmentsRepository.liveSegments,
+        banalServiceRepository.bSportType
+    ) { allLiveSegments, currentBSportType ->
+        allLiveSegments.filter { segment ->
+            ( segment.summary.bSportType == currentBSportType
+                    || currentBSportType == BSportType.UNKNOWN)
+                    && segment.liveData.segmentStatus != LiveSegmentStatus.FAR_FAR_AWAY
+        }
+            .sortedWith(
+                compareByDescending<LiveSegment> {
+                    // Priority 1: Status
+                    when(it.liveData.segmentStatus) {
+                        LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH -> 4
+                        LiveSegmentStatus.ON_SEGMENT -> 3
+                        LiveSegmentStatus.APPROACHING -> 2
+                        LiveSegmentStatus.FINISHED -> 1
+                        else -> 0
+                    }
+                }.thenBy {
+                    // Priority 2: Conditional tie-breaker
+                    when(it.liveData.segmentStatus) {
+                        // If we are ON the segment, prioritize by remaining distance (finish line)
+                        LiveSegmentStatus.ON_SEGMENT,
+                        LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH -> it.liveData.remainingDistance
+
+                        // If we are APPROACHING, prioritize by distance to the start line
+                        LiveSegmentStatus.APPROACHING -> it.liveData.distanceToStart
+
+                        // For the other cases, it is not clear what to do.  Thus, we try the segment offset. I.e., the closest segment (although this might jump).
+                        else -> it.liveData.segmentOffset
+                    }
+                }
+            )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
 
     private val sharedPreferences: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(application)
     private val defaultZoneColor = Color(ContextCompat.getColor(application, R.color.color_background))
@@ -120,8 +168,9 @@ class TrackingViewModel(
             combine(
                 trackingViewsRepository.getSensorFieldConfigsForView(viewId),
                 banalServiceRepository.allFilteredSensorData,
-                trackingViewsRepository.getTrackingViewInfoFlow(viewId)
-            ) { configs, allSensorData, viewInfo ->
+                trackingViewsRepository.getTrackingViewInfoFlow(viewId),
+                activeLiveSegments
+            ) { configs, allSensorData, viewInfo, activeLiveSegments ->
                 // This whole block will re-execute whenever configs OR sensor data change
 
                 // --- Step 1: Create the base state from the latest configurations ---
@@ -166,6 +215,8 @@ class TrackingViewModel(
                     )
                 }
 
+                val activeIds = activeLiveSegments.map { it.summary.stravaId }.toSet()
+
                 // --- Step 4: Package everything into the TrackingScreenState ---
                 TrackingScreenState(
                     fields = finalFields,
@@ -176,6 +227,7 @@ class TrackingViewModel(
                         isFollowMeEnabled = true,
                         currentTrack = currentTrack,
                         segments = starredSegments,
+                        activeLiveSegmentIds = activeIds,
                         markers = markerList
                     )
                 )
@@ -313,7 +365,8 @@ class TrackingViewModelFactory(
         if (modelClass.isAssignableFrom(TrackingViewModel::class.java)) {
             val trackingViewsRepo = TrackingViewsRepository.getInstance(application)
             val banalServiceRepo = BANALServiceRepository.getInstance(application)
-            return TrackingViewModel(application, trackingViewsRepo, banalServiceRepo, viewId) as T
+            val segmentsRepository = SegmentsRepository.getInstance(application)
+            return TrackingViewModel(application, trackingViewsRepo, banalServiceRepo, segmentsRepository, viewId) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

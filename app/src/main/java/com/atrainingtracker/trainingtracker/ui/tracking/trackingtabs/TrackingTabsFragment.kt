@@ -31,6 +31,7 @@ import androidx.activity.OnBackPressedCallback
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -47,6 +48,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -344,7 +346,6 @@ class TrackingTabsFragment : Fragment() {
 
     @Composable
     private fun TabConfigContent(viewInfo: TrackingViewInfo) {
-        // We use viewInfo.tabViewId as a key so that when you swipe tabs, the local state resets.
         var localName by remember(viewInfo.tabViewId) { mutableStateOf(viewInfo.name) }
 
         Column(
@@ -353,6 +354,7 @@ class TrackingTabsFragment : Fragment() {
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
                 .padding(8.dp)
         ) {
+            // Row 1: Tab Name Input
             OutlinedTextField(
                 value = localName,
                 onValueChange = {
@@ -366,45 +368,74 @@ class TrackingTabsFragment : Fragment() {
 
             Spacer(Modifier.height(4.dp))
 
+            // Row 2: Management Buttons (Add Before, Delete, Add After)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                // Add Before
                 IconButton(onClick = { viewModel.onAddTabRelative(viewInfo.tabViewId, false) }) {
-                    Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Icon(Icons.Default.Add, contentDescription = "Add Before", tint = MaterialTheme.colorScheme.primary)
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(
-                        checked = viewInfo.showMap,
-                        onCheckedChange = { viewModel.onUpdateShowMap(viewInfo.tabViewId, it) }
+                // Delete in the middle
+                IconButton(onClick = { viewModel.onDeleteTab(viewInfo.tabViewId) }) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete Tab"
                     )
-                    Text(stringResource(R.string.showMap), style = MaterialTheme.typography.labelSmall)
-
-                    Checkbox(
-                        checked = viewInfo.showLapButton,
-                        onCheckedChange = { viewModel.onUpdateShowLapButton(viewInfo.tabViewId, it) }
-                    )
-                    Text(stringResource(R.string.showLapButton), style = MaterialTheme.typography.labelSmall)
-
-                    Spacer(Modifier.width(8.dp))
-
-                    IconButton(
-                        onClick = { viewModel.onDeleteTab(viewInfo.tabViewId) }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete Field", // For accessibility
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
                 }
 
+                // Add After
                 IconButton(onClick = { viewModel.onAddTabRelative(viewInfo.tabViewId, true) }) {
                     Icon(Icons.Default.Add, contentDescription = "Add After", tint = MaterialTheme.colorScheme.primary)
                 }
             }
+
+            Spacer(Modifier.height(4.dp))
+
+            // Row 3: Settings (The three Checkboxes)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                ConfigCheckbox(
+                    label = stringResource(R.string.showMap),
+                    checked = viewInfo.showMap,
+                    onCheckedChange = { viewModel.onUpdateShowMap(viewInfo.tabViewId, it) }
+                )
+                ConfigCheckbox(
+                    label = stringResource(R.string.showLiveSegments),
+                    checked = viewInfo.showLiveSegments,
+                    onCheckedChange = { viewModel.onUpdateShowLiveSegments(viewInfo.tabViewId, it) }
+                )
+                ConfigCheckbox(
+                    label = stringResource(R.string.showLapButton),
+                    checked = viewInfo.showLapButton,
+                    onCheckedChange = { viewModel.onUpdateShowLapButton(viewInfo.tabViewId, it) }
+                )
+            }
+
+        }
+    }
+
+    /**
+     * Helper to keep the Checkbox logic clean
+     */
+    @Composable
+    private fun ConfigCheckbox(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(
+                checked = checked,
+                onCheckedChange = onCheckedChange
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                maxLines = 1
+            )
         }
     }
 
