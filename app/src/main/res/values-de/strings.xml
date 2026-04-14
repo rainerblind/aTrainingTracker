@@ -979,6 +979,6 @@
     <string name="ant_missing_adapter_message">Das ANT Interface meldet uns einen fehlenden ANT Adapter zurück.  Vermutlich hat dein Smartphone keine direkte ANT+ Unterstützung.  Du kannst dennoch ANT+ Sensoren koppeln, wenn Du dir einen USB ANT Dongle besorgst, den Du über einen OTG Adapter mit dem Smartphone verbindest (und dann auch noch den ANT USB Service intalliert hast).</string>
     <string name="ant_missing_dependency_title">Fehlende Abhängigkeit</string>
     <string name="ant_missing_dependency_message">Die notwendige Application\n\"%1$s\"\n ist nicht installiert.  Sollen wir im Play Store nach dieser suchen?</string>
-    <string name="go_to_store">Go to Play Store</string>
+    <string name="go_to_store">Zum Play Store</string>
 
 </resources>
