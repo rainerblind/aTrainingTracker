@@ -79,7 +79,7 @@ import java.util.Locale;
 import java.util.Set;
 
 public class TrainingApplication extends Application {
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
     // some Strings to handle tracking globally
     public static final String REQUEST_START_TRACKING = "com.atrainingtracker.trainingapplication.REQUEST_START_TRACKING";
     public static final String REQUEST_PAUSE_TRACKING = "com.atrainingtracker.trainingapplication.REQUEST_PAUSE_TRACKING";
