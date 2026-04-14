@@ -108,8 +108,8 @@ class TrackingViewModel(
                         // Priority 1: Status
                         when(it.liveData.segmentStatus) {
                             LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH -> 4
-                            LiveSegmentStatus.APPROACHING -> 3
-                            LiveSegmentStatus.ON_SEGMENT -> 2
+                            LiveSegmentStatus.ON_SEGMENT -> 3
+                            LiveSegmentStatus.APPROACHING -> 2
                             LiveSegmentStatus.FINISHED -> 1
                             else -> 0
                         }
