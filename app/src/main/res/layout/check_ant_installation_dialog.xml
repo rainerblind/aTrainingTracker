@@ -23,6 +23,13 @@
     android:layout_height="wrap_content"
     android:orientation="vertical">
 
+    <!-- General Explanation -->
+    <TextView
+        android:id="@+id/tvAntExplainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/ant_general_explanation"/>
+
     <LinearLayout
         android:id="@+id/llPluginService"
         android:layout_width="fill_parent"
