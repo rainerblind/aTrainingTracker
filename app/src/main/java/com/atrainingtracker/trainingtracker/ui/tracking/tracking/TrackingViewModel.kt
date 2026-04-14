@@ -114,12 +114,18 @@ class TrackingViewModel(
                             else -> 0
                         }
                     }.thenBy {
-                        // Priority 2: Proximity to Finish or start line
-                        // if multiple are in the same state, we show the closest to the finish line first
-                        it.liveData.remainingDistance
-                    }.thenBy {
-                        // If multiple are "APPROACHING", show the closest to the start first
-                        it.liveData.distanceToStart
+                        // Priority 2: Conditional tie-breaker
+                        when(it.liveData.segmentStatus) {
+                            // If we are ON the segment, prioritize by remaining distance (finish line)
+                            LiveSegmentStatus.ON_SEGMENT,
+                            LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH -> it.liveData.remainingDistance
+
+                            // If we are APPROACHING, prioritize by distance to the start line
+                            LiveSegmentStatus.APPROACHING -> it.liveData.distanceToStart
+
+                            // For the other cases, it is not clear what to do.  Thus, we try the segment offset. I.e., the closest segment (although this might jump).
+                            else -> it.liveData.segmentOffset
+                        }
                     }
                 )
         }.stateIn(
