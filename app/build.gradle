@@ -123,6 +123,7 @@ dependencies {
     implementation 'com.google.android.gms:play-services-location:21.3.0'
     implementation "com.google.accompanist:accompanist-drawablepainter:0.37.3"
     implementation "com.google.maps.android:maps-compose:8.2.2"
+    implementation 'com.google.maps.android:android-maps-utils:4.1.1'
     implementation platform('com.google.firebase:firebase-bom:34.11.0')
     implementation 'com.google.firebase:firebase-analytics' // No version needed with BOM
 

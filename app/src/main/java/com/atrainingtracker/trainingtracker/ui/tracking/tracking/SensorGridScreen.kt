@@ -31,16 +31,26 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.BottomSheetScaffold
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SheetValue
+import androidx.compose.material3.rememberBottomSheetScaffoldState
+import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import com.atrainingtracker.trainingtracker.segments.LiveSegment
 import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
 import com.atrainingtracker.trainingtracker.ui.map.MapViewModel
+import com.atrainingtracker.trainingtracker.ui.segments.LiveSegmentSheet
 import com.atrainingtracker.trainingtracker.ui.theme.Zone1
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.LightBackground
@@ -62,78 +72,114 @@ interface GridActions {
  * A generic screen that displays a grid of sensor fields for either tracking or configuration.
  * It adapts its UI and behavior based on the provided [screenMode].
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SensorGridScreen(
     state: TrackingScreenState,
     screenMode: ScreenMode,
     gridActions: GridActions,
     currentLocationFlow: StateFlow<LatLng?>,
+    liveSegments: StateFlow<List<LiveSegment>>,
     mapViewModel: MapViewModel
 ) {
-    Column(Modifier.fillMaxSize()) {
-        val fieldsByRow = state.fields.groupBy { it.rowNr }
-        val sortedRows = fieldsByRow.keys.sorted()
 
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            var maxRowNr = 0
-            sortedRows.forEach { rowNr ->
-                maxRowNr = rowNr
-                // --- ADD field BETWEEN ROWS ---
-                if (screenMode == ScreenMode.CONFIGURATION) {
-                    RowAdder(onClick = { gridActions.onAddRow(rowNr) })
-                }
+    val activeSegments by liveSegments.collectAsState()
+    val activeSegment = activeSegments.firstOrNull()
 
-                val fieldsInThisRow = fieldsByRow[rowNr]?.sortedBy { it.colNr } ?: emptyList()
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.height(IntrinsicSize.Min) // Important for vertical adder alignment
-                ) {
+    // Control the sheet state
+    val scaffoldState = rememberBottomSheetScaffoldState(
+        bottomSheetState = rememberStandardBottomSheetState(
+            initialValue = SheetValue.PartiallyExpanded,
+            skipHiddenState = false // Allow it to hide if no segment
+        )
+    )
 
-                    var maxColNr = 0
-                    fieldsInThisRow.forEach { fieldState ->
-                        // --- ADD Field BETWEEN FIELDS ---
-                        if (screenMode == ScreenMode.CONFIGURATION) {
-                            ColAdder(onClick = { gridActions.onAddCol(rowNr,fieldState.colNr) } )
-                        }
-                        maxColNr = fieldState.colNr
-                        Box(modifier = Modifier.weight(1f)) {
-                            SensorFieldView(
-                                fieldState = fieldState,
-                                screenMode = screenMode,
-                                onEdit = { gridActions.onEditField(fieldState) },
-                                onDelete = { gridActions.onDeleteField(fieldState) }
-                            )
-                        }
-                    }
-                    // --- ADD Field AT END OF the ROW ---
-                    if (screenMode == ScreenMode.CONFIGURATION) {
-                        ColAdder(onClick = { gridActions.onAddCol(rowNr, maxColNr + 1) })
-                    }
-
-                }
-            }
-            // -- ADD Field as a new row
-            if (screenMode == ScreenMode.CONFIGURATION) {
-                RowAdder(onClick = { gridActions.onAddRow(maxRowNr + 1) })
+    BottomSheetScaffold(
+        scaffoldState = scaffoldState,
+        sheetDragHandle = null, // Removes the large top spacer entirely
+        // Only show sheet if we are in tracking mode and have an active segment
+        sheetPeekHeight = if (activeSegment != null && screenMode == ScreenMode.TRACKING) 170.dp else 0.dp,
+        sheetSwipeEnabled = activeSegment != null,
+        sheetContent = {
+            if (activeSegment != null) {
+                LiveSegmentSheet(
+                    liveSegment = activeSegment
+                )
+            } else {
+                Box(Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)) // Empty placeholder
             }
         }
+    ) { paddingValues ->
 
+        Box(Modifier.fillMaxSize()) {
+            Column(Modifier.fillMaxSize()) {
+                val fieldsByRow = state.fields.groupBy { it.rowNr }
+                val sortedRows = fieldsByRow.keys.sorted()
 
-        // Conditionally display the map
-        if (state.showMap) {
-            ATrainingTrackerMap(
-                mapState = state.mapState,
-                mapViewModel = mapViewModel,
-                currentLocationFlow = currentLocationFlow,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-            )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    var maxRowNr = 0
+                    sortedRows.forEach { rowNr ->
+                        maxRowNr = rowNr
+                        // --- ADD field BETWEEN ROWS ---
+                        if (screenMode == ScreenMode.CONFIGURATION) {
+                            RowAdder(onClick = { gridActions.onAddRow(rowNr) })
+                        }
+
+                        val fieldsInThisRow =
+                            fieldsByRow[rowNr]?.sortedBy { it.colNr } ?: emptyList()
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.height(IntrinsicSize.Min)
+                        ) {
+                            var maxColNr = 0
+                            fieldsInThisRow.forEach { fieldState ->
+                                if (screenMode == ScreenMode.CONFIGURATION) {
+                                    ColAdder(onClick = {
+                                        gridActions.onAddCol(
+                                            rowNr,
+                                            fieldState.colNr
+                                        )
+                                    })
+                                }
+                                maxColNr = fieldState.colNr
+                                Box(modifier = Modifier.weight(1f)) {
+                                    SensorFieldView(
+                                        fieldState = fieldState,
+                                        screenMode = screenMode,
+                                        onEdit = { gridActions.onEditField(fieldState) },
+                                        onDelete = { gridActions.onDeleteField(fieldState) }
+                                    )
+                                }
+                            }
+                            if (screenMode == ScreenMode.CONFIGURATION) {
+                                ColAdder(onClick = { gridActions.onAddCol(rowNr, maxColNr + 1) })
+                            }
+                        }
+                    }
+                    if (screenMode == ScreenMode.CONFIGURATION) {
+                        RowAdder(onClick = { gridActions.onAddRow(maxRowNr + 1) })
+                    }
+                }
+
+                // Conditionally display the map
+                if (state.showMap) {
+                    ATrainingTrackerMap(
+                        mapState = state.mapState,
+                        mapViewModel = mapViewModel,
+                        currentLocationFlow = currentLocationFlow,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                    )
+                }
+            }
         }
     }
 }
@@ -164,6 +210,7 @@ private fun ColAdder(onClick: () -> Unit) {
 val dummyLocationFlow = kotlinx.coroutines.flow.MutableStateFlow(
     com.google.android.gms.maps.model.LatLng(48.8566, 2.3522) // Paris, for example
 )
+val dummySegmentsFlow = kotlinx.coroutines.flow.MutableStateFlow<List<LiveSegment>>(emptyList())
 
 // Preview for Configuration Mode
 @Preview(showBackground = true, name = "Config Mode")
@@ -188,6 +235,7 @@ fun SensorGridScreenConfigPreview() {
             screenMode = ScreenMode.CONFIGURATION,
             gridActions = mockActions,
             currentLocationFlow = dummyLocationFlow,
+            liveSegments = dummySegmentsFlow,
             mapViewModel = previewMapViewModel
         )
     }
@@ -216,6 +264,7 @@ fun SensorGridScreenTrackingPreview() {
             screenMode = ScreenMode.TRACKING,
             gridActions = mockActions,
             currentLocationFlow = dummyLocationFlow,
+            liveSegments = dummySegmentsFlow,
             previewMapViewModel
         )
     }

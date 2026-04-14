@@ -529,6 +529,7 @@
     <string name="delete_view">entfernen</string>
     <string name="add_view_after">neu</string>
     <string name="EditTrackingView">Bearbeiten</string>
+    <string name="showLiveSegments">Live Segments</string>
     <string name="showLapButton">Lap Knopf</string>
     <string name="select_device_type">wähle Sensor Typ</string>
     <string name="Preview">Vorschau</string>
@@ -959,4 +960,15 @@
     <string name="control_tracking_ready_run">Bereit zu Laufen</string>
     <string name="control_tracking_ready_bike">Bereit zum Radeln</string>
     <string name="control_tracking_ready_other">Bereit zum Training</string>
+
+    <!-- live segments -->
+    <string name="segment_status_far_far_away">Weit weit entfernt</string>
+    <string name="segment_status_approaching">Anpirschen</string>
+    <string name="segment_status_on_segment">Auf Segment</string>
+    <string name="segment_status_near_finish">Ziel in Sicht</string>
+    <string name="segment_status_finished">Geschafft</string>
+    <string name="segment_status_start_in">Start in: %1$s</string>
+    <string name="segment_status_remaining">Ziel in: %1$s</string>
+    <string name="segment_status_offset">Daneben: %1$s</string>
+
 </resources>

@@ -85,7 +85,8 @@ public class SegmentsDatabaseManager {
 
 
 
-    public List<MapSegment> getAllSegments() {
+    @Deprecated // use LiveSegment from the repository instead.
+    public List<MapSegment> getAllMapSegments() {
         List<MapSegment> segments = new ArrayList<>();
         SQLiteDatabase db = getDatabase();    // 1. Get all starred segments
         Cursor cursor = db.query(Segments.TABLE_STARRED_SEGMENTS, null, null, null, null, null, null);
@@ -114,7 +115,7 @@ public class SegmentsDatabaseManager {
         return segments;
     }
 
-    private List<PathPoint> getSegmentPath(long segmentId) {
+    public List<PathPoint> getSegmentPath(long segmentId) {
         List<PathPoint> points = new ArrayList<>();
         SQLiteDatabase db = getDatabase();
         Cursor c = db.query(Segments.TABLE_SEGMENT_STREAMS,
@@ -141,6 +142,7 @@ public class SegmentsDatabaseManager {
         c.close();
         return points;
     }
+
 
     /**
      * Fetches summary details for a specific segment and formats them into a SegmentSummary object.
@@ -183,9 +185,11 @@ public class SegmentsDatabaseManager {
                     name,
                     sportType,
                     climbCategory > 0 ? StravaHelper.translateClimbCategory(climbCategory) : "",
+                    prTimeSeconds,
                     prTimeSeconds > 0 ? tf.format(prTimeSeconds) : "",
                     (city != null && !city.isEmpty()) ? city : "",
                     df.format_with_units(distance),
+                    distance,
                     String.format(Locale.getDefault(), "Ø %.1f%%", avgGrade),
                     String.format(Locale.getDefault(), "%.1f%% Max", maxGrade),
                     String.format(Locale.getDefault(), "%d m", Math.round(elevHigh - elevLow)),
@@ -196,6 +200,65 @@ public class SegmentsDatabaseManager {
         cursor.close();
 
         return summary;
+    }
+
+    public List<SegmentSummary> getAllSegmentSummaries() {
+        List<SegmentSummary> summaries = new ArrayList<>();
+        SQLiteDatabase db = getDatabase();
+        Cursor cursor = db.query(Segments.TABLE_STARRED_SEGMENTS, null, null, null, null, null, null);
+
+        SportTypeDatabaseManager sportTypeMgr = SportTypeDatabaseManager.getInstance(mContext);
+        DistanceFormatter df = new DistanceFormatter();
+        TimeFormatter tf = new TimeFormatter();
+
+        int strava_id_index = cursor.getColumnIndexOrThrow(Segments.STRAVA_SEGMENT_ID);
+        int activity_type_index = cursor.getColumnIndexOrThrow(Segments.ACTIVITY_TYPE);
+        int dist_index = cursor.getColumnIndexOrThrow(Segments.DISTANCE);
+        int avg_grade_index = cursor.getColumnIndexOrThrow(Segments.AVERAGE_GRADE);
+        int max_grade_index = cursor.getColumnIndexOrThrow(Segments.MAXIMUM_GRADE);
+        int elev_low_index = cursor.getColumnIndexOrThrow(Segments.ELEVATION_LOW);
+        int elev_high_index = cursor.getColumnIndexOrThrow(Segments.ELEVATION_HIGH);
+        int pr_time_index = cursor.getColumnIndexOrThrow(Segments.PR_TIME);
+        int climb_category_index = cursor.getColumnIndexOrThrow(Segments.CLIMB_CATEGORY);
+        int city_index = cursor.getColumnIndexOrThrow(Segments.CITY);
+        int name_index = cursor.getColumnIndexOrThrow(Segments.SEGMENT_NAME);
+
+
+        while (cursor.moveToNext()) {
+            long segmentId = cursor.getLong(strava_id_index);
+            String activityType = cursor.getString(activity_type_index);
+            BSportType sportType = sportTypeMgr.getBSportTypeFromStravaName(activityType);
+            double distance = cursor.getDouble(dist_index);
+            double avgGrade = cursor.getDouble(avg_grade_index);
+            double maxGrade = cursor.getDouble(max_grade_index);
+            double elevLow = cursor.getDouble(elev_low_index);
+            double elevHigh = cursor.getDouble(elev_high_index);
+            int prTimeSeconds = cursor.getInt(pr_time_index);
+            int climbCategory = cursor.getInt(climb_category_index);
+            String city = cursor.getString(city_index);
+            String name = cursor.getString(name_index);
+
+            summaries.add(new SegmentSummary(
+                            segmentId,
+                            name,
+                            sportType,
+                            climbCategory > 0 ? StravaHelper.translateClimbCategory(climbCategory) : "",
+                            prTimeSeconds,
+                            prTimeSeconds > 0 ? tf.format(prTimeSeconds) : "",
+                            (city != null && !city.isEmpty()) ? city : "",
+                            df.format_with_units(distance),
+                            distance,
+                            String.format(Locale.getDefault(), "Ø %.1f%%", avgGrade),
+                            String.format(Locale.getDefault(), "%.1f%% Max", maxGrade),
+                            String.format(Locale.getDefault(), "%d m", Math.round(elevHigh - elevLow)),
+                            String.format(Locale.getDefault(), "%d m", Math.round(elevLow)),
+                            String.format(Locale.getDefault(), "%d m", Math.round(elevHigh))
+                    )
+            );
+        }
+        cursor.close();
+
+        return summaries;
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////

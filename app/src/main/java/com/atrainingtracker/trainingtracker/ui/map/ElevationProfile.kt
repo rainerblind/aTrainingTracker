@@ -19,130 +19,95 @@
 package com.atrainingtracker.trainingtracker.ui.map
 
 import android.graphics.Paint
-import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
+import kotlin.math.ceil
 import com.atrainingtracker.trainingtracker.ui.theme.Zone1
 import com.atrainingtracker.trainingtracker.ui.theme.Zone2
 import com.atrainingtracker.trainingtracker.ui.theme.Zone3
 import com.atrainingtracker.trainingtracker.ui.theme.Zone4
 import com.atrainingtracker.trainingtracker.ui.theme.Zone5
 
+// Data class to cache the pre-calculated geometry and metadata
+private data class CachedProfileData(
+    val segments: List<ElevationSegment>,
+    val minAlt: Float,
+    val maxAlt: Float,
+    val totalDist: Float,
+    val altRange: Float,
+    val kmStep: Float,
+    val altStep: Float
+)
+
+private data class ElevationSegment(
+    val p1: Offset, // Normalized 0..1
+    val p2: Offset, // Normalized 0..1
+    val color: Color
+)
+
 @Composable
 fun ElevationProfile(
     pathPoints: List<PathPoint>,
+    currentDistance: Double?,
     modifier: Modifier = Modifier
 ) {
     if (pathPoints.isEmpty()) return
 
-    val minAlt = pathPoints.minOf { it.altitude }
-    val maxAlt = pathPoints.maxOf { it.altitude }
-    val totalDist = pathPoints.last().distance
-    val altRange = (maxAlt - minAlt).coerceAtLeast(1f)
-
     val colorScheme = MaterialTheme.colorScheme
-    val textPaint = Paint().apply {
-        color = colorScheme.onSurfaceVariant.toArgb()
-        textSize = 36f
-        isAntiAlias = true
-    }
 
-    Canvas(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(150.dp) // Increased height for axes
-            .background(colorScheme.surfaceVariant.copy(alpha = 0.1f))
-            .padding(bottom = 24.dp, start = 40.dp, end = 16.dp, top = 8.dp)
-    ) {
-        val width = size.width
-        val height = size.height
+    // --- 1. Cache Static Geometry & Adaptive Labels ---
+    val cachedData = remember(pathPoints) {
+        val min = pathPoints.minOf { it.altitude }
+        val max = pathPoints.maxOf { it.altitude }
+        val dist = pathPoints.last().distance
+        val range = (max - min).coerceAtLeast(1f)
 
-        // --- 1. Draw Axes Labels ---
-        drawIntoCanvas { canvas ->
-            val textHeightBuffer = textPaint.textSize // pixels to avoid overlap vertically
-            val textWidthBuffer = 80f // pixels to avoid overlap horizontally
-
-            // Altitude labels (Min/Max) - Fixed boundaries
-            canvas.nativeCanvas.drawText("${minAlt.toInt()} m", -85f, height, textPaint)
-            canvas.nativeCanvas.drawText("${maxAlt.toInt()} m", -85f, 10f, textPaint)
-
-            // Distance label (End) - Fixed boundary
-            canvas.nativeCanvas.drawText("${String.format("%.1f", totalDist / 1000f)} km", width - 60f, height + 40f, textPaint)
-
-            // Distance labels (Ticks every 1km)
-            val kmStep = 1000f
-            var currentKm = 0f
-            while (currentKm <= totalDist) {
-                val x = (currentKm / totalDist) * width
-
-                // Only draw if NOT too close to the 0 start or the calculated end label
-                val isTooCloseToStart = x < 40f
-                val isTooCloseToEnd = (width - x) < textWidthBuffer
-
-                if (!isTooCloseToStart && !isTooCloseToEnd) {
-                    canvas.nativeCanvas.drawLine(x, height, x, height + 10f, textPaint)
-                    if (totalDist < 10000f || currentKm % 5000f == 0f) {
-                        val label = "${(currentKm / 1000).toInt()} km"
-                        canvas.nativeCanvas.drawText(label, x - 20f, height + 40f, textPaint)
-                    }
-                }
-                currentKm += kmStep
-            }
-
-            // Altitude labels (Ticks every 100m)
-            val altStep = 100f
-            var currentAlt = (Math.ceil(minAlt.toDouble() / altStep) * altStep).toFloat()
-            while (currentAlt <= maxAlt) {
-                val y = height - ((currentAlt - minAlt) / altRange) * height
-
-                // Only draw if NOT too close to the min altitude (bottom) or max altitude (top)
-                val isTooCloseToBottom = (height - y) < textHeightBuffer
-                val isTooCloseToTop = y < textHeightBuffer
-
-                if (!isTooCloseToBottom && !isTooCloseToTop) {
-                    // Draw a small tick line
-                    canvas.nativeCanvas.drawLine(-10f, y, 0f, y, textPaint)
-
-                    // Draw horizontal grid line
-                    canvas.nativeCanvas.drawLine(0f, y, width, y, Paint().apply {
-                        color = colorScheme.onSurfaceVariant.toArgb()
-                        alpha = 30
-                        strokeWidth = 1f
-                    })
-
-                    canvas.nativeCanvas.drawText("${currentAlt.toInt()} m", -85f, y + 10f, textPaint)
-                }
-                currentAlt += altStep
-            }
+        // Adaptive Distance Ticks
+        val kmStep = when {
+            dist > 100_000 -> 20_000f
+            dist > 50_000 -> 10_000f
+            dist > 20_000 -> 5_000f
+            dist > 5_000 -> 1_000f
+            dist > 1_500 -> 500f
+            else -> 200f              // For segments < 1.5km, use 200m steps
         }
 
-        // --- 2. Calculate Grade Segments & Draw Color-coded area ---
-        // We iterate through points to create segmented paths or a gradient
+        // Adaptive Altitude Ticks
+        val altStep = when {
+            range > 2000 -> 1000f
+            range > 1000 -> 500f
+            range > 500 -> 200f
+            range > 100 -> 100f
+            else -> 50f
+        }
+
+        val segments = mutableListOf<ElevationSegment>()
         for (i in 0 until pathPoints.size - 1) {
             val p1 = pathPoints[i]
             val p2 = pathPoints[i + 1]
 
-            val x1 = (p1.distance / totalDist) * width
-            val y1 = height - ((p1.altitude - minAlt) / altRange) * height
-            val x2 = (p2.distance / totalDist) * width
-            val y2 = height - ((p2.altitude - minAlt) / altRange) * height
+            val d1 = p1.distance / dist
+            val a1 = (p1.altitude - min) / range
+            val d2 = p2.distance / dist
+            val a2 = (p2.altitude - min) / range
 
-            // Calculate grade: (rise / run) * 100
-            val distanceDiff = p2.distance - p1.distance
-            val grade = if (distanceDiff > 0) ((p2.altitude - p1.altitude) / distanceDiff) * 100 else 0f
+            val distDiff = p2.distance - p1.distance
+            val grade = if (distDiff > 0) ((p2.altitude - p1.altitude) / distDiff) * 100 else 0f
 
-            // Map grade to Zone Colors
-            val segmentColor = when {
+            val color = when {
                 grade < 2f -> Zone1
                 grade < 5f -> Zone2
                 grade < 10f -> Zone3
@@ -151,23 +116,149 @@ fun ElevationProfile(
                 else -> Color.Black
             }
 
-            // Draw the fill segment
-            val segmentPath = Path().apply {
-                moveTo(x1, y1)
-                lineTo(x2, y2)
-                lineTo(x2, height)
-                lineTo(x1, height)
-                close()
-            }
-            drawPath(path = segmentPath, color = segmentColor.copy(alpha = 0.4f))
+            segments.add(ElevationSegment(Offset(d1, a1), Offset(d2, a2), color))
+        }
+        CachedProfileData(segments, min, max, dist, range, kmStep, altStep)
+    }
 
-            // Draw the line segment
+    val textPaint = remember(colorScheme) {
+        Paint().apply {
+            color = colorScheme.onSurfaceVariant.toArgb()
+            textSize = 32f
+            isAntiAlias = true
+        }
+    }
+
+    Canvas(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(150.dp)
+            .background(colorScheme.surfaceVariant.copy(alpha = 0.1f))
+            .padding(bottom = 24.dp, start = 50.dp, end = 25.dp, top = 10.dp)
+    ) {
+        val width = size.width
+        val height = size.height
+
+        // --- 2. Static Background: Axes, Ticks, and Grid ---
+        drawIntoCanvas { canvas ->
+            val textHeightBuffer = textPaint.textSize
+            val textWidthBuffer = 90f
+
+            // 2a. Altitude labels
+            canvas.nativeCanvas.drawText("${cachedData.minAlt.toInt()} m", -110f, height, textPaint)
+            canvas.nativeCanvas.drawText("${cachedData.maxAlt.toInt()} m", -110f, 10f, textPaint)
+
+            // 2b. Distance label (End point) - Handles meters vs km
+            val endLabel = if (cachedData.totalDist < 1000) {
+                "${cachedData.totalDist.toInt()} m"
+            } else {
+                "${String.format("%.1f", cachedData.totalDist / 1000f)} km"
+            }
+            canvas.nativeCanvas.drawText(endLabel, width - 40f, height + 45f, textPaint)
+
+            // 2c. Adaptive Distance Ticks
+            var currentKm = cachedData.kmStep
+            while (currentKm < cachedData.totalDist) {
+                val x = (currentKm / cachedData.totalDist) * width
+
+                val isTooCloseToStart = x < 60f
+                val isTooCloseToEnd = (width - x) < textWidthBuffer
+
+                if (!isTooCloseToStart && !isTooCloseToEnd) {
+                    canvas.nativeCanvas.drawLine(x, height, x, height + 10f, textPaint)
+
+                    // IMPROVED LABEL LOGIC:
+                    val label = when {
+                        // Short segments (< 1.5km): "200m", "400m", etc.
+                        cachedData.totalDist < 1500 -> "${currentKm.toInt()}m"
+
+                        // Mid-length segments with sub-km steps (like your 4.4km / 500m case):
+                        // If currentKm is not a multiple of 1000, show "1.5"
+                        currentKm % 1000f != 0f -> String.format("%.1f", currentKm / 1000f)
+
+                        // Whole kilometer steps: "1", "2", "3"
+                        else -> "${(currentKm / 1000).toInt()}"
+                    }
+
+                    canvas.nativeCanvas.drawText(label, x - 15f, height + 45f, textPaint)
+                }
+                currentKm += cachedData.kmStep
+            }
+
+            // 2d. Adaptive Altitude Ticks...
+            var currentAlt = (ceil(cachedData.minAlt.toDouble() / cachedData.altStep) * cachedData.altStep).toFloat()
+            while (currentAlt < cachedData.maxAlt) {
+                val y = height - ((currentAlt - cachedData.minAlt) / cachedData.altRange) * height
+
+                val isTooCloseToBottom = (height - y) < textHeightBuffer
+                val isTooCloseToTop = y < textHeightBuffer
+
+                if (!isTooCloseToBottom && !isTooCloseToTop) {
+                    canvas.nativeCanvas.drawLine(-10f, y, 0f, y, textPaint)
+                    drawLine(
+                        color = colorScheme.onSurfaceVariant.copy(alpha = 0.1f),
+                        start = Offset(0f, y),
+                        end = Offset(width, y),
+                        strokeWidth = 1.dp.toPx()
+                    )
+                    canvas.nativeCanvas.drawText("${currentAlt.toInt()}", -110f, y + 10f, textPaint)
+                }
+                currentAlt += cachedData.altStep
+            }
+        }
+
+        // --- 3. Optimized Segment Drawing ---
+        cachedData.segments.forEach { seg ->
+            val x1 = seg.p1.x * width
+            val y1 = height - (seg.p1.y * height)
+            val x2 = seg.p2.x * width
+            val y2 = height - (seg.p2.y * height)
+
+            drawPath(
+                path = Path().apply {
+                    moveTo(x1, y1)
+                    lineTo(x2, y2)
+                    lineTo(x2, height)
+                    lineTo(x1, height)
+                    close()
+                },
+                color = seg.color.copy(alpha = 0.3f)
+            )
             drawLine(
-                color = segmentColor,
-                start = androidx.compose.ui.geometry.Offset(x1, y1),
-                end = androidx.compose.ui.geometry.Offset(x2, y2),
+                color = seg.color,
+                start = Offset(x1, y1),
+                end = Offset(x2, y2),
                 strokeWidth = 2.dp.toPx()
             )
+        }
+
+        // --- 4. Dynamic Progress Marker ---
+        currentDistance?.let { dist ->
+            val clampedDist = dist.coerceIn(0.0, cachedData.totalDist.toDouble()).toFloat()
+            val markerX = (clampedDist / cachedData.totalDist) * width
+
+            val activeIndex = pathPoints.indexOfLast { it.distance <= clampedDist }.coerceAtLeast(0)
+            val pLeft = pathPoints[activeIndex]
+            val pRight = pathPoints.getOrNull(activeIndex + 1)
+
+            val markerY = if (pRight != null) {
+                val ratio = (clampedDist - pLeft.distance) / (pRight.distance - pLeft.distance)
+                val interAlt = pLeft.altitude + ratio * (pRight.altitude - pLeft.altitude)
+                height - ((interAlt - cachedData.minAlt) / cachedData.altRange) * height
+            } else {
+                height - ((pLeft.altitude - cachedData.minAlt) / cachedData.altRange) * height
+            }
+
+            drawLine(
+                color = colorScheme.primary,
+                start = Offset(markerX, 0f),
+                end = Offset(markerX, height),
+                strokeWidth = 1.dp.toPx(),
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f))
+            )
+
+            drawCircle(color = colorScheme.onSurface, radius = 5.dp.toPx(), center = Offset(markerX, markerY))
+            drawCircle(color = colorScheme.primary, radius = 3.dp.toPx(), center = Offset(markerX, markerY))
         }
     }
 }

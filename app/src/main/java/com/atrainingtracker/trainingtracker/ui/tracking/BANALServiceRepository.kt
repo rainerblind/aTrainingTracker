@@ -116,6 +116,9 @@ class BANALServiceRepository private constructor(private val context: Context) {
     private val _currentSpeed = MutableStateFlow<Double?>(null)
     val currentSpeed: StateFlow<Double?> = _currentSpeed.asStateFlow()
 
+    private val _currentDistance = MutableStateFlow<Double?>(null)
+    val currentDistance: StateFlow<Double?> = _currentDistance.asStateFlow()
+
     // StateFlow for the current bearing
     private val _currentBearing = MutableStateFlow<Double?>(null)
     val currentBearing: StateFlow<Double?> = _currentBearing.asStateFlow()
@@ -290,6 +293,7 @@ class BANALServiceRepository private constructor(private val context: Context) {
 
                 _currentSpeed.value = banalServiceComm?.getBestSensorData(SensorType.SPEED_mps)?.value as Double?
                 _currentBearing.value = banalServiceComm?.getBestSensorData(SensorType.BEARING)?.value as Double?
+                _currentDistance.value = banalServiceComm?.getBestSensorData(SensorType.DISTANCE_m)?.value as Double?
 
                 if (DEBUG) Log.i(TAG, "BANALService:\n _searchingForDevice.value: ${_searchingForDevice.value},\n _bSportType.value: ${_bSportType.value},\n _foundDeviceIds.value: ${_activeRemoteDevicesIds.value},\n _activeSensors.value: ${_activeSensors.value}")
                 if (DEBUG) Log.i(TAG, "trackingMode: ${_trackingMode.value}")
