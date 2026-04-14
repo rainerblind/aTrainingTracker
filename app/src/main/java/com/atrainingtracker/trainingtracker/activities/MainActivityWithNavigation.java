@@ -203,7 +203,15 @@ public class MainActivityWithNavigation
     };
 
 
+    boolean showingSpecificInstallANTDialog = false;
     public void showSpecificInstallANTDialog() {
+        if (showingSpecificInstallANTDialog) {
+            return;
+        }
+        else {
+            showingSpecificInstallANTDialog = true;
+        }
+
         Context context = this;
 
         AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
