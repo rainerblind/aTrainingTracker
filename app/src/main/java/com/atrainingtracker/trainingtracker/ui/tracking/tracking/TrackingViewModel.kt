@@ -96,13 +96,32 @@ class TrackingViewModel(
 
     private val starredSegments: List<MapSegment> = SegmentsDatabaseManager.getInstance(application).getAllMapSegments()
 
-    // Filter the segments from the repository:
+    // Filter and sort the segments from the repository:
     // TODO: also filter for activity type.
     val liveSegments: StateFlow<List<LiveSegment>> = segmentsRepository.liveSegments
         .map { allSegments ->
             allSegments.filter { segment ->
                 segment.liveData.segmentStatus != LiveSegmentStatus.FAR_FAR_AWAY
             }
+                .sortedWith(
+                    compareByDescending<LiveSegment> {
+                        // Priority 1: Status
+                        when(it.liveData.segmentStatus) {
+                            LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH -> 4
+                            LiveSegmentStatus.APPROACHING -> 3
+                            LiveSegmentStatus.ON_SEGMENT -> 2
+                            LiveSegmentStatus.FINISHED -> 1
+                            else -> 0
+                        }
+                    }.thenBy {
+                        // Priority 2: Proximity to Finish or start line
+                        // if multiple are in the same state, we show the closest to the finish line first
+                        it.liveData.remainingDistance
+                    }.thenBy {
+                        // If multiple are "APPROACHING", show the closest to the start first
+                        it.liveData.distanceToStart
+                    }
+                )
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
