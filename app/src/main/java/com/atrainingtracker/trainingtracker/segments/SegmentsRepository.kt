@@ -71,7 +71,8 @@ data class LiveSegmentData(
     val distanceOnSegment: String = "--",
     val distanceOnSegment_raw: Double = 0.0,
     val remainingDistance: String = "--",
-    val segmentOffset: String = "--"
+    val segmentOffset: String = "--",
+    val segmentOffset_raw: Double = 0.0
 )
 
 data class LiveSegmentMath(
@@ -403,7 +404,8 @@ class SegmentsRepository private constructor(context: Context) {
                                 distanceOnSegment = df.format_with_units(distanceOnSegment),
                                 distanceOnSegment_raw = distanceOnSegment,
                                 remainingDistance = df.format_with_units(remainingDistance),
-                                segmentOffset = df.format_with_units(distanceToSegment)
+                                segmentOffset = df.format_with_units(distanceToSegment),
+                                segmentOffset_raw = distanceToSegment
                             )
                         )
                     }

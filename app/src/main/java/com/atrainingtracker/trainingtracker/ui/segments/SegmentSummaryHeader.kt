@@ -36,7 +36,10 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.segments.LiveSegmentData
 import com.atrainingtracker.trainingtracker.segments.LiveSegmentStatus
 import com.atrainingtracker.trainingtracker.segments.SegmentSummary
+import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.atrainingtracker.trainingtracker.ui.theme.Zone3
+import com.atrainingtracker.trainingtracker.ui.theme.Zone4
 
 @Composable
 fun SegmentSummaryHeader(
@@ -60,7 +63,7 @@ fun SegmentSummaryHeader(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.Top // Align to top so metadata stays pinned if title wraps
             ) {
-                // 1. Left Column: Name and City of Live Segment state
+                // 1. Left Column: Name and City of Live or state of LiveSegment
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = summary.name,
@@ -205,7 +208,15 @@ fun SegmentSummaryHeader(
                         Text(
                             text = stringResource(id = R.string.segment_status_offset, liveSegmentData.segmentOffset),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = if (liveSegmentData.segmentOffset_raw < SegmentsRepository.SEGMENT_DISTANCE_THRESHOLD * 0.5f) {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            }
+                            else if (liveSegmentData.segmentOffset_raw < SegmentsRepository.SEGMENT_DISTANCE_THRESHOLD * 0.75f ) {
+                                Zone3
+                            }
+                            else {
+                                Zone4
+                            }
                         )
                     }
 
@@ -365,7 +376,8 @@ fun PreviewSegmentSummaryLiveOnSegment() {
                 timeOnSegment = "2:45",
                 distanceOnSegment = "1.20 km",
                 remainingDistance = "12.80 m",
-                segmentOffset = "3 m"
+                segmentOffset = "40 m",
+                segmentOffset_raw = 40.0
             )
         )
     }
@@ -397,7 +409,8 @@ fun PreviewSegmentSummaryLive() {
                 timeOnSegment = "12:45",
                 distanceOnSegment = "3.20 km",
                 remainingDistance = "400 m",
-                segmentOffset = "3 m"
+                segmentOffset = "30 m",
+                segmentOffset_raw = 30.0
             )
         )
     }
