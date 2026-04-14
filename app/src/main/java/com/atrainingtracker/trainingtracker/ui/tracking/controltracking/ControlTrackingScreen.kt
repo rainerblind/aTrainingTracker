@@ -32,8 +32,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
@@ -106,10 +108,17 @@ fun ControlTrackingScreen(
         // Pushes the main control buttons to the center
         Spacer(modifier = Modifier.weight(1f))
 
+        val context = LocalContext.current
+        val hasLocationPermission = remember(context) {
+            androidx.core.content.ContextCompat.checkSelfPermission(context,
+                android.Manifest.permission.ACCESS_COARSE_LOCATION
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        }
         // Large Control Buttons (Start/Pause/Stop)
         ControlTrackingButton(
             modifier = Modifier.fillMaxWidth(),
             mode = trackingMode,
+            enabled = hasLocationPermission,
             onStart = onStart,
             onPause = onPause,
             onResume = onResume,
