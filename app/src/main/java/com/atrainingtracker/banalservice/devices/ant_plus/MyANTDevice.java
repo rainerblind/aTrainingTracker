@@ -33,6 +33,7 @@ import com.atrainingtracker.banalservice.devices.MyRemoteDevice;
 import com.atrainingtracker.banalservice.Protocol;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.banalservice.helpers.BatteryStatusHelper;
+import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.dsi.ant.plugins.antplus.pcc.defines.BatteryStatus;
 import com.dsi.ant.plugins.antplus.pcc.defines.DeviceState;
 import com.dsi.ant.plugins.antplus.pcc.defines.EventFlag;
@@ -204,35 +205,18 @@ public abstract class MyANTDevice extends MyRemoteDevice {
 
     private void dependencyNotInstalled() {
         myLog("dependencyNotInstalled()");
-        // TODO: is this the right place to install the dependencies or should we just send a broadcast intent???
 
         if (mContext == null) {
             Log.d(TAG, "WTF: mContext == null");
             return;
         }
 
-        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(mContext);
-        alertDialogBuilder.setTitle("Missing Dependency");
-        alertDialogBuilder.setMessage("The required application\n\"" + AntPluginPcc.getMissingDependencyName() + "\"\n is not installed. Do you want to launch the Play Store to search for it?");
-        alertDialogBuilder.setCancelable(true);
-        alertDialogBuilder.setPositiveButton("Go to Store", new OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                Intent startStore = new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + AntPluginPcc.getMissingDependencyPackageName()));
-                startStore.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-
-                mContext.startActivity(startStore);
-            }
-        });
-        alertDialogBuilder.setNegativeButton("Cancel", new OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                dialog.dismiss();
-            }
-        });
-
-        final AlertDialog waitDialog = alertDialogBuilder.create();
-        waitDialog.show();
+        // Since we can not show a dialog here, we notify the app via a broadcast
+        Intent intent = new Intent("com.atrainingtracker.ANT_DEPENDENCY_MISSING");
+        intent.setPackage(mContext.getPackageName());
+        intent.putExtra("dependency_name", AntPluginPcc.getMissingDependencyName());
+        intent.putExtra("package_name", AntPluginPcc.getMissingDependencyPackageName());
+        mContext.sendBroadcast(intent);
     }
 
 
