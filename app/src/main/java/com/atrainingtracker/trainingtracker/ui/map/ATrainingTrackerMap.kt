@@ -51,6 +51,7 @@ import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.JointType
 import com.google.android.gms.maps.model.LatLng
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.activities.SegmentDetailsActivity
 import com.atrainingtracker.trainingtracker.segments.SegmentHelper
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager
@@ -431,12 +432,17 @@ private fun drawSegments(
                     currentZoom > 15f -> 18f
                     else -> 14f
                 }
+                val sportIconRes = if (segment.bSportType == BSportType.RUN) {
+                    R.drawable.bsport_run
+                } else {
+                    R.drawable.bsport_bike
+                }
                 // START: Positioned "Below" (Behind) the line
                 // Rotation (startBearing - 90) aligns the width of the text with the orthogonal line.
                 // An anchor V of -0.2f pushes the bitmap "down" the path direction.
                 val startMarker = googleMap.addMarker(MarkerOptions()
                     .position(startPt.latLng)
-                    .icon(createTextMarkerBitmap(context, segment.name, "🚩", textSize))
+                    .icon(createTextMarkerBitmap(context, segment.name, "🚩", textSize, sportIconRes))
                     // .rotation(startBearing)
                     .anchor(0.5f, -0.2f)
                     .alpha(alpha)
@@ -448,7 +454,7 @@ private fun drawSegments(
                 // An anchor V of 1.2f pushes the bitmap "up" further past the finish point.
                 val finishMarker = googleMap.addMarker(MarkerOptions()
                     .position(endPt.latLng)
-                    .icon(createTextMarkerBitmap(context, segment.name, "🏁", textSize))
+                    .icon(createTextMarkerBitmap(context, segment.name, "🏁", textSize, sportIconRes))
                     // .rotation(endBearing)
                     .anchor(0.5f, 1.2f)
                     .alpha(alpha)
@@ -475,35 +481,78 @@ private fun bitmapDescriptorFromVectorInternal(context: Context, resId: Int, siz
 }
 
 /**
- * Generates a Bitmap containing an emoji and text to be used as a marker.
+ * Generates a Bitmap containing a Sport Icon, Text, and an Emoji.
+ * Format: [Icon] [Text] [Emoji]
  */
-private fun createTextMarkerBitmap(context: Context, text: String, emoji: String, textSizeIn: Float): BitmapDescriptor? {
+private fun createTextMarkerBitmap(
+    context: Context,
+    text: String,
+    emoji: String,
+    textSizeIn: Float,
+    @DrawableRes iconResId: Int// ? = null
+): BitmapDescriptor? {
+    val density = context.resources.displayMetrics.density
+    val scaledTextSize = textSizeIn * density
+
     val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
         color = android.graphics.Color.BLACK
-        textSize = textSizeIn * context.resources.displayMetrics.density
+        textSize = scaledTextSize
         typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.NORMAL)
     }
 
-    val fullText = "$emoji $text"
-    val baseline = -paint.ascent()
-    val width = (paint.measureText(fullText) + 0.5f).toInt()
-    val height = (baseline + paint.descent() + 0.5f).toInt()
+    // 1. Prepare the Sport Icon
+    val iconSize = (scaledTextSize * 1.2f).toInt() // Slightly larger than text
+    val iconBitmap = iconResId?.let { res ->
+        ContextCompat.getDrawable(context, res)?.let { drawable ->
+            val bm = Bitmap.createBitmap(iconSize, iconSize, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bm)
+            drawable.setBounds(0, 0, iconSize, iconSize)
+            // drawable.setTint(android.graphics.Color.BLACK) // Match text color
+            drawable.draw(canvas)
+            bm
+        }
+    }
 
-    val image = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-    val canvas = Canvas(image)
+    // 2. Calculate Dimensions
+    val fullText = "$text $emoji" // Emoji moved to the end
+    val textWidth = paint.measureText(fullText)
+    val iconPadding = if (iconBitmap != null) 3f * density else 0f
+    val totalWidth = (iconSize.toFloat() + iconPadding + textWidth + 4f).toInt()
 
-    // Draw white shadow/outline for better readability on map
-    paint.style = android.graphics.Paint.Style.STROKE
-    paint.strokeWidth = 4f
-    paint.color = android.graphics.Color.WHITE
-    canvas.drawText(fullText, 0f, baseline, paint)
+    val fontMetrics = paint.fontMetrics
+    val height = (fontMetrics.bottom - fontMetrics.top + 0.5f).toInt()
+    val baseline = -fontMetrics.top
 
-    // Draw actual text
-    paint.style = android.graphics.Paint.Style.FILL
-    paint.color = android.graphics.Color.BLACK
-    canvas.drawText(fullText, 0f, baseline, paint)
+    // 3. Create Result Bitmap
+    val resultImage = Bitmap.createBitmap(totalWidth, height, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(resultImage)
 
-    return BitmapDescriptorFactory.fromBitmap(image)
+    // 4. Draw Shadow/Outline for visibility
+    val shadowPaint = android.graphics.Paint(paint).apply {
+        style = android.graphics.Paint.Style.STROKE
+        strokeWidth = 2f * density
+        color = android.graphics.Color.WHITE
+    }
+
+    val textX = if (iconBitmap != null) iconSize + iconPadding else 0f
+
+    // Draw Outline
+    canvas.drawText(fullText, textX, baseline, shadowPaint)
+
+    // 5. Draw Icon
+    iconBitmap?.let {
+        // Draw a small white glow behind the icon
+        val glowPaint = android.graphics.Paint().apply {
+            colorFilter = android.graphics.PorterDuffColorFilter(android.graphics.Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN)
+        }
+        canvas.drawBitmap(it, 2f, (height - iconSize) / 2f, glowPaint) // Background glow
+        canvas.drawBitmap(it, 0f, (height - iconSize) / 2f, null)
+    }
+
+    // 6. Draw Actual Text
+    canvas.drawText(fullText, textX, baseline, paint)
+
+    return BitmapDescriptorFactory.fromBitmap(resultImage)
 }
 
 private fun calculateOrthogonalLine(point: LatLng, nextPoint: LatLng): List<LatLng> {
