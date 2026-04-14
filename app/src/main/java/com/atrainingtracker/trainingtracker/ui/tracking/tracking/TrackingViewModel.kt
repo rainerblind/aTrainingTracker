@@ -98,41 +98,45 @@ class TrackingViewModel(
 
     // Filter and sort the segments from the repository:
     // TODO: also filter for activity type.
-    val liveSegments: StateFlow<List<LiveSegment>> = segmentsRepository.liveSegments
-        .map { allSegments ->
-            allSegments.filter { segment ->
-                segment.liveData.segmentStatus != LiveSegmentStatus.FAR_FAR_AWAY
-            }
-                .sortedWith(
-                    compareByDescending<LiveSegment> {
-                        // Priority 1: Status
-                        when(it.liveData.segmentStatus) {
-                            LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH -> 4
-                            LiveSegmentStatus.ON_SEGMENT -> 3
-                            LiveSegmentStatus.APPROACHING -> 2
-                            LiveSegmentStatus.FINISHED -> 1
-                            else -> 0
-                        }
-                    }.thenBy {
-                        // Priority 2: Conditional tie-breaker
-                        when(it.liveData.segmentStatus) {
-                            // If we are ON the segment, prioritize by remaining distance (finish line)
-                            LiveSegmentStatus.ON_SEGMENT,
-                            LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH -> it.liveData.remainingDistance
-
-                            // If we are APPROACHING, prioritize by distance to the start line
-                            LiveSegmentStatus.APPROACHING -> it.liveData.distanceToStart
-
-                            // For the other cases, it is not clear what to do.  Thus, we try the segment offset. I.e., the closest segment (although this might jump).
-                            else -> it.liveData.segmentOffset
-                        }
+    val liveSegments: StateFlow<List<LiveSegment>> = combine(
+        segmentsRepository.liveSegments,
+        banalServiceRepository.bSportType
+    ) { allLiveSegments, currentBSportType ->
+        allLiveSegments.filter { segment ->
+            ( segment.summary.bSportType == currentBSportType
+                    || currentBSportType == BSportType.UNKNOWN)
+                    && segment.liveData.segmentStatus != LiveSegmentStatus.FAR_FAR_AWAY
+        }
+            .sortedWith(
+                compareByDescending<LiveSegment> {
+                    // Priority 1: Status
+                    when(it.liveData.segmentStatus) {
+                        LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH -> 4
+                        LiveSegmentStatus.ON_SEGMENT -> 3
+                        LiveSegmentStatus.APPROACHING -> 2
+                        LiveSegmentStatus.FINISHED -> 1
+                        else -> 0
                     }
-                )
-        }.stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
+                }.thenBy {
+                    // Priority 2: Conditional tie-breaker
+                    when(it.liveData.segmentStatus) {
+                        // If we are ON the segment, prioritize by remaining distance (finish line)
+                        LiveSegmentStatus.ON_SEGMENT,
+                        LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH -> it.liveData.remainingDistance
+
+                        // If we are APPROACHING, prioritize by distance to the start line
+                        LiveSegmentStatus.APPROACHING -> it.liveData.distanceToStart
+
+                        // For the other cases, it is not clear what to do.  Thus, we try the segment offset. I.e., the closest segment (although this might jump).
+                        else -> it.liveData.segmentOffset
+                    }
+                }
+            )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
 
     private val sharedPreferences: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(application)
     private val defaultZoneColor = Color(ContextCompat.getColor(application, R.color.color_background))
