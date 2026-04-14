@@ -98,7 +98,7 @@ class TrackingViewModel(
 
     // Filter and sort the segments from the repository:
     // TODO: also filter for activity type.
-    val liveSegments: StateFlow<List<LiveSegment>> = combine(
+    val activeLiveSegments: StateFlow<List<LiveSegment>> = combine(
         segmentsRepository.liveSegments,
         banalServiceRepository.bSportType
     ) { allLiveSegments, currentBSportType ->
@@ -168,8 +168,9 @@ class TrackingViewModel(
             combine(
                 trackingViewsRepository.getSensorFieldConfigsForView(viewId),
                 banalServiceRepository.allFilteredSensorData,
-                trackingViewsRepository.getTrackingViewInfoFlow(viewId)
-            ) { configs, allSensorData, viewInfo ->
+                trackingViewsRepository.getTrackingViewInfoFlow(viewId),
+                activeLiveSegments
+            ) { configs, allSensorData, viewInfo, activeLiveSegments ->
                 // This whole block will re-execute whenever configs OR sensor data change
 
                 // --- Step 1: Create the base state from the latest configurations ---
@@ -214,6 +215,8 @@ class TrackingViewModel(
                     )
                 }
 
+                val activeIds = activeLiveSegments.map { it.summary.stravaId }.toSet()
+
                 // --- Step 4: Package everything into the TrackingScreenState ---
                 TrackingScreenState(
                     fields = finalFields,
@@ -224,6 +227,7 @@ class TrackingViewModel(
                         isFollowMeEnabled = true,
                         currentTrack = currentTrack,
                         segments = starredSegments,
+                        activeLiveSegmentIds = activeIds,
                         markers = markerList
                     )
                 )

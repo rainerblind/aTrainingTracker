@@ -65,6 +65,7 @@ data class MapState(
     val currentTrack: List<LatLng> = emptyList(),
     val tracks: List<MapTrack> = emptyList(),
     val segments: List<MapSegment> = emptyList(),
+    val activeLiveSegmentIds: Set<Long> = emptySet(),
     val markers: List<LocationMarker> = emptyList()
 )
 

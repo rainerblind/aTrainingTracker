@@ -201,6 +201,8 @@ fun ATrainingTrackerMap(
 
                 val currentDataHash = mapState.segments.hashCode() +
                         mapState.markers.hashCode() +
+                        mapState.activeLiveSegmentIds.hashCode() +
+                        mapState.isFollowMeEnabled.hashCode() +
                         zoomInt
 
                 if (mapViewModel.staticDataHash != currentDataHash) {
@@ -220,6 +222,8 @@ fun ATrainingTrackerMap(
                     drawSegments(
                         googleMap,
                         mapState.segments,
+                        activeLiveSegmentIds = mapState.activeLiveSegmentIds,
+                        isFollowMeEnabled = mapState.isFollowMeEnabled,
                         context,
                         mapViewModel.activeSegmentMarkers,   // Pass list to store new markers
                         mapViewModel.activeSegmentPolylines,
@@ -339,6 +343,8 @@ fun createSensorMarker(
 private fun drawSegments(
     googleMap: GoogleMap,
     segments: List<MapSegment>,
+    activeLiveSegmentIds: Set<Long>,
+    isFollowMeEnabled: Boolean,
     context: Context,
     markerList: MutableList<Marker>,
     polylineList: MutableList<Polyline>,
@@ -358,19 +364,27 @@ private fun drawSegments(
     }
 
     segments.forEach { segment ->
-        // Main Path
+        val isLive = activeLiveSegmentIds.contains(segment.id)
+
+        // Logic: Full color if followMe is OFF OR if the segment is LIVE.
+        // Transparent only if followMe is ON and the segment is NOT live.
+        val alpha = if (!isFollowMeEnabled || isLive) 1.0f else 0.3f
+        val strokeWidth = if (isLive && isFollowMeEnabled) 12f else 8f
+        val zIndex = if (isLive && isFollowMeEnabled) 1.0f else 0.0f
+
         val polyline = googleMap.addPolyline(
             PolylineOptions()
-                .addAll( segment.path.map { it.latLng })
-                .color(StravaOrange.toArgb())
-                .width(8f)
+                .addAll(segment.path.map { it.latLng })
+                .color(StravaOrange.copy(alpha = alpha).toArgb())
+                .width(strokeWidth)
                 .jointType(JointType.ROUND)
                 .clickable(true)
+                .zIndex(zIndex)
         )
-        polyline.tag = segment.id // Store ID for the click listener
+        polyline.tag = segment.id
         polylineList.add(polyline)
 
-        // Select direction icon based on zoom level
+        // Direction arrows and labels follow the same alpha
         if (currentZoom > 14f) {
             val icon = when {
                 currentZoom > 17f -> directionLarge
@@ -378,14 +392,20 @@ private fun drawSegments(
                 else -> directionSmall
             }
 
-            segment.path.windowed(2, 20).forEach { pair ->
-                googleMap.addMarker(MarkerOptions()
-                    .position(LatLng((pair[0].latLng.latitude + pair[1].latLng.latitude) / 2.0, (pair[0].latLng.longitude + pair[1].latLng.longitude) / 2.0))
-                    .icon(icon)
-                    .rotation(calculateBearing(pair[0].latLng, pair[1].latLng).toFloat())
-                    .flat(true)
-                    .anchor(0.5f, 0.5f)
-                    .alpha(0.7f))
+            // Only draw direction arrows for live segments or high zoom levels to maintain performance
+            if (isLive || currentZoom > 16f) {
+                segment.path.windowed(2, 20).forEach { pair ->
+                    googleMap.addMarker(MarkerOptions()
+                        .position(LatLng((pair[0].latLng.latitude + pair[1].latLng.latitude) / 2.0,
+                            (pair[0].latLng.longitude + pair[1].latLng.longitude) / 2.0))
+                        .icon(icon)
+                        .rotation(calculateBearing(pair[0].latLng, pair[1].latLng).toFloat())
+                        .flat(true)
+                        .anchor(0.5f, 0.5f)
+                        .alpha(alpha)
+                        .zIndex(zIndex)
+                    )
+                }
             }
         }
 
@@ -397,8 +417,8 @@ private fun drawSegments(
             val endPrev = segment.path[segment.path.size - 6]
 
             // Orthogonal Lines
-            googleMap.addPolyline(PolylineOptions().addAll(calculateOrthogonalLine(startPt.latLng, startNext.latLng)).color(StravaOrange.toArgb()).width(8f))
-            googleMap.addPolyline(PolylineOptions().addAll(calculateOrthogonalLine(endPt.latLng, endPrev.latLng)).color(StravaOrange.toArgb()).width(8f))
+            googleMap.addPolyline(PolylineOptions().addAll(calculateOrthogonalLine(startPt.latLng, startNext.latLng)).color(StravaOrange.copy(alpha = alpha).toArgb()).width(strokeWidth))
+            googleMap.addPolyline(PolylineOptions().addAll(calculateOrthogonalLine(endPt.latLng, endPrev.latLng)).color(StravaOrange.copy(alpha = alpha).toArgb()).width(strokeWidth))
 
             // Labels (Only at high zoom)
             if (currentZoom > 14f
@@ -419,6 +439,7 @@ private fun drawSegments(
                     .icon(createTextMarkerBitmap(context, segment.name, "🚩", textSize))
                     // .rotation(startBearing)
                     .anchor(0.5f, -0.2f)
+                    .alpha(alpha)
                     .flat(false)
                 )
                 startMarker?.let { markerList.add(it) }
@@ -430,6 +451,7 @@ private fun drawSegments(
                     .icon(createTextMarkerBitmap(context, segment.name, "🏁", textSize))
                     // .rotation(endBearing)
                     .anchor(0.5f, 1.2f)
+                    .alpha(alpha)
                     .flat(false)
                 )
                 finishMarker?.let { markerList.add(it) }
