@@ -92,7 +92,7 @@ data class PathPoint(
 data class MapTrack(
     val id: Long,
     val type: TrackType,
-    val path: List<LatLng>,
+    val path: List<PathPoint>,
     val isVisible: Boolean = true
 )
 {

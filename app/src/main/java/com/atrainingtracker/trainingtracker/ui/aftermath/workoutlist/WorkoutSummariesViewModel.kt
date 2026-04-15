@@ -30,6 +30,7 @@ import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.aftermath.DeletionProgress
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.map.Roughness
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import com.google.android.gms.maps.model.LatLng
@@ -109,7 +110,7 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
      * Fetches track points for a specific workout using the repository.
      * Replaces the logic previously handled by TrackOnMapHelper.
      */
-    suspend fun getWorkoutTrackPoints(workoutId: Long): List<LatLng> {
+    suspend fun getWorkoutTrackPoints(workoutId: Long): List<PathPoint> {
         return repository.getWorkoutTrackPoints(workoutId, Roughness.MEDIUM, TrackType.BEST)
     }
 
