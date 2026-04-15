@@ -40,6 +40,7 @@ class TrackOnMapAftermathViewModel(application: Application) : MapViewModel(appl
     private val _aftermathState = MutableStateFlow(MapState(isFollowMeEnabled = false))
     val aftermathState = _aftermathState.asStateFlow()
 
+    // TODO: Move to WorkoutRepository.
     private val summariesDb = WorkoutSummariesDatabaseManager.getInstance(application)
     private val samplesDb = WorkoutSamplesDatabaseManager.getInstance(application)
 
@@ -53,7 +54,6 @@ class TrackOnMapAftermathViewModel(application: Application) : MapViewModel(appl
     fun loadAftermathData(workoutId: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             val baseFileName = summariesDb.getBaseFileName(workoutId) ?: return@launch
-            val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
 
             // 1. Load Tracks
             val trackList = TrackType.entries.mapNotNull { type ->
