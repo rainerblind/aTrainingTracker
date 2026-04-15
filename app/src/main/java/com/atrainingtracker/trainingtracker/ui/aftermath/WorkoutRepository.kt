@@ -33,6 +33,7 @@ import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
+import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import kotlinx.coroutines.Dispatchers
@@ -51,6 +52,7 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.Des
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderDataProvider
+import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.map.Roughness
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
@@ -169,9 +171,9 @@ class WorkoutRepository private constructor(private val application: Application
         workoutId: Long,
         roughness: Roughness,
         trackType: TrackType
-    ): List<LatLng> = withContext(Dispatchers.IO) {
+    ): List<PathPoint> = withContext(Dispatchers.IO) {
 
-        val points = mutableListOf<LatLng>()
+        val points = mutableListOf<PathPoint>()
 
         // 1. Get the base file name (same as TrackOnMapHelper)
         val baseFileName = summariesManager.getBaseFileName(workoutId)
@@ -184,14 +186,25 @@ class WorkoutRepository private constructor(private val application: Application
         val latName = trackType.latitudeColumn
         val lonName = trackType.longitudeColumn
 
+
         db.query(tableName, null, null, null, null, null, null).use { cursor ->
+
+            val latIdx = cursor.getColumnIndex(latName)
+            val lonIdx = cursor.getColumnIndex(lonName)
+            val altIdx = cursor.getColumnIndex(SensorType.ALTITUDE.name)
+            val distIdx = cursor.getColumnIndex(SensorType.DISTANCE_m.name)
+
             // 3. Replicate the Roughness stepSize logic
             while (cursor.move(roughness.stepSize)) {
-                val latIdx = cursor.getColumnIndex(latName)
-                val lonIdx = cursor.getColumnIndex(lonName)
 
                 if (latIdx != -1 && lonIdx != -1 && !cursor.isNull(latIdx) && !cursor.isNull(lonIdx)) {
-                    points.add(LatLng(cursor.getDouble(latIdx), cursor.getDouble(lonIdx)))
+                    points.add(
+                        PathPoint(
+                            cursor.getDouble(distIdx).toFloat(),
+                            LatLng(cursor.getDouble(latIdx), cursor.getDouble(lonIdx)),
+                            cursor.getDouble(altIdx).toFloat()
+                        )
+                    )
                 }
             }
         }

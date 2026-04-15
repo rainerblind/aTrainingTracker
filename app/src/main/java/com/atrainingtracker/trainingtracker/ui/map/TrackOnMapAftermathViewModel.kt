@@ -27,6 +27,7 @@ import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,8 +40,11 @@ class TrackOnMapAftermathViewModel(application: Application) : MapViewModel(appl
     private val _aftermathState = MutableStateFlow(MapState(isFollowMeEnabled = false))
     val aftermathState = _aftermathState.asStateFlow()
 
+    // TODO: Move to WorkoutRepository.
     private val summariesDb = WorkoutSummariesDatabaseManager.getInstance(application)
     private val samplesDb = WorkoutSamplesDatabaseManager.getInstance(application)
+
+    private val workoutRepository = WorkoutRepository.getInstance(application)
 
     private val extremaSensorTypes = arrayOf(
         SensorType.ALTITUDE, SensorType.TEMPERATURE,
@@ -50,11 +54,10 @@ class TrackOnMapAftermathViewModel(application: Application) : MapViewModel(appl
     fun loadAftermathData(workoutId: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             val baseFileName = summariesDb.getBaseFileName(workoutId) ?: return@launch
-            val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
 
             // 1. Load Tracks
             val trackList = TrackType.entries.mapNotNull { type ->
-                val path = fetchPath(tableName, type)
+                val path = workoutRepository.getWorkoutTrackPoints(workoutId, Roughness.ALL, type)
                 if (path.isNotEmpty()) MapTrack(id = type.ordinal.toLong(), type = type, path = path) else null
             }
 
@@ -122,42 +125,6 @@ class TrackOnMapAftermathViewModel(application: Application) : MapViewModel(appl
             SensorType.SPEED_mps -> R.drawable.ic_speed
             else -> -1
         }
-    }
-
-
-    private fun fetchPath(tableName: String, type: TrackType): List<LatLng> {
-        val latCol = type.latitudeColumn
-        val lonCol = type.longitudeColumn
-
-        // --- NEW: Safety check to prevent SQLiteException ---
-        if (!columnExists(tableName, latCol) || !columnExists(tableName, lonCol)) {
-            Log.w("TrackOnMapAftermath", "Skipping $type: Columns $latCol/$lonCol not found in $tableName")
-            return emptyList()
-        }
-
-        val path = mutableListOf<LatLng>()
-        samplesDb.database.query(tableName, arrayOf(latCol, lonCol), "$latCol IS NOT NULL", null, null, null, null).use { cursor ->
-            val latIdx = cursor.getColumnIndex(latCol)
-            val lonIdx = cursor.getColumnIndex(lonCol)
-
-            while (cursor.moveToNext()) {
-                path.add(LatLng(cursor.getDouble(latIdx), cursor.getDouble(lonIdx)))
-            }
-        }
-        return path
-    }
-
-    /**
-     * Helper to verify if a column exists in a specific table
-     */
-    private fun columnExists(tableName: String, columnName: String): Boolean {
-        samplesDb.database.rawQuery("PRAGMA table_info($tableName)", null).use { cursor ->
-            val nameIdx = cursor.getColumnIndex("name")
-            while (cursor.moveToNext()) {
-                if (cursor.getString(nameIdx).equals(columnName, ignoreCase = true)) return true
-            }
-        }
-        return false
     }
 
     private fun getExtremaPos(id: Long, file: String, type: ExtremaType): LatLng? {

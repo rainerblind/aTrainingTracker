@@ -114,7 +114,7 @@ fun ATrainingTrackerMap(
                 // 1. Include all points from all tracks
                 mapState.tracks.forEach { track ->
                     track.path.forEach {
-                        builder.include(it)
+                        builder.include(it.latLng)
                         hasPoints = true
                     }
                 }
@@ -258,7 +258,7 @@ fun ATrainingTrackerMap(
                 mapState.tracks.forEach { track ->
                     if (track.isVisible && track.path.isNotEmpty()) {
                         googleMap.addPolyline(PolylineOptions()
-                            .addAll(track.path)
+                            .addAll( track.path.map { it.latLng} )
                             .color(track.color.toArgb())
                             .zIndex(track.zIndex)
                             .width(5f)

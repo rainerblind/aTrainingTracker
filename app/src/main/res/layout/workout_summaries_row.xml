@@ -85,7 +85,7 @@
         <androidx.compose.ui.platform.ComposeView
             android:id="@+id/workout_summaries_map_compose"
             android:layout_width="0dp"
-            android:layout_height="180dp"
+            android:layout_height="275dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/extrema_values_include"

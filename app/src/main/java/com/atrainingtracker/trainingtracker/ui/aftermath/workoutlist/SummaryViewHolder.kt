@@ -21,11 +21,17 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 import android.app.Activity
 import android.view.View
 import androidx.appcompat.widget.PopupMenu
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
@@ -43,6 +49,7 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.Extrema
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderData
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderViewHolder
 import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
+import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.map.MapState
 import com.atrainingtracker.trainingtracker.ui.map.MapTrack
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
@@ -105,15 +112,34 @@ class SummaryViewHolder(
             mapComposeView.setContent {
                 ATrainingTrackerTheme {
                     val state by rowMapState.collectAsState()
+                    val path = state.tracks.firstOrNull()?.path ?: emptyList()
 
-                    // 2. Use the new ATrainingTrackerMap
-                    ATrainingTrackerMap(
-                        mapState = state,
-                        mapViewModel = mapViewModel,
-                        currentLocationFlow = MutableStateFlow(null), // Static row
-                        modifier = Modifier.fillMaxSize(),
-                        onMapClick = { TrainingApplication.startTrackOnMapAftermathActivity(activity, workoutSummary.id) }
-                    )
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        // 1. The Map (Takes up the remaining space)
+                        ATrainingTrackerMap(
+                            mapState = state,
+                            mapViewModel = mapViewModel,
+                            currentLocationFlow = MutableStateFlow(null),
+                            modifier = Modifier
+                                .weight(1f) // Fills available space above the profile
+                                .fillMaxWidth(),
+                            onMapClick = {
+                                TrainingApplication.startTrackOnMapAftermathActivity(activity, workoutSummary.id)
+                            }
+                        )
+
+                        // 2. The Elevation Profile (Fixed height at the bottom)
+                        if (path.isNotEmpty()) {
+                            ElevationProfile(
+                                pathPoints = path,
+                                currentDistance = null, // No progress marker needed in summary
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(100.dp) // Adjusted height for visibility in a list row
+                                    .background(MaterialTheme.colorScheme.surface)
+                            )
+                        }
+                    }
                 }
             }
         } else {
