@@ -238,7 +238,15 @@ public class MainActivityWithNavigation
         waitDialog.show();
     }
 
+    private boolean isShowingANTAdapterMissingDialog = false;
     public void showANTAdapterMissingDialog() {
+        if (isShowingANTAdapterMissingDialog) {
+            return;
+        }
+        else {
+            isShowingANTAdapterMissingDialog = true;
+        }
+
         Context context = this;
 
         AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
