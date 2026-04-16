@@ -149,7 +149,7 @@ fun TrackingTabsScreen(
                     .fillMaxWidth()
                     .weight(1f),
                 userScrollEnabled = true,
-                beyondViewportPageCount = 3 // Keep some tabs...
+                beyondViewportPageCount = 7 // Keep some tabs...
             ) { page ->
                 if (!isExplicitMode && page == 0) {
 
