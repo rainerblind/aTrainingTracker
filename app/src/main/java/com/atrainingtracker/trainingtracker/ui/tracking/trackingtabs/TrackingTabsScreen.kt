@@ -22,7 +22,10 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.ScrollableTabRow
@@ -126,12 +129,15 @@ fun TrackingTabsScreen(
             // 3. THE HORIZONTAL PAGER (Optimized for speed)
             HorizontalPager(
                 state = pagerState,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
                 userScrollEnabled = screenMode == ScreenMode.TRACKING,
-                beyondViewportPageCount = 1 // KEEP MAPS WARM
+                beyondViewportPageCount = 3 // KEEP some tabs...
             ) { page ->
                 if (!isExplicitMode && page == 0) {
-// --- CONTROL TAB (Page 0) ---
+
+                    // --- CONTROL TAB (Page 0) ---
 
                     // Initialize the specialized ViewModel for this screen
                     val controlViewModel: ControlTrackingViewModel = viewModel(
@@ -193,21 +199,22 @@ fun TrackingTabsScreen(
                         mapViewModel)
                 }
             }
-        }
 
-        // 4. THE CONDITIONAL LAP BUTTON
-        // Requirement: check currentViewInfo.showLapButton
-        val shouldShowLapButton = currentViewInfo?.showLapButton == true
-                && screenMode == ScreenMode.TRACKING
+            // 4. THE CONDITIONAL LAP BUTTON
+            // Requirement: check currentViewInfo.showLapButton
+            val shouldShowLapButton = currentViewInfo?.showLapButton == true
+                    && screenMode == ScreenMode.TRACKING
 
-        if (shouldShowLapButton) {
-            LapButton(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(16.dp),
-                trackingMode = trackingMode,
-                onClick = { trackingTabsViewModel.onLapButtonClick() }
-            )
+            if (shouldShowLapButton) {
+                LapButton(
+                    modifier = Modifier
+                        .padding(start = 8.dp, end = 8.dp, bottom = 0.dp)
+                        .align(Alignment.CenterHorizontally)
+                        .wrapContentHeight(),
+                    trackingMode = trackingMode,
+                    onClick = { trackingTabsViewModel.onLapButtonClick() }
+                )
+            }
         }
     }
 }
