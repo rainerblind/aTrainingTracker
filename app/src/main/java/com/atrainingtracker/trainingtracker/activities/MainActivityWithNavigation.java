@@ -54,6 +54,7 @@ import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentFragment;
 import com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrack;
 import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository;
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsFragment;
+import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsFragmentClassic;
 import com.dsi.ant.plugins.antplus.pccbase.AntPluginPcc;
 import com.google.android.material.navigation.NavigationView;
 import androidx.core.app.ActivityCompat;
