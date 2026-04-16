@@ -98,42 +98,53 @@ fun TrackingTabsScreen(
                 onToggleMode = { trackingTabsViewModel.toggleScreenMode() }
             )
 
-            // 2. TAB ROW (Only show in VIEW mode)
-            if (screenMode == ScreenMode.TRACKING) {
-                ScrollableTabRow(
-                    selectedTabIndex = pagerState.currentPage,
-                    edgePadding = 16.dp,
-                    divider = {}
-                ) {
-                    if (!isExplicitMode) {
-                        Tab(
-                            selected = pagerState.currentPage == 0,
-                            onClick = { scope.launch { pagerState.animateScrollToPage(0) } },
-                            text = {
-                                // Dynamic Title for Control Tab (Tracking/Paused/Start)
-                                Text(getControlTabTitle(trackingMode))
-                            }
-                        )
-                    }
-                    trackingViews.forEachIndexed { index, view ->
-                        val targetPage = if (isExplicitMode) index else index + 1
-                        Tab(
-                            selected = pagerState.currentPage == targetPage,
-                            onClick = { scope.launch { pagerState.animateScrollToPage(targetPage) } },
-                            text = { Text(view.name) }
-                        )
-                    }
+            // HEADER FOR CONFIGURING THE TAB
+            if (screenMode == ScreenMode.CONFIGURATION && currentViewInfo != null) {
+                TabConfigContent(
+                    viewInfo = currentViewInfo,
+                    onUpdateTabName = { id, name -> trackingTabsViewModel.onUpdateTabName(id, name) },
+                    onAddTabRelative = { id, after -> trackingTabsViewModel.onAddTabRelative(id, after) },
+                    onDeleteTab = { id -> trackingTabsViewModel.onDeleteTab(id) },
+                    onUpdateShowMap = { id, show -> trackingTabsViewModel.onUpdateShowMap(id, show) },
+                    onUpdateShowLiveSegments = { id, show -> trackingTabsViewModel.onUpdateShowLiveSegments(id, show) },
+                    onUpdateShowLapButton = { id, show -> trackingTabsViewModel.onUpdateShowLapButton(id, show) }
+                )
+            }
+
+            // TAB ROW
+            ScrollableTabRow(
+                selectedTabIndex = pagerState.currentPage,
+                edgePadding = 16.dp,
+                divider = {}
+            ) {
+                if (!isExplicitMode) {
+                    Tab(
+                        selected = pagerState.currentPage == 0,
+                        onClick = { scope.launch { pagerState.animateScrollToPage(0) } },
+                        text = {
+                            // Dynamic Title for Control Tab (Tracking/Paused/Start)
+                            Text(getControlTabTitle(trackingMode))
+                        }
+                    )
+                }
+                trackingViews.forEachIndexed { index, view ->
+                    val targetPage = if (isExplicitMode) index else index + 1
+                    Tab(
+                        selected = pagerState.currentPage == targetPage,
+                        onClick = { scope.launch { pagerState.animateScrollToPage(targetPage) } },
+                        text = { Text(view.name) }
+                    )
                 }
             }
 
-            // 3. THE HORIZONTAL PAGER (Optimized for speed)
+            // 3. THE HORIZONTAL PAGER
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
-                userScrollEnabled = screenMode == ScreenMode.TRACKING,
-                beyondViewportPageCount = 3 // KEEP some tabs...
+                userScrollEnabled = true,
+                beyondViewportPageCount = 3 // Keep some tabs...
             ) { page ->
                 if (!isExplicitMode && page == 0) {
 
@@ -200,8 +211,7 @@ fun TrackingTabsScreen(
                 }
             }
 
-            // 4. THE CONDITIONAL LAP BUTTON
-            // Requirement: check currentViewInfo.showLapButton
+            // THE CONDITIONAL LAP BUTTON
             val shouldShowLapButton = currentViewInfo?.showLapButton == true
                     && screenMode == ScreenMode.TRACKING
 
