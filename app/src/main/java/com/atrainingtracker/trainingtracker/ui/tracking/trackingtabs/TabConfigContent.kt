@@ -29,10 +29,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -60,7 +62,9 @@ fun TabConfigContent(
     onDeleteTab: (Long) -> Unit,
     onUpdateShowMap: (Long, Boolean) -> Unit,
     onUpdateShowLiveSegments: (Long, Boolean) -> Unit,
-    onUpdateShowLapButton: (Long, Boolean) -> Unit
+    onUpdateShowLapButton: (Long, Boolean) -> Unit,
+    onToggleMode: () -> Unit
+
 ) {
     // Local state for the text field to ensure smooth typing
     var localName by remember(viewInfo.tabViewId) { mutableStateOf(viewInfo.name) }
@@ -71,17 +75,36 @@ fun TabConfigContent(
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
             .padding(8.dp)
     ) {
-        // Row 1: Tab Name Input
-        OutlinedTextField(
-            value = localName,
-            onValueChange = {
-                localName = it
-                onUpdateTabName(viewInfo.tabViewId, it)
-            },
-            label = { Text(stringResource(R.string.tab_name)) },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
+        // Row 1: Tab Name Input & Done Button
+        Row(modifier = Modifier) {
+            OutlinedTextField(
+                value = localName,
+                onValueChange = {
+                    localName = it
+                    onUpdateTabName(viewInfo.tabViewId, it)
+                },
+                label = { Text(stringResource(R.string.tab_name)) },
+                modifier = Modifier.weight(1f),
+                singleLine = true
+            )
+
+            // DONE BUTTON
+            IconButton(
+                onClick = onToggleMode,
+                colors = IconButtonDefaults.iconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                ),
+                modifier = Modifier
+                    .padding(4.dp)
+                    .align(Alignment.CenterVertically)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = stringResource(R.string.Done),
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+        }
 
         Spacer(Modifier.height(4.dp))
 
