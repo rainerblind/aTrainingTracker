@@ -19,7 +19,6 @@
 package com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs
 
 import androidx.activity.compose.BackHandler
-import androidx.activity.result.launch
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,29 +29,45 @@ import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFragmentFactory
 import com.atrainingtracker.trainingtracker.TrackingMode
+import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation
+import com.atrainingtracker.trainingtracker.ui.map.MapViewModel
+import com.atrainingtracker.trainingtracker.ui.map.MapViewModelFactory
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
+import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlNavigation
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingScreen
+import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModel
 import kotlinx.coroutines.launch
 
 @Composable
 fun TrackingTabsScreen(
-    viewModel: TrackingTabsViewModel,
+    trackingTabsViewModel: TrackingTabsViewModel,
     isExplicitMode: Boolean
 ) {
-    val trackingViews by viewModel.trackingViews.collectAsState(initial = emptyList())
-    val trackingMode by viewModel.trackingMode.observeAsState(TrackingMode.READY)
-    val screenMode by viewModel.screenMode.collectAsState()
+    val context = LocalContext.current as androidx.appcompat.app.AppCompatActivity
+
+    val trackingViews by trackingTabsViewModel.trackingViews.collectAsState(initial = emptyList())
+    val trackingMode by trackingTabsViewModel.trackingMode.observeAsState(TrackingMode.READY)
+    val screenMode by trackingTabsViewModel.screenMode.collectAsState()
+
+    val mapViewModel: MapViewModel = viewModel(
+        factory = MapViewModelFactory(context.application)
+    )
 
     // Page count: Control Tab + Sensor Tabs
     val pageCount = if (isExplicitMode) trackingViews.size else trackingViews.size + 1
@@ -61,7 +76,7 @@ fun TrackingTabsScreen(
 
     // BACK NAVIGATION HANDLER: when in CONFIGURATION mode, exit to TRACKING mode
     BackHandler(enabled = screenMode == ScreenMode.CONFIGURATION) {
-        viewModel.toggleScreenMode() // Exit config mode on back press
+        trackingTabsViewModel.toggleScreenMode() // Exit config mode on back press
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -77,7 +92,7 @@ fun TrackingTabsScreen(
             TabConfigHeader(
                 viewInfo = currentViewInfo,
                 screenMode = screenMode,
-                onToggleMode = { viewModel.toggleScreenMode() }
+                onToggleMode = { trackingTabsViewModel.toggleScreenMode() }
             )
 
             // 2. TAB ROW (Only show in VIEW mode)
@@ -116,12 +131,66 @@ fun TrackingTabsScreen(
                 beyondViewportPageCount = 1 // KEEP MAPS WARM
             ) { page ->
                 if (!isExplicitMode && page == 0) {
-                    ControlTrackingScreen() // Dashboard
-                } else {
+// --- CONTROL TAB (Page 0) ---
+
+                    // Initialize the specialized ViewModel for this screen
+                    val controlViewModel: ControlTrackingViewModel = viewModel(
+                        factory = object : ViewModelProvider.Factory {
+                            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                                return ControlTrackingViewModel(context.application) as T
+                            }
+                        }
+                    )
+
+                    // Collect the states required by ControlTrackingScreen
+                    val searchingFor by controlViewModel.searchingForDevice.collectAsState()
+                    val devices by controlViewModel.remoteDevices.collectAsState()
+                    val activeSensors by controlViewModel.activeSensors.collectAsState()
+                    val bSportType by controlViewModel.bSportType.collectAsState()
+                    val trackingMode by controlViewModel.trackingMode.observeAsState(TrackingMode.READY)
+
+                    // Navigation logic for Pairing/Edit (Moved from Fragment to LaunchedEffect)
+                    LaunchedEffect(Unit) {
+                        controlViewModel.navigationEvent.collect { navigation ->
+                            when (navigation) {
+                                is ControlNavigation.ToPairing -> {
+                                    (context as? MainActivityWithNavigation)?.startPairing(navigation.protocol)
+                                }
+                                is ControlNavigation.ToEditDevice -> {
+                                    val editDeviceDialog = EditDeviceFragmentFactory.create(
+                                        deviceId = navigation.deviceId,
+                                        deviceType = navigation.deviceType
+                                    )
+                                    editDeviceDialog.show(context.supportFragmentManager, "EditDeviceDialog")
+                                }
+                            }
+                        }
+                    }
+
+                    ControlTrackingScreen(
+                        trackingMode = trackingMode,
+                        searchingFor = searchingFor,
+                        devices = devices,
+                        activeSensors = activeSensors,
+                        currentSport = bSportType,
+                        isAntSupported = controlViewModel.isAntProperlyInstalled(),
+                        isBluetoothSupported = controlViewModel.isBluetoothSupported(),
+                        onSearch = { controlViewModel.onSearchClicked() },
+                        onDeviceClick = { controlViewModel.onDeviceClicked(it) },
+                        onSportSelected = { controlViewModel.setSport(it) },
+                        onStart = { controlViewModel.onStartTracking() },
+                        onPause = { controlViewModel.onPauseTracking() },
+                        onResume = { controlViewModel.onResumeTracking() },
+                        onStop = { controlViewModel.onStopTracking() },
+                        onPairingClicked = { controlViewModel.onPairingClicked(it) }
+                    )                } else {
                     val viewIndex = if (isExplicitMode) page else page - 1
                     val viewInfo = trackingViews[viewIndex]
                     // The Grid Content (including the Elevation Profile logic)
-                    TrackingTabGridContent(viewInfo.tabViewId, screenMode)
+                    TrackingTabGridContent(
+                        viewInfo.tabViewId,
+                        screenMode,
+                        mapViewModel)
                 }
             }
         }
@@ -137,7 +206,7 @@ fun TrackingTabsScreen(
                     .align(Alignment.BottomEnd)
                     .padding(16.dp),
                 trackingMode = trackingMode,
-                onClick = { viewModel.onLapButtonClick() }
+                onClick = { trackingTabsViewModel.onLapButtonClick() }
             )
         }
     }

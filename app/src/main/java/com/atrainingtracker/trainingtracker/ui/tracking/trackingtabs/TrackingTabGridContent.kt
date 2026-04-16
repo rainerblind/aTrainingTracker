@@ -23,10 +23,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.map.MapViewModel
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
 import com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldDialog
+import com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModel
+import com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModelFactory
 import com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridScreen
 import com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModel
 import com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelFactory
@@ -35,7 +40,8 @@ import com.atrainingtracker.trainingtracker.ui.tracking.tracking.GridActions
 @Composable
 fun TrackingTabGridContent(
     tabViewId: Long,
-    screenMode: ScreenMode
+    screenMode: ScreenMode,
+    mapViewModel: MapViewModel
 ) {
     val context = LocalContext.current
     val activity = context as? ComponentActivity
@@ -51,51 +57,81 @@ fun TrackingTabGridContent(
     val uiState by viewModel.uiState.collectAsState()
     val editingFieldId by viewModel.editingFieldId.collectAsState()
     val pendingAddition by viewModel.pendingAddition.collectAsState()
+    val gridActions = object : GridActions {
+        override fun onEditField(fieldState: SensorFieldState) {
+            viewModel.onEditField(fieldState)
+        }
+
+        override fun onDeleteField(fieldState: SensorFieldState) {
+            viewModel.onDeleteSensorField(fieldState.sensorFieldId)
+        }
+
+        override fun onAddRow(beforeRow: Int) {
+            viewModel.onAddRow(beforeRow)
+        }
+
+        override fun onAddCol(atRow: Int, beforeCol: Int) {
+            viewModel.onAddCol(atRow, beforeCol)
+        }
+    }
 
     // Map the UI state and interactions to the SensorGridScreen
     SensorGridScreen(
         state = uiState,
         screenMode = screenMode,
-        gridActions = GridActions {
-            override fun onEditField(fieldState: SensorFieldState) {
-                viewModel.onEditField(fieldState)
-            }
-
-            override fun onDeleteField(fieldState: SensorFieldState) {
-                viewModel.onDeleteSensorField(fieldState.sensorFieldId)
-            }
-
-            override fun onAddRow(beforeRow: Int) {
-                viewModel.onAddRow(beforeRow)
-            }
-
-            override fun onAddCol(atRow: Int, beforeCol: Int) {
-                viewModel.onAddCol(atRow, beforeCol)
-            }
-        },
-        // Pass flows from your repository/service
+        gridActions = gridActions,
         currentLocationFlow = viewModel.banalServiceRepository.currentLocation,
         liveSegments = viewModel.activeLiveSegments,
-        mapViewModel = TODO()
+        mapViewModel = mapViewModel
     )
+
+    val currentActivityType by viewModel.activityType.collectAsState()
 
     // Handle Dialogs (Edit field / Add sensor)
     if (editingFieldId != null) {
+        // 1. We need the activityType and tabViewId from the existing tab ViewModel
+        // Note: 'viewModel' here refers to the TrackingViewModel initialized at the top of this file
+
+        // 2. Initialize the specialized ViewModel using the complex Factory
+        val editViewModel: EditSensorFieldViewModel = viewModel(
+            factory = EditSensorFieldViewModelFactory(
+                application = activity.application,
+                trackingViewsRepository = viewModel.trackingViewsRepository, // Use repo from main VM
+                banalServiceRepository = viewModel.banalServiceRepository,   // Use repo from main VM
+                activityType = currentActivityType,
+                sensorFieldId = editingFieldId!!,
+                tabViewId = tabViewId,
+                rowNr = -1, // Not used for editing existing fields
+                colNr = -1  // Not used for editing existing fields
+            ),
+            key = "edit_field_$editingFieldId"
+        )
+
+        // 3. Show the Dialog
         EditSensorFieldDialog(
-            fieldId = editingFieldId!!,
-            onDismiss = { viewModel.onCancelEdit() },
-            onSave = { updatedField -> viewModel.onSaveSensorField(updatedField) },
-            title = TODO(),
-            viewModel = TODO(),
-            onDismissRequest = TODO()
+            title = stringResource(R.string.edit_field),
+            viewModel = editViewModel,
+            onDismissRequest = { viewModel.onDismissEditDialog() }
         )
     }
 
-    if (pendingAddition != null) {
-        AddSensorDialog(
-            position = pendingAddition!!,
-            onDismiss = { viewModel.onCancelAdd() },
-            onConfirm = { sensorType -> viewModel.onConfirmAddSensor(sensorType) }
+    pendingAddition?.let { params ->
+        EditSensorFieldDialog(
+            title = stringResource(R.string.add_sensor),
+            viewModel = viewModel(
+                factory = EditSensorFieldViewModelFactory(
+                    application = activity.application,
+                    trackingViewsRepository = viewModel.trackingViewsRepository,
+                    banalServiceRepository = viewModel.banalServiceRepository,
+                    activityType = currentActivityType,
+                    sensorFieldId = -1L, // Signal NEW mode
+                    tabViewId = tabViewId,
+                    rowNr = params.row,
+                    colNr = params.col,
+                ),
+                key = "$tabViewId, ${params.row}, ${params.col}"
+            ),
+            onDismissRequest = { viewModel.onDismissAddition() }
         )
     }
 }
