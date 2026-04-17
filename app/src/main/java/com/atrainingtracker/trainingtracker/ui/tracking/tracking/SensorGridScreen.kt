@@ -178,7 +178,6 @@ fun SensorGridScreen(
                 if (state.showMap) {
                     ATrainingTrackerMap(
                         mapState = state.mapState,
-                        mapViewModel = mapViewModel,
                         currentLocationFlow = currentLocationFlow,
                         modifier = Modifier
                             .fillMaxWidth()

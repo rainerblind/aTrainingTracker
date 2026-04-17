@@ -118,7 +118,6 @@ class SummaryViewHolder(
                         // 1. The Map (Takes up the remaining space)
                         ATrainingTrackerMap(
                             mapState = state,
-                            mapViewModel = mapViewModel,
                             currentLocationFlow = MutableStateFlow(null),
                             modifier = Modifier
                                 .weight(1f) // Fills available space above the profile

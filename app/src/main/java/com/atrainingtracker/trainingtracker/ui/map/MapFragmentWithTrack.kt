@@ -65,7 +65,6 @@ class MapFragmentWithTrack : Fragment() {
 
                     ATrainingTrackerMap(
                         mapState = mapState,
-                        mapViewModel = mapViewModel,
                         currentLocationFlow = viewModel.currentLocation,
                         modifier = Modifier.fillMaxSize()
                     )
