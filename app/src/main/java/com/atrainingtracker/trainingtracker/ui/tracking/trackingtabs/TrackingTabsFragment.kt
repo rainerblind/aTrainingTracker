@@ -54,9 +54,6 @@ class TrackingTabsFragment : Fragment() {
                 viewModel.setExplicitActivityType(ActivityType.valueOf(activityTypeName))
                 viewModel.setScreenMode(ScreenMode.CONFIGURATION)
             }
-            else {
-                viewModel.setScreenMode(ScreenMode.TRACKING)
-            }
         }
     }
 
