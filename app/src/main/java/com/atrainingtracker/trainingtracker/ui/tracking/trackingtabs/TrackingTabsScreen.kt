@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs
 
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -71,6 +72,13 @@ fun TrackingTabsScreen(
     val trackingMode by trackingTabsViewModel.trackingMode.observeAsState(TrackingMode.READY)
     val screenMode by trackingTabsViewModel.screenMode.collectAsState()
 
+    if (trackingViews.isEmpty() && screenMode != ScreenMode.TRACKING) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("Loading tabs...")
+        }
+        return // Stop execution here to prevent Pager from crashing
+    }
+
     // -- view models
     val mapViewModel: MapViewModel = viewModel(
         factory = MapViewModelFactory(context.application)
@@ -92,7 +100,7 @@ fun TrackingTabsScreen(
 
 
     // Page count: Control Tab + Sensor Tabs
-    val pageCount = if (screenMode != ScreenMode.TRACKING) trackingViews.size else trackingViews.size + 1
+    val pageCount = if (screenMode == ScreenMode.TRACKING) trackingViews.size + 1 else trackingViews.size
     val pagerState = rememberPagerState(pageCount = { pageCount })
     val scope = rememberCoroutineScope()
 
@@ -218,12 +226,21 @@ fun TrackingTabsScreen(
                 }
                 else {
                     val viewIndex = if (screenMode == ScreenMode.TRACKING) page - 1 else page
-                    val viewInfo = trackingViews[viewIndex]
-                    // The Grid Content (including the Elevation Profile logic)
-                    TrackingTabGridContent(
-                        viewInfo.tabViewId,
-                        screenMode,
-                        mapViewModel)
+                    Log.i("TrackingTabsScreen", "viewIndex=$viewIndex")
+
+                    // Safely get the viewInfo
+                    val viewInfo = trackingViews.getOrNull(viewIndex)
+
+                    if (viewInfo != null) {
+                        TrackingTabGridContent(
+                            viewInfo.tabViewId,
+                            screenMode,
+                            mapViewModel
+                        )
+                    } else {
+                        // Optional: Show a placeholder or empty box while loading
+                        Box(Modifier.fillMaxSize())
+                    }
                 }
             }
 
