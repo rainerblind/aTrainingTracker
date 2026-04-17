@@ -96,6 +96,7 @@ fun TrackingTabsScreen(
             // HEADER FOR CONFIGURING THE TAB
             if (screenMode == ScreenMode.CONFIGURATION && currentViewInfo != null) {
                 TabConfigContent(
+                    // TODO: Use the nicer elevated Surface here.
                     viewInfo = currentViewInfo,
                     onUpdateTabName = { id, name -> trackingTabsViewModel.onUpdateTabName(id, name) },
                     onAddTabRelative = { id, after -> trackingTabsViewModel.onAddTabRelative(id, after) },
