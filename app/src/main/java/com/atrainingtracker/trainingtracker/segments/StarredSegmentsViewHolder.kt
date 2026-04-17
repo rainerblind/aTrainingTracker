@@ -62,7 +62,6 @@ class StarredSegmentViewHolder(
 
                 ATrainingTrackerMap(
                     mapState = state,
-                    mapViewModel = viewModel,
                     currentLocationFlow = MutableStateFlow(null),
                     modifier = Modifier.fillMaxSize(),
                     onMapClick = {

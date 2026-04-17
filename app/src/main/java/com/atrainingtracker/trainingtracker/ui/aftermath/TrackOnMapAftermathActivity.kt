@@ -90,7 +90,6 @@ class TrackOnMapAftermathActivity : AppCompatActivity() {
 
                 ATrainingTrackerMap(
                     mapState = mapState,
-                    mapViewModel = viewModel,
                     currentLocationFlow = noLocation,
                     modifier = Modifier.fillMaxSize()
                 )

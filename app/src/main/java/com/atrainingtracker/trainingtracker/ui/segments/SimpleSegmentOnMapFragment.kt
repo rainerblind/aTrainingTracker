@@ -89,7 +89,6 @@ class SimpleSegmentOnMapFragment : Fragment() {
 
                         ATrainingTrackerMap(
                             mapState = mapState,
-                            mapViewModel = viewModel,
                             currentLocationFlow = noLocation,
                             // This now works because it is inside a Column
                             modifier = Modifier.weight(2f)

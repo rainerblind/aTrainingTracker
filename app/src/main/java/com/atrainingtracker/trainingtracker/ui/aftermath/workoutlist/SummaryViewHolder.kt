@@ -54,7 +54,6 @@ import com.atrainingtracker.trainingtracker.ui.map.MapState
 import com.atrainingtracker.trainingtracker.ui.map.MapTrack
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
-import com.atrainingtracker.trainingtracker.ui.map.MapViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
@@ -107,7 +106,6 @@ class SummaryViewHolder(
         setupMenuButtonClickListeners(headerViewHolder?.menuButton)
 
         // --- Initialize Map Component ---
-        val mapViewModel = MapViewModel(application = activity.application)
         if (isPlayServiceAvailable && mapComposeView != null) {
             mapComposeView.setContent {
                 ATrainingTrackerTheme {
@@ -118,7 +116,6 @@ class SummaryViewHolder(
                         // 1. The Map (Takes up the remaining space)
                         ATrainingTrackerMap(
                             mapState = state,
-                            mapViewModel = mapViewModel,
                             currentLocationFlow = MutableStateFlow(null),
                             modifier = Modifier
                                 .weight(1f) // Fills available space above the profile

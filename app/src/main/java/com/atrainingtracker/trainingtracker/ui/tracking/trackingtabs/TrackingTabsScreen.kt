@@ -53,8 +53,6 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFragmentFactory
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation
-import com.atrainingtracker.trainingtracker.ui.map.MapViewModel
-import com.atrainingtracker.trainingtracker.ui.map.MapViewModelFactory
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlNavigation
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingScreen
@@ -78,11 +76,6 @@ fun TrackingTabsScreen(
         }
         return // Stop execution here to prevent Pager from crashing
     }
-
-    // -- view models
-    val mapViewModel: MapViewModel = viewModel(
-        factory = MapViewModelFactory(context.application)
-    )
 
     // ViewModel for the control tracking tab
     val controlViewModel: ControlTrackingViewModel = viewModel(
@@ -235,7 +228,6 @@ fun TrackingTabsScreen(
                         TrackingTabGridContent(
                             viewInfo.tabViewId,
                             screenMode,
-                            mapViewModel
                         )
                     } else {
                         // Optional: Show a placeholder or empty box while loading

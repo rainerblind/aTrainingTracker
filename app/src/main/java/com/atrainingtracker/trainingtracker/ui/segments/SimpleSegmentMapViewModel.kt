@@ -19,11 +19,12 @@
 package com.atrainingtracker.trainingtracker.ui.segments
 
 import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.trainingtracker.segments.SegmentSummary
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.ui.map.MapState
-import com.atrainingtracker.trainingtracker.ui.map.MapViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -32,7 +33,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 
-class SimpleSegmentMapViewModel(application: Application) : MapViewModel(application) {
+class SimpleSegmentMapViewModel(application: Application) : AndroidViewModel(application) {
 
     // Repository instance
     private val segmentsRepository = SegmentsRepository.getInstance(application)

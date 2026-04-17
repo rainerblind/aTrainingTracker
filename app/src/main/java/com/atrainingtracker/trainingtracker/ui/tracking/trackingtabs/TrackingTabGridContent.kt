@@ -26,7 +26,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.R
-import com.atrainingtracker.trainingtracker.ui.map.MapViewModel
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
 import com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldDialog
@@ -41,7 +40,6 @@ import com.atrainingtracker.trainingtracker.ui.tracking.tracking.GridActions
 fun TrackingTabGridContent(
     tabViewId: Long,
     screenMode: ScreenMode,
-    mapViewModel: MapViewModel
 ) {
     val context = LocalContext.current
     val activity = context as? ComponentActivity
@@ -82,7 +80,6 @@ fun TrackingTabGridContent(
         gridActions = gridActions,
         currentLocationFlow = viewModel.banalServiceRepository.currentLocation,
         liveSegments = viewModel.activeLiveSegments,
-        mapViewModel = mapViewModel
     )
 
     val currentActivityType by viewModel.activityType.collectAsState()
