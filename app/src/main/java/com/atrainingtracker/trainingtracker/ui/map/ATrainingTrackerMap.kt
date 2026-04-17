@@ -118,7 +118,7 @@ fun ATrainingTrackerMap(
             var hasPoints = false
 
             // Limit for "Local" content
-            val maxDistanceMeters = 10000.0  // 10 km
+            val maxDistanceMeters = 1000.0  // 1 km
 
             fun isLocal(target: LatLng): Boolean {
                 if (userPos == null) return true // If we don't know where user is, include everything
