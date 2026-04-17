@@ -113,75 +113,73 @@ fun SensorGridScreen(
             }
         }
     ) { paddingValues ->
-
-        Box(modifier = Modifier
-            .fillMaxSize()
-            .padding(paddingValues)
+        // Use a Column as the main container for the content
+        // We do NOT apply the full paddingValues.bottom here because we want the
+        // Map to draw UNDER the bottom sheet for a modern look.
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = paddingValues.calculateTopPadding()) // Only pad the top
         ) {
-            Column(Modifier.fillMaxSize()) {
+            // 1. The Sensor Grid (Scrollable)
+            // This Column will only take as much space as the sensors need.
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 val fieldsByRow = state.fields.groupBy { it.rowNr }
                 val sortedRows = fieldsByRow.keys.sorted()
+                var maxRowNr = 0
 
-                Column(
+                sortedRows.forEach { rowNr ->
+                    maxRowNr = rowNr
+                    if (screenMode == ScreenMode.CONFIGURATION) {
+                        RowAdder(onClick = { gridActions.onAddRow(rowNr) })
+                    }
+
+                    val fieldsInThisRow = fieldsByRow[rowNr]?.sortedBy { it.colNr } ?: emptyList()
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.height(IntrinsicSize.Min)
+                    ) {
+                        var maxColNr = 0
+                        fieldsInThisRow.forEach { fieldState ->
+                            if (screenMode == ScreenMode.CONFIGURATION) {
+                                ColAdder(onClick = { gridActions.onAddCol(rowNr, fieldState.colNr) })
+                            }
+                            maxColNr = fieldState.colNr
+                            Box(modifier = Modifier.weight(1f)) {
+                                SensorFieldView(
+                                    fieldState = fieldState,
+                                    screenMode = screenMode,
+                                    onEdit = { gridActions.onEditField(fieldState) },
+                                    onDelete = { gridActions.onDeleteField(fieldState) }
+                                )
+                            }
+                        }
+                        if (screenMode == ScreenMode.CONFIGURATION) {
+                            ColAdder(onClick = { gridActions.onAddCol(rowNr, maxColNr + 1) })
+                        }
+                    }
+                }
+                if (screenMode == ScreenMode.CONFIGURATION) {
+                    RowAdder(onClick = { gridActions.onAddRow(maxRowNr + 1) })
+                }
+            }
+
+            // 2. The Map (Expanded)
+            // By using weight(1f) here, the Map will fill every pixel between
+            // the bottom of the sensors and the bottom of the screen.
+            if (state.showMap) {
+                ATrainingTrackerMap(
+                    mapState = state.mapState,
+                    currentLocationFlow = currentLocationFlow,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .verticalScroll(rememberScrollState()),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    var maxRowNr = 0
-                    sortedRows.forEach { rowNr ->
-                        maxRowNr = rowNr
-                        // --- ADD field BETWEEN ROWS ---
-                        if (screenMode == ScreenMode.CONFIGURATION) {
-                            RowAdder(onClick = { gridActions.onAddRow(rowNr) })
-                        }
-
-                        val fieldsInThisRow =
-                            fieldsByRow[rowNr]?.sortedBy { it.colNr } ?: emptyList()
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.height(IntrinsicSize.Min)
-                        ) {
-                            var maxColNr = 0
-                            fieldsInThisRow.forEach { fieldState ->
-                                if (screenMode == ScreenMode.CONFIGURATION) {
-                                    ColAdder(onClick = {
-                                        gridActions.onAddCol(
-                                            rowNr,
-                                            fieldState.colNr
-                                        )
-                                    })
-                                }
-                                maxColNr = fieldState.colNr
-                                Box(modifier = Modifier.weight(1f)) {
-                                    SensorFieldView(
-                                        fieldState = fieldState,
-                                        screenMode = screenMode,
-                                        onEdit = { gridActions.onEditField(fieldState) },
-                                        onDelete = { gridActions.onDeleteField(fieldState) }
-                                    )
-                                }
-                            }
-                            if (screenMode == ScreenMode.CONFIGURATION) {
-                                ColAdder(onClick = { gridActions.onAddCol(rowNr, maxColNr + 1) })
-                            }
-                        }
-                    }
-                    if (screenMode == ScreenMode.CONFIGURATION) {
-                        RowAdder(onClick = { gridActions.onAddRow(maxRowNr + 1) })
-                    }
-                }
-
-                // Conditionally display the map
-                if (state.showMap) {
-                    ATrainingTrackerMap(
-                        mapState = state.mapState,
-                        currentLocationFlow = currentLocationFlow,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                    )
-                }
+                        .weight(1f) // Fills remaining space
+                )
             }
         }
     }
