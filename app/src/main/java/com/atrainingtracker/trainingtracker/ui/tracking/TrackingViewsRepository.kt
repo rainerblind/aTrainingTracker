@@ -90,12 +90,8 @@ class TrackingViewsRepository private constructor(private val context: Context) 
     private val _screenMode = MutableStateFlow(ScreenMode.TRACKING)
     val screenMode: StateFlow<ScreenMode> = _screenMode.asStateFlow()
 
-    fun toggleScreenMode() {
-        _screenMode.value  = when (_screenMode.value) {
-            ScreenMode.TRACKING -> ScreenMode.CONFIGURATION  // Should never ever happen.
-            ScreenMode.CONFIGURATION -> ScreenMode.PREVIEW
-            ScreenMode.PREVIEW -> ScreenMode.CONFIGURATION
-        }
+    fun setScreenMode(mode: ScreenMode) {
+        _screenMode.value = mode
     }
 
     /**

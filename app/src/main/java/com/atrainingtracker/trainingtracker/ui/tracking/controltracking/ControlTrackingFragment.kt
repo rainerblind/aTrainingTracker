@@ -81,7 +81,6 @@ class ControlTrackingFragment : Fragment() {
                             trackingMode = trackingMode,
                             searchingFor = searchingFor,
                             devices = devices,
-                            activeSensors = activeSensors,
                             currentSport = bSportType,
                             isAntSupported = viewModel.isAntProperlyInstalled(),
                             isBluetoothSupported = viewModel.isBluetoothSupported(),

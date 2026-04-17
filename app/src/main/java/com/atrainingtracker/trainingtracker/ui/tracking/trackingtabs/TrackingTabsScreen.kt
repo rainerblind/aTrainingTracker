@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -54,12 +55,12 @@ import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlNavigation
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingScreen
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModel
+import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorStatus
 import kotlinx.coroutines.launch
 
 @Composable
 fun TrackingTabsScreen(
-    trackingTabsViewModel: TrackingTabsViewModel,
-    isExplicitMode: Boolean
+    trackingTabsViewModel: TrackingTabsViewModel
 ) {
     val context = LocalContext.current as androidx.appcompat.app.AppCompatActivity
 
@@ -67,12 +68,28 @@ fun TrackingTabsScreen(
     val trackingMode by trackingTabsViewModel.trackingMode.observeAsState(TrackingMode.READY)
     val screenMode by trackingTabsViewModel.screenMode.collectAsState()
 
+    // -- view models
     val mapViewModel: MapViewModel = viewModel(
         factory = MapViewModelFactory(context.application)
     )
 
+    // ViewModel for the control tracking tab
+    val controlViewModel: ControlTrackingViewModel = viewModel(
+        factory = object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                return ControlTrackingViewModel(context.application) as T
+            }
+        }
+    )
+    // Collect the states required by ControlTrackingScreen
+    val searchingFor by controlViewModel.searchingForDevice.collectAsState()
+    val devices by controlViewModel.remoteDevices.collectAsState()
+    val activeSensors by controlViewModel.activeSensors.collectAsState()
+    val bSportType by controlViewModel.bSportType.collectAsState()
+
+
     // Page count: Control Tab + Sensor Tabs
-    val pageCount = if (isExplicitMode) trackingViews.size else trackingViews.size + 1
+    val pageCount = if (screenMode != ScreenMode.TRACKING) trackingViews.size else trackingViews.size + 1
     val pagerState = rememberPagerState(pageCount = { pageCount })
     val scope = rememberCoroutineScope()
 
@@ -83,7 +100,7 @@ fun TrackingTabsScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         // 1. DYNAMIC HEADER (Config Mode or Tab Title)
-        val currentViewInfo = if (isExplicitMode) {
+        val currentViewInfo = if (screenMode != ScreenMode.TRACKING) {
             trackingViews.getOrNull(pagerState.currentPage)
         } else if (pagerState.currentPage > 0) {
             trackingViews.getOrNull(pagerState.currentPage - 1)
@@ -91,20 +108,37 @@ fun TrackingTabsScreen(
 
         Column(modifier = Modifier.fillMaxSize()) {
 
-
             // TAB HEADER
-            if (currentViewInfo != null) {
-                TrackingTabHeader(
-                    viewInfo = currentViewInfo,
-                    screenMode = screenMode,
-                    onUpdateTabName = { id, name -> trackingTabsViewModel.onUpdateTabName(id, name) },
-                    onAddTabRelative = { id, after -> trackingTabsViewModel.onAddTabRelative(id, after) },
-                    onDeleteTab = { id -> trackingTabsViewModel.onDeleteTab(id) },
-                    onUpdateShowMap = { id, show -> trackingTabsViewModel.onUpdateShowMap(id, show) },
-                    onUpdateShowLiveSegments = { id, show -> trackingTabsViewModel.onUpdateShowLiveSegments(id, show) },
-                    onUpdateShowLapButton = { id, show -> trackingTabsViewModel.onUpdateShowLapButton(id, show) },
-                    onToggleMode = { trackingTabsViewModel.toggleScreenMode() }
-                )
+            when (screenMode) {
+                ScreenMode.TRACKING -> {
+                    // Show the available Sensors
+                    Surface(modifier = Modifier.padding(4.dp)) {
+                        SensorStatus(activeSensors = activeSensors)
+                    }
+                }
+                ScreenMode.CONFIGURATION -> {
+                    // -- The full configuration screen for editing the name of the tab, checkboxes for lap botton, map, and live segments, as well as the add/delete buttons
+                    if (currentViewInfo != null) {
+                        TrackingTabConfigHeader(
+                            viewInfo = currentViewInfo,
+                            onUpdateTabName = { id, name -> trackingTabsViewModel.onUpdateTabName(id, name) },
+                            onAddTabRelative = { id, after -> trackingTabsViewModel.onAddTabRelative(id, after) },
+                            onDeleteTab = { id -> trackingTabsViewModel.onDeleteTab(id) },
+                            onUpdateShowMap = { id, show -> trackingTabsViewModel.onUpdateShowMap(id, show) },
+                            onUpdateShowLiveSegments = { id, show -> trackingTabsViewModel.onUpdateShowLiveSegments(id, show) },
+                            onUpdateShowLapButton = { id, show -> trackingTabsViewModel.onUpdateShowLapButton(id, show) },
+                            onToggleMode = { trackingTabsViewModel.toggleScreenMode() }
+                        )
+                    }
+                }
+                ScreenMode.PREVIEW -> {
+                    if (currentViewInfo != null) {
+                        TrackingTabPreviewHeader(
+                            viewInfo = currentViewInfo,
+                            onToggleMode = { trackingTabsViewModel.toggleScreenMode() },
+                        )
+                    }
+                }
             }
 
             // TAB ROW
@@ -113,18 +147,16 @@ fun TrackingTabsScreen(
                 edgePadding = 16.dp,
                 divider = {}
             ) {
-                if (!isExplicitMode) {
-                    Tab(
-                        selected = pagerState.currentPage == 0,
-                        onClick = { scope.launch { pagerState.animateScrollToPage(0) } },
-                        text = {
-                            // Dynamic Title for Control Tab (Tracking/Paused/Start)
-                            Text(getControlTabTitle(trackingMode))
-                        }
-                    )
-                }
+                Tab(
+                    selected = pagerState.currentPage == 0,
+                    onClick = { scope.launch { pagerState.animateScrollToPage(0) } },
+                    text = {
+                        // Dynamic Title for Control Tab (Tracking/Paused/Start)
+                        Text(getControlTabTitle(trackingMode))
+                    }
+                )
                 trackingViews.forEachIndexed { index, view ->
-                    val targetPage = if (isExplicitMode) index else index + 1
+                    val targetPage = if (screenMode != ScreenMode.TRACKING) index else index + 1
                     Tab(
                         selected = pagerState.currentPage == targetPage,
                         onClick = { scope.launch { pagerState.animateScrollToPage(targetPage) } },
@@ -142,27 +174,9 @@ fun TrackingTabsScreen(
                 userScrollEnabled = true,
                 beyondViewportPageCount = 7 // Keep some tabs...
             ) { page ->
-                if (!isExplicitMode && page == 0) {
+                if (screenMode == ScreenMode.TRACKING && page == 0) {
 
                     // --- CONTROL TAB (Page 0) ---
-
-                    // Initialize the specialized ViewModel for this screen
-                    val controlViewModel: ControlTrackingViewModel = viewModel(
-                        factory = object : ViewModelProvider.Factory {
-                            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                                return ControlTrackingViewModel(context.application) as T
-                            }
-                        }
-                    )
-
-                    // Collect the states required by ControlTrackingScreen
-                    val searchingFor by controlViewModel.searchingForDevice.collectAsState()
-                    val devices by controlViewModel.remoteDevices.collectAsState()
-                    val activeSensors by controlViewModel.activeSensors.collectAsState()
-                    val bSportType by controlViewModel.bSportType.collectAsState()
-                    val trackingMode by controlViewModel.trackingMode.observeAsState(TrackingMode.READY)
-
-                    // Navigation logic for Pairing/Edit (Moved from Fragment to LaunchedEffect)
                     LaunchedEffect(Unit) {
                         controlViewModel.navigationEvent.collect { navigation ->
                             when (navigation) {
@@ -184,7 +198,6 @@ fun TrackingTabsScreen(
                         trackingMode = trackingMode,
                         searchingFor = searchingFor,
                         devices = devices,
-                        activeSensors = activeSensors,
                         currentSport = bSportType,
                         isAntSupported = controlViewModel.isAntProperlyInstalled(),
                         isBluetoothSupported = controlViewModel.isBluetoothSupported(),
@@ -197,7 +210,7 @@ fun TrackingTabsScreen(
                         onStop = { controlViewModel.onStopTracking() },
                         onPairingClicked = { controlViewModel.onPairingClicked(it) }
                     )                } else {
-                    val viewIndex = if (isExplicitMode) page else page - 1
+                    val viewIndex = if (screenMode != ScreenMode.TRACKING) page else page - 1
                     val viewInfo = trackingViews[viewIndex]
                     // The Grid Content (including the Elevation Profile logic)
                     TrackingTabGridContent(
@@ -209,7 +222,6 @@ fun TrackingTabsScreen(
 
             // THE CONDITIONAL LAP BUTTON
             val shouldShowLapButton = currentViewInfo?.showLapButton == true
-                    && screenMode == ScreenMode.TRACKING
 
             if (shouldShowLapButton) {
                 LapButton(

@@ -112,7 +112,7 @@ class ConfigTrackingTabsActivity : AppCompatActivity(),
 
     private fun showTrackingTabs(activityType: ActivityType) {
         // Create the fragment and pass the ActivityType explicitly
-        val fragment = TrackingTabsFragmentClassic.newInstance(activityType)
+        val fragment = TrackingTabsFragment.newInstance(activityType)
 
         supportFragmentManager.beginTransaction()
             .replace(R.id.content, fragment)

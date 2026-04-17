@@ -55,7 +55,6 @@ fun ControlTrackingScreen(
     trackingMode: TrackingMode,
     searchingFor: String?,
     devices: List<RemoteDeviceUIData>,
-    activeSensors: Set<SensorType>,
     currentSport: BSportType,
     isAntSupported: Boolean,
     isBluetoothSupported: Boolean,
@@ -74,11 +73,6 @@ fun ControlTrackingScreen(
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Top part: Sensors
-        SensorStatus(activeSensors = activeSensors)
-
-        Spacer(modifier = Modifier.height(8.dp))
-
         Box(modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 8.dp)
@@ -186,7 +180,6 @@ fun PreviewControlTrackingScreenSearching() {
                 trackingMode = TrackingMode.READY,
                 searchingFor = "my spd",
                 devices = listOf(RemoteDeviceUIData(1, deviceType = DeviceType.HRM, name = "Polar H10", R.drawable.hr)),
-                activeSensors = setOf(SensorType.TIME_ACTIVE, SensorType.HR),
                 currentSport = BSportType.RUN,
                 isAntSupported = true,
                 isBluetoothSupported = true,
@@ -211,7 +204,6 @@ fun PreviewControlTrackingScreen() {
                 trackingMode = TrackingMode.READY,
                 searchingFor = null,
                 devices = listOf(RemoteDeviceUIData(1, deviceType = DeviceType.HRM, name = "Polar H10", R.drawable.hr)),
-                activeSensors = setOf(SensorType.TIME_ACTIVE, SensorType.HR),
                 currentSport = BSportType.RUN,
                 isAntSupported = true,
                 isBluetoothSupported = true,

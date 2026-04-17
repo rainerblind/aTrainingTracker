@@ -122,10 +122,15 @@ class TrackingTabsViewModel(
     // Method for the Fragment to set the explicit ActivityType
     fun setExplicitActivityType(type: ActivityType) {
         _explicitActivityType.value = type
+        trackingViewsRepository.setScreenMode(ScreenMode.CONFIGURATION)
     }
 
     fun toggleScreenMode() {
-        trackingViewsRepository.toggleScreenMode()
+        when (screenMode.value) {
+            ScreenMode.TRACKING -> trackingViewsRepository.setScreenMode(ScreenMode.CONFIGURATION)  // Should never ever happen.
+            ScreenMode.CONFIGURATION -> trackingViewsRepository.setScreenMode(ScreenMode.PREVIEW)
+            ScreenMode.PREVIEW -> trackingViewsRepository.setScreenMode(ScreenMode.CONFIGURATION)
+        }
     }
 
     fun onUpdateTabName(tabViewId: Long, newName: String) {

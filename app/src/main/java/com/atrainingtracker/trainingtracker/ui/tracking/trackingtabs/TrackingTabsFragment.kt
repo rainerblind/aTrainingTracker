@@ -43,8 +43,6 @@ class TrackingTabsFragment : Fragment() {
         TrackingTabsViewModelFactory(requireActivity().application)
     }
 
-    private var isExplicitMode: Boolean = false
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -52,7 +50,6 @@ class TrackingTabsFragment : Fragment() {
         arguments?.let {
             val activityTypeName = it.getString(ARG_ACTIVITY_TYPE)
             if (activityTypeName != null) {
-                isExplicitMode = true
                 viewModel.setExplicitActivityType(ActivityType.valueOf(activityTypeName))
             }
         }
@@ -68,7 +65,6 @@ class TrackingTabsFragment : Fragment() {
                 ATrainingTrackerTheme {
                     TrackingTabsScreen(
                         trackingTabsViewModel = viewModel,
-                        isExplicitMode = isExplicitMode
                     )
                 }
             }
