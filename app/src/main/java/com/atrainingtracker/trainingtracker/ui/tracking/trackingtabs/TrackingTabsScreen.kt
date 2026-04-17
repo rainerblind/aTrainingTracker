@@ -92,26 +92,17 @@ fun TrackingTabsScreen(
         Column(modifier = Modifier.fillMaxSize()) {
 
 
-            // HEADER FOR CONFIGURING THE TAB
-            if (screenMode == ScreenMode.CONFIGURATION && currentViewInfo != null) {
-                TabConfigHeader(
-                    // TODO: Use the nicer elevated Surface here.
+            // TAB HEADER
+            if (currentViewInfo != null) {
+                TrackingTabHeader(
                     viewInfo = currentViewInfo,
+                    screenMode = screenMode,
                     onUpdateTabName = { id, name -> trackingTabsViewModel.onUpdateTabName(id, name) },
                     onAddTabRelative = { id, after -> trackingTabsViewModel.onAddTabRelative(id, after) },
                     onDeleteTab = { id -> trackingTabsViewModel.onDeleteTab(id) },
                     onUpdateShowMap = { id, show -> trackingTabsViewModel.onUpdateShowMap(id, show) },
                     onUpdateShowLiveSegments = { id, show -> trackingTabsViewModel.onUpdateShowLiveSegments(id, show) },
                     onUpdateShowLapButton = { id, show -> trackingTabsViewModel.onUpdateShowLapButton(id, show) },
-                    onToggleMode = { trackingTabsViewModel.toggleScreenMode() }
-                )
-            }
-            else {
-                // TODO: Merge these two headers into one!!
-                // TabConfigHeader includes the Toggle Button for Edit/View
-                TabPreviewHeader(
-                    viewInfo = currentViewInfo,
-                    screenMode = screenMode,
                     onToggleMode = { trackingTabsViewModel.toggleScreenMode() }
                 )
             }

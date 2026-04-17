@@ -66,7 +66,8 @@ enum class ScreenMode {
     /** The screen is used for actively tracking a workout. Long-clicks are handled. */
     TRACKING,
     /** The screen is used for configuring the layout. Normal clicks are handled for editing. */
-    CONFIGURATION
+    CONFIGURATION,
+    PREVIEW
 }
 
 
@@ -90,13 +91,12 @@ class TrackingViewsRepository private constructor(private val context: Context) 
     val screenMode: StateFlow<ScreenMode> = _screenMode.asStateFlow()
 
     fun toggleScreenMode() {
-        _screenMode.value = if (_screenMode.value == ScreenMode.TRACKING) {
-            ScreenMode.CONFIGURATION
-        } else {
-            ScreenMode.TRACKING
+        _screenMode.value  = when (_screenMode.value) {
+            ScreenMode.TRACKING -> ScreenMode.CONFIGURATION  // Should never ever happen.
+            ScreenMode.CONFIGURATION -> ScreenMode.PREVIEW
+            ScreenMode.PREVIEW -> ScreenMode.CONFIGURATION
         }
     }
-
 
     /**
      * Retrieves the ActivityType associated with a specific view definition.
