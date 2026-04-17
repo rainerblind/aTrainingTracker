@@ -26,7 +26,6 @@ import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import android.graphics.Typeface
-import android.view.ViewGroup
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -46,7 +45,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atrainingtracker.R
@@ -112,39 +110,53 @@ fun ATrainingTrackerMap(
         return
     }
 
-    // Automated Bounds Fitting (When not following)
-    LaunchedEffect(mapState.tracks, mapState.markers, mapState.segments) {
-        if (!mapState.isFollowMeEnabled &&
-            (mapState.tracks.isNotEmpty() || mapState.markers.isNotEmpty() || mapState.segments.isNotEmpty())) {
-
+    // Automated Bounds Fitting (Optimized for Local Area)
+    LaunchedEffect(mapState.tracks, mapState.markers, mapState.segments, mapState.isFollowMeEnabled, currentLocation) {
+        if (!mapState.isFollowMeEnabled) {
+            val userPos = currentLocation
             val builder = LatLngBounds.Builder()
             var hasPoints = false
 
-            // 1. Include all points from all tracks
+            // Limit for "Local" content
+            val maxDistanceMeters = 10000.0  // 10 km
+
+            fun isLocal(target: LatLng): Boolean {
+                if (userPos == null) return true // If we don't know where user is, include everything
+                val results = FloatArray(1)
+                android.location.Location.distanceBetween(
+                    userPos.latitude, userPos.longitude,
+                    target.latitude, target.longitude,
+                    results
+                )
+                return results[0] < maxDistanceMeters
+            }
+
+            // 1. Include all track points
             mapState.tracks.forEach { track ->
-                track.path.forEach {
-                    builder.include(it.latLng)
-                    hasPoints = true
-                }
+                track.path.forEach { builder.include(it.latLng); hasPoints = true }
             }
 
-            // 2. Include all points from all segments (this fits the start/finish lines too)
+            // 2. Include only local segment points
             mapState.segments.forEach { segment ->
-                segment.path.forEach {
-                    builder.include(it.latLng)
-                    hasPoints = true
-                }
+                segment.path.forEach { if (isLocal(it.latLng)) { builder.include(it.latLng); hasPoints = true } }
             }
 
-            // 3. Include all sensor marker positions
-            mapState.markers.forEach { marker ->
-                builder.include(marker.position)
-                hasPoints = true
-            }
+            // 3. Include all sensor markers
+            mapState.markers.forEach { marker -> builder.include(marker.position); hasPoints = true }
 
             if (hasPoints) {
-                val padding = (25 * context.resources.displayMetrics.density).toInt()
-                cameraPositionState.animate(CameraUpdateFactory.newLatLngBounds(builder.build(), padding))
+                // Fit to the local cluster of data
+                val padding = (40 * context.resources.displayMetrics.density).toInt()
+                try {
+                    cameraPositionState.move(CameraUpdateFactory.newLatLngBounds(builder.build(), padding))
+                } catch (e: IllegalStateException) {
+                    // Map not laid out yet
+                }
+            } else if (userPos != null) {
+                // If no points are there, just zoom to the user's current city/area
+                cameraPositionState.move(
+                    CameraUpdateFactory.newLatLngZoom(userPos, 12f)
+                )
             }
         }
     }
