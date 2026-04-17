@@ -43,7 +43,7 @@ fun LiveSegmentSheet(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .fillMaxHeight(0.5f)
+            //.fillMaxHeight(0.5f)
             .background(MaterialTheme.colorScheme.surface)
     ) {
         // --- Drag Handle (The horizontal line) ---
@@ -72,6 +72,7 @@ fun LiveSegmentSheet(
             // Pass the raw distance double to the profile for the progress marker
             currentDistance = liveSegment.liveData.distanceOnSegment_raw,
             modifier = Modifier
+                .height(150.dp)
                 .fillMaxWidth()
         )
     }

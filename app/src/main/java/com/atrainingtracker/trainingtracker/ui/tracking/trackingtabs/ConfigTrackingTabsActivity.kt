@@ -19,14 +19,12 @@
 package com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs
 
 import android.os.Bundle
-import android.util.Log
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.banalservice.BANALService
-import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface
 
 

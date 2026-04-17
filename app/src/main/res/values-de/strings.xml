@@ -980,5 +980,6 @@
     <string name="ant_missing_dependency_title">Fehlende Abhängigkeit</string>
     <string name="ant_missing_dependency_message">Die notwendige Application\n\"%1$s\"\n ist nicht installiert.  Sollen wir im Play Store nach dieser suchen?</string>
     <string name="go_to_store">Zum Play Store</string>
+    <string name="Done">Done</string>
 
 </resources>

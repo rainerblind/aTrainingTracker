@@ -68,7 +68,7 @@ open class MapViewModel(application: Application) : AndroidViewModel(application
 }
 
 
-class TrackingMapViewModelFactory(
+class MapViewModelFactory(
     private val application: Application
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
