@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.segments
 
 import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.trainingtracker.segments.SegmentSummary
@@ -32,7 +33,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 
-class SimpleSegmentMapViewModel(application: Application) : ViewModel() {
+class SimpleSegmentMapViewModel(application: Application) : AndroidViewModel(application) {
 
     // Repository instance
     private val segmentsRepository = SegmentsRepository.getInstance(application)
