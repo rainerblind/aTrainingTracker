@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.map
 
 import android.app.Application
 import android.util.Log
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.sensor.SensorType
@@ -35,7 +36,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class TrackOnMapAftermathViewModel(application: Application) : MapViewModel(application) {
+class TrackOnMapAftermathViewModel(val application: Application) : ViewModel() {
 
     private val _aftermathState = MutableStateFlow(MapState(isFollowMeEnabled = false))
     val aftermathState = _aftermathState.asStateFlow()
@@ -66,10 +67,10 @@ class TrackOnMapAftermathViewModel(application: Application) : MapViewModel(appl
 
             // Start/Stop Markers
             getExtremaPos(workoutId, baseFileName, ExtremaType.START)?.let {
-                markerList.add(LocationMarker(it, R.drawable.control_start, getApplication<Application>().getString(R.string.Start)))
+                markerList.add(LocationMarker(it, R.drawable.control_start, application.getString(R.string.Start)))
             }
             getExtremaPos(workoutId, baseFileName, ExtremaType.END)?.let {
-                markerList.add(LocationMarker(it, R.drawable.control_stop, getApplication<Application>().getString(R.string.Stop)))
+                markerList.add(LocationMarker(it, R.drawable.control_stop, application.getString(R.string.Stop)))
             }
 
             // Sensor Extrema (MAX for all, MIN for specific sensors)
@@ -104,12 +105,12 @@ class TrackOnMapAftermathViewModel(application: Application) : MapViewModel(appl
     ) {
         val extrema = samplesDb.getExtremaPosition(summariesDb, workoutId, sensor, type)
         extrema?.let {
-            val title = getApplication<Application>().getString(
+            val title = application.getString(
                 R.string.location_extrema_format,
                 type.name, // Will be "MAX" or "MIN"
-                sensor.getFullName(getApplication()),
+                sensor.getFullName(application),
                 sensor.myFormatter.format(it.value),
-                getApplication<Application>().getString(MyHelper.getShortUnitsId(sensor))
+                application.getString(MyHelper.getShortUnitsId(sensor))
             )
             markerList.add(LocationMarker(it.latLng, getExtremaIcon(sensor, type), title))
         }

@@ -50,7 +50,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.segments.LiveSegment
 import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
-import com.atrainingtracker.trainingtracker.ui.map.MapViewModel
 import com.atrainingtracker.trainingtracker.ui.segments.LiveSegmentSheet
 import com.atrainingtracker.trainingtracker.ui.theme.Zone1
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
@@ -81,7 +80,6 @@ fun SensorGridScreen(
     gridActions: GridActions,
     currentLocationFlow: StateFlow<LatLng?>,
     liveSegments: StateFlow<List<LiveSegment>>,
-    mapViewModel: MapViewModel
 ) {
 
     val activeSegments by liveSegments.collectAsState()
@@ -222,7 +220,6 @@ val dummySegmentsFlow = kotlinx.coroutines.flow.MutableStateFlow<List<LiveSegmen
 @Composable
 fun SensorGridScreenConfigPreview() {
     val context = LocalContext.current
-    val previewMapViewModel = MapViewModel(context.applicationContext as Application)
     ATrainingTrackerTheme {
         val previewFields = listOf(
             SensorFieldState(configHash = 1, sensorFieldId = 1, rowNr = 0, colNr = 0, viewSize = ViewSize.NORMAL, label = "Pace", value = "5:31", units = "/min", zoneColor = LightBackground, filterDescription = "GPS: 5s avg"),
@@ -240,8 +237,7 @@ fun SensorGridScreenConfigPreview() {
             screenMode = ScreenMode.CONFIGURATION,
             gridActions = mockActions,
             currentLocationFlow = dummyLocationFlow,
-            liveSegments = dummySegmentsFlow,
-            mapViewModel = previewMapViewModel
+            liveSegments = dummySegmentsFlow
         )
     }
 }
@@ -251,7 +247,6 @@ fun SensorGridScreenConfigPreview() {
 @Composable
 fun SensorGridScreenTrackingPreview() {
     val context = LocalContext.current
-    val previewMapViewModel = MapViewModel(context.applicationContext as Application)
     ATrainingTrackerTheme {
         val previewFields = listOf(
             SensorFieldState(configHash = 1, sensorFieldId = 1, rowNr = 0, colNr = 0, viewSize = ViewSize.LARGE, label = "Pace", value = "5:31", units = "/min", zoneColor = LightBackground, filterDescription = "GPS: 5s avg"),
@@ -269,8 +264,7 @@ fun SensorGridScreenTrackingPreview() {
             screenMode = ScreenMode.TRACKING,
             gridActions = mockActions,
             currentLocationFlow = dummyLocationFlow,
-            liveSegments = dummySegmentsFlow,
-            previewMapViewModel
+            liveSegments = dummySegmentsFlow
         )
     }
 }

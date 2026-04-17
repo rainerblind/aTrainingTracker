@@ -49,8 +49,6 @@ class MapFragmentWithTrack : Fragment() {
     }
 
     private val viewModel: MapFragmentWithTrackViewModel by viewModels()
-    private val mapViewModel: MapViewModel by viewModels()
-
 
     override fun onCreateView(
         inflater: LayoutInflater,
