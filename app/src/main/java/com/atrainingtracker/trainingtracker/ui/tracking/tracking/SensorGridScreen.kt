@@ -87,6 +87,8 @@ fun SensorGridScreen(
     val activeSegments by liveSegments.collectAsState()
     val activeSegment = activeSegments.firstOrNull()
 
+    val showLiveSegments = state.showLiveSegments && activeSegment != null
+
     // Control the sheet state
     val scaffoldState = rememberBottomSheetScaffoldState(
         bottomSheetState = rememberStandardBottomSheetState(
@@ -99,10 +101,10 @@ fun SensorGridScreen(
         scaffoldState = scaffoldState,
         sheetDragHandle = null, // Removes the large top spacer entirely
         // Only show sheet if we are in tracking mode and have an active segment
-        sheetPeekHeight = if (activeSegment != null && screenMode == ScreenMode.TRACKING) 170.dp else 0.dp,
-        sheetSwipeEnabled = activeSegment != null,
+        sheetPeekHeight = if (showLiveSegments && screenMode == ScreenMode.TRACKING) 170.dp else 0.dp,
+        sheetSwipeEnabled = showLiveSegments,
         sheetContent = {
-            if (activeSegment != null) {
+            if (showLiveSegments) {
                 LiveSegmentSheet(
                     liveSegment = activeSegment
                 )
