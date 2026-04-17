@@ -31,6 +31,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 
 /**
  * Fragment that hosts the tabbed tracking interface.
@@ -51,6 +52,10 @@ class TrackingTabsFragment : Fragment() {
             val activityTypeName = it.getString(ARG_ACTIVITY_TYPE)
             if (activityTypeName != null) {
                 viewModel.setExplicitActivityType(ActivityType.valueOf(activityTypeName))
+                viewModel.setScreenMode(ScreenMode.CONFIGURATION)
+            }
+            else {
+                viewModel.setScreenMode(ScreenMode.TRACKING)
             }
         }
     }

@@ -27,9 +27,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -142,21 +145,23 @@ fun TrackingTabsScreen(
             }
 
             // TAB ROW
-            ScrollableTabRow(
+            PrimaryScrollableTabRow(
                 selectedTabIndex = pagerState.currentPage,
-                edgePadding = 16.dp,
+                edgePadding = 8.dp,
                 divider = {}
             ) {
-                Tab(
-                    selected = pagerState.currentPage == 0,
-                    onClick = { scope.launch { pagerState.animateScrollToPage(0) } },
-                    text = {
-                        // Dynamic Title for Control Tab (Tracking/Paused/Start)
-                        Text(getControlTabTitle(trackingMode))
-                    }
-                )
+                if (screenMode == ScreenMode.TRACKING) {
+                    Tab(
+                        selected = pagerState.currentPage == 0,
+                        onClick = { scope.launch { pagerState.animateScrollToPage(0) } },
+                        text = {
+                            // Dynamic Title for Control Tab (Tracking/Paused/Start)
+                            Text(getControlTabTitle(trackingMode))
+                        }
+                    )
+                }
                 trackingViews.forEachIndexed { index, view ->
-                    val targetPage = if (screenMode != ScreenMode.TRACKING) index else index + 1
+                    val targetPage = if (screenMode == ScreenMode.TRACKING) index + 1 else index
                     Tab(
                         selected = pagerState.currentPage == targetPage,
                         onClick = { scope.launch { pagerState.animateScrollToPage(targetPage) } },
@@ -172,7 +177,7 @@ fun TrackingTabsScreen(
                     .fillMaxWidth()
                     .weight(1f),
                 userScrollEnabled = true,
-                beyondViewportPageCount = 7 // Keep some tabs...
+                beyondViewportPageCount = if (screenMode == ScreenMode.TRACKING) trackingViews.size + 1 else trackingViews.size  // keep them all
             ) { page ->
                 if (screenMode == ScreenMode.TRACKING && page == 0) {
 
@@ -209,8 +214,10 @@ fun TrackingTabsScreen(
                         onResume = { controlViewModel.onResumeTracking() },
                         onStop = { controlViewModel.onStopTracking() },
                         onPairingClicked = { controlViewModel.onPairingClicked(it) }
-                    )                } else {
-                    val viewIndex = if (screenMode != ScreenMode.TRACKING) page else page - 1
+                    )
+                }
+                else {
+                    val viewIndex = if (screenMode == ScreenMode.TRACKING) page - 1 else page
                     val viewInfo = trackingViews[viewIndex]
                     // The Grid Content (including the Elevation Profile logic)
                     TrackingTabGridContent(
