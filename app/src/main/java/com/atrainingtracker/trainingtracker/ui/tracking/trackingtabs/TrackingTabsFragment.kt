@@ -76,6 +76,11 @@ class TrackingTabsFragment : Fragment() {
         }
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        viewModel.setScreenMode(ScreenMode.TRACKING)
+    }
+
     companion object {
         val DEBUG = TrainingApplication.getDebug(true)
         const val TAG = "TrackingTabsFragment"
