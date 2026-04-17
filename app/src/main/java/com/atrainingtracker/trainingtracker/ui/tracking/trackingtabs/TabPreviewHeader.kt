@@ -34,7 +34,7 @@ import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewInfo
 
 @Composable
-fun TabConfigHeader(
+fun TabPreviewHeader(
     viewInfo: TrackingViewInfo?,
     screenMode: ScreenMode,
     onToggleMode: () -> Unit

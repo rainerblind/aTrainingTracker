@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.pager.HorizontalPager
@@ -95,7 +94,7 @@ fun TrackingTabsScreen(
 
             // HEADER FOR CONFIGURING THE TAB
             if (screenMode == ScreenMode.CONFIGURATION && currentViewInfo != null) {
-                TabConfigContent(
+                TabConfigHeader(
                     // TODO: Use the nicer elevated Surface here.
                     viewInfo = currentViewInfo,
                     onUpdateTabName = { id, name -> trackingTabsViewModel.onUpdateTabName(id, name) },
@@ -110,7 +109,7 @@ fun TrackingTabsScreen(
             else {
                 // TODO: Merge these two headers into one!!
                 // TabConfigHeader includes the Toggle Button for Edit/View
-                TabConfigHeader(
+                TabPreviewHeader(
                     viewInfo = currentViewInfo,
                     screenMode = screenMode,
                     onToggleMode = { trackingTabsViewModel.toggleScreenMode() }

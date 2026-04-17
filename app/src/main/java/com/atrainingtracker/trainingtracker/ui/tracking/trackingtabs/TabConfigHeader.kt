@@ -53,7 +53,7 @@ import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewInfo
  * Ported directly from TrackingTabsFragmentClassic.kt
  */
 @Composable
-fun TabConfigContent(
+fun TabConfigHeader(
     viewInfo: TrackingViewInfo,
     // Callbacks to ViewModel
     onUpdateTabName: (Long, String) -> Unit,
