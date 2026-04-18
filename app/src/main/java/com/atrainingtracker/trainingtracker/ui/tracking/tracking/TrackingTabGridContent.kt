@@ -16,7 +16,7 @@
  * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
-package com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs
+package com.atrainingtracker.trainingtracker.ui.tracking.tracking
 
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
@@ -31,10 +31,6 @@ import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
 import com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldDialog
 import com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModel
 import com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModelFactory
-import com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridScreen
-import com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModel
-import com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelFactory
-import com.atrainingtracker.trainingtracker.ui.tracking.tracking.GridActions
 
 @Composable
 fun TrackingTabGridContent(

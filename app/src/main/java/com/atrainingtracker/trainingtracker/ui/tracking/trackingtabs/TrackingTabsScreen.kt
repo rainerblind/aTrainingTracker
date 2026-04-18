@@ -42,7 +42,6 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -62,6 +61,7 @@ import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlN
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingScreen
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModel
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorStatus
+import com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingTabGridContent
 import kotlinx.coroutines.launch
 
 private const val TAG = "TrackingTabsScreen"
