@@ -46,6 +46,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.createBitmap
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
@@ -71,11 +72,12 @@ import com.google.maps.android.compose.rememberCameraPositionState
 import kotlinx.coroutines.flow.StateFlow
 
 
-
 @Composable
 fun ATrainingTrackerMap(
     mapState: MapState,
     currentLocationFlow: StateFlow<LatLng?>,
+    selectedDistance: Double? = null,
+    selectedBSportType: BSportType = BSportType.UNKNOWN,
     modifier: Modifier = Modifier,
     onMapClick: (() -> Unit)? = null
 ) {
@@ -92,6 +94,7 @@ fun ATrainingTrackerMap(
     var directionIconMed by remember { mutableStateOf<BitmapDescriptor?>(null) }
     var directionIconLarge by remember { mutableStateOf<BitmapDescriptor?>(null) }
     var currentZoomState by remember { mutableFloatStateOf(0f) }
+    var scrubIcon by remember { mutableStateOf<BitmapDescriptor?>(null) }
 
     // Initialize icons inside LaunchedEffect (Safe from IBitmapDescriptorFactory error)
     LaunchedEffect(primaryColor) {
@@ -100,6 +103,21 @@ fun ATrainingTrackerMap(
         directionIconSmall = bitmapDescriptorFromVectorInternal(context, R.drawable.ic_navigation_arrow, 12, primaryColor)
         directionIconMed = bitmapDescriptorFromVectorInternal(context, R.drawable.ic_navigation_arrow, 16, primaryColor)
         directionIconLarge = bitmapDescriptorFromVectorInternal(context, R.drawable.ic_navigation_arrow, 22, primaryColor)
+
+        // Map sport type to drawable
+        val iconRes = when (selectedBSportType) {
+            BSportType.RUN -> R.drawable.bsport_run
+            BSportType.BIKE -> R.drawable.bsport_bike
+            else -> -1
+        }
+
+        // Use your existing helper to create a pinned icon
+        scrubIcon = if (iconRes == -1) {
+            BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)
+        }
+        else {
+            vectorToBitmap(context,iconRes, 32)
+        }
     }
 
     // Prevents Render Issues in Android Studio Preview
@@ -205,6 +223,21 @@ fun ATrainingTrackerMap(
                     points = track.path.map { it.latLng },
                     color = track.color,
                     width = 5f
+                )
+            }
+        }
+
+        // show a marker for the selected distance
+        selectedDistance?.let { targetDist ->
+            // Find the GPS coordinate closest to the touched distance
+            val scrubPoint = mapState.tracks.firstOrNull()?.path?.find { it.distance >= targetDist }
+
+            scrubPoint?.let { point ->
+                Marker(
+                    state = MarkerState(position = point.latLng),
+                    icon = scrubIcon, // Use our sport-specific icon
+                    anchor = Offset(0.5f, 0.9f), // Anchor at the bottom tip of the pin
+                    zIndex = 3.0f // Ensure it's above other polylines
                 )
             }
         }
@@ -392,9 +425,28 @@ private fun bitmapDescriptorFromVectorInternal(context: Context, resId: Int, siz
     tint?.let { drawable.setTint(it.toArgb()) }
     val px = (sizeDp * context.resources.displayMetrics.density).toInt()
     drawable.setBounds(0, 0, px, px)
-    val bm = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888)
+    val bm = createBitmap(px, px, Bitmap.Config.ARGB_8888)
     drawable.draw(Canvas(bm))
     return BitmapDescriptorFactory.fromBitmap(bm)
+}
+
+fun vectorToBitmap(
+    context: Context,
+    @DrawableRes resId: Int,
+    sizeDp: Int
+): BitmapDescriptor {
+    val drawable = ContextCompat.getDrawable(context, resId)?.mutate()
+        ?: return BitmapDescriptorFactory.defaultMarker()
+
+    val density = context.resources.displayMetrics.density
+    val sizePx = (sizeDp * density).toInt()
+
+    val bitmap = createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    drawable.setBounds(0, 0, sizePx, sizePx)
+    drawable.draw(canvas)
+
+    return BitmapDescriptorFactory.fromBitmap(bitmap)
 }
 
 /**

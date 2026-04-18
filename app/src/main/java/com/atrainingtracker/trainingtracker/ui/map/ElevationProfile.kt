@@ -20,7 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.map
 
 import android.graphics.Paint
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import kotlin.math.ceil
 import com.atrainingtracker.trainingtracker.ui.theme.Zone1
@@ -62,6 +63,7 @@ private data class ElevationSegment(
 fun ElevationProfile(
     pathPoints: List<PathPoint>,
     currentDistance: Double?,
+    onDistanceSelected: (Double?) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     if (pathPoints.isEmpty()) return
@@ -72,16 +74,16 @@ fun ElevationProfile(
     val cachedData = remember(pathPoints) {
         val min = pathPoints.minOf { it.altitude }
         val max = pathPoints.maxOf { it.altitude }
-        val dist = pathPoints.last().distance
+        val totalDist = pathPoints.last().distance
         val range = (max - min).coerceAtLeast(1f)
 
         // Adaptive Distance Ticks
         val kmStep = when {
-            dist > 100_000 -> 20_000f
-            dist > 50_000 -> 10_000f
-            dist > 20_000 -> 5_000f
-            dist > 5_000 -> 1_000f
-            dist > 1_500 -> 500f
+            totalDist > 100_000 -> 20_000f
+            totalDist > 50_000 -> 10_000f
+            totalDist > 20_000 -> 5_000f
+            totalDist > 5_000 -> 1_000f
+            totalDist > 1_500 -> 500f
             else -> 200f              // For segments < 1.5km, use 200m steps
         }
 
@@ -99,9 +101,9 @@ fun ElevationProfile(
             val p1 = pathPoints[i]
             val p2 = pathPoints[i + 1]
 
-            val d1 = p1.distance / dist
+            val d1 = p1.distance / totalDist
             val a1 = (p1.altitude - min) / range
-            val d2 = p2.distance / dist
+            val d2 = p2.distance / totalDist
             val a2 = (p2.altitude - min) / range
 
             val distDiff = p2.distance - p1.distance
@@ -118,7 +120,7 @@ fun ElevationProfile(
 
             segments.add(ElevationSegment(Offset(d1, a1), Offset(d2, a2), color))
         }
-        CachedProfileData(segments, min, max, dist, range, kmStep, altStep)
+        CachedProfileData(segments, min, max, totalDist, range, kmStep, altStep)
     }
 
     val textPaint = remember(colorScheme) {
@@ -131,10 +133,21 @@ fun ElevationProfile(
 
     Canvas(
         modifier = modifier
-            .fillMaxWidth()
-            .height(150.dp)
-            .background(colorScheme.surfaceVariant.copy(alpha = 0.1f))
-            .padding(bottom = 24.dp, start = 50.dp, end = 25.dp, top = 10.dp)
+            .pointerInput(pathPoints) {
+                detectDragGestures(
+                    onDragStart = { offset ->
+                        val dist = (offset.x / size.width) * cachedData.totalDist
+                        onDistanceSelected(dist.coerceIn(0.0f, cachedData.totalDist).toDouble())
+                    },
+                    onDrag = { change, _ ->
+                        val dist = (change.position.x / size.width) * cachedData.totalDist
+                        onDistanceSelected(dist.coerceIn(0.0f, cachedData.totalDist).toDouble())
+                    },
+                    onDragEnd = { onDistanceSelected(null) },
+                    onDragCancel = { onDistanceSelected(null) }
+                )
+            }
+            .padding(8.dp)
     ) {
         val width = size.width
         val height = size.height
