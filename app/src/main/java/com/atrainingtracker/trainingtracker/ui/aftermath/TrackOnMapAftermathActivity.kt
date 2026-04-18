@@ -24,7 +24,9 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -40,6 +42,7 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutH
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderViewHolder
 import com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModel
 import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
+import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -88,11 +91,25 @@ class TrackOnMapAftermathActivity : AppCompatActivity() {
                 // For aftermath, we don't have a live location flow
                 val noLocation = remember { MutableStateFlow<LatLng?>(null) }
 
-                ATrainingTrackerMap(
-                    mapState = mapState,
-                    currentLocationFlow = noLocation,
-                    modifier = Modifier.fillMaxSize()
-                )
+                Column(modifier = Modifier.fillMaxSize()) {
+                    // The Map takes the top 70% of the screen
+                    ATrainingTrackerMap(
+                        mapState = mapState,
+                        currentLocationFlow = noLocation,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(0.75f) // Adjust this ratio as needed
+                    )
+
+                    // The Elevation Profile takes the bottom 30%
+                    // We extract the track points from the mapState
+                    ElevationProfile(
+                        pathPoints = mapState.tracks.firstOrNull()?.path ?: emptyList(),                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(0.25f),
+                        currentDistance = null
+                    )
+                }
             }
         }
 
