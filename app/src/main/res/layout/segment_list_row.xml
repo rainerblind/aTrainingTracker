@@ -28,7 +28,7 @@
     android:layout_marginTop="4dp"
     android:layout_marginEnd="8dp"
     android:layout_marginBottom="4dp"
-    app:cardCornerRadius="8dp"
+    app:cardCornerRadius="16dp"
     app:cardElevation="2dp">
 
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -40,8 +40,8 @@
         <androidx.compose.ui.platform.ComposeView
             android:id="@+id/map_compose_segment"
             android:layout_width="120dp"
-            android:layout_height="0dp"
-            app:layout_constraintBottom_toBottomOf="parent"
+            android:layout_height="120dp"
+            app:layout_constraintBottom_toTopOf="@id/compose_elevation_profile"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"/>
 
@@ -203,7 +203,6 @@
             android:layout_marginBottom="8dp"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="@id/textViewSegmentName"
             app:layout_constraintTop_toBottomOf="@id/layout_grades"
@@ -271,6 +270,17 @@
             android:textAppearance="@style/TextAppearance.AppCompat.Small"
             tools:text="1570 m" />
         </LinearLayout>
+
+        <!-- Elevation Profile (Bottom) -->
+        <androidx.compose.ui.platform.ComposeView
+            android:id="@+id/compose_elevation_profile"
+            android:layout_width="0dp"
+            android:layout_height="100dp"
+            android:layout_marginBottom="8dp"
+            app:layout_constraintTop_toBottomOf="@id/layout_elevation"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </com.google.android.material.card.MaterialCardView>

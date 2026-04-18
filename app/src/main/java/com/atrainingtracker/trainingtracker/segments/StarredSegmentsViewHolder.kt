@@ -22,15 +22,24 @@ import android.app.Activity
 import android.view.View
 import android.widget.TextView
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
-import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
+import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.segments.SimpleSegmentMapViewModel
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
-import kotlinx.coroutines.flow.MutableStateFlow
+import com.atrainingtracker.trainingtracker.ui.theme.StravaOrange
+import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapProperties
+import com.google.maps.android.compose.MapType
+import com.google.maps.android.compose.MapUiSettings
+import com.google.maps.android.compose.Polyline
+import com.google.maps.android.compose.rememberCameraPositionState
 
 class StarredSegmentViewHolder(
     val rowView: View,
@@ -53,22 +62,78 @@ class StarredSegmentViewHolder(
     val tvElevationMax: TextView = rowView.findViewById(R.id.textViewElevationMax)
 
     val mapComposeView: ComposeView? = rowView.findViewById(R.id.map_compose_segment)
+    val elevationProfileComposeView: ComposeView? = rowView.findViewById(R.id.compose_elevation_profile)
+
     val viewModel: SimpleSegmentMapViewModel = SimpleSegmentMapViewModel(activity.application)
 
     init {
         mapComposeView?.setContent {
             ATrainingTrackerTheme {
                 val state by viewModel.mapState.collectAsState()
+                val segment = state.segments.firstOrNull()
 
-                ATrainingTrackerMap(
-                    mapState = state,
-                    currentLocationFlow = MutableStateFlow(null),
-                    modifier = Modifier.fillMaxSize(),
+                // 1. Create a CameraPositionState that we can control
+                val cameraPositionState =
+                    rememberCameraPositionState()
+
+                // 2. Use the base GoogleMap for maximum layout control
+                GoogleMap(
+                    modifier = Modifier
+                        .fillMaxSize(),
+                    cameraPositionState = cameraPositionState,
+                    // Disable all UI overlays that might shrink the map content
+                    uiSettings = MapUiSettings(
+                        zoomControlsEnabled = false,
+                        compassEnabled = false,
+                        mapToolbarEnabled = false,
+                        myLocationButtonEnabled = false,
+                        scrollGesturesEnabled = false, // Static look for list rows
+                        zoomGesturesEnabled = false
+                    ),
+                    properties = MapProperties(mapType = MapType.TERRAIN),
                     onMapClick = {
                         if (segmentId != -1L) {
                             onSegmentClick(segmentId)
                         }
                     }
+                ) {
+                    // 3. Draw the segment path manually
+                    segment?.let { seg ->
+                        val segPoints = seg.path.map {it.latLng}
+                        Polyline(
+                            points = segPoints,
+                            color = StravaOrange,
+                            width = 8f
+                        )
+
+                        // 4. Update camera once the map is ready to fit the segment
+                        LaunchedEffect(seg.path) {
+                            if (seg.path.isNotEmpty()) {
+                                val boundsBuilder = com.google.android.gms.maps.model.LatLngBounds.Builder()
+                                segPoints.forEach{ boundsBuilder.include(it) }
+                                cameraPositionState.move(
+                                    com.google.android.gms.maps.CameraUpdateFactory.newLatLngBounds(
+                                        boundsBuilder.build(),
+                                        20 // padding in px
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        elevationProfileComposeView?.setContent {
+            val state by viewModel.mapState.collectAsState()
+            val segmentPoints = state.segments.firstOrNull()?.path ?: emptyList()
+
+            ATrainingTrackerTheme {
+                // We draw the elevation profile using the track data from the map state
+                ElevationProfile(
+                    pathPoints = segmentPoints,
+                    currentDistance = null,
+                    modifier = Modifier.fillMaxSize()
                 )
             }
         }
