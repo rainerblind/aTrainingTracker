@@ -94,8 +94,35 @@ fun TrackingTabsScreen(
 
 
     // Page count: Control Tab + Sensor Tabs
-    val pageCount = if (screenMode == ScreenMode.TRACKING) trackingViews.size + 1 else trackingViews.size
-    val pagerState = rememberPagerState(pageCount = { pageCount })
+    val pageCount by remember(trackingViews, screenMode) {
+        derivedStateOf {
+            if (screenMode == ScreenMode.TRACKING) trackingViews.size + 1 else trackingViews.size
+        }
+    }
+    // Keep track of the current page as a simple variable to survive the PagerState recreation
+    var lastKnownPage by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+
+    // Calculate the initial page for the NEW state
+    val initialPage = remember(trackingViews.size, screenMode) {
+        // Use the tracked 'lastKnownPage' instead of the pagerState reference
+        lastKnownPage.coerceIn(
+            0,
+            (if (screenMode == ScreenMode.TRACKING) trackingViews.size else trackingViews.size - 1).coerceAtLeast(0)
+        )
+    }
+
+    // Recreate the PagerState using the preserved initialPage
+    val pagerState = key(trackingViews.size, screenMode) {
+        rememberPagerState(
+            initialPage = initialPage,
+            pageCount = { pageCount }
+        )
+    }
+    // Update the tracker whenever the pager settles on a new page
+    LaunchedEffect(pagerState.currentPage) {
+        lastKnownPage = pagerState.currentPage
+    }
+
     val scope = rememberCoroutineScope()
 
     // BACK NAVIGATION HANDLER: when in CONFIGURATION mode, exit to TRACKING mode
@@ -116,6 +143,42 @@ fun TrackingTabsScreen(
                     trackingTabsViewModel.clearLapEvent()
                 }
             )
+        }
+    }
+
+
+    // NAVIGATION COLLECTION (necessary, when deleting tabs)
+    LaunchedEffect(Unit) {
+        trackingTabsViewModel.navigationEvent.collect { tabNavigationEvent ->
+            when (tabNavigationEvent) {
+                is TabNavigationEvent.NavigateTo -> {
+
+                    // Calculate offset: if TRACKING mode, page 0 is Control, so add 1
+                    val offset = if (screenMode == ScreenMode.TRACKING) 1 else 0
+                    val target = tabNavigationEvent.index + offset
+
+                    // Animate to the requested page
+                    scope.launch {
+                        try {
+                            lastKnownPage = target
+                            pagerState.animateScrollToPage(target)
+                        }
+                        catch (e: Exception) {
+                            Log.e(TAG, "Navigation failed: page $target not ready yet", e)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Move to first tab when tracking is started
+    val navigateTrigger by trackingTabsViewModel.navigateToTrackingTab.observeAsState()
+    LaunchedEffect(navigateTrigger) {
+        if (navigateTrigger != null) {
+            if (screenMode == ScreenMode.TRACKING) {
+                pagerState.scrollToPage(1)
+            }
         }
     }
 
