@@ -28,19 +28,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.PrimaryScrollableTabRow
-import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -49,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.atrainingtracker.BuildConfig
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFragmentFactory
 import com.atrainingtracker.trainingtracker.TrackingMode
@@ -60,6 +63,9 @@ import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlT
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModel
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorStatus
 import kotlinx.coroutines.launch
+
+private const val TAG = "TrackingTabsScreen"
+private val DEBUG = BuildConfig.DEBUG
 
 @Composable
 fun TrackingTabsScreen(
@@ -301,7 +307,6 @@ fun TrackingTabsScreen(
                 }
                 else {
                     val viewIndex = if (screenMode == ScreenMode.TRACKING) page - 1 else page
-                    Log.i("TrackingTabsScreen", "viewIndex=$viewIndex")
 
                     // Safely get the viewInfo
                     val viewInfo = trackingViews.getOrNull(viewIndex)
