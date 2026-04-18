@@ -161,6 +161,10 @@ class BANALServiceRepository private constructor(private val context: Context) {
         }
     }
 
+    fun clearLapEvent() {
+        _lapEvent.value = null
+    }
+
 
     init {
         // Set a default value when the repository is created

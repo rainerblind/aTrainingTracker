@@ -53,6 +53,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFragmentFactory
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation
+import com.atrainingtracker.trainingtracker.ui.tracking.LapSummaryDialog
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlNavigation
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingScreen
@@ -102,6 +103,22 @@ fun TrackingTabsScreen(
         trackingTabsViewModel.toggleScreenMode() // Exit config mode on back press
     }
 
+    // -- Show Lap Summary Dialog
+    val lapEvent by trackingTabsViewModel.lapEvent.observeAsState()
+    lapEvent?.let { event ->
+        if (pagerState.currentPage != 0) {
+            LapSummaryDialog(
+                lapNr = event.lapNumber,
+                lapTime = event.lapTime,
+                lapDistance = event.lapDistance,
+                lapSpeed = event.lapSpeed,
+                onDismissRequest = {
+                    trackingTabsViewModel.clearLapEvent()
+                }
+            )
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         // 1. DYNAMIC HEADER (Config Mode or Tab Title)
         val currentViewInfo = if (screenMode != ScreenMode.TRACKING) {
@@ -120,6 +137,7 @@ fun TrackingTabsScreen(
                         SensorStatus(activeSensors = activeSensors)
                     }
                 }
+
                 ScreenMode.CONFIGURATION -> {
                     // -- The full configuration screen for editing the name of the tab, checkboxes for lap botton, map, and live segments, as well as the add/delete buttons
                     if (currentViewInfo != null) {
@@ -135,6 +153,7 @@ fun TrackingTabsScreen(
                         )
                     }
                 }
+
                 ScreenMode.PREVIEW -> {
                     if (currentViewInfo != null) {
                         TrackingTabPreviewHeader(
@@ -238,7 +257,6 @@ fun TrackingTabsScreen(
 
             // THE CONDITIONAL LAP BUTTON
             val shouldShowLapButton = currentViewInfo?.showLapButton == true
-
             if (shouldShowLapButton) {
                 LapButton(
                     modifier = Modifier
