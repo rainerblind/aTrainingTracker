@@ -94,7 +94,9 @@ fun ATrainingTrackerMap(
     var directionIconMed by remember { mutableStateOf<BitmapDescriptor?>(null) }
     var directionIconLarge by remember { mutableStateOf<BitmapDescriptor?>(null) }
     var currentZoomState by remember { mutableFloatStateOf(0f) }
-    var scrubIcon by remember { mutableStateOf<BitmapDescriptor?>(null) }
+
+    var scrubIconRight by remember { mutableStateOf<BitmapDescriptor?>(null) }
+    var scrubIconLeft by remember { mutableStateOf<BitmapDescriptor?>(null) }
 
     // Initialize icons inside LaunchedEffect (Safe from IBitmapDescriptorFactory error)
     LaunchedEffect(primaryColor) {
@@ -111,13 +113,9 @@ fun ATrainingTrackerMap(
             else -> -1
         }
 
-        // Use your existing helper to create a pinned icon
-        scrubIcon = if (iconRes == -1) {
-            BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)
-        }
-        else {
-            vectorToBitmap(context,iconRes, 32)
-        }
+        // Pre-calculate both versions
+        scrubIconRight = vectorToBitmap(context, iconRes, 24, false)
+        scrubIconLeft = vectorToBitmap(context, iconRes, 24, true)
     }
 
     // Prevents Render Issues in Android Studio Preview
@@ -229,15 +227,41 @@ fun ATrainingTrackerMap(
 
         // show a marker for the selected distance
         selectedDistance?.let { targetDist ->
-            // Find the GPS coordinate closest to the touched distance
-            val scrubPoint = mapState.tracks.firstOrNull()?.path?.find { it.distance >= targetDist }
+            val trackPoints = mapState.tracks.firstOrNull()?.path ?: emptyList()
+            val index = trackPoints.indexOfFirst { it.distance >= targetDist }
 
-            scrubPoint?.let { point ->
+            if (index != -1) {
+                val point = trackPoints[index]
+
+                // Determine direction by looking for the next point with a different longitude
+                val isWestbound = run {
+                    // 1. Look forward for the first point that actually moves East or West
+                    val nextSignificantPoint = trackPoints.drop(index + 1).firstOrNull {
+                        it.latLng.longitude != point.latLng.longitude
+                    }
+
+                    if (nextSignificantPoint != null) {
+                        nextSignificantPoint.latLng.longitude < point.latLng.longitude
+                    } else {
+                        // 2. If we are at the end of the track, look backward to see which way we were moving
+                        val prevSignificantPoint = trackPoints.take(index).lastOrNull {
+                            it.latLng.longitude != point.latLng.longitude
+                        }
+                        if (prevSignificantPoint != null) {
+                            point.latLng.longitude < prevSignificantPoint.latLng.longitude
+                        } else {
+                            false // Default to East if the entire track is perfectly vertical
+                        }
+                    }
+                }
+
                 Marker(
                     state = MarkerState(position = point.latLng),
-                    icon = scrubIcon, // Use our sport-specific icon
-                    anchor = Offset(0.5f, 0.9f), // Anchor at the bottom tip of the pin
-                    zIndex = 3.0f // Ensure it's above other polylines
+                    // Switch icon based on movement direction
+                    icon = if (isWestbound) scrubIconLeft else scrubIconRight,
+                    // anchor = Offset(0.5f, 0.5f), // Center silhouette on the line
+                    zIndex = 5.0f,
+                    flat = true
                 )
             }
         }
@@ -433,8 +457,13 @@ private fun bitmapDescriptorFromVectorInternal(context: Context, resId: Int, siz
 fun vectorToBitmap(
     context: Context,
     @DrawableRes resId: Int,
-    sizeDp: Int
+    sizeDp: Int,
+    mirror: Boolean = false
 ): BitmapDescriptor {
+    if (resId == -1) {
+        return BitmapDescriptorFactory.defaultMarker()
+    }
+
     val drawable = ContextCompat.getDrawable(context, resId)?.mutate()
         ?: return BitmapDescriptorFactory.defaultMarker()
 
@@ -443,6 +472,12 @@ fun vectorToBitmap(
 
     val bitmap = createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
+
+    if (mirror) {
+        // Flip the canvas horizontally around the center
+        canvas.scale(-1f, 1f, sizePx / 2f, sizePx / 2f)
+    }
+
     drawable.setBounds(0, 0, sizePx, sizePx)
     drawable.draw(canvas)
 
