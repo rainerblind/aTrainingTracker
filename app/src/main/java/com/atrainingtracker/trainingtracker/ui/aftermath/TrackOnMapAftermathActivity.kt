@@ -101,7 +101,6 @@ class TrackOnMapAftermathActivity : AppCompatActivity() {
                         mapState = mapState,
                         currentLocationFlow = noLocation,
                         selectedDistance = selectedDistance,
-                        selectedBSportType = BSportType.BIKE, // TODO: get the correct BSportType!
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(0.75f) // Adjust this ratio as needed

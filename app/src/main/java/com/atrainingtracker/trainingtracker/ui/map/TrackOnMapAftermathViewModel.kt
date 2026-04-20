@@ -19,12 +19,11 @@
 package com.atrainingtracker.trainingtracker.ui.map
 
 import android.app.Application
-import android.util.Log
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.application
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.database.ExtremaType
@@ -58,13 +57,17 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             val baseFileName = summariesDb.getBaseFileName(workoutId) ?: return@launch
 
-            // 1. Load Tracks
+            // Get the Sport Type
+            val workout = workoutRepository.getWorkoutById(workoutId).value
+            val bSportType = workout?.sportData?.bSportType ?: BSportType.UNKNOWN
+
+            // Load Track
             val trackList = TrackType.entries.mapNotNull { type ->
                 val path = workoutRepository.getWorkoutTrackPoints(workoutId, Roughness.ALL, type)
                 if (path.isNotEmpty()) MapTrack(id = type.ordinal.toLong(), type = type, path = path) else null
             }
 
-            // 2. Load Markers
+            // Load Markers
             val markerList = mutableListOf<LocationMarker>()
 
             // Start/Stop Markers
@@ -90,7 +93,8 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
                 _aftermathState.value = _aftermathState.value.copy(
                     tracks = trackList,
                     markers = markerList,
-                    isFollowMeEnabled = false
+                    isFollowMeEnabled = false,
+                    bSportType = bSportType
                 )
             }
         }

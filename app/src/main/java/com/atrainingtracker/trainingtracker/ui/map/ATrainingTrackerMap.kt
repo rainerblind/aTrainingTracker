@@ -26,6 +26,7 @@ import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import android.graphics.Typeface
+import android.location.Location
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -77,7 +78,6 @@ fun ATrainingTrackerMap(
     mapState: MapState,
     currentLocationFlow: StateFlow<LatLng?>,
     selectedDistance: Double? = null,
-    selectedBSportType: BSportType = BSportType.UNKNOWN,
     modifier: Modifier = Modifier,
     onMapClick: (() -> Unit)? = null
 ) {
@@ -105,17 +105,19 @@ fun ATrainingTrackerMap(
         directionIconSmall = bitmapDescriptorFromVectorInternal(context, R.drawable.ic_navigation_arrow, 12, primaryColor)
         directionIconMed = bitmapDescriptorFromVectorInternal(context, R.drawable.ic_navigation_arrow, 16, primaryColor)
         directionIconLarge = bitmapDescriptorFromVectorInternal(context, R.drawable.ic_navigation_arrow, 22, primaryColor)
+    }
 
+    LaunchedEffect(mapState.bSportType) {
         // Map sport type to drawable
-        val iconRes = when (selectedBSportType) {
+        val iconRes = when (mapState.bSportType) {
             BSportType.RUN -> R.drawable.bsport_run
             BSportType.BIKE -> R.drawable.bsport_bike
             else -> -1
         }
 
         // Pre-calculate both versions
-        scrubIconRight = vectorToBitmap(context, iconRes, 24, false)
-        scrubIconLeft = vectorToBitmap(context, iconRes, 24, true)
+        scrubIconRight = vectorToBitmap(context, iconRes, 32, false, primaryColor)
+        scrubIconLeft = vectorToBitmap(context, iconRes, 32, true, primaryColor)
     }
 
     // Prevents Render Issues in Android Studio Preview
@@ -139,7 +141,7 @@ fun ATrainingTrackerMap(
             fun isLocal(target: LatLng): Boolean {
                 if (userPos == null) return true // If we don't know where user is, include everything
                 val results = FloatArray(1)
-                android.location.Location.distanceBetween(
+                Location.distanceBetween(
                     userPos.latitude, userPos.longitude,
                     target.latitude, target.longitude,
                     results
@@ -458,10 +460,14 @@ fun vectorToBitmap(
     context: Context,
     @DrawableRes resId: Int,
     sizeDp: Int,
-    mirror: Boolean = false
+    mirror: Boolean = false,
+    tint: Color, // only for the default marker
 ): BitmapDescriptor {
     if (resId == -1) {
-        return BitmapDescriptorFactory.defaultMarker()
+        // Convert Compose Color to HSV to get the Hue
+        val hsv = FloatArray(3)
+        android.graphics.Color.colorToHSV(tint.toArgb(), hsv)
+        return BitmapDescriptorFactory.defaultMarker(hsv[0]) // hsv[0] is the Hue
     }
 
     val drawable = ContextCompat.getDrawable(context, resId)?.mutate()
