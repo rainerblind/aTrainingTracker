@@ -197,6 +197,53 @@ fun ATrainingTrackerMap(
         }
     }
 
+    // --- Auto-center Map on Scrubber Icon ---
+    LaunchedEffect(selectedDistance) {
+        selectedDistance?.let { targetDist ->
+            // Find the point associated with the distance
+            val activePath = if (mapState.tracks.isNotEmpty()) {
+                mapState.tracks.firstOrNull()?.path
+            } else {
+                mapState.segments.firstOrNull()?.path
+            } ?: emptyList()
+
+            val scrubPoint = activePath.find { it.distance >= targetDist }
+
+            scrubPoint?.let { point ->
+                /*
+                // Option A: Always center (Smooth tracking)
+                cameraPositionState.animate(
+                    CameraUpdateFactory.newLatLng(point.latLng),
+                    200 // Fast animation for responsiveness
+                )
+                 */
+
+                // Option B: Smart Margin centering
+                val projection = cameraPositionState.projection
+                val bounds = projection?.visibleRegion?.latLngBounds
+
+                if (bounds != null) {
+                    // Define a 2% margin padding
+                    val latPadding = (bounds.northeast.latitude - bounds.southwest.latitude) * 0.2
+                    val lngPadding = (bounds.northeast.longitude - bounds.southwest.longitude) * 0.2
+
+                    val safeBounds = LatLngBounds(
+                        LatLng(bounds.southwest.latitude + latPadding, bounds.southwest.longitude + lngPadding),
+                        LatLng(bounds.northeast.latitude - latPadding, bounds.northeast.longitude - lngPadding)
+                    )
+
+                    // If the icon is outside the 20% safety margin, center it
+                    if (!safeBounds.contains(point.latLng)) {
+                        cameraPositionState.animate(
+                            CameraUpdateFactory.newLatLng(point.latLng),
+                            300
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     // THE MAP
     GoogleMap(
         modifier = modifier,
