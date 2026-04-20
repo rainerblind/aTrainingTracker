@@ -22,6 +22,7 @@ import android.app.Activity
 import android.view.View
 import androidx.appcompat.widget.PopupMenu
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -125,16 +126,23 @@ class SummaryViewHolder(
                             }
                         )
 
-                        // 2. The Elevation Profile (Fixed height at the bottom)
+                        // 2. The Elevation Profile (Interactive)
                         if (path.isNotEmpty()) {
-                            ElevationProfile(
-                                pathPoints = path,
-                                currentDistance = null, // No progress marker needed in summary
+                            androidx.compose.foundation.layout.Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(100.dp) // Adjusted height for visibility in a list row
+                                    .height(100.dp)
                                     .background(MaterialTheme.colorScheme.surface)
-                            )
+                                    .clickable {
+                                        TrainingApplication.startTrackOnMapAftermathActivity(activity, workoutSummary.id)
+                                    }
+                            ) {
+                                ElevationProfile(
+                                    pathPoints = path,
+                                    currentDistance = null,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
                         }
                     }
                 }
