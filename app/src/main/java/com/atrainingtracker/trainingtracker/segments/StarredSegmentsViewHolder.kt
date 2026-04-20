@@ -21,14 +21,14 @@ package com.atrainingtracker.trainingtracker.segments
 import android.app.Activity
 import android.view.View
 import android.widget.TextView
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.segments.SimpleSegmentMapViewModel
@@ -129,12 +129,22 @@ class StarredSegmentViewHolder(
             val segmentPoints = state.segments.firstOrNull()?.path ?: emptyList()
 
             ATrainingTrackerTheme {
-                // We draw the elevation profile using the track data from the map state
-                ElevationProfile(
-                    pathPoints = segmentPoints,
-                    currentDistance = null,
-                    modifier = Modifier.fillMaxSize()
-                )
+                // Wrap in a Box to make the entire profile area clickable
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clickable {
+                            if (segmentId != -1L) {
+                                onSegmentClick(segmentId)
+                            }
+                        }
+                ) {
+                    ElevationProfile(
+                        pathPoints = segmentPoints,
+                        currentDistance = null,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
             }
         }
     }
