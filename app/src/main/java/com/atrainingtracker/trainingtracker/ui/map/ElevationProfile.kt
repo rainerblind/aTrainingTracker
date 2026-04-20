@@ -72,9 +72,37 @@ fun ElevationProfile(
 
     // --- 1. Cache Static Geometry & Adaptive Labels ---
     val cachedData = remember(pathPoints) {
-        val min = pathPoints.minOf { it.altitude }
-        val max = pathPoints.maxOf { it.altitude }
         val totalDist = pathPoints.last().distance
+        val pointCount = pathPoints.size
+
+        // --- Adaptive Smoothing Logic ---
+        // Calculate average distance between points (e.g., 5m or 20m)
+        val avgPointSpacing = totalDist / pointCount
+
+        // We want a smoothing window of ~80 meters.
+        // WindowSize = 80m / spacing. We ensure it's at least 3 and always odd.
+        val targetWindowMeters = 80f
+        val calculatedWindow = (targetWindowMeters / avgPointSpacing).toInt()
+            .coerceIn(3, 51) // Don't go below 3 or above 51 to keep performance high
+
+        val windowSize = if (calculatedWindow % 2 == 0) calculatedWindow + 1 else calculatedWindow
+        val halfWindow = windowSize / 2
+
+        val smoothedAltitudes = pathPoints.indices.map { i ->
+            val start = (i - halfWindow).coerceAtLeast(0)
+            val end = (i + halfWindow).coerceAtMost(pathPoints.size - 1)
+            var sum = 0f
+            var count = 0
+            for (j in start..end) {
+                sum += pathPoints[j].altitude
+                count++
+            }
+            sum / count
+        }
+
+        // Use smoothed altitudes for Min/Max to avoid "spikes" affecting the scale
+        val min = smoothedAltitudes.minOrNull() ?: 0f
+        val max = smoothedAltitudes.maxOrNull() ?: 1f
         val range = (max - min).coerceAtLeast(1f)
 
         // Adaptive Distance Ticks
@@ -101,13 +129,21 @@ fun ElevationProfile(
             val p1 = pathPoints[i]
             val p2 = pathPoints[i + 1]
 
+            // Use Smoothed Altitudes for geometry
+            val sAlt1 = smoothedAltitudes[i]
+            val sAlt2 = smoothedAltitudes[i + 1]
+
             val d1 = p1.distance / totalDist
-            val a1 = (p1.altitude - min) / range
+            val a1 = (sAlt1 - min) / range
             val d2 = p2.distance / totalDist
-            val a2 = (p2.altitude - min) / range
+            val a2 = (sAlt2 - min) / range
 
             val distDiff = p2.distance - p1.distance
-            val grade = if (distDiff > 0) ((p2.altitude - p1.altitude) / distDiff) * 100 else 0f
+
+            // Use Smoothed Altitudes for Grade calculation (much more stable colors!)
+            val grade = if (distDiff > 1.0) { // Small threshold to avoid division issues
+                ((sAlt2 - sAlt1) / distDiff) * 100
+            } else 0f
 
             val color = when {
                 grade < 2f -> Zone1
