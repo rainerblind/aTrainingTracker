@@ -147,7 +147,8 @@ fun ElevationProfile(
                     onDragCancel = { onDistanceSelected(null) }
                 )
             }
-            .padding(8.dp)
+            .fillMaxWidth()
+            .padding(bottom = 24.dp, start = 50.dp, end = 25.dp, top = 10.dp)
     ) {
         val width = size.width
         val height = size.height

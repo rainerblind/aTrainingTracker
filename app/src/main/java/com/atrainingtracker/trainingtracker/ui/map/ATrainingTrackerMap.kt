@@ -229,16 +229,22 @@ fun ATrainingTrackerMap(
 
         // show a marker for the selected distance
         selectedDistance?.let { targetDist ->
-            val trackPoints = mapState.tracks.firstOrNull()?.path ?: emptyList()
-            val index = trackPoints.indexOfFirst { it.distance >= targetDist }
+            // 1. Identify the active path (either from tracks or segments)
+            val activePath = if (mapState.tracks.isNotEmpty()) {
+                mapState.tracks.firstOrNull()?.path
+            } else {
+                mapState.segments.firstOrNull()?.path
+            } ?: emptyList()
+
+            val index = activePath.indexOfFirst { it.distance >= targetDist }
 
             if (index != -1) {
-                val point = trackPoints[index]
+                val point = activePath[index]
 
                 // Determine direction by looking for the next point with a different longitude
                 val isWestbound = run {
                     // 1. Look forward for the first point that actually moves East or West
-                    val nextSignificantPoint = trackPoints.drop(index + 1).firstOrNull {
+                    val nextSignificantPoint = activePath.drop(index + 1).firstOrNull {
                         it.latLng.longitude != point.latLng.longitude
                     }
 
@@ -246,7 +252,7 @@ fun ATrainingTrackerMap(
                         nextSignificantPoint.latLng.longitude < point.latLng.longitude
                     } else {
                         // 2. If we are at the end of the track, look backward to see which way we were moving
-                        val prevSignificantPoint = trackPoints.take(index).lastOrNull {
+                        val prevSignificantPoint = activePath.take(index).lastOrNull {
                             it.latLng.longitude != point.latLng.longitude
                         }
                         if (prevSignificantPoint != null) {

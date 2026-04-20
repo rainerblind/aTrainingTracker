@@ -28,7 +28,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
@@ -81,6 +83,9 @@ class SimpleSegmentOnMapFragment : Fragment() {
                     val summary by viewModel.segmentSummary.collectAsState()
                     val noLocation = remember { MutableStateFlow<LatLng?>(null) }
 
+                    // State for scrubbing
+                    var selectedDistance by remember { mutableStateOf<Double?>(null) }
+
                     // Use a Column to stack Map on top and Profile on bottom
                     Column(modifier = Modifier.fillMaxSize()) {
                         summary?.let {
@@ -90,7 +95,7 @@ class SimpleSegmentOnMapFragment : Fragment() {
                         ATrainingTrackerMap(
                             mapState = mapState,
                             currentLocationFlow = noLocation,
-                            // This now works because it is inside a Column
+                            selectedDistance = selectedDistance,
                             modifier = Modifier.weight(2f)
                         )
 
@@ -98,7 +103,10 @@ class SimpleSegmentOnMapFragment : Fragment() {
                         mapState.segments.firstOrNull()?.let { segment ->
                             ElevationProfile(
                                 pathPoints = segment.path,
-                                currentDistance = null,
+                                currentDistance = selectedDistance,
+                                onDistanceSelected = { dist ->
+                                    selectedDistance = dist
+                                },
                                 modifier = Modifier.weight(1f)
                             )
                         }
