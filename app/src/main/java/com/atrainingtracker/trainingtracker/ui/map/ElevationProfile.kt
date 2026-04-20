@@ -170,14 +170,26 @@ fun ElevationProfile(
     Canvas(
         modifier = modifier
             .pointerInput(pathPoints) {
+                // Convert DP padding to PX
+                val startPaddingPx = 50.dp.toPx()
+                val endPaddingPx = 25.dp.toPx()
+
                 detectDragGestures(
                     onDragStart = { offset ->
-                        val dist = (offset.x / size.width) * cachedData.totalDist
-                        onDistanceSelected(dist.coerceIn(0.0f, cachedData.totalDist).toDouble())
+                        // Calculate width of the actual chart area
+                        val chartWidthPx = size.width - startPaddingPx - endPaddingPx
+                        // Adjust touch X: subtract start padding and clamp to chart bounds
+                        val adjustedX = (offset.x - startPaddingPx).coerceIn(0f, chartWidthPx)
+
+                        val dist = (adjustedX / chartWidthPx) * cachedData.totalDist
+                        onDistanceSelected(dist.toDouble())
                     },
                     onDrag = { change, _ ->
-                        val dist = (change.position.x / size.width) * cachedData.totalDist
-                        onDistanceSelected(dist.coerceIn(0.0f, cachedData.totalDist).toDouble())
+                        val chartWidthPx = size.width - startPaddingPx - endPaddingPx
+                        val adjustedX = (change.position.x - startPaddingPx).coerceIn(0f, chartWidthPx)
+
+                        val dist = (adjustedX / chartWidthPx) * cachedData.totalDist
+                        onDistanceSelected(dist.toDouble())
                     },
                     onDragEnd = { onDistanceSelected(null) },
                     onDragCancel = { onDistanceSelected(null) }
