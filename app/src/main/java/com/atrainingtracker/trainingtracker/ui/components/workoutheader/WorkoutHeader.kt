@@ -155,14 +155,12 @@ fun WorkoutHeader(
 @Composable
 private fun IconTextRow(iconRes: Int, text: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        /*
         Icon(
             painter = painterResource(id = iconRes),
             contentDescription = null,
             modifier = Modifier.size(18.dp),
             tint = MaterialTheme.colorScheme.onPrimary
         )
-         */
         Spacer(modifier = Modifier.width(4.dp))
         Text(
             text = text,
