@@ -38,13 +38,12 @@
             android:minHeight="?attr/actionBarSize"
             android:theme="@style/AppTheme.Toolbar.title" /> -->
 
-        <androidx.appcompat.widget.Toolbar
-            android:id="@+id/apps_toolbar"
+        <!-- This is our "Fake" Status Bar -->
+        <View
+            android:id="@+id/status_bar_spacer"
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            android:background="?attr/colorPrimary"
-            android:theme="@style/Widget.aTrainingTracker.Toolbar.ToolBarStyle"
-            app:layout_scrollFlags="scroll|enterAlways"/>
+            android:layout_height="0dp"
+            android:background="@color/baby_blue_eyes" />
 
         <!-- Real content goes here -->
         <FrameLayout

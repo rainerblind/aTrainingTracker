@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.activities;
 
 import android.Manifest;
 
+import androidx.activity.EdgeToEdge;
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -61,7 +62,9 @@ import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.OnApplyWindowInsetsListener;
 import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
@@ -311,6 +314,8 @@ public class MainActivityWithNavigation
         super.onCreate(savedInstanceState);
         if (DEBUG) Log.d(TAG, "onCreate");
 
+        EdgeToEdge.enable(this);
+
         // some initialization
         mTrainingApplication = (TrainingApplication) getApplication();
         mHandler = new Handler();
@@ -321,17 +326,7 @@ public class MainActivityWithNavigation
         // now, create the UI
         setContentView(R.layout.main_activity_with_navigation);
 
-        Toolbar toolbar = findViewById(R.id.apps_toolbar);
-        setSupportActionBar(toolbar);
-
-        final ActionBar supportAB = getSupportActionBar();
-        // supportAB.setHomeAsUpIndicator(R.drawable.abc_ic_ab_back_mtrl_am_alpha);
-        supportAB.setDisplayHomeAsUpEnabled(true);
-
         mDrawerLayout = findViewById(R.id.drawer_layout);
-
-        ActionBarDrawerToggle actionBarDrawerToggle = new ActionBarDrawerToggle(this, mDrawerLayout, toolbar, R.string.TrainingTracker, R.string.TrainingTracker);
-        actionBarDrawerToggle.syncState();
 
         mNavigationView = findViewById(R.id.nav_view);
         mNavigationView.setItemIconTintList(null);  // avoid converting the icons to black and white or gray and white
@@ -402,6 +397,35 @@ public class MainActivityWithNavigation
                         return WindowInsetsCompat.CONSUMED;
                     }
                 });
+
+
+        final View statusBarSpacer = findViewById(R.id.status_bar_spacer);
+        final DrawerLayout drawerLayout = findViewById(R.id.drawer_layout);
+
+        ViewCompat.setOnApplyWindowInsetsListener(drawerLayout, (v, windowInsets) -> {
+            Insets systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+
+            // FORCE the layout to the very top of the screen
+            ViewGroup.MarginLayoutParams mlp = (ViewGroup.MarginLayoutParams) v.getLayoutParams();
+            mlp.topMargin = 0;
+            v.setLayoutParams(mlp);
+
+            // Set the spacer height to exactly the status bar height
+            ViewGroup.LayoutParams spacerLp = statusBarSpacer.getLayoutParams();
+            spacerLp.height = systemBars.top;
+            statusBarSpacer.setLayoutParams(spacerLp);
+
+            // Handle horizontal/bottom padding (for navigation bar and notches)
+            v.setPadding(systemBars.left, 0, systemBars.right, systemBars.bottom);
+
+            // Ensure the status bar icons are visible (Dark icons on Baby Blue)
+            WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+            if (controller != null) {
+                controller.setAppearanceLightStatusBars(true);
+            }
+
+            return windowInsets;
+        });
 
         getOnBackPressedDispatcher().addCallback(this,
                 new OnBackPressedCallback(true) {
