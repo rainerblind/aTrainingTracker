@@ -83,7 +83,7 @@ class TrackingTabsViewModel(
         )
 
     val trackingMode: LiveData<TrackingMode> = banalServiceRepository.trackingMode
-    val lapEvent: LiveData<LapEvent> = banalServiceRepository.lapEvent
+    val lapEvent: LiveData<LapEvent?> = banalServiceRepository.lapEvent
     fun clearLapEvent() = banalServiceRepository.clearLapEvent()
 
     val screenMode: StateFlow<ScreenMode> = trackingViewsRepository.screenMode
