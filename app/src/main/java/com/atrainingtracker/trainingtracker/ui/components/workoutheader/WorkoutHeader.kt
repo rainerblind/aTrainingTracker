@@ -86,7 +86,7 @@ fun WorkoutHeader(
                         if (data.trainer || data.commute) {
                             val label = when {
                                 data.commute -> stringResource(R.string.commute)
-                                else -> stringResource(R.string.trainer_general)
+                                else -> stringResource(data.bSportType.indoorEquipmentResId)
                             }
                             Text(
                                 text = label,
@@ -104,7 +104,7 @@ fun WorkoutHeader(
                     modifier = Modifier.padding(horizontal = 4.dp)
                 ) {
                     Image(
-                        painter = painterResource(id = getSportIcon(data.bSportType)),
+                        painter = painterResource(id = data.bSportType.iconResId),
                         contentDescription = null,
                         modifier = Modifier.size(48.dp),
                         colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onPrimary)
@@ -169,18 +169,6 @@ private fun IconTextRow(iconRes: Int, text: String) {
         )
     }
 }
-
-/**
- * Helper to resolve sport icons (Addressing your TODO)
- */
-private fun getSportIcon(bSportType: BSportType): Int {
-    return when (bSportType) {
-        BSportType.RUN -> R.drawable.bsport_run
-        BSportType.BIKE -> R.drawable.bsport_bike
-        else -> R.drawable.bsport_other
-    }
-}
-
 
 // --- PREVIEWS ---
 
