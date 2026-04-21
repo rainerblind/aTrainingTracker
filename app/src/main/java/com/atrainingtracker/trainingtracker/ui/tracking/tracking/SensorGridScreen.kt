@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -49,7 +50,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.segments.LiveSegment
 import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
-import com.atrainingtracker.trainingtracker.ui.map.MapViewModel
 import com.atrainingtracker.trainingtracker.ui.segments.LiveSegmentSheet
 import com.atrainingtracker.trainingtracker.ui.theme.Zone1
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
@@ -80,11 +80,12 @@ fun SensorGridScreen(
     gridActions: GridActions,
     currentLocationFlow: StateFlow<LatLng?>,
     liveSegments: StateFlow<List<LiveSegment>>,
-    mapViewModel: MapViewModel
 ) {
 
     val activeSegments by liveSegments.collectAsState()
     val activeSegment = activeSegments.firstOrNull()
+
+    val showLiveSegments = state.showLiveSegments && activeSegment != null
 
     // Control the sheet state
     val scaffoldState = rememberBottomSheetScaffoldState(
@@ -98,10 +99,10 @@ fun SensorGridScreen(
         scaffoldState = scaffoldState,
         sheetDragHandle = null, // Removes the large top spacer entirely
         // Only show sheet if we are in tracking mode and have an active segment
-        sheetPeekHeight = if (activeSegment != null && screenMode == ScreenMode.TRACKING) 170.dp else 0.dp,
-        sheetSwipeEnabled = activeSegment != null,
+        sheetPeekHeight = if (showLiveSegments && screenMode == ScreenMode.TRACKING) 170.dp else 0.dp,
+        sheetSwipeEnabled = showLiveSegments,
         sheetContent = {
-            if (activeSegment != null) {
+            if (showLiveSegments) {
                 LiveSegmentSheet(
                     liveSegment = activeSegment
                 )
@@ -112,73 +113,73 @@ fun SensorGridScreen(
             }
         }
     ) { paddingValues ->
-
-        Box(Modifier.fillMaxSize()) {
-            Column(Modifier.fillMaxSize()) {
+        // Use a Column as the main container for the content
+        // We do NOT apply the full paddingValues.bottom here because we want the
+        // Map to draw UNDER the bottom sheet for a modern look.
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = paddingValues.calculateTopPadding()) // Only pad the top
+        ) {
+            // 1. The Sensor Grid (Scrollable)
+            // This Column will only take as much space as the sensors need.
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 val fieldsByRow = state.fields.groupBy { it.rowNr }
                 val sortedRows = fieldsByRow.keys.sorted()
+                var maxRowNr = 0
 
-                Column(
+                sortedRows.forEach { rowNr ->
+                    maxRowNr = rowNr
+                    if (screenMode == ScreenMode.CONFIGURATION) {
+                        RowAdder(onClick = { gridActions.onAddRow(rowNr) })
+                    }
+
+                    val fieldsInThisRow = fieldsByRow[rowNr]?.sortedBy { it.colNr } ?: emptyList()
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.height(IntrinsicSize.Min)
+                    ) {
+                        var maxColNr = 0
+                        fieldsInThisRow.forEach { fieldState ->
+                            if (screenMode == ScreenMode.CONFIGURATION) {
+                                ColAdder(onClick = { gridActions.onAddCol(rowNr, fieldState.colNr) })
+                            }
+                            maxColNr = fieldState.colNr
+                            Box(modifier = Modifier.weight(1f)) {
+                                SensorFieldView(
+                                    fieldState = fieldState,
+                                    screenMode = screenMode,
+                                    onEdit = { gridActions.onEditField(fieldState) },
+                                    onDelete = { gridActions.onDeleteField(fieldState) }
+                                )
+                            }
+                        }
+                        if (screenMode == ScreenMode.CONFIGURATION) {
+                            ColAdder(onClick = { gridActions.onAddCol(rowNr, maxColNr + 1) })
+                        }
+                    }
+                }
+                if (screenMode == ScreenMode.CONFIGURATION) {
+                    RowAdder(onClick = { gridActions.onAddRow(maxRowNr + 1) })
+                }
+            }
+
+            // 2. The Map (Expanded)
+            // By using weight(1f) here, the Map will fill every pixel between
+            // the bottom of the sensors and the bottom of the screen.
+            if (state.showMap) {
+                ATrainingTrackerMap(
+                    mapState = state.mapState,
+                    currentLocationFlow = currentLocationFlow,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .verticalScroll(rememberScrollState()),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    var maxRowNr = 0
-                    sortedRows.forEach { rowNr ->
-                        maxRowNr = rowNr
-                        // --- ADD field BETWEEN ROWS ---
-                        if (screenMode == ScreenMode.CONFIGURATION) {
-                            RowAdder(onClick = { gridActions.onAddRow(rowNr) })
-                        }
-
-                        val fieldsInThisRow =
-                            fieldsByRow[rowNr]?.sortedBy { it.colNr } ?: emptyList()
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.height(IntrinsicSize.Min)
-                        ) {
-                            var maxColNr = 0
-                            fieldsInThisRow.forEach { fieldState ->
-                                if (screenMode == ScreenMode.CONFIGURATION) {
-                                    ColAdder(onClick = {
-                                        gridActions.onAddCol(
-                                            rowNr,
-                                            fieldState.colNr
-                                        )
-                                    })
-                                }
-                                maxColNr = fieldState.colNr
-                                Box(modifier = Modifier.weight(1f)) {
-                                    SensorFieldView(
-                                        fieldState = fieldState,
-                                        screenMode = screenMode,
-                                        onEdit = { gridActions.onEditField(fieldState) },
-                                        onDelete = { gridActions.onDeleteField(fieldState) }
-                                    )
-                                }
-                            }
-                            if (screenMode == ScreenMode.CONFIGURATION) {
-                                ColAdder(onClick = { gridActions.onAddCol(rowNr, maxColNr + 1) })
-                            }
-                        }
-                    }
-                    if (screenMode == ScreenMode.CONFIGURATION) {
-                        RowAdder(onClick = { gridActions.onAddRow(maxRowNr + 1) })
-                    }
-                }
-
-                // Conditionally display the map
-                if (state.showMap) {
-                    ATrainingTrackerMap(
-                        mapState = state.mapState,
-                        mapViewModel = mapViewModel,
-                        currentLocationFlow = currentLocationFlow,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                    )
-                }
+                        .weight(1f) // Fills remaining space
+                )
             }
         }
     }
@@ -217,7 +218,6 @@ val dummySegmentsFlow = kotlinx.coroutines.flow.MutableStateFlow<List<LiveSegmen
 @Composable
 fun SensorGridScreenConfigPreview() {
     val context = LocalContext.current
-    val previewMapViewModel = MapViewModel(context.applicationContext as Application)
     ATrainingTrackerTheme {
         val previewFields = listOf(
             SensorFieldState(configHash = 1, sensorFieldId = 1, rowNr = 0, colNr = 0, viewSize = ViewSize.NORMAL, label = "Pace", value = "5:31", units = "/min", zoneColor = LightBackground, filterDescription = "GPS: 5s avg"),
@@ -235,8 +235,7 @@ fun SensorGridScreenConfigPreview() {
             screenMode = ScreenMode.CONFIGURATION,
             gridActions = mockActions,
             currentLocationFlow = dummyLocationFlow,
-            liveSegments = dummySegmentsFlow,
-            mapViewModel = previewMapViewModel
+            liveSegments = dummySegmentsFlow
         )
     }
 }
@@ -246,7 +245,6 @@ fun SensorGridScreenConfigPreview() {
 @Composable
 fun SensorGridScreenTrackingPreview() {
     val context = LocalContext.current
-    val previewMapViewModel = MapViewModel(context.applicationContext as Application)
     ATrainingTrackerTheme {
         val previewFields = listOf(
             SensorFieldState(configHash = 1, sensorFieldId = 1, rowNr = 0, colNr = 0, viewSize = ViewSize.LARGE, label = "Pace", value = "5:31", units = "/min", zoneColor = LightBackground, filterDescription = "GPS: 5s avg"),
@@ -264,8 +262,7 @@ fun SensorGridScreenTrackingPreview() {
             screenMode = ScreenMode.TRACKING,
             gridActions = mockActions,
             currentLocationFlow = dummyLocationFlow,
-            liveSegments = dummySegmentsFlow,
-            previewMapViewModel
+            liveSegments = dummySegmentsFlow
         )
     }
 }

@@ -24,14 +24,19 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.constraintlayout.widget.ConstraintLayout
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
@@ -40,6 +45,7 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutH
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderViewHolder
 import com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModel
 import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
+import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -84,16 +90,35 @@ class TrackOnMapAftermathActivity : AppCompatActivity() {
             ATrainingTrackerTheme {
                 // Observe the MapState from the ViewModel
                 val mapState by viewModel.aftermathState.collectAsState()
-
                 // For aftermath, we don't have a live location flow
                 val noLocation = remember { MutableStateFlow<LatLng?>(null) }
 
-                ATrainingTrackerMap(
-                    mapState = mapState,
-                    mapViewModel = viewModel,
-                    currentLocationFlow = noLocation,
-                    modifier = Modifier.fillMaxSize()
-                )
+                var selectedDistance by remember { mutableStateOf<Double?>(null) }
+
+                Column(modifier = Modifier.fillMaxSize()) {
+                    // The Map takes the top 70% of the screen
+                    ATrainingTrackerMap(
+                        mapState = mapState,
+                        currentLocationFlow = noLocation,
+                        selectedDistance = selectedDistance,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(0.75f) // Adjust this ratio as needed
+                    )
+
+                    // The Elevation Profile takes the bottom 30%
+                    // We extract the track points from the mapState
+                    ElevationProfile(
+                        pathPoints = mapState.tracks.firstOrNull()?.path ?: emptyList(),                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(0.25f),
+                        currentDistance = selectedDistance,
+                        // Callback when the user slides their finger
+                        onDistanceSelected = { dist ->
+                            selectedDistance = dist
+                        }
+                    )
+                }
             }
         }
 

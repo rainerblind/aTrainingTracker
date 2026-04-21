@@ -24,16 +24,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.atrainingtracker.trainingtracker.segments.LiveSegment
-import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
-import com.atrainingtracker.trainingtracker.ui.map.MapState
-import com.atrainingtracker.trainingtracker.ui.map.MapViewModel
-import com.google.android.gms.maps.model.LatLng
-import kotlinx.coroutines.flow.StateFlow
 
 
 @Composable
@@ -43,7 +36,7 @@ fun LiveSegmentSheet(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .fillMaxHeight(0.5f)
+            //.fillMaxHeight(0.5f)
             .background(MaterialTheme.colorScheme.surface)
     ) {
         // --- Drag Handle (The horizontal line) ---
@@ -72,6 +65,7 @@ fun LiveSegmentSheet(
             // Pass the raw distance double to the profile for the progress marker
             currentDistance = liveSegment.liveData.distanceOnSegment_raw,
             modifier = Modifier
+                .height(150.dp)
                 .fillMaxWidth()
         )
     }

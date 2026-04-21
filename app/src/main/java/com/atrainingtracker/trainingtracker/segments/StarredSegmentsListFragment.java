@@ -24,6 +24,8 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
@@ -32,6 +34,7 @@ import androidx.cursoradapter.widget.CursorAdapter;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -58,7 +61,6 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
     protected SQLiteDatabase mDb;
     protected Cursor mStarredSegmentsCursor;
     protected CursorAdapter mStarredSegmentsCursorAdapter;
-    protected ListView mListView;
     protected long mSportTypeId;
     protected StravaSegmentsHelper mStravaSegmentsHelper;
     protected StartSegmentDetailsActivityInterface startSegmentDetailsActivityInterface;
@@ -169,8 +171,6 @@ public class StarredSegmentsListFragment extends SwipeRefreshListFragment {
             }
         });
         setListAdapter(mStarredSegmentsCursorAdapter);
-
-        mListView = getListView();
 
         setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override

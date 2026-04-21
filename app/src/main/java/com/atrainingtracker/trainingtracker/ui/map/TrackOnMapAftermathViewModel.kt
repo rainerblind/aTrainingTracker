@@ -19,9 +19,11 @@
 package com.atrainingtracker.trainingtracker.ui.map
 
 import android.app.Application
-import android.util.Log
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.application
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.database.ExtremaType
@@ -35,7 +37,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class TrackOnMapAftermathViewModel(application: Application) : MapViewModel(application) {
+class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _aftermathState = MutableStateFlow(MapState(isFollowMeEnabled = false))
     val aftermathState = _aftermathState.asStateFlow()
@@ -55,21 +57,25 @@ class TrackOnMapAftermathViewModel(application: Application) : MapViewModel(appl
         viewModelScope.launch(Dispatchers.IO) {
             val baseFileName = summariesDb.getBaseFileName(workoutId) ?: return@launch
 
-            // 1. Load Tracks
+            // Get the Sport Type
+            val workout = workoutRepository.getWorkoutById(workoutId).value
+            val bSportType = workout?.sportData?.bSportType ?: BSportType.UNKNOWN
+
+            // Load Track
             val trackList = TrackType.entries.mapNotNull { type ->
                 val path = workoutRepository.getWorkoutTrackPoints(workoutId, Roughness.ALL, type)
                 if (path.isNotEmpty()) MapTrack(id = type.ordinal.toLong(), type = type, path = path) else null
             }
 
-            // 2. Load Markers
+            // Load Markers
             val markerList = mutableListOf<LocationMarker>()
 
             // Start/Stop Markers
             getExtremaPos(workoutId, baseFileName, ExtremaType.START)?.let {
-                markerList.add(LocationMarker(it, R.drawable.control_start, getApplication<Application>().getString(R.string.Start)))
+                markerList.add(LocationMarker(it, R.drawable.control_start, application.getString(R.string.Start)))
             }
             getExtremaPos(workoutId, baseFileName, ExtremaType.END)?.let {
-                markerList.add(LocationMarker(it, R.drawable.control_stop, getApplication<Application>().getString(R.string.Stop)))
+                markerList.add(LocationMarker(it, R.drawable.control_stop, application.getString(R.string.Stop)))
             }
 
             // Sensor Extrema (MAX for all, MIN for specific sensors)
@@ -87,7 +93,8 @@ class TrackOnMapAftermathViewModel(application: Application) : MapViewModel(appl
                 _aftermathState.value = _aftermathState.value.copy(
                     tracks = trackList,
                     markers = markerList,
-                    isFollowMeEnabled = false
+                    isFollowMeEnabled = false,
+                    bSportType = bSportType
                 )
             }
         }
@@ -104,12 +111,12 @@ class TrackOnMapAftermathViewModel(application: Application) : MapViewModel(appl
     ) {
         val extrema = samplesDb.getExtremaPosition(summariesDb, workoutId, sensor, type)
         extrema?.let {
-            val title = getApplication<Application>().getString(
+            val title = application.getString(
                 R.string.location_extrema_format,
                 type.name, // Will be "MAX" or "MIN"
-                sensor.getFullName(getApplication()),
+                sensor.getFullName(application),
                 sensor.myFormatter.format(it.value),
-                getApplication<Application>().getString(MyHelper.getShortUnitsId(sensor))
+                application.getString(MyHelper.getShortUnitsId(sensor))
             )
             markerList.add(LocationMarker(it.latLng, getExtremaIcon(sensor, type), title))
         }

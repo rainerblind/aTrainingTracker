@@ -60,6 +60,7 @@ import java.util.Objects
  */
 data class TrackingScreenState(
     val showMap: Boolean = false,
+    val showLiveSegments: Boolean = false,
     val fields: List<SensorFieldState> = emptyList(),
     val mapState: MapState = MapState()
 )
@@ -221,6 +222,7 @@ class TrackingViewModel(
                 TrackingScreenState(
                     fields = finalFields,
                     showMap = viewInfo?.showMap ?: false,
+                    showLiveSegments =  viewInfo?.showLiveSegments ?: false,
                     mapState = MapState(
                         speed = banalServiceRepository.currentSpeed.value?.toFloat() ?: 0f,
                         bearing = banalServiceRepository.currentBearing.value?.toFloat() ?: 0f,

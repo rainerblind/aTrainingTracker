@@ -29,6 +29,7 @@ import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
 
+import com.atrainingtracker.BuildConfig;
 import com.atrainingtracker.banalservice.devices.DeviceManager;
 import com.atrainingtracker.banalservice.devices.DeviceType;
 import com.atrainingtracker.banalservice.devices.MyDevice;
@@ -60,7 +61,7 @@ import javax.annotation.Nullable;
 
 public class BANALService
         extends Service {
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = BuildConfig.DEBUG;
 
     /**
      * the Log TAG

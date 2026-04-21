@@ -142,8 +142,8 @@ class BANALServiceRepository private constructor(private val context: Context) {
     }
 
     // -- Lap Event
-    private val _lapEvent = SingleLiveEvent<LapEvent>()
-    val lapEvent: LiveData<LapEvent> = _lapEvent
+    private val _lapEvent = SingleLiveEvent<LapEvent?>()
+    val lapEvent: LiveData<LapEvent?> = _lapEvent
 
     // the receiver for Lap Summary Event
     private val lapSummaryReceiver = object : BroadcastReceiver() {
@@ -159,6 +159,10 @@ class BANALServiceRepository private constructor(private val context: Context) {
                 _lapEvent.postValue(lapEvent)
             }
         }
+    }
+
+    fun clearLapEvent() {
+        _lapEvent.value = null
     }
 
 

@@ -47,6 +47,7 @@ import androidx.work.WorkManager;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.atrainingtracker.BuildConfig;
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.BSportType;
@@ -79,7 +80,7 @@ import java.util.Locale;
 import java.util.Set;
 
 public class TrainingApplication extends Application {
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = BuildConfig.DEBUG;
     // some Strings to handle tracking globally
     public static final String REQUEST_START_TRACKING = "com.atrainingtracker.trainingapplication.REQUEST_START_TRACKING";
     public static final String REQUEST_PAUSE_TRACKING = "com.atrainingtracker.trainingapplication.REQUEST_PAUSE_TRACKING";

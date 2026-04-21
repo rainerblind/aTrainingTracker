@@ -83,7 +83,8 @@ class TrackingTabsViewModel(
         )
 
     val trackingMode: LiveData<TrackingMode> = banalServiceRepository.trackingMode
-    val lapEvent: LiveData<LapEvent> = banalServiceRepository.lapEvent
+    val lapEvent: LiveData<LapEvent?> = banalServiceRepository.lapEvent
+    fun clearLapEvent() = banalServiceRepository.clearLapEvent()
 
     val screenMode: StateFlow<ScreenMode> = trackingViewsRepository.screenMode
 
@@ -124,8 +125,14 @@ class TrackingTabsViewModel(
         _explicitActivityType.value = type
     }
 
+    fun setScreenMode(mode: ScreenMode) = trackingViewsRepository.setScreenMode(mode)
+
     fun toggleScreenMode() {
-        trackingViewsRepository.toggleScreenMode()
+        when (screenMode.value) {
+            ScreenMode.TRACKING -> trackingViewsRepository.setScreenMode(ScreenMode.CONFIGURATION)  // Should never ever happen.
+            ScreenMode.CONFIGURATION -> trackingViewsRepository.setScreenMode(ScreenMode.PREVIEW)
+            ScreenMode.PREVIEW -> trackingViewsRepository.setScreenMode(ScreenMode.CONFIGURATION)
+        }
     }
 
     fun onUpdateTabName(tabViewId: Long, newName: String) {

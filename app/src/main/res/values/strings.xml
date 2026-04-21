@@ -1081,4 +1081,9 @@
     <string name="ant_missing_dependency_title">Missing Dependency</string>
     <string name="ant_missing_dependency_message">The required application\n\"%1$s\"\n is not installed. Do you want to launch the Play Store to search for it?</string>
     <string name="go_to_store">Go to Play Store</string>
+
+    <!-- Tracking -->
+    <string name="Done">Done</string>
+    <string name="Edit">Edit</string>
+
 </resources>

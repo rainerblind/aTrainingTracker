@@ -22,7 +22,11 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.view.ViewGroup
+import android.graphics.Paint
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffColorFilter
+import android.graphics.Typeface
+import android.location.Location
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -37,40 +41,43 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.createBitmap
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.model.BitmapDescriptor
-import com.google.android.gms.maps.model.BitmapDescriptorFactory
-import com.google.android.gms.maps.model.CameraPosition
-import com.google.android.gms.maps.model.JointType
-import com.google.android.gms.maps.model.LatLng
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.activities.SegmentDetailsActivity
 import com.atrainingtracker.trainingtracker.segments.SegmentHelper
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.theme.StravaOrange
-import com.google.android.gms.maps.GoogleMap
+import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.BitmapDescriptor
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.JointType
+import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
-import com.google.android.gms.maps.model.Marker
-import com.google.android.gms.maps.model.MarkerOptions
-import com.google.android.gms.maps.model.Polyline
-import com.google.android.gms.maps.model.PolylineOptions
+import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapProperties
+import com.google.maps.android.compose.MapType
+import com.google.maps.android.compose.MapUiSettings
+import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.MarkerState
+import com.google.maps.android.compose.Polyline
+import com.google.maps.android.compose.rememberCameraPositionState
 import kotlinx.coroutines.flow.StateFlow
-
 
 
 @Composable
 fun ATrainingTrackerMap(
     mapState: MapState,
-    mapViewModel: MapViewModel,
     currentLocationFlow: StateFlow<LatLng?>,
+    selectedDistance: Double? = null,
     modifier: Modifier = Modifier,
     onMapClick: (() -> Unit)? = null
 ) {
@@ -78,12 +85,18 @@ fun ATrainingTrackerMap(
     val currentLocation by currentLocationFlow.collectAsStateWithLifecycle()
     val primaryColor = MaterialTheme.colorScheme.primary
 
+    //  Camera State management
+    val cameraPositionState = rememberCameraPositionState()
+
     // Cache the locationIcon bitmap
     var locationIcon by remember { mutableStateOf<BitmapDescriptor?>(null) }
     var directionIconSmall by remember { mutableStateOf<BitmapDescriptor?>(null) }
     var directionIconMed by remember { mutableStateOf<BitmapDescriptor?>(null) }
     var directionIconLarge by remember { mutableStateOf<BitmapDescriptor?>(null) }
     var currentZoomState by remember { mutableFloatStateOf(0f) }
+
+    var scrubIconRight by remember { mutableStateOf<BitmapDescriptor?>(null) }
+    var scrubIconLeft by remember { mutableStateOf<BitmapDescriptor?>(null) }
 
     // Initialize icons inside LaunchedEffect (Safe from IBitmapDescriptorFactory error)
     LaunchedEffect(primaryColor) {
@@ -94,6 +107,19 @@ fun ATrainingTrackerMap(
         directionIconLarge = bitmapDescriptorFromVectorInternal(context, R.drawable.ic_navigation_arrow, 22, primaryColor)
     }
 
+    LaunchedEffect(mapState.bSportType) {
+        // Map sport type to drawable
+        val iconRes = when (mapState.bSportType) {
+            BSportType.RUN -> R.drawable.bsport_run
+            BSportType.BIKE -> R.drawable.bsport_bike
+            else -> -1
+        }
+
+        // Pre-calculate both versions
+        scrubIconRight = vectorToBitmap(context, iconRes, 32, false, primaryColor)
+        scrubIconLeft = vectorToBitmap(context, iconRes, 32, true, primaryColor)
+    }
+
     // Prevents Render Issues in Android Studio Preview
     if (LocalInspectionMode.current) {
         Box(modifier = modifier.background(Color.LightGray), contentAlignment = Alignment.Center) {
@@ -102,207 +128,237 @@ fun ATrainingTrackerMap(
         return
     }
 
-    // Only trigger this if we are NOT in "Follow Me" mode (e.g., Aftermath screen)
-    LaunchedEffect(mapState.tracks, mapState.markers, mapState.segments) {
-        if (!mapState.isFollowMeEnabled &&
-            (mapState.tracks.isNotEmpty() || mapState.markers.isNotEmpty() || mapState.segments.isNotEmpty())) {
+    // Automated Bounds Fitting (Optimized for Local Area)
+    LaunchedEffect(mapState.tracks, mapState.markers, mapState.segments, mapState.isFollowMeEnabled, currentLocation) {
+        if (!mapState.isFollowMeEnabled) {
+            val userPos = currentLocation
+            val builder = LatLngBounds.Builder()
+            var hasPoints = false
 
-            mapViewModel.sharedMapView.getMapAsync { googleMap ->
-                val builder = LatLngBounds.Builder()
-                var hasPoints = false
+            // Limit for "Local" content
+            val maxDistanceMeters = 1000.0  // 1 km
 
-                // 1. Include all points from all tracks
-                mapState.tracks.forEach { track ->
-                    track.path.forEach {
-                        builder.include(it.latLng)
-                        hasPoints = true
-                    }
+            fun isLocal(target: LatLng): Boolean {
+                if (userPos == null) return true // If we don't know where user is, include everything
+                val results = FloatArray(1)
+                Location.distanceBetween(
+                    userPos.latitude, userPos.longitude,
+                    target.latitude, target.longitude,
+                    results
+                )
+                return results[0] < maxDistanceMeters
+            }
+
+            // 1. Include all track points
+            mapState.tracks.forEach { track ->
+                track.path.forEach { builder.include(it.latLng); hasPoints = true }
+            }
+
+            // 2. Include only local segment points
+            mapState.segments.forEach { segment ->
+                segment.path.forEach { if (isLocal(it.latLng)) { builder.include(it.latLng); hasPoints = true } }
+            }
+
+            // 3. Include all sensor markers
+            mapState.markers.forEach { marker -> builder.include(marker.position); hasPoints = true }
+
+            if (hasPoints) {
+                // Fit to the local cluster of data
+                val padding = (40 * context.resources.displayMetrics.density).toInt()
+                try {
+                    cameraPositionState.move(CameraUpdateFactory.newLatLngBounds(builder.build(), padding))
+                } catch (e: IllegalStateException) {
+                    // Map not laid out yet
                 }
-
-                // 2. Include all points from all segments (this fits the start/finish lines too)
-                mapState.segments.forEach { segment ->
-                    segment.path.forEach {
-                        builder.include(it.latLng)
-                        hasPoints = true
-                    }
-                }
-
-                // 3. Include all sensor marker positions
-                mapState.markers.forEach { marker ->
-                    builder.include(marker.position)
-                    hasPoints = true
-                }
-
-                if (hasPoints) {
-                    try {
-                        val bounds = builder.build()
-                        val padding = (25 * context.resources.displayMetrics.density).toInt()
-                        googleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, padding))
-                    } catch (e: IllegalStateException) {
-                        // Handle case where bounds couldn't be built
-                    }
-                }
+            } else if (userPos != null) {
+                // If no points are there, just zoom to the user's current city/area
+                cameraPositionState.move(
+                    CameraUpdateFactory.newLatLngZoom(userPos, 12f)
+                )
             }
         }
     }
 
+    // Follow Me Logic
     LaunchedEffect(currentLocation, mapState.bearing, mapState.speed) {
+        if (mapState.isFollowMeEnabled && currentLocation != null) {
+            val targetZoom = (20f - 0.1f * mapState.speed).coerceIn(14f, 20f)
+            cameraPositionState.animate(
+                CameraUpdateFactory.newCameraPosition(
+                    CameraPosition.builder()
+                        .target(currentLocation!!)
+                        .bearing(mapState.bearing)
+                        .zoom(targetZoom)
+                        .tilt(70f)
+                        .build()
+                ),
+                400,
+            )
+        }
+    }
 
-        mapViewModel.sharedMapView.getMapAsync { googleMap ->
-            googleMap.setOnCameraMoveListener {
-                currentZoomState = googleMap.cameraPosition.zoom
-            }
+    // --- Auto-center Map on Scrubber Icon ---
+    LaunchedEffect(selectedDistance) {
+        selectedDistance?.let { targetDist ->
+            // Find the point associated with the distance
+            val activePath = if (mapState.tracks.isNotEmpty()) {
+                mapState.tracks.firstOrNull()?.path
+            } else {
+                mapState.segments.firstOrNull()?.path
+            } ?: emptyList()
 
-            if (currentLocation != null) {
-                // SNAP to position if it's the very first time
-                if (!mapViewModel.isInitialPositionSet) {
-                    googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation!!, 16f))
-                    mapViewModel.isInitialPositionSet = true
-                }
+            val scrubPoint = activePath.find { it.distance >= targetDist }
 
-                if (mapState.isFollowMeEnabled && currentLocation != null) {
-                    val targetZoom = (20f - 0.1f * mapState.speed).coerceIn(14f, 20f)
+            scrubPoint?.let { point ->
+                /*
+                // Option A: Always center (Smooth tracking)
+                cameraPositionState.animate(
+                    CameraUpdateFactory.newLatLng(point.latLng),
+                    200 // Fast animation for responsiveness
+                )
+                 */
 
-                    googleMap.animateCamera(
-                        CameraUpdateFactory.newCameraPosition(
-                            CameraPosition.builder()
-                                .target(currentLocation!!)
-                                .bearing(mapState.bearing)
-                                .zoom(targetZoom)
-                                .tilt(70f)
-                                .build()
-                        ),
-                        400, // Reduced duration for snappier response
-                        null
+                // Option B: Smart Margin centering
+                val projection = cameraPositionState.projection
+                val bounds = projection?.visibleRegion?.latLngBounds
+
+                if (bounds != null) {
+                    // Define a 2% margin padding
+                    val latPadding = (bounds.northeast.latitude - bounds.southwest.latitude) * 0.2
+                    val lngPadding = (bounds.northeast.longitude - bounds.southwest.longitude) * 0.2
+
+                    val safeBounds = LatLngBounds(
+                        LatLng(bounds.southwest.latitude + latPadding, bounds.southwest.longitude + lngPadding),
+                        LatLng(bounds.northeast.latitude - latPadding, bounds.northeast.longitude - lngPadding)
                     )
+
+                    // If the icon is outside the 20% safety margin, center it
+                    if (!safeBounds.contains(point.latLng)) {
+                        cameraPositionState.animate(
+                            CameraUpdateFactory.newLatLng(point.latLng),
+                            300
+                        )
+                    }
                 }
             }
         }
     }
 
-    // THE SINGLETON MAP LOGIC:
-    // Instead of GoogleMap {}, we use AndroidView to "plug in" the shared MapView instance.
-    AndroidView(
+    // THE MAP
+    GoogleMap(
         modifier = modifier,
-        factory = {
-            val mapView = mapViewModel.sharedMapView
-            (mapView.parent as? ViewGroup)?.removeView(mapView)
-            mapView
-        },
-        update = { mapView ->
-            // 3. Only draw if the icons are actually ready
-            val currentLocIcon = locationIcon ?: return@AndroidView
+        cameraPositionState = cameraPositionState,
+        onMapClick = { onMapClick?.invoke() },
+        properties = MapProperties(mapType = MapType.TERRAIN),
+        uiSettings = MapUiSettings(zoomControlsEnabled = false, tiltGesturesEnabled = true)
+    ) {
+        // --- Layer 1: Segments ---
+        mapState.segments.forEach { segment ->
+            SegmentLayer(
+                segment = segment,
+                isLive = mapState.activeLiveSegmentIds.contains(segment.id),
+                isFollowMeEnabled = mapState.isFollowMeEnabled,
+                currentZoom = cameraPositionState.position.zoom,
+                context = context,
+                icons = Triple(directionIconSmall, directionIconMed, directionIconLarge)
+            )
+        }
 
-            val zoomInt = currentZoomState.toInt()
-
-            mapView.getMapAsync { googleMap ->
-                googleMap.setOnMapClickListener {
-                    onMapClick?.invoke()
-                }
-
-                val currentDataHash = mapState.segments.hashCode() +
-                        mapState.markers.hashCode() +
-                        mapState.activeLiveSegmentIds.hashCode() +
-                        mapState.isFollowMeEnabled.hashCode() +
-                        zoomInt
-
-                if (mapViewModel.staticDataHash != currentDataHash) {
-                    // MANUALLY REMOVE EVERYTHING
-                    mapViewModel.activeSegmentMarkers.forEach { it.remove() }
-                    mapViewModel.activeSegmentMarkers.clear()
-
-                    mapViewModel.activeSegmentPolylines.forEach { it.remove() }
-                    mapViewModel.activeSegmentPolylines.clear()
-
-                    // still call googleMap.clear()
-                    googleMap.clear()                        // TODO: Unfortunately, this clear does not always remove all markers...
-
-                    mapViewModel.userMarker = null
-                    mapViewModel.trackPolyline = null
-
-                    drawSegments(
-                        googleMap,
-                        mapState.segments,
-                        activeLiveSegmentIds = mapState.activeLiveSegmentIds,
-                        isFollowMeEnabled = mapState.isFollowMeEnabled,
-                        context,
-                        mapViewModel.activeSegmentMarkers,   // Pass list to store new markers
-                        mapViewModel.activeSegmentPolylines,
-                        directionIconSmall,
-                        directionIconMed,
-                        directionIconLarge
-                    )
-
-                    mapState.markers.forEach { markerData ->
-                        // Convert Vector to Bitmap if needed
-                        val icon = createSensorMarker(
-                            context = context,
-                            iconResId = markerData.iconResId,
-                            pinColor = primaryColor, // The teardrop is your primary color
-                            iconColor = Color.White   // The sensor icon is white
-                        )
-
-                        googleMap.addMarker(MarkerOptions()
-                            .position(markerData.position)
-                            .icon(icon) // Use the converted Bitmap
-                            .title(markerData.title)
-                            .rotation(markerData.rotation)
-                            .flat(markerData.flat)
-                            //.anchor(markerData.anchor.x, markerData.anchor.y)
-                        )
-                    }
-
-                    mapViewModel.staticDataHash = currentDataHash
-                }
-
-                mapState.tracks.forEach { track ->
-                    if (track.isVisible && track.path.isNotEmpty()) {
-                        googleMap.addPolyline(PolylineOptions()
-                            .addAll( track.path.map { it.latLng} )
-                            .color(track.color.toArgb())
-                            .zIndex(track.zIndex)
-                            .width(5f)
-                        )
-                    }
-                }
-
-                // --- LAYER 2: SEMI-DYNAMIC (The Track) ---
-                if (mapState.currentTrack.isNotEmpty()) {
-                    val trackLine = mapViewModel.trackPolyline
-                    if (trackLine == null) {
-                        mapViewModel.trackPolyline = googleMap.addPolyline(
-                            PolylineOptions()
-                                .addAll(mapState.currentTrack)
-                                .color(Color.Blue.toArgb())
-                                .width(10f)
-                                .jointType(JointType.ROUND)
-                        )
-                    } else {
-                        trackLine.points = mapState.currentTrack
-                    }
-                }
-
-                // --- LAYER 3: DYNAMIC (User Location) ---
-                currentLocation?.let { loc ->
-                    val marker = mapViewModel.userMarker
-                    if (marker == null) {
-                        mapViewModel.userMarker = googleMap.addMarker(
-                            MarkerOptions()
-                                .position(loc)
-                                .icon(currentLocIcon) // Use local ready icon
-                                .rotation(mapState.bearing)
-                                .flat(true)
-                                .anchor(0.5f, 0.5f)
-                                .zIndex(2.0f)
-                        )
-                    } else {
-                        marker.position = loc
-                        marker.rotation = mapState.bearing
-                    }
-                }
+        mapState.tracks.forEach { track ->
+            if (track.isVisible) {
+                Polyline(
+                    points = track.path.map { it.latLng },
+                    color = track.color,
+                    width = 5f
+                )
             }
         }
-    )
+
+        // show a marker for the selected distance
+        selectedDistance?.let { targetDist ->
+            // 1. Identify the active path (either from tracks or segments)
+            val activePath = if (mapState.tracks.isNotEmpty()) {
+                mapState.tracks.firstOrNull()?.path
+            } else {
+                mapState.segments.firstOrNull()?.path
+            } ?: emptyList()
+
+            val index = activePath.indexOfFirst { it.distance >= targetDist }
+
+            if (index != -1) {
+                val point = activePath[index]
+
+                // Determine direction by looking for the next point with a different longitude
+                val isWestbound = run {
+                    // 1. Look forward for the first point that actually moves East or West
+                    val nextSignificantPoint = activePath.drop(index + 1).firstOrNull {
+                        it.latLng.longitude != point.latLng.longitude
+                    }
+
+                    if (nextSignificantPoint != null) {
+                        nextSignificantPoint.latLng.longitude < point.latLng.longitude
+                    } else {
+                        // 2. If we are at the end of the track, look backward to see which way we were moving
+                        val prevSignificantPoint = activePath.take(index).lastOrNull {
+                            it.latLng.longitude != point.latLng.longitude
+                        }
+                        if (prevSignificantPoint != null) {
+                            point.latLng.longitude < prevSignificantPoint.latLng.longitude
+                        } else {
+                            false // Default to East if the entire track is perfectly vertical
+                        }
+                    }
+                }
+
+                Marker(
+                    state = MarkerState(position = point.latLng),
+                    // Switch icon based on movement direction
+                    icon = if (isWestbound) scrubIconLeft else scrubIconRight,
+                    // anchor = Offset(0.5f, 0.5f), // Center silhouette on the line
+                    zIndex = 5.0f,
+                    flat = true
+                )
+            }
+        }
+
+
+        // --- Layer 2: Sensor Markers ---
+        mapState.markers.forEach { markerData ->
+            val icon = remember(markerData.iconResId, primaryColor) {
+                createSensorMarker(context, markerData.iconResId, primaryColor, Color.White)
+            }
+            Marker(
+                state = MarkerState(position = markerData.position),
+                icon = icon,
+                title = markerData.title,
+                rotation = markerData.rotation,
+                flat = markerData.flat,
+                anchor = markerData.anchor
+            )
+        }
+
+
+        // --- Layer 3: Live Session Track ---
+        if (mapState.currentTrack.isNotEmpty()) {
+            Polyline(
+                points = mapState.currentTrack,
+                color = Color.Blue,
+                width = 10f,
+                jointType = JointType.ROUND
+            )
+        }
+        // --- Layer 4: User Location ---
+        currentLocation?.let { loc ->
+            Marker(
+                state = MarkerState(position = loc),
+                icon = locationIcon,
+                rotation = mapState.bearing,
+                flat = true,
+                anchor = Offset(0.5f, 0.5f),
+                zIndex = 2.0f
+            )
+        }
+    }
 }
 
 fun createSensorMarker(
@@ -341,127 +397,100 @@ fun createSensorMarker(
     return BitmapDescriptorFactory.fromBitmap(bitmap)
 }
 
-private fun drawSegments(
-    googleMap: GoogleMap,
-    segments: List<MapSegment>,
-    activeLiveSegmentIds: Set<Long>,
+@Composable
+private fun SegmentLayer(
+    segment: MapSegment,
+    isLive: Boolean,
     isFollowMeEnabled: Boolean,
+    currentZoom: Float,
     context: Context,
-    markerList: MutableList<Marker>,
-    polylineList: MutableList<Polyline>,
-    directionSmall: BitmapDescriptor?, directionMed: BitmapDescriptor?, directionLarge: BitmapDescriptor?
+    icons: Triple<BitmapDescriptor?, BitmapDescriptor?, BitmapDescriptor?>
 ) {
-    googleMap.uiSettings.isZoomControlsEnabled = false
-    val currentZoom = googleMap.cameraPosition.zoom
+    val alpha = if (!isFollowMeEnabled || isLive) 1.0f else 0.3f
+    val strokeWidth = if (isLive && isFollowMeEnabled) 12f else 8f
+    val zIndex = if (isLive && isFollowMeEnabled) 1.0f else 0.0f
+    val segmentColor = StravaOrange.copy(alpha = alpha)
 
-    // TODO: Don't start the activity from there.  This should be done by the fragment/viewModel instaead?
-    googleMap.setOnPolylineClickListener { polyline ->
-        val segmentId = polyline.tag as? Long
-        if (segmentId != null) {
-            val intent = Intent(context, SegmentDetailsActivity::class.java)
-            intent.putExtra(SegmentsDatabaseManager.Segments.STRAVA_SEGMENT_ID, segmentId)
+    // 1. Main Segment Path
+    Polyline(
+        points = segment.path.map { it.latLng },
+        color = segmentColor,
+        width = strokeWidth,
+        zIndex = zIndex,
+        clickable = true,
+        onClick = {
+            val intent = Intent(context, SegmentDetailsActivity::class.java).apply {
+                putExtra(SegmentsDatabaseManager.Segments.STRAVA_SEGMENT_ID, segment.id)
+            }
             context.startActivity(intent)
+        }
+    )
+
+    // 2. Direction Arrows (Performance check: only at high zoom or if Live)
+    if (isLive || currentZoom > 15f) {
+        val arrowIcon = when {
+            currentZoom > 17f -> icons.third
+            currentZoom > 15.5f -> icons.second
+            else -> icons.first
+        }
+
+        // windowed(2, 20) mimics your skip-logic for performance
+        segment.path.windowed(2, 20).forEach { pair ->
+            val midPos = LatLng(
+                (pair[0].latLng.latitude + pair[1].latLng.latitude) / 2.0,
+                (pair[0].latLng.longitude + pair[1].latLng.longitude) / 2.0
+            )
+            Marker(
+                state = MarkerState(position = midPos),
+                icon = arrowIcon,
+                rotation = calculateBearing(pair[0].latLng, pair[1].latLng).toFloat(),
+                flat = true,
+                anchor = Offset(0.5f, 0.5f),
+                alpha = alpha,
+                zIndex = zIndex
+            )
         }
     }
 
-    segments.forEach { segment ->
-        val isLive = activeLiveSegmentIds.contains(segment.id)
+    // 3. Start / Finish Lines and Labels
+    if (segment.path.size >= 6) {
+        val startPt = segment.path[0].latLng
+        val startNext = segment.path[5].latLng
+        val endPt = segment.path.last().latLng
+        val endPrev = segment.path[segment.path.size - 6].latLng
 
-        // Logic: Full color if followMe is OFF OR if the segment is LIVE.
-        // Transparent only if followMe is ON and the segment is NOT live.
-        val alpha = if (!isFollowMeEnabled || isLive) 1.0f else 0.3f
-        val strokeWidth = if (isLive && isFollowMeEnabled) 12f else 8f
-        val zIndex = if (isLive && isFollowMeEnabled) 1.0f else 0.0f
+        // Orthogonal Lines
+        Polyline(points = calculateOrthogonalLine(startPt, startNext), color = segmentColor, width = strokeWidth)
+        Polyline(points = calculateOrthogonalLine(endPt, endPrev), color = segmentColor, width = strokeWidth)
 
-        val polyline = googleMap.addPolyline(
-            PolylineOptions()
-                .addAll(segment.path.map { it.latLng })
-                .color(StravaOrange.copy(alpha = alpha).toArgb())
-                .width(strokeWidth)
-                .jointType(JointType.ROUND)
-                .clickable(true)
-                .zIndex(zIndex)
-        )
-        polyline.tag = segment.id
-        polylineList.add(polyline)
-
-        // Direction arrows and labels follow the same alpha
-        if (currentZoom > 14f) {
-            val icon = when {
-                currentZoom > 17f -> directionLarge
-                currentZoom > 15f -> directionMed
-                else -> directionSmall
+        // Text Labels (Only at high zoom)
+        if (currentZoom > 14f && segment.showStartAndFinishText) {
+            val textSize = when {
+                currentZoom > 17f -> 22f
+                currentZoom > 15f -> 18f
+                else -> 14f
             }
+            val sportIcon = if (segment.bSportType == BSportType.RUN) R.drawable.bsport_run else R.drawable.bsport_bike
 
-            // Only draw direction arrows for live segments or high zoom levels to maintain performance
-            if (isLive || currentZoom > 16f) {
-                segment.path.windowed(2, 20).forEach { pair ->
-                    googleMap.addMarker(MarkerOptions()
-                        .position(LatLng((pair[0].latLng.latitude + pair[1].latLng.latitude) / 2.0,
-                            (pair[0].latLng.longitude + pair[1].latLng.longitude) / 2.0))
-                        .icon(icon)
-                        .rotation(calculateBearing(pair[0].latLng, pair[1].latLng).toFloat())
-                        .flat(true)
-                        .anchor(0.5f, 0.5f)
-                        .alpha(alpha)
-                        .zIndex(zIndex)
-                    )
-                }
-            }
-        }
+            // Start Label
+            Marker(
+                state = MarkerState(position = startPt),
+                icon = remember(segment.name, textSize) {
+                    createTextMarkerBitmap(context, segment.name, "🚩", textSize, sportIcon)
+                },
+                anchor = Offset(0.5f, -0.2f),
+                alpha = alpha
+            )
 
-        // Start/Finish Lines with name of the segment
-        if (segment.path.size >= 6) {
-            val startPt = segment.path[0]
-            val startNext = segment.path[5]
-            val endPt = segment.path.last()
-            val endPrev = segment.path[segment.path.size - 6]
-
-            // Orthogonal Lines
-            googleMap.addPolyline(PolylineOptions().addAll(calculateOrthogonalLine(startPt.latLng, startNext.latLng)).color(StravaOrange.copy(alpha = alpha).toArgb()).width(strokeWidth))
-            googleMap.addPolyline(PolylineOptions().addAll(calculateOrthogonalLine(endPt.latLng, endPrev.latLng)).color(StravaOrange.copy(alpha = alpha).toArgb()).width(strokeWidth))
-
-            // Labels (Only at high zoom)
-            if (currentZoom > 14f
-                && segment.showStartAndFinishText) {
-                val startBearing = calculateBearing(startPt.latLng, startNext.latLng).toFloat()
-                val endBearing = calculateBearing(endPrev.latLng, endPt.latLng).toFloat()
-
-                val textSize = when {
-                    currentZoom > 17f -> 22f
-                    currentZoom > 15f -> 18f
-                    else -> 14f
-                }
-                val sportIconRes = if (segment.bSportType == BSportType.RUN) {
-                    R.drawable.bsport_run
-                } else {
-                    R.drawable.bsport_bike
-                }
-                // START: Positioned "Below" (Behind) the line
-                // Rotation (startBearing - 90) aligns the width of the text with the orthogonal line.
-                // An anchor V of -0.2f pushes the bitmap "down" the path direction.
-                val startMarker = googleMap.addMarker(MarkerOptions()
-                    .position(startPt.latLng)
-                    .icon(createTextMarkerBitmap(context, segment.name, "🚩", textSize, sportIconRes))
-                    // .rotation(startBearing)
-                    .anchor(0.5f, -0.2f)
-                    .alpha(alpha)
-                    .flat(false)
-                )
-                startMarker?.let { markerList.add(it) }
-
-                // FINISH: Positioned "Above" (Ahead) the line
-                // An anchor V of 1.2f pushes the bitmap "up" further past the finish point.
-                val finishMarker = googleMap.addMarker(MarkerOptions()
-                    .position(endPt.latLng)
-                    .icon(createTextMarkerBitmap(context, segment.name, "🏁", textSize, sportIconRes))
-                    // .rotation(endBearing)
-                    .anchor(0.5f, 1.2f)
-                    .alpha(alpha)
-                    .flat(false)
-                )
-                finishMarker?.let { markerList.add(it) }
-            }
+            // Finish Label
+            Marker(
+                state = MarkerState(position = endPt),
+                icon = remember(segment.name, textSize) {
+                    createTextMarkerBitmap(context, segment.name, "🏁", textSize, sportIcon)
+                },
+                anchor = Offset(0.5f, 1.2f),
+                alpha = alpha
+            )
         }
     }
 }
@@ -475,9 +504,43 @@ private fun bitmapDescriptorFromVectorInternal(context: Context, resId: Int, siz
     tint?.let { drawable.setTint(it.toArgb()) }
     val px = (sizeDp * context.resources.displayMetrics.density).toInt()
     drawable.setBounds(0, 0, px, px)
-    val bm = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888)
+    val bm = createBitmap(px, px, Bitmap.Config.ARGB_8888)
     drawable.draw(Canvas(bm))
     return BitmapDescriptorFactory.fromBitmap(bm)
+}
+
+fun vectorToBitmap(
+    context: Context,
+    @DrawableRes resId: Int,
+    sizeDp: Int,
+    mirror: Boolean = false,
+    tint: Color, // only for the default marker
+): BitmapDescriptor {
+    if (resId == -1) {
+        // Convert Compose Color to HSV to get the Hue
+        val hsv = FloatArray(3)
+        android.graphics.Color.colorToHSV(tint.toArgb(), hsv)
+        return BitmapDescriptorFactory.defaultMarker(hsv[0]) // hsv[0] is the Hue
+    }
+
+    val drawable = ContextCompat.getDrawable(context, resId)?.mutate()
+        ?: return BitmapDescriptorFactory.defaultMarker()
+
+    val density = context.resources.displayMetrics.density
+    val sizePx = (sizeDp * density).toInt()
+
+    val bitmap = createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+
+    if (mirror) {
+        // Flip the canvas horizontally around the center
+        canvas.scale(-1f, 1f, sizePx / 2f, sizePx / 2f)
+    }
+
+    drawable.setBounds(0, 0, sizePx, sizePx)
+    drawable.draw(canvas)
+
+    return BitmapDescriptorFactory.fromBitmap(bitmap)
 }
 
 /**
@@ -494,10 +557,10 @@ private fun createTextMarkerBitmap(
     val density = context.resources.displayMetrics.density
     val scaledTextSize = textSizeIn * density
 
-    val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = android.graphics.Color.BLACK
         textSize = scaledTextSize
-        typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.NORMAL)
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
     }
 
     // 1. Prepare the Sport Icon
@@ -528,8 +591,8 @@ private fun createTextMarkerBitmap(
     val canvas = Canvas(resultImage)
 
     // 4. Draw Shadow/Outline for visibility
-    val shadowPaint = android.graphics.Paint(paint).apply {
-        style = android.graphics.Paint.Style.STROKE
+    val shadowPaint = Paint(paint).apply {
+        style = Paint.Style.STROKE
         strokeWidth = 2f * density
         color = android.graphics.Color.WHITE
     }
@@ -542,8 +605,8 @@ private fun createTextMarkerBitmap(
     // 5. Draw Icon
     iconBitmap?.let {
         // Draw a small white glow behind the icon
-        val glowPaint = android.graphics.Paint().apply {
-            colorFilter = android.graphics.PorterDuffColorFilter(android.graphics.Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN)
+        val glowPaint = Paint().apply {
+            colorFilter = PorterDuffColorFilter(android.graphics.Color.WHITE, PorterDuff.Mode.SRC_IN)
         }
         canvas.drawBitmap(it, 2f, (height - iconSize) / 2f, glowPaint) // Background glow
         canvas.drawBitmap(it, 0f, (height - iconSize) / 2f, null)

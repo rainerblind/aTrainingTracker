@@ -22,6 +22,7 @@ import android.app.Activity
 import android.view.View
 import androidx.appcompat.widget.PopupMenu
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -54,7 +55,6 @@ import com.atrainingtracker.trainingtracker.ui.map.MapState
 import com.atrainingtracker.trainingtracker.ui.map.MapTrack
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
-import com.atrainingtracker.trainingtracker.ui.map.MapViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
@@ -107,7 +107,6 @@ class SummaryViewHolder(
         setupMenuButtonClickListeners(headerViewHolder?.menuButton)
 
         // --- Initialize Map Component ---
-        val mapViewModel = MapViewModel(application = activity.application)
         if (isPlayServiceAvailable && mapComposeView != null) {
             mapComposeView.setContent {
                 ATrainingTrackerTheme {
@@ -118,7 +117,6 @@ class SummaryViewHolder(
                         // 1. The Map (Takes up the remaining space)
                         ATrainingTrackerMap(
                             mapState = state,
-                            mapViewModel = mapViewModel,
                             currentLocationFlow = MutableStateFlow(null),
                             modifier = Modifier
                                 .weight(1f) // Fills available space above the profile
@@ -128,16 +126,23 @@ class SummaryViewHolder(
                             }
                         )
 
-                        // 2. The Elevation Profile (Fixed height at the bottom)
+                        // 2. The Elevation Profile (Interactive)
                         if (path.isNotEmpty()) {
-                            ElevationProfile(
-                                pathPoints = path,
-                                currentDistance = null, // No progress marker needed in summary
+                            androidx.compose.foundation.layout.Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(100.dp) // Adjusted height for visibility in a list row
+                                    .height(100.dp)
                                     .background(MaterialTheme.colorScheme.surface)
-                            )
+                                    .clickable {
+                                        TrainingApplication.startTrackOnMapAftermathActivity(activity, workoutSummary.id)
+                                    }
+                            ) {
+                                ElevationProfile(
+                                    pathPoints = path,
+                                    currentDistance = null,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
                         }
                     }
                 }
