@@ -26,6 +26,7 @@ import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import android.graphics.Typeface
+import android.location.Location
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -46,6 +47,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.createBitmap
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
@@ -71,11 +73,11 @@ import com.google.maps.android.compose.rememberCameraPositionState
 import kotlinx.coroutines.flow.StateFlow
 
 
-
 @Composable
 fun ATrainingTrackerMap(
     mapState: MapState,
     currentLocationFlow: StateFlow<LatLng?>,
+    selectedDistance: Double? = null,
     modifier: Modifier = Modifier,
     onMapClick: (() -> Unit)? = null
 ) {
@@ -93,6 +95,9 @@ fun ATrainingTrackerMap(
     var directionIconLarge by remember { mutableStateOf<BitmapDescriptor?>(null) }
     var currentZoomState by remember { mutableFloatStateOf(0f) }
 
+    var scrubIconRight by remember { mutableStateOf<BitmapDescriptor?>(null) }
+    var scrubIconLeft by remember { mutableStateOf<BitmapDescriptor?>(null) }
+
     // Initialize icons inside LaunchedEffect (Safe from IBitmapDescriptorFactory error)
     LaunchedEffect(primaryColor) {
         // This runs after the composition has started, ensuring Maps SDK is likely ready
@@ -100,6 +105,19 @@ fun ATrainingTrackerMap(
         directionIconSmall = bitmapDescriptorFromVectorInternal(context, R.drawable.ic_navigation_arrow, 12, primaryColor)
         directionIconMed = bitmapDescriptorFromVectorInternal(context, R.drawable.ic_navigation_arrow, 16, primaryColor)
         directionIconLarge = bitmapDescriptorFromVectorInternal(context, R.drawable.ic_navigation_arrow, 22, primaryColor)
+    }
+
+    LaunchedEffect(mapState.bSportType) {
+        // Map sport type to drawable
+        val iconRes = when (mapState.bSportType) {
+            BSportType.RUN -> R.drawable.bsport_run
+            BSportType.BIKE -> R.drawable.bsport_bike
+            else -> -1
+        }
+
+        // Pre-calculate both versions
+        scrubIconRight = vectorToBitmap(context, iconRes, 32, false, primaryColor)
+        scrubIconLeft = vectorToBitmap(context, iconRes, 32, true, primaryColor)
     }
 
     // Prevents Render Issues in Android Studio Preview
@@ -123,7 +141,7 @@ fun ATrainingTrackerMap(
             fun isLocal(target: LatLng): Boolean {
                 if (userPos == null) return true // If we don't know where user is, include everything
                 val results = FloatArray(1)
-                android.location.Location.distanceBetween(
+                Location.distanceBetween(
                     userPos.latitude, userPos.longitude,
                     target.latitude, target.longitude,
                     results
@@ -179,6 +197,53 @@ fun ATrainingTrackerMap(
         }
     }
 
+    // --- Auto-center Map on Scrubber Icon ---
+    LaunchedEffect(selectedDistance) {
+        selectedDistance?.let { targetDist ->
+            // Find the point associated with the distance
+            val activePath = if (mapState.tracks.isNotEmpty()) {
+                mapState.tracks.firstOrNull()?.path
+            } else {
+                mapState.segments.firstOrNull()?.path
+            } ?: emptyList()
+
+            val scrubPoint = activePath.find { it.distance >= targetDist }
+
+            scrubPoint?.let { point ->
+                /*
+                // Option A: Always center (Smooth tracking)
+                cameraPositionState.animate(
+                    CameraUpdateFactory.newLatLng(point.latLng),
+                    200 // Fast animation for responsiveness
+                )
+                 */
+
+                // Option B: Smart Margin centering
+                val projection = cameraPositionState.projection
+                val bounds = projection?.visibleRegion?.latLngBounds
+
+                if (bounds != null) {
+                    // Define a 2% margin padding
+                    val latPadding = (bounds.northeast.latitude - bounds.southwest.latitude) * 0.2
+                    val lngPadding = (bounds.northeast.longitude - bounds.southwest.longitude) * 0.2
+
+                    val safeBounds = LatLngBounds(
+                        LatLng(bounds.southwest.latitude + latPadding, bounds.southwest.longitude + lngPadding),
+                        LatLng(bounds.northeast.latitude - latPadding, bounds.northeast.longitude - lngPadding)
+                    )
+
+                    // If the icon is outside the 20% safety margin, center it
+                    if (!safeBounds.contains(point.latLng)) {
+                        cameraPositionState.animate(
+                            CameraUpdateFactory.newLatLng(point.latLng),
+                            300
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     // THE MAP
     GoogleMap(
         modifier = modifier,
@@ -205,6 +270,53 @@ fun ATrainingTrackerMap(
                     points = track.path.map { it.latLng },
                     color = track.color,
                     width = 5f
+                )
+            }
+        }
+
+        // show a marker for the selected distance
+        selectedDistance?.let { targetDist ->
+            // 1. Identify the active path (either from tracks or segments)
+            val activePath = if (mapState.tracks.isNotEmpty()) {
+                mapState.tracks.firstOrNull()?.path
+            } else {
+                mapState.segments.firstOrNull()?.path
+            } ?: emptyList()
+
+            val index = activePath.indexOfFirst { it.distance >= targetDist }
+
+            if (index != -1) {
+                val point = activePath[index]
+
+                // Determine direction by looking for the next point with a different longitude
+                val isWestbound = run {
+                    // 1. Look forward for the first point that actually moves East or West
+                    val nextSignificantPoint = activePath.drop(index + 1).firstOrNull {
+                        it.latLng.longitude != point.latLng.longitude
+                    }
+
+                    if (nextSignificantPoint != null) {
+                        nextSignificantPoint.latLng.longitude < point.latLng.longitude
+                    } else {
+                        // 2. If we are at the end of the track, look backward to see which way we were moving
+                        val prevSignificantPoint = activePath.take(index).lastOrNull {
+                            it.latLng.longitude != point.latLng.longitude
+                        }
+                        if (prevSignificantPoint != null) {
+                            point.latLng.longitude < prevSignificantPoint.latLng.longitude
+                        } else {
+                            false // Default to East if the entire track is perfectly vertical
+                        }
+                    }
+                }
+
+                Marker(
+                    state = MarkerState(position = point.latLng),
+                    // Switch icon based on movement direction
+                    icon = if (isWestbound) scrubIconLeft else scrubIconRight,
+                    // anchor = Offset(0.5f, 0.5f), // Center silhouette on the line
+                    zIndex = 5.0f,
+                    flat = true
                 )
             }
         }
@@ -392,9 +504,43 @@ private fun bitmapDescriptorFromVectorInternal(context: Context, resId: Int, siz
     tint?.let { drawable.setTint(it.toArgb()) }
     val px = (sizeDp * context.resources.displayMetrics.density).toInt()
     drawable.setBounds(0, 0, px, px)
-    val bm = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888)
+    val bm = createBitmap(px, px, Bitmap.Config.ARGB_8888)
     drawable.draw(Canvas(bm))
     return BitmapDescriptorFactory.fromBitmap(bm)
+}
+
+fun vectorToBitmap(
+    context: Context,
+    @DrawableRes resId: Int,
+    sizeDp: Int,
+    mirror: Boolean = false,
+    tint: Color, // only for the default marker
+): BitmapDescriptor {
+    if (resId == -1) {
+        // Convert Compose Color to HSV to get the Hue
+        val hsv = FloatArray(3)
+        android.graphics.Color.colorToHSV(tint.toArgb(), hsv)
+        return BitmapDescriptorFactory.defaultMarker(hsv[0]) // hsv[0] is the Hue
+    }
+
+    val drawable = ContextCompat.getDrawable(context, resId)?.mutate()
+        ?: return BitmapDescriptorFactory.defaultMarker()
+
+    val density = context.resources.displayMetrics.density
+    val sizePx = (sizeDp * density).toInt()
+
+    val bitmap = createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+
+    if (mirror) {
+        // Flip the canvas horizontally around the center
+        canvas.scale(-1f, 1f, sizePx / 2f, sizePx / 2f)
+    }
+
+    drawable.setBounds(0, 0, sizePx, sizePx)
+    drawable.draw(canvas)
+
+    return BitmapDescriptorFactory.fromBitmap(bitmap)
 }
 
 /**

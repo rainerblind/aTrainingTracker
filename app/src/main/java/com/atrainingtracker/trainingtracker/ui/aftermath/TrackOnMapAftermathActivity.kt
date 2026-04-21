@@ -29,11 +29,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.constraintlayout.widget.ConstraintLayout
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
@@ -87,15 +90,17 @@ class TrackOnMapAftermathActivity : AppCompatActivity() {
             ATrainingTrackerTheme {
                 // Observe the MapState from the ViewModel
                 val mapState by viewModel.aftermathState.collectAsState()
-
                 // For aftermath, we don't have a live location flow
                 val noLocation = remember { MutableStateFlow<LatLng?>(null) }
+
+                var selectedDistance by remember { mutableStateOf<Double?>(null) }
 
                 Column(modifier = Modifier.fillMaxSize()) {
                     // The Map takes the top 70% of the screen
                     ATrainingTrackerMap(
                         mapState = mapState,
                         currentLocationFlow = noLocation,
+                        selectedDistance = selectedDistance,
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(0.75f) // Adjust this ratio as needed
@@ -107,7 +112,11 @@ class TrackOnMapAftermathActivity : AppCompatActivity() {
                         pathPoints = mapState.tracks.firstOrNull()?.path ?: emptyList(),                        modifier = Modifier
                             .fillMaxWidth()
                             .weight(0.25f),
-                        currentDistance = null
+                        currentDistance = selectedDistance,
+                        // Callback when the user slides their finger
+                        onDistanceSelected = { dist ->
+                            selectedDistance = dist
+                        }
                     )
                 }
             }

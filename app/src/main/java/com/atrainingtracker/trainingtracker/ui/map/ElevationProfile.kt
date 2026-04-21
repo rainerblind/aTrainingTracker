@@ -20,7 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.map
 
 import android.graphics.Paint
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import kotlin.math.ceil
 import com.atrainingtracker.trainingtracker.ui.theme.Zone1
@@ -62,6 +63,7 @@ private data class ElevationSegment(
 fun ElevationProfile(
     pathPoints: List<PathPoint>,
     currentDistance: Double?,
+    onDistanceSelected: (Double?) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     if (pathPoints.isEmpty()) return
@@ -70,18 +72,46 @@ fun ElevationProfile(
 
     // --- 1. Cache Static Geometry & Adaptive Labels ---
     val cachedData = remember(pathPoints) {
-        val min = pathPoints.minOf { it.altitude }
-        val max = pathPoints.maxOf { it.altitude }
-        val dist = pathPoints.last().distance
+        val totalDist = pathPoints.last().distance
+        val pointCount = pathPoints.size
+
+        // --- Adaptive Smoothing Logic ---
+        // Calculate average distance between points (e.g., 5m or 20m)
+        val avgPointSpacing = totalDist / pointCount
+
+        // We want a smoothing window of ~80 meters.
+        // WindowSize = 80m / spacing. We ensure it's at least 3 and always odd.
+        val targetWindowMeters = 80f
+        val calculatedWindow = (targetWindowMeters / avgPointSpacing).toInt()
+            .coerceIn(3, 51) // Don't go below 3 or above 51 to keep performance high
+
+        val windowSize = if (calculatedWindow % 2 == 0) calculatedWindow + 1 else calculatedWindow
+        val halfWindow = windowSize / 2
+
+        val smoothedAltitudes = pathPoints.indices.map { i ->
+            val start = (i - halfWindow).coerceAtLeast(0)
+            val end = (i + halfWindow).coerceAtMost(pathPoints.size - 1)
+            var sum = 0f
+            var count = 0
+            for (j in start..end) {
+                sum += pathPoints[j].altitude
+                count++
+            }
+            sum / count
+        }
+
+        // Use smoothed altitudes for Min/Max to avoid "spikes" affecting the scale
+        val min = smoothedAltitudes.minOrNull() ?: 0f
+        val max = smoothedAltitudes.maxOrNull() ?: 1f
         val range = (max - min).coerceAtLeast(1f)
 
         // Adaptive Distance Ticks
         val kmStep = when {
-            dist > 100_000 -> 20_000f
-            dist > 50_000 -> 10_000f
-            dist > 20_000 -> 5_000f
-            dist > 5_000 -> 1_000f
-            dist > 1_500 -> 500f
+            totalDist > 100_000 -> 20_000f
+            totalDist > 50_000 -> 10_000f
+            totalDist > 20_000 -> 5_000f
+            totalDist > 5_000 -> 1_000f
+            totalDist > 1_500 -> 500f
             else -> 200f              // For segments < 1.5km, use 200m steps
         }
 
@@ -99,13 +129,21 @@ fun ElevationProfile(
             val p1 = pathPoints[i]
             val p2 = pathPoints[i + 1]
 
-            val d1 = p1.distance / dist
-            val a1 = (p1.altitude - min) / range
-            val d2 = p2.distance / dist
-            val a2 = (p2.altitude - min) / range
+            // Use Smoothed Altitudes for geometry
+            val sAlt1 = smoothedAltitudes[i]
+            val sAlt2 = smoothedAltitudes[i + 1]
+
+            val d1 = p1.distance / totalDist
+            val a1 = (sAlt1 - min) / range
+            val d2 = p2.distance / totalDist
+            val a2 = (sAlt2 - min) / range
 
             val distDiff = p2.distance - p1.distance
-            val grade = if (distDiff > 0) ((p2.altitude - p1.altitude) / distDiff) * 100 else 0f
+
+            // Use Smoothed Altitudes for Grade calculation (much more stable colors!)
+            val grade = if (distDiff > 1.0) { // Small threshold to avoid division issues
+                ((sAlt2 - sAlt1) / distDiff) * 100
+            } else 0f
 
             val color = when {
                 grade < 2f -> Zone1
@@ -118,7 +156,7 @@ fun ElevationProfile(
 
             segments.add(ElevationSegment(Offset(d1, a1), Offset(d2, a2), color))
         }
-        CachedProfileData(segments, min, max, dist, range, kmStep, altStep)
+        CachedProfileData(segments, min, max, totalDist, range, kmStep, altStep)
     }
 
     val textPaint = remember(colorScheme) {
@@ -131,9 +169,33 @@ fun ElevationProfile(
 
     Canvas(
         modifier = modifier
+            .pointerInput(pathPoints) {
+                // Convert DP padding to PX
+                val startPaddingPx = 50.dp.toPx()
+                val endPaddingPx = 25.dp.toPx()
+
+                detectDragGestures(
+                    onDragStart = { offset ->
+                        // Calculate width of the actual chart area
+                        val chartWidthPx = size.width - startPaddingPx - endPaddingPx
+                        // Adjust touch X: subtract start padding and clamp to chart bounds
+                        val adjustedX = (offset.x - startPaddingPx).coerceIn(0f, chartWidthPx)
+
+                        val dist = (adjustedX / chartWidthPx) * cachedData.totalDist
+                        onDistanceSelected(dist.toDouble())
+                    },
+                    onDrag = { change, _ ->
+                        val chartWidthPx = size.width - startPaddingPx - endPaddingPx
+                        val adjustedX = (change.position.x - startPaddingPx).coerceIn(0f, chartWidthPx)
+
+                        val dist = (adjustedX / chartWidthPx) * cachedData.totalDist
+                        onDistanceSelected(dist.toDouble())
+                    },
+                    onDragEnd = { onDistanceSelected(null) },
+                    onDragCancel = { onDistanceSelected(null) }
+                )
+            }
             .fillMaxWidth()
-            .height(150.dp)
-            .background(colorScheme.surfaceVariant.copy(alpha = 0.1f))
             .padding(bottom = 24.dp, start = 50.dp, end = 25.dp, top = 10.dp)
     ) {
         val width = size.width

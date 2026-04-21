@@ -106,6 +106,7 @@ public class StarredSegmentsCursorAdapter extends CursorAdapter {
         final StarredSegmentViewHolder viewHolder = (StarredSegmentViewHolder) view.getTag();
 
         final long segmentId = cursor.getLong(cursor.getColumnIndex(Segments.STRAVA_SEGMENT_ID));
+        viewHolder.bindSegment(segmentId);
 
         viewHolder.getTvName().setText(cursor.getString(cursor.getColumnIndex(Segments.SEGMENT_NAME)));
 
