@@ -29,6 +29,7 @@ import com.atrainingtracker.trainingtracker.ui.map.MapSegment
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository
 import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.SphericalUtil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -79,6 +80,7 @@ data class LiveSegmentMath(
     val start: LatLng,             // The start point of the segment
     val start_a: LatLng,           // one end of the start line
     val start_b: LatLng,           // the other end of the start line
+    val segmentStartBearing: Double,   // The bearing of the segment start point
     val start_cross_n: Double,     // the cross product of the 'next' point to the start line
     var start_cross_loc: Double = 0.0,   // the cross product of the current/past location to the start line
     val end: LatLng,               // the end point of the segment
@@ -160,8 +162,9 @@ class SegmentsRepository private constructor(context: Context) {
             launch {
                 banalRepo.currentLocation.collect { location ->
                     val currentDistance = banalRepo.currentDistance.value
+                    val currentBearing = banalRepo.currentBearing.value ?: 0.0
                     if (location != null && currentDistance != null) {
-                        updateLiveSegments(location, currentDistance)
+                        updateLiveSegments(location, currentBearing, currentDistance)
                     }
                 }
             }
@@ -218,6 +221,9 @@ class SegmentsRepository private constructor(context: Context) {
         val startA = LatLng(start.latitude + (start.longitude - next.longitude), start.longitude - (start.latitude - next.latitude))
         val startB = LatLng(start.latitude - (start.longitude - next.longitude), start.longitude + (start.latitude - next.latitude))
 
+        // Calculate the bearing of the segment start
+        val segmentStartBearing = SphericalUtil.computeHeading(start, next)
+
         // 2. Calculate End Gate (Perpendicular to last path segment)
         val endA = LatLng(end.latitude + (end.longitude - prevToEnd.longitude), end.longitude - (end.latitude - prevToEnd.latitude))
         val endB = LatLng(end.latitude - (end.longitude - prevToEnd.longitude), end.longitude + (end.latitude - prevToEnd.latitude))
@@ -234,6 +240,7 @@ class SegmentsRepository private constructor(context: Context) {
                 start = start,
                 start_a = startA,
                 start_b = startB,
+                segmentStartBearing = segmentStartBearing,
                 start_cross_n = startCrossN,
                 end = end,
                 end_a = endA,
@@ -246,7 +253,7 @@ class SegmentsRepository private constructor(context: Context) {
     /**
      * Updates the live segment data whenever the user's location changes.
      */
-    private fun updateLiveSegments(currentLocation: LatLng, currentDistance: Double) {
+    private fun updateLiveSegments(currentLocation: LatLng, currentBearing: Double, currentDistance: Double) {
         if (DEBUG) Log.i(TAG, "updateLiveSegments ...")
 
         _liveSegments.value = _liveSegments.value.map { liveSegment ->
@@ -281,7 +288,12 @@ class SegmentsRepository private constructor(context: Context) {
             // -- state handling
             when (liveSegment.liveData.segmentStatus) {
                 LiveSegmentStatus.FAR_FAR_AWAY -> {
+                    // Calculate bearing alignment
+                    val bearingDiff = getBearingDifference(currentBearing, liveSegment.math.segmentStartBearing)
+                    val isHeadingCorrect = bearingDiff <= 45f // 45 degrees tolerance
+
                     if (distanceToStart <= SEGMENT_START_DISTANCE_THRESHOLD                // close enough to start
+                        && isHeadingCorrect                                                // going in the right direction
                         && start_cross_loc.sign != liveSegment.math.start_cross_n.sign) {  // different sign as the 'first' point in the segment -> on the other side of the start line
                         if (DEBUG) Log.i(TAG, "  Segment is close to start: ${liveSegment.summary.name}")
 
@@ -456,5 +468,14 @@ class SegmentsRepository private constructor(context: Context) {
 
     private fun crossProduct(a: LatLng, b: LatLng, c: LatLng): Double {
         return (b.latitude - a.latitude) * (c.longitude - a.longitude) - (b.longitude - a.longitude) * (c.latitude - a.latitude)
+    }
+
+    /**
+     * Calculates the smallest difference between two bearings (0-360).
+     * Result is between 0 and 180.
+     */
+    private fun getBearingDifference(bearing1: Double, bearing2: Double): Double {
+        val diff = Math.abs(bearing1 - bearing2) % 360
+        return if (diff > 180) 360 - diff else diff
     }
 }
