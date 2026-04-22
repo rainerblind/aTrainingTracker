@@ -51,6 +51,7 @@ import com.atrainingtracker.trainingtracker.fragments.preferences.PebbleScreenFr
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
 import com.atrainingtracker.trainingtracker.segments.StarredSegmentsTabbedContainer;
 import com.atrainingtracker.trainingtracker.tracker.TrackerService;
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedFragment;
 import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentFragment;
 import com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrack;
 import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository;
@@ -721,8 +722,8 @@ public class MainActivityWithNavigation
                 break;
 
             case R.id.drawer_workouts:
-                mFragment = new WorkoutSummariesTabbedFragmentClassic();
-                tag = WorkoutSummariesTabbedFragmentClassic.TAG;
+                mFragment = new WorkoutSummariesTabbedFragment();
+                tag = WorkoutSummariesTabbedFragment.TAG;
                 break;
 
             case R.id.drawer_my_sensors:

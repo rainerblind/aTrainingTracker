@@ -81,4 +81,16 @@ class WorkoutSummariesTabbedFragment : Fragment() {
             // Trigger your existing Delete Dialog logic here if needed
         }
     }
+
+
+    // Companion object for Java compatibility
+    companion object {
+        @JvmField
+        val TAG: String = "WorkoutSummariesTabbedFragment"
+
+        @JvmStatic
+        fun newInstance(): WorkoutSummariesTabbedFragment {
+            return WorkoutSummariesTabbedFragment()
+        }
+    }
 }
