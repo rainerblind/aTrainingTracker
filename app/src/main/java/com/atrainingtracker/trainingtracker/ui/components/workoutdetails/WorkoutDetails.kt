@@ -96,112 +96,39 @@ fun WorkoutDetails(
         )
 
         // --- Section 3: Altitude (Identical to bindAltitude in ViewHolder) ---
-        val hasAltitudeData = data.ascentMeters > 0 || data.descentMeters > 0 || data.minAltitude != null || data.maxAltitude != null
-
-        if (hasAltitudeData) {
-            DetailCard {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    // Ascent / Descent Row
-                    if (data.ascentMeters > 0 || data.descentMeters > 0) {
-                        Row(modifier = Modifier.fillMaxWidth()) {
-                            if (data.ascentMeters > 0) {
-                                DetailItem(
-                                    modifier = Modifier.weight(1f),
-                                    label = stringResource(R.string.ascent),
-                                    value = "${data.ascentMeters} m",
-                                    iconRes = R.drawable.ic_ascent
-                                )
-                            }
-                            if (data.descentMeters > 0) {
-                                DetailItem(
-                                    modifier = Modifier.weight(1f),
-                                    label = stringResource(R.string.descent),
-                                    value = "${data.descentMeters} m",
-                                    iconRes = R.drawable.ic_descent
-                                )
-                            }
-                        }
-                    }
-
-                    // Min / Max Altitude Row
-                    if (data.minAltitude != null || data.maxAltitude != null) {
-                        Row(modifier = Modifier.fillMaxWidth()) {
-                            data.minAltitude?.let {
-                                DetailItem(
-                                    modifier = Modifier.weight(1f),
-                                    label = stringResource(R.string.altitude),
-                                    value = "%.0f m".format(it),
-                                    iconRes = R.drawable.ic_altitude_min
-                                )
-                            }
-                            data.maxAltitude?.let {
-                                DetailItem(
-                                    modifier = Modifier.weight(1f),
-                                    label = stringResource(R.string.altitude),
-                                    value = "%.0f m".format(it),
-                                    iconRes = R.drawable.ic_altitude_max
-                                )
-                            }
-                        }
-                    }
-                }
+        Row(modifier = Modifier.fillMaxWidth()) {
+            if (data.ascentMeters > 0) {
+                DetailItem(
+                    modifier = Modifier.weight(1f),
+                    label = stringResource(R.string.ascent_short),
+                    value = "${data.ascentMeters} m",
+                    iconRes = R.drawable.ic_ascent
+                )
             }
-        }
-    }
-}
-
-@Composable
-private fun DetailCard(content: @Composable () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp) // Flat look like standard lists
-    ) {
-        Box(modifier = Modifier.padding(14.dp)) {
-            content()
-        }
-    }
-}
-
-@Composable
-private fun DetailRow(
-    label: String,
-    value: String,
-    iconRes: Int,
-    isSecondary: Boolean = false
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-            Icon(
-                painter = painterResource(id = iconRes),
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-                tint = if (isSecondary)
-                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                else
-                    MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                text = label,
-                style = if (isSecondary) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyMedium,
-                color = if (isSecondary) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-                fontWeight = if (isSecondary) FontWeight.Normal else FontWeight.Medium
-            )
-        }
-        if (value.isNotEmpty()) {
-            Text(
-                text = value,
-                style = if (isSecondary) MaterialTheme.typography.bodySmall else MaterialTheme.typography.titleMedium,
-                color = if (isSecondary) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-                fontWeight = if (isSecondary) FontWeight.Normal else FontWeight.Bold
-            )
+            if (data.descentMeters > 0) {
+                DetailItem(
+                    modifier = Modifier.weight(1f),
+                    label = stringResource(R.string.descent_short),
+                    value = "${data.descentMeters} m",
+                    iconRes = R.drawable.ic_descent
+                )
+            }
+            data.minAltitude?.let {
+                DetailItem(
+                    modifier = Modifier.weight(1f),
+                    label = stringResource(R.string.altitude_short),
+                    value = "%.0f m".format(it),
+                        iconRes = R.drawable.ic_altitude_min
+                )
+            }
+            data.maxAltitude?.let {
+                DetailItem(
+                    modifier = Modifier.weight(1f),
+                    label = stringResource(R.string.altitude_short),
+                        value = "%.0f m".format(it),
+                    iconRes = R.drawable.ic_altitude_max
+                )
+            }
         }
     }
 }
@@ -235,6 +162,7 @@ private fun MainItem(
                 Text(
                     text = mainValueString,
                     style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
@@ -258,15 +186,15 @@ private fun DetailItem(
 ) {
     Row(
         modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.Bottom
     ) {
         Icon(
             painter = painterResource(id = iconRes),
             contentDescription = null,
-            modifier = Modifier.size(20.dp),
+            modifier = Modifier.size(28.dp),
             tint = MaterialTheme.colorScheme.primary
         )
-        Spacer(modifier = Modifier.width(10.dp))
+        Spacer(modifier = Modifier.width(2.dp))
         Column {
             Text(
                 text = label,
