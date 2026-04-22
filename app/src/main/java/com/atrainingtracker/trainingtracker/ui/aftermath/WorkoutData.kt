@@ -23,6 +23,7 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.Des
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsData
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaData
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderData
+import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 
 /**
  * A composite data class that represents all data needed for a single row in the workout list.
@@ -41,7 +42,8 @@ data class WorkoutData(
     val detailsData: WorkoutDetailsData,
     val descriptionData: DescriptionData,
     val extremaData: ExtremaData,
-    val exportStatuses: List<ExportStatusGroupData>,
+    val trackPoints: List<PathPoint>,
+    val exportStatuses: List<ExportStatusGroupData>
 )
 
 // TODO: move the methods to update redundant data to here???

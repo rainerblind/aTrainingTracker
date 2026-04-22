@@ -18,7 +18,6 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 
-import androidx.compose.animation.core.copy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -48,6 +47,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun WorkoutTabsScreen(
     workouts: List<WorkoutData>,
+    isPlayServiceAvailable: Boolean,
     onMenuClick: (WorkoutData) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -85,10 +85,10 @@ fun WorkoutTabsScreen(
             verticalAlignment = Alignment.Top
         ) { pageIndex ->
             when (pageIndex) {
-                0 -> WorkoutList(workouts = workouts, onMenuClick = onMenuClick)
-                1 -> WorkoutList(workouts = workouts.filter { it.sportData.bSportType == BSportType.BIKE }, onMenuClick = onMenuClick)
-                2 -> WorkoutList(workouts = workouts.filter { it.sportData.bSportType == BSportType.RUN }, onMenuClick = onMenuClick)
-                3 -> WorkoutList(workouts = workouts.filter { it.sportData.bSportType == BSportType.UNKNOWN }, onMenuClick = onMenuClick)
+                0 -> WorkoutList(workouts = workouts, isPlayServiceAvailable = isPlayServiceAvailable, onMenuClick = onMenuClick)
+                1 -> WorkoutList(workouts = workouts.filter { it.sportData.bSportType == BSportType.BIKE }, isPlayServiceAvailable = isPlayServiceAvailable,  onMenuClick = onMenuClick)
+                2 -> WorkoutList(workouts = workouts.filter { it.sportData.bSportType == BSportType.RUN }, isPlayServiceAvailable = isPlayServiceAvailable, onMenuClick = onMenuClick)
+                3 -> WorkoutList(workouts = workouts.filter { it.sportData.bSportType == BSportType.UNKNOWN }, isPlayServiceAvailable = isPlayServiceAvailable, onMenuClick = onMenuClick)
             }
         }
     }
@@ -101,6 +101,7 @@ fun WorkoutTabsScreen(
 @Composable
 fun WorkoutList(
     workouts: List<WorkoutData>,
+    isPlayServiceAvailable: Boolean,
     onMenuClick: (WorkoutData) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -113,8 +114,11 @@ fun WorkoutList(
             key = { it.id } // Use workout ID as key for stable animations
         ) { workout ->
             WorkoutSummary(
-                data = workout,
-                onMenuClick = { onMenuClick(workout) }
+                workoutData = workout,
+                onMenuClick = { onMenuClick(workout) },
+                isPlayServiceAvailable = isPlayServiceAvailable,
+                onMapClick = { },
+                modifier = modifier
             )
             HorizontalDivider(
                 thickness = 8.dp,

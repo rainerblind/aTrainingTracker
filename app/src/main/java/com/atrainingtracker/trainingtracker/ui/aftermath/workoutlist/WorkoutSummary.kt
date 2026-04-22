@@ -18,7 +18,6 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,14 +35,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusGroup
-import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusGroupData
-import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.DescriptionData
 import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.WorkoutDescription
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.*
-import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaData
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.WorkoutExtrema
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeader
-import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderData
 import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.map.MapState
@@ -59,9 +54,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
  */
 @Composable
 fun WorkoutSummary(
-    data: WorkoutData,
+    workoutData: WorkoutData,
     onMenuClick: () -> Unit,
-    trackPoints: List<PathPoint>,
     isPlayServiceAvailable: Boolean,
     onMapClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -70,38 +64,38 @@ fun WorkoutSummary(
 
         // 1. Header (Blue Scrim Section)
         WorkoutHeader(
-            data = data.headerData,
+            data = workoutData.headerData,
             onMenuClick = onMenuClick
         )
 
         // 2. Description Section (Notes, Goals, Method)
         // Hidden automatically if all fields are null/blank
-        WorkoutDescription(data = data.descriptionData)
+        WorkoutDescription(data = workoutData.descriptionData)
 
         // 3. Main Details Section (Distance, Time, Speed/Pace)
-        WorkoutDetails(data = data.detailsData)
+        WorkoutDetails(data = workoutData.detailsData)
 
         // 4. Extrema Values Section
         // Show a subtle divider if extrema data exists
-        if (data.extremaData.dataRows.isNotEmpty() || data.extremaData.isCalculating) {
+        if (workoutData.extremaData.dataRows.isNotEmpty() || workoutData.extremaData.isCalculating) {
             HorizontalDivider(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 thickness = 0.5.dp,
                 color = MaterialTheme.colorScheme.outlineVariant
             )
-            WorkoutExtrema(data = data.extremaData)
+            WorkoutExtrema(data = workoutData.extremaData)
         }
 
-        if (isPlayServiceAvailable && trackPoints.isNotEmpty()) {
+        if (isPlayServiceAvailable && workoutData.trackPoints.isNotEmpty()) {
             WorkoutMediaSection(
-                workoutId = data.id,
-                points = trackPoints,
+                workoutId = workoutData.id,
+                points = workoutData.trackPoints,
                 onMapClick = onMapClick
             )
         }
 
         // 5. Export Status Section
-        val activeExports = data.exportStatuses.filter { it.hasContent }
+        val activeExports = workoutData.exportStatuses.filter { it.hasContent }
         if (activeExports.isNotEmpty()) {
             Column(
                 modifier = Modifier
