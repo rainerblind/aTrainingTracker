@@ -18,7 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.components.workoutheader
 
-import android.content.res.Configuration // CORRECTED: Use this for Previews, not androidx.work
+import android.content.res.Configuration
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -74,11 +74,11 @@ fun WorkoutHeader(
 
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         IconTextRow(
-                            iconRes = R.drawable.ic_date_start_18dp,
+                            iconRes = R.drawable.ic_date_start,
                             text = data.formattedDate
                         )
                         IconTextRow(
-                            iconRes = R.drawable.ic_time_start_18dp,
+                            iconRes = R.drawable.ic_time_start,
                             text = data.formattedTime
                         )
 
