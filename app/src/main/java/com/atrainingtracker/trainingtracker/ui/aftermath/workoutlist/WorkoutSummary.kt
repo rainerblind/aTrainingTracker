@@ -18,15 +18,20 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
@@ -39,6 +44,13 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.Extrema
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.WorkoutExtrema
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeader
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderData
+import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
+import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
+import com.atrainingtracker.trainingtracker.ui.map.MapState
+import com.atrainingtracker.trainingtracker.ui.map.MapTrack
+import com.atrainingtracker.trainingtracker.ui.map.PathPoint
+import com.atrainingtracker.trainingtracker.ui.map.TrackType
+import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
  * A comprehensive summary of a workout.
@@ -49,6 +61,9 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutH
 fun WorkoutSummary(
     data: WorkoutData,
     onMenuClick: () -> Unit,
+    trackPoints: List<PathPoint>,
+    isPlayServiceAvailable: Boolean,
+    onMapClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
@@ -77,8 +92,13 @@ fun WorkoutSummary(
             WorkoutExtrema(data = data.extremaData)
         }
 
-        // TODO: add ATrainingTrackerMap
-        // TODO: add Elevation Profile
+        if (isPlayServiceAvailable && trackPoints.isNotEmpty()) {
+            WorkoutMediaSection(
+                workoutId = data.id,
+                points = trackPoints,
+                onMapClick = onMapClick
+            )
+        }
 
         // 5. Export Status Section
         val activeExports = data.exportStatuses.filter { it.hasContent }
@@ -99,5 +119,61 @@ fun WorkoutSummary(
 
         // Final spacing at the bottom of the summary
         Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+/**
+ * Replicates the logic from SummaryViewHolder.kt init block:
+ * A Map with an Elevation Profile overlaid at the bottom.
+ */
+@Composable
+private fun WorkoutMediaSection(
+    workoutId: Long,
+    points: List<PathPoint>,
+    onMapClick: () -> Unit
+) {
+    // Replicating rowMapState from SummaryViewHolder
+    val mapState = remember(points) {
+        MapState(
+            tracks = listOf(
+                MapTrack(
+                    id = workoutId,
+                    path = points,
+                    type = TrackType.BEST,
+                    isVisible = true
+                )
+            ),
+            isFollowMeEnabled = false
+        )
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(300.dp) // Total height for map + profile area
+    ) {
+        // 1. The Map (Weight 1 lets it take remaining space above profile)
+        ATrainingTrackerMap(
+            mapState = mapState,
+            currentLocationFlow = MutableStateFlow(null),
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+            onMapClick = { onMapClick() }
+        )
+
+        // 2. The Elevation Profile
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(100.dp)
+                .clickable { onMapClick() }
+        ) {
+            ElevationProfile(
+                pathPoints = points,
+                currentDistance = null,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
     }
 }
