@@ -42,7 +42,6 @@ fun WorkoutDetails(
     data: WorkoutDetailsData,
     modifier: Modifier = Modifier
 ) {
-    // Initialize formatters as used in the original ViewHolder
     val distanceFormatter = DistanceFormatter()
     val timeFormatter = TimeFormatter()
     val speedFormatter = SpeedFormatter()
@@ -54,75 +53,54 @@ fun WorkoutDetails(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // --- Section 1: Distance and Time ---
-        DetailCard {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                val distanceUnit = stringResource(id = MyHelper.getDistanceUnitNameId())
+        // --- Section 1: Distance and Time (Replicates the first Card/Group) ---
+            Row(modifier = Modifier.fillMaxWidth()) {
 
-                // Main Distance
-                DetailRow(
-                    label = stringResource(R.string.distance),
-                    value = stringResource(
-                        R.string.value_unit_string_string,
-                        distanceFormatter.format(data.totalDistance),
-                        distanceUnit
-                    ),
-                    iconRes = R.drawable.ic_distance
-                )
-
-                // Max Displacement
-                data.maxDisplacement?.let {
-                    val maxDisplacementFormatted = distanceFormatter.format(it)
-                    val maxDisplacementString = stringResource(R.string.value_unit_string_string, maxDisplacementFormatted, distanceUnit)
-                    DetailRow(
-                        label = stringResource(R.string.format_max_displacement, maxDisplacementString),
-                        value = "",
-                        isSecondary = true,
-                        iconRes = R.drawable.ic_distance
-                    )
+                // Distance
+                // TODO: move this logic to the viewModel?
+                val maxDispString = if (data.maxDisplacement != null) {
+                    val maxDispFormatted = distanceFormatter.format_with_units(data.maxDisplacement)
+                    stringResource(R.string.format_max_displacement, maxDispFormatted)
                 }
-
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp)
+                else {
+                    null
+                }
+                MainItem(
+                    iconRes = R.drawable.ic_distance,
+                    mainString = distanceFormatter.format_with_units(data.totalDistance),
+                    secondaryString = maxDispString,
+                    modifier = Modifier.weight(1f)
+                )
 
                 // Active Time
-                DetailRow(
-                    label = stringResource(R.string.time_active),
-                    value = timeFormatter.format(data.activeTimeSec),
-                    iconRes = R.drawable.ic_time_active
-                )
-
-                // Total Time
-                DetailRow(
-                    label = stringResource(R.string.time_total),
-                    value = timeFormatter.format(data.totalTimeSec),
-                    isSecondary = true,
-                    iconRes = R.drawable.ic_time_active
+                MainItem(
+                    iconRes = R.drawable.ic_time_active,
+                    mainString = timeFormatter.format(data.activeTimeSec),
+                    secondaryString = stringResource(R.string.total_time_format, timeFormatter.format(data.totalTimeSec)),
+                    modifier = Modifier.weight(1f)
                 )
             }
+        // Speed (or pace)
+        val mainSpeedString = if (data.bSportType == BSportType.RUN) {
+            paceFormatter.format_with_units(1/data.avgSpeedMps)
         }
-
-        // --- Section 2: Speed / Pace ---
-        DetailCard {
-            val (formattedValue, unit) = if (data.bSportType == BSportType.RUN) {
-                val paceSpm = if (data.avgSpeedMps > 0) 1.0 / data.avgSpeedMps else 0.0
-                paceFormatter.format(paceSpm) to stringResource(MyHelper.getPaceUnitNameId())
-            } else {
-                speedFormatter.format(data.avgSpeedMps.toDouble()) to stringResource(MyHelper.getSpeedUnitNameId())
-            }
-
-            DetailRow(
-                label = if (data.bSportType == BSportType.RUN) stringResource(R.string.pace) else stringResource(R.string.speed),
-                value = stringResource(R.string.value_unit_string_string, formattedValue, unit),
-                iconRes = R.drawable.ic_speed
-            )
+        else {
+            speedFormatter.format_with_units(data.avgSpeedMps)
         }
+        MainItem(
+            iconRes = R.drawable.ic_speed,
+            mainString = mainSpeedString,
+            secondaryString = if (BSportType.RUN == data.bSportType) "          " + speedFormatter.format_with_units(data.avgSpeedMps) else null,
+            modifier = Modifier
+        )
 
-        // --- Section 3: Altitude ---
+        // --- Section 3: Altitude (Identical to bindAltitude in ViewHolder) ---
         val hasAltitudeData = data.ascentMeters > 0 || data.descentMeters > 0 || data.minAltitude != null || data.maxAltitude != null
 
         if (hasAltitudeData) {
             DetailCard {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    // Ascent / Descent Row
                     if (data.ascentMeters > 0 || data.descentMeters > 0) {
                         Row(modifier = Modifier.fillMaxWidth()) {
                             if (data.ascentMeters > 0) {
@@ -144,6 +122,7 @@ fun WorkoutDetails(
                         }
                     }
 
+                    // Min / Max Altitude Row
                     if (data.minAltitude != null || data.maxAltitude != null) {
                         Row(modifier = Modifier.fillMaxWidth()) {
                             data.minAltitude?.let {
@@ -175,10 +154,11 @@ private fun DetailCard(content: @Composable () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-        )
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp) // Flat look like standard lists
     ) {
-        Box(modifier = Modifier.padding(16.dp)) {
+        Box(modifier = Modifier.padding(14.dp)) {
             content()
         }
     }
@@ -196,25 +176,66 @@ private fun DetailRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
             Icon(
                 painter = painterResource(id = iconRes),
                 contentDescription = null,
                 modifier = Modifier.size(18.dp),
-                tint = if (isSecondary) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
+                tint = if (isSecondary)
+                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                else
+                    MaterialTheme.colorScheme.primary
             )
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(12.dp))
             Text(
                 text = label,
                 style = if (isSecondary) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyMedium,
-                color = if (isSecondary) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
+                color = if (isSecondary) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                fontWeight = if (isSecondary) FontWeight.Normal else FontWeight.Medium
             )
         }
-        Text(
-            text = value,
-            style = if (isSecondary) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.titleMedium,
-            fontWeight = if (isSecondary) FontWeight.Normal else FontWeight.Bold
-        )
+        if (value.isNotEmpty()) {
+            Text(
+                text = value,
+                style = if (isSecondary) MaterialTheme.typography.bodySmall else MaterialTheme.typography.titleMedium,
+                color = if (isSecondary) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                fontWeight = if (isSecondary) FontWeight.Normal else FontWeight.Bold
+            )
+        }
+    }
+}
+
+
+@Composable
+private fun MainItem(
+    iconRes: Int,
+    mainString: String,
+    secondaryString: String?,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                painter = painterResource(id = iconRes),
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = mainString,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+        if (secondaryString != null) {
+            Text(
+                text = secondaryString,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
@@ -235,7 +256,7 @@ private fun DetailItem(
             modifier = Modifier.size(20.dp),
             tint = MaterialTheme.colorScheme.primary
         )
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(10.dp))
         Column {
             Text(
                 text = label,
@@ -245,7 +266,44 @@ private fun DetailItem(
             Text(
                 text = value,
                 style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+fun PreviewDetailItem() {
+    MaterialTheme {
+        MainItem(
+            iconRes = R.drawable.ic_distance,
+            modifier = Modifier.fillMaxWidth(),
+            mainString = "10,00 km",
+            secondaryString = "(Max. Luftlinie: 5,00 km)"
+        )
+    }
+}
+
+@Preview
+@Composable
+fun PreviewDistanceAndTime() {
+    MaterialTheme {
+        Row(modifier = Modifier.fillMaxWidth()) {
+            MainItem(
+                iconRes = R.drawable.ic_distance,
+                mainString = "10,00 km",
+                secondaryString = "(Max. Luftlinie: 5,00 km)",
+                modifier = Modifier.weight(1f)
+            )
+
+            // Active Time
+            MainItem(
+                iconRes = R.drawable.ic_time_active,
+                mainString = "0:30:00",
+                secondaryString = "(Total: 0:45:00)",
+                modifier = Modifier.weight(1f)
             )
         }
     }
