@@ -23,7 +23,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -35,7 +34,6 @@ import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.PaceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
-import com.atrainingtracker.trainingtracker.MyHelper
 
 @Composable
 fun WorkoutDetails(
@@ -67,16 +65,18 @@ fun WorkoutDetails(
                 }
                 MainItem(
                     iconRes = R.drawable.ic_distance,
-                    mainString = distanceFormatter.format_with_units(data.totalDistance),
-                    secondaryString = maxDispString,
+                    stringResource(R.string.distance),
+                    mainValueString = distanceFormatter.format_with_units(data.totalDistance),
+                    secondaryValueString = maxDispString,
                     modifier = Modifier.weight(1f)
                 )
 
                 // Active Time
                 MainItem(
                     iconRes = R.drawable.ic_time_active,
-                    mainString = timeFormatter.format(data.activeTimeSec),
-                    secondaryString = stringResource(R.string.total_time_format, timeFormatter.format(data.totalTimeSec)),
+                    stringResource(R.string.time_active),
+                    mainValueString = timeFormatter.format(data.activeTimeSec),
+                    secondaryValueString = stringResource(R.string.total_time_format, timeFormatter.format(data.totalTimeSec)),
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -89,8 +89,9 @@ fun WorkoutDetails(
         }
         MainItem(
             iconRes = R.drawable.ic_speed,
-            mainString = mainSpeedString,
-            secondaryString = if (BSportType.RUN == data.bSportType) "          " + speedFormatter.format_with_units(data.avgSpeedMps) else null,
+            label = if (BSportType.RUN == data.bSportType) stringResource(R.string.pace) else stringResource(R.string.speed),
+            mainValueString = mainSpeedString,
+            secondaryValueString = if (BSportType.RUN == data.bSportType) "          " + speedFormatter.format_with_units(data.avgSpeedMps) else null,
             modifier = Modifier
         )
 
@@ -209,29 +210,38 @@ private fun DetailRow(
 @Composable
 private fun MainItem(
     iconRes: Int,
-    mainString: String,
-    secondaryString: String?,
+    label: String,
+    mainValueString: String,
+    secondaryValueString: String?,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.Bottom) {
             Icon(
                 painter = painterResource(id = iconRes),
                 contentDescription = null,
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier
+                    .size(32.dp)
+                    .padding(bottom = 0.dp),
                 tint = MaterialTheme.colorScheme.primary
             )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = mainString,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            Spacer(modifier = Modifier.width(5.dp))
+            Column {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = mainValueString,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
         }
-        if (secondaryString != null) {
+        if (secondaryValueString != null) {
             Text(
-                text = secondaryString,
+                text = secondaryValueString,
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -279,9 +289,10 @@ fun PreviewDetailItem() {
     MaterialTheme {
         MainItem(
             iconRes = R.drawable.ic_distance,
+            label = "Distance",
             modifier = Modifier.fillMaxWidth(),
-            mainString = "10,00 km",
-            secondaryString = "(Max. Luftlinie: 5,00 km)"
+            mainValueString = "10,00 km",
+            secondaryValueString = "(Max. Luftlinie: 5,00 km)"
         )
     }
 }
@@ -293,16 +304,18 @@ fun PreviewDistanceAndTime() {
         Row(modifier = Modifier.fillMaxWidth()) {
             MainItem(
                 iconRes = R.drawable.ic_distance,
-                mainString = "10,00 km",
-                secondaryString = "(Max. Luftlinie: 5,00 km)",
+                label = "Distance",
+                mainValueString = "10,00 km",
+                secondaryValueString = "(Max. Luftlinie: 5,00 km)",
                 modifier = Modifier.weight(1f)
             )
 
             // Active Time
             MainItem(
                 iconRes = R.drawable.ic_time_active,
-                mainString = "0:30:00",
-                secondaryString = "(Total: 0:45:00)",
+                label = "Active Time",
+                mainValueString = "0:30:00",
+                secondaryValueString = "(Total: 0:45:00)",
                 modifier = Modifier.weight(1f)
             )
         }
