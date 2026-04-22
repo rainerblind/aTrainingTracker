@@ -29,6 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusGroup
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusGroupData
 import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.DescriptionData
@@ -46,11 +47,7 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutH
  */
 @Composable
 fun WorkoutSummary(
-    headerData: WorkoutHeaderData,
-    descriptionData: DescriptionData,
-    detailsData: WorkoutDetailsData,
-    extremaData: ExtremaData,
-    exportStatuses: List<ExportStatusGroupData>,
+    data: WorkoutData,
     onMenuClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -58,33 +55,33 @@ fun WorkoutSummary(
 
         // 1. Header (Blue Scrim Section)
         WorkoutHeader(
-            data = headerData,
+            data = data.headerData,
             onMenuClick = onMenuClick
         )
 
         // 2. Description Section (Notes, Goals, Method)
         // Hidden automatically if all fields are null/blank
-        WorkoutDescription(data = descriptionData)
+        WorkoutDescription(data = data.descriptionData)
 
         // 3. Main Details Section (Distance, Time, Speed/Pace)
-        WorkoutDetails(data = detailsData)
+        WorkoutDetails(data = data.detailsData)
 
         // 4. Extrema Values Section
         // Show a subtle divider if extrema data exists
-        if (extremaData.dataRows.isNotEmpty() || extremaData.isCalculating) {
+        if (data.extremaData.dataRows.isNotEmpty() || data.extremaData.isCalculating) {
             HorizontalDivider(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 thickness = 0.5.dp,
                 color = MaterialTheme.colorScheme.outlineVariant
             )
-            WorkoutExtrema(data = extremaData)
+            WorkoutExtrema(data = data.extremaData)
         }
 
         // TODO: add ATrainingTrackerMap
         // TODO: add Elevation Profile
 
         // 5. Export Status Section
-        val activeExports = exportStatuses.filter { it.hasContent }
+        val activeExports = data.exportStatuses.filter { it.hasContent }
         if (activeExports.isNotEmpty()) {
             Column(
                 modifier = Modifier

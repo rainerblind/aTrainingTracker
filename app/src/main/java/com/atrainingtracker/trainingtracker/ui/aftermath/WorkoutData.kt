@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath
 
+import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusGroupData
 import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.DescriptionData
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsData
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaData
@@ -39,7 +40,8 @@ data class WorkoutData(
     val headerData: WorkoutHeaderData,
     val detailsData: WorkoutDetailsData,
     val descriptionData: DescriptionData,
-    val extremaData: ExtremaData
+    val extremaData: ExtremaData,
+    val exportStatuses: List<ExportStatusGroupData>,
 )
 
 // TODO: move the methods to update redundant data to here???
