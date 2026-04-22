@@ -27,6 +27,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -63,10 +64,12 @@ fun WorkoutTabsScreen(
 
     Column(modifier = modifier.fillMaxSize()) {
         // Tab Bar
-        PrimaryTabRow(
+        PrimaryScrollableTabRow(
             selectedTabIndex = pagerState.currentPage,
-            containerColor = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.primary
+            edgePadding = 8.dp,
+            // containerColor = MaterialTheme.colorScheme.surface,
+            // contentColor = MaterialTheme.colorScheme.primary,
+            divider = {}
         ) {
             tabs.forEachIndexed { index, title ->
                 Tab(
@@ -83,6 +86,7 @@ fun WorkoutTabsScreen(
         HorizontalPager(
             state = pagerState,
             modifier = Modifier.weight(1f),
+            userScrollEnabled = true,
             verticalAlignment = Alignment.Top
         ) { pageIndex ->
             when (pageIndex) {
