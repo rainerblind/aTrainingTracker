@@ -98,7 +98,7 @@ fun WorkoutDetails(
         // --- Section 3: Altitude (Identical to bindAltitude in ViewHolder) ---
         Row(modifier = Modifier.fillMaxWidth()) {
             if (data.ascentMeters > 0) {
-                DetailItem(
+                AltitudeItem(
                     modifier = Modifier.weight(1f),
                     label = stringResource(R.string.ascent_short),
                     value = "${data.ascentMeters} m",
@@ -106,7 +106,7 @@ fun WorkoutDetails(
                 )
             }
             if (data.descentMeters > 0) {
-                DetailItem(
+                AltitudeItem(
                     modifier = Modifier.weight(1f),
                     label = stringResource(R.string.descent_short),
                     value = "${data.descentMeters} m",
@@ -114,7 +114,7 @@ fun WorkoutDetails(
                 )
             }
             data.minAltitude?.let {
-                DetailItem(
+                AltitudeItem(
                     modifier = Modifier.weight(1f),
                     label = stringResource(R.string.altitude_short),
                     value = "%.0f m".format(it),
@@ -122,7 +122,7 @@ fun WorkoutDetails(
                 )
             }
             data.maxAltitude?.let {
-                DetailItem(
+                AltitudeItem(
                     modifier = Modifier.weight(1f),
                     label = stringResource(R.string.altitude_short),
                         value = "%.0f m".format(it),
@@ -178,7 +178,7 @@ private fun MainItem(
 }
 
 @Composable
-private fun DetailItem(
+private fun AltitudeItem(
     modifier: Modifier,
     label: String,
     value: String,
