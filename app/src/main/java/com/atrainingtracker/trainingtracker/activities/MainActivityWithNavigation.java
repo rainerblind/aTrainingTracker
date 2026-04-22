@@ -71,12 +71,9 @@ import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
-import androidx.appcompat.app.ActionBar;
-import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceScreen;
-import androidx.appcompat.widget.Toolbar;
 
 import android.provider.Settings;
 import android.util.Log;
@@ -100,7 +97,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
 import com.atrainingtracker.trainingtracker.dialogs.GPSDisabledDialog;
 import com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialog;
-import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedFragment;
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedFragmentClassic;
 import com.atrainingtracker.trainingtracker.fragments.preferences.CloudUploadFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.FancyWorkoutNameListFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.RootPrefsFragment;
@@ -724,8 +721,8 @@ public class MainActivityWithNavigation
                 break;
 
             case R.id.drawer_workouts:
-                mFragment = new WorkoutSummariesTabbedFragment();
-                tag = WorkoutSummariesTabbedFragment.TAG;
+                mFragment = new WorkoutSummariesTabbedFragmentClassic();
+                tag = WorkoutSummariesTabbedFragmentClassic.TAG;
                 break;
 
             case R.id.drawer_my_sensors:

@@ -68,7 +68,9 @@ class WorkoutDataMapper(
             headerData = headerData,
             detailsData = detailsData,
             descriptionData = descriptionData,
-            extremaData = extremaData
+            extremaData = extremaData,
+            trackPoints = emptyList(),  // TODO
+            exportStatuses = emptyList() // TODO
         )
     }
 }
