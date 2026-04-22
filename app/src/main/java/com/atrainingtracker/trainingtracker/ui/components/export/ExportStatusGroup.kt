@@ -43,7 +43,7 @@ fun ExportStatusGroup(
     ) {
         // Title (e.g., "Dropbox") - Matches Body2 style
         Text(
-            text = data.groupTitle ?: "",
+            text = data.groupTitle,
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
@@ -62,10 +62,9 @@ private fun StatusLine(text: String?) {
     if (!text.isNullOrBlank()) {
         Text(
             text = text,
-            fontSize = 12.sp, // Matches android:textSize="12sp"
-            lineHeight = 16.sp,
+            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 4.dp)
+            modifier = Modifier.padding(start = 8.dp, top = 2.dp)
         )
     }
 }

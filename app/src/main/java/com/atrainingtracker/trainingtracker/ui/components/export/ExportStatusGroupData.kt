@@ -32,7 +32,7 @@ package com.atrainingtracker.trainingtracker.ui.components.export
 // TODO: find a better name?
 data class ExportStatusGroupData(
     val hasContent: Boolean,
-    val groupTitle: String? = null,
+    val groupTitle: String = "",
     val waitingLine: String? = null,
     val runningLine: String? = null,
     val succeededLine: String? = null,
