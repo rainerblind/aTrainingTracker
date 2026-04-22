@@ -47,6 +47,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun WorkoutTabsScreen(
     workouts: List<WorkoutData>,
+    isLoading: Boolean,  // TODO: show a CircularProgressIndicator here
     isPlayServiceAvailable: Boolean,
     onMenuClick: (WorkoutData) -> Unit,
     modifier: Modifier = Modifier
@@ -117,7 +118,7 @@ fun WorkoutList(
                 workoutData = workout,
                 onMenuClick = { onMenuClick(workout) },
                 isPlayServiceAvailable = isPlayServiceAvailable,
-                onMapClick = { },
+                onMapClick = { }, // TODO: move forward / upwards later on.
                 modifier = modifier
             )
             HorizontalDivider(
