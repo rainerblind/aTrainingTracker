@@ -45,9 +45,12 @@ import com.atrainingtracker.trainingtracker.database.WorkoutDeletionHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
 import com.atrainingtracker.trainingtracker.exporter.ExportManager
+import com.atrainingtracker.trainingtracker.exporter.ExportType
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.helpers.CalcExtremaWorker
 import com.atrainingtracker.trainingtracker.tracker.TrackerService
+import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusDataProvider
+import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusGroupData
 import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.DescriptionDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaDataProvider
@@ -340,6 +343,9 @@ class WorkoutRepository private constructor(private val application: Application
     }
 
 
+    val exportStatusDataProvider = ExportStatusDataProvider(application)
+    val orderedExportTypes = listOf(ExportType.FILE, ExportType.DROPBOX, ExportType.COMMUNITY)
+
     suspend fun loadAllWorkouts() {
         withContext(Dispatchers.IO) {
             val summaryList = mutableListOf<WorkoutData>()
@@ -349,8 +355,35 @@ class WorkoutRepository private constructor(private val application: Application
                 if (c.moveToFirst()) {
                     do {
                         val data = mapper.fromCursor(c)
+
+                        // TODO: rewrite this part.
+                        // -> own repository for the track points; merged by the viewModel
+                        // -> own repository for the export status; merged by the viewModel
+
                         val trackPoints = getWorkoutTrackPoints(data.id, Roughness.MEDIUM, TrackType.BEST)
-                        summaryList.add(data.copy(trackPoints = trackPoints))
+
+                        val exportStatuses: MutableList<ExportStatusGroupData> = mutableListOf()
+                        if (data.fileBaseName != null) {
+                            for (type in orderedExportTypes) {
+                                // Get the export statuses from our central provider
+                                val groupData =
+                                    exportStatusDataProvider.createGroupData(
+                                        data.fileBaseName,
+                                        type
+                                    )
+                                if (groupData.hasContent) {
+                                    exportStatuses.add(groupData)
+                                }
+                            }
+                        }
+
+                        summaryList.add(
+                            data.copy(
+                                trackPoints = trackPoints,
+                                exportStatuses = exportStatuses
+                            )
+                        )
+
                     } while (c.moveToNext())
                 }
             }
