@@ -103,14 +103,12 @@ fun WorkoutDetails(
             iconColor = iconColor,
             textColorMain = textColorMain,
             textColorSecondary = textColorSecondary,
-            iconRes = R.drawable.ic_time_active,
+            iconRes = R.drawable.ic_speed,
             label = if (BSportType.RUN == data.bSportType) stringResource(R.string.pace) else stringResource(R.string.speed),
             mainValueString = mainSpeedString,
             secondaryValueString = if (BSportType.RUN == data.bSportType) "          " + speedFormatter.format_with_units(data.avgSpeedMps) else null,
             modifier = Modifier
         )
-
-        HorizontalDivider()
 
         // --- Section 3: Altitude (Identical to bindAltitude in ViewHolder) ---
         AltitudeRow(
@@ -185,6 +183,12 @@ private fun AltitudeRow(
     modifier: Modifier,
 ){
     if (ascentMeters > 0 || descentMeters > 0 || minAltitude != null || maxAltitude != null) {
+        HorizontalDivider(
+            // modifier = Modifier.padding(8.dp),
+            thickness = 0.5.dp,
+            color = MaterialTheme.colorScheme.outlineVariant
+        )
+
         Row(
             modifier = modifier
                 .fillMaxWidth()
