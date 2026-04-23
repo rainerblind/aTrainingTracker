@@ -23,6 +23,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -35,6 +36,7 @@ import com.atrainingtracker.banalservice.sensor.formater.PaceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
 
+
 @Composable
 fun WorkoutDetails(
     data: WorkoutDetailsData,
@@ -44,6 +46,10 @@ fun WorkoutDetails(
     val timeFormatter = TimeFormatter()
     val speedFormatter = SpeedFormatter()
     val paceFormatter = PaceFormatter()
+
+    val iconColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val textColorMain = MaterialTheme.colorScheme.onSurface
+    val textColorSecondary = MaterialTheme.colorScheme.onSurfaceVariant
 
     Column(
         modifier = modifier
@@ -64,8 +70,11 @@ fun WorkoutDetails(
                     null
                 }
                 MainItem(
+                    iconColor = iconColor,
+                    textColorMain = textColorMain,
+                    textColorSecondary = textColorSecondary,
                     iconRes = R.drawable.ic_distance,
-                    stringResource(R.string.distance),
+                    label = stringResource(R.string.distance),
                     mainValueString = distanceFormatter.format_with_units(data.totalDistance),
                     secondaryValueString = maxDispString,
                     modifier = Modifier.weight(1f)
@@ -73,8 +82,11 @@ fun WorkoutDetails(
 
                 // Active Time
                 MainItem(
+                    iconColor = iconColor,
+                    textColorMain = textColorMain,
+                    textColorSecondary = textColorSecondary,
                     iconRes = R.drawable.ic_time_active,
-                    stringResource(R.string.time_active),
+                    label = stringResource(R.string.time_active),
                     mainValueString = timeFormatter.format(data.activeTimeSec),
                     secondaryValueString = stringResource(R.string.total_time_format, timeFormatter.format(data.totalTimeSec)),
                     modifier = Modifier.weight(1f)
@@ -88,54 +100,38 @@ fun WorkoutDetails(
             speedFormatter.format_with_units(data.avgSpeedMps)
         }
         MainItem(
-            iconRes = R.drawable.ic_speed,
+            iconColor = iconColor,
+            textColorMain = textColorMain,
+            textColorSecondary = textColorSecondary,
+            iconRes = R.drawable.ic_time_active,
             label = if (BSportType.RUN == data.bSportType) stringResource(R.string.pace) else stringResource(R.string.speed),
             mainValueString = mainSpeedString,
             secondaryValueString = if (BSportType.RUN == data.bSportType) "          " + speedFormatter.format_with_units(data.avgSpeedMps) else null,
             modifier = Modifier
         )
 
+        HorizontalDivider()
+
         // --- Section 3: Altitude (Identical to bindAltitude in ViewHolder) ---
-        Row(modifier = Modifier.fillMaxWidth()) {
-            if (data.ascentMeters > 0) {
-                AltitudeItem(
-                    modifier = Modifier.weight(1f),
-                    label = stringResource(R.string.ascent_short),
-                    value = "${data.ascentMeters} m",
-                    iconRes = R.drawable.ic_ascent
-                )
-            }
-            if (data.descentMeters > 0) {
-                AltitudeItem(
-                    modifier = Modifier.weight(1f),
-                    label = stringResource(R.string.descent_short),
-                    value = "${data.descentMeters} m",
-                    iconRes = R.drawable.ic_descent
-                )
-            }
-            data.minAltitude?.let {
-                AltitudeItem(
-                    modifier = Modifier.weight(1f),
-                    label = stringResource(R.string.altitude_short),
-                    value = "%.0f m".format(it),
-                        iconRes = R.drawable.ic_altitude_min
-                )
-            }
-            data.maxAltitude?.let {
-                AltitudeItem(
-                    modifier = Modifier.weight(1f),
-                    label = stringResource(R.string.altitude_short),
-                        value = "%.0f m".format(it),
-                    iconRes = R.drawable.ic_altitude_max
-                )
-            }
-        }
+        AltitudeRow(
+            data.ascentMeters,
+            data.descentMeters,
+            data.minAltitude,
+            data.maxAltitude,
+            modifier = Modifier,
+            iconColor = iconColor,
+            textColorMain = textColorMain,
+            textColorSecondary = textColorSecondary
+        )
     }
 }
 
 
 @Composable
 private fun MainItem(
+    iconColor: Color,
+    textColorMain: Color,
+    textColorSecondary: Color,
     iconRes: Int,
     label: String,
     mainValueString: String,
@@ -150,20 +146,20 @@ private fun MainItem(
                 modifier = Modifier
                     .size(32.dp)
                     .padding(bottom = 0.dp),
-                tint = MaterialTheme.colorScheme.primary
+                tint = iconColor
             )
             Spacer(modifier = Modifier.width(5.dp))
             Column {
                 Text(
                     text = label,
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = textColorSecondary
                 )
                 Text(
                     text = mainValueString,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = textColorMain
                 )
             }
         }
@@ -171,8 +167,95 @@ private fun MainItem(
             Text(
                 text = secondaryValueString,
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = textColorSecondary
             )
+        }
+    }
+}
+
+@Composable
+private fun AltitudeRow(
+    ascentMeters: Int,
+    descentMeters: Int,
+    minAltitude: Double?,
+    maxAltitude: Double?,
+    iconColor: Color,
+    textColorMain: Color,
+    textColorSecondary: Color,
+    modifier: Modifier,
+){
+    if (ascentMeters > 0 || descentMeters > 0 || minAltitude != null || maxAltitude != null) {
+        Row(
+            modifier = modifier
+                .fillMaxWidth()
+        ) {
+            Column() {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_altitude),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(32.dp)
+                        .padding(bottom = 0.dp),
+                    tint = iconColor
+                )
+                Spacer(modifier = Modifier.width(5.dp))
+                Text(
+                    text = stringResource(R.string.altitude),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = textColorSecondary
+                )
+            }
+            Spacer(modifier = Modifier.width(20.dp))
+            Column() {
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    if (ascentMeters > 0) {
+                        AltitudeItem(
+                            modifier = Modifier.weight(1f),
+                            label = stringResource(R.string.ascent_short),
+                            value = "${ascentMeters} m",
+                            iconRes = R.drawable.ic_ascent,
+                            iconColor = iconColor,
+                            textColorMain = textColorMain,
+                            textColorSecondary = textColorSecondary
+                        )
+                    }
+                    maxAltitude?.let {
+                        AltitudeItem(
+                            modifier = Modifier.weight(1f),
+                            label = stringResource(R.string.max),
+                            value = "%.0f m".format(it),
+                            iconRes = R.drawable.ic_altitude_max,
+                            iconColor = iconColor,
+                            textColorMain = textColorMain,
+                            textColorSecondary = textColorSecondary
+                        )
+                    }
+                }
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    if (descentMeters > 0) {
+                        AltitudeItem(
+                            modifier = Modifier.weight(1f),
+                            label = stringResource(R.string.descent_short),
+                            value = "${descentMeters} m",
+                            iconRes = R.drawable.ic_descent,
+                            iconColor = iconColor,
+                            textColorMain = textColorMain,
+                            textColorSecondary = textColorSecondary
+                        )
+                    }
+                    minAltitude?.let {
+                        AltitudeItem(
+                            modifier = Modifier.weight(1f),
+                            label = stringResource(R.string.min),
+                            value = "%.0f m".format(it),
+                            iconRes = R.drawable.ic_altitude_min,
+                            iconColor = iconColor,
+                            textColorMain = textColorMain,
+                            textColorSecondary = textColorSecondary
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -182,7 +265,10 @@ private fun AltitudeItem(
     modifier: Modifier,
     label: String,
     value: String,
-    iconRes: Int
+    iconRes: Int,
+    iconColor: Color,
+    textColorMain: Color,
+    textColorSecondary: Color
 ) {
     Row(
         modifier = modifier,
@@ -192,20 +278,20 @@ private fun AltitudeItem(
             painter = painterResource(id = iconRes),
             contentDescription = null,
             modifier = Modifier.size(28.dp),
-            tint = MaterialTheme.colorScheme.primary
+            tint = iconColor
         )
         Spacer(modifier = Modifier.width(2.dp))
         Column {
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = textColorSecondary
             )
             Text(
                 text = value,
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
+                color = textColorMain
             )
         }
     }
@@ -217,6 +303,9 @@ fun PreviewDetailItem() {
     MaterialTheme {
         MainItem(
             iconRes = R.drawable.ic_distance,
+            iconColor = MaterialTheme.colorScheme.onSurface,
+            textColorMain = MaterialTheme.colorScheme.onSurface,
+            textColorSecondary = MaterialTheme.colorScheme.onSurfaceVariant,
             label = "Distance",
             modifier = Modifier.fillMaxWidth(),
             mainValueString = "10,00 km",
@@ -232,6 +321,9 @@ fun PreviewDistanceAndTime() {
         Row(modifier = Modifier.fillMaxWidth()) {
             MainItem(
                 iconRes = R.drawable.ic_distance,
+                iconColor = MaterialTheme.colorScheme.onSurface,
+                textColorMain = MaterialTheme.colorScheme.onSurface,
+                textColorSecondary = MaterialTheme.colorScheme.onSurfaceVariant,
                 label = "Distance",
                 mainValueString = "10,00 km",
                 secondaryValueString = "(Max. Luftlinie: 5,00 km)",
@@ -241,12 +333,32 @@ fun PreviewDistanceAndTime() {
             // Active Time
             MainItem(
                 iconRes = R.drawable.ic_time_active,
+                iconColor = MaterialTheme.colorScheme.onSurface,
+                textColorMain = MaterialTheme.colorScheme.onSurface,
+                textColorSecondary = MaterialTheme.colorScheme.onSurfaceVariant,
                 label = "Active Time",
                 mainValueString = "0:30:00",
                 secondaryValueString = "(Total: 0:45:00)",
                 modifier = Modifier.weight(1f)
             )
         }
+    }
+}
+
+@Preview
+@Composable
+fun PreviewAltitudeRow() {
+    MaterialTheme {
+        AltitudeRow(
+            ascentMeters = 1250,
+            descentMeters = 1240,
+            minAltitude = 1150.0,
+            maxAltitude = 1410.0,
+            modifier = Modifier,
+            iconColor = MaterialTheme.colorScheme.onSurface,
+            textColorMain = MaterialTheme.colorScheme.onSurface,
+            textColorSecondary = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
