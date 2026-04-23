@@ -32,8 +32,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatus
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusGroup
 import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.WorkoutDescription
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.*
@@ -95,21 +98,9 @@ fun WorkoutSummary(
         }
 
         // 5. Export Status Section
-        val activeExports = workoutData.exportStatuses.filter { it.hasContent }
-        if (activeExports.isNotEmpty()) {
-            Column(
-                modifier = Modifier
-                    .padding(16.dp)
-                    .fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                activeExports.forEach { statusGroup ->
-                    ExportStatusGroup(
-                        data = statusGroup
-                    )
-                }
-            }
-        }
+        ExportStatus(
+            exportStatuses = workoutData.exportStatuses
+        )
 
         // Final spacing at the bottom of the summary
         Spacer(modifier = Modifier.height(16.dp))
