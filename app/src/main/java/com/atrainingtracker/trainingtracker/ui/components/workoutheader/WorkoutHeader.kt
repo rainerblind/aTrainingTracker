@@ -118,7 +118,7 @@ fun WorkoutHeader(
                     data.equipmentName?.let { equipmentName ->
                         Text(
                             text = equipmentName,
-                            style = MaterialTheme.typography.bodySmall
+                            style = MaterialTheme.typography.bodyMedium
                         )
                     }
                 }
