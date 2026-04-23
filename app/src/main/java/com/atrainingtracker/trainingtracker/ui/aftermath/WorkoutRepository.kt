@@ -349,7 +349,8 @@ class WorkoutRepository private constructor(private val application: Application
                 if (c.moveToFirst()) {
                     do {
                         val data = mapper.fromCursor(c)
-                        summaryList.add( data)
+                        val trackPoints = getWorkoutTrackPoints(data.id, Roughness.MEDIUM, TrackType.BEST)
+                        summaryList.add(data.copy(trackPoints = trackPoints))
                     } while (c.moveToNext())
                 }
             }

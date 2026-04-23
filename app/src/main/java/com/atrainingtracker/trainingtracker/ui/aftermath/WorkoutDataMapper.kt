@@ -69,7 +69,7 @@ class WorkoutDataMapper(
             detailsData = detailsData,
             descriptionData = descriptionData,
             extremaData = extremaData,
-            trackPoints = emptyList(),  // TODO
+            trackPoints = emptyList(),  // added by the repository
             exportStatuses = emptyList() // TODO
         )
     }
