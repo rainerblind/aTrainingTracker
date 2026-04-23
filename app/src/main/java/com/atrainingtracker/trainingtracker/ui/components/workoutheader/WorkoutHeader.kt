@@ -44,10 +44,13 @@ fun WorkoutHeader(
     onMenuClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val backgroundColor = MaterialTheme.colorScheme.primaryContainer
+    val textColor = MaterialTheme.colorScheme.onPrimaryContainer
+
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.primary,
-        contentColor = MaterialTheme.colorScheme.onPrimary
+        color = backgroundColor,
+        contentColor = textColor
     ) {
         // Box allows us to place the Menu Button at the absolute top-right
         Box(modifier = Modifier.fillMaxWidth()) {
@@ -90,8 +93,7 @@ fun WorkoutHeader(
                             }
                             Text(
                                 text = label,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
+                                style = MaterialTheme.typography.bodySmall
                             )
                         }
                     }
@@ -107,17 +109,16 @@ fun WorkoutHeader(
                         painter = painterResource(id = data.bSportType.iconResId),
                         contentDescription = null,
                         modifier = Modifier.size(48.dp),
-                        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onPrimary)
+                        colorFilter = ColorFilter.tint(textColor)
                     )
                     Text(
                         text = data.sportName,
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodyMedium
                     )
                     data.equipmentName?.let { equipmentName ->
                         Text(
                             text = equipmentName,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
+                            style = MaterialTheme.typography.bodySmall
                         )
                     }
                 }
@@ -140,7 +141,6 @@ fun WorkoutHeader(
                     Icon(
                         painter = painterResource(id = R.drawable.ic_baseline_more_vert_24),
                         contentDescription = "Menu",
-                        tint = MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -158,14 +158,12 @@ private fun IconTextRow(iconRes: Int, text: String) {
         Icon(
             painter = painterResource(id = iconRes),
             contentDescription = null,
-            modifier = Modifier.size(18.dp),
-            tint = MaterialTheme.colorScheme.onPrimary
+            modifier = Modifier.size(18.dp)
         )
         Spacer(modifier = Modifier.width(4.dp))
         Text(
             text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onPrimary
+            style = MaterialTheme.typography.bodyMedium
         )
     }
 }

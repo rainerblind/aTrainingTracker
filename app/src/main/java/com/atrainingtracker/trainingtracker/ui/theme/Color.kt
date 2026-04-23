@@ -23,8 +23,8 @@ import androidx.compose.ui.graphics.Color
 // Light Theme Colors from color.xml
 val LightPrimary = Color(0xFF1464F4)
 val LightOnPrimary = Color(0xFFFFFFFF)
-val LightPrimaryContainer = Color(0xFFD8E2FF) // Suggested Material 3 color
-val LightOnPrimaryContainer = Color(0xFF001A41) // Suggested Material 3 color
+val BabyBlueEye = Color(0xFFA1CAF1) // Baby Blue Eye
+val BabyBlueEyeInverse = Color(0xFF001A41) // Suggested Material 3 color
 val LightSecondary = Color(0xFF0000CD)
 val LightOnSecondary = Color(0xFFFFFFFF)
 val LightSecondaryContainer = Color(0xFFDEE1F9) // Suggested Material 3 color
