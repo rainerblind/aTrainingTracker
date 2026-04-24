@@ -51,6 +51,7 @@ fun WorkoutTabsScreen(
     isLoading: Boolean,  // TODO: show a CircularProgressIndicator here
     isPlayServiceAvailable: Boolean,
     onMenuClick: (WorkoutData) -> Unit,
+    onEditWorkout: (Long) -> Unit,
     onMapClick: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -91,10 +92,10 @@ fun WorkoutTabsScreen(
             verticalAlignment = Alignment.Top
         ) { pageIndex ->
             when (pageIndex) {
-                0 -> WorkoutList(workouts = workouts, isPlayServiceAvailable = isPlayServiceAvailable, onMenuClick = onMenuClick, onMapClick = onMapClick)
-                1 -> WorkoutList(workouts = workouts.filter { it.sportData.bSportType == BSportType.BIKE }, isPlayServiceAvailable = isPlayServiceAvailable,  onMenuClick = onMenuClick, onMapClick = onMapClick)
-                2 -> WorkoutList(workouts = workouts.filter { it.sportData.bSportType == BSportType.RUN }, isPlayServiceAvailable = isPlayServiceAvailable, onMenuClick = onMenuClick, onMapClick = onMapClick)
-                3 -> WorkoutList(workouts = workouts.filter { it.sportData.bSportType == BSportType.UNKNOWN }, isPlayServiceAvailable = isPlayServiceAvailable, onMenuClick = onMenuClick, onMapClick = onMapClick)
+                0 -> WorkoutList(workouts = workouts, isPlayServiceAvailable = isPlayServiceAvailable, onMenuClick = onMenuClick, onEditWorkout = onEditWorkout, onMapClick = onMapClick)
+                1 -> WorkoutList(workouts = workouts.filter { it.sportData.bSportType == BSportType.BIKE }, isPlayServiceAvailable = isPlayServiceAvailable,  onMenuClick = onMenuClick, onEditWorkout = onEditWorkout, onMapClick = onMapClick)
+                2 -> WorkoutList(workouts = workouts.filter { it.sportData.bSportType == BSportType.RUN }, isPlayServiceAvailable = isPlayServiceAvailable, onMenuClick = onMenuClick, onEditWorkout = onEditWorkout, onMapClick = onMapClick)
+                3 -> WorkoutList(workouts = workouts.filter { it.sportData.bSportType == BSportType.UNKNOWN }, isPlayServiceAvailable = isPlayServiceAvailable, onMenuClick = onMenuClick, onEditWorkout = onEditWorkout, onMapClick = onMapClick)
             }
         }
     }
@@ -109,6 +110,7 @@ fun WorkoutList(
     workouts: List<WorkoutData>,
     isPlayServiceAvailable: Boolean,
     onMenuClick: (WorkoutData) -> Unit,
+    onEditWorkout: (Long) -> Unit,
     onMapClick: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -122,9 +124,10 @@ fun WorkoutList(
         ) { workout ->
             WorkoutSummary(
                 workoutData = workout,
-                onMenuClick = { onMenuClick(workout) },
                 isPlayServiceAvailable = isPlayServiceAvailable,
-                onMapClick = { onMapClick (workout.id) },
+                onMenuClick = { onMenuClick(workout) },
+                onEditWorkout = { onEditWorkout(workout.id) },
+                onMapClick = { onMapClick(workout.id) },
                 modifier = modifier
             )
             HorizontalDivider(

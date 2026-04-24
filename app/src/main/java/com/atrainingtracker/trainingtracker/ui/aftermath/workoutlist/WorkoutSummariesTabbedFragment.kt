@@ -69,6 +69,9 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                             // e.g., opening a popup or calling viewModel logic
                             // viewModel.onWorkoutAction(workoutData.headerData.id)
                         },
+                        onEditWorkout = { workoutId ->
+                            TrainingApplication.startEditWorkoutActivity(workoutId, false)
+                        },
                         onMapClick = { workoutId ->
                             TrainingApplication.startTrackOnMapAftermathActivity(activity, workoutId)
                         },

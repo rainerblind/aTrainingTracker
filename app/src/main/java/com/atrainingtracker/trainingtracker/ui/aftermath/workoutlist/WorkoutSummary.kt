@@ -19,7 +19,6 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -32,12 +31,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatus
-import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusGroup
 import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.WorkoutDescription
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.*
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.WorkoutExtrema
@@ -58,25 +54,40 @@ import kotlinx.coroutines.flow.MutableStateFlow
 @Composable
 fun WorkoutSummary(
     workoutData: WorkoutData,
-    onMenuClick: () -> Unit,
     isPlayServiceAvailable: Boolean,
+    onMenuClick: () -> Unit,
+    onEditWorkout: () -> Unit,
     onMapClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
+        // Shared modifier for the clickable sections
+        val editWorkoutModifier = Modifier.clickable {
+            if (workoutData.headerData.finished) {
+                onEditWorkout()
+            }
+        }
+        // TODO: Add functionality to show more detailed stats when clicking on the WorkoutDetails or Extrema Values.
 
         // 1. Header (Blue Scrim Section)
         WorkoutHeader(
             data = workoutData.headerData,
-            onMenuClick = onMenuClick
+            onMenuClick = onMenuClick,
+            modifier = editWorkoutModifier
         )
 
         // 2. Description Section (Notes, Goals, Method)
         // Hidden automatically if all fields are null/blank
-        WorkoutDescription(data = workoutData.descriptionData)
+        WorkoutDescription(
+            data = workoutData.descriptionData,
+            modifier = editWorkoutModifier
+        )
 
         // 3. Main Details Section (Distance, Time, Speed/Pace)
-        WorkoutDetails(data = workoutData.detailsData)
+        WorkoutDetails(
+            data = workoutData.detailsData,
+            modifier = editWorkoutModifier
+        )
 
         // 4. Extrema Values Section
         // Show a subtle divider if extrema data exists
@@ -86,7 +97,9 @@ fun WorkoutSummary(
                 thickness = 0.5.dp,
                 color = MaterialTheme.colorScheme.outlineVariant
             )
-            WorkoutExtrema(data = workoutData.extremaData)
+            WorkoutExtrema(data = workoutData.extremaData,
+                modifier = editWorkoutModifier
+            )
         }
 
         if (isPlayServiceAvailable && workoutData.trackPoints.isNotEmpty()) {
