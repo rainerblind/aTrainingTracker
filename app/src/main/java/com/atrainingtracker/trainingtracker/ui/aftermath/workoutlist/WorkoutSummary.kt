@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,6 +32,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
@@ -61,14 +63,23 @@ fun WorkoutSummary(
     onMapClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier.fillMaxWidth()) {
-        // Shared modifier for the clickable sections
-        val editWorkoutModifier = Modifier.clickable {
-            if (workoutData.headerData.finished) {
-                onEditWorkout()
-            }
+    // When the workout is not yet finished (properly), we show it with an alpha of 0.5
+    val contentAlpha = if (workoutData.headerData.finished) 1.0f else 0.5f
+
+    // Shared modifier for the clickable sections
+    val editWorkoutModifier = Modifier.clickable {
+        if (workoutData.headerData.finished) {
+            onEditWorkout()
         }
-        // TODO: Add functionality to show more detailed stats when clicking on the WorkoutDetails or Extrema Values.
+    }
+    // TODO: Add functionality to show more detailed stats when clicking on the WorkoutDetails or Extrema Values.
+
+    Column(
+        modifier = modifier.fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+            // Apply the alpha to the entire summary container
+            .graphicsLayer(alpha = contentAlpha)
+    ) {
 
         // 1. Header (Blue Scrim Section)
         WorkoutHeader(
