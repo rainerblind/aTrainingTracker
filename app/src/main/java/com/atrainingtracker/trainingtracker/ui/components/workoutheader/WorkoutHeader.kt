@@ -20,7 +20,10 @@ package com.atrainingtracker.trainingtracker.ui.components.workoutheader
 
 import android.content.res.Configuration
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -46,18 +49,28 @@ import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 @Composable
 fun WorkoutHeader(
     data: WorkoutHeaderData,
+    onClicked: () -> Unit,
     onExport: (FileFormat) -> Unit,
+    onDeleteConfirmed: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     // State to control menu visibility
     var showMenu by remember { mutableStateOf(false) }
+    var showContextMenu by remember { mutableStateOf(false) }
+    var confirmDeletion by remember { mutableStateOf(false) }
 
     val backgroundColor = MaterialTheme.colorScheme.primaryContainer
     val textColor = MaterialTheme.colorScheme.onPrimaryContainer
 
 
     Surface(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth()
+            .combinedClickable(
+            onClick = onClicked,
+            onLongClick = {
+                showContextMenu = true
+            }
+        ),
         color = backgroundColor,
         contentColor = textColor
     ) {
@@ -178,6 +191,35 @@ fun WorkoutHeader(
                             )
                         }
                     }
+
+                    // Context Menu for deletion
+                    DropdownMenu(expanded = showContextMenu, onDismissRequest = { showContextMenu = false }) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.delete)) },
+                            onClick = { showContextMenu = false; confirmDeletion = true },
+                            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
+                        )
+                    }
+
+                    // Delete Confirmation Dialog
+                    if (confirmDeletion) {
+                        AlertDialog(
+                            onDismissRequest = { confirmDeletion = false },
+                            title = { Text(stringResource(R.string.delete)) },
+                            text = { Text(stringResource(R.string.really_delete_format, data.workoutName)) },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    onDeleteConfirmed()
+                                    confirmDeletion = false
+                                }) {
+                                    Text(stringResource(R.string.delete))
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { confirmDeletion = false }) { Text(stringResource(R.string.Cancel)) }
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -249,7 +291,9 @@ fun PreviewWorkoutHeader(
         Surface(color = MaterialTheme.colorScheme.background) {
             WorkoutHeader(
                 data = data,
-                onExport = {}
+                onClicked = {},
+                onExport = {},
+                onDeleteConfirmed = {}
             )
         }
     }
@@ -272,7 +316,9 @@ fun PreviewCommuteHeader() {
                 equipmentName = null,
                 trainer = false
             ),
-            onExport = {}
+            onClicked = {},
+            onExport = {},
+            onDeleteConfirmed = {}
         )
     }
 }

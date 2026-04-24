@@ -51,6 +51,7 @@ fun WorkoutTabsScreen(
     isLoading: Boolean,  // TODO: show a CircularProgressIndicator here
     isPlayServiceAvailable: Boolean,
     onExportWorkoutTo: (Long, FileFormat) -> Unit,
+    onDeleteConfirmed: (Long) -> Unit,
     onEditWorkout: (Long) -> Unit,
     onMapClick: (Long) -> Unit,
     modifier: Modifier = Modifier
@@ -92,10 +93,10 @@ fun WorkoutTabsScreen(
             verticalAlignment = Alignment.Top
         ) { pageIndex ->
             when (pageIndex) {
-                0 -> WorkoutList(workouts = workouts, isPlayServiceAvailable = isPlayServiceAvailable, onExportWorkout = onExportWorkoutTo, onEditWorkout = onEditWorkout, onMapClick = onMapClick)
-                1 -> WorkoutList(workouts = workouts.filter { it.sportData.bSportType == BSportType.BIKE }, isPlayServiceAvailable = isPlayServiceAvailable,  onExportWorkout = onExportWorkoutTo, onEditWorkout = onEditWorkout, onMapClick = onMapClick)
-                2 -> WorkoutList(workouts = workouts.filter { it.sportData.bSportType == BSportType.RUN }, isPlayServiceAvailable = isPlayServiceAvailable, onExportWorkout = onExportWorkoutTo, onEditWorkout = onEditWorkout, onMapClick = onMapClick)
-                3 -> WorkoutList(workouts = workouts.filter { it.sportData.bSportType == BSportType.UNKNOWN }, isPlayServiceAvailable = isPlayServiceAvailable, onExportWorkout = onExportWorkoutTo, onEditWorkout = onEditWorkout, onMapClick = onMapClick)
+                0 -> WorkoutList(workouts = workouts, isPlayServiceAvailable = isPlayServiceAvailable, onExportWorkout = onExportWorkoutTo, onDeleteConfirmed = onDeleteConfirmed,  onEditWorkout = onEditWorkout, onMapClick = onMapClick)
+                1 -> WorkoutList(workouts = workouts.filter { it.sportData.bSportType == BSportType.BIKE }, isPlayServiceAvailable = isPlayServiceAvailable,  onExportWorkout = onExportWorkoutTo, onDeleteConfirmed = onDeleteConfirmed, onEditWorkout = onEditWorkout, onMapClick = onMapClick)
+                2 -> WorkoutList(workouts = workouts.filter { it.sportData.bSportType == BSportType.RUN }, isPlayServiceAvailable = isPlayServiceAvailable, onExportWorkout = onExportWorkoutTo, onDeleteConfirmed = onDeleteConfirmed, onEditWorkout = onEditWorkout, onMapClick = onMapClick)
+                3 -> WorkoutList(workouts = workouts.filter { it.sportData.bSportType == BSportType.UNKNOWN }, isPlayServiceAvailable = isPlayServiceAvailable, onExportWorkout = onExportWorkoutTo, onDeleteConfirmed = onDeleteConfirmed, onEditWorkout = onEditWorkout, onMapClick = onMapClick)
             }
         }
     }
@@ -110,6 +111,7 @@ fun WorkoutList(
     workouts: List<WorkoutData>,
     isPlayServiceAvailable: Boolean,
     onExportWorkout: (Long, FileFormat) -> Unit,
+    onDeleteConfirmed: (Long) -> Unit,
     onEditWorkout: (Long) -> Unit,
     onMapClick: (Long) -> Unit,
     modifier: Modifier = Modifier
@@ -126,6 +128,7 @@ fun WorkoutList(
                 workoutData = workout,
                 isPlayServiceAvailable = isPlayServiceAvailable,
                 onExport = { fileFormat -> onExportWorkout(workout.id, fileFormat) },
+                onDeleteConfirmed = { onDeleteConfirmed(workout.id) },
                 onEditWorkout = { onEditWorkout(workout.id) },
                 onMapClick = { onMapClick(workout.id) },
                 modifier = modifier

@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -27,13 +28,23 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.*
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatus
@@ -59,6 +70,7 @@ fun WorkoutSummary(
     workoutData: WorkoutData,
     isPlayServiceAvailable: Boolean,
     onExport: (FileFormat) -> Unit,
+    onDeleteConfirmed: () -> Unit,
     onEditWorkout: () -> Unit,
     onMapClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -84,7 +96,9 @@ fun WorkoutSummary(
         // 1. Header (Blue Scrim Section)
         WorkoutHeader(
             data = workoutData.headerData,
+            onClicked = onEditWorkout,
             onExport = onExport,
+            onDeleteConfirmed = onDeleteConfirmed,
             modifier = editWorkoutModifier
         )
 
