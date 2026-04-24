@@ -58,11 +58,11 @@ public class ExportManager {
     @Nullable
     protected final Context mContext;
     // protected static HashMap<String, EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>>> cCash = new HashMap<String, EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>>>();
-    private final ExportStatusDatabaseManager mRepository;
+    private final ExportStatusDatabaseManager exportStatusDatabaseManager;
 
     public ExportManager(Context context) {
         mContext = context;
-        mRepository = ExportStatusDatabaseManager.getInstance(context);
+        exportStatusDatabaseManager = ExportStatusDatabaseManager.getInstance(context);
     }
 
 
@@ -124,7 +124,7 @@ public class ExportManager {
                 values.put(ExportStatusDatabaseManager.TYPE, exportType.name());
                 values.put(ExportStatusDatabaseManager.EXPORT_STATUS, ExportStatus.UNWANTED.name());
 
-                mRepository.addExportStatus(values);
+                exportStatusDatabaseManager.addExportStatus(values);
             }
         }
 
@@ -136,7 +136,7 @@ public class ExportManager {
 
         for (FileFormat fileFormat : ExportType.FILE.getExportToFileFormats()) {
             if (TrainingApplication.exportToFile(fileFormat)) {
-                mRepository.updateExportStatus(TRACKING, fileBaseName, ExportType.FILE, fileFormat);
+                exportStatusDatabaseManager.updateExportStatus(TRACKING, fileBaseName, ExportType.FILE, fileFormat);
             }
         }
 
@@ -144,14 +144,14 @@ public class ExportManager {
             for (FileFormat fileFormat : ExportType.DROPBOX.getExportToFileFormats()) {
                 // Ein Upload zu Dropbox macht nur Sinn, wenn das Dateiformat prinzipiell auch generiert wird.
                 if (TrainingApplication.exportToFile(fileFormat)) {
-                    mRepository.updateExportStatus(TRACKING, fileBaseName, ExportType.DROPBOX, fileFormat);
+                    exportStatusDatabaseManager.updateExportStatus(TRACKING, fileBaseName, ExportType.DROPBOX, fileFormat);
                 }
             }
         }
 
         for (FileFormat fileFormat : ExportType.COMMUNITY.getExportToFileFormats()) {
             if (TrainingApplication.uploadToCommunity(fileFormat)) {
-                mRepository.updateExportStatus(TRACKING, fileBaseName, ExportType.COMMUNITY, fileFormat);
+                exportStatusDatabaseManager.updateExportStatus(TRACKING, fileBaseName, ExportType.COMMUNITY, fileFormat);
             }
         }
 
@@ -169,7 +169,7 @@ public class ExportManager {
         if (DEBUG) Log.d(TAG, "workoutFinished: " + fileBaseName);
 
         // simply delegate to the repository.
-        int updatedRows = mRepository.workoutFinished(fileBaseName);
+        int updatedRows = exportStatusDatabaseManager.workoutFinished(fileBaseName);
 
         if (DEBUG) Log.d(TAG, "workoutFinished: Updated " + updatedRows + " rows to WAITING status.");
 
@@ -213,7 +213,7 @@ public class ExportManager {
         // user explicitly wants this.  So, we do not check whether we normally do this.  I.e. no if (TrainingApplication.exportToFile(fileFormat))
         // -> simply reset the answer and start the full export.
         values.put(ExportStatusDatabaseManager.ANSWER, "");
-        mRepository.updateExportStatus(values, fileBaseName, ExportType.FILE, fileFormat);
+        exportStatusDatabaseManager.updateExportStatus(values, fileBaseName, ExportType.FILE, fileFormat);
 
         // trigger the export
         startFullExportProcess(fileBaseName, fileFormat);
@@ -276,7 +276,7 @@ public class ExportManager {
             ContentValues values = new ContentValues();
             values.put(ExportStatusDatabaseManager.EXPORT_STATUS, ExportStatus.FINISHED_FAILED.name());
             values.put(ExportStatusDatabaseManager.ANSWER, "Interner Fehler bei Job-Erstellung");  // TODO: Text
-            mRepository.updateExportStatus(values, fileBaseName, null, fileFormat);   // note that exportType is set to null to update all.
+            exportStatusDatabaseManager.updateExportStatus(values, fileBaseName, null, fileFormat);   // note that exportType is set to null to update all.
             broadcastExportStatusChanged(mContext);
         }
     }
@@ -287,7 +287,7 @@ public class ExportManager {
         if (answer != null) {
             values.put(ExportStatusDatabaseManager.ANSWER, answer);
         }
-        mRepository.updateExportStatus(values, info);
+        exportStatusDatabaseManager.updateExportStatus(values, info);
     }
 
     private OneTimeWorkRequest createWorkRequest(ExportInfo exportInfo) throws JSONException {
@@ -315,7 +315,7 @@ public class ExportManager {
         values.put(ExportStatusDatabaseManager.EXPORT_STATUS, ExportStatus.FINISHED_FAILED.name());
         values.put(ExportStatusDatabaseManager.ANSWER, answer);
 
-        mRepository.updateExportStatus(values, exportInfo);
+        exportStatusDatabaseManager.updateExportStatus(values, exportInfo);
 
         broadcastExportStatusChanged(mContext);
     }
