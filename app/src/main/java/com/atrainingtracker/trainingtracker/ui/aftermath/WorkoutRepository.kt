@@ -432,6 +432,8 @@ class WorkoutRepository private constructor(private val application: Application
                         // If the user HAS edited the name, stick with the name currently in memory.
                         currentWorkoutName
                     }
+                    val points = getWorkoutTrackPoints(workoutId, Roughness.MEDIUM, TrackType.GPS)
+                    if (DEBUG) Log.i(TAG, "#points: ${points.size}")
                     // Create the final workout object to be posted.
                     val finalWorkoutData = freshWorkoutData.copy(
                         // Always preserve the calculation message if it exists
@@ -439,7 +441,9 @@ class WorkoutRepository private constructor(private val application: Application
 
                         // And always use the final, intelligently decided name.
                         // Provide a fallback to the original fresh name just in case.
-                        headerData = freshWorkoutData.headerData.copy(workoutName = finalWorkoutName ?: freshWorkoutData.headerData.workoutName)
+                        headerData = freshWorkoutData.headerData.copy(workoutName = finalWorkoutName ?: freshWorkoutData.headerData.workoutName),
+
+                        trackPoints = points
                     )
 
                     // Update the workout list
