@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.google.android.gms.common.ConnectionResult
@@ -55,7 +56,7 @@ class WorkoutSummariesTabbedFragment : Fragment() {
             setContent {
                 ATrainingTrackerTheme {
                     // 1. Observe the workouts list from ViewModel
-                    val workouts by viewModel.workouts.observeAsState(initial = emptyList())
+                    val workouts by viewModel.workouts.collectAsStateWithLifecycle()
 
                     // 2. Observe the loading state
                     val isLoading by viewModel.isLoading.observeAsState(initial = false)

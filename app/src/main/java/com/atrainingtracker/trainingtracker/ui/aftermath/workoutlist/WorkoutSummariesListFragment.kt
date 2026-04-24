@@ -24,9 +24,13 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
+import androidx.activity.result.launch
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.atrainingtracker.R
@@ -34,6 +38,7 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
+import kotlinx.coroutines.launch
 
 class WorkoutSummariesListFragment : Fragment() {
     // Access the ViewModel of the Parent Fragment
@@ -109,16 +114,20 @@ class WorkoutSummariesListFragment : Fragment() {
 
         if (DEBUG) Log.i(TAG, "onViewCreated(): bSportType=$bSportType, sportId=$sportId, equipId=$equipId, startS=$startS, endS=$endS")
 
-        // Observe the filtered list
-        viewModel.getFilteredWorkouts(
-            bSportType = bSportType,
-            sportTypeId = sportId,
-            equipmentId = equipId,
-            startTimeS = startS,
-            endTimeS = endS
-        ).observe(viewLifecycleOwner) { workouts ->
-            Log.i(TAG, "observing filtered list: workouts=$workouts")
-            workoutAdapter.submitList(workouts)
+        // Observe the filtered list using Flow
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.getFilteredWorkouts(
+                    bSportType = bSportType,
+                    sportTypeId = sportId,
+                    equipmentId = equipId,
+                    startTimeS = startS,
+                    endTimeS = endS
+                ).collect { workouts ->
+                    if (DEBUG) Log.i(TAG, "collecting filtered list: workouts=${workouts.size}")
+                    workoutAdapter.submitList(workouts)
+                }
+            }
         }
     }
 
