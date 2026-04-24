@@ -32,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatus
 import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.WorkoutDescription
@@ -55,7 +56,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 fun WorkoutSummary(
     workoutData: WorkoutData,
     isPlayServiceAvailable: Boolean,
-    onMenuClick: () -> Unit,
+    onExport: (FileFormat) -> Unit,
     onEditWorkout: () -> Unit,
     onMapClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -72,7 +73,7 @@ fun WorkoutSummary(
         // 1. Header (Blue Scrim Section)
         WorkoutHeader(
             data = workoutData.headerData,
-            onMenuClick = onMenuClick,
+            onExport = onExport,
             modifier = editWorkoutModifier
         )
 

@@ -64,10 +64,8 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                     WorkoutTabsScreen(
                         workouts = workouts,
                         isLoading = isLoading,
-                        onMenuClick = { workoutData ->
-                            // Here you can handle the menu click,
-                            // e.g., opening a popup or calling viewModel logic
-                            // viewModel.onWorkoutAction(workoutData.headerData.id)
+                        onExportWorkoutTo = { workoutId, fileFormat ->
+                            viewModel.onExportWorkoutTo(workoutId, fileFormat)
                         },
                         onEditWorkout = { workoutId ->
                             TrainingApplication.startEditWorkoutActivity(workoutId, false)

@@ -33,7 +33,6 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.map.Roughness
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
-import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.launch
 
 
@@ -147,7 +146,7 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
     }
 
 
-    fun onExportWorkoutClicked(id: Long, format: FileFormat) {
+    fun onExportWorkoutTo(id: Long, format: FileFormat) {
         // Post an event commanding the fragment/activity to handle the export.
         exportWorkout(id, format)    }
 

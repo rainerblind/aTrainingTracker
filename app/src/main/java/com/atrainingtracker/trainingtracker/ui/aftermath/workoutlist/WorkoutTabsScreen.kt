@@ -28,7 +28,6 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryScrollableTabRow
-import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -39,6 +38,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import kotlinx.coroutines.launch
 
@@ -50,7 +50,7 @@ fun WorkoutTabsScreen(
     workouts: List<WorkoutData>,
     isLoading: Boolean,  // TODO: show a CircularProgressIndicator here
     isPlayServiceAvailable: Boolean,
-    onMenuClick: (WorkoutData) -> Unit,
+    onExportWorkoutTo: (Long, FileFormat) -> Unit,
     onEditWorkout: (Long) -> Unit,
     onMapClick: (Long) -> Unit,
     modifier: Modifier = Modifier
@@ -92,10 +92,10 @@ fun WorkoutTabsScreen(
             verticalAlignment = Alignment.Top
         ) { pageIndex ->
             when (pageIndex) {
-                0 -> WorkoutList(workouts = workouts, isPlayServiceAvailable = isPlayServiceAvailable, onMenuClick = onMenuClick, onEditWorkout = onEditWorkout, onMapClick = onMapClick)
-                1 -> WorkoutList(workouts = workouts.filter { it.sportData.bSportType == BSportType.BIKE }, isPlayServiceAvailable = isPlayServiceAvailable,  onMenuClick = onMenuClick, onEditWorkout = onEditWorkout, onMapClick = onMapClick)
-                2 -> WorkoutList(workouts = workouts.filter { it.sportData.bSportType == BSportType.RUN }, isPlayServiceAvailable = isPlayServiceAvailable, onMenuClick = onMenuClick, onEditWorkout = onEditWorkout, onMapClick = onMapClick)
-                3 -> WorkoutList(workouts = workouts.filter { it.sportData.bSportType == BSportType.UNKNOWN }, isPlayServiceAvailable = isPlayServiceAvailable, onMenuClick = onMenuClick, onEditWorkout = onEditWorkout, onMapClick = onMapClick)
+                0 -> WorkoutList(workouts = workouts, isPlayServiceAvailable = isPlayServiceAvailable, onExportWorkout = onExportWorkoutTo, onEditWorkout = onEditWorkout, onMapClick = onMapClick)
+                1 -> WorkoutList(workouts = workouts.filter { it.sportData.bSportType == BSportType.BIKE }, isPlayServiceAvailable = isPlayServiceAvailable,  onExportWorkout = onExportWorkoutTo, onEditWorkout = onEditWorkout, onMapClick = onMapClick)
+                2 -> WorkoutList(workouts = workouts.filter { it.sportData.bSportType == BSportType.RUN }, isPlayServiceAvailable = isPlayServiceAvailable, onExportWorkout = onExportWorkoutTo, onEditWorkout = onEditWorkout, onMapClick = onMapClick)
+                3 -> WorkoutList(workouts = workouts.filter { it.sportData.bSportType == BSportType.UNKNOWN }, isPlayServiceAvailable = isPlayServiceAvailable, onExportWorkout = onExportWorkoutTo, onEditWorkout = onEditWorkout, onMapClick = onMapClick)
             }
         }
     }
@@ -109,7 +109,7 @@ fun WorkoutTabsScreen(
 fun WorkoutList(
     workouts: List<WorkoutData>,
     isPlayServiceAvailable: Boolean,
-    onMenuClick: (WorkoutData) -> Unit,
+    onExportWorkout: (Long, FileFormat) -> Unit,
     onEditWorkout: (Long) -> Unit,
     onMapClick: (Long) -> Unit,
     modifier: Modifier = Modifier
@@ -125,7 +125,7 @@ fun WorkoutList(
             WorkoutSummary(
                 workoutData = workout,
                 isPlayServiceAvailable = isPlayServiceAvailable,
-                onMenuClick = { onMenuClick(workout) },
+                onExport = { fileFormat -> onExportWorkout(workout.id, fileFormat) },
                 onEditWorkout = { onEditWorkout(workout.id) },
                 onMapClick = { onMapClick(workout.id) },
                 modifier = modifier

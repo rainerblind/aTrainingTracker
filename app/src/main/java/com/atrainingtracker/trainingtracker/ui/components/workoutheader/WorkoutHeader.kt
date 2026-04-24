@@ -23,6 +23,10 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
@@ -36,16 +40,21 @@ import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 @Composable
 fun WorkoutHeader(
     data: WorkoutHeaderData,
-    onMenuClick: () -> Unit,
+    onExport: (FileFormat) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // State to control menu visibility
+    var showMenu by remember { mutableStateOf(false) }
+
     val backgroundColor = MaterialTheme.colorScheme.primaryContainer
     val textColor = MaterialTheme.colorScheme.onPrimaryContainer
+
 
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -129,20 +138,46 @@ fun WorkoutHeader(
             }
 
             // 4. Menu Button (Pinned to Top-End)
-            // Matches workout_header_menu_button with android:layout_marginTop="4dp"
             if (data.finished) {
-                IconButton(
-                    onClick = onMenuClick,
+                Box(
                     modifier = Modifier
-                        .align(Alignment.TopEnd)
+                        .align(Alignment.TopEnd) // This moves it to the right
                         .padding(top = 4.dp, end = 4.dp)
-                        .size(32.dp) // Constrain size to reduce "space around"
                 ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_baseline_more_vert_24),
-                        contentDescription = "Menu",
-                        modifier = Modifier.size(24.dp)
-                    )
+                    IconButton(
+                        onClick = { showMenu = true },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_baseline_more_vert_24),
+                            contentDescription = stringResource(R.string.ExportFiles),
+                        )
+                    }
+
+                    // Material 3 Dropdown Menu replacing the legacy PopupMenu
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        // Export Actions (Mapping same as SummaryViewHolder)
+                        val formats = listOf(
+                            FileFormat.TCX to R.string.tcxWrite,
+                            FileFormat.GPX to R.string.gpxWrite,
+                            FileFormat.CSV to R.string.csvWrite,
+                            FileFormat.GC to R.string.jsonWrite,
+                            FileFormat.STRAVA to R.string.stravaUpload
+                        )
+
+                        formats.forEach { (format, labelRes) ->
+                            DropdownMenuItem(
+                                text = { Text(stringResource(labelRes)) },
+                                onClick = {
+                                    showMenu = false
+                                    onExport(format)
+                                }
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -214,7 +249,7 @@ fun PreviewWorkoutHeader(
         Surface(color = MaterialTheme.colorScheme.background) {
             WorkoutHeader(
                 data = data,
-                onMenuClick = { /* No-op for preview */ }
+                onExport = {}
             )
         }
     }
@@ -237,7 +272,7 @@ fun PreviewCommuteHeader() {
                 equipmentName = null,
                 trainer = false
             ),
-            onMenuClick = {}
+            onExport = {}
         )
     }
 }

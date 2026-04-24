@@ -192,23 +192,23 @@ class SummaryViewHolder(
                         true // Consume the click
                     }
                     R.id.tcxWrite -> {
-                        viewModel.onExportWorkoutClicked(workoutSummary.id, FileFormat.TCX)
+                        viewModel.onExportWorkoutTo(workoutSummary.id, FileFormat.TCX)
                         true
                     }
                     R.id.gpxWrite -> {
-                        viewModel.onExportWorkoutClicked(workoutSummary.id, FileFormat.GPX)
+                        viewModel.onExportWorkoutTo(workoutSummary.id, FileFormat.GPX)
                         true
                     }
                     R.id.csvWrite -> {
-                        viewModel.onExportWorkoutClicked(workoutSummary.id, FileFormat.CSV)
+                        viewModel.onExportWorkoutTo(workoutSummary.id, FileFormat.CSV)
                         true
                     }
                     R.id.jsonWrite -> {
-                        viewModel.onExportWorkoutClicked(workoutSummary.id, FileFormat.GC)
+                        viewModel.onExportWorkoutTo(workoutSummary.id, FileFormat.GC)
                         true
                     }
                     R.id.stravaUpload -> {
-                        viewModel.onExportWorkoutClicked(workoutSummary.id, FileFormat.STRAVA)
+                        viewModel.onExportWorkoutTo(workoutSummary.id, FileFormat.STRAVA)
                         true
                     }
                     // TODO: runkeeper, trainingPeaks, ...
