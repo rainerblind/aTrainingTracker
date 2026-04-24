@@ -113,16 +113,12 @@ class WorkoutRepository private constructor(private val application: Application
     private val exportManager by lazy { ExportManager(application) }
 
     private val mapper by lazy {
-        // Create instances of the required providers
-        val sportDataProvider = SportDataProvider(sportTypeDatabaseManager)
-        val equipmentDataProvider = EquipmentDataProvider(equipmentDbHelper, sportTypeDatabaseManager)
-        val headerProvider = WorkoutHeaderDataProvider(application, equipmentDbHelper, sportTypeDatabaseManager)
-        val detailsProvider = WorkoutDetailsDataProvider(application)
-        val extremaProvider = ExtremaDataProvider(application)
-        val descriptionProvider = DescriptionDataProvider()
-
-        // Inject them into the mapper
-        WorkoutDataMapper(sportDataProvider, equipmentDataProvider, headerProvider, detailsProvider, descriptionProvider, extremaProvider)
+        WorkoutDataMapper(
+            context = application,
+            workoutSummariesDatabaseManager = summariesManager,
+            sportTypeDatabaseManager = sportTypeDatabaseManager,
+            equipmentDbHelper = equipmentDbHelper
+        )
     }
 
     // --- LiveData for Data and Progress ---
@@ -240,9 +236,8 @@ class WorkoutRepository private constructor(private val application: Application
                     // Find the current workout in the list.
                     val workout = _allWorkouts.value?.find { it.id == workoutId }
                     // If it has a calculation message, clear it.
-                    if (workout != null && workout.extremaData.calculationMessage != null) {
-                        val updatedExtrema = workout.extremaData.copy(calculationMessage = null)
-                        updateWorkoutInList(workoutId, workout.copy(extremaData = updatedExtrema))
+                    if (workout != null && workout.extremaCalculationMessage != null) {
+                        updateWorkoutInList(workoutId, workout.copy(extremaCalculationMessage = null))
                     }
                     // TODO: Currently, we update the workout list twice.  This should be avoided.
 
@@ -261,10 +256,8 @@ class WorkoutRepository private constructor(private val application: Application
                             // update the message in the list
                             val workoutToUpdate = _allWorkouts.value?.find { it.id == workoutId }
                             if (workoutToUpdate != null) {
-                                // Create a new ExtremaData with the updated message.
-                                val updatedExtrema = workoutToUpdate.extremaData.copy(calculationMessage = message)
-                                // Create a new WorkoutData with the new ExtremaData.
-                                val updatedWorkout = workoutToUpdate.copy(extremaData = updatedExtrema)
+                                // Create a new WorkoutData with the updated message.
+                                val updatedWorkout = workoutToUpdate.copy(extremaCalculationMessage = message)
                                 // Post the update. DiffUtil will see that extremaData has changed.
                                 updateWorkoutInList(workoutId, updatedWorkout)
                             }
@@ -434,14 +427,15 @@ class WorkoutRepository private constructor(private val application: Application
                     }
                     val points = getWorkoutTrackPoints(workoutId, Roughness.MEDIUM, TrackType.GPS)
                     if (DEBUG) Log.i(TAG, "#points: ${points.size}")
+
                     // Create the final workout object to be posted.
                     val finalWorkoutData = freshWorkoutData.copy(
                         // Always preserve the calculation message if it exists
-                        extremaData = freshWorkoutData.extremaData.copy(calculationMessage = currentMessage),
+                        extremaCalculationMessage = currentMessage,
 
                         // And always use the final, intelligently decided name.
                         // Provide a fallback to the original fresh name just in case.
-                        headerData = freshWorkoutData.headerData.copy(workoutName = finalWorkoutName ?: freshWorkoutData.headerData.workoutName),
+                        workoutName = finalWorkoutName ?: freshWorkoutData.headerData.workoutName,
 
                         trackPoints = points
                     )
@@ -461,7 +455,7 @@ class WorkoutRepository private constructor(private val application: Application
         if (newName == workoutToUpdate.headerData.workoutName) return
 
         val updatedWorkout = workoutToUpdate.copy(
-            headerData = workoutToUpdate.headerData.copy(workoutName = newName)
+            workoutName = newName
         )
         updateWorkoutInList(workoutId, updatedWorkout)
     }
@@ -469,24 +463,13 @@ class WorkoutRepository private constructor(private val application: Application
     fun updateSport(workoutId: Long, newSportName: String, newSportId: Long, newBSportType: BSportType) {
         val currentList = _allWorkouts.value ?: return
         val workoutToUpdate = currentList.find { it.id == workoutId } ?: return
-        if (newSportName == workoutToUpdate.sportData.sportName) return
+        if (newSportName == workoutToUpdate.sportName) return
 
         // update the workout.  Thereby, we have to update the sport, equipment, header, and details...
         val updatedWorkout = workoutToUpdate.copy(
-            sportData = workoutToUpdate.sportData.copy(
-                sportId = newSportId,
-                bSportType = newBSportType,
-                sportName = newSportName
-            ),
-            equipmentData = workoutToUpdate.equipmentData.copy(
-                bSportType = newBSportType
-            ),
-            headerData = workoutToUpdate.headerData.copy(
-                bSportType = newBSportType,
-                sportName = newSportName
-            ),
-            detailsData = workoutToUpdate.detailsData.copy(
-                bSportType = newBSportType)
+            sportId = newSportId,
+            bSportType = newBSportType,
+            sportName = newSportName
         )
         updateWorkoutInList(workoutId, updatedWorkout)
     }
@@ -495,16 +478,10 @@ class WorkoutRepository private constructor(private val application: Application
     fun updateEquipmentName(workoutId: Long, newEquipmentName: String?) {
         val currentList = _allWorkouts.value ?: return
         val workoutToUpdate = currentList.find { it.id == workoutId } ?: return
-        if (newEquipmentName == workoutToUpdate.equipmentData.equipmentName) return
+        if (newEquipmentName == workoutToUpdate.equipmentName) return
 
         // update the workout.  Thereby, we have to update the sportAndEquipment and header ...
-        val updatedWorkout = workoutToUpdate.copy(
-            equipmentData = workoutToUpdate.equipmentData.copy(
-                equipmentName = newEquipmentName
-            ),
-            headerData = workoutToUpdate.headerData.copy(
-                equipmentName = newEquipmentName)
-        )
+        val updatedWorkout = workoutToUpdate.copy(equipmentName = newEquipmentName)
         updateWorkoutInList(workoutId, updatedWorkout)
     }
 
@@ -513,9 +490,7 @@ class WorkoutRepository private constructor(private val application: Application
         val workoutToUpdate = currentList.find { it.id == workoutId } ?: return
         if (newDescription == workoutToUpdate.descriptionData.description) return
 
-        val updatedWorkout = workoutToUpdate.copy(
-            descriptionData = workoutToUpdate.descriptionData.copy(description = newDescription)
-        )
+        val updatedWorkout = workoutToUpdate.copy(description = newDescription)
         updateWorkoutInList(workoutId, updatedWorkout)
     }
 
@@ -524,9 +499,7 @@ class WorkoutRepository private constructor(private val application: Application
         val workoutToUpdate = currentList.find { it.id == workoutId } ?: return
         if (newGoal == workoutToUpdate.descriptionData.goal) return
 
-        val updatedWorkout = workoutToUpdate.copy(
-            descriptionData = workoutToUpdate.descriptionData.copy(goal = newGoal)
-        )
+        val updatedWorkout = workoutToUpdate.copy(goal = newGoal)
         updateWorkoutInList(workoutId, updatedWorkout)
     }
 
@@ -535,9 +508,7 @@ class WorkoutRepository private constructor(private val application: Application
         val workoutToUpdate = currentList.find { it.id == workoutId } ?: return
         if (newMethod == workoutToUpdate.descriptionData.method) return
 
-        val updatedWorkout = workoutToUpdate.copy(
-            descriptionData = workoutToUpdate.descriptionData.copy(method = newMethod)
-        )
+        val updatedWorkout = workoutToUpdate.copy(method = newMethod)
         updateWorkoutInList(workoutId, updatedWorkout)
     }
 
@@ -546,9 +517,7 @@ class WorkoutRepository private constructor(private val application: Application
         val workoutToUpdate = currentList.find { it.id == workoutId } ?: return
         if (isChecked == workoutToUpdate.headerData.commute) return
 
-        val updatedWorkout = workoutToUpdate.copy(
-            headerData = workoutToUpdate.headerData.copy(commute = isChecked)
-        )
+        val updatedWorkout = workoutToUpdate.copy(commute = isChecked)
         updateWorkoutInList(workoutId, updatedWorkout)
     }
 
@@ -557,9 +526,7 @@ class WorkoutRepository private constructor(private val application: Application
         val workoutToUpdate = currentList.find { it.id == workoutId } ?: return
         if (isChecked == workoutToUpdate.headerData.trainer) return
 
-        val updatedWorkout = workoutToUpdate.copy(
-            headerData = workoutToUpdate.headerData.copy(trainer = isChecked)
-        )
+        val updatedWorkout = workoutToUpdate.copy(trainer = isChecked)
         updateWorkoutInList(workoutId, updatedWorkout)
     }
 
@@ -581,11 +548,11 @@ class WorkoutRepository private constructor(private val application: Application
             )
 
             // Update Sport and Equipment
-            val equipmentId = equipmentDbHelper.getEquipmentId(dataToSave.equipmentData.equipmentName ?: "")
+            val equipmentId = equipmentDbHelper.getEquipmentId(dataToSave.equipmentName ?: "")
             summariesManager.updateSportAndEquipment(
                 workoutId,
-                dataToSave.sportData.sportId,
-                dataToSave.sportData.bSportType,
+                dataToSave.sportId,
+                dataToSave.bSportType,
                 equipmentId
             )
 

@@ -131,9 +131,9 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
     ): Flow<List<WorkoutData>> {
         return workouts.map { list ->
             list.filter { workout ->
-                val matchesBSport = bSportType == null || workout.sportData.bSportType == bSportType
-                val matchesSportId = sportTypeId == null || workout.sportData.sportId == sportTypeId
-                val matchesEquip = equipmentId == null || workout.equipmentData.equipmentId == equipmentId
+                val matchesBSport = bSportType == null || workout.bSportType == bSportType
+                val matchesSportId = sportTypeId == null || workout.sportId == sportTypeId
+                val matchesEquip = equipmentId == null || workout.equipmentId == equipmentId
 
                 val workoutTime = workout.headerData.startTimeS
                 val matchesTime = (startTimeS == null || workoutTime >= startTimeS) && (endTimeS == null || workoutTime <= endTimeS)
