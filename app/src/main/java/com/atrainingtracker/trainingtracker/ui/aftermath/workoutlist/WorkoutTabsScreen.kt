@@ -21,10 +21,14 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryScrollableTabRow
@@ -124,19 +128,24 @@ fun WorkoutList(
             items = workouts,
             key = { it.id } // Use workout ID as key for stable animations
         ) { workout ->
-            WorkoutSummary(
-                workoutData = workout,
-                isPlayServiceAvailable = isPlayServiceAvailable,
-                onExport = { fileFormat -> onExportWorkout(workout.id, fileFormat) },
-                onDeleteConfirmed = { onDeleteConfirmed(workout.id) },
-                onEditWorkout = { onEditWorkout(workout.id) },
-                onMapClick = { onMapClick(workout.id) },
-                modifier = modifier
-            )
-            HorizontalDivider(
-                thickness = 8.dp,
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-            )
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.elevatedCardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
+            ) {
+                WorkoutSummary(
+                    workoutData = workout,
+                    isPlayServiceAvailable = isPlayServiceAvailable,
+                    onExport = { fileFormat -> onExportWorkout(workout.id, fileFormat) },
+                    onDeleteConfirmed = { onDeleteConfirmed(workout.id) },
+                    onEditWorkout = { onEditWorkout(workout.id) },
+                    onMapClick = { onMapClick(workout.id) },
+                    modifier = modifier
+                )
+            }
         }
     }
 }
