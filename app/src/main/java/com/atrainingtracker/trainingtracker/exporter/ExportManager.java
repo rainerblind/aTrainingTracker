@@ -155,7 +155,7 @@ public class ExportManager {
             }
         }
 
-        broadcastExportStatusChanged(mContext);
+        broadcastExportStatusChanged(mContext, fileBaseName);
     }
 
 
@@ -173,7 +173,7 @@ public class ExportManager {
 
         if (DEBUG) Log.d(TAG, "workoutFinished: Updated " + updatedRows + " rows to WAITING status.");
 
-        broadcastExportStatusChanged(mContext);
+        broadcastExportStatusChanged(mContext, fileBaseName);
     }
 
     /** method to trigger the ExportManager to export a Workout to the various file formats and upload it to the cloud later on.
@@ -218,7 +218,7 @@ public class ExportManager {
         // trigger the export
         startFullExportProcess(fileBaseName, fileFormat);
 
-        broadcastExportStatusChanged(mContext);
+        broadcastExportStatusChanged(mContext, fileBaseName);
     }
 
     /***********************************************************************************************
@@ -268,7 +268,7 @@ public class ExportManager {
             }
 
             // now, that everything is scheduled, we send an broadcast.
-            broadcastExportStatusChanged(mContext);
+            broadcastExportStatusChanged(mContext, fileBaseName);
 
         } catch (JSONException e) {
             Log.e(TAG, "Could not create WorkRequest due to JSONException", e);
@@ -277,7 +277,7 @@ public class ExportManager {
             values.put(ExportStatusDatabaseManager.EXPORT_STATUS, ExportStatus.FINISHED_FAILED.name());
             values.put(ExportStatusDatabaseManager.ANSWER, "Interner Fehler bei Job-Erstellung");  // TODO: Text
             exportStatusDatabaseManager.updateExportStatus(values, fileBaseName, null, fileFormat);   // note that exportType is set to null to update all.
-            broadcastExportStatusChanged(mContext);
+            broadcastExportStatusChanged(mContext, fileBaseName);
         }
     }
 
@@ -308,6 +308,7 @@ public class ExportManager {
                 .build();
     }
 
+    /*
     private synchronized void exportingFailed(@NonNull ExportInfo exportInfo, String answer) {
         //  update the DB accordingly
         ContentValues values = new ContentValues();
@@ -317,8 +318,10 @@ public class ExportManager {
 
         exportStatusDatabaseManager.updateExportStatus(values, exportInfo);
 
-        broadcastExportStatusChanged(mContext);
+        broadcastExportStatusChanged(mContext, fileBaseName);
     }
+     */
+
 
 
     /** simple helper method to get the baseFileName from a given workoutId */
