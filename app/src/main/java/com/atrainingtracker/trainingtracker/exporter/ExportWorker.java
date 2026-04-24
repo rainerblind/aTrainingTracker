@@ -31,7 +31,7 @@ import androidx.work.Data;
 import androidx.work.Worker;
 import androidx.work.WorkerParameters;
 
-import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusRepository;
+import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseManager;
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportNotificationManager;
 
 import org.json.JSONException;
@@ -45,7 +45,7 @@ public class ExportWorker extends Worker  {
     private BaseExporter mExporter;
 
     private final ExportNotificationManager mExportNotificationManager;
-    private final ExportStatusRepository repository = ExportStatusRepository.getInstance(getApplicationContext());
+    private final ExportStatusDatabaseManager repository = ExportStatusDatabaseManager.getInstance(getApplicationContext());
     private final Context mContext;
 
     public ExportWorker(@NonNull Context context, @NonNull WorkerParameters workerParams) {
@@ -129,10 +129,10 @@ public class ExportWorker extends Worker  {
 
         // create a ContentValues object to hold the new data.
         ContentValues values = new ContentValues();
-        values.put(ExportStatusRepository.EXPORT_STATUS, status.name());
+        values.put(ExportStatusDatabaseManager.EXPORT_STATUS, status.name());
 
         if (answer != null) {
-            values.put(ExportStatusRepository.ANSWER, answer);
+            values.put(ExportStatusDatabaseManager.ANSWER, answer);
         }
 
         // delegate the database update to the repository.

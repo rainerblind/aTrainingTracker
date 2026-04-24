@@ -23,7 +23,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.exporter.ExportStatus
 import com.atrainingtracker.trainingtracker.exporter.ExportType
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
-import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusRepository
+import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseManager
 import com.atrainingtracker.trainingtracker.helpers.formatListAsString
 
 class ExportStatusDataProvider(private val context: Context) {
@@ -69,7 +69,7 @@ class ExportStatusDataProvider(private val context: Context) {
 
 
     private fun getJobs(fileBaseName: String, exportType: ExportType): Map<FileFormat, ExportStatus> {
-        return ExportStatusRepository.getInstance(context).getExportStatusMap(fileBaseName, exportType)
+        return ExportStatusDatabaseManager.getInstance(context).getExportStatusMap(fileBaseName, exportType)
     }
 
     private fun getWaitingJobsList(finishedJobs: Map<FileFormat, ExportStatus>): List<String> {
