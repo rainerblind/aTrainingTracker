@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
@@ -67,6 +68,9 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                             // Here you can handle the menu click,
                             // e.g., opening a popup or calling viewModel logic
                             // viewModel.onWorkoutAction(workoutData.headerData.id)
+                        },
+                        onMapClick = { workoutId ->
+                            TrainingApplication.startTrackOnMapAftermathActivity(activity, workoutId)
                         },
                         isPlayServiceAvailable = isPlayAvailable,
                         modifier = Modifier.fillMaxSize()

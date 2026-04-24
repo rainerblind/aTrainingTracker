@@ -51,6 +51,7 @@ fun WorkoutTabsScreen(
     isLoading: Boolean,  // TODO: show a CircularProgressIndicator here
     isPlayServiceAvailable: Boolean,
     onMenuClick: (WorkoutData) -> Unit,
+    onMapClick: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val tabs = listOf(
@@ -90,10 +91,10 @@ fun WorkoutTabsScreen(
             verticalAlignment = Alignment.Top
         ) { pageIndex ->
             when (pageIndex) {
-                0 -> WorkoutList(workouts = workouts, isPlayServiceAvailable = isPlayServiceAvailable, onMenuClick = onMenuClick)
-                1 -> WorkoutList(workouts = workouts.filter { it.sportData.bSportType == BSportType.BIKE }, isPlayServiceAvailable = isPlayServiceAvailable,  onMenuClick = onMenuClick)
-                2 -> WorkoutList(workouts = workouts.filter { it.sportData.bSportType == BSportType.RUN }, isPlayServiceAvailable = isPlayServiceAvailable, onMenuClick = onMenuClick)
-                3 -> WorkoutList(workouts = workouts.filter { it.sportData.bSportType == BSportType.UNKNOWN }, isPlayServiceAvailable = isPlayServiceAvailable, onMenuClick = onMenuClick)
+                0 -> WorkoutList(workouts = workouts, isPlayServiceAvailable = isPlayServiceAvailable, onMenuClick = onMenuClick, onMapClick = onMapClick)
+                1 -> WorkoutList(workouts = workouts.filter { it.sportData.bSportType == BSportType.BIKE }, isPlayServiceAvailable = isPlayServiceAvailable,  onMenuClick = onMenuClick, onMapClick = onMapClick)
+                2 -> WorkoutList(workouts = workouts.filter { it.sportData.bSportType == BSportType.RUN }, isPlayServiceAvailable = isPlayServiceAvailable, onMenuClick = onMenuClick, onMapClick = onMapClick)
+                3 -> WorkoutList(workouts = workouts.filter { it.sportData.bSportType == BSportType.UNKNOWN }, isPlayServiceAvailable = isPlayServiceAvailable, onMenuClick = onMenuClick, onMapClick = onMapClick)
             }
         }
     }
@@ -108,6 +109,7 @@ fun WorkoutList(
     workouts: List<WorkoutData>,
     isPlayServiceAvailable: Boolean,
     onMenuClick: (WorkoutData) -> Unit,
+    onMapClick: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -122,7 +124,7 @@ fun WorkoutList(
                 workoutData = workout,
                 onMenuClick = { onMenuClick(workout) },
                 isPlayServiceAvailable = isPlayServiceAvailable,
-                onMapClick = { }, // TODO: move forward / upwards later on.
+                onMapClick = { onMapClick (workout.id) },
                 modifier = modifier
             )
             HorizontalDivider(
