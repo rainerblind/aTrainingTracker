@@ -41,12 +41,11 @@ fun WorkoutExtrema(
             .fillMaxWidth()
             // .padding(vertical = 8.dp)
     ) {
-        if (data.isCalculating) {
-            // Displays the message (e.g., "Calculating extrema values...")
-            // from the data model if present, otherwise uses a default string resource.
+        if (data.calculationMessage != null) {
+            // Displays the message (e.g., "Calculating max spd...")
             Text(
-                text = data.calculationMessage ?: stringResource(R.string.calculating_extrema_values),
-                style = MaterialTheme.typography.bodySmall,
+                text = data.calculationMessage,
+                style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
