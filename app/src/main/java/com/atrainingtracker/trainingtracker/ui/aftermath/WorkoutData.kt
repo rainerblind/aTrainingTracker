@@ -79,16 +79,15 @@ data class WorkoutData(
     val minAltitude: Double?,
     val maxAltitude: Double?,
 
-    val description: String,
-    val goal: String,
-    val method: String,
+    val description: String?,
+    val goal: String?,
+    val method: String?,
 
     val isCalculatingExtrema: Boolean = false,
     val extremaCalculationMessage: String? = null,
 
     // --- 2. Heavy/Live Data ---
-    // Nullable so the UI knows if GPS points are still loading from the DB
-    val trackPoints: List<PathPoint>? = emptyList(),
+    val trackPoints: List<PathPoint> = emptyList(),
     val exportStatuses: List<ExportStatusGroupData> = emptyList(),
     val extremaRows: List<ExtremaDataRow> = emptyList()
 ) {

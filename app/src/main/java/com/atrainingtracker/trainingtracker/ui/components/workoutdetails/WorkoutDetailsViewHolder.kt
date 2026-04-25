@@ -128,12 +128,12 @@ class WorkoutDetailsViewHolder(
 
         // Using takeIf makes this more concise
         data.ascentMeters.takeIf { it > 0 }?.let {
-            tvAscent.setTextViewWithIntValue(it, "m")
+            tvAscent.setTextViewWithLongValue(it, "m")
             hasAltitudeData = true
         } ?: run { tvAscent.isVisible = false }
 
         data.descentMeters.takeIf { it > 0 }?.let {
-            tvDescent.setTextViewWithIntValue(it, "m")
+            tvDescent.setTextViewWithLongValue(it, "m")
             hasAltitudeData = true
         } ?: run { tvDescent.isVisible = false }
 
@@ -153,7 +153,7 @@ class WorkoutDetailsViewHolder(
      * Helper to format an integer value with a unit and set it on a TextView.
      * Defined as an extension function for conciseness.
      */
-    private fun TextView.setTextViewWithIntValue(value: Int, unit: String) {
+    private fun TextView.setTextViewWithLongValue(value: Long, unit: String) {
         text = "$value $unit" // String template
         isVisible = true
     }

@@ -173,8 +173,8 @@ private fun MainItem(
 
 @Composable
 private fun AltitudeRow(
-    ascentMeters: Int,
-    descentMeters: Int,
+    ascentMeters: Long,
+    descentMeters: Long,
     minAltitude: Double?,
     maxAltitude: Double?,
     iconColor: Color,
@@ -376,7 +376,7 @@ fun PreviewWorkoutDetails() {
                 maxDisplacement = 4500.0,
                 activeTimeSec = 3600,
                 totalTimeSec = 4200,
-                avgSpeedMps = 3.47f,
+                avgSpeedMps = 3.47,
                 bSportType = BSportType.BIKE,
                 ascentMeters = 250,
                 descentMeters = 240,

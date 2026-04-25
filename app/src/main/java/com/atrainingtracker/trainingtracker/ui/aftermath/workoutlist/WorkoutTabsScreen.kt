@@ -98,9 +98,9 @@ fun WorkoutTabsScreen(
         ) { pageIndex ->
             when (pageIndex) {
                 0 -> WorkoutList(workouts = workouts, isPlayServiceAvailable = isPlayServiceAvailable, onExportWorkout = onExportWorkoutTo, onDeleteConfirmed = onDeleteConfirmed,  onEditWorkout = onEditWorkout, onMapClick = onMapClick)
-                1 -> WorkoutList(workouts = workouts.filter { it.sportData.bSportType == BSportType.BIKE }, isPlayServiceAvailable = isPlayServiceAvailable,  onExportWorkout = onExportWorkoutTo, onDeleteConfirmed = onDeleteConfirmed, onEditWorkout = onEditWorkout, onMapClick = onMapClick)
-                2 -> WorkoutList(workouts = workouts.filter { it.sportData.bSportType == BSportType.RUN }, isPlayServiceAvailable = isPlayServiceAvailable, onExportWorkout = onExportWorkoutTo, onDeleteConfirmed = onDeleteConfirmed, onEditWorkout = onEditWorkout, onMapClick = onMapClick)
-                3 -> WorkoutList(workouts = workouts.filter { it.sportData.bSportType == BSportType.UNKNOWN }, isPlayServiceAvailable = isPlayServiceAvailable, onExportWorkout = onExportWorkoutTo, onDeleteConfirmed = onDeleteConfirmed, onEditWorkout = onEditWorkout, onMapClick = onMapClick)
+                1 -> WorkoutList(workouts = workouts.filter { it.bSportType == BSportType.BIKE }, isPlayServiceAvailable = isPlayServiceAvailable,  onExportWorkout = onExportWorkoutTo, onDeleteConfirmed = onDeleteConfirmed, onEditWorkout = onEditWorkout, onMapClick = onMapClick)
+                2 -> WorkoutList(workouts = workouts.filter { it.bSportType == BSportType.RUN }, isPlayServiceAvailable = isPlayServiceAvailable, onExportWorkout = onExportWorkoutTo, onDeleteConfirmed = onDeleteConfirmed, onEditWorkout = onEditWorkout, onMapClick = onMapClick)
+                3 -> WorkoutList(workouts = workouts.filter { it.bSportType == BSportType.UNKNOWN }, isPlayServiceAvailable = isPlayServiceAvailable, onExportWorkout = onExportWorkoutTo, onDeleteConfirmed = onDeleteConfirmed, onEditWorkout = onEditWorkout, onMapClick = onMapClick)
             }
         }
     }
