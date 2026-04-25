@@ -119,6 +119,7 @@ class WorkoutDataMapper(
             goal = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.GOAL)),
             method = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.METHOD)),
 
+            isCalculatingExtrema = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.EXTREMA_VALUES_CALCULATED)) == 0,
             extremaRows = sensorsToCheck.mapNotNull { sensorType ->
                 // Business logic: do not show speed for running activities
                 if (bSportType == BSportType.RUN && sensorType == SensorType.SPEED_mps) {

@@ -219,6 +219,8 @@ class WorkoutRepository private constructor(private val application: Application
     private val activeObservers = mutableMapOf<Long, Observer<List<WorkInfo>>>()
 
     private fun observeExtremaCalculation(workoutId: Long) {
+        if (DEBUG) Log.i(TAG, "observeExtremaCalculation: workoutId=$workoutId")
+
         // Create a new, dedicated observer for this specific workoutId.
         val newObserver = object : Observer<List<WorkInfo>> {
             private var lastProgressSequence = -1
@@ -404,6 +406,8 @@ class WorkoutRepository private constructor(private val application: Application
 
     // Function to update the workout data from the database but keep the calculationMessage of the extrema data and the workout name if it has changed
     private fun reloadWorkoutData(workoutId: Long) {
+        if (DEBUG) Log.i(TAG, "reloadWorkoutData: workoutId=$workoutId")
+
         launch(Dispatchers.IO) {
             summariesManager.getWorkoutCursor(workoutId).use { cursor ->
                 if (cursor?.moveToFirst() == true) {

@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -64,6 +65,7 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
                 combine(workoutList.map { workout ->
                     // Safely handle null fileBaseName
                     val fileName = workout.fileBaseName
+                    if (DEBUG) Log.i(TAG, "Merging Flows: fileName=" + fileName)
 
                     if (fileName != null) {
                         exportRepo.getExportStatusFlow(fileName)
