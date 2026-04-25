@@ -61,7 +61,6 @@ import com.google.android.material.navigation.NavigationView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
-import androidx.core.view.OnApplyWindowInsetsListener;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -381,42 +380,17 @@ public class MainActivityWithNavigation
                 dialog.show();
             }
         }
-        ViewCompat.setOnApplyWindowInsetsListener(
-                mDrawerLayout,
-                new OnApplyWindowInsetsListener() {
-                    @NonNull
-                    @Override
-                    public WindowInsetsCompat onApplyWindowInsets(
-                            @NonNull View v, @NonNull WindowInsetsCompat windowInsets) {
-                        Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
-                        v.setPadding(insets.left, 0, insets.right, insets.bottom);
-                        ViewGroup.MarginLayoutParams mlp = (ViewGroup.MarginLayoutParams) v.getLayoutParams();
-                        mlp.topMargin = insets.top;
-                        return WindowInsetsCompat.CONSUMED;
-                    }
-                });
 
 
-        final View statusBarSpacer = findViewById(R.id.status_bar_spacer);
-        final DrawerLayout drawerLayout = findViewById(R.id.drawer_layout);
-
-        ViewCompat.setOnApplyWindowInsetsListener(drawerLayout, (v, windowInsets) -> {
+        ViewCompat.setOnApplyWindowInsetsListener(mDrawerLayout, (v, windowInsets) -> {
             Insets systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
 
-            // FORCE the layout to the very top of the screen
-            ViewGroup.MarginLayoutParams mlp = (ViewGroup.MarginLayoutParams) v.getLayoutParams();
-            mlp.topMargin = 0;
-            v.setLayoutParams(mlp);
-
-            // Set the spacer height to exactly the status bar height
-            ViewGroup.LayoutParams spacerLp = statusBarSpacer.getLayoutParams();
-            spacerLp.height = systemBars.top;
-            statusBarSpacer.setLayoutParams(spacerLp);
-
-            // Handle horizontal/bottom padding (for navigation bar and notches)
+            // We only apply horizontal and bottom padding to the DrawerLayout
+            // to keep the navigation drawer and content away from the edges/notches.
+            // We leave TOP at 0 because Compose will handle the status bar.
             v.setPadding(systemBars.left, 0, systemBars.right, systemBars.bottom);
 
-            // Ensure the status bar icons are visible (Dark icons on Baby Blue)
+            // Keep the status bar icons dark (since your background is baby blue)
             WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
             if (controller != null) {
                 controller.setAppearanceLightStatusBars(true);
