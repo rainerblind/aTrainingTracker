@@ -59,7 +59,7 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                     val workouts by viewModel.workouts.collectAsStateWithLifecycle()
 
                     // 2. Observe the loading state
-                    val isLoading by viewModel.isLoading.observeAsState(initial = false)
+                    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
 
                     // 3. Render the Tabbed UI
                     WorkoutTabsScreen(

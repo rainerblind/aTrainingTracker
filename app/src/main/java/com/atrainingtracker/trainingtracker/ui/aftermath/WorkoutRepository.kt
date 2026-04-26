@@ -349,6 +349,9 @@ class WorkoutRepository private constructor(private val application: Application
             cursor.use { c ->
                 if (c.moveToFirst()) {
                     do {
+
+                        // Thread.sleep(50) // adding some delay for testing.
+
                         val data = mapper.fromCursor(c)
 
                         // TODO: rewrite this part.

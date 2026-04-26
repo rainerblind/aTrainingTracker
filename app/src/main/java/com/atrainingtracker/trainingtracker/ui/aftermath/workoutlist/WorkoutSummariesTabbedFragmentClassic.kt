@@ -182,6 +182,7 @@ class WorkoutSummariesTabbedFragmentClassic : Fragment() {
 
     private fun observeViewModel() {
         // Observe loading state to show/hide progress
+        /*
         viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
             if (isLoading) {
                 progressContainer.visibility = View.VISIBLE
@@ -191,6 +192,7 @@ class WorkoutSummariesTabbedFragmentClassic : Fragment() {
                 progressContainer.visibility = View.GONE
             }
         }
+         */
 
         viewModel.showDeleteOldWorkoutsDialogEvent.observe(viewLifecycleOwner) {
             showDeleteOldWorkoutsDialog()

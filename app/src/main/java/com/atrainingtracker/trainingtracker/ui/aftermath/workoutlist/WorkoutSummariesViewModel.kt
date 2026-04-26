@@ -36,6 +36,7 @@ import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.map.Roughness
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.StateFlow
@@ -87,8 +88,8 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
         )
 
     // Loading State
-    private val _isLoading = MutableLiveData<Boolean>(false)
-    val isLoading: LiveData<Boolean> = _isLoading
+    private val _isLoading = MutableStateFlow(true)
+    val isLoading: StateFlow<Boolean> = _isLoading
 
     // LiveData to trigger showing the "Delete Old Workouts" dialog
     val showDeleteOldWorkoutsDialogEvent = SingleLiveEvent<Unit>()
@@ -101,14 +102,9 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
 
     // only load the workouts if the list of workouts is null or empty
     fun loadWorkoutsIfNeeded() {
-        _isLoading.value = true // Show spinner
-        // Use the ViewModel's coroutine scope to launch on a background thread.
-        if (workouts.value == null || workouts.value?.isEmpty() == true) {
-            viewModelScope.launch {
-                workoutRepo.loadAllWorkouts()
-            }
+        if (workouts.value.isEmpty() == true) {
+            loadWorkouts()
         }
-        _isLoading.value = false // Hide spinner
     }
 
     fun loadWorkouts() {
@@ -116,8 +112,8 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
         // Use the ViewModel's coroutine scope to launch on a background thread.
         viewModelScope.launch {
             workoutRepo.loadAllWorkouts()
+            _isLoading.value = false // Hide spinner
         }
-        _isLoading.value = false // Hide spinner
     }
 
     /**
