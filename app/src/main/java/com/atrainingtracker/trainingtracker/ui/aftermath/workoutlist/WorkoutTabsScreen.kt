@@ -92,7 +92,7 @@ fun WorkoutTabsScreen(
     val density = LocalDensity.current
 
     // 1. Calculate the total height of the Header (Status Bar + Heading + Trab Row)
-    val appBarMaxHeightPx = with(density) { 140.dp.roundToPx() }
+    val appBarMaxHeightPx = with(density) { 125.dp.roundToPx() }
 
     // 2. Initialize the Connection from the article
     val connection = remember(appBarMaxHeightPx) {
@@ -135,13 +135,7 @@ fun WorkoutTabsScreen(
 
             // THE HEADER (Layered on top)
             Surface(
-                modifier = Modifier.offset { IntOffset(0, connection.appBarOffset.toInt()) },
-                /* modifier = Modifier
-                    .fillMaxWidth()
-                    .graphicsLayer {
-                        // Directly use the offset from our custom connection
-                        translationY = connection.appBarOffset
-                    }, */
+                modifier = Modifier.offset { IntOffset(0, connection.appBarOffset) },
                 color = MaterialTheme.colorScheme.primaryContainer,
                 tonalElevation = 3.dp
             ) {
@@ -149,14 +143,14 @@ fun WorkoutTabsScreen(
                     // --- THE HEADING ---
                     Text(
                         text = stringResource(R.string.tab_workouts),
-                        style = MaterialTheme.typography.headlineMedium,
+                        style = MaterialTheme.typography.headlineSmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier
-                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
                     )
                     PrimaryScrollableTabRow(
                         selectedTabIndex = pagerState.currentPage,
-                        containerColor = Color.Transparent,
+                        containerColor = MaterialTheme.colorScheme.surface,
                         divider = {}
                     ) {
                         tabs.forEachIndexed { index, title ->
