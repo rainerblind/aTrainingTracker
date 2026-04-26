@@ -36,7 +36,7 @@ class WorkoutPagerAdapter(fragment: Fragment) : FragmentStateAdapter(fragment) {
 
     override fun createFragment(position: Int): Fragment {
         // Return your existing List Fragment, but with a filter argument
-        return WorkoutSummariesListFragment.newInstance(tabs[position])
+        return WorkoutSummariesListFragmentClassic.newInstance(tabs[position])
     }
 
     fun getTabType(position: Int) = tabs[position]
