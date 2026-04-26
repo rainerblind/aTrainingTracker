@@ -80,8 +80,7 @@ fun WorkoutTabsScreen(
     onExportWorkoutTo: (Long, FileFormat) -> Unit,
     onDeleteConfirmed: (Long) -> Unit,
     onEditWorkout: (Long) -> Unit,
-    onMapClick: (Long) -> Unit,
-    modifier: Modifier = Modifier
+    onMapClick: (Long) -> Unit
 ) {
     val tabs = listOf(
         stringResource(R.string.workout_summaries_tab_all),

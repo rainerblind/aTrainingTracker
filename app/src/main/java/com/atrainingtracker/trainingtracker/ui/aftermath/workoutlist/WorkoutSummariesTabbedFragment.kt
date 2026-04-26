@@ -77,8 +77,7 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                         onMapClick = { workoutId ->
                             TrainingApplication.startTrackOnMapAftermathActivity(activity, workoutId)
                         },
-                        isPlayServiceAvailable = isPlayAvailable,
-                        modifier = Modifier.fillMaxSize()
+                        isPlayServiceAvailable = isPlayAvailable
                     )
                 }
             }
