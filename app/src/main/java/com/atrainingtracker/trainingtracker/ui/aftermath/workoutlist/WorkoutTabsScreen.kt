@@ -22,6 +22,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
@@ -183,6 +185,7 @@ fun WorkoutList(
     headerHeightPx: Float
 ) {
     val density = LocalDensity.current
+    val bottomPadding = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -190,7 +193,7 @@ fun WorkoutList(
             // Calculation: The initial header height (px) + the current offset (px)
             // convert the final result to Dp.
             top = with(density) { (headerHeightPx + appBarOffsetPx).toDp() },
-            bottom = 80.dp,
+            bottom = bottomPadding + 16.dp,
             start = 8.dp,
             end = 8.dp
         ),

@@ -385,10 +385,9 @@ public class MainActivityWithNavigation
         ViewCompat.setOnApplyWindowInsetsListener(mDrawerLayout, (v, windowInsets) -> {
             Insets systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
 
-            // We only apply horizontal and bottom padding to the DrawerLayout
-            // to keep the navigation drawer and content away from the edges/notches.
+            // We only apply horizontal padding to the DrawerLayout
             // We leave TOP at 0 because Compose will handle the status bar.
-            v.setPadding(systemBars.left, 0, systemBars.right, systemBars.bottom);
+            v.setPadding(systemBars.left, 0, systemBars.right, 0);
 
             // Keep the status bar icons dark (since your background is baby blue)
             WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
