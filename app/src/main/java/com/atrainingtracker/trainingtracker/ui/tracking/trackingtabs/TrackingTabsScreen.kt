@@ -357,7 +357,8 @@ fun TrackingTabsScreen(
                                     onPause = { controlViewModel.onPauseTracking() },
                                     onResume = { controlViewModel.onResumeTracking() },
                                     onStop = { controlViewModel.onStopTracking() },
-                                    onPairingClicked = { controlViewModel.onPairingClicked(it) }
+                                    onPairingClicked = { controlViewModel.onPairingClicked(it) },
+                                    modifier = Modifier.navigationBarsPadding(), // do not draw under the navigation bar
                                 )
                             } else {
                                 val viewIndex =
