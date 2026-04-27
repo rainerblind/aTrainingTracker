@@ -235,37 +235,12 @@ fun TrackingTabsScreen(
                                 if (currentViewInfo != null) {
                                     TrackingTabConfigHeader(
                                         viewInfo = currentViewInfo,
-                                        onUpdateTabName = { id, name ->
-                                            trackingTabsViewModel.onUpdateTabName(
-                                                id,
-                                                name
-                                            )
-                                        },
-                                        onAddTabRelative = { id, after ->
-                                            trackingTabsViewModel.onAddTabRelative(
-                                                id,
-                                                after
-                                            )
-                                        },
+                                        onUpdateTabName = { id, name -> trackingTabsViewModel.onUpdateTabName(id, name) },
+                                        onAddTabRelative = { id, after -> trackingTabsViewModel.onAddTabRelative(id, after) },
                                         onDeleteTab = { id -> trackingTabsViewModel.onDeleteTab(id) },
-                                        onUpdateShowMap = { id, show ->
-                                            trackingTabsViewModel.onUpdateShowMap(
-                                                id,
-                                                show
-                                            )
-                                        },
-                                        onUpdateShowLiveSegments = { id, show ->
-                                            trackingTabsViewModel.onUpdateShowLiveSegments(
-                                                id,
-                                                show
-                                            )
-                                        },
-                                        onUpdateShowLapButton = { id, show ->
-                                            trackingTabsViewModel.onUpdateShowLapButton(
-                                                id,
-                                                show
-                                            )
-                                        },
+                                        onUpdateShowMap = { id, show -> trackingTabsViewModel.onUpdateShowMap(id, show) },
+                                        onUpdateShowLiveSegments = { id, show -> trackingTabsViewModel.onUpdateShowLiveSegments(id, show)},
+                                        onUpdateShowLapButton = { id, show -> trackingTabsViewModel.onUpdateShowLapButton(id, show) },
                                         onToggleMode = { trackingTabsViewModel.toggleScreenMode() }
                                     )
                                 }
