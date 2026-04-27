@@ -91,10 +91,11 @@ class SportTypeViewModel(application: Application) : AndroidViewModel(applicatio
                     }.joinToString(", ")
 
                     val stats = dbSummariesManager.getSportTypeStats(id)
+                    val sportTypeName = it.getString(it.getColumnIndexOrThrow(SportTypeDatabaseManager.SportType.UI_NAME))
 
                     list.add(SportTypeItem(
                         id = id,
-                        name = it.getString(it.getColumnIndexOrThrow(SportTypeDatabaseManager.SportType.UI_NAME)),
+                        name = sportTypeName,
                         bSportType = try {
                             BSportType.valueOf(it.getString(it.getColumnIndexOrThrow(SportTypeDatabaseManager.SportType.BASE_SPORT_TYPE)))
                         } catch (e: Exception) {
@@ -111,7 +112,8 @@ class SportTypeViewModel(application: Application) : AndroidViewModel(applicatio
                         firstUsed = stats.firstUsage?.substringBefore(" "),
                         lastUsed = stats.lastUsage?.substringBefore(" "),
                         statsData = StatsData.fromDatabase(
-                            title = getApplication<Application>().getString(R.string.stats_total),
+                            primaryTitle = sportTypeName,
+                            secondaryTitle = getApplication<Application>().getString(R.string.stats_total),
                             stats = stats,
                             sportTypeId = id
                         )
@@ -122,14 +124,15 @@ class SportTypeViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun getDetailedStats(sportTypeId: Long, firstUsageDate: String?): List<StatsData> {
+    fun getDetailedStats(sportTypeName: String, sportTypeId: Long, firstUsageDate: String?): List<StatsData> {
         return StatsPeriodHelper.getDetailedStats(
             context = getApplication(),
             firstUsageDate = firstUsageDate,
             fetchPeriod = { title, startS, endS ->
                 val raw = dbSummariesManager.getSportTypeStatsForPeriod(sportTypeId, startS, endS)
                 StatsData.fromDatabase(
-                    title = title,
+                    primaryTitle = sportTypeName,
+                    secondaryTitle = title,
                     stats = raw,
                     sportTypeId = sportTypeId,
                     startTimeS = startS,

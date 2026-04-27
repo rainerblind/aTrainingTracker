@@ -23,17 +23,19 @@ import android.content.Context;
 import com.atrainingtracker.R;
 
 public enum BSportType {
-    UNKNOWN(R.drawable.bsport_other, R.string.sport_type_other),
-    RUN(R.drawable.bsport_run, R.string.sport_type_run),
-    BIKE(R.drawable.bsport_bike, R.string.sport_type_bike),
-    CONFLICT(R.drawable.bsport_other, R.string.sport_type_other);
+    UNKNOWN(R.drawable.bsport_other, R.string.sport_type_other, R.string.trainer_general),
+    RUN(R.drawable.bsport_run, R.string.sport_type_run, R.string.trainer_run),
+    BIKE(R.drawable.bsport_bike, R.string.sport_type_bike, R.string.trainer_bike),
+    CONFLICT(R.drawable.bsport_other, R.string.sport_type_other, R.string.trainer_general);
 
     private final int iconResId;
     private final int stringResId;
+    private final int indoorEquipmentResId;
 
-    BSportType(int iconResId, int stringResId) {
+    BSportType(int iconResId, int stringResId, int indoorEquipmentResId) {
         this.iconResId = iconResId;
         this.stringResId = stringResId;
+        this.indoorEquipmentResId = indoorEquipmentResId;
     }
 
     public int getIconResId() {
@@ -43,6 +45,8 @@ public enum BSportType {
     public int getStringResId() {
         return stringResId;
     }
+
+    public int getIndoorEquipmentResId() { return indoorEquipmentResId; }
 
     public String getName(Context context) {
         return context.getString(stringResId);

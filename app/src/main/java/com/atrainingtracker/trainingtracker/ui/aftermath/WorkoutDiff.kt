@@ -57,14 +57,6 @@ class WorkoutDiffCallback : DiffUtil.ItemCallback<WorkoutData>() {
         val payloads = mutableListOf<WorkoutUpdatePayload>()
 
         // Check for a change in the sport data.
-        if (oldItem.sportData != newItem.sportData) {
-            payloads.add(WorkoutUpdatePayload.SportDataChanged(newItem.sportData))
-        }
-
-        // Check for change in the equipment data.
-        if (oldItem.equipmentData != newItem.equipmentData) {
-            payloads.add(WorkoutUpdatePayload.EquipmentDataChanged(newItem.equipmentData))
-        }
 
         // Check for a change in the header data.
         if (oldItem.headerData != newItem.headerData) {
