@@ -24,7 +24,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 
 import com.atrainingtracker.trainingtracker.TrainingApplication;
-import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusRepository;
+import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseManager;
 
 import java.util.List;
 
@@ -40,7 +40,7 @@ public class WorkoutDeletionHelper {
     private final WorkoutSummariesDatabaseManager mSummariesManager;
     private final LapsDatabaseManager mLapsManager;
     private final WorkoutSamplesDatabaseManager mSamplesManager;
-    private final ExportStatusRepository mExportStatusRepo;
+    private final ExportStatusDatabaseManager mExportStatusRepo;
 
     /**
      * Constructor for the deletion helper.
@@ -54,7 +54,7 @@ public class WorkoutDeletionHelper {
         this.mSummariesManager = WorkoutSummariesDatabaseManager.getInstance(mContext);
         this.mLapsManager = LapsDatabaseManager.getInstance(mContext);
         this.mSamplesManager = WorkoutSamplesDatabaseManager.getInstance(mContext);
-        this.mExportStatusRepo = ExportStatusRepository.getInstance(mContext);
+        this.mExportStatusRepo = ExportStatusDatabaseManager.getInstance(mContext);
     }
 
     /**

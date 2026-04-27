@@ -51,4 +51,17 @@ public class PaceFormatter implements MyFormatter<Number> {
         return min + ":" + (sec <= 9 ? "0" + sec : sec);
     }
 
+    public String format_with_units(Number pace_spm) {
+        String units = "";
+        switch (TrainingApplication.getUnit()) {
+            case METRIC:
+                units = "min/km";
+                break;
+            case IMPERIAL:
+                units = "min/mile";
+                break;
+        }
+
+        return format(pace_spm) + " " + units;
+    }
 }

@@ -31,7 +31,7 @@ import androidx.work.Data;
 import androidx.work.Worker;
 import androidx.work.WorkerParameters;
 
-import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusRepository;
+import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseManager;
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportNotificationManager;
 
 import org.json.JSONException;
@@ -45,7 +45,7 @@ public class ExportWorker extends Worker  {
     private BaseExporter mExporter;
 
     private final ExportNotificationManager mExportNotificationManager;
-    private final ExportStatusRepository repository = ExportStatusRepository.getInstance(getApplicationContext());
+    private final ExportStatusDatabaseManager repository = ExportStatusDatabaseManager.getInstance(getApplicationContext());
     private final Context mContext;
 
     public ExportWorker(@NonNull Context context, @NonNull WorkerParameters workerParams) {
@@ -98,21 +98,21 @@ public class ExportWorker extends Worker  {
     private void informOthersStarted() {
         if (DEBUG) Log.i(TAG, "Export started: " + mExportInfo.toString());
 
-        updateStatus(ExportStatus.PROCESSING, "Export is being prepared...");  // TODO: Text?
+        updateStatus(mExportInfo.getFileBaseName(), ExportStatus.PROCESSING, "Export is being prepared...");  // TODO: Text?
         mExportNotificationManager.updateNotification(mExportInfo, false);
     }
 
     private void informOthersSuccess(String answer) {
         if (DEBUG) Log.i(TAG, "Export successful: " + mExportInfo.toString() + " Answer: " + answer);
 
-        updateStatus(ExportStatus.FINISHED_SUCCESS, answer);
+        updateStatus(mExportInfo.getFileBaseName(), ExportStatus.FINISHED_SUCCESS, answer);
         mExportNotificationManager.updateNotification(mExportInfo, true);
     }
 
     private void informOthersFailed(String answer) {
         if (DEBUG) Log.i(TAG, "Export failed: " + mExportInfo.toString() + " Answer: " + answer);
 
-        updateStatus(ExportStatus.FINISHED_FAILED, answer);
+        updateStatus(mExportInfo.getFileBaseName(), ExportStatus.FINISHED_FAILED, answer);
         mExportNotificationManager.updateNotification(mExportInfo, true);
     }
 
@@ -125,21 +125,21 @@ public class ExportWorker extends Worker  {
      * @param status The new status of the export (e.g., PROCESSING, FINISHED_SUCCESS).
      * @param answer A descriptive message about the result (e.g., "Upload successful" or an error message). Can be null.
      */
-    private void updateStatus(ExportStatus status, @Nullable String answer) {
+    private void updateStatus(String fileBaseName, ExportStatus status, @Nullable String answer) {
 
         // create a ContentValues object to hold the new data.
         ContentValues values = new ContentValues();
-        values.put(ExportStatusRepository.EXPORT_STATUS, status.name());
+        values.put(ExportStatusDatabaseManager.EXPORT_STATUS, status.name());
 
         if (answer != null) {
-            values.put(ExportStatusRepository.ANSWER, answer);
+            values.put(ExportStatusDatabaseManager.ANSWER, answer);
         }
 
         // delegate the database update to the repository.
         repository.updateExportStatus(values, mExportInfo);
 
         // Finally, send a broadcast to inform the UI that it needs to refresh.
-        ExportStatusChangedBroadcaster.broadcastExportStatusChanged(getApplicationContext());
+        ExportStatusChangedBroadcaster.broadcastExportStatusChanged(getApplicationContext(), fileBaseName);
     }
 
 }

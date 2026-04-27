@@ -50,8 +50,9 @@ import java.util.Set;
 
 
 public class CalcExtremaWorker extends Worker {
-    private static final String TAG = CalcExtremaWorker.class.getSimpleName();
+    private static final String TAG = "CalcExtremaWorker";
     private static final boolean DEBUG = TrainingApplication.getDebug(true);
+    private static final boolean DELAY = false;
 
     // --- KEYS for Input/Output/Progress Data ---
     public static final String KEY_WORKOUT_ID = "WORKOUT_ID";
@@ -93,6 +94,15 @@ public class CalcExtremaWorker extends Worker {
 
 
     private void publishStarting(String message) {
+        if (DEBUG) Log.i(TAG, "publishStarting: " + message);
+        if (DEBUG && DELAY) {
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                // do nothing.
+            }
+        }
+
         progressCounter++;
         Data progressData = new Data.Builder()
                 .putString(KEY_STARTING_MESSAGE, message)

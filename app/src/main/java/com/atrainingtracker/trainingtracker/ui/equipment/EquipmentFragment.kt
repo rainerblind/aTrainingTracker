@@ -28,6 +28,8 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesListFragment
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesListFragmentClassic
+import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 class EquipmentFragment : Fragment() {
@@ -64,8 +66,10 @@ class EquipmentFragment : Fragment() {
      * Navigates to the WorkoutSummariesListFragment with the filters
      * defined in the clicked StatsData.
      */
-    private fun navigateToFilteredWorkouts(stats: com.atrainingtracker.trainingtracker.ui.components.stats.StatsData) {
+    private fun navigateToFilteredWorkouts(stats: StatsData) {
         val fragment = WorkoutSummariesListFragment.newInstance(
+            primaryTitle = stats.primaryTitle,
+            secondaryTitle = stats.secondaryTitle,
             sportTypeId = stats.filterSportTypeId,
             equipmentId = stats.filterEquipmentId,
             startS = stats.startTimeS,

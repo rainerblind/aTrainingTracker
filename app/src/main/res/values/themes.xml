@@ -24,7 +24,7 @@
 
     <!--Base custom theme which will be shared between both light and dark theme variants-->
     <style name="Base.aTrainingTracker" parent="Base.MaterialThemeBuilder">
-        <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item>
+        <!-- <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item> -->
 
         <!--Material color attributes -->
         <item name="colorPrimary">@color/color_primary</item>
@@ -73,10 +73,22 @@
         <item name="alphaEmphasisMedium">@dimen/alpha_emphasis_medium</item>
         <item name="alphaEmphasisDisabled">@dimen/alpha_emphasis_disabled</item>
 
-        <item name="android:statusBarColor">?colorPrimaryVariant</item>
-        <item name="android:windowLightStatusBar">true</item>
+        <!-- Transparent StatusBar and NavigationBar -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
 
-        <!--Remap legacy AppCompat attributes to MaterialComponent attributes-->
+        <!-- This prevents the system from adding a gray scrim for "contrast" on API 29+ -->
+        <item name="android:enforceNavigationBarContrast" tools:targetApi="29">false</item>
+        <item name="android:enforceStatusBarContrast" tools:targetApi="29">false</item>
+
+        <!-- Ensures icons are visible on light backgrounds -->
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="27">true</item>
+
+        <!-- Ensure these are NOT set to true (translucent != transparent) -->
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:windowTranslucentNavigation">false</item>
+
         <item name="colorPrimaryDark">?colorPrimaryVariant</item>
         <item name="colorAccent">?colorSecondary</item>
     </style>

@@ -19,10 +19,11 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.map
+import androidx.lifecycle.asFlow
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
@@ -30,10 +31,19 @@ import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.aftermath.DeletionProgress
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusRepository
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.map.Roughness
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
-import com.google.android.gms.maps.model.LatLng
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 
@@ -43,42 +53,67 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
         const val TAG = "WorkoutSummariesViewModel"
     }
 
-    private val repository = WorkoutRepository.getInstance(application)
+    private val workoutRepo = WorkoutRepository.getInstance(application)
+    private val exportRepo = ExportStatusRepository.getInstance(application)
 
-    val workouts: LiveData<List<WorkoutData>> = repository.allWorkouts
+    val workouts: StateFlow<List<WorkoutData>> = workoutRepo.allWorkouts
+        .asFlow()
+        .flatMapLatest { workoutList ->
+            // Create a combined flow that updates whenever any individual export status changes
+            if (workoutList.isEmpty()) {
+                kotlinx.coroutines.flow.flowOf(emptyList())
+            } else {
+                combine(workoutList.map { workout ->
+                    // Safely handle null fileBaseName
+                    val fileName = workout.fileBaseName
+                    if (DEBUG) Log.i(TAG, "Merging Flows: fileName=" + fileName)
+
+                    if (fileName != null) {
+                        exportRepo.getExportStatusFlow(fileName)
+                            .map { liveStatuses ->
+                                workout.copy(exportStatuses = liveStatuses)
+                            }
+                    } else {
+                        // If no fileBaseName exists, there are no live updates to track.
+                        // Return a flow containing the original workout object.
+                        flowOf(workout)
+                    }
+                }) { it.toList() }
+            }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
 
     // Loading State
-    private val _isLoading = MutableLiveData<Boolean>(false)
-    val isLoading: LiveData<Boolean> = _isLoading
+    private val _isLoading = MutableStateFlow(true)
+    val isLoading: StateFlow<Boolean> = _isLoading
 
     // LiveData to trigger showing the "Delete Old Workouts" dialog
     val showDeleteOldWorkoutsDialogEvent = SingleLiveEvent<Unit>()
 
     // --- LiveData for granular deletion progress ---
-    val deletionProgress: LiveData<DeletionProgress> = repository.deletionProgress
+    val deletionProgress: LiveData<DeletionProgress> = workoutRepo.deletionProgress
 
 
     val confirmDeleteWorkoutEvent = SingleLiveEvent<Long>()
 
     // only load the workouts if the list of workouts is null or empty
     fun loadWorkoutsIfNeeded() {
-        _isLoading.value = true // Show spinner
-        // Use the ViewModel's coroutine scope to launch on a background thread.
-        if (workouts.value == null || workouts.value?.isEmpty() == true) {
-            viewModelScope.launch {
-                repository.loadAllWorkouts()
-            }
+        if (workouts.value.isEmpty() == true) {
+            loadWorkouts()
         }
-        _isLoading.value = false // Hide spinner
     }
 
     fun loadWorkouts() {
         _isLoading.value = true // Show spinner
         // Use the ViewModel's coroutine scope to launch on a background thread.
         viewModelScope.launch {
-            repository.loadAllWorkouts()
+            workoutRepo.loadAllWorkouts()
+            _isLoading.value = false // Hide spinner
         }
-        _isLoading.value = false // Hide spinner
     }
 
     /**
@@ -91,12 +126,12 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
         equipmentId: Long? = null,
         startTimeS: Long? = null,
         endTimeS: Long? = null
-    ): LiveData<List<WorkoutData>> {
+    ): Flow<List<WorkoutData>> {
         return workouts.map { list ->
             list.filter { workout ->
-                val matchesBSport = bSportType == null || workout.sportData.bSportType == bSportType
-                val matchesSportId = sportTypeId == null || workout.sportData.sportId == sportTypeId
-                val matchesEquip = equipmentId == null || workout.equipmentData.equipmentId == equipmentId
+                val matchesBSport = bSportType == null || workout.bSportType == bSportType
+                val matchesSportId = sportTypeId == null || workout.sportId == sportTypeId
+                val matchesEquip = equipmentId == null || workout.equipmentId == equipmentId
 
                 val workoutTime = workout.headerData.startTimeS
                 val matchesTime = (startTimeS == null || workoutTime >= startTimeS) && (endTimeS == null || workoutTime <= endTimeS)
@@ -111,7 +146,7 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
      * Replaces the logic previously handled by TrackOnMapHelper.
      */
     suspend fun getWorkoutTrackPoints(workoutId: Long): List<PathPoint> {
-        return repository.getWorkoutTrackPoints(workoutId, Roughness.MEDIUM, TrackType.BEST)
+        return workoutRepo.getWorkoutTrackPoints(workoutId, Roughness.MEDIUM, TrackType.BEST)
     }
 
 
@@ -125,7 +160,7 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
      * This method will be called by the Fragment *after* the user confirms the deletion.
      */
     fun deleteWorkout(id: Long) {
-        repository.deleteWorkout(id)
+        workoutRepo.deleteWorkout(id)
     }
 
 
@@ -142,18 +177,18 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
      */
     fun executeDeleteOldWorkouts(daysToKeep: Int) {
         viewModelScope.launch {
-            repository.deleteOldWorkouts(daysToKeep)
+            workoutRepo.deleteOldWorkouts(daysToKeep)
         }
     }
 
 
-    fun onExportWorkoutClicked(id: Long, format: FileFormat) {
+    fun onExportWorkoutTo(id: Long, format: FileFormat) {
         // Post an event commanding the fragment/activity to handle the export.
         exportWorkout(id, format)    }
 
     fun exportWorkout(workoutId: Long, fileFormat: FileFormat) {
         viewModelScope.launch {
-            repository.exportWorkoutTo(workoutId, fileFormat)
+            workoutRepo.exportWorkoutTo(workoutId, fileFormat)
         }
     }
 }

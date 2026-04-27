@@ -42,11 +42,11 @@ import java.util.EnumMap;
  * Dies ist ein Singleton und der EINZIGE Ort, an dem Datenbankzugriffe
  * für den Export-Status stattfinden. Alle Methoden sind Thread-sicher.
  */
-public class ExportStatusRepository {
+public class ExportStatusDatabaseManager {
 
     private static final boolean DEBUG = true;
     private static final String TAG = "ExportStatusRepo";
-    private static ExportStatusRepository sInstance;
+    private static ExportStatusDatabaseManager sInstance;
     private final ExportStatusDbHelper mDbHelper;
 
 
@@ -55,13 +55,13 @@ public class ExportStatusRepository {
     public static final String EXPORT_STATUS = "Progress"; // TODO: rename to ExportStatus???
     public static final String ANSWER = "Answer";
 
-    private ExportStatusRepository(Context context) {
+    private ExportStatusDatabaseManager(Context context) {
         mDbHelper = ExportStatusDbHelper.getInstance(context);
     }
 
-    public static synchronized ExportStatusRepository getInstance(Context context) {
+    public static synchronized ExportStatusDatabaseManager getInstance(Context context) {
         if (sInstance == null) {
-            sInstance = new ExportStatusRepository(context.getApplicationContext());
+            sInstance = new ExportStatusDatabaseManager(context.getApplicationContext());
         }
         return sInstance;
     }

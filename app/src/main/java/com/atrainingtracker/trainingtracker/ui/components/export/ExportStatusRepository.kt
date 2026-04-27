@@ -18,21 +18,107 @@
 
 package com.atrainingtracker.trainingtracker.ui.components.export
 
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import androidx.core.content.ContextCompat
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.exporter.ExportStatus
+import com.atrainingtracker.trainingtracker.exporter.ExportStatusChangedBroadcaster
 import com.atrainingtracker.trainingtracker.exporter.ExportType
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseManager
 import com.atrainingtracker.trainingtracker.helpers.formatListAsString
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.*
 
-class ExportStatusDataProvider(private val context: Context) {
+class ExportStatusRepository private constructor(context: Context) {
+
+    private val appContext = context.applicationContext
+
+    // Acquire the manager internally so we don't have to pass it to getInstance
+    private val dbManager = ExportStatusDatabaseManager.getInstance(appContext)
+
+    // Repository scope to keep flows alive independently of specific ViewModels
+    private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    // Cache to ensure we only have one StateFlow per workout ID
+    private val statusFlows = mutableMapOf<String, StateFlow<List<ExportStatusGroupData>>>()
+
+    companion object {
+        @Volatile
+        private var INSTANCE: ExportStatusRepository? = null
+
+        fun getInstance(context: Context): ExportStatusRepository {
+            return INSTANCE ?: synchronized(this) {
+                INSTANCE ?: ExportStatusRepository(context).also { INSTANCE = it }
+            }
+        }
+    }
 
     /**
-     * The central class to collect all data for an ExportType and create the corresponding string for the UI.
+     * Returns a reactive StateFlow for a specific workout.
+     * It updates automatically whenever a broadcast is received for this fileBaseName.
      */
-    fun createGroupData(fileBaseName: String, exportType: ExportType): ExportStatusGroupData {
-        val jobs = getJobs(fileBaseName, exportType)
+    fun getExportStatusFlow(fileBaseName: String): StateFlow<List<ExportStatusGroupData>> {
+        return synchronized(statusFlows) {
+            statusFlows.getOrPut(fileBaseName) {
+                createStatusFlow(fileBaseName)
+            }
+        }
+    }
+
+    private fun createStatusFlow(fileBaseName: String): StateFlow<List<ExportStatusGroupData>> {
+        return callbackFlow {
+            // 1. Logic to fetch data from DB and map to UI model
+            val refresh = {
+                val rawMap = dbManager.getExportStatusMap(fileBaseName)
+                val uiData = rawMap?.map { (type, jobs) ->
+                    createGroupData(exportType = type, jobs = jobs)
+                }?.filter { it.hasContent } ?: emptyList()
+
+                trySend(uiData)
+            }
+
+            // 2. Initial fetch
+            refresh()
+
+            // 3. Register Receiver for the "Poke" from the Broadcaster
+            val receiver = object : BroadcastReceiver() {
+                override fun onReceive(context: Context?, intent: Intent?) {
+                    val changedFile = intent?.getStringExtra(
+                        ExportStatusChangedBroadcaster.EXTRA_FILE_BASE_NAME
+                    )
+                    // Refresh if it's a global update (null) or matches this specific file
+                    if (changedFile == null || changedFile == fileBaseName) {
+                        refresh()
+                    }
+                }
+            }
+
+            val filter = IntentFilter(ExportStatusChangedBroadcaster.EXPORT_STATUS_CHANGED_INTENT)
+            ContextCompat.registerReceiver(
+                appContext, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED
+            )
+
+            // 4. Cleanup when the Flow is no longer needed
+            awaitClose {
+                appContext.unregisterReceiver(receiver)
+            }
+        }
+            .stateIn(
+                scope = repositoryScope,
+                // Keep active for 5 seconds after the last collector disappears
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = emptyList()
+            )
+    }
+
+    fun createGroupData(exportType: ExportType, jobs: Map<FileFormat, ExportStatus>): ExportStatusGroupData {
 
         val waitingJobsList = getWaitingJobsList(jobs)
         val runningJobsList = getRunningJobsList(jobs)
@@ -55,7 +141,7 @@ class ExportStatusDataProvider(private val context: Context) {
 
         return ExportStatusGroupData(
             hasContent = true,
-            groupTitle = context.getString(exportType.uiId),
+            groupTitle = appContext.getString(exportType.uiId),
             waitingLine = waitingLine,
             runningLine = runningLine,
             succeededLine = succeededLine,
@@ -63,44 +149,35 @@ class ExportStatusDataProvider(private val context: Context) {
         )
     }
 
-    /***********************************************************************************************
-     * private helpers
-     **********************************************************************************************/
-
-
-    private fun getJobs(fileBaseName: String, exportType: ExportType): Map<FileFormat, ExportStatus> {
-        return ExportStatusDatabaseManager.getInstance(context).getExportStatusMap(fileBaseName, exportType)
-    }
-
     private fun getWaitingJobsList(finishedJobs: Map<FileFormat, ExportStatus>): List<String> {
         return finishedJobs.filterValues { it == ExportStatus.WAITING }
-            .keys.map { context.getString(it.uiNameId) }
+            .keys.map { appContext.getString(it.uiNameId) }
     }
 
     private fun getRunningJobsList(finishedJobs: Map<FileFormat, ExportStatus>): List<String> {
         return finishedJobs.filterValues { it == ExportStatus.PROCESSING }
-            .keys.map { context.getString(it.uiNameId) }
+            .keys.map { appContext.getString(it.uiNameId) }
     }
 
     private fun getSucceededJobsList(finishedJobs: Map<FileFormat, ExportStatus>): List<String> {
         return finishedJobs.filterValues { it == ExportStatus.FINISHED_SUCCESS }
-            .keys.map { context.getString(it.uiNameId) }
+            .keys.map { appContext.getString(it.uiNameId) }
     }
 
     private fun getFailedJobsList(finishedJobs: Map<FileFormat, ExportStatus>): List<String> {
         return finishedJobs.filterValues { it == ExportStatus.FINISHED_FAILED }
-            .keys.map { context.getString(it.uiNameId) }
+            .keys.map { appContext.getString(it.uiNameId) }
     }
 
     private fun getRunningLine(runningJobs: Set<FileFormat>, pluralsId: Int): String {
-        val runningJobNames = runningJobs.map { context.getString(it.uiNameId) }
-        val formattedFileFormats = formatListAsString(context, runningJobNames)
-        return context.resources.getQuantityString(pluralsId, runningJobs.size, formattedFileFormats)
+        val runningJobNames = runningJobs.map { appContext.getString(it.uiNameId) }
+        val formattedFileFormats = formatListAsString(appContext, runningJobNames)
+        return appContext.resources.getQuantityString(pluralsId, runningJobs.size, formattedFileFormats)
     }
 
     private fun getResultLine(filteredJobList: List<String>, pluralResId: Int): String {
-        val formattedJobs = formatListAsString(context, filteredJobList)
-        return context.resources.getQuantityString(pluralResId, filteredJobList.size, formattedJobs)
+        val formattedJobs = formatListAsString(appContext, filteredJobList)
+        return appContext.resources.getQuantityString(pluralResId, filteredJobList.size, formattedJobs)
     }
 
     // data class for the plurals

@@ -18,7 +18,6 @@
 
 package com.atrainingtracker.banalservice.ui.sporttype
 
-import androidx.activity.result.launch
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -52,9 +51,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.SecondaryScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -183,7 +180,8 @@ fun SportTypeScreen(
                     firstUsed = null,
                     lastUsed = null,
                     statsData = StatsData(
-                        title = "",
+                        primaryTitle = "",
+                        secondaryTitle = "",
                         totalWorkouts = 0,
                         totalDistanceWithUnits = "0",
                         timeWithUnits = "0",
@@ -222,7 +220,7 @@ fun SportTypeScreen(
                         onConfigClick = { itemToEdit = item },
                         onStatsClick = { item ->
                             // 1. Fetch detailed periods from ViewModel
-                            val periods = viewModel.getDetailedStats(item.id, item.firstUsed)
+                            val periods = viewModel.getDetailedStats(item.name, item.id, item.firstUsed)
                             // 2. Combine with the "Total" stats already in the item
                             val allStats = listOf(item.statsData) + periods
                             // 3. Show the sheet

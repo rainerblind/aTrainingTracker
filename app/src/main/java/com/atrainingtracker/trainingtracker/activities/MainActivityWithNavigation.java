@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.activities;
 
 import android.Manifest;
 
+import androidx.activity.EdgeToEdge;
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -50,6 +51,7 @@ import com.atrainingtracker.trainingtracker.fragments.preferences.PebbleScreenFr
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
 import com.atrainingtracker.trainingtracker.segments.StarredSegmentsTabbedContainer;
 import com.atrainingtracker.trainingtracker.tracker.TrackerService;
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedFragment;
 import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentFragment;
 import com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrack;
 import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository;
@@ -59,21 +61,19 @@ import com.google.android.material.navigation.NavigationView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
-import androidx.core.view.OnApplyWindowInsetsListener;
 import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
-import androidx.appcompat.app.ActionBar;
-import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceScreen;
-import androidx.appcompat.widget.Toolbar;
 
 import android.provider.Settings;
 import android.util.Log;
@@ -97,7 +97,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
 import com.atrainingtracker.trainingtracker.dialogs.GPSDisabledDialog;
 import com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialog;
-import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedFragment;
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedFragmentClassic;
 import com.atrainingtracker.trainingtracker.fragments.preferences.CloudUploadFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.FancyWorkoutNameListFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.RootPrefsFragment;
@@ -311,6 +311,8 @@ public class MainActivityWithNavigation
         super.onCreate(savedInstanceState);
         if (DEBUG) Log.d(TAG, "onCreate");
 
+        EdgeToEdge.enable(this);
+
         // some initialization
         mTrainingApplication = (TrainingApplication) getApplication();
         mHandler = new Handler();
@@ -321,17 +323,7 @@ public class MainActivityWithNavigation
         // now, create the UI
         setContentView(R.layout.main_activity_with_navigation);
 
-        Toolbar toolbar = findViewById(R.id.apps_toolbar);
-        setSupportActionBar(toolbar);
-
-        final ActionBar supportAB = getSupportActionBar();
-        // supportAB.setHomeAsUpIndicator(R.drawable.abc_ic_ab_back_mtrl_am_alpha);
-        supportAB.setDisplayHomeAsUpEnabled(true);
-
         mDrawerLayout = findViewById(R.id.drawer_layout);
-
-        ActionBarDrawerToggle actionBarDrawerToggle = new ActionBarDrawerToggle(this, mDrawerLayout, toolbar, R.string.TrainingTracker, R.string.TrainingTracker);
-        actionBarDrawerToggle.syncState();
 
         mNavigationView = findViewById(R.id.nav_view);
         mNavigationView.setItemIconTintList(null);  // avoid converting the icons to black and white or gray and white
@@ -388,20 +380,23 @@ public class MainActivityWithNavigation
                 dialog.show();
             }
         }
-        ViewCompat.setOnApplyWindowInsetsListener(
-                mDrawerLayout,
-                new OnApplyWindowInsetsListener() {
-                    @NonNull
-                    @Override
-                    public WindowInsetsCompat onApplyWindowInsets(
-                            @NonNull View v, @NonNull WindowInsetsCompat windowInsets) {
-                        Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
-                        v.setPadding(insets.left, 0, insets.right, insets.bottom);
-                        ViewGroup.MarginLayoutParams mlp = (ViewGroup.MarginLayoutParams) v.getLayoutParams();
-                        mlp.topMargin = insets.top;
-                        return WindowInsetsCompat.CONSUMED;
-                    }
-                });
+
+
+        ViewCompat.setOnApplyWindowInsetsListener(mDrawerLayout, (v, windowInsets) -> {
+            Insets systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+
+            // We only apply horizontal padding to the DrawerLayout
+            // We leave TOP at 0 because Compose will handle the status bar.
+            v.setPadding(systemBars.left, 0, systemBars.right, 0);
+
+            // Keep the status bar icons dark (since your background is baby blue)
+            WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+            if (controller != null) {
+                controller.setAppearanceLightStatusBars(true);
+            }
+
+            return windowInsets;
+        });
 
         getOnBackPressedDispatcher().addCallback(this,
                 new OnBackPressedCallback(true) {

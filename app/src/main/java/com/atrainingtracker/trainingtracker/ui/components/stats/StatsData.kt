@@ -23,7 +23,8 @@ import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.Stats
 
 data class StatsData(
-    val title: String,
+    val primaryTitle: String,
+    val secondaryTitle: String,
     val totalWorkouts: Int,
     val totalDistanceWithUnits: String,
     val timeWithUnits: String,
@@ -35,17 +36,20 @@ data class StatsData(
     val endTimeS: Long? = null             // From StatsPeriodHelper
 ) {
     companion object {
-        fun fromDatabase(title: String,
-                         stats: Stats,
-                         sportTypeId: Long? = null,
-                         equipmentId: Long? = null,
-                         startTimeS: Long? = null,
-                         endTimeS: Long? = null
+        fun fromDatabase(
+            primaryTitle: String,
+            secondaryTitle: String,
+            stats: Stats,
+            sportTypeId: Long? = null,
+            equipmentId: Long? = null,
+            startTimeS: Long? = null,
+            endTimeS: Long? = null
         ): StatsData {
             val distanceFormater = DistanceFormatter()
 
             return StatsData (
-                title = title,
+                primaryTitle = primaryTitle,
+                secondaryTitle = secondaryTitle,
                 totalWorkouts = stats.count,
                 totalDistanceWithUnits = distanceFormater.format_with_units(stats.totalDistanceM),
                 timeWithUnits = TimeFormatter().format_with_units(stats.totalActiveTimeS),

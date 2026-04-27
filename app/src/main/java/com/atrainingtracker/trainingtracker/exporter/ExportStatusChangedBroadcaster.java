@@ -24,9 +24,16 @@ import android.content.Intent;
 public class ExportStatusChangedBroadcaster {
 
     public static final String EXPORT_STATUS_CHANGED_INTENT = "com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT";
+    public static final String EXTRA_FILE_BASE_NAME = "extra_file_base_name";
 
-    public static void broadcastExportStatusChanged(Context context) {
-        context.sendBroadcast(new Intent(EXPORT_STATUS_CHANGED_INTENT)
-                .setPackage(context.getPackageName()));
+    public static void broadcastExportStatusChanged(Context context, String fileBaseName) {
+        Intent intent = new Intent(EXPORT_STATUS_CHANGED_INTENT)
+                .setPackage(context.getPackageName());
+
+        if (fileBaseName != null) {
+            intent.putExtra(EXTRA_FILE_BASE_NAME, fileBaseName);
+        }
+
+        context.sendBroadcast(intent);
     }
 }

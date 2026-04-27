@@ -124,7 +124,7 @@ fun EquipmentScreen(
                 onConfigClick = { itemToConfigure = it },
                 onStatsClick = { item ->
                     // 1. Fetch detailed periods from ViewModel
-                    val periods = viewModel.getDetailedStats(item.id, item.firstUsed)
+                    val periods = viewModel.getDetailedStats(item.name, item.id, item.firstUsed)
                     // 2. Combine with the "Total" stats already in the item
                     val allStats = listOf(item.statsData) + periods
                     // 3. Show the sheet
@@ -157,7 +157,8 @@ fun EquipmentScreen(
             firstUsed = null,
             lastUsed = null,
             statsData = StatsData(
-                title = "",
+                primaryTitle = "",
+                secondaryTitle = "",
                 totalWorkouts = 0,
                 totalDistanceWithUnits = "0",
                 timeWithUnits = "0",
@@ -450,7 +451,8 @@ private fun mockStats(
     timeWithUnits: String,
     ascent: String
 ) = StatsData(
-    title = title,
+    primaryTitle = "Foo",
+    secondaryTitle = title,
     totalWorkouts = workouts,
     totalDistanceWithUnits = dist,
     timeWithUnits = timeWithUnits,

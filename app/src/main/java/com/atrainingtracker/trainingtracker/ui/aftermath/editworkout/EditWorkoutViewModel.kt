@@ -139,9 +139,9 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
 
     fun initSuggestedSportAndEquipmentNames(initialWorkout: WorkoutData) {
 
-        currentBSportType = initialWorkout.sportData.bSportType
-        suggestedSportTypeName = initialWorkout.sportData.sportName
-        suggestedEquipmentName = initialWorkout.equipmentData.equipmentName
+        currentBSportType = initialWorkout.bSportType
+        suggestedSportTypeName = initialWorkout.sportName
+        suggestedEquipmentName = initialWorkout.equipmentName
 
         // get the linked sport types
         var suggestedSportNames = discoveryManager.getLinkedSportTypeNames(workoutId)
@@ -149,7 +149,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
             // when the linked sport types are empty, use the speed-based guess
             suggestedSportNames = discoveryManager.getSpeedBasedSportTypeNames(
                 currentBSportType,
-                initialWorkout.sportData.avgSpeedMps
+                initialWorkout.avgSpeedMps
             )
         }
 
@@ -335,7 +335,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
             return
         }
 
-        if (newSportName == workout.sportData.sportName) return
+        if (newSportName == workout.sportName) return
 
 
         // first, get the new sportId and bSportType
@@ -368,7 +368,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
             return
         }
 
-        if (newEquipmentName == workout.equipmentData.equipmentName) return
+        if (newEquipmentName == workout.equipmentName) return
 
         // call the repository method that updates the equipment data
         repository.updateEquipmentName(workoutId, newEquipmentName)
