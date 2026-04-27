@@ -59,8 +59,8 @@ fun WorkoutHeader(
     var showContextMenu by remember { mutableStateOf(false) }
     var confirmDeletion by remember { mutableStateOf(false) }
 
-    val backgroundColor = MaterialTheme.colorScheme.primaryContainer
-    val textColor = MaterialTheme.colorScheme.onPrimaryContainer
+    val backgroundColor = MaterialTheme.colorScheme.surfaceContainerHighest
+    val textColor = MaterialTheme.colorScheme.onSurfaceVariant
 
 
     Surface(

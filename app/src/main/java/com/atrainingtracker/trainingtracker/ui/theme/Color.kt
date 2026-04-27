@@ -47,13 +47,13 @@ val LightOutline = Color(0xFF74777F) // Suggested
 val LightInverseOnSurface = Color(0xFFF2F0F4) // Suggested
 val LightInverseSurface = Color(0xFF2F3033) // Suggested
 val LightPrimaryInverse = Color(0xFFA6C8FF) // Suggested
-val surfaceDimLight = Color(0xFFDDD9D9)
-val surfaceBrightLight = Color(0xFFFCF8F8)
-val surfaceContainerLowestLight = Color(0xFFFFFFFF)
-val surfaceContainerLowLight = Color(0xFFFFFFFF)
-val surfaceContainerLight = Color(0xFFFFFFFF)
-val surfaceContainerHighLight = Color(0xFFEBE7E7)
-val surfaceContainerHighestLight = Color(0xFFE5E2E1)
+val surfaceDimLight = Color(0xFFCDE2FB)        // Clear Light Blue
+val surfaceBrightLight = Color(0xFFF0F7FF)     // "Ice" - Almost white blue
+val surfaceContainerLowestLight = Color(0xFFFFFFFF) // Pure White
+val surfaceContainerLowLight = Color(0xFFECF4FF)  // Very soft sky blue
+val surfaceContainerLight = Color(0xFFE2EFFF)    // Fresh light blue
+val surfaceContainerHighLight = Color(0xFFD6E9FF) // Noticeable light blue
+val surfaceContainerHighestLight = Color(0xFFC8E3FF) // <--- Use this for headers
 
 // Dark Theme Colors (These are suggested Material 3 colors, you can customize them)
 val DarkPrimary = Color(0xFFA6C8FF)

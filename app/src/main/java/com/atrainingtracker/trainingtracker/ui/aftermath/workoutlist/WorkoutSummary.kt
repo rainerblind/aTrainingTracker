@@ -86,11 +86,15 @@ fun WorkoutSummary(
     }
     // TODO: Add functionality to show more detailed stats when clicking on the WorkoutDetails or Extrema Values.
 
-    Column(
+    ElevatedCard(
         modifier = modifier.fillMaxWidth()
             .background(MaterialTheme.colorScheme.surface)
             // Apply the alpha to the entire summary container
-            .graphicsLayer(alpha = contentAlpha)
+            .graphicsLayer(alpha = contentAlpha),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surface // This is your Color.White
+        ),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
     ) {
 
         // 1. Header (Blue Scrim Section)
