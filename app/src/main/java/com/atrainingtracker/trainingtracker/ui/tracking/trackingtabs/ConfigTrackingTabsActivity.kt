@@ -41,18 +41,6 @@ class ConfigTrackingTabsActivity : AppCompatActivity(),
 
         setContentView(R.layout.main_activity_without_navigation)
 
-        // Find the toolbar from the XML layout
-        val toolbar: Toolbar = findViewById(R.id.apps_toolbar)
-
-        // Set it as the ActionBar for this Activity
-        // This allows getSupportActionBar() to work and populates the Menu
-        setSupportActionBar(toolbar)
-
-        // Add a back button
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        // supportActionBar?.setTitle(R.string.prefsConfigureDisplaysTitle)
-
-
         // Now, show an dialog to select the activity type
         showSelectActivityTypeDialog()
     }
