@@ -58,6 +58,8 @@ class SportTypeListFragment : Fragment() {
      */
     private fun navigateToFilteredWorkouts(stats: StatsData) {
         val fragment = WorkoutSummariesListFragment.newInstance(
+            primaryTitle = stats.primaryTitle,
+            secondaryTitle = stats.secondaryTitle,
             sportTypeId = stats.filterSportTypeId,
             equipmentId = stats.filterEquipmentId,
             startS = stats.startTimeS,

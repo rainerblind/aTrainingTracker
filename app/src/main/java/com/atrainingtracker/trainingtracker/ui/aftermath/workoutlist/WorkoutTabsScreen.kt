@@ -78,7 +78,7 @@ fun WorkoutTabsScreen(
         CollapsingAppBarNestedScrollConnection(appBarMaxHeightPx)
     }
 
-    // This is the root container (Baby Blue background)
+    // This is the root container
     Surface(
         modifier = Modifier.fillMaxSize()
     ) {

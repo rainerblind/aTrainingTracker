@@ -56,7 +56,7 @@ fun StatsSummaryBlock(
     ) {
         // Section Title (e.g., "All Time Stats")
         Text(
-            text = stats.title,
+            text = stats.secondaryTitle,
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary
         )
@@ -123,7 +123,8 @@ fun UsageItem(label: String, date: String, alignEnd: Boolean = false) {
 @Composable
 fun PreviewStatsSummaryFull() {
     val mockData = StatsData(
-        title = "Gesamt", // German for "All Time"
+        primaryTitle = "Foo",
+        secondaryTitle = "Gesamt", // German for "All Time"
         totalWorkouts = 42,
         totalDistanceWithUnits = "1.250,5 km",
         timeWithUnits = "42:34:00",
@@ -144,7 +145,8 @@ fun PreviewStatsSummaryFull() {
 @Composable
 fun PreviewStatsSummaryMinimal() {
     val mockData = StatsData(
-        title = "All Time",
+        primaryTitle = "Bar",
+        secondaryTitle = "All Time",
         totalWorkouts = 12,
         totalDistanceWithUnits = "280.0 mi",
         timeWithUnits = "42:34:00",

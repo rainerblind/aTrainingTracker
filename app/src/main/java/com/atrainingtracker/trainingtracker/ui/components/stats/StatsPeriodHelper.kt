@@ -138,6 +138,6 @@ object StatsPeriodHelper {
         }
 
         // Return only periods with actual workouts.
-        return statsList.distinctBy { it.title }.filter { it.totalWorkouts > 0 }
+        return statsList.distinctBy { it.secondaryTitle }.filter { it.totalWorkouts > 0 }
     }
 }
