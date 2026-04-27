@@ -195,191 +195,200 @@ fun TrackingTabsScreen(
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.primaryContainer
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            // 1. DYNAMIC HEADER (Config Mode or Tab Title)
+
+            // Get the current view info
             val currentViewInfo = if (screenMode != ScreenMode.TRACKING) {
                 trackingViews.getOrNull(pagerState.currentPage)
             } else if (pagerState.currentPage > 0) {
                 trackingViews.getOrNull(pagerState.currentPage - 1)
             } else null
 
-            Column(modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding() // Pushes the header below the status bar
-            ) {
+            Column {
 
-                // TAB HEADER
-                when (screenMode) {
-                    ScreenMode.TRACKING -> {
-                        // Show the available Sensors
-                        Surface(
-                            modifier = Modifier.padding(4.dp),
-                            color = Color.Transparent
-                        ) {
-                            SensorStatus(activeSensors = activeSensors)
-                        }
-                    }
-
-                    ScreenMode.CONFIGURATION -> {
-                        // -- The full configuration screen for editing the name of the tab, checkboxes for lap button, map, and live segments, as well as the add/delete buttons
-                        if (currentViewInfo != null) {
-                            TrackingTabConfigHeader(
-                                viewInfo = currentViewInfo,
-                                onUpdateTabName = { id, name ->
-                                    trackingTabsViewModel.onUpdateTabName(
-                                        id,
-                                        name
-                                    )
-                                },
-                                onAddTabRelative = { id, after ->
-                                    trackingTabsViewModel.onAddTabRelative(
-                                        id,
-                                        after
-                                    )
-                                },
-                                onDeleteTab = { id -> trackingTabsViewModel.onDeleteTab(id) },
-                                onUpdateShowMap = { id, show ->
-                                    trackingTabsViewModel.onUpdateShowMap(
-                                        id,
-                                        show
-                                    )
-                                },
-                                onUpdateShowLiveSegments = { id, show ->
-                                    trackingTabsViewModel.onUpdateShowLiveSegments(
-                                        id,
-                                        show
-                                    )
-                                },
-                                onUpdateShowLapButton = { id, show ->
-                                    trackingTabsViewModel.onUpdateShowLapButton(
-                                        id,
-                                        show
-                                    )
-                                },
-                                onToggleMode = { trackingTabsViewModel.toggleScreenMode() }
-                            )
-                        }
-                    }
-
-                    ScreenMode.PREVIEW -> {
-                        if (currentViewInfo != null) {
-                            TrackingTabPreviewHeader(
-                                viewInfo = currentViewInfo,
-                                onToggleMode = { trackingTabsViewModel.toggleScreenMode() },
-                            )
-                        }
-                    }
-                }
-
-                // TAB ROW
-                PrimaryScrollableTabRow(
-                    selectedTabIndex = pagerState.currentPage,
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    edgePadding = 8.dp,
-                    divider = {}
-                ) {
-                    if (screenMode == ScreenMode.TRACKING) {
-                        Tab(
-                            selected = pagerState.currentPage == 0,
-                            onClick = { scope.launch { pagerState.animateScrollToPage(0) } },
-                            text = {
-                                // Dynamic Title for Control Tab (Tracking/Paused/Start)
-                                Text(getControlTabTitle(trackingMode))
-                            }
-                        )
-                    }
-                    trackingViews.forEachIndexed { index, view ->
-                        val targetPage = if (screenMode == ScreenMode.TRACKING) index + 1 else index
-                        Tab(
-                            selected = pagerState.currentPage == targetPage,
-                            onClick = { scope.launch { pagerState.animateScrollToPage(targetPage) } },
-                            text = { Text(view.name) }
-                        )
-                    }
-                }
-
-                // 3. THE HORIZONTAL PAGER
-                // We wrap the pager in a Surface with the "Content" color (White)
-                // so the actual data looks clean and separated from the Blue header.
+                // 1. DYNAMIC HEADER (Config Mode or Tab Title)
                 Surface(
-                    modifier = Modifier.weight(1f),
-                    color = MaterialTheme.colorScheme.surface // Usually White
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    tonalElevation = 3.dp
                 ) {
-                    Column(modifier = Modifier.fillMaxSize()) {
-                        HorizontalPager(
-                            state = pagerState,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f),
-                            userScrollEnabled = true,
-                            beyondViewportPageCount = if (screenMode == ScreenMode.TRACKING) trackingViews.size + 1 else trackingViews.size  // keep them all
-                        ) { page ->
-                            if (screenMode == ScreenMode.TRACKING && page == 0) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .statusBarsPadding() // Pushes the header below the status bar
+                    ) {
 
-                                // --- CONTROL TAB (Page 0) ---
-                                LaunchedEffect(Unit) {
-                                    controlViewModel.navigationEvent.collect { navigation ->
-                                        when (navigation) {
-                                            is ControlNavigation.ToPairing -> {
-                                                (context as? MainActivityWithNavigation)?.startPairing(
-                                                    navigation.protocol
-                                                )
-                                            }
+                        // TAB HEADER
+                        when (screenMode) {
+                            ScreenMode.TRACKING -> {
+                                // Show the available Sensors
+                                Surface(
+                                    modifier = Modifier.padding(4.dp),
+                                    color = Color.Transparent
+                                ) {
+                                    SensorStatus(activeSensors = activeSensors)
+                                }
+                            }
 
-                                            is ControlNavigation.ToEditDevice -> {
-                                                val editDeviceDialog =
-                                                    EditDeviceFragmentFactory.create(
-                                                        deviceId = navigation.deviceId,
-                                                        deviceType = navigation.deviceType
-                                                    )
-                                                editDeviceDialog.show(
-                                                    context.supportFragmentManager,
-                                                    "EditDeviceDialog"
-                                                )
-                                            }
+                            ScreenMode.CONFIGURATION -> {
+                                // -- The full configuration screen for editing the name of the tab, checkboxes for lap button, map, and live segments, as well as the add/delete buttons
+                                if (currentViewInfo != null) {
+                                    TrackingTabConfigHeader(
+                                        viewInfo = currentViewInfo,
+                                        onUpdateTabName = { id, name ->
+                                            trackingTabsViewModel.onUpdateTabName(
+                                                id,
+                                                name
+                                            )
+                                        },
+                                        onAddTabRelative = { id, after ->
+                                            trackingTabsViewModel.onAddTabRelative(
+                                                id,
+                                                after
+                                            )
+                                        },
+                                        onDeleteTab = { id -> trackingTabsViewModel.onDeleteTab(id) },
+                                        onUpdateShowMap = { id, show ->
+                                            trackingTabsViewModel.onUpdateShowMap(
+                                                id,
+                                                show
+                                            )
+                                        },
+                                        onUpdateShowLiveSegments = { id, show ->
+                                            trackingTabsViewModel.onUpdateShowLiveSegments(
+                                                id,
+                                                show
+                                            )
+                                        },
+                                        onUpdateShowLapButton = { id, show ->
+                                            trackingTabsViewModel.onUpdateShowLapButton(
+                                                id,
+                                                show
+                                            )
+                                        },
+                                        onToggleMode = { trackingTabsViewModel.toggleScreenMode() }
+                                    )
+                                }
+                            }
+
+                            ScreenMode.PREVIEW -> {
+                                if (currentViewInfo != null) {
+                                    TrackingTabPreviewHeader(
+                                        viewInfo = currentViewInfo,
+                                        onToggleMode = { trackingTabsViewModel.toggleScreenMode() },
+                                    )
+                                }
+                            }
+                        }
+
+                        // TAB ROW
+                        PrimaryScrollableTabRow(
+                            selectedTabIndex = pagerState.currentPage,
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            edgePadding = 8.dp,
+                            divider = {}
+                        ) {
+                            if (screenMode == ScreenMode.TRACKING) {
+                                Tab(
+                                    selected = pagerState.currentPage == 0,
+                                    onClick = { scope.launch { pagerState.animateScrollToPage(0) } },
+                                    text = {
+                                        // Dynamic Title for Control Tab (Tracking/Paused/Start)
+                                        Text(getControlTabTitle(trackingMode))
+                                    }
+                                )
+                            }
+                            trackingViews.forEachIndexed { index, view ->
+                                val targetPage =
+                                    if (screenMode == ScreenMode.TRACKING) index + 1 else index
+                                Tab(
+                                    selected = pagerState.currentPage == targetPage,
+                                    onClick = {
+                                        scope.launch {
+                                            pagerState.animateScrollToPage(
+                                                targetPage
+                                            )
                                         }
+                                    },
+                                    text = { Text(view.name) }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // The Main content
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier
+                        .fillMaxSize(),
+                    userScrollEnabled = true,
+                    beyondViewportPageCount = if (screenMode == ScreenMode.TRACKING) trackingViews.size + 1 else trackingViews.size  // keep them all
+                ) { page ->
+                    if (screenMode == ScreenMode.TRACKING && page == 0) {
+
+                        // --- CONTROL TAB (Page 0) ---
+                        LaunchedEffect(Unit) {
+                            controlViewModel.navigationEvent.collect { navigation ->
+                                when (navigation) {
+                                    is ControlNavigation.ToPairing -> {
+                                        (context as? MainActivityWithNavigation)?.startPairing(
+                                            navigation.protocol
+                                        )
+                                    }
+
+                                    is ControlNavigation.ToEditDevice -> {
+                                        val editDeviceDialog =
+                                            EditDeviceFragmentFactory.create(
+                                                deviceId = navigation.deviceId,
+                                                deviceType = navigation.deviceType
+                                            )
+                                        editDeviceDialog.show(
+                                            context.supportFragmentManager,
+                                            "EditDeviceDialog"
+                                        )
                                     }
                                 }
-
-                                ControlTrackingScreen(
-                                    trackingMode = trackingMode,
-                                    searchingFor = searchingFor,
-                                    devices = devices,
-                                    currentSport = bSportType,
-                                    isAntSupported = controlViewModel.isAntProperlyInstalled(),
-                                    isBluetoothSupported = controlViewModel.isBluetoothSupported(),
-                                    onSearch = { controlViewModel.onSearchClicked() },
-                                    onDeviceClick = { controlViewModel.onDeviceClicked(it) },
-                                    onSportSelected = { controlViewModel.setSport(it) },
-                                    onStart = { controlViewModel.onStartTracking() },
-                                    onPause = { controlViewModel.onPauseTracking() },
-                                    onResume = { controlViewModel.onResumeTracking() },
-                                    onStop = { controlViewModel.onStopTracking() },
-                                    onPairingClicked = { controlViewModel.onPairingClicked(it) },
-                                    modifier = Modifier.navigationBarsPadding(), // do not draw under the navigation bar
-                                )
-                            } else {
-                                val viewIndex =
-                                    if (screenMode == ScreenMode.TRACKING) page - 1 else page
-
-                                // Safely get the viewInfo
-                                val viewInfo = trackingViews.getOrNull(viewIndex)
-
-                                if (viewInfo != null) {
-                                    TrackingTabGridContent(
-                                        viewInfo.tabViewId,
-                                        screenMode,
-                                    )
-                                } else {
-                                    // Optional: Show a placeholder or empty box while loading
-                                    Box(Modifier.fillMaxSize())
-                                }
                             }
+                        }
+
+                        ControlTrackingScreen(
+                            trackingMode = trackingMode,
+                            searchingFor = searchingFor,
+                            devices = devices,
+                            currentSport = bSportType,
+                            isAntSupported = controlViewModel.isAntProperlyInstalled(),
+                            isBluetoothSupported = controlViewModel.isBluetoothSupported(),
+                            onSearch = { controlViewModel.onSearchClicked() },
+                            onDeviceClick = { controlViewModel.onDeviceClicked(it) },
+                            onSportSelected = { controlViewModel.setSport(it) },
+                            onStart = { controlViewModel.onStartTracking() },
+                            onPause = { controlViewModel.onPauseTracking() },
+                            onResume = { controlViewModel.onResumeTracking() },
+                            onStop = { controlViewModel.onStopTracking() },
+                            onPairingClicked = { controlViewModel.onPairingClicked(it) },
+                            modifier = Modifier.navigationBarsPadding(), // do not draw under the navigation bar
+                        )
+                    } else {
+                        val viewIndex =
+                            if (screenMode == ScreenMode.TRACKING) page - 1 else page
+
+                        // Safely get the viewInfo
+                        val viewInfo = trackingViews.getOrNull(viewIndex)
+
+                        if (viewInfo != null) {
+                            TrackingTabGridContent(
+                                viewInfo.tabViewId,
+                                screenMode,
+                            )
+                        } else {
+                            // Optional: Show a placeholder or empty box while loading
+                            Box(Modifier.fillMaxSize())
                         }
                     }
                 }
+
+
             }
 
             // --- Conditionally show the Lap Button
