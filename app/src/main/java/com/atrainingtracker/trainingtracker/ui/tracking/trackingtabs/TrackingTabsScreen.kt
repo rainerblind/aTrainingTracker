@@ -24,9 +24,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.MaterialTheme
@@ -305,83 +307,94 @@ fun TrackingTabsScreen(
                     modifier = Modifier.weight(1f),
                     color = MaterialTheme.colorScheme.surface // Usually White
                 ) {
-                    HorizontalPager(
-                        state = pagerState,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                        userScrollEnabled = true,
-                        beyondViewportPageCount = if (screenMode == ScreenMode.TRACKING) trackingViews.size + 1 else trackingViews.size  // keep them all
-                    ) { page ->
-                        if (screenMode == ScreenMode.TRACKING && page == 0) {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        HorizontalPager(
+                            state = pagerState,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
+                            userScrollEnabled = true,
+                            beyondViewportPageCount = if (screenMode == ScreenMode.TRACKING) trackingViews.size + 1 else trackingViews.size  // keep them all
+                        ) { page ->
+                            if (screenMode == ScreenMode.TRACKING && page == 0) {
 
-                            // --- CONTROL TAB (Page 0) ---
-                            LaunchedEffect(Unit) {
-                                controlViewModel.navigationEvent.collect { navigation ->
-                                    when (navigation) {
-                                        is ControlNavigation.ToPairing -> {
-                                            (context as? MainActivityWithNavigation)?.startPairing(
-                                                navigation.protocol
-                                            )
-                                        }
+                                // --- CONTROL TAB (Page 0) ---
+                                LaunchedEffect(Unit) {
+                                    controlViewModel.navigationEvent.collect { navigation ->
+                                        when (navigation) {
+                                            is ControlNavigation.ToPairing -> {
+                                                (context as? MainActivityWithNavigation)?.startPairing(
+                                                    navigation.protocol
+                                                )
+                                            }
 
-                                        is ControlNavigation.ToEditDevice -> {
-                                            val editDeviceDialog = EditDeviceFragmentFactory.create(
-                                                deviceId = navigation.deviceId,
-                                                deviceType = navigation.deviceType
-                                            )
-                                            editDeviceDialog.show(
-                                                context.supportFragmentManager,
-                                                "EditDeviceDialog"
-                                            )
+                                            is ControlNavigation.ToEditDevice -> {
+                                                val editDeviceDialog =
+                                                    EditDeviceFragmentFactory.create(
+                                                        deviceId = navigation.deviceId,
+                                                        deviceType = navigation.deviceType
+                                                    )
+                                                editDeviceDialog.show(
+                                                    context.supportFragmentManager,
+                                                    "EditDeviceDialog"
+                                                )
+                                            }
                                         }
                                     }
                                 }
-                            }
 
-                            ControlTrackingScreen(
-                                trackingMode = trackingMode,
-                                searchingFor = searchingFor,
-                                devices = devices,
-                                currentSport = bSportType,
-                                isAntSupported = controlViewModel.isAntProperlyInstalled(),
-                                isBluetoothSupported = controlViewModel.isBluetoothSupported(),
-                                onSearch = { controlViewModel.onSearchClicked() },
-                                onDeviceClick = { controlViewModel.onDeviceClicked(it) },
-                                onSportSelected = { controlViewModel.setSport(it) },
-                                onStart = { controlViewModel.onStartTracking() },
-                                onPause = { controlViewModel.onPauseTracking() },
-                                onResume = { controlViewModel.onResumeTracking() },
-                                onStop = { controlViewModel.onStopTracking() },
-                                onPairingClicked = { controlViewModel.onPairingClicked(it) }
-                            )
-                        } else {
-                            val viewIndex = if (screenMode == ScreenMode.TRACKING) page - 1 else page
-
-                            // Safely get the viewInfo
-                            val viewInfo = trackingViews.getOrNull(viewIndex)
-
-                            if (viewInfo != null) {
-                                TrackingTabGridContent(
-                                    viewInfo.tabViewId,
-                                    screenMode,
+                                ControlTrackingScreen(
+                                    trackingMode = trackingMode,
+                                    searchingFor = searchingFor,
+                                    devices = devices,
+                                    currentSport = bSportType,
+                                    isAntSupported = controlViewModel.isAntProperlyInstalled(),
+                                    isBluetoothSupported = controlViewModel.isBluetoothSupported(),
+                                    onSearch = { controlViewModel.onSearchClicked() },
+                                    onDeviceClick = { controlViewModel.onDeviceClicked(it) },
+                                    onSportSelected = { controlViewModel.setSport(it) },
+                                    onStart = { controlViewModel.onStartTracking() },
+                                    onPause = { controlViewModel.onPauseTracking() },
+                                    onResume = { controlViewModel.onResumeTracking() },
+                                    onStop = { controlViewModel.onStopTracking() },
+                                    onPairingClicked = { controlViewModel.onPairingClicked(it) }
                                 )
                             } else {
-                                // Optional: Show a placeholder or empty box while loading
-                                Box(Modifier.fillMaxSize())
+                                val viewIndex =
+                                    if (screenMode == ScreenMode.TRACKING) page - 1 else page
+
+                                // Safely get the viewInfo
+                                val viewInfo = trackingViews.getOrNull(viewIndex)
+
+                                if (viewInfo != null) {
+                                    TrackingTabGridContent(
+                                        viewInfo.tabViewId,
+                                        screenMode,
+                                    )
+                                } else {
+                                    // Optional: Show a placeholder or empty box while loading
+                                    Box(Modifier.fillMaxSize())
+                                }
                             }
                         }
                     }
                 }
+            }
 
-                // THE CONDITIONAL LAP BUTTON
-                val shouldShowLapButton = currentViewInfo?.showLapButton == true
-                if (shouldShowLapButton) {
+            // --- Conditionally show the Lap Button
+            val shouldShowLapButton = currentViewInfo?.showLapButton == true
+            if (shouldShowLapButton) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .navigationBarsPadding() // Respect system nav bar
+                        .padding(bottom = 8.dp), // Space from bottom of screen
+                    contentAlignment = Alignment.BottomCenter
+                ) {
                     LapButton(
                         modifier = Modifier
-                            .padding(start = 8.dp, end = 8.dp, bottom = 0.dp)
-                            .align(Alignment.CenterHorizontally)
-                            .wrapContentHeight(),
+                            .wrapContentSize() // Don't fill width anymore
+                            .padding(horizontal = 16.dp),
                         trackingMode = trackingMode,
                         onClick = { trackingTabsViewModel.onLapButtonClick() }
                     )
