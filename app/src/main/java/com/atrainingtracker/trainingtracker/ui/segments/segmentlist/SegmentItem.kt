@@ -18,7 +18,6 @@
 
 package com.atrainingtracker.trainingtracker.ui.segments.segmentlist
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CardDefaults
@@ -26,10 +25,7 @@ import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.segments.SegmentSummary
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
@@ -67,7 +63,7 @@ fun SegmentItem(
                     onMapClick = { onSegmentClick(summary.stravaId) }
                 )
 
-                // 2. Summary Header (Your existing Composable)
+                // 2. Summary Header
                 SegmentSummaryHeader(
                     summary = summary,
                     modifier = Modifier
