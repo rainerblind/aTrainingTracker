@@ -27,6 +27,8 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.segments.SimpleSegmentOnMapFragment
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 class StarredSegmentsFragment : Fragment() {
@@ -56,8 +58,19 @@ class StarredSegmentsFragment : Fragment() {
                         isRefreshing = { sport -> viewModel.isRefreshing(sport) },
                         onRefresh = { sport -> viewModel.onRefresh(sport) },
                         onSegmentClick = { id ->
-                            viewModel.onSegmentClick(id)
-                            // Add navigation logic here if needed
+                            // Swap fragments
+                            val detailsFragment = SimpleSegmentOnMapFragment.newInstance(id)
+
+                            parentFragmentManager.beginTransaction()
+                                .setCustomAnimations(
+                                    R.anim.slide_in_right,
+                                    R.anim.slide_out_left,
+                                    R.anim.slide_in_left,
+                                    R.anim.slide_out_right
+                                )
+                                .replace(R.id.content, detailsFragment) // Use your actual container ID
+                                .addToBackStack(SimpleSegmentOnMapFragment.TAG)
+                                .commit()
                         }
                     )
                 }
