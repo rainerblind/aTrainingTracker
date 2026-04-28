@@ -41,7 +41,7 @@ fun SegmentItem(
     ElevatedCard(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp),
+            .padding(horizontal = 4.dp, vertical = 4.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surface
@@ -66,6 +66,7 @@ fun SegmentItem(
                 // 2. Summary Header
                 SegmentSummaryHeader(
                     summary = summary,
+                    compact = true,
                     modifier = Modifier
                         .weight(1f)
                         .padding(end = 8.dp)
@@ -76,7 +77,7 @@ fun SegmentItem(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(100.dp)
+                    .height(125.dp)
                     .padding(vertical = 4.dp)
             ) {
                 ElevationProfile(
