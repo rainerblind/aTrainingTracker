@@ -65,7 +65,8 @@ fun SimpleSegmentOnMapScreen(
             mapState = mapState,
             currentLocationFlow = noLocation,
             selectedDistance = selectedDistance,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
+            onSegmentClick = { /* nothing to do here. */ }
         )
 
         // 3. ELEVATION PROFILE with Navigation Bar Padding

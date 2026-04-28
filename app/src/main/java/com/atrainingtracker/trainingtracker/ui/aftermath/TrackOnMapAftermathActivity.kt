@@ -103,7 +103,9 @@ class TrackOnMapAftermathActivity : AppCompatActivity() {
                         selectedDistance = selectedDistance,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .weight(0.75f) // Adjust this ratio as needed
+                            .weight(0.75f), // Adjust this ratio as needed
+                        onSegmentClick = { } // since we do not show the segments here, nothing must be done here.
+                        // TODO: show Segments and show segment details...
                     )
 
                     // The Elevation Profile takes the bottom 30%

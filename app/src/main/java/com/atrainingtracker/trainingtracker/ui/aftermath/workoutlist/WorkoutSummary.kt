@@ -187,7 +187,8 @@ private fun WorkoutMediaSection(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth(),
-            onMapClick = { onMapClick() }
+            onMapClick = { onMapClick() },
+            onSegmentClick = { }  // nothing to do here.
         )
 
         // 2. The Elevation Profile

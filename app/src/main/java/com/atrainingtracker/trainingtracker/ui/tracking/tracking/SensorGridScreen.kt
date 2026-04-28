@@ -178,7 +178,8 @@ fun SensorGridScreen(
                     currentLocationFlow = currentLocationFlow,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f) // Fills remaining space
+                        .weight(1f), // Fills remaining space
+                    onSegmentClick = { /* Handle segment click if needed */ }
                 )
             }
         }
