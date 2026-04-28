@@ -24,7 +24,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -52,7 +54,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun SegmentsTabsScreen(
     liveSegments: List<LiveSegment>,
-    // 1. Change to a function: Check if a specific sport is currently refreshing
+    pagerState: PagerState,
+    bikeListState: LazyListState,
+    runListState: LazyListState,
     isRefreshing: (BSportType) -> Boolean,
     onRefresh: (BSportType) -> Unit,
     onSegmentClick: (Long) -> Unit
@@ -62,7 +66,6 @@ fun SegmentsTabsScreen(
         Pair(stringResource(R.string.workout_summaries_tab_run), BSportType.RUN)
     )
 
-    val pagerState = rememberPagerState(pageCount = { tabs.size })
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
 
@@ -81,11 +84,12 @@ fun SegmentsTabsScreen(
                 verticalAlignment = Alignment.Top
             ) { pageIndex ->
                 val currentSport = tabs[pageIndex].second
+                val listState = if (currentSport == BSportType.BIKE) bikeListState else runListState
                 val filteredLiveSegments = liveSegments.filter { it.summary.bSportType == currentSport }
 
                 SegmentList(
                     liveSegments = filteredLiveSegments,
-                    // 2. Pass the refresh state specific to this page's sport
+                    scrollState = listState,
                     isRefreshing = isRefreshing(currentSport),
                     onRefresh = { onRefresh(currentSport) },
                     onSegmentClick = onSegmentClick,

@@ -23,6 +23,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,6 +58,10 @@ class StarredSegmentsFragment : Fragment() {
                     val segments by viewModel.liveSegments.collectAsStateWithLifecycle()
                     val refreshingSports by viewModel.refreshingSports.collectAsStateWithLifecycle()
 
+                    val pagerState = rememberPagerState(pageCount = { 2 })
+                    val bikeListState = rememberLazyListState()
+                    val runListState = rememberLazyListState()
+
                     // 1. Manage local navigation state
                     var selectedSegmentId by rememberSaveable { mutableStateOf<Long?>(null) }
 
@@ -64,6 +70,9 @@ class StarredSegmentsFragment : Fragment() {
                         // SHOW LIST
                         SegmentsTabsScreen(
                             liveSegments = segments,
+                            pagerState = pagerState,
+                            bikeListState = bikeListState,
+                            runListState = runListState,
                             isRefreshing = { sport -> refreshingSports.contains(sport) },
                             onRefresh = { sport -> viewModel.onRefresh(sport) },
                             onSegmentClick = { id ->

@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -38,6 +39,7 @@ import com.atrainingtracker.trainingtracker.segments.LiveSegment
 @Composable
 fun SegmentList(
     liveSegments: List<LiveSegment>,
+    scrollState: LazyListState,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     onSegmentClick: (Long) -> Unit,
@@ -53,6 +55,7 @@ fun SegmentList(
         val bottomPadding = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
 
         LazyColumn(
+            state = scrollState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
                 // Calculation: The initial header height (px) + the current offset (px)
