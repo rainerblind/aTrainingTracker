@@ -18,40 +18,59 @@
 
 package com.atrainingtracker.trainingtracker.ui.segments.segmentlist
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.atrainingtracker.trainingtracker.segments.SegmentSummary
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
+import com.atrainingtracker.trainingtracker.segments.LiveSegment
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SegmentList(
-    segments: List<SegmentSummary>,
+    liveSegments: List<LiveSegment>,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     onSegmentClick: (Long) -> Unit,
-    modifier: Modifier = Modifier
+    appBarOffsetPx: Int,
+    headerHeightPx: Float
 ) {
     // PullToRefreshBox handles the loading spinner and gesture
     PullToRefreshBox(
         isRefreshing = isRefreshing,
-        onRefresh = onRefresh,
-        modifier = modifier.fillMaxSize()
+        onRefresh = onRefresh
     ) {
-        LazyColumn(modifier = Modifier.fillMaxSize()) {
+        val density = LocalDensity.current
+        val bottomPadding = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                // Calculation: The initial header height (px) + the current offset (px)
+                // convert the final result to Dp.
+                top = with(density) { (headerHeightPx + appBarOffsetPx).toDp() },
+                bottom = bottomPadding + 16.dp,
+                start = 8.dp,
+                end = 8.dp
+            ),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
             items(
-                items = segments,
-                key = { it.stravaId } // Improves performance and scroll position handling
-            ) { summary ->
+                items = liveSegments,
+                key = { it.summary.stravaId } // Improves performance and scroll position handling
+            ) { liveSegment ->
                 SegmentItem(
-                    summary = summary,
-                    // Note: You need the pathPoints for the map/elevation profile.
-                    // Usually, these are stored within the summary or a wrapper.
-                    pathPoints = emptyList(), // TODO:  Replace with actual points from data source
+                    summary = liveSegment.summary,
+                    pathPoints = liveSegment.path,
                     onSegmentClick = onSegmentClick
                 )
             }

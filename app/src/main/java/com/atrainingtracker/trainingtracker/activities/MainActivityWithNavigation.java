@@ -54,6 +54,7 @@ import com.atrainingtracker.trainingtracker.tracker.TrackerService;
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedFragment;
 import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentFragment;
 import com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrack;
+import com.atrainingtracker.trainingtracker.ui.segments.segmentlist.StarredSegmentsFragment;
 import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository;
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsFragment;
 import com.dsi.ant.plugins.antplus.pccbase.AntPluginPcc;
@@ -690,8 +691,8 @@ public class MainActivityWithNavigation
                 break;
 
             case R.id.drawer_segments:
-                mFragment = new StarredSegmentsTabbedContainer();
-                tag = StarredSegmentsTabbedContainer.TAG;
+                mFragment = StarredSegmentsFragment.newInstance();
+                tag = StarredSegmentsFragment.TAG;
                 break;
 
             case R.id.drawer_workouts:
