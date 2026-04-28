@@ -19,7 +19,6 @@
 package com.atrainingtracker.trainingtracker.ui.map
 
 import android.content.Context
-import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
@@ -51,9 +50,7 @@ import androidx.core.graphics.createBitmap
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
-import com.atrainingtracker.trainingtracker.activities.SegmentDetailsActivity
 import com.atrainingtracker.trainingtracker.segments.SegmentHelper
-import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.theme.StravaOrange
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.BitmapDescriptor
@@ -79,7 +76,8 @@ fun ATrainingTrackerMap(
     currentLocationFlow: StateFlow<LatLng?>,
     selectedDistance: Double? = null,
     modifier: Modifier = Modifier,
-    onMapClick: (() -> Unit)? = null
+    onMapClick: (() -> Unit)? = null,
+    onSegmentClick: (Long) -> Unit
 ) {
     val context = LocalContext.current
     val currentLocation by currentLocationFlow.collectAsStateWithLifecycle()
@@ -260,7 +258,8 @@ fun ATrainingTrackerMap(
                 isFollowMeEnabled = mapState.isFollowMeEnabled,
                 currentZoom = cameraPositionState.position.zoom,
                 context = context,
-                icons = Triple(directionIconSmall, directionIconMed, directionIconLarge)
+                icons = Triple(directionIconSmall, directionIconMed, directionIconLarge),
+                onSegmentClick = onSegmentClick
             )
         }
 
@@ -404,7 +403,8 @@ private fun SegmentLayer(
     isFollowMeEnabled: Boolean,
     currentZoom: Float,
     context: Context,
-    icons: Triple<BitmapDescriptor?, BitmapDescriptor?, BitmapDescriptor?>
+    icons: Triple<BitmapDescriptor?, BitmapDescriptor?, BitmapDescriptor?>,
+    onSegmentClick: (Long) -> Unit
 ) {
     val alpha = if (!isFollowMeEnabled || isLive) 1.0f else 0.3f
     val strokeWidth = if (isLive && isFollowMeEnabled) 12f else 8f
@@ -418,12 +418,7 @@ private fun SegmentLayer(
         width = strokeWidth,
         zIndex = zIndex,
         clickable = true,
-        onClick = {
-            val intent = Intent(context, SegmentDetailsActivity::class.java).apply {
-                putExtra(SegmentsDatabaseManager.Segments.STRAVA_SEGMENT_ID, segment.id)
-            }
-            context.startActivity(intent)
-        }
+        onClick = { onSegmentClick(segment.id) }
     )
 
     // 2. Direction Arrows (Performance check: only at high zoom or if Live)

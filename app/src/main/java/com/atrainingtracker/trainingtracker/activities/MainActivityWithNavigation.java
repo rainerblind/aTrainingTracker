@@ -49,11 +49,11 @@ import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedCont
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFragmentFactory;
 import com.atrainingtracker.trainingtracker.fragments.preferences.PebbleScreenFragment;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
-import com.atrainingtracker.trainingtracker.segments.StarredSegmentsTabbedContainer;
 import com.atrainingtracker.trainingtracker.tracker.TrackerService;
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedFragment;
 import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentFragment;
 import com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrack;
+import com.atrainingtracker.trainingtracker.ui.segments.segmentlist.StarredSegmentsFragment;
 import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository;
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsFragment;
 import com.dsi.ant.plugins.antplus.pccbase.AntPluginPcc;
@@ -78,8 +78,6 @@ import androidx.preference.PreferenceScreen;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.MenuItem;
-import android.view.View;
-import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -97,7 +95,6 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
 import com.atrainingtracker.trainingtracker.dialogs.GPSDisabledDialog;
 import com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialog;
-import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedFragmentClassic;
 import com.atrainingtracker.trainingtracker.fragments.preferences.CloudUploadFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.FancyWorkoutNameListFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.RootPrefsFragment;
@@ -106,8 +103,6 @@ import com.atrainingtracker.trainingtracker.fragments.preferences.SearchFragment
 import com.atrainingtracker.trainingtracker.fragments.preferences.StravaUploadFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.TrainingpeaksUploadFragment;
 import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface;
-import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager;
-import com.atrainingtracker.trainingtracker.segments.StarredSegmentsListFragment;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 
@@ -127,7 +122,6 @@ public class MainActivityWithNavigation
         NavigationView.OnNavigationItemSelectedListener,
         BANALService.GetBanalServiceInterface,
         PreferenceFragmentCompat.OnPreferenceStartScreenCallback,
-        StarredSegmentsListFragment.StartSegmentDetailsActivityInterface,
         StartOrResumeInterface {
     public static final String SELECTED_FRAGMENT_ID = "SELECTED_FRAGMENT_ID";
     public static final String SELECTED_FRAGMENT = "SELECTED_FRAGMENT";
@@ -690,8 +684,8 @@ public class MainActivityWithNavigation
                 break;
 
             case R.id.drawer_segments:
-                mFragment = new StarredSegmentsTabbedContainer();
-                tag = StarredSegmentsTabbedContainer.TAG;
+                mFragment = StarredSegmentsFragment.newInstance();
+                tag = StarredSegmentsFragment.TAG;
                 break;
 
             case R.id.drawer_workouts:
@@ -812,18 +806,6 @@ public class MainActivityWithNavigation
             builder.create().show();
         }
     }
-
-    @Override
-    public void startSegmentDetailsActivity(int segmentId) {
-        if (DEBUG) Log.i(TAG, "startSegmentDetailsActivity: segmentId=" + segmentId);
-
-        Bundle bundle = new Bundle();
-        bundle.putLong(SegmentsDatabaseManager.Segments.STRAVA_SEGMENT_ID, segmentId);
-        Intent segmentDetailsIntent = new Intent(this, SegmentDetailsActivity.class);
-        segmentDetailsIntent.putExtras(bundle);
-        startActivity(segmentDetailsIntent);
-    }
-
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // the connection to the BANALService
