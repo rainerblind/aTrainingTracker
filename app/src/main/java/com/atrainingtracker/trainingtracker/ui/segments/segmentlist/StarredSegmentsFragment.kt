@@ -22,13 +22,19 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.atrainingtracker.R
-import com.atrainingtracker.trainingtracker.ui.segments.SimpleSegmentOnMapFragment
+import com.atrainingtracker.trainingtracker.ui.map.MapSegment
+import com.atrainingtracker.trainingtracker.ui.map.MapState
+import com.atrainingtracker.trainingtracker.ui.segments.SimpleSegmentOnMapScreen
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 class StarredSegmentsFragment : Fragment() {
@@ -48,31 +54,57 @@ class StarredSegmentsFragment : Fragment() {
                     )
 
                     val segments by viewModel.liveSegments.collectAsStateWithLifecycle()
-                    // Note: We need to observe the set of refreshing sports
-                    // Since it's a StateFlow, we collect it here.
-                    // We might need to add 'val refreshingSports' to the ViewModel if not exposed
+                    val refreshingSports by viewModel.refreshingSports.collectAsStateWithLifecycle()
 
-                    SegmentsTabsScreen(
-                        liveSegments = segments,
-                        // Accessing the state from the ViewModel
-                        isRefreshing = { sport -> viewModel.isRefreshing(sport) },
-                        onRefresh = { sport -> viewModel.onRefresh(sport) },
-                        onSegmentClick = { id ->
-                            // Swap fragments
-                            val detailsFragment = SimpleSegmentOnMapFragment.newInstance(id)
+                    // 1. Manage local navigation state
+                    var selectedSegmentId by rememberSaveable { mutableStateOf<Long?>(null) }
 
-                            parentFragmentManager.beginTransaction()
-                                .setCustomAnimations(
-                                    R.anim.slide_in_right,
-                                    R.anim.slide_out_left,
-                                    R.anim.slide_in_left,
-                                    R.anim.slide_out_right
+                    // 2. Logic to switch between List and Detail
+                    if (selectedSegmentId == null) {
+                        // SHOW LIST
+                        SegmentsTabsScreen(
+                            liveSegments = segments,
+                            isRefreshing = { sport -> refreshingSports.contains(sport) },
+                            onRefresh = { sport -> viewModel.onRefresh(sport) },
+                            onSegmentClick = { id ->
+                                selectedSegmentId = id
+                            }
+                        )
+                    } else {
+                        // SHOW DETAIL
+                        // Deriving the specific segment from the list we already have
+                        val selectedSegment = segments.find { it.summary.stravaId == selectedSegmentId }
+
+                        if (selectedSegment != null) {
+
+                            // Create MapState on the fly
+                            val mapState = remember(selectedSegment) {
+                                MapState(
+                                    segments = listOf(
+                                        MapSegment(
+                                            id = selectedSegment.summary.stravaId,
+                                            name = selectedSegment.summary.name,
+                                            bSportType = selectedSegment.summary.bSportType,
+                                            path = selectedSegment.path,
+                                            showStartAndFinishText = false
+                                        )
+                                    ),
+                                    bSportType = selectedSegment.summary.bSportType,
+                                    isFollowMeEnabled = false
                                 )
-                                .replace(R.id.content, detailsFragment) // Use your actual container ID
-                                .addToBackStack(SimpleSegmentOnMapFragment.TAG)
-                                .commit()
+                            }
+
+                            SimpleSegmentOnMapScreen(
+                                segmentSummary = selectedSegment.summary,
+                                mapState = mapState,
+                            )
+
+                            // Handle Back Press to return to list
+                            BackHandler {
+                                selectedSegmentId = null
+                            }
                         }
-                    )
+                    }
                 }
             }
         }

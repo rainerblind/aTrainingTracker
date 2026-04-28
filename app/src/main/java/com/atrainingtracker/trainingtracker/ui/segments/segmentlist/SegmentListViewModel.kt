@@ -50,6 +50,7 @@ class SegmentListViewModel(
 
     // Set containing the sport types currently being refreshed
     private val _refreshingSports = MutableStateFlow<Set<BSportType>>(emptySet())
+    val refreshingSports: StateFlow<Set<BSportType>> = _refreshingSports.asStateFlow()
 
     // Helper function for the UI to check state
     fun isRefreshing(sport: BSportType): Boolean = _refreshingSports.value.contains(sport)
