@@ -111,7 +111,8 @@ class TrackOnMapAftermathActivity : AppCompatActivity() {
                     // The Elevation Profile takes the bottom 30%
                     // We extract the track points from the mapState
                     ElevationProfile(
-                        pathPoints = mapState.tracks.firstOrNull()?.path ?: emptyList(),                        modifier = Modifier
+                        pathPoints = mapState.tracks.firstOrNull()?.path ?: emptyList(),
+                        modifier = Modifier
                             .fillMaxWidth()
                             .weight(0.25f),
                         currentDistance = selectedDistance,
