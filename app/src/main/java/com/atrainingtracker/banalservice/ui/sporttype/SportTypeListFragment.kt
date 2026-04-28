@@ -27,7 +27,6 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesListFragment
-import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesListFragmentClassic
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 

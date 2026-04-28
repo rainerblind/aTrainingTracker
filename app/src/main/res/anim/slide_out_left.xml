@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
+<?xml version="1.0" encoding="utf-8"?><!--
   ~ aTrainingTracker (ANT+ BTLE)
   ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
   ~
@@ -17,8 +16,8 @@
   ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
   -->
 
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/fragment_container"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical" />
+<set xmlns:android="http://schemas.android.com/apk/res/android">
+    <translate android:fromXDelta="0%" android:toXDelta="-100%"
+        android:interpolator="@android:anim/decelerate_interpolator"
+        android:duration="@android:integer/config_mediumAnimTime"/>
+</set>

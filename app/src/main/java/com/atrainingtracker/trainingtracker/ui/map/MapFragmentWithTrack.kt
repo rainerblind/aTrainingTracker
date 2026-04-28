@@ -64,7 +64,8 @@ class MapFragmentWithTrack : Fragment() {
                     ATrainingTrackerMap(
                         mapState = mapState,
                         currentLocationFlow = viewModel.currentLocation,
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier.fillMaxSize(),
+                        onSegmentClick = { }  //TODO: show segment details as BottomSheetScaffold
                     )
                 }
             }
