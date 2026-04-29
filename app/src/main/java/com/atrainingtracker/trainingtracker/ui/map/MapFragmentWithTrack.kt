@@ -29,10 +29,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SheetValue
+import androidx.compose.material3.Surface
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.LaunchedEffect
@@ -52,7 +56,6 @@ import com.atrainingtracker.trainingtracker.ui.segments.SegmentSummaryHeader
 import com.atrainingtracker.trainingtracker.ui.segments.SimpleSegmentOnMapScreen
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import kotlinx.coroutines.flow.MutableStateFlow
-import androidx.compose.runtime.collectAsState
 import com.atrainingtracker.banalservice.BSportType
 
 /**
@@ -119,9 +122,6 @@ class MapFragmentWithTrack : Fragment() {
                         bottomSheetState = rememberStandardBottomSheetState(skipHiddenState = false)
                     )
 
-                    // Logic: If a segment is selected, peek height shows the header. Otherwise, it's 0.
-                    val peekHeight = if (selectedSegmentId != null) 200.dp else 0.dp
-
                     // Effect: When a user clicks a new segment, ensure the sheet is at least "Partially Expanded" (Peeked)
                     LaunchedEffect(selectedSegmentId) {
                         if (selectedSegmentId != null) {
@@ -133,8 +133,19 @@ class MapFragmentWithTrack : Fragment() {
 
                     BottomSheetScaffold(
                         scaffoldState = scaffoldState,
-                        sheetPeekHeight = peekHeight,
-                        sheetDragHandle = { BottomSheetDefaults.DragHandle() },
+                        sheetPeekHeight = if (selectedSegmentId != null) 210.dp else 0.dp,
+                        sheetDragHandle = {
+                            // Subtle small drag handle
+                            Surface(
+                                modifier = Modifier.padding(vertical = 8.dp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                shape = CircleShape
+                            ) {
+                                Box(
+                                    Modifier.size(width = 32.dp, height = 3.dp)
+                                )
+                            }
+                        },
                         sheetContent = {
                             // --- THE SHEET CONTENT: The Entire SimpleSegmentOnMapScreen ---
                             val selectedSegment = mapState.segments.find { it.id == selectedSegmentId }
@@ -148,26 +159,22 @@ class MapFragmentWithTrack : Fragment() {
                                 )
                             }
 
-                            Box(modifier = Modifier.fillMaxHeight()) {
-                                SimpleSegmentOnMapScreen(
-                                    segmentSummary = liveSegments.find { it.summary.stravaId == selectedSegmentId }?.summary,
-                                    mapState = detailMapState,
-                                    modifier = Modifier
-                                )
-                            }
+                            SimpleSegmentOnMapScreen(
+                                segmentSummary = liveSegments.find { it.summary.stravaId == selectedSegmentId }?.summary,
+                                mapState = detailMapState,
+                                modifier = Modifier
+                            )
                         }
                     ) { innerPadding ->
                         // --- THE MAIN BODY: The Track Map ---
-                        Box(modifier = Modifier.padding(innerPadding)) {
-                            ATrainingTrackerMap(
-                                mapState = mapState,
-                                currentLocationFlow = MutableStateFlow(currentLocation),
-                                modifier = Modifier.fillMaxSize(),
-                                onSegmentClick = { id ->
-                                    selectedSegmentId = id
-                                }
-                            )
-                        }
+                        ATrainingTrackerMap(
+                            mapState = mapState,
+                            currentLocationFlow = MutableStateFlow(currentLocation),
+                            modifier = Modifier.fillMaxSize(),
+                            onSegmentClick = { id ->
+                                selectedSegmentId = id
+                            }
+                        )
                     }
 
                     // Handle system back button to close the peek
