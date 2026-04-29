@@ -69,7 +69,6 @@ import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelpe
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaSegmentsHelper;
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager;
 import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutActivity;
-import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapAftermathActivity;
 import com.dropbox.core.json.JsonReadException;
 import com.dropbox.core.oauth.DbxCredential;
 
@@ -752,12 +751,6 @@ public class TrainingApplication extends Application {
 
     public static void setResumeFromCrash(boolean resumeFromCrash) {
         cResumeFromCrash = resumeFromCrash;
-    }
-
-    public static void startTrackOnMapAftermathActivity(Context context, long workoutId) {
-        if (DEBUG) Log.i(TAG, "startTrackOnMapAftermathActivity(" + workoutId + ")");
-
-        TrackOnMapAftermathActivity.start(context, workoutId);
     }
 
     // TODO: remove cAppContext and FLAG_ACTIVITY_NEW_TASK from here

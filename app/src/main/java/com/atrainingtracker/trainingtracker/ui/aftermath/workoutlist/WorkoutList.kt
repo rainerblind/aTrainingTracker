@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CardDefaults
@@ -41,6 +42,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorkoutList(
+    scrollState: LazyListState,
     workouts: List<WorkoutData>,
     isPlayServiceAvailable: Boolean,
     onExportWorkout: (Long, FileFormat) -> Unit,
@@ -54,6 +56,7 @@ fun WorkoutList(
     val bottomPadding = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
 
     LazyColumn(
+        state = scrollState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(
             // Calculation: The initial header height (px) + the current offset (px)

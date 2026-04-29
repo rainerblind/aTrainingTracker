@@ -23,23 +23,31 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.ui.Modifier
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreen
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModel
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
+import kotlin.getValue
 
 class WorkoutSummariesTabbedFragment : Fragment() {
 
     // Initialize the existing ViewModel
     private val viewModel: WorkoutSummariesViewModel by viewModels()
+    private val trackOnMapViewModel: TrackOnMapAftermathViewModel by viewModels()
+
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -55,30 +63,62 @@ class WorkoutSummariesTabbedFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setContent {
                 ATrainingTrackerTheme {
+                    // 1. HOIST SCROLL STATES
+                    // These will live as long as the Fragment's View is alive
+                    val pagerState = rememberPagerState(pageCount = { 4 })
+                    val allListState = rememberLazyListState()
+                    val bikeListState = rememberLazyListState()
+                    val runListState = rememberLazyListState()
+                    val otherListState = rememberLazyListState()
+
                     // 1. Observe the workouts list from ViewModel
                     val workouts by viewModel.workouts.collectAsStateWithLifecycle()
 
                     // 2. Observe the loading state
                     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
 
-                    // 3. Render the Tabbed UI
-                    WorkoutTabsScreen(
-                        workouts = workouts,
-                        isLoading = isLoading,
-                        onExportWorkoutTo = { workoutId, fileFormat ->
-                            viewModel.onExportWorkoutTo(workoutId, fileFormat)
-                        },
-                        onDeleteConfirmed = { workoutId ->
-                            viewModel.deleteWorkout(workoutId)
-                        },
-                        onEditWorkout = { workoutId ->
-                            TrainingApplication.startEditWorkoutActivity(workoutId, false)
-                        },
-                        onMapClick = { workoutId ->
-                            TrainingApplication.startTrackOnMapAftermathActivity(activity, workoutId)
-                        },
-                        isPlayServiceAvailable = isPlayAvailable
-                    )
+                    var selectedWorkoutId by rememberSaveable { mutableStateOf<Long?>(null) }
+
+                    if (selectedWorkoutId == null) {
+                        // 3. Render the Tabbed UI
+                        WorkoutTabsScreen(
+                            workouts = workouts,
+                            isLoading = isLoading,
+                            pagerState = pagerState,
+                            allListState = allListState,
+                            bikeListState = bikeListState,
+                            runListState = runListState,
+                            otherListState = otherListState,
+                            onExportWorkoutTo = { workoutId, fileFormat ->
+                                viewModel.onExportWorkoutTo(workoutId, fileFormat)
+                            },
+                            onDeleteConfirmed = { workoutId ->
+                                viewModel.deleteWorkout(workoutId)
+                            },
+                            onEditWorkout = { workoutId ->
+                                TrainingApplication.startEditWorkoutActivity(workoutId, false)
+                            },
+                            onMapClick = { workoutId ->
+                                selectedWorkoutId = workoutId
+                                trackOnMapViewModel.loadAftermathData(workoutId)
+                            },
+                            isPlayServiceAvailable = isPlayAvailable
+                        )
+                    }
+                    else {
+                        // 3. Render the Detail Map Screen
+                        // We pass the ID to the screen. The screen (or its internal VM)
+                        // will handle loading the specific data for this ID.
+                        TrackOnMapScreen(
+                            workoutData = workouts.find { it.id == selectedWorkoutId }!!,
+                            mapState = trackOnMapViewModel.aftermathState.collectAsStateWithLifecycle().value
+                        )
+
+                        // 4. Handle System Back Button
+                        BackHandler {
+                            selectedWorkoutId = null
+                        }
+                    }
                 }
             }
         }
