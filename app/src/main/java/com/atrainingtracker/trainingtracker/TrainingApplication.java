@@ -69,6 +69,7 @@ import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelpe
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaSegmentsHelper;
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager;
 import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutActivity;
+import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutActivityClassic;
 import com.dropbox.core.json.JsonReadException;
 import com.dropbox.core.oauth.DbxCredential;
 
@@ -760,8 +761,8 @@ public class TrainingApplication extends Application {
         Bundle bundle = new Bundle();
         bundle.putLong(WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_ID, workoutId);
 
-        bundle.putBoolean(EditWorkoutActivity.EXTRA_SHOW_DETAILS, showAllDetails);
-        bundle.putBoolean(EditWorkoutActivity.EXTRA_SHOW_EXTREMA, showAllDetails);
+        bundle.putBoolean(EditWorkoutActivityClassic.EXTRA_SHOW_DETAILS, showAllDetails);
+        bundle.putBoolean(EditWorkoutActivityClassic.EXTRA_SHOW_EXTREMA, showAllDetails);
         // bundle.putBoolean(EditWorkoutActivity.EXTRA_SHOW_MAP, showAllDetails);
 
         Intent intent = new Intent(cAppContext, EditWorkoutActivity.class);
