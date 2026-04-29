@@ -23,6 +23,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.getValue
@@ -30,6 +31,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -90,12 +92,12 @@ class StarredSegmentsFragment : Fragment() {
                             val mapState = remember(selectedSegment) {
                                 MapState(
                                     segments = listOf(
-                                        MapSegment(
-                                            id = selectedSegment.summary.stravaId,
-                                            name = selectedSegment.summary.name,
-                                            bSportType = selectedSegment.summary.bSportType,
-                                            path = selectedSegment.path,
-                                            showStartAndFinishText = false
+                                            MapSegment(
+                                                id = selectedSegment.summary.stravaId,
+                                                name = selectedSegment.summary.name,
+                                                bSportType = selectedSegment.summary.bSportType,
+                                                path = selectedSegment.path,
+                                                showStartAndFinishText = false
                                         )
                                     ),
                                     bSportType = selectedSegment.summary.bSportType,
@@ -106,6 +108,7 @@ class StarredSegmentsFragment : Fragment() {
                             SimpleSegmentOnMapScreen(
                                 segmentSummary = selectedSegment.summary,
                                 mapState = mapState,
+                                modifier = Modifier.statusBarsPadding()
                             )
 
                             // Handle Back Press to return to list
