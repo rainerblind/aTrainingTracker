@@ -90,12 +90,12 @@ class StarredSegmentsFragment : Fragment() {
                             val mapState = remember(selectedSegment) {
                                 MapState(
                                     segments = listOf(
-                                        MapSegment(
-                                            id = selectedSegment.summary.stravaId,
-                                            name = selectedSegment.summary.name,
-                                            bSportType = selectedSegment.summary.bSportType,
-                                            path = selectedSegment.path,
-                                            showStartAndFinishText = false
+                                            MapSegment(
+                                                id = selectedSegment.summary.stravaId,
+                                                name = selectedSegment.summary.name,
+                                                bSportType = selectedSegment.summary.bSportType,
+                                                path = selectedSegment.path,
+                                                showStartAndFinishText = false
                                         )
                                     ),
                                     bSportType = selectedSegment.summary.bSportType,
