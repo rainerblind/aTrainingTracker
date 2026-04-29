@@ -53,6 +53,7 @@ import com.atrainingtracker.trainingtracker.ui.segments.SimpleSegmentOnMapScreen
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 import androidx.compose.runtime.collectAsState
+import com.atrainingtracker.banalservice.BSportType
 
 /**
  * Fragment that displays the map with current track and segments.
@@ -142,6 +143,7 @@ class MapFragmentWithTrack : Fragment() {
                             val detailMapState = remember(selectedSegment) {
                                 MapState(
                                     segments = if (selectedSegment != null) listOf(selectedSegment) else emptyList(),
+                                    bSportType = selectedSegment?.bSportType ?: BSportType.UNKNOWN,
                                     isFollowMeEnabled = false
                                 )
                             }
@@ -149,7 +151,8 @@ class MapFragmentWithTrack : Fragment() {
                             Box(modifier = Modifier.fillMaxHeight()) {
                                 SimpleSegmentOnMapScreen(
                                     segmentSummary = liveSegments.find { it.summary.stravaId == selectedSegmentId }?.summary,
-                                    mapState = detailMapState
+                                    mapState = detailMapState,
+                                    modifier = Modifier
                                 )
                             }
                         }

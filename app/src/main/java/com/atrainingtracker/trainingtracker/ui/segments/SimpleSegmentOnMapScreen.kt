@@ -25,6 +25,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.segments.SegmentSummary
 import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
@@ -36,7 +37,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 @Composable
 fun SimpleSegmentOnMapScreen(
     segmentSummary: SegmentSummary?,
-    mapState: MapState
+    mapState: MapState,
+    modifier: Modifier
 ) {
     // Shared state for the "seeker" position on both Map and Profile
     var selectedDistance by remember { mutableStateOf<Double?>(null) }
@@ -44,13 +46,13 @@ fun SimpleSegmentOnMapScreen(
 
     Column(modifier = Modifier.fillMaxSize()) {
 
-        // 1. HEADER with Status Bar Padding
         segmentSummary?.let {
             Surface(
                 color = MaterialTheme.colorScheme.primaryContainer,
-                tonalElevation = 3.dp
+                tonalElevation = 3.dp,
+                shape = RectangleShape
             ) {
-                Column(modifier = Modifier.statusBarsPadding()) {
+                Column(modifier = modifier) {
                     SegmentSummaryHeader(
                         summary = it,
                         modifier = Modifier.fillMaxWidth()
