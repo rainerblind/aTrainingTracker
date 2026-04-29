@@ -59,10 +59,14 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreen
+import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutScreen
+import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModel
+import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModelFactory
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModel
 import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
@@ -129,10 +133,12 @@ class WorkoutSummariesListFragment : Fragment() {
                         CollapsingAppBarNestedScrollConnection(headerHeightPx)
                     }
 
-                    var selectedWorkoutId by rememberSaveable { mutableStateOf<Long?>(null) }
+                    var selectedWorkoutForDetails by rememberSaveable { mutableStateOf<Long?>(null) }
+                    var selectedWorkoutIdForEdit by rememberSaveable { mutableStateOf<Long?>(null) }
+
                     val scrollState = rememberLazyListState()
 
-                    if (selectedWorkoutId == null) {
+                    if (selectedWorkoutForDetails == null && selectedWorkoutIdForEdit == null) {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -148,10 +154,10 @@ class WorkoutSummariesListFragment : Fragment() {
                                 },
                                 onDeleteConfirmed = { id -> viewModel.deleteWorkout(id) },
                                 onEditWorkout = { id ->
-                                    TrainingApplication.startEditWorkoutActivity(id, false)
+                                    selectedWorkoutIdForEdit = id
                                 },
                                 onMapClick = { id ->
-                                    selectedWorkoutId = id
+                                    selectedWorkoutForDetails = id
                                     trackOnMapViewModel.loadAftermathData(id)
                                 },
                                 appBarOffsetPx = connection.appBarOffset,
@@ -219,21 +225,43 @@ class WorkoutSummariesListFragment : Fragment() {
                             }
                         }
                     }
-                    else {
+                    // TODO: almost same code as in WorkoutSummariesTabbedFragment -> somehow unify!
+                    else if (selectedWorkoutForDetails != null){
 
                         // 3. Render the Detail Map Screen
                         // We pass the ID to the screen. The screen (or its internal VM)
                         // will handle loading the specific data for this ID.
                         TrackOnMapScreen(
-                            workoutData = workouts.find { it.id == selectedWorkoutId }!!,
+                            workoutData = workouts.find { it.id == selectedWorkoutForDetails }!!,
                             mapState = trackOnMapViewModel.aftermathState.collectAsStateWithLifecycle().value
                         )
 
                         // 4. Handle System Back Button
                         BackHandler {
-                            selectedWorkoutId = null
+                            selectedWorkoutForDetails = null
                         }
 
+                    }
+                    else if (selectedWorkoutIdForEdit != null) {
+
+                        val editViewModel: EditWorkoutViewModel = viewModel(
+                            factory = EditWorkoutViewModelFactory(
+                                requireActivity().application,
+                                selectedWorkoutIdForEdit!!
+                            )
+                        )
+
+                        ATrainingTrackerTheme {
+                            EditWorkoutScreen(
+                                viewModel = editViewModel,
+                                onBack = { selectedWorkoutIdForEdit = null }
+                            )
+                        }
+
+                        // 4. Handle System Back Button
+                        BackHandler {
+                            selectedWorkoutIdForEdit = null
+                        }
                     }
                 }
             }
