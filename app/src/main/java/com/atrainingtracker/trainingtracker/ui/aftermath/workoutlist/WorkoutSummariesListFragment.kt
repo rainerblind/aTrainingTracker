@@ -23,6 +23,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.compose.BackHandler
 import androidx.appcompat.app.AlertDialog
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -41,7 +42,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -53,11 +57,14 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreen
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModel
 import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
@@ -66,6 +73,7 @@ class WorkoutSummariesListFragment : Fragment() {
 
     // 1. Share the ViewModel with the Activity/Parent as in the Classic version
     private val viewModel: WorkoutSummariesViewModel by activityViewModels()
+    private val trackOnMapViewModel: TrackOnMapAftermathViewModel by viewModels()
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreateView(
@@ -121,105 +129,111 @@ class WorkoutSummariesListFragment : Fragment() {
                         CollapsingAppBarNestedScrollConnection(headerHeightPx)
                     }
 
+                    var selectedWorkoutId by rememberSaveable { mutableStateOf<Long?>(null) }
                     val scrollState = rememberLazyListState()
 
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .nestedScroll(connection)
-                    ) {
-                        // THE LIST (Content)
-                        WorkoutList(
-                            scrollState = scrollState,
-                            workouts = workouts,
-                            isPlayServiceAvailable = isPlayAvailable,
-                            onExportWorkout = { id, fileFormat ->
-                                viewModel.onExportWorkoutTo(
-                                    id,
-                                    fileFormat
-                                )
-                            },
-                            onDeleteConfirmed = { id -> viewModel.deleteWorkout(id) },
-                            onEditWorkout = { id ->
-                                TrainingApplication.startEditWorkoutActivity(
-                                    id,
-                                    false
-                                )
-                            },
-                            onMapClick = { id ->
-                                TrainingApplication.startTrackOnMapAftermathActivity(
-                                    activity,
-                                    id
-                                )
-                            },
-                            appBarOffsetPx = connection.appBarOffset,
-                            headerHeightPx = headerHeightPx.toFloat()
-                        )
-
-                        // THE HEADER (Titles)
-                        Surface(
+                    if (selectedWorkoutId == null) {
+                        Box(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .offset {
-                                IntOffset(
-                                    0,
-                                    connection.appBarOffset
-                                )
-                            },
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            tonalElevation = 3.dp
+                                .fillMaxSize()
+                                .nestedScroll(connection)
                         ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .statusBarsPadding()
-                                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                            ) {
-                                 Text(
-                                    text = primaryTitle ?: "",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                                Text(
-                                    text = secondaryTitle ?: "",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                            }
-                        }
+                            // THE LIST (Content)
+                            WorkoutList(
+                                scrollState = scrollState,
+                                workouts = workouts,
+                                isPlayServiceAvailable = isPlayAvailable,
+                                onExportWorkout = { id, fileFormat ->
+                                    viewModel.onExportWorkoutTo(id, fileFormat)
+                                },
+                                onDeleteConfirmed = { id -> viewModel.deleteWorkout(id) },
+                                onEditWorkout = { id ->
+                                    TrainingApplication.startEditWorkoutActivity(id, false)
+                                },
+                                onMapClick = { id ->
+                                    selectedWorkoutId = id
+                                    trackOnMapViewModel.loadAftermathData(id)
+                                },
+                                appBarOffsetPx = connection.appBarOffset,
+                                headerHeightPx = headerHeightPx.toFloat()
+                            )
 
-                        // 2. LOADING OVERLAY
-                        if (isLoading) {
+                            // THE HEADER (Titles)
                             Surface(
                                 modifier = Modifier
-                                    .align(Alignment.TopCenter)
-                                    .padding(top = with(LocalDensity.current) {
-                                        // Position it just below the header area
-                                        (headerHeightPx + connection.appBarOffset).toDp() + 16.dp
-                                    })
-                                    .padding(horizontal = 32.dp),
-                                shape = RoundedCornerShape(8.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant,
-                                tonalElevation = 4.dp
+                                    .fillMaxWidth()
+                                    .offset { IntOffset(0, connection.appBarOffset) },
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                tonalElevation = 3.dp
                             ) {
                                 Column(
-                                    modifier = Modifier.padding(12.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .statusBarsPadding()
+                                        .padding(horizontal = 16.dp, vertical = 8.dp)
                                 ) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(36.dp),
-                                        color = MaterialTheme.colorScheme.primary,
-                                        strokeWidth = 3.dp
+                                    Text(
+                                        text = primaryTitle ?: "",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                     Text(
-                                        text = stringResource(R.string.workout_summaries_loading),
+                                        text = secondaryTitle ?: "",
                                         style = MaterialTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                 }
                             }
+
+                            // 2. LOADING OVERLAY
+                            if (isLoading) {
+                                Surface(
+                                    modifier = Modifier
+                                        .align(Alignment.TopCenter)
+                                        .padding(top = with(LocalDensity.current) {
+                                            // Position it just below the header area
+                                            (headerHeightPx + connection.appBarOffset).toDp() + 16.dp
+                                        })
+                                        .padding(horizontal = 32.dp),
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant,
+                                    tonalElevation = 4.dp
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(12.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(36.dp),
+                                            color = MaterialTheme.colorScheme.primary,
+                                            strokeWidth = 3.dp
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.workout_summaries_loading),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
                         }
+                    }
+                    else {
+
+                        // 3. Render the Detail Map Screen
+                        // We pass the ID to the screen. The screen (or its internal VM)
+                        // will handle loading the specific data for this ID.
+                        TrackOnMapScreen(
+                            workoutData = workouts.find { it.id == selectedWorkoutId }!!,
+                            mapState = trackOnMapViewModel.aftermathState.collectAsStateWithLifecycle().value
+                        )
+
+                        // 4. Handle System Back Button
+                        BackHandler {
+                            selectedWorkoutId = null
+                        }
+
                     }
                 }
             }
