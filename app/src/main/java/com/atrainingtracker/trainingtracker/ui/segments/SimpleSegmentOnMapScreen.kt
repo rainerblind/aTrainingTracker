@@ -76,19 +76,17 @@ fun SimpleSegmentOnMapScreen(
             Surface(
                 color = MaterialTheme.colorScheme.surface
             ) {
-                Column(modifier = Modifier.navigationBarsPadding()) {
-                    ElevationProfile(
-                        pathPoints = segment.path,
-                        currentDistance = selectedDistance,
-                        onDistanceSelected = { dist ->
-                            selectedDistance = dist
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(140.dp) // Professional height for detail view
-                            .padding(8.dp)
-                    )
-                }
+                ElevationProfile(
+                    pathPoints = segment.path,
+                    currentDistance = selectedDistance,
+                    onDistanceSelected = { dist ->
+                        selectedDistance = dist
+                    },
+                    modifier = Modifier
+                        .navigationBarsPadding()
+                        .fillMaxWidth()
+                        .height(150.dp)
+                )
             }
         }
     }

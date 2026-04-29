@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -120,6 +121,8 @@ class WorkoutSummariesListFragment : Fragment() {
                         CollapsingAppBarNestedScrollConnection(headerHeightPx)
                     }
 
+                    val scrollState = rememberLazyListState()
+
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -127,6 +130,7 @@ class WorkoutSummariesListFragment : Fragment() {
                     ) {
                         // THE LIST (Content)
                         WorkoutList(
+                            scrollState = scrollState,
                             workouts = workouts,
                             isPlayServiceAvailable = isPlayAvailable,
                             onExportWorkout = { id, fileFormat ->

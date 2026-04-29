@@ -19,7 +19,9 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
@@ -54,6 +56,11 @@ import kotlinx.coroutines.launch
 fun WorkoutTabsScreen(
     workouts: List<WorkoutData>,
     isLoading: Boolean,
+    pagerState: PagerState,
+    allListState: LazyListState,
+    bikeListState: LazyListState,
+    runListState: LazyListState,
+    otherListState: LazyListState,
     isPlayServiceAvailable: Boolean,
     onExportWorkoutTo: (Long, FileFormat) -> Unit,
     onDeleteConfirmed: (Long) -> Unit,
@@ -66,7 +73,6 @@ fun WorkoutTabsScreen(
         stringResource(R.string.workout_summaries_tab_run),
         stringResource(R.string.workout_summaries_tab_other)
     )
-    val pagerState = rememberPagerState(pageCount = { tabs.size })
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
 
@@ -98,8 +104,16 @@ fun WorkoutTabsScreen(
                     3 -> workouts.filter { it.bSportType == BSportType.UNKNOWN }
                     else -> workouts
                 }
+                val scrollState = when (pageIndex) {
+                    1 -> allListState
+                    2 -> bikeListState
+                    3 -> runListState
+                    else -> otherListState
+
+                }
 
                 WorkoutList(
+                    scrollState = scrollState,
                     workouts = filteredWorkouts,
                     isPlayServiceAvailable = isPlayServiceAvailable,
                     onExportWorkout = onExportWorkoutTo,
