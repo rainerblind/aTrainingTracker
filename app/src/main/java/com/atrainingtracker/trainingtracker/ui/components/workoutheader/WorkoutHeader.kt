@@ -55,7 +55,8 @@ fun WorkoutHeader(
     onDeleteConfirmed: () -> Unit,
     modifier: Modifier = Modifier,
     backgroundColor: Color = MaterialTheme.colorScheme.surfaceContainerHighest,
-    textColor: Color = MaterialTheme.colorScheme.onSurfaceVariant
+    textColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    menuEnabled: Boolean = true
 ) {
     // State to control menu visibility
     var showMenu by remember { mutableStateOf(false) }
@@ -67,7 +68,7 @@ fun WorkoutHeader(
             .combinedClickable(
             onClick = onClicked,
             onLongClick = {
-                showContextMenu = true
+                if (menuEnabled) showContextMenu = true
             }
         ),
         color = backgroundColor,
@@ -150,7 +151,7 @@ fun WorkoutHeader(
             }
 
             // 4. Menu Button (Pinned to Top-End)
-            if (data.finished) {
+            if (data.finished && menuEnabled) {
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd) // This moves it to the right
