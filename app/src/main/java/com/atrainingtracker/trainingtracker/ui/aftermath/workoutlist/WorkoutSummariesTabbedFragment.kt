@@ -26,6 +26,7 @@ import android.view.ViewGroup
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -33,9 +34,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents
 import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreen
+import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutScreen
+import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModel
+import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModelFactory
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModel
 import com.google.android.gms.common.ConnectionResult
@@ -77,9 +84,50 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                     // 2. Observe the loading state
                     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
 
-                    var selectedWorkoutId by rememberSaveable { mutableStateOf<Long?>(null) }
+                    var selectedWorkoutIdForDetails by rememberSaveable { mutableStateOf<Long?>(null) }
+                    var selectedWorkoutIdForEdit by rememberSaveable { mutableStateOf<Long?>(null) }
 
-                    if (selectedWorkoutId == null) {
+                    // Observe the event stream
+                    LaunchedEffect(Unit) {
+                        WorkoutNavigationEvents.navigateToEdit.collect { workoutId ->
+                            if (workoutId != -1L) {
+                                selectedWorkoutIdForEdit = workoutId
+                            }
+                        }
+                    }
+
+                    if (selectedWorkoutIdForDetails != null) {
+                        TrackOnMapScreen(
+                            workoutData = workouts.find { it.id == selectedWorkoutIdForDetails }!!,
+                            mapState = trackOnMapViewModel.aftermathState.collectAsStateWithLifecycle().value
+                        )
+
+                        // 4. Handle System Back Button
+                        BackHandler {
+                            selectedWorkoutIdForDetails = null
+                        }
+                    }
+                    else if (selectedWorkoutIdForEdit != null) {
+                        val editViewModel: EditWorkoutViewModel = viewModel(
+                            factory = EditWorkoutViewModelFactory(requireActivity().application, selectedWorkoutIdForEdit!!)
+                        )
+
+                        EditWorkoutScreen(
+                            viewModel = editViewModel,
+                            onBack = {
+                                selectedWorkoutIdForEdit = null
+                                WorkoutNavigationEvents.reset()
+                            }
+                        )
+
+                        // 4. Handle System Back Button
+                        BackHandler {
+                            selectedWorkoutIdForEdit = null
+                            WorkoutNavigationEvents.reset()
+                        }
+
+                    }
+                    else {
                         // 3. Render the Tabbed UI
                         WorkoutTabsScreen(
                             workouts = workouts,
@@ -96,28 +144,14 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                                 viewModel.deleteWorkout(workoutId)
                             },
                             onEditWorkout = { workoutId ->
-                                TrainingApplication.startEditWorkoutActivity(workoutId, false)
+                                selectedWorkoutIdForEdit = workoutId
                             },
                             onMapClick = { workoutId ->
-                                selectedWorkoutId = workoutId
+                                selectedWorkoutIdForDetails = workoutId
                                 trackOnMapViewModel.loadAftermathData(workoutId)
                             },
                             isPlayServiceAvailable = isPlayAvailable
                         )
-                    }
-                    else {
-                        // 3. Render the Detail Map Screen
-                        // We pass the ID to the screen. The screen (or its internal VM)
-                        // will handle loading the specific data for this ID.
-                        TrackOnMapScreen(
-                            workoutData = workouts.find { it.id == selectedWorkoutId }!!,
-                            mapState = trackOnMapViewModel.aftermathState.collectAsStateWithLifecycle().value
-                        )
-
-                        // 4. Handle System Back Button
-                        BackHandler {
-                            selectedWorkoutId = null
-                        }
                     }
                 }
             }

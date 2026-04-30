@@ -455,94 +455,12 @@ class WorkoutRepository private constructor(private val application: Application
     }
 
 
-    // Function to update the workout name of one workout
-    fun updateWorkoutName(workoutId: Long, newName: String) {
-        val currentList = _allWorkouts.value ?: return
-        val workoutToUpdate = currentList.find { it.id == workoutId } ?: return
-        if (newName == workoutToUpdate.headerData.workoutName) return
-
-        val updatedWorkout = workoutToUpdate.copy(
-            workoutName = newName
-        )
-        updateWorkoutInList(workoutId, updatedWorkout)
-    }
-
-    fun updateSport(workoutId: Long, newSportName: String, newSportId: Long, newBSportType: BSportType) {
-        val currentList = _allWorkouts.value ?: return
-        val workoutToUpdate = currentList.find { it.id == workoutId } ?: return
-        if (newSportName == workoutToUpdate.sportName) return
-
-        // update the workout.  Thereby, we have to update the sport, equipment, header, and details...
-        val updatedWorkout = workoutToUpdate.copy(
-            sportId = newSportId,
-            bSportType = newBSportType,
-            sportName = newSportName
-        )
-        updateWorkoutInList(workoutId, updatedWorkout)
-    }
-
-
-    fun updateEquipmentName(workoutId: Long, newEquipmentName: String?) {
-        val currentList = _allWorkouts.value ?: return
-        val workoutToUpdate = currentList.find { it.id == workoutId } ?: return
-        if (newEquipmentName == workoutToUpdate.equipmentName) return
-
-        // update the workout.  Thereby, we have to update the sportAndEquipment and header ...
-        val updatedWorkout = workoutToUpdate.copy(equipmentName = newEquipmentName)
-        updateWorkoutInList(workoutId, updatedWorkout)
-    }
-
-    fun updateDescription(workoutId: Long, newDescription: String) {
-        val currentList = _allWorkouts.value ?: return
-        val workoutToUpdate = currentList.find { it.id == workoutId } ?: return
-        if (newDescription == workoutToUpdate.descriptionData.description) return
-
-        val updatedWorkout = workoutToUpdate.copy(description = newDescription)
-        updateWorkoutInList(workoutId, updatedWorkout)
-    }
-
-    fun updateGoal(workoutId: Long, newGoal: String) {
-        val currentList = _allWorkouts.value ?: return
-        val workoutToUpdate = currentList.find { it.id == workoutId } ?: return
-        if (newGoal == workoutToUpdate.descriptionData.goal) return
-
-        val updatedWorkout = workoutToUpdate.copy(goal = newGoal)
-        updateWorkoutInList(workoutId, updatedWorkout)
-    }
-
-    fun updateMethod(workoutId: Long, newMethod: String) {
-        val currentList = _allWorkouts.value ?: return
-        val workoutToUpdate = currentList.find { it.id == workoutId } ?: return
-        if (newMethod == workoutToUpdate.descriptionData.method) return
-
-        val updatedWorkout = workoutToUpdate.copy(method = newMethod)
-        updateWorkoutInList(workoutId, updatedWorkout)
-    }
-
-    fun updateIsCommute(workoutId: Long, isChecked: Boolean) {
-        val currentList = _allWorkouts.value ?: return
-        val workoutToUpdate = currentList.find { it.id == workoutId } ?: return
-        if (isChecked == workoutToUpdate.headerData.commute) return
-
-        val updatedWorkout = workoutToUpdate.copy(commute = isChecked)
-        updateWorkoutInList(workoutId, updatedWorkout)
-    }
-
-    fun updateIsTrainer(workoutId: Long, isChecked: Boolean) {
-        val currentList = _allWorkouts.value ?: return
-        val workoutToUpdate = currentList.find { it.id == workoutId } ?: return
-        if (isChecked == workoutToUpdate.headerData.trainer) return
-
-        val updatedWorkout = workoutToUpdate.copy(trainer = isChecked)
-        updateWorkoutInList(workoutId, updatedWorkout)
-    }
-
     /**
-     * Saves the current state of the WorkoutData object to the database.
+     * Saves the current state of the WorkoutData object to the databases.
      */
-    fun saveWorkout(workoutId: Long) {
-        // Get the most recent state from the LiveData. If it's null, there's nothing to save.
-        val dataToSave = allWorkouts.value?.find { it.id == workoutId } ?: return
+    fun saveWorkout(workoutDataToSave: WorkoutData?) {
+        if (workoutDataToSave == null) return
+        val workoutId = workoutDataToSave.id
 
         // Launch a coroutine in the IO dispatcher to perform database operations off the main thread.
         launch(Dispatchers.IO) {
@@ -551,36 +469,37 @@ class WorkoutRepository private constructor(private val application: Application
             // Update Workout Name
             summariesManager.updateWorkoutName(
                 workoutId,
-                dataToSave.headerData.workoutName ?: ""
+                workoutDataToSave.headerData.workoutName
             )
 
             // Update Sport and Equipment
-            val equipmentId = equipmentDbHelper.getEquipmentId(dataToSave.equipmentName ?: "")
+            val equipmentId = equipmentDbHelper.getEquipmentId(workoutDataToSave.equipmentName ?: "")
             summariesManager.updateSportAndEquipment(
                 workoutId,
-                dataToSave.sportId,
-                dataToSave.bSportType,
+                workoutDataToSave.sportId,
+                workoutDataToSave.bSportType,
                 equipmentId
             )
 
             // Update Commute and Trainer flags
             summariesManager.updateCommuteAndTrainerFlag(
                 workoutId,
-                dataToSave.headerData.commute,
-                dataToSave.headerData.trainer
+                workoutDataToSave.headerData.commute,
+                workoutDataToSave.headerData.trainer
             )
 
             // Update Description, Goal, and Method
             summariesManager.updateDescription(
                 workoutId,
-                dataToSave.descriptionData.description ?: "",
-                dataToSave.descriptionData.goal ?: "",
-                dataToSave.descriptionData.method ?: ""
+                workoutDataToSave.descriptionData.description ?: "",
+                workoutDataToSave.descriptionData.goal ?: "",
+                workoutDataToSave.descriptionData.method ?: ""
             )
 
             // -- trigger export
-            exportManager.exportWorkout(dataToSave.fileBaseName)
+            exportManager.exportWorkout(workoutDataToSave.fileBaseName)
 
+            updateWorkoutInList(workoutId, workoutDataToSave)
             saveFinishedEvent.postValue(Pair(workoutId, true))
         }
     }

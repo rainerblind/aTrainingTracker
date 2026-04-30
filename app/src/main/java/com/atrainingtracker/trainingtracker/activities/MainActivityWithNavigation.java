@@ -50,6 +50,7 @@ import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFragmen
 import com.atrainingtracker.trainingtracker.fragments.preferences.PebbleScreenFragment;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
 import com.atrainingtracker.trainingtracker.tracker.TrackerService;
+import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents;
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedFragment;
 import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentFragment;
 import com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrack;
@@ -72,6 +73,7 @@ import androidx.fragment.app.FragmentTransaction;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.LifecycleOwnerKt;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceScreen;
 
@@ -109,6 +111,8 @@ import com.google.android.gms.common.GooglePlayServicesUtil;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+
+import kotlinx.coroutines.flow.FlowKt;
 
 // import android.support.v7.app.AlertDialog;
 
@@ -411,6 +415,36 @@ public class MainActivityWithNavigation
                     }
                 }
         );
+
+        observeNavigationEvents();
+    }
+
+    private void observeNavigationEvents() {
+        // Observe the LiveData. This is standard Java/Android code.
+        // No more Flows, Continuations, or Units.
+        WorkoutNavigationEvents.getNavigateToEditLiveData().observe(this, workoutId -> {
+            if (workoutId == null) return;
+
+            // 1. Update the internal state
+            mSelectedFragmentId = R.id.drawer_workouts;
+
+            // 2. Update the Drawer UI checkmark
+            mNavigationView.setCheckedItem(mSelectedFragmentId);
+
+            // 3. Instantiate the new Fragment
+            mFragment = new WorkoutSummariesTabbedFragment();
+
+            // Ensure this TAG is defined in your Kotlin Fragment's companion object
+            String tag = WorkoutSummariesTabbedFragment.TAG;
+
+            // 4. Clear the backstack
+            getSupportFragmentManager().popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE);
+
+            // 5. Perform the Transaction
+            getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.content, mFragment, tag)
+                    .commit();
+        });
     }
 
     @NonNull

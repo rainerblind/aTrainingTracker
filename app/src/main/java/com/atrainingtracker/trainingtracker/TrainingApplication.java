@@ -68,7 +68,7 @@ import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapHel
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaSegmentsHelper;
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager;
-import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutActivity;
+import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents;
 import com.dropbox.core.json.JsonReadException;
 import com.dropbox.core.oauth.DbxCredential;
 
@@ -753,24 +753,6 @@ public class TrainingApplication extends Application {
         cResumeFromCrash = resumeFromCrash;
     }
 
-    // TODO: remove cAppContext and FLAG_ACTIVITY_NEW_TASK from here
-    public static void startEditWorkoutActivity(long workoutId, boolean showAllDetails) {
-        if (DEBUG) Log.i(TAG, "startEditWorkoutActivity(" + workoutId + ")");
-
-        Bundle bundle = new Bundle();
-        bundle.putLong(WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_ID, workoutId);
-
-        bundle.putBoolean(EditWorkoutActivity.EXTRA_SHOW_DETAILS, showAllDetails);
-        bundle.putBoolean(EditWorkoutActivity.EXTRA_SHOW_EXTREMA, showAllDetails);
-        // bundle.putBoolean(EditWorkoutActivity.EXTRA_SHOW_MAP, showAllDetails);
-
-        Intent intent = new Intent(cAppContext, EditWorkoutActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        intent.putExtras(bundle);
-        cAppContext.startActivity(intent);
-    }
-
-
     @Override
     public void onCreate() {
         super.onCreate();
@@ -1077,7 +1059,8 @@ public class TrainingApplication extends Application {
 
         // start EditWorkoutActivity
         // startEditWorkoutActivity(mWorkoutID, true); // here, the EditWorkoutActivity shall show the details, extrema values and the map.
-        startEditWorkoutActivity(mWorkoutID, false); // although, the user might want to see the statistics as early as possible, showing them here leads to an inconsistency.  Thus, we daactivate this feature.
+        // startEditWorkoutActivity(mWorkoutID, false); // although, the user might want to see the statistics as early as possible, showing them here leads to an inconsistency.  Thus, we daactivate this feature.
+        WorkoutNavigationEvents.triggerEdit(mWorkoutID);
         mNotificationManager.cancel(TRACKING_NOTIFICATION_ID);
     }
 
