@@ -230,8 +230,14 @@ class BANALServiceRepository private constructor(private val context: Context) {
         if (DEBUG) Log.i(TAG, "unbindFromBANALService()")
 
         if (isBoundToBanalService) {
-            context.unbindService(banalServiceConnection)
-            isBoundToBanalService = false
+            try {
+                context.unbindService(banalServiceConnection)
+                isBoundToBanalService = false
+                // _serviceBinder.value = null // Must not be set to null!!  When this is set to null, we don't get updates when the app is started for the second time.
+            } catch (e: IllegalArgumentException) {
+                // This catches cases where the OS already unregistered the service
+                Log.e("BANALRepository", "Service not registered or already unbound: ${e.message}")
+            }
         }
     }
 

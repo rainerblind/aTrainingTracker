@@ -160,6 +160,12 @@ class TrackingViewModel(
         loadActivityType()
     }
 
+    override fun onCleared() {
+        super.onCleared()
+        // Trigger the unbind logic in the repository
+        banalServiceRepository.unbindFromBANALService()
+    }
+
     private fun loadActivityType() {
         viewModelScope.launch {
             // Use the new repository function to get the activity type
