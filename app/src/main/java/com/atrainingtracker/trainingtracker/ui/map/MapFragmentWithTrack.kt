@@ -136,7 +136,7 @@ class MapFragmentWithTrack : Fragment() {
 
                     BottomSheetScaffold(
                         scaffoldState = scaffoldState,
-                        sheetPeekHeight = if (selectedSegmentId != null) 210.dp else 0.dp,
+                        sheetPeekHeight = if (selectedSegmentId != null) 225.dp else 0.dp,
                         sheetDragHandle = {
                             // Subtle small drag handle
                             Surface(
