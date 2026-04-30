@@ -473,12 +473,11 @@ class WorkoutRepository private constructor(private val application: Application
             )
 
             // Update Sport and Equipment
-            val equipmentId = equipmentDbHelper.getEquipmentId(workoutDataToSave.equipmentName ?: "")
             summariesManager.updateSportAndEquipment(
                 workoutId,
                 workoutDataToSave.sportId,
                 workoutDataToSave.bSportType,
-                equipmentId
+                workoutDataToSave.equipmentId
             )
 
             // Update Commute and Trainer flags

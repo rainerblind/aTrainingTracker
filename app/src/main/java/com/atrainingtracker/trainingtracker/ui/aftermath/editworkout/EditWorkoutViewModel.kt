@@ -25,14 +25,18 @@ import androidx.lifecycle.*
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
+import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.SimpleSportTypeInfo
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
+import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper.EquipmentData
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDiffCallback
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutUpdatePayload
+import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository
+import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
 import com.atrainingtracker.trainingtracker.ui.util.Event
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -52,7 +56,10 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     private val sportTypeDatabaseManager by lazy { SportTypeDatabaseManager.getInstance(application) }
 
     private val discoveryManager by lazy { EquipmentAndSportTypeDiscoveryManager.getInstance(application) }
-    private val equipmentManager by lazy { EquipmentDbHelper(application) }
+    private val equipmentManager by lazy { EquipmentDbHelper(application) }        // TODO: replace by EquipmentRepository
+
+    private val equipmentList: List<EquipmentData> = EquipmentRepository.getInstance(application).equipmentList
+    private val sportTypesList: List<SimpleSportTypeInfo> = SportTypesRepository.getInstance(application).sportTypesList
 
     // 1. The Single Source of Truth for the UI
     private val _workoutData = MutableStateFlow<WorkoutData?>(null)
@@ -315,7 +322,12 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         }
 
         if (newSportName == workoutData.value?.sportName) return
-
+        val simpleSportTypeInfo = sportTypesList.find { it.name == newSportName }
+        _workoutData.update { it?.copy(
+            sportName = newSportName,
+            bSportType = simpleSportTypeInfo?.bSportType ?: BSportType.UNKNOWN,
+            sportId = simpleSportTypeInfo?.id ?: -1
+        ) }
 
         // first, get the new sportId and bSportType
         val newSportId = sportTypeDatabaseManager.getSportTypeIdFromUIName(newSportName)
@@ -344,8 +356,10 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         }
 
         if (newEquipmentName == workoutData.value?.equipmentName) return
-
-        _workoutData.update { it?.copy(equipmentName = newEquipmentName) }
+        val equipmentId = equipmentList.find { it.name == newEquipmentName }?.id ?: -1
+        _workoutData.update { it?.copy(
+            equipmentName = newEquipmentName,
+            equipmentId = equipmentId) }
 
         suggestedEquipmentName = newEquipmentName
         updateSuggestedSportNames(newEquipmentName)
