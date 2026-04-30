@@ -441,9 +441,7 @@ class SegmentsRepository private constructor(context: Context) {
                     }
                     else {  // finished some time ago -> only update the segmentOffset as the distance to the end.
                         liveSegment.copy(
-                            liveData = LiveSegmentData(
-                                segmentStatus = newSegmentStatus,
-                                remainingDistance = df.format_with_units(0),
+                            liveData = liveSegment.liveData.copy(
                                 segmentOffset = df.format_with_units(distanceToEnd)
                             )
                         )
