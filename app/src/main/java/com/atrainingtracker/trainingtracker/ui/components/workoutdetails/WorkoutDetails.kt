@@ -142,7 +142,7 @@ private fun MainItem(
                 painter = painterResource(id = iconRes),
                 contentDescription = null,
                 modifier = Modifier
-                    .size(32.dp)
+                    .size(28.dp)
                     .padding(bottom = 0.dp),
                 tint = iconColor
             )
@@ -155,7 +155,7 @@ private fun MainItem(
                 )
                 Text(
                     text = mainValueString,
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold,
                     color = textColorMain
                 )
@@ -164,7 +164,7 @@ private fun MainItem(
         if (secondaryValueString != null) {
             Text(
                 text = secondaryValueString,
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.bodySmall,
                 color = textColorSecondary
             )
         }
@@ -198,7 +198,7 @@ private fun AltitudeRow(
                     painter = painterResource(id = R.drawable.ic_altitude),
                     contentDescription = null,
                     modifier = Modifier
-                        .size(32.dp)
+                        .size(28.dp)
                         .padding(bottom = 0.dp),
                     tint = iconColor
                 )
@@ -281,7 +281,7 @@ private fun AltitudeItem(
         Icon(
             painter = painterResource(id = iconRes),
             contentDescription = null,
-            modifier = Modifier.size(28.dp),
+            modifier = Modifier.size(24.dp),
             tint = iconColor
         )
         Spacer(modifier = Modifier.width(2.dp))
@@ -293,7 +293,7 @@ private fun AltitudeItem(
             )
             Text(
                 text = value,
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
                 color = textColorMain
             )
