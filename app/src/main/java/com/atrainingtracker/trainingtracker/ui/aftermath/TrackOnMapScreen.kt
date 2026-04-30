@@ -53,12 +53,13 @@ fun TrackOnMapScreen(
 
         Surface(
             color = MaterialTheme.colorScheme.primaryContainer,
-            tonalElevation = 3.dp,
             shape = RectangleShape
         ) {
             WorkoutHeader(
                 modifier = Modifier.statusBarsPadding(),
                 data = workoutData.headerData,
+                backgroundColor = MaterialTheme.colorScheme.surface,
+                textColor = MaterialTheme.colorScheme.onSurface,
                 onClicked = { },
                 onExport = { },
                 onDeleteConfirmed = { }

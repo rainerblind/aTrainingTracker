@@ -32,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -52,16 +53,14 @@ fun WorkoutHeader(
     onClicked: () -> Unit,
     onExport: (FileFormat) -> Unit,
     onDeleteConfirmed: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    backgroundColor: Color = MaterialTheme.colorScheme.surfaceContainerHighest,
+    textColor: Color = MaterialTheme.colorScheme.onSurfaceVariant
 ) {
     // State to control menu visibility
     var showMenu by remember { mutableStateOf(false) }
     var showContextMenu by remember { mutableStateOf(false) }
     var confirmDeletion by remember { mutableStateOf(false) }
-
-    val backgroundColor = MaterialTheme.colorScheme.surfaceContainerHighest
-    val textColor = MaterialTheme.colorScheme.onSurfaceVariant
-
 
     Surface(
         modifier = modifier.fillMaxWidth()
