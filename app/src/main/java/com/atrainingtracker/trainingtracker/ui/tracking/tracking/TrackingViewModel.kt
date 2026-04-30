@@ -152,6 +152,9 @@ class TrackingViewModel(
     )
 
     init {
+        // ensure the repository is bound to the BANALService
+        banalServiceRepository.bindToBANALService()
+
         // Load both the main UI state and the activity type
         loadSensorFieldStates()
         loadActivityType()

@@ -75,7 +75,8 @@ class BANALServiceRepository private constructor(private val context: Context) {
     private val repositoryScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     // access to the BANALService
-    private var banalServiceComm: BANALService.BANALServiceComm? = null
+    // private var banalServiceComm: BANALService.BANALServiceComm? = null
+    private val _serviceBinder = MutableStateFlow<BANALService.BANALServiceComm?>(null)
     private var isBoundToBanalService = false
 
 
@@ -199,20 +200,18 @@ class BANALServiceRepository private constructor(private val context: Context) {
 
             // This is called when the connection to the service has been established.
             // We get the BANALServiceComm binder instance.
-            banalServiceComm = service as? BANALService.BANALServiceComm
-            isBoundToBanalService = banalServiceComm != null
-            if (isBoundToBanalService) {
-                // Once connected, start observing the service for data
-                startObservingBANALService()
-            }
+            val binder = service as? BANALService.BANALServiceComm
+            _serviceBinder.value = binder // This "wakes up" any listeners
+            isBoundToBanalService = true
+            // Once connected, start observing the service for data
+            startObservingBANALService()
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
             if (DEBUG) Log.i(TAG, "onServiceDisconnected")
 
             // This is called when the service connection is lost unexpectedly
-            isBoundToBanalService = false
-            banalServiceComm = null
+            _serviceBinder.value = null
         }
     }
 
@@ -220,7 +219,7 @@ class BANALServiceRepository private constructor(private val context: Context) {
     fun bindToBANALService() {
         if (DEBUG) Log.i(TAG, "bindToBANALService()")
 
-        if (!isBoundToBanalService) {
+        if (! isBoundToBanalService) {
             val intent = Intent(context, BANALService::class.java)
             // BIND_AUTO_CREATE ensures the service is created if not already running
             context.bindService(intent, banalServiceConnection, Context.BIND_AUTO_CREATE)
@@ -233,7 +232,6 @@ class BANALServiceRepository private constructor(private val context: Context) {
         if (isBoundToBanalService) {
             context.unbindService(banalServiceConnection)
             isBoundToBanalService = false
-            banalServiceComm = null
         }
     }
 
@@ -248,36 +246,36 @@ class BANALServiceRepository private constructor(private val context: Context) {
                     delay(1000)
                 }
             }.collect {
-                if (DEBUG) Log.i(TAG, "collecting (banalServiceComm = ${banalServiceComm})")
-                if (banalServiceComm == null) return@collect // Service not bound yet
+                if (DEBUG) Log.i(TAG, "collecting (banalServiceComm = ${_serviceBinder.value})")
+                if (_serviceBinder.value == null) return@collect // Service not bound yet
 
                 // --- ACTIVITY TYPE ---
-                val newActivityType = banalServiceComm?.activityType
+                val newActivityType = _serviceBinder.value?.activityType
                 if (_activityType.value != newActivityType) {
                     _activityType.value = newActivityType!!
                 }
 
                 // -- filtered sensor data --
-                val newSensorData = banalServiceComm?.allFilteredSensorData
+                val newSensorData = _serviceBinder.value?.allFilteredSensorData
                 if (newSensorData != null) {
                     // Update the StateFlow using the .value property
                     _allFilteredSensorData.value = newSensorData
                 }
 
-                Log.i(TAG, "getIdsOfFoundDevices: ${banalServiceComm?.getIdsOfNewlyFoundDevices()}")
-                Log.i(TAG, "databaseIdsOfActiveDevices: ${banalServiceComm?.databaseIdsOfActiveRemoteDevices}")
+                Log.i(TAG, "getIdsOfFoundDevices: ${_serviceBinder.value?.getIdsOfNewlyFoundDevices()}")
+                Log.i(TAG, "databaseIdsOfActiveDevices: ${_serviceBinder.value?.databaseIdsOfActiveRemoteDevices}")
 
-                _searchingForDevice.value = banalServiceComm?.nameOfSearchingDevice
-                _bSportType.value = banalServiceComm?.bSportType!!
-                _activeRemoteDevicesIds.value = banalServiceComm?.databaseIdsOfActiveRemoteDevices!!
-                _newlyFoundDevicesIds.value = banalServiceComm?.getIdsOfNewlyFoundDevices()!!
-                _activeSensors.value = banalServiceComm?.availableSensorTypeSet?.toSet() ?: emptySet()
+                _searchingForDevice.value = _serviceBinder.value?.nameOfSearchingDevice
+                _bSportType.value = _serviceBinder.value?.bSportType!!
+                _activeRemoteDevicesIds.value = _serviceBinder.value?.databaseIdsOfActiveRemoteDevices!!
+                _newlyFoundDevicesIds.value = _serviceBinder.value?.getIdsOfNewlyFoundDevices()!!
+                _activeSensors.value = _serviceBinder.value?.availableSensorTypeSet?.toSet() ?: emptySet()
 
-                _allActiveDevices.postValue(banalServiceComm?.activeDevicesIncludingSpeedAndLocationDevices ?: emptyList())
+                _allActiveDevices.postValue(_serviceBinder.value?.activeDevicesIncludingSpeedAndLocationDevices ?: emptyList())
 
                 // get the current location
-                val latData = banalServiceComm?.getBestSensorData(SensorType.LATITUDE)
-                val lonData = banalServiceComm?.getBestSensorData(SensorType.LONGITUDE)
+                val latData = _serviceBinder.value?.getBestSensorData(SensorType.LATITUDE)
+                val lonData = _serviceBinder.value?.getBestSensorData(SensorType.LONGITUDE)
 
                 if (latData?.value is Double && lonData?.value is Double) {
                     Log.i(TAG, "got a location")
@@ -295,9 +293,9 @@ class BANALServiceRepository private constructor(private val context: Context) {
                     }
                 }
 
-                _currentSpeed.value = banalServiceComm?.getBestSensorData(SensorType.SPEED_mps)?.value as Double?
-                _currentBearing.value = banalServiceComm?.getBestSensorData(SensorType.BEARING)?.value as Double?
-                _currentDistance.value = banalServiceComm?.getBestSensorData(SensorType.DISTANCE_m)?.value as Double?
+                _currentSpeed.value = _serviceBinder.value?.getBestSensorData(SensorType.SPEED_mps)?.value as Double?
+                _currentBearing.value = _serviceBinder.value?.getBestSensorData(SensorType.BEARING)?.value as Double?
+                _currentDistance.value = _serviceBinder.value?.getBestSensorData(SensorType.DISTANCE_m)?.value as Double?
 
                 if (DEBUG) Log.i(TAG, "BANALService:\n _searchingForDevice.value: ${_searchingForDevice.value},\n _bSportType.value: ${_bSportType.value},\n _foundDeviceIds.value: ${_activeRemoteDevicesIds.value},\n _activeSensors.value: ${_activeSensors.value}")
                 if (DEBUG) Log.i(TAG, "trackingMode: ${_trackingMode.value}")
@@ -306,11 +304,11 @@ class BANALServiceRepository private constructor(private val context: Context) {
     }
 
     fun createFilter(filterData: FilterData) {
-        if (banalServiceComm != null) banalServiceComm?.createFilter(filterData)
+        if (_serviceBinder.value != null) _serviceBinder.value?.createFilter(filterData)
     }
 
     fun setUserSelectedSportType(bSportType: BSportType) {
-        if (banalServiceComm != null) banalServiceComm?.setUserSelectedSportType(bSportType)
+        if (_serviceBinder.value != null) _serviceBinder.value?.setUserSelectedSportType(bSportType)
     }
 
     fun startSearchingForPairedDevices() {

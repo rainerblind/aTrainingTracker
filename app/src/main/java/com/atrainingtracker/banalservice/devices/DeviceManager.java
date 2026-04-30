@@ -560,12 +560,13 @@ public class DeviceManager {
     }
 
     public LinkedList<MyRemoteDevice> getRemoteDeviceList() {
-        if (DEBUG) Log.d(TAG, "getRemoteDeviceList");
-
-        LinkedList<MyRemoteDevice> list = new LinkedList<MyRemoteDevice>();
-        list.addAll(mMyRemoteDevices.values());
-
-        return list;
+        if (DEBUG) Log.d(TAG, "getRemoteDeviceList: " + mMyRemoteDevices);
+        if (mMyRemoteDevices != null) {
+            return new LinkedList<>(mMyRemoteDevices.values());
+        }
+        else {
+            return new LinkedList<>();
+        }
     }
 
     // TODO: not the best solution/approach
