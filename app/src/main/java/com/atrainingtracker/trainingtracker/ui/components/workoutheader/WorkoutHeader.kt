@@ -170,7 +170,8 @@ fun WorkoutHeader(
                     // Material 3 Dropdown Menu replacing the legacy PopupMenu
                     DropdownMenu(
                         expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
+                        onDismissRequest = { showMenu = false },
+                        containerColor = MaterialTheme.colorScheme.surface
                     ) {
                         // Export Actions (Mapping same as SummaryViewHolder)
                         val formats = listOf(
@@ -193,7 +194,11 @@ fun WorkoutHeader(
                     }
 
                     // Context Menu for deletion
-                    DropdownMenu(expanded = showContextMenu, onDismissRequest = { showContextMenu = false }) {
+                    DropdownMenu(
+                        expanded = showContextMenu,
+                        onDismissRequest = { showContextMenu = false },
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ) {
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.delete)) },
                             onClick = { showContextMenu = false; confirmDeletion = true },
@@ -205,6 +210,7 @@ fun WorkoutHeader(
                     if (confirmDeletion) {
                         AlertDialog(
                             onDismissRequest = { confirmDeletion = false },
+                            containerColor = MaterialTheme.colorScheme.surface,
                             title = { Text(stringResource(R.string.delete)) },
                             text = { Text(stringResource(R.string.really_delete_format, data.workoutName)) },
                             confirmButton = {
