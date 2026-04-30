@@ -35,7 +35,7 @@ import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.flow.MutableStateFlow
 
 @Composable
-fun SimpleSegmentOnMapScreen(
+fun SegmentOnMapScreen(
     segmentSummary: SegmentSummary?,
     mapState: MapState,
     modifier: Modifier
@@ -49,7 +49,7 @@ fun SimpleSegmentOnMapScreen(
         segmentSummary?.let {
             Surface(
                 color = MaterialTheme.colorScheme.primaryContainer,
-                tonalElevation = 3.dp,
+                // tonalElevation = 3.dp,
                 shape = RectangleShape
             ) {
                 Column(modifier = modifier) {

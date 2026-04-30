@@ -38,7 +38,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
 import com.atrainingtracker.trainingtracker.ui.map.MapState
-import com.atrainingtracker.trainingtracker.ui.segments.SimpleSegmentOnMapScreen
+import com.atrainingtracker.trainingtracker.ui.segments.SegmentOnMapScreen
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 class StarredSegmentsFragment : Fragment() {
@@ -105,7 +105,7 @@ class StarredSegmentsFragment : Fragment() {
                                 )
                             }
 
-                            SimpleSegmentOnMapScreen(
+                            SegmentOnMapScreen(
                                 segmentSummary = selectedSegment.summary,
                                 mapState = mapState,
                                 modifier = Modifier.statusBarsPadding()
