@@ -54,12 +54,6 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     private val discoveryManager by lazy { EquipmentAndSportTypeDiscoveryManager.getInstance(application) }
     private val equipmentManager by lazy { EquipmentDbHelper(application) }
 
-
-    // LiveData to hold the entire WorkoutData object. The UI will observe this.
-    // val workoutData: LiveData<WorkoutData?>
-
-    // val initialWorkoutLoaded: LiveData<WorkoutData> = repository.initialWorkoutLoaded
-
     // 1. The Single Source of Truth for the UI
     private val _workoutData = MutableStateFlow<WorkoutData?>(null)
     val workoutData: StateFlow<WorkoutData?> = _workoutData.asStateFlow()
@@ -94,16 +88,8 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     val ALL_SHOES = application.getString(R.string.equipment_all_shoes)
     val ALL_BIKES = application.getString(R.string.equipment_all_bikes)
     val ALL_SPORT_TYPES = application.getString(R.string.show_all_sport_types)
+    // TODO: really all sports
 
-
-
-
-    // LiveData to emit specific update payloads ---
-    private val _updatePayloads = MutableLiveData<Event<List<WorkoutUpdatePayload>>>()
-    val updatePayloads: LiveData<Event<List<WorkoutUpdatePayload>>> = _updatePayloads
-
-    // Diffing utility
-    private val diffCallback = WorkoutDiffCallback()
 
     val saveFinishedEvent: MutableLiveData<Pair<Long, Boolean>> = repository.saveFinishedEvent
 
@@ -316,7 +302,6 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
 
     fun updateWorkoutName(newName: String) {
         _workoutData.update { it?.copy(workoutName = newName) }
-        repository.updateWorkoutName(workoutId, newName)
     }
 
 
@@ -335,9 +320,6 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         // first, get the new sportId and bSportType
         val newSportId = sportTypeDatabaseManager.getSportTypeIdFromUIName(newSportName)
         val newBSportType = sportTypeDatabaseManager.getBSportType(newSportId)
-
-        // finally, call a repository method that updates the sport and equipment data
-        repository.updateSport(workoutId, newSportName, newSportId, newBSportType)
 
         if (newSportName != suggestedSportTypeName) {
             userSelectedSportTypeName = newSportName
@@ -363,9 +345,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
 
         if (newEquipmentName == workoutData.value?.equipmentName) return
 
-        // call the repository method that updates the equipment data
         _workoutData.update { it?.copy(equipmentName = newEquipmentName) }
-        repository.updateEquipmentName(workoutId, newEquipmentName)
 
         suggestedEquipmentName = newEquipmentName
         updateSuggestedSportNames(newEquipmentName)
@@ -374,33 +354,26 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
 
     fun updateDescription(newDescription: String) {
         _workoutData.update { it?.copy(description = newDescription) }
-        repository.updateDescription(workoutId, newDescription)
     }
 
     fun updateGoal(newGoal: String) {
         _workoutData.update { it?.copy(goal = newGoal) }
-        repository.updateGoal(workoutId, newGoal)
     }
 
     fun updateMethod(newMethod: String) {
         _workoutData.update { it?.copy(method = newMethod) }
-        repository.updateMethod(workoutId, newMethod)
     }
 
     fun updateIsCommute(isChecked: Boolean) {
         val isTrainer = if (isChecked) { false } else { workoutData.value?.trainer ?: false }
 
         _workoutData.update { it?.copy(commute = isChecked, trainer = isTrainer) }
-        repository.updateIsCommute(workoutId, isChecked)
-        repository.updateIsTrainer(workoutId, isTrainer)
     }
 
     fun updateIsTrainer(isChecked: Boolean) {
         val isCommute = if (isChecked) { false } else { workoutData.value?.commute ?: false }
 
         _workoutData.update { it?.copy(trainer = isChecked, commute = isCommute) }
-        repository.updateIsTrainer(workoutId, isChecked)
-        repository.updateIsCommute(workoutId, isCommute)
     }
 
 
@@ -421,7 +394,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
      * Saves the current state of the WorkoutData object to the database.
      */
     fun saveChanges() {
-        repository.saveWorkout(workoutId)
+        repository.saveWorkout(workoutData.value)
     }
 }
 
