@@ -25,14 +25,14 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 
 object WorkoutNavigationEvents {
-    private val _navigateToEdit = MutableSharedFlow<Long>(
+    private val _navigateToEdit = MutableSharedFlow<Long?>(
         replay = 1, // <--- This makes the event "sticky"
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
     val navigateToEdit = _navigateToEdit.asSharedFlow()
 
     @JvmStatic
-    val navigateToEditLiveData: LiveData<Long> = _navigateToEdit.asLiveData()
+    val navigateToEditLiveData: LiveData<Long?> = _navigateToEdit.asLiveData()
 
     @JvmStatic
     fun triggerEdit(workoutId: Long) {
@@ -41,6 +41,6 @@ object WorkoutNavigationEvents {
 
     // Clear the event after it's handled
     fun reset() {
-        _navigateToEdit.tryEmit(-1L)
+        _navigateToEdit.tryEmit(null)
     }
 }

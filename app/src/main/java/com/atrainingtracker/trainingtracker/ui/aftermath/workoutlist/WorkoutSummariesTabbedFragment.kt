@@ -92,7 +92,6 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                         WorkoutNavigationEvents.navigateToEdit.collect { workoutId ->
                             if (workoutId != -1L) {
                                 selectedWorkoutIdForEdit = workoutId
-                                WorkoutNavigationEvents.reset()
                             }
                         }
                     }
@@ -115,12 +114,16 @@ class WorkoutSummariesTabbedFragment : Fragment() {
 
                         EditWorkoutScreen(
                             viewModel = editViewModel,
-                            onBack = { selectedWorkoutIdForEdit = null }
+                            onBack = {
+                                selectedWorkoutIdForEdit = null
+                                WorkoutNavigationEvents.reset()
+                            }
                         )
 
                         // 4. Handle System Back Button
                         BackHandler {
                             selectedWorkoutIdForEdit = null
+                            WorkoutNavigationEvents.reset()
                         }
 
                     }
