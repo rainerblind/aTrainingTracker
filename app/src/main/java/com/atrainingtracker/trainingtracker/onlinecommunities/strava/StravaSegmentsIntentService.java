@@ -209,6 +209,7 @@ public class StravaSegmentsIntentService extends IntentService {
 
             // now, insert the content values to the database
             // thereby make sure that each row is one second later
+            // TODO: it looks like, this was not a good idea. -> Remove this part.
             if (haveTime) {
                 int initialTime = effortStreams[0].getAsInteger("time");
                 int prevTime = initialTime - 1;

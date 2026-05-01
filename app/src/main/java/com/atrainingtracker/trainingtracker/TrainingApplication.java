@@ -784,17 +784,6 @@ public class TrainingApplication extends Application {
         ContextCompat.registerReceiver(this, mTrackingStoppedReceiver, new IntentFilter(TrackerService.TRACKING_FINISHED_INTENT), ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mPauseTrackingReceiver, new IntentFilter(REQUEST_PAUSE_TRACKING), ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mResumeFromPaused, new IntentFilter(REQUEST_RESUME_FROM_PAUSED), ContextCompat.RECEIVER_NOT_EXPORTED);
-
-        // eventually get the starred segments
-        // TODO: do this in the main activity???
-        if (new StravaHelper().getAthleteId(this) != 0 // the athlete is registered to strava
-                && !SegmentsDatabaseManager.doesDatabaseExist(this)) {  // but there is not yet a database for the segments
-            StravaSegmentsHelper stravaSegmentsHelper = new StravaSegmentsHelper(this);
-            stravaSegmentsHelper.getStarredStravaSegments(SportTypeDatabaseManager.getSportTypeId(BSportType.BIKE));
-            stravaSegmentsHelper.getStarredStravaSegments(SportTypeDatabaseManager.getSportTypeId(BSportType.RUN));
-        }
-
-
     }
 
     // helper method to create the Notification Builder

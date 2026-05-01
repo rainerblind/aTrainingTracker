@@ -67,11 +67,6 @@ class SegmentListViewModel(
         }
     }
 
-
-    fun onSegmentClick(stravaId: Long) {
-        // TODO: Handle navigation to details
-    }
-
     class SegmentListViewModelFactory(context: Context) : ViewModelProvider.Factory {
         private val repository = SegmentsRepository.getInstance(context)
         override fun <T : ViewModel> create(modelClass: Class<T>): T {

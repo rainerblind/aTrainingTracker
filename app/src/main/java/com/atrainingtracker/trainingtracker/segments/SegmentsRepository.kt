@@ -104,25 +104,6 @@ data class LiveSegment(
 
 class SegmentsRepository private constructor(context: Context) {
 
-    companion object {
-        val DEBUG = true
-        val TAG = "SegmentsRepository"
-
-        val SEGMENT_DISTANCE_THRESHOLD = 50 // m          distance between the current location and the segment to decide whether we are on the segment
-        val SEGMENT_START_DISTANCE_THRESHOLD = 250 // m   distance between the current location and the start line to show that we are approaching a segment start
-        val SEGMENT_END_DISTANCE_THRESHOLD = 500 // m     distance between the current location and the finish line to show that we are approaching the finish line
-        val SEGMENT_POST_END_DISTANCE_THRESHOLD = 250 // m distance after the finish line and the current location to mark this segment as far far away
-
-
-        @Volatile
-        private var instance: SegmentsRepository? = null
-
-        fun getInstance(context: Context): SegmentsRepository {
-            return instance ?: synchronized(this) {
-                instance ?: SegmentsRepository(context.applicationContext).also { instance = it }
-            }
-        }
-    }
 
     private val tf = TimeFormatter()
     private val df = DistanceFormatter()
@@ -171,39 +152,9 @@ class SegmentsRepository private constructor(context: Context) {
         }
     }
 
-    /**
-     * Fetches all segments. If they haven't loaded yet, it waits for the background task.
-     */
-    suspend fun getAllMapSegments(): List<MapSegment> = withContext(Dispatchers.IO) {
-        // Wait until the flow has a non-null value (meaning DB load finished)
-        _allMapSegments.first { it != null } ?: emptyList()
-    }
-
-    /**
-     * Fetches a specific segment by its ID from the in-memory cache.
-     */
-    suspend fun getMapSegmentById(segmentId: Long): MapSegment? = withContext(Dispatchers.IO) {
-        // Ensure data is loaded before filtering
-        val segments = _allMapSegments.first { it != null }
-        segments?.find { it.id == segmentId }
-    }
-
-    /**
-     * Fetches the summary details for a specific segment.
-     */
-    suspend fun getSegmentSummary(segmentId: Long): SegmentSummary? = withContext(Dispatchers.IO) {
-        // This assumes your dbManager has a corresponding method to return this data class
-        dbManager.getSegmentSummary(segmentId)  // TODO: rewrite: use the LiveSegmentData instead.
-    }
-
-    /**
-     * Optional: Trigger a refresh if the user adds/edits segments
-     */
-    fun refreshSegments() {
-        repositoryScope.launch {
-            _allMapSegments.value = dbManager.allMapSegments ?: emptyList()
-        }
-    }
+    /***********************************************************************************************
+     * Live Segment stuff
+     **********************************************************************************************/
 
     /**
      * Calculates the virtual gates (start/finish lines) and distances for a segment.
@@ -476,4 +427,35 @@ class SegmentsRepository private constructor(context: Context) {
         val diff = Math.abs(bearing1 - bearing2) % 360
         return if (diff > 180) 360 - diff else diff
     }
+
+    /***********************************************************************************************
+     * Get segments from Strava
+     **********************************************************************************************/
+
+
+
+    /***********************************************************************************************
+     * Companion Object
+     **********************************************************************************************/
+
+    companion object {
+        val DEBUG = true
+        val TAG = "SegmentsRepository"
+
+        val SEGMENT_DISTANCE_THRESHOLD = 50 // m          distance between the current location and the segment to decide whether we are on the segment
+        val SEGMENT_START_DISTANCE_THRESHOLD = 250 // m   distance between the current location and the start line to show that we are approaching a segment start
+        val SEGMENT_END_DISTANCE_THRESHOLD = 500 // m     distance between the current location and the finish line to show that we are approaching the finish line
+        val SEGMENT_POST_END_DISTANCE_THRESHOLD = 250 // m distance after the finish line and the current location to mark this segment as far far away
+
+
+        @Volatile
+        private var instance: SegmentsRepository? = null
+
+        fun getInstance(context: Context): SegmentsRepository {
+            return instance ?: synchronized(this) {
+                instance ?: SegmentsRepository(context.applicationContext).also { instance = it }
+            }
+        }
+    }
+
 }
