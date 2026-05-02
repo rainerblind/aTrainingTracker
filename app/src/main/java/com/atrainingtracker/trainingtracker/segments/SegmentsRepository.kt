@@ -543,7 +543,6 @@ class SegmentsRepository private constructor(context: Context) {
         else {
             liveSegments.value.filter { it.summary.bSportType == bSportType }.map { it.summary.stravaId }.toSet()
         }
-        // oldIds.forEach { deleteSegment(it) } // uncomment to delete all segments
 
         val newIds = mutableSetOf<Long>()
         // Create a local copy of the current list to modify
@@ -567,21 +566,28 @@ class SegmentsRepository private constructor(context: Context) {
             for (segment in segments) {
                 if (ignoreSport.equals(segment.activity_type, ignoreCase = true)) continue
 
+                // get the detailed segment
+                val detailedSegment = fetchDetailedSegment(segment.id) ?: segment
+
                 newIds.add(segment.id)
                 if (!oldIds.contains(segment.id)) {
-                    // add summary and stream
-                    addOrUpdateSegment(segment)
+
+                    // store the segment
+                    addOrUpdateSegment(detailedSegment)
+
+                    // get the path
                     val path = fetchAndInsertStream(segment.id) ?: emptyList()
 
-                    // 2. Add to the local list immediately
-                    val newLiveSegment = calculateInitialLiveSegmentState(segment.toSummary(), path)
+                    // add it to the live segment list
+                    val newLiveSegment = calculateInitialLiveSegmentState(detailedSegment.toSummary(), path)
                     if (newLiveSegment != null) {
                         currentLiveSegments.add(newLiveSegment)
                     }
                 }
                 else {
                     // only update (PB might have changed)
-                    addOrUpdateSegment(segment)
+                    addOrUpdateSegment(detailedSegment)
+                    // update list of LiveSegments
                     val index = currentLiveSegments.indexOfFirst { it.summary.stravaId == segment.id }
                     if (index != -1) {
                         val existing = currentLiveSegments[index]
@@ -605,7 +611,6 @@ class SegmentsRepository private constructor(context: Context) {
             currentLiveSegments.removeAll { toDelete.contains(it.summary.stravaId) }
             _liveSegments.value = currentLiveSegments.toList()
         }
-
     }
 
     private suspend fun fetchStarredSegmentsFromStrava(page: Int): String = withContext(Dispatchers.IO) {
@@ -646,6 +651,28 @@ class SegmentsRepository private constructor(context: Context) {
 
     private fun deleteSegment(segmentId: Long) {
         segmentsDb.deleteSegment(segmentId)
+    }
+
+    private suspend fun fetchDetailedSegment(segmentId: Long): StravaSegment? = withContext(Dispatchers.IO) {
+        val accessToken = StravaHelper.getRefreshedAccessToken() ?: return@withContext null
+        val url = "https://www.strava.com/api/v3/segments/$segmentId"
+
+        val client = OkHttpClient()
+        val request = Request.Builder()
+            .url(url)
+            .addHeader("Authorization", "Bearer $accessToken")
+            .build()
+
+        return@withContext try {
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext null
+                val body = response.body?.string() ?: return@withContext null
+                json.decodeFromString<StravaSegment>(body)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error fetching details for segment $segmentId", e)
+            null
+        }
     }
 
     private suspend fun fetchAndInsertStream(segmentId: Long): List<PathPoint>? = withContext(Dispatchers.IO) {
