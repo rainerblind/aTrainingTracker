@@ -176,6 +176,7 @@ public class SegmentsDatabaseManager {
             int climbCategory = cursor.getInt(cursor.getColumnIndexOrThrow(Segments.CLIMB_CATEGORY));
             String city = cursor.getString(cursor.getColumnIndexOrThrow(Segments.CITY));
             String name = cursor.getString(cursor.getColumnIndexOrThrow(Segments.SEGMENT_NAME));
+            String polyline = cursor.getString(cursor.getColumnIndexOrThrow(Segments.MAP_POLYLINE));
 
             // 3. Format strings
             DistanceFormatter df = new DistanceFormatter();
@@ -195,7 +196,8 @@ public class SegmentsDatabaseManager {
                     String.format(Locale.getDefault(), "%.1f%% Max", maxGrade),
                     String.format(Locale.getDefault(), "%d m", Math.round(elevHigh - elevLow)),
                     String.format(Locale.getDefault(), "%d m", Math.round(elevLow)),
-                    String.format(Locale.getDefault(), "%d m", Math.round(elevHigh))
+                    String.format(Locale.getDefault(), "%d m", Math.round(elevHigh)),
+                    polyline
             );
         }
         cursor.close();
@@ -223,6 +225,7 @@ public class SegmentsDatabaseManager {
         int climb_category_index = cursor.getColumnIndexOrThrow(Segments.CLIMB_CATEGORY);
         int city_index = cursor.getColumnIndexOrThrow(Segments.CITY);
         int name_index = cursor.getColumnIndexOrThrow(Segments.SEGMENT_NAME);
+        int map_polyline_index = cursor.getColumnIndexOrThrow(Segments.MAP_POLYLINE);
 
 
         while (cursor.moveToNext()) {
@@ -238,6 +241,11 @@ public class SegmentsDatabaseManager {
             int climbCategory = cursor.getInt(climb_category_index);
             String city = cursor.getString(city_index);
             String name = cursor.getString(name_index);
+            String polyline = cursor.getString(map_polyline_index);
+            if (polyline == null) {
+                polyline = "";
+            }
+
 
             summaries.add(new SegmentSummary(
                             segmentId,
@@ -253,7 +261,8 @@ public class SegmentsDatabaseManager {
                             String.format(Locale.getDefault(), "%.1f%% Max", maxGrade),
                             String.format(Locale.getDefault(), "%d m", Math.round(elevHigh - elevLow)),
                             String.format(Locale.getDefault(), "%d m", Math.round(elevLow)),
-                            String.format(Locale.getDefault(), "%d m", Math.round(elevHigh))
+                            String.format(Locale.getDefault(), "%d m", Math.round(elevHigh)),
+                            polyline
                     )
             );
         }

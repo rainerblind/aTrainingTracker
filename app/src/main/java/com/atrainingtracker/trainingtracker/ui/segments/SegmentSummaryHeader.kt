@@ -294,7 +294,8 @@ fun PreviewSegmentSummaryFull() {
                 maxGrade = "12.0% Max",
                 elevationGain = "1073 m",
                 elevationMin = "720 m",
-                elevationMax = "1793 m"
+                elevationMax = "1793 m",
+                map_polyline = ""
             )
         )
     }
@@ -319,7 +320,8 @@ fun PreviewSegmentSummaryFullCompact() {
                 maxGrade = "12.0% Max",
                 elevationGain = "1073 m",
                 elevationMin = "720 m",
-                elevationMax = "1793 m"
+                elevationMax = "1793 m",
+                map_polyline = ""
             ),
             compact = true
         )
@@ -345,7 +347,8 @@ fun PreviewSegmentSummaryMinimal() {
                 maxGrade = "1.2% Max",
                 elevationGain = "5 m",
                 elevationMin = "34 m",
-                elevationMax = "39 m"
+                elevationMax = "39 m",
+                map_polyline = ""
             )
         )
     }
@@ -370,7 +373,8 @@ fun PreviewSegmentSummaryLiveApproaching() {
                 maxGrade = "12.0% Max",
                 elevationGain = "1073 m",
                 elevationMin = "720 m",
-                elevationMax = "1793 m"
+                elevationMax = "1793 m",
+                map_polyline = ""
             ),
             liveSegmentData = LiveSegmentData(
                 segmentStatus = LiveSegmentStatus.APPROACHING,
@@ -403,7 +407,8 @@ fun PreviewSegmentSummaryLiveOnSegment() {
                 maxGrade = "12.0% Max",
                 elevationGain = "1073 m",
                 elevationMin = "720 m",
-                elevationMax = "1793 m"
+                elevationMax = "1793 m",
+                map_polyline = ""
             ),
             liveSegmentData = LiveSegmentData(
                 segmentStatus = LiveSegmentStatus.ON_SEGMENT,
@@ -436,7 +441,8 @@ fun PreviewSegmentSummaryLive() {
                 maxGrade = "12.0% Max",
                 elevationGain = "1073 m",
                 elevationMin = "720 m",
-                elevationMax = "1793 m"
+                elevationMax = "1793 m",
+                map_polyline = ""
             ),
             liveSegmentData = LiveSegmentData(
                 segmentStatus = LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH,

@@ -65,6 +65,7 @@ data class SegmentSummary(
     val elevationGain: String,
     val elevationMin: String,
     val elevationMax: String,
+    val map_polyline: String,
 )
 
 enum class LiveSegmentStatus(val resId: Int) {
@@ -168,7 +169,8 @@ private fun StravaSegment.toSummary(): SegmentSummary {
             String.format(locale, "%d m", Math.round(this.elevation_high - this.elevation_low))
         },
         elevationMin = String.format(locale, "%d m", Math.round(this.elevation_low)),
-        elevationMax = String.format(locale, "%d m", Math.round(this.elevation_high))
+        elevationMax = String.format(locale, "%d m", Math.round(this.elevation_high)),
+        map_polyline = this.map?.polyline ?: ""
     )
 }
 
@@ -177,11 +179,6 @@ private fun StravaSegment.toSummary(): SegmentSummary {
 data class StravaMap(
     val id: String,
     val polyline: String? = null
-)
-
-@Serializable
-data class AthleteSegmentStats(
-    val pr_elapsed_time: Int? = null,
 )
 
 @Serializable

@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.segments.segmentlist
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.theme.StravaOrange
@@ -32,11 +33,17 @@ import com.google.maps.android.compose.rememberCameraPositionState
 
 @Composable
 fun SegmentOnMap(
-    pathPoints: List<PathPoint>,
+    polyline: String,
     modifier: Modifier = Modifier,
     onMapClick: () -> Unit = {}
 ) {
     val cameraPositionState = rememberCameraPositionState()
+
+    // Decode the polyline into LatLngs.
+    // We 'remember' it so it doesn't re-decode on every recomposition.
+    val latLngs = remember(polyline) {
+        com.google.maps.android.PolyUtil.decode(polyline)
+    }
 
     GoogleMap(
         modifier = modifier,
@@ -52,8 +59,7 @@ fun SegmentOnMap(
         properties = MapProperties(mapType = MapType.TERRAIN),
         onMapClick = { onMapClick() }
     ) {
-        if (pathPoints.isNotEmpty()) {
-            val latLngs = pathPoints.map { it.latLng }
+        if (latLngs.isNotEmpty()) {
 
             Polyline(
                 points = latLngs,
@@ -62,7 +68,7 @@ fun SegmentOnMap(
             )
 
             // Auto-zoom to fit the segment whenever pathPoints change
-            LaunchedEffect(pathPoints) {
+            LaunchedEffect(latLngs) {
                 val boundsBuilder = com.google.android.gms.maps.model.LatLngBounds.Builder()
                 latLngs.forEach { boundsBuilder.include(it) }
                 cameraPositionState.move(
