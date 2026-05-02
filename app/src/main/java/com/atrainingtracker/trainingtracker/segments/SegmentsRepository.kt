@@ -18,13 +18,16 @@
 
 package com.atrainingtracker.trainingtracker.segments
 
+import android.content.ContentValues
 import android.content.Context
+import android.database.DatabaseUtils
 import android.util.Log
 import com.atrainingtracker.R
 import com.google.maps.android.PolyUtil
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
+import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository
@@ -35,10 +38,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.*
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import kotlin.math.sign
+import kotlin.text.equals
 
 data class SegmentSummary(
     val stravaId: Long,
@@ -102,13 +110,61 @@ data class LiveSegment(
     val math: LiveSegmentMath,
 )
 
+
+// data class for the segment (Strava API)
+@Serializable
+data class StravaSegment(
+    val id: Long,
+    val name: String,
+    val activity_type: String,
+    val distance: Double,
+    val average_grade: Double,
+    val maximum_grade: Double,
+    val elevation_high: Double,
+    val elevation_low: Double,
+    val total_elevation_gain: Double,
+    val start_latlng: List<Double>,
+    val end_latlng: List<Double>,
+    val climb_category: Int,
+    val city: String? = null, // Strava sometimes returns null for city
+    val state: String? = null,
+    val country: String? = null,
+    val map: StravaMap? = null,
+    val athlete_segment_stats: AthleteSegmentStats? = null
+)
+
+@Serializable
+data class StravaMap(
+    val id: String,
+    val polyline: String? = null
+)
+
+@Serializable
+data class AthleteSegmentStats(
+    val pr_elapsed_time: Int? = null,
+)
+
+@Serializable
+data class StravaStream(
+    val type: String,
+    val data: List<JsonElement>, // Flexible type to handle both numbers and arrays
+    @SerialName("series_type") val seriesType: String,
+    val resolution: String,
+    @SerialName("original_size") val originalSize: Int
+)
+
+private val json = Json {
+    ignoreUnknownKeys = true // CRITICAL: Strava sends many fields we don't need
+    coerceInputValues = true
+}
+
 class SegmentsRepository private constructor(context: Context) {
 
 
     private val tf = TimeFormatter()
     private val df = DistanceFormatter()
 
-    private val dbManager = SegmentsDatabaseManager.getInstance(context)
+    private val segmentsDb = SegmentsDatabaseManager.getInstance(context)
 
     private val banalRepo = BANALServiceRepository.getInstance(context)
 
@@ -116,6 +172,7 @@ class SegmentsRepository private constructor(context: Context) {
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     // In-memory cache of segments
+    @Deprecated("can be removed later")
     private var _allMapSegments = MutableStateFlow<List<MapSegment>?>(null)
 
     private val _liveSegments = MutableStateFlow(emptyList<LiveSegment>())
@@ -126,13 +183,13 @@ class SegmentsRepository private constructor(context: Context) {
 
         // Load segments from DB into memory immediately upon creation
         repositoryScope.launch {
-            _allMapSegments.value = dbManager.getAllMapSegments()
+            _allMapSegments.value = segmentsDb.getAllMapSegments()
 
-            val segmentSummaries = dbManager.getAllSegmentSummaries()
+            val segmentSummaries = segmentsDb.getAllSegmentSummaries()
 
             // Calculate LiveSegments for all loaded segments
             segmentSummaries.forEach { segmentSummary ->
-                val path = dbManager.getSegmentPath(segmentSummary.stravaId)
+                val path = segmentsDb.getSegmentPath(segmentSummary.stravaId)
 
                 calculateInitialLiveSegmentState(segmentSummary, path)?.let { liveSegment ->
                     _liveSegments.value += liveSegment
@@ -431,7 +488,154 @@ class SegmentsRepository private constructor(context: Context) {
     /***********************************************************************************************
      * Get segments from Strava
      **********************************************************************************************/
+    suspend fun syncStarredSegments(bSportType: BSportType) = withContext(Dispatchers.IO) {
 
+        // sport to ignore:  For Run we ignore Ride and for Run we ignore Bike.  For Unknown we should not ignore.
+        val ignoreSport = when (bSportType) {
+            BSportType.RUN -> "Ride"
+            BSportType.BIKE -> "Run"
+            else -> "Foo"
+        }
+
+        // Store existing IDs to find what to delete later
+        val oldIds = liveSegments.value.map { it.summary.stravaId }.toSet()
+
+        val newIds = mutableSetOf<Long>()
+        var page = 1
+        var hasMore = true
+
+        // 2. Pagination Loop
+        while (hasMore) {
+            val responseBody = fetchStarredSegmentsFromStrava(page)
+
+            // AUTOMATIC PARSING: Converts the whole string into a List of objects
+            val segments = json.decodeFromString<List<StravaSegment>>(responseBody)
+
+            if (segments.isEmpty()) {
+                hasMore = false
+                continue
+            }
+
+            for (segment in segments) {
+                if (ignoreSport.equals(segment.activity_type, ignoreCase = true)) continue
+
+                newIds.add(segment.id)
+                if (!oldIds.contains(segment.id)) {
+                    // add summary and stream
+                    addOrUpdateSegment(segment)
+                    fetchAndInsertStream(segment.id)
+                }
+                else {
+                    // only update (PB might have changed)
+                    addOrUpdateSegment(segment)
+                }
+            }
+            page++
+            hasMore = segments.size >= 30 // Strava default page size
+        }
+
+        // 4. Cleanup: Remove segments no longer starred on Strava
+        val toDelete = oldIds - newIds
+        toDelete.forEach { deleteSegment(it) }
+    }
+
+    private suspend fun fetchStarredSegmentsFromStrava(page: Int): String = withContext(Dispatchers.IO) {
+        // 1. Get the access token from your existing StravaHelper
+        val accessToken = StravaHelper.getRefreshedAccessToken()
+        if (accessToken.isNullOrEmpty()) {
+            Log.e(TAG, "Strava Access Token is null or empty")
+            return@withContext "[]"
+        }
+
+        // 2. Build the URL for starred segments
+        // Strava API: GET /segments/starred
+        val url = "https://www.strava.com/api/v3/segments/starred?page=$page&per_page=30"
+
+        val client = OkHttpClient()
+        val request = Request.Builder()
+            .url(url)
+            .addHeader("Authorization", "Bearer $accessToken")
+            .build()
+
+        try {
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    Log.e(TAG, "Failed to fetch segments: ${response.code} ${response.message}")
+                    return@withContext "[]"
+                }
+                return@withContext response.body?.string() ?: "[]"
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception fetching Strava segments", e)
+            "[]"
+        }
+    }
+
+    private fun addOrUpdateSegment(segment: StravaSegment) {
+        segmentsDb.addOrUpdateSegment(segment)
+    }
+
+    private fun deleteSegment(segmentId: Long) {
+        segmentsDb.deleteSegment(segmentId)
+    }
+
+    private suspend fun fetchAndInsertStream(segmentId: Long) = withContext(Dispatchers.IO) {
+
+        // 2. Fetch from Strava
+        val accessToken = StravaHelper.getRefreshedAccessToken() ?: return@withContext
+        val url = "https://www.strava.com/api/v3/segments/$segmentId/streams/latlng,distance,altitude,time"
+
+        val client = OkHttpClient()
+        val request = Request.Builder()
+            .url(url)
+            .addHeader("Authorization", "Bearer $accessToken")
+            .build()
+
+        val responseBody = try {
+            client.newCall(request).execute().use { it.body?.string() }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error fetching streams for $segmentId", e)
+            null
+        } ?: return@withContext
+
+        // 3. Decode JSON into our List<StravaStream>
+        val streams = try {
+            json.decodeFromString<List<StravaStream>>(responseBody)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error decoding stream JSON", e)
+            return@withContext
+        }
+
+        if (streams.isEmpty()) return@withContext
+
+        // 4. Transform parallel streams into rows of ContentValues
+        val streamSize = streams.first().data.size
+        val effortRows = List(streamSize) { ContentValues() }
+        var haveTime = false
+
+        for (stream in streams) {
+            for (i in 0 until streamSize) {
+                val element = stream.data[i]
+                when (stream.type) {
+                    "latlng" -> {
+                        // latlng is a JsonArray [lat, lng]
+                        val coords = element.jsonArray
+                        effortRows[i].put(SegmentsDatabaseManager.Segments.LATITUDE, coords[0].jsonPrimitive.double)
+                        effortRows[i].put(SegmentsDatabaseManager.Segments.LONGITUDE, coords[1].jsonPrimitive.double)
+                    }
+                    "time" -> {
+                        effortRows[i].put("time", element.jsonPrimitive.int)
+                        haveTime = true
+                    }
+                    "distance" -> effortRows[i].put(SegmentsDatabaseManager.Segments.DISTANCE, element.jsonPrimitive.double)
+                    "altitude" -> effortRows[i].put(SegmentsDatabaseManager.Segments.ALTITUDE, element.jsonPrimitive.double)
+                }
+            }
+        }
+
+        // 5. Delegate database insertion and interpolation to the Manager
+        segmentsDb.insertSegmentStreams(segmentId, effortRows, haveTime)
+    }
 
 
     /***********************************************************************************************

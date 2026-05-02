@@ -19,14 +19,12 @@
 package com.atrainingtracker.trainingtracker.ui.segments.segmentlist
 
 import android.content.Context
-import androidx.activity.result.launch
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.segments.LiveSegment
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -36,12 +34,12 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class SegmentListViewModel(
-    private val repository: SegmentsRepository
+    private val segmentsRepository: SegmentsRepository
 ) : ViewModel() {
 
     // 1. Directly expose the repository's StateFlow
     // We use stateIn to make it lifecycle-aware for Compose
-    val liveSegments: StateFlow<List<LiveSegment>> = repository.liveSegments
+    val liveSegments: StateFlow<List<LiveSegment>> = segmentsRepository.liveSegments
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -60,7 +58,7 @@ class SegmentListViewModel(
             _refreshingSports.update { it + sport } // Add sport to refreshing set
 
             try {
-                // TODO: update Segments
+                segmentsRepository.syncStarredSegments(sport)
             } finally {
                 _refreshingSports.update { it - sport } // Remove sport when done
             }
