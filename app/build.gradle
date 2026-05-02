@@ -153,6 +153,7 @@ dependencies {
     implementation 'androidx.compose.runtime:runtime-livedata:1.10.6'
 
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0'
+    implementation 'androidx.compose.ui:ui-text:1.11.0'
 }
 
 secrets {

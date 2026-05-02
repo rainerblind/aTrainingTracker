@@ -22,6 +22,8 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.DatabaseUtils
 import android.util.Log
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.text.intl.Locale
 import com.atrainingtracker.R
 import com.google.maps.android.PolyUtil
 import com.atrainingtracker.banalservice.BSportType
@@ -130,8 +132,46 @@ data class StravaSegment(
     val state: String? = null,
     val country: String? = null,
     val map: StravaMap? = null,
-    val athlete_segment_stats: AthleteSegmentStats? = null
+    val pr_time: Int? = null
 )
+/**
+ * Extension function to convert a StravaSegment (API Model)
+ * to a SegmentSummary (Internal App Model).
+ */
+private fun StravaSegment.toSummary(): SegmentSummary {
+    // Map Strava's activity_type string to our BSportType enum
+    val sportType = when (this.activity_type) {
+        "Ride" -> BSportType.BIKE
+        "Run" -> BSportType.RUN
+        else -> BSportType.UNKNOWN
+    }
+    val tf = TimeFormatter()
+    val df = DistanceFormatter()
+    val locale = java.util.Locale.getDefault()
+
+    return SegmentSummary(
+        stravaId = this.id,
+        name = this.name,
+        bSportType = sportType,
+        climbCategory = StravaHelper.translateClimbCategory(this.climb_category),
+        prTime_raw = this.pr_time ?: 0,
+        prTime = if (this.pr_time != null) tf.format(this.pr_time) else "",
+        city = this.city ?: "",
+        distance = df.format_with_units(this.distance),
+        distance_raw = this.distance,
+        averageGrade = String.format(locale, "Ø %.1f%%", this.average_grade),
+        maxGrade = String.format(locale, "%.1f%% Max", this.maximum_grade),
+        elevationGain = if (this.total_elevation_gain != null) {
+            String.format(locale, "%d m", this.total_elevation_gain)
+        }
+        else {
+            String.format(locale, "%d m", Math.round(this.elevation_high - this.elevation_low))
+        },
+        elevationMin = String.format(locale, "%d m", Math.round(this.elevation_low)),
+        elevationMax = String.format(locale, "%d m", Math.round(this.elevation_high))
+    )
+}
+
 
 @Serializable
 data class StravaMap(
@@ -506,6 +546,9 @@ class SegmentsRepository private constructor(context: Context) {
         // oldIds.forEach { deleteSegment(it) } // uncomment to delete all segments
 
         val newIds = mutableSetOf<Long>()
+        // Create a local copy of the current list to modify
+        val currentLiveSegments = _liveSegments.value.toMutableList()
+
         var page = 1
         var hasMore = true
 
@@ -528,12 +571,28 @@ class SegmentsRepository private constructor(context: Context) {
                 if (!oldIds.contains(segment.id)) {
                     // add summary and stream
                     addOrUpdateSegment(segment)
-                    fetchAndInsertStream(segment.id)
+                    val path = fetchAndInsertStream(segment.id) ?: emptyList()
+
+                    // 2. Add to the local list immediately
+                    val newLiveSegment = calculateInitialLiveSegmentState(segment.toSummary(), path)
+                    if (newLiveSegment != null) {
+                        currentLiveSegments.add(newLiveSegment)
+                    }
                 }
                 else {
                     // only update (PB might have changed)
                     addOrUpdateSegment(segment)
+                    val index = currentLiveSegments.indexOfFirst { it.summary.stravaId == segment.id }
+                    if (index != -1) {
+                        val existing = currentLiveSegments[index]
+                        currentLiveSegments[index] = existing.copy(
+                            summary = segment.toSummary() // Update PB, name, etc but keep path/state
+                        )
+                    }
                 }
+
+                // Emit progress after every segment if you want the list to grow live
+                _liveSegments.value = currentLiveSegments.toList()
             }
             page++
             hasMore = segments.size >= 30 // Strava default page size
@@ -541,7 +600,12 @@ class SegmentsRepository private constructor(context: Context) {
 
         // 4. Cleanup: Remove segments no longer starred on Strava
         val toDelete = oldIds - newIds
-        toDelete.forEach { deleteSegment(it) }
+        if (toDelete.isNotEmpty()) {
+            toDelete.forEach { deleteSegment(it) }
+            currentLiveSegments.removeAll { toDelete.contains(it.summary.stravaId) }
+            _liveSegments.value = currentLiveSegments.toList()
+        }
+
     }
 
     private suspend fun fetchStarredSegmentsFromStrava(page: Int): String = withContext(Dispatchers.IO) {
@@ -584,10 +648,10 @@ class SegmentsRepository private constructor(context: Context) {
         segmentsDb.deleteSegment(segmentId)
     }
 
-    private suspend fun fetchAndInsertStream(segmentId: Long) = withContext(Dispatchers.IO) {
+    private suspend fun fetchAndInsertStream(segmentId: Long): List<PathPoint>? = withContext(Dispatchers.IO) {
 
         // 2. Fetch from Strava
-        val accessToken = StravaHelper.getRefreshedAccessToken() ?: return@withContext
+        val accessToken = StravaHelper.getRefreshedAccessToken() ?: return@withContext null
         val url = "https://www.strava.com/api/v3/segments/$segmentId/streams/latlng,distance,altitude,time"
 
         val client = OkHttpClient()
@@ -601,21 +665,22 @@ class SegmentsRepository private constructor(context: Context) {
         } catch (e: Exception) {
             Log.e(TAG, "Error fetching streams for $segmentId", e)
             null
-        } ?: return@withContext
+        } ?: return@withContext null
 
         // 3. Decode JSON into our List<StravaStream>
         val streams = try {
             json.decodeFromString<List<StravaStream>>(responseBody)
         } catch (e: Exception) {
             Log.e(TAG, "Error decoding stream JSON", e)
-            return@withContext
+            return@withContext null
         }
 
-        if (streams.isEmpty()) return@withContext
+        if (streams.isEmpty()) return@withContext emptyList()
 
         // 4. Transform parallel streams into rows of ContentValues
         val streamSize = streams.first().data.size
         val effortRows = List(streamSize) { ContentValues() }
+        val pathPoints = mutableListOf<PathPoint>()
         var haveTime = false
 
         for (stream in streams) {
@@ -637,9 +702,18 @@ class SegmentsRepository private constructor(context: Context) {
                 }
             }
         }
+        effortRows.forEach { row ->
+            pathPoints.add(PathPoint(
+                latLng = LatLng(row.getAsDouble(SegmentsDatabaseManager.Segments.LATITUDE), row.getAsDouble(SegmentsDatabaseManager.Segments.LONGITUDE)),
+                distance = row.getAsDouble(SegmentsDatabaseManager.Segments.DISTANCE) ?: 0.0,
+                altitude = row.getAsDouble(SegmentsDatabaseManager.Segments.ALTITUDE) ?: 0.0
+            ))
+        }
 
         // 5. Delegate database insertion and interpolation to the Manager
         segmentsDb.insertSegmentStreams(segmentId, effortRows, haveTime)
+
+        return@withContext pathPoints
     }
 
 

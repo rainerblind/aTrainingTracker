@@ -243,7 +243,7 @@ public class SegmentsDatabaseManager {
                             segmentId,
                             name,
                             sportType,
-                            climbCategory > 0 ? StravaHelper.translateClimbCategory(climbCategory) : "",
+                            StravaHelper.translateClimbCategory(climbCategory),
                             prTimeSeconds,
                             prTimeSeconds > 0 ? tf.format(prTimeSeconds) : "",
                             (city != null && !city.isEmpty()) ? city : "",
@@ -286,6 +286,7 @@ public class SegmentsDatabaseManager {
         cv.put(Segments.CITY, segment.getCity());
         cv.put(Segments.STATE, segment.getState());
         cv.put(Segments.COUNTRY, segment.getCountry());
+        cv.put(Segments.PR_TIME, segment.getPr_time());
 
         // Extract the polyline from the nested Map object
         if (segment.getMap() != null) {
@@ -302,10 +303,6 @@ public class SegmentsDatabaseManager {
             cv.put(Segments.END_LONGITUDE, segment.getEnd_latlng().get(1));
         }
 
-        // Handle PR stats if available
-        if (segment.getAthlete_segment_stats() != null && segment.getAthlete_segment_stats().getPr_elapsed_time() != null) {
-            cv.put(Segments.PR_TIME, segment.getAthlete_segment_stats().getPr_elapsed_time());
-        }
 
         // Insert or Replace logic
         db.beginTransaction();
