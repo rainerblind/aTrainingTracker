@@ -122,7 +122,7 @@ data class StravaSegment(
     val maximum_grade: Double,
     val elevation_high: Double,
     val elevation_low: Double,
-    val total_elevation_gain: Double,
+    val total_elevation_gain: Double? = null,
     val start_latlng: List<Double>,
     val end_latlng: List<Double>,
     val climb_category: Int,
