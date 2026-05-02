@@ -41,6 +41,7 @@ import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquip
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaOAuthCallbackActivity;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaSegmentsHelper;
+import com.atrainingtracker.trainingtracker.segments.SegmentsRepository;
 
 /**
  * Created by rainer on 01.02.16.
@@ -59,6 +60,7 @@ public class StravaUploadFragment extends androidx.preference.PreferenceFragment
         REQUESTING,
         GOT
     }
+
     @Nullable
     private RequestTokenState requestTokenState = null;
 
@@ -150,9 +152,9 @@ public class StravaUploadFragment extends androidx.preference.PreferenceFragment
             new StravaEquipmentSynchronizeThread(getActivity()).start();
 
             // update Segments
-            StravaSegmentsHelper stravaSegmentsHelper = new StravaSegmentsHelper(getContext());
-            stravaSegmentsHelper.getStarredStravaSegments(SportTypeDatabaseManager.getSportTypeId(BSportType.BIKE));
-            stravaSegmentsHelper.getStarredStravaSegments(SportTypeDatabaseManager.getSportTypeId(BSportType.RUN));
+            SegmentsRepository repository = SegmentsRepository.Companion.getInstance(getContext());
+            repository.syncSegmentsAsync(BSportType.BIKE);
+            repository.syncSegmentsAsync(BSportType.RUN);
         }
     }
 }

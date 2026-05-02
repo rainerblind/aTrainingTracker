@@ -40,6 +40,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
@@ -149,6 +151,7 @@ private fun StravaSegment.toSummary(): SegmentSummary {
     val tf = TimeFormatter()
     val df = DistanceFormatter()
     val locale = java.util.Locale.getDefault()
+    val elevationGain = this.total_elevation_gain ?: (this.elevation_high - this.elevation_low)
 
     return SegmentSummary(
         stravaId = this.id,
@@ -162,12 +165,7 @@ private fun StravaSegment.toSummary(): SegmentSummary {
         distance_raw = this.distance,
         averageGrade = String.format(locale, "Ø %.1f%%", this.average_grade),
         maxGrade = String.format(locale, "%.1f%% Max", this.maximum_grade),
-        elevationGain = if (this.total_elevation_gain != null) {
-            String.format(locale, "%d m", this.total_elevation_gain)
-        }
-        else {
-            String.format(locale, "%d m", Math.round(this.elevation_high - this.elevation_low))
-        },
+        elevationGain = String.format(locale, "%d m", Math.round(elevationGain)),
         elevationMin = String.format(locale, "%d m", Math.round(this.elevation_low)),
         elevationMax = String.format(locale, "%d m", Math.round(this.elevation_high)),
         map_polyline = this.map?.polyline ?: ""
@@ -525,7 +523,29 @@ class SegmentsRepository private constructor(context: Context) {
     /***********************************************************************************************
      * Get segments from Strava
      **********************************************************************************************/
+    // Set containing the sport types currently being refreshed
+    private val _refreshingSports = MutableStateFlow<Set<BSportType>>(emptySet())
+    val refreshingSports: StateFlow<Set<BSportType>> = _refreshingSports.asStateFlow()
+
+
+
+    /**
+     * Java-friendly method to trigger a sync without dealing with Coroutines in Java code.
+     */
+    fun syncSegmentsAsync(bSportType: BSportType) {
+        // Use GlobalScope or pass a scope in. For a one-time sync after login,
+        // a background scope is appropriate.
+        CoroutineScope(Dispatchers.IO).launch {
+            // try {
+                syncStarredSegments(bSportType)
+            //} catch (e: Exception) {
+            //    Log.e("SegmentsRepository", "Async sync failed", e)
+            //}
+        }
+    }
+
     suspend fun syncStarredSegments(bSportType: BSportType) = withContext(Dispatchers.IO) {
+        _refreshingSports.update { it + bSportType } // Add sport to refreshing set
 
         // sport to ignore:  For Run we ignore Ride and for Run we ignore Bike.  For Unknown we should not ignore.
         val ignoreSport = when (bSportType) {
@@ -603,11 +623,14 @@ class SegmentsRepository private constructor(context: Context) {
 
         // 4. Cleanup: Remove segments no longer starred on Strava
         val toDelete = oldIds - newIds
+        // val toDelete = oldIds + newIds // uncomment to delete all segments (ONLY FOR TESTING!)
         if (toDelete.isNotEmpty()) {
             toDelete.forEach { deleteSegment(it) }
             currentLiveSegments.removeAll { toDelete.contains(it.summary.stravaId) }
             _liveSegments.value = currentLiveSegments.toList()
         }
+
+        _refreshingSports.update { it - bSportType } // Remove sport when done
     }
 
     private suspend fun fetchStarredSegmentsFromStrava(page: Int): String = withContext(Dispatchers.IO) {

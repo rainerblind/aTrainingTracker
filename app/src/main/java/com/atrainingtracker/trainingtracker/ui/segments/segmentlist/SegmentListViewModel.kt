@@ -46,22 +46,11 @@ class SegmentListViewModel(
             initialValue = emptyList()
         )
 
-    // Set containing the sport types currently being refreshed
-    private val _refreshingSports = MutableStateFlow<Set<BSportType>>(emptySet())
-    val refreshingSports: StateFlow<Set<BSportType>> = _refreshingSports.asStateFlow()
-
-    // Helper function for the UI to check state
-    fun isRefreshing(sport: BSportType): Boolean = _refreshingSports.value.contains(sport)
+    val refreshingSports: StateFlow<Set<BSportType>> = segmentsRepository.refreshingSports
 
     fun onRefresh(sport: BSportType) {
         viewModelScope.launch {
-            _refreshingSports.update { it + sport } // Add sport to refreshing set
-
-            try {
-                segmentsRepository.syncStarredSegments(sport)
-            } finally {
-                _refreshingSports.update { it - sport } // Remove sport when done
-            }
+            segmentsRepository.syncStarredSegments(sport)
         }
     }
 
