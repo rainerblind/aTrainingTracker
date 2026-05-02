@@ -498,7 +498,12 @@ class SegmentsRepository private constructor(context: Context) {
         }
 
         // Store existing IDs to find what to delete later
-        val oldIds = liveSegments.value.map { it.summary.stravaId }.toSet()
+        val oldIds = if (bSportType == BSportType.UNKNOWN) {
+            liveSegments.value.map { it.summary.stravaId }.toSet() }
+        else {
+            liveSegments.value.filter { it.summary.bSportType == bSportType }.map { it.summary.stravaId }.toSet()
+        }
+        // oldIds.forEach { deleteSegment(it) } // uncomment to delete all segments
 
         val newIds = mutableSetOf<Long>()
         var page = 1
