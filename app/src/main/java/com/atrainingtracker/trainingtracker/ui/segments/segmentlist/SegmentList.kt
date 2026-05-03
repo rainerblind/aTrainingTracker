@@ -80,7 +80,7 @@ fun SegmentList(
             contentPadding = PaddingValues(
                 // Calculation: The initial header height (px) + the current offset (px)
                 // convert the final result to Dp.
-                top = with(density) { (headerHeightPx + appBarOffsetPx).toDp() },
+                top = with(density) { (headerHeightPx + appBarOffsetPx).toDp() + 16.dp },
                 bottom = bottomPadding + 16.dp,
                 start = 4.dp,
                 end = 4.dp
