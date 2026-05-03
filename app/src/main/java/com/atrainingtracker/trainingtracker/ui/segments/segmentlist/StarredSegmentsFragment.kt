@@ -26,6 +26,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -58,6 +59,7 @@ class StarredSegmentsFragment : Fragment() {
                     )
 
                     val segments by viewModel.liveSegments.collectAsStateWithLifecycle()
+                    val sortOrder by viewModel.sortOrder.collectAsState()
                     val refreshingSports by viewModel.refreshingSports.collectAsStateWithLifecycle()
 
                     val pagerState = rememberPagerState(pageCount = { 2 })
@@ -79,7 +81,9 @@ class StarredSegmentsFragment : Fragment() {
                             onRefresh = { sport -> viewModel.onRefresh(sport) },
                             onSegmentClick = { id ->
                                 selectedSegmentId = id
-                            }
+                            },
+                            sortOrder = sortOrder,
+                            onSortOrderChange = { viewModel.setSortOrder(it) }
                         )
                     } else {
                         // SHOW DETAIL

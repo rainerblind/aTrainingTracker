@@ -19,32 +19,97 @@
 package com.atrainingtracker.trainingtracker.ui.segments.segmentlist
 
 import android.content.Context
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.segments.LiveSegment
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
+import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.text.lowercase
+
+enum class SegmentSortOrder(@StringRes val labelResId: Int) {
+    DISTANCE_TO_USER(R.string.sort_closest),
+    CLIMB_CATEGORY(R.string.sort_climb_category),
+    TOTAL_ELEVATION_GAIN(R.string.sort_elevation_gain),
+    SEGMENT_DISTANCE(R.string.sort_segment_length),
+    NAME(R.string.sort_name)
+}
 
 class SegmentListViewModel(
-    private val segmentsRepository: SegmentsRepository
+    private val segmentsRepository: SegmentsRepository,
+    private val banalServiceRepository: BANALServiceRepository
 ) : ViewModel() {
 
-    // 1. Directly expose the repository's StateFlow
-    // We use stateIn to make it lifecycle-aware for Compose
-    val liveSegments: StateFlow<List<LiveSegment>> = segmentsRepository.liveSegments
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
+    private val _sortOrder = MutableStateFlow(SegmentSortOrder.DISTANCE_TO_USER)
+    val sortOrder = _sortOrder.asStateFlow()
+
+    // Reactive sorted list
+    val liveSegments: StateFlow<List<LiveSegment>> = combine(
+        segmentsRepository.liveSegments,
+        _sortOrder,
+        banalServiceRepository.currentLocation // Directly observing the BANALService source
+    ) { segments, order, location ->
+        when (order) {
+            SegmentSortOrder.NAME ->
+                segments.sortedBy { it.summary.name.lowercase() }
+
+            SegmentSortOrder.CLIMB_CATEGORY ->
+                segments.sortedWith(
+                    compareByDescending<LiveSegment> { it.summary.climbCategory_raw }
+                        .thenByDescending { it.summary.elevationGain_raw }
+                        .thenBy { it.summary.name.lowercase() }
+                )
+
+            SegmentSortOrder.TOTAL_ELEVATION_GAIN ->
+                segments.sortedWith(
+                    compareByDescending<LiveSegment> { it.summary.elevationGain_raw }
+                        .thenBy { it.summary.name.lowercase() }
+                )
+
+            SegmentSortOrder.SEGMENT_DISTANCE ->
+                segments.sortedWith(
+                    compareByDescending<LiveSegment> { it.summary.distance_raw }
+                        .thenBy { it.summary.name.lowercase() }
+                )
+
+            SegmentSortOrder.DISTANCE_TO_USER -> {
+                if (location == null) {
+                    segments.sortedBy { it.summary.name.lowercase() }
+                } else {
+                    segments.sortedBy { segment ->
+                        calculateDistance(
+                            location.latitude, location.longitude,
+                            segment.path[0].latLng.latitude, segment.path[0].latLng.longitude
+                        )
+                    }
+                }
+            }
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
+    fun setSortOrder(order: SegmentSortOrder) {
+        _sortOrder.value = order
+    }
+
+    private fun calculateDistance(uLat: Double, uLon: Double, sLat: Double, sLon: Double): Float {
+        val results = FloatArray(1)
+        android.location.Location.distanceBetween(uLat, uLon, sLat, sLon, results)
+        return results[0]
+    }
 
     val refreshingSports: StateFlow<Set<BSportType>> = segmentsRepository.refreshingSports
 
@@ -55,11 +120,14 @@ class SegmentListViewModel(
     }
 
     class SegmentListViewModelFactory(context: Context) : ViewModelProvider.Factory {
-        private val repository = SegmentsRepository.getInstance(context)
+
+        private val segmentsRepository = SegmentsRepository.getInstance(context)
+        private val banalServiceRepository = BANALServiceRepository.getInstance(context)
+
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(SegmentListViewModel::class.java)) {
                 @Suppress("UNCHECKED_CAST")
-                return SegmentListViewModel(repository) as T
+                return SegmentListViewModel(segmentsRepository, banalServiceRepository) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }

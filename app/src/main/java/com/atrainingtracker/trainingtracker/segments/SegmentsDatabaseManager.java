@@ -170,6 +170,7 @@ public class SegmentsDatabaseManager {
             double distance = cursor.getDouble(cursor.getColumnIndexOrThrow(Segments.DISTANCE));
             double avgGrade = cursor.getDouble(cursor.getColumnIndexOrThrow(Segments.AVERAGE_GRADE));
             double maxGrade = cursor.getDouble(cursor.getColumnIndexOrThrow(Segments.MAXIMUM_GRADE));
+            double elevationGain = cursor.getDouble(cursor.getColumnIndexOrThrow(Segments.TOTAL_ELEVATION_GAIN));
             double elevLow = cursor.getDouble(cursor.getColumnIndexOrThrow(Segments.ELEVATION_LOW));
             double elevHigh = cursor.getDouble(cursor.getColumnIndexOrThrow(Segments.ELEVATION_HIGH));
             int prTimeSeconds = cursor.getInt(cursor.getColumnIndexOrThrow(Segments.PR_TIME));
@@ -186,6 +187,7 @@ public class SegmentsDatabaseManager {
                     segmentId,
                     name,
                     sportType,
+                    climbCategory,
                     climbCategory > 0 ? StravaHelper.translateClimbCategory(climbCategory) : "",
                     prTimeSeconds,
                     prTimeSeconds > 0 ? tf.format(prTimeSeconds) : "",
@@ -194,7 +196,8 @@ public class SegmentsDatabaseManager {
                     distance,
                     String.format(Locale.getDefault(), "Ø %.1f%%", avgGrade),
                     String.format(Locale.getDefault(), "%.1f%% Max", maxGrade),
-                    String.format(Locale.getDefault(), "%d m", Math.round(elevHigh - elevLow)),
+                    elevationGain,
+                    String.format(Locale.getDefault(), "%d m", Math.round(elevationGain)),
                     String.format(Locale.getDefault(), "%d m", Math.round(elevLow)),
                     String.format(Locale.getDefault(), "%d m", Math.round(elevHigh)),
                     polyline
@@ -219,6 +222,7 @@ public class SegmentsDatabaseManager {
         int dist_index = cursor.getColumnIndexOrThrow(Segments.DISTANCE);
         int avg_grade_index = cursor.getColumnIndexOrThrow(Segments.AVERAGE_GRADE);
         int max_grade_index = cursor.getColumnIndexOrThrow(Segments.MAXIMUM_GRADE);
+        int elev_gain_index = cursor.getColumnIndexOrThrow(Segments.TOTAL_ELEVATION_GAIN);
         int elev_low_index = cursor.getColumnIndexOrThrow(Segments.ELEVATION_LOW);
         int elev_high_index = cursor.getColumnIndexOrThrow(Segments.ELEVATION_HIGH);
         int pr_time_index = cursor.getColumnIndexOrThrow(Segments.PR_TIME);
@@ -235,6 +239,7 @@ public class SegmentsDatabaseManager {
             double distance = cursor.getDouble(dist_index);
             double avgGrade = cursor.getDouble(avg_grade_index);
             double maxGrade = cursor.getDouble(max_grade_index);
+            double elevation_gain = cursor.getDouble(elev_gain_index);
             double elevLow = cursor.getDouble(elev_low_index);
             double elevHigh = cursor.getDouble(elev_high_index);
             int prTimeSeconds = cursor.getInt(pr_time_index);
@@ -251,6 +256,7 @@ public class SegmentsDatabaseManager {
                             segmentId,
                             name,
                             sportType,
+                            climbCategory,
                             StravaHelper.translateClimbCategory(climbCategory),
                             prTimeSeconds,
                             prTimeSeconds > 0 ? tf.format(prTimeSeconds) : "",
@@ -259,7 +265,8 @@ public class SegmentsDatabaseManager {
                             distance,
                             String.format(Locale.getDefault(), "Ø %.1f%%", avgGrade),
                             String.format(Locale.getDefault(), "%.1f%% Max", maxGrade),
-                            String.format(Locale.getDefault(), "%d m", Math.round(elevHigh - elevLow)),
+                            elevation_gain,
+                            String.format(Locale.getDefault(), "%d m", Math.round(elevation_gain)),
                             String.format(Locale.getDefault(), "%d m", Math.round(elevLow)),
                             String.format(Locale.getDefault(), "%d m", Math.round(elevHigh)),
                             polyline
