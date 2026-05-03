@@ -284,6 +284,7 @@ fun PreviewSegmentSummaryFull() {
                 stravaId = 12345L,
                 name = "Alpe d'Huez Climb",
                 bSportType = BSportType.BIKE,
+                climbCategory_raw = 5,
                 climbCategory = "HC",
                 prTime_raw = 45 * 60 + 20,
                 prTime = "45:20",
@@ -292,9 +293,11 @@ fun PreviewSegmentSummaryFull() {
                 distance_raw = 13800.0,
                 averageGrade = "Ø 8.1%",
                 maxGrade = "12.0% Max",
+                elevationGain_raw = 1073.0,
                 elevationGain = "1073 m",
                 elevationMin = "720 m",
-                elevationMax = "1793 m"
+                elevationMax = "1793 m",
+                map_polyline = ""
             )
         )
     }
@@ -309,6 +312,7 @@ fun PreviewSegmentSummaryFullCompact() {
                 stravaId = 12345L,
                 name = "Alpe d'Huez Climb",
                 bSportType = BSportType.BIKE,
+                climbCategory_raw = 5,
                 climbCategory = "HC",
                 prTime_raw = 45 * 60 + 20,
                 prTime = "45:20",
@@ -317,9 +321,11 @@ fun PreviewSegmentSummaryFullCompact() {
                 distance_raw = 13800.0,
                 averageGrade = "Ø 8.1%",
                 maxGrade = "12.0% Max",
+                elevationGain_raw = 1073.1,
                 elevationGain = "1073 m",
                 elevationMin = "720 m",
-                elevationMax = "1793 m"
+                elevationMax = "1793 m",
+                map_polyline = ""
             ),
             compact = true
         )
@@ -335,6 +341,7 @@ fun PreviewSegmentSummaryMinimal() {
                 stravaId = 67890L,
                 name = "Short Flat Sprint",
                 bSportType = BSportType.BIKE,
+                climbCategory_raw = 0,
                 climbCategory = "", // Empty category
                 prTime_raw = -1,
                 prTime = "",   // Empty/Placeholder PR
@@ -343,9 +350,11 @@ fun PreviewSegmentSummaryMinimal() {
                 distance_raw = 1200.0,
                 averageGrade = "Ø 0.5%",
                 maxGrade = "1.2% Max",
+                elevationGain_raw = 5.2,
                 elevationGain = "5 m",
                 elevationMin = "34 m",
-                elevationMax = "39 m"
+                elevationMax = "39 m",
+                map_polyline = ""
             )
         )
     }
@@ -360,6 +369,7 @@ fun PreviewSegmentSummaryLiveApproaching() {
                 stravaId = 12345L,
                 name = "Alpe d'Huez Climb",
                 bSportType = BSportType.BIKE,
+                climbCategory_raw = 5,
                 climbCategory = "HC",
                 prTime_raw = 2720,
                 prTime = "45:20",
@@ -368,9 +378,11 @@ fun PreviewSegmentSummaryLiveApproaching() {
                 distance_raw = 13800.0,
                 averageGrade = "Ø 8.1%",
                 maxGrade = "12.0% Max",
+                elevationGain_raw = 1073.1,
                 elevationGain = "1073 m",
                 elevationMin = "720 m",
-                elevationMax = "1793 m"
+                elevationMax = "1793 m",
+                map_polyline = ""
             ),
             liveSegmentData = LiveSegmentData(
                 segmentStatus = LiveSegmentStatus.APPROACHING,
@@ -393,6 +405,7 @@ fun PreviewSegmentSummaryLiveOnSegment() {
                 stravaId = 12345L,
                 name = "Alpe d'Huez Climb",
                 bSportType = BSportType.BIKE,
+                climbCategory_raw = 5,
                 climbCategory = "HC",
                 prTime_raw = 2720,
                 prTime = "45:20",
@@ -401,9 +414,11 @@ fun PreviewSegmentSummaryLiveOnSegment() {
                 distance_raw = 13800.0,
                 averageGrade = "Ø 8.1%",
                 maxGrade = "12.0% Max",
+                elevationGain_raw = 1073.1,
                 elevationGain = "1073 m",
                 elevationMin = "720 m",
-                elevationMax = "1793 m"
+                elevationMax = "1793 m",
+                map_polyline = ""
             ),
             liveSegmentData = LiveSegmentData(
                 segmentStatus = LiveSegmentStatus.ON_SEGMENT,
@@ -426,6 +441,7 @@ fun PreviewSegmentSummaryLive() {
                 stravaId = 12345L,
                 name = "Alpe d'Huez Climb",
                 bSportType = BSportType.BIKE,
+                climbCategory_raw = 5,
                 climbCategory = "HC",
                 prTime_raw = 2720,
                 prTime = "45:20",
@@ -434,9 +450,11 @@ fun PreviewSegmentSummaryLive() {
                 distance_raw = 13800.0,
                 averageGrade = "Ø 8.1%",
                 maxGrade = "12.0% Max",
+                elevationGain_raw = 1073.1,
                 elevationGain = "1073 m",
                 elevationMin = "720 m",
-                elevationMax = "1793 m"
+                elevationMax = "1793 m",
+                map_polyline = ""
             ),
             liveSegmentData = LiveSegmentData(
                 segmentStatus = LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH,

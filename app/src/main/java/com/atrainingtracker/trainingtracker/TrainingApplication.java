@@ -50,12 +50,10 @@ import android.widget.Toast;
 import com.atrainingtracker.BuildConfig;
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
-import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.sensor.SensorData;
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
-import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation;
 import com.atrainingtracker.trainingtracker.exporter.FileFormat;
 import com.atrainingtracker.trainingtracker.helpers.CalcExtremaWorker;
@@ -65,9 +63,6 @@ import com.atrainingtracker.trainingtracker.smartwatch.pebble.Watchapp;
 import com.atrainingtracker.trainingtracker.tracker.TrackerService;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapHelper;
-import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
-import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaSegmentsHelper;
-import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager;
 import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents;
 import com.dropbox.core.json.JsonReadException;
 import com.dropbox.core.oauth.DbxCredential;
@@ -784,17 +779,6 @@ public class TrainingApplication extends Application {
         ContextCompat.registerReceiver(this, mTrackingStoppedReceiver, new IntentFilter(TrackerService.TRACKING_FINISHED_INTENT), ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mPauseTrackingReceiver, new IntentFilter(REQUEST_PAUSE_TRACKING), ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mResumeFromPaused, new IntentFilter(REQUEST_RESUME_FROM_PAUSED), ContextCompat.RECEIVER_NOT_EXPORTED);
-
-        // eventually get the starred segments
-        // TODO: do this in the main activity???
-        if (new StravaHelper().getAthleteId(this) != 0 // the athlete is registered to strava
-                && !SegmentsDatabaseManager.doesDatabaseExist(this)) {  // but there is not yet a database for the segments
-            StravaSegmentsHelper stravaSegmentsHelper = new StravaSegmentsHelper(this);
-            stravaSegmentsHelper.getStarredStravaSegments(SportTypeDatabaseManager.getSportTypeId(BSportType.BIKE));
-            stravaSegmentsHelper.getStarredStravaSegments(SportTypeDatabaseManager.getSportTypeId(BSportType.RUN));
-        }
-
-
     }
 
     // helper method to create the Notification Builder

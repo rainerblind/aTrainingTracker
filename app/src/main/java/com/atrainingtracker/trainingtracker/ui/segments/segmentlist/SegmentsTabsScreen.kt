@@ -18,9 +18,12 @@
 
 package com.atrainingtracker.trainingtracker.ui.segments.segmentlist
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -28,15 +31,27 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -59,7 +74,9 @@ fun SegmentsTabsScreen(
     runListState: LazyListState,
     isRefreshing: (BSportType) -> Boolean,
     onRefresh: (BSportType) -> Unit,
-    onSegmentClick: (Long) -> Unit
+    onSegmentClick: (Long) -> Unit,
+    sortOrder: SegmentSortOrder,
+    onSortOrderChange: (SegmentSortOrder) -> Unit
 ) {
     val tabs = listOf(
         Pair(stringResource(R.string.workout_summaries_tab_bike), BSportType.BIKE),
@@ -73,6 +90,16 @@ fun SegmentsTabsScreen(
     val connection = remember(appBarMaxHeightPx) {
         CollapsingAppBarNestedScrollConnection(appBarMaxHeightPx)
     }
+
+    // Reset scroll position to top whenever the sorting order changes
+    LaunchedEffect(sortOrder) {
+        // We use scrollToItem(0) for an immediate jump.
+        // We could also use animateScrollToItem(0) for a smooth slide.
+        bikeListState.scrollToItem(0)
+        runListState.scrollToItem(0)
+    }
+
+    var showSortMenu by remember { mutableStateOf(false) } // Track sort order menu visibility
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Box(Modifier.nestedScroll(connection)) {
@@ -102,18 +129,64 @@ fun SegmentsTabsScreen(
             Surface(
                 modifier = Modifier.offset { IntOffset(0, connection.appBarOffset) },
                 color = MaterialTheme.colorScheme.primaryContainer,
-                tonalElevation = 3.dp
+                // tonalElevation = 3.dp
             ) {
-                Column(modifier = Modifier.statusBarsPadding()) {
-                    Text(
-                        text = stringResource(R.string.segments),
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                    )
+                Column {
+                    Column(modifier = Modifier.statusBarsPadding()) {
+                        // Title Row with Sort Icon
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = stringResource(R.string.segments),
+                                style = MaterialTheme.typography.headlineSmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+
+                            Box {
+                                IconButton(onClick = { showSortMenu = true }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Sort,
+                                        contentDescription = "Sort",
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+
+                                DropdownMenu(
+                                    expanded = showSortMenu,
+                                    onDismissRequest = { showSortMenu = false },
+                                    containerColor = MaterialTheme.colorScheme.surface
+                                ) {
+                                    SegmentSortOrder.entries.forEach { order ->
+                                        DropdownMenuItem(
+                                            text = {
+                                                Text(stringResource(order.labelResId))
+                                            },
+                                            onClick = {
+                                                onSortOrderChange(order)
+                                                showSortMenu = false
+                                            },
+                                            leadingIcon = {
+                                                if (sortOrder == order) {
+                                                    Icon(
+                                                        Icons.Default.Check,
+                                                        contentDescription = null
+                                                    )
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                     PrimaryScrollableTabRow(
                         selectedTabIndex = pagerState.currentPage,
-                        containerColor = MaterialTheme.colorScheme.surface,
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                         divider = {}
                     ) {
                         tabs.forEachIndexed { index, tab ->

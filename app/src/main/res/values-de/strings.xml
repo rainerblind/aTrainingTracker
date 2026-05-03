@@ -982,4 +982,12 @@
     <string name="go_to_store">Zum Play Store</string>
     <string name="Done">Done</string>
 
+    <!-- Segment Sorting -->
+    <string name="sort_closest">Entfernung</string>
+    <string name="sort_climb_category">Bergkategorie</string>
+    <string name="sort_elevation_gain">Höhenmeter</string>
+    <string name="sort_segment_length">Länge</string>
+    <string name="sort_name">Name</string>
+
+
 </resources>

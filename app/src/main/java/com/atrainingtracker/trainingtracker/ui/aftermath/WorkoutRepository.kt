@@ -199,9 +199,9 @@ class WorkoutRepository private constructor(private val application: Application
                 if (latIdx != -1 && lonIdx != -1 && !cursor.isNull(latIdx) && !cursor.isNull(lonIdx)) {
                     points.add(
                         PathPoint(
-                            cursor.getDouble(distIdx).toFloat(),
+                            cursor.getDouble(distIdx),
                             LatLng(cursor.getDouble(latIdx), cursor.getDouble(lonIdx)),
-                            cursor.getDouble(altIdx).toFloat()
+                            cursor.getDouble(altIdx)
                         )
                     )
                 }

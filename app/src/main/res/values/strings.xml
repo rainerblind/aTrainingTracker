@@ -1086,4 +1086,11 @@
     <string name="Done">Done</string>
     <string name="Edit">Edit</string>
 
+    <!-- Segment Sorting -->
+    <string name="sort_closest">Closest</string>
+    <string name="sort_climb_category">Climb Category</string>
+    <string name="sort_elevation_gain">Elevation Gain</string>
+    <string name="sort_segment_length">Segment Length</string>
+    <string name="sort_name">Name</string>
+
 </resources>

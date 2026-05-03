@@ -23,13 +23,17 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
@@ -46,12 +50,28 @@ fun SegmentList(
     appBarOffsetPx: Int,
     headerHeightPx: Float
 ) {
-    // PullToRefreshBox handles the loading spinner and gesture
+    val density = LocalDensity.current
+    val topPadding = with(density) { (headerHeightPx + appBarOffsetPx).toDp() }
+
+    val pullToRefreshState = rememberPullToRefreshState()
+
     PullToRefreshBox(
         isRefreshing = isRefreshing,
-        onRefresh = onRefresh
+        onRefresh = onRefresh,
+        state = pullToRefreshState,
+        modifier = Modifier.fillMaxSize(),
+        indicator = {
+            // We use the Indicator to give a visual feedback while refreshing
+            PullToRefreshDefaults.Indicator(
+                state = pullToRefreshState,
+                isRefreshing = isRefreshing,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    // This padding pushes the spinner down below your header
+                    .padding(top = topPadding + 16.dp)
+            )
+        }
     ) {
-        val density = LocalDensity.current
         val bottomPadding = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
 
         LazyColumn(
@@ -60,7 +80,7 @@ fun SegmentList(
             contentPadding = PaddingValues(
                 // Calculation: The initial header height (px) + the current offset (px)
                 // convert the final result to Dp.
-                top = with(density) { (headerHeightPx + appBarOffsetPx).toDp() },
+                top = with(density) { (headerHeightPx + appBarOffsetPx).toDp() + 16.dp },
                 bottom = bottomPadding + 16.dp,
                 start = 4.dp,
                 end = 4.dp

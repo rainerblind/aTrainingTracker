@@ -58,7 +58,7 @@ fun SegmentItem(
             ) {
                 // 1. Static Segment Map (120dp square)
                 SegmentOnMap(
-                    pathPoints = pathPoints,
+                    polyline = summary.map_polyline,
                     modifier = Modifier.size(120.dp),
                     onMapClick = { onSegmentClick(summary.stravaId) }
                 )
