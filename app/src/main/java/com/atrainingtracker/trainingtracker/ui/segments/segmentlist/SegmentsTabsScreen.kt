@@ -129,7 +129,7 @@ fun SegmentsTabsScreen(
             Surface(
                 modifier = Modifier.offset { IntOffset(0, connection.appBarOffset) },
                 color = MaterialTheme.colorScheme.primaryContainer,
-                tonalElevation = 3.dp
+                // tonalElevation = 3.dp
             ) {
                 Column {
                     Column(modifier = Modifier.statusBarsPadding()) {
@@ -159,8 +159,7 @@ fun SegmentsTabsScreen(
                                 DropdownMenu(
                                     expanded = showSortMenu,
                                     onDismissRequest = { showSortMenu = false },
-                                    containerColor = MaterialTheme.colorScheme.surface,
-                                    tonalElevation = 0.dp
+                                    containerColor = MaterialTheme.colorScheme.surface
                                 ) {
                                     SegmentSortOrder.entries.forEach { order ->
                                         DropdownMenuItem(
@@ -187,7 +186,7 @@ fun SegmentsTabsScreen(
                     }
                     PrimaryScrollableTabRow(
                         selectedTabIndex = pagerState.currentPage,
-                        containerColor = MaterialTheme.colorScheme.surface,
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                         divider = {}
                     ) {
                         tabs.forEachIndexed { index, tab ->
