@@ -296,7 +296,8 @@ fun TrackingTabsScreen(
                 HorizontalPager(
                     state = pagerState,
                     modifier = Modifier
-                        .fillMaxSize(),
+                        .fillMaxSize()
+                        .navigationBarsPadding(), // do not draw under the navigation bar
                     userScrollEnabled = true,
                     beyondViewportPageCount = if (screenMode == ScreenMode.TRACKING) trackingViews.size + 1 else trackingViews.size  // keep them all
                 ) { page ->
@@ -342,7 +343,6 @@ fun TrackingTabsScreen(
                             onResume = { controlViewModel.onResumeTracking() },
                             onStop = { controlViewModel.onStopTracking() },
                             onPairingClicked = { controlViewModel.onPairingClicked(it) },
-                            modifier = Modifier.navigationBarsPadding(), // do not draw under the navigation bar
                         )
                     } else {
                         val viewIndex =
@@ -362,8 +362,6 @@ fun TrackingTabsScreen(
                         }
                     }
                 }
-
-
             }
 
             // --- Conditionally show the Lap Button
