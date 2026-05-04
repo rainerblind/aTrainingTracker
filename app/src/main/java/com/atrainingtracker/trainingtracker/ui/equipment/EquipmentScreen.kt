@@ -41,16 +41,20 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.components.stats.RichStatsSheet
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsSummaryBlock
+import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -80,58 +84,86 @@ fun EquipmentScreen(
     )
     val scope = rememberCoroutineScope()
 
-    Scaffold(
-        topBar = {
-            Column {
-                TopAppBar(
-                    title = {
+    // --- Header Animation Logic (Matches SegmentsTabsScreen) ---
+    val density = LocalDensity.current
+    val appBarMaxHeightPx = with(density) { 125.dp.roundToPx() }
+    val connection = remember(appBarMaxHeightPx) {
+        CollapsingAppBarNestedScrollConnection(appBarMaxHeightPx)
+    }
+
+    Surface(modifier = Modifier.fillMaxSize()) {
+        Box(Modifier.nestedScroll(connection)) {
+
+            // 1. THE CONTENT (Pager)
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize()
+            ) { page ->
+                val currentList = if (page == 0) bikes else shoes
+
+                EquipmentList(
+                    items = currentList,
+                    emptyMessage = if (page == 0) stringResource(R.string.equipment_no_bikes)
+                    else stringResource(R.string.equipment_no_shoes),
+                    onConfigClick = { itemToConfigure = it },
+                    onStatsClick = { item ->
+                        val periods = viewModel.getDetailedStats(item.name, item.id, item.firstUsed)
+                        val allStats = listOf(item.statsData) + periods
+                        statsToShow = Pair(item.name, allStats)
+                    },
+                    onDelete = { itemToDelete = it },
+                    appBarOffsetPx = connection.appBarOffset,
+                    headerHeightPx = appBarMaxHeightPx.toFloat()
+                )
+            }
+
+            // 2. THE COLLAPSING HEADER (Matches Segments Style)
+            Surface(
+                modifier = Modifier.offset { IntOffset(0, connection.appBarOffset) },
+                color = MaterialTheme.colorScheme.primaryContainer,
+            ) {
+                Column(modifier = Modifier.statusBarsPadding()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
                         Text(
                             text = stringResource(R.string.equipment_management_title_full),
-                            style = MaterialTheme.typography.titleLarge
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        titleContentColor = MaterialTheme.colorScheme.onSurface
-                    )
-                )
-                PrimaryTabRow(selectedTabIndex = pagerState.currentPage) {
-                    tabs.forEachIndexed { index, title ->
-                        Tab(
-                            selected = pagerState.currentPage == index,
-                            onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
-                            text = { Text(title) }
-                        )
+                    }
+
+                    PrimaryScrollableTabRow(
+                        selectedTabIndex = pagerState.currentPage,
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                        divider = {}
+                    ) {
+                        tabs.forEachIndexed { index, title ->
+                            Tab(
+                                selected = pagerState.currentPage == index,
+                                onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
+                                text = { Text(title) }
+                            )
+                        }
                     }
                 }
             }
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = { isAddingNew = true }) {
+
+            // 3. THE FLOATING ACTION BUTTON
+            // Since we aren't using Scaffold, we align it manually to the bottom-right
+            FloatingActionButton(
+                onClick = { isAddingNew = true },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp)
+                    .navigationBarsPadding() // Ensure it stays above nav bar
+            ) {
                 Icon(Icons.Default.Add, contentDescription = stringResource(R.string.text_new))
             }
-        }
-    ) { padding ->
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.padding(padding)
-        ) { page ->
-            val currentList = if (page == 0) bikes else shoes
-            EquipmentList(
-                items = currentList,
-                emptyMessage = if (page == 0) stringResource(R.string.equipment_no_bikes) else stringResource(R.string.equipment_no_shoes),
-                // Forward the clicks to set our local state
-                onConfigClick = { itemToConfigure = it },
-                onStatsClick = { item ->
-                    // 1. Fetch detailed periods from ViewModel
-                    val periods = viewModel.getDetailedStats(item.name, item.id, item.firstUsed)
-                    // 2. Combine with the "Total" stats already in the item
-                    val allStats = listOf(item.statsData) + periods
-                    // 3. Show the sheet
-                    statsToShow = Pair(item.name, allStats)
-                },
-                onDelete = { itemToDelete = it }
-            )
         }
     }
 
@@ -242,17 +274,33 @@ fun EquipmentList(
     emptyMessage: String,
     onConfigClick: (EquipmentItem) -> Unit,
     onStatsClick: (EquipmentItem) -> Unit,
-    onDelete: (EquipmentItem) -> Unit
+    onDelete: (EquipmentItem) -> Unit,
+    appBarOffsetPx: Int,
+    headerHeightPx: Float
 ) {
+    val density = LocalDensity.current
+    val topPadding = with(density) { (headerHeightPx + appBarOffsetPx).toDp() }
+
     if (items.isEmpty()) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .padding(top = topPadding + 16.dp),
+            contentAlignment = Alignment.Center) {
             Text(emptyMessage, style = MaterialTheme.typography.headlineSmall)
         }
     } else {
+        val bottomPadding = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
+
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            contentPadding = PaddingValues(
+                // Calculation: The initial header height (px) + the current offset (px)
+                // convert the final result to Dp.
+                top = with(density) { (headerHeightPx + appBarOffsetPx).toDp() + 16.dp },
+                bottom = bottomPadding + 16.dp,
+                start = 4.dp,
+                end = 4.dp
+            ),            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(items) { item ->
                 EquipmentCard(
