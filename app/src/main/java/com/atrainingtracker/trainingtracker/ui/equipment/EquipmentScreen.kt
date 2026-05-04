@@ -28,6 +28,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
@@ -131,7 +132,7 @@ fun EquipmentScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = stringResource(R.string.equipment_management_title_full),
+                            text = stringResource(R.string.equipment_management_title),
                             style = MaterialTheme.typography.headlineSmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
@@ -303,7 +304,7 @@ fun EquipmentList(
             ),            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(items) { item ->
-                EquipmentCard(
+                EquipmentItem(
                     item = item,
                     onConfigClick = onConfigClick,
                     onStatsClick = onStatsClick,
@@ -316,7 +317,7 @@ fun EquipmentList(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun EquipmentCard(
+fun EquipmentItem(
     item: EquipmentItem,
     onConfigClick: (EquipmentItem) -> Unit,
     onStatsClick: (EquipmentItem) -> Unit,
@@ -337,6 +338,12 @@ fun EquipmentCard(
         ElevatedCard(
             modifier = Modifier
                 .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 4.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.elevatedCardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
+            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
         ) {
             // ZONE 1: CONFIGURATION (Top part)
             Column(modifier = Modifier
@@ -512,7 +519,7 @@ private fun mockStats(
 fun PreviewEquipmentCardLinked() {
     ATrainingTrackerTheme {
         Box(modifier = Modifier.padding(16.dp)) {
-            EquipmentCard(
+            EquipmentItem(
                 item = EquipmentItem(
                     id = 1,
                     name = "Specialized Epic MTB",
@@ -546,7 +553,7 @@ fun PreviewEquipmentCardLinked() {
 fun PreviewEquipmentCardSimple() {
     ATrainingTrackerTheme {
         Box(modifier = Modifier.padding(16.dp)) {
-            EquipmentCard(
+            EquipmentItem(
                 item = EquipmentItem(
                     id = 2,
                     name = "Asics Gel-Nimbus",
@@ -580,7 +587,7 @@ fun PreviewEquipmentCardSimple() {
 fun PreviewEquipmentCardEmpty() {
     ATrainingTrackerTheme {
         Box(modifier = Modifier.padding(16.dp)) {
-            EquipmentCard(
+            EquipmentItem(
                 item = EquipmentItem(
                     id = 3,
                     name = "New Road Bike",
