@@ -388,7 +388,7 @@ fun IntegerInputField(
     var textState by remember(currentValue) { mutableStateOf(currentValue.toString()) }
 
     OutlinedTextField(
-        value = textState,
+        value = if (enabled) {textState} else {"--"},
         onValueChange = { input ->
             if (input.all { it.isDigit() }) {
                 textState = input
