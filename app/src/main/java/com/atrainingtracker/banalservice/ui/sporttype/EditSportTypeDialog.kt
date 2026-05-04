@@ -145,6 +145,8 @@ fun EditSportTypeDialog(
     }
 
     AlertDialog(
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 0.dp,
         onDismissRequest = onDismiss,
         title = {
             Text(if (item.id == -1L) stringResource(R.string.text_new) else stringResource(R.string.edit_sport_type))
@@ -194,6 +196,8 @@ fun EditSportTypeDialog(
                                 .fillMaxWidth()
                         )
                         ExposedDropdownMenu(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            tonalElevation = 0.dp,
                             expanded = expanded,
                             onDismissRequest = { expanded = false }
                         ) {
@@ -363,6 +367,8 @@ fun SportTypeDropdown(
         )
 
         ExposedDropdownMenu(
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp,
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
@@ -412,6 +418,8 @@ fun MultiSelectEquipmentSpinner(
         )
 
         ExposedDropdownMenu(
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp,
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {

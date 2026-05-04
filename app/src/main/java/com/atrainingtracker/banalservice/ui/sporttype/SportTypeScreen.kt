@@ -291,6 +291,8 @@ fun SportTypeScreen(
     // Delete Confirmation Dialog
     itemToDelete?.let { item ->
         AlertDialog(
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp,
             onDismissRequest = { itemToDelete = null },
             title = { Text(stringResource(R.string.delete)) },
             text = { Text(stringResource(R.string.really_delete_format, item.name)) },
