@@ -301,7 +301,8 @@ fun EquipmentList(
                 bottom = bottomPadding + 16.dp,
                 start = 4.dp,
                 end = 4.dp
-            ),            verticalArrangement = Arrangement.spacedBy(12.dp)
+            ),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(items) { item ->
                 EquipmentItem(

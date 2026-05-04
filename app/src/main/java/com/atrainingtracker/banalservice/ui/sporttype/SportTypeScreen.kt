@@ -22,27 +22,19 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
@@ -51,13 +43,11 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SecondaryScrollableTabRow
+import androidx.compose.material3.PrimaryScrollableTabRow
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -67,9 +57,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
@@ -80,6 +73,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.components.stats.RichStatsSheet
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsSummaryBlock
+import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -106,130 +100,165 @@ fun SportTypeScreen(
 
     var statsToShow by remember { mutableStateOf<Pair<String, List<StatsData>>?>(null) }
 
-    Scaffold(
-        topBar = {
-            Column {
-                TopAppBar(
-                    title = {
-                        Text(
-                            text = stringResource(R.string.configure_sport_types),
-                            style = MaterialTheme.typography.titleLarge
-                        )
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        titleContentColor = MaterialTheme.colorScheme.onSurface
-                    )
-                )
+    val density = LocalDensity.current
 
-                SecondaryScrollableTabRow(selectedTabIndex = pagerState.currentPage) {
-                    tabs.forEachIndexed { index, tab ->
-                        Tab(
-                            selected = pagerState.currentPage == index,
-                            onClick = {
-                                coroutineScope.launch { pagerState.animateScrollToPage(index) }
+    val appBarMaxHeightPx = with(density) { 125.dp.roundToPx() }
+    val connection = remember(appBarMaxHeightPx) {
+        CollapsingAppBarNestedScrollConnection(appBarMaxHeightPx)
+    }
+
+    Surface(modifier = Modifier.fillMaxSize()) {
+        Box(Modifier.nestedScroll(connection)) {
+
+            // 1. THE CONTENT (Pager)
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize(),
+            ) { pageIndex ->
+                val targetBSportType = tabs[pageIndex].second
+
+                // Filter the list based on the tab's BSportType
+                val filteredList = if (targetBSportType == null) {
+                    sportTypes
+                } else {
+                    sportTypes.filter { it.bSportType == targetBSportType }
+                }
+
+                val bottomPadding = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
+
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+
+                    contentPadding = PaddingValues(
+                        // Calculation: The initial header height (px) + the current offset (px)
+                        // convert the final result to Dp.
+                        top = with(density) { (appBarMaxHeightPx.toFloat() + connection.appBarOffset).toDp() + 16.dp },
+                        bottom = bottomPadding + 16.dp,
+                        start = 4.dp,
+                        end = 4.dp
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(12.dp) // Matching Equipment spacing
+                ) {
+                    items(filteredList, key = { it.id }) { item ->
+                        SportTypeCard(
+                            item = item,
+                            onConfigClick = { itemToEdit = item },
+                            onStatsClick = { item ->
+                                // 1. Fetch detailed periods from ViewModel
+                                val periods = viewModel.getDetailedStats(item.name, item.id, item.firstUsed)
+                                // 2. Combine with the "Total" stats already in the item
+                                val allStats = listOf(item.statsData) + periods
+                                // 3. Show the sheet
+                                statsToShow = Pair(item.name, allStats)
                             },
-                            text = { Text(text = tab.first) }
+                            onDelete = { itemToDelete = item }
                         )
                     }
                 }
             }
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = {
-                // Get the BSportType associated with the currently visible tab
-                val currentTabType = tabs[pagerState.currentPage].second
 
-                // If on the "All" tab (null), default to BIKE
-                // otherwise use the specific tab's type.
-                val initialBSportType = currentTabType ?: BSportType.BIKE
-
-                // Create blank template for new item
-                itemToEdit = SportTypeItem(
-                    id = -1,
-                    name = "",
-                    bSportType = initialBSportType,
-                    minSpeed = when (initialBSportType) {
-                        BSportType.BIKE -> TrainingApplication.getMaxRunSpeed_mps()
-                        BSportType.RUN -> TrainingApplication.getMaxWalkSpeed_mps()
-                        else -> 0.0
-                    },
-                    maxSpeed = when (initialBSportType) {
-                        BSportType.BIKE -> TrainingApplication.getMaxBikeSpeed_mps()
-                        BSportType.RUN -> TrainingApplication.getMaxRunSpeed_mps()
-                        else -> TrainingApplication.getMaxWalkSpeed_mps()
-                    },
-                    stravaName = when (initialBSportType) {
-                        BSportType.BIKE -> "Ride"
-                        BSportType.RUN -> "Run"
-                        else -> "Workout"
-                    },
-                    tcxName = when (initialBSportType) {
-                        BSportType.BIKE -> "Biking"
-                        BSportType.RUN -> "Running"
-                        else -> "Other"
-                    },
-                    gcName = when (initialBSportType) {
-                        BSportType.BIKE -> "bike"
-                        BSportType.RUN -> "run"
-                        else -> "walk"
-                    },
-                    linkedEquipmentIds = emptyList(),
-                    linkedEquipmentNames = "",
-                    isEditable = true,
-                    firstUsed = null,
-                    lastUsed = null,
-                    statsData = StatsData(
-                        primaryTitle = "",
-                        secondaryTitle = "",
-                        totalWorkouts = 0,
-                        totalDistanceWithUnits = "0",
-                        timeWithUnits = "0",
-                        totalAscentWithUnits = "0"
-                    )
-                )
-            }) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.text_new))
-            }
-        }
-    ) { padding ->
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize(),
-            verticalAlignment = Alignment.Top
-        ) { pageIndex ->
-            val targetBSportType = tabs[pageIndex].second
-
-            // Filter the list based on the tab's BSportType
-            val filteredList = if (targetBSportType == null) {
-                sportTypes
-            } else {
-                sportTypes.filter { it.bSportType == targetBSportType }
-            }
-
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp) // Matching Equipment spacing
+            // 2. THE COLLAPSING HEADER (Matches Segments Style)
+            Surface(
+                modifier = Modifier.offset { IntOffset(0, connection.appBarOffset) },
+                color = MaterialTheme.colorScheme.primaryContainer,
             ) {
-                items(filteredList, key = { it.id }) { item ->
-                    SportTypeCard(
-                        item = item,
-                        onConfigClick = { itemToEdit = item },
-                        onStatsClick = { item ->
-                            // 1. Fetch detailed periods from ViewModel
-                            val periods = viewModel.getDetailedStats(item.name, item.id, item.firstUsed)
-                            // 2. Combine with the "Total" stats already in the item
-                            val allStats = listOf(item.statsData) + periods
-                            // 3. Show the sheet
-                            statsToShow = Pair(item.name, allStats)
-                        },
-                        onDelete = { itemToDelete = item }
-                    )
+                Column(modifier = Modifier.statusBarsPadding()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = stringResource(R.string.sport_types),
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+
+                    PrimaryScrollableTabRow(
+                        selectedTabIndex = pagerState.currentPage,
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                        divider = {}
+                    ) {
+                        tabs.forEachIndexed { index, tab ->
+                            Tab(
+                                selected = pagerState.currentPage == index,
+                                onClick = {
+                                    coroutineScope.launch { pagerState.animateScrollToPage(index) }
+                                },
+                                text = { Text(text = tab.first) }
+                            )
+                        }
+                    }
                 }
             }
+
+            FloatingActionButton(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp)
+                    .navigationBarsPadding(),
+
+                onClick = {
+                    // Get the BSportType associated with the currently visible tab
+                    val currentTabType = tabs[pagerState.currentPage].second
+
+                    // If on the "All" tab (null), default to BIKE
+                    // otherwise use the specific tab's type.
+                    val initialBSportType = currentTabType ?: BSportType.BIKE
+
+                    // Create blank template for new item
+                    itemToEdit = SportTypeItem(
+                        id = -1,
+                        name = "",
+                        bSportType = initialBSportType,
+                        minSpeed = when (initialBSportType) {
+                            BSportType.BIKE -> TrainingApplication.getMaxRunSpeed_mps()
+                            BSportType.RUN -> TrainingApplication.getMaxWalkSpeed_mps()
+                            else -> 0.0
+                        },
+                        maxSpeed = when (initialBSportType) {
+                            BSportType.BIKE -> TrainingApplication.getMaxBikeSpeed_mps()
+                            BSportType.RUN -> TrainingApplication.getMaxRunSpeed_mps()
+                            else -> TrainingApplication.getMaxWalkSpeed_mps()
+                        },
+                        stravaName = when (initialBSportType) {
+                            BSportType.BIKE -> "Ride"
+                            BSportType.RUN -> "Run"
+                            else -> "Workout"
+                        },
+                        tcxName = when (initialBSportType) {
+                            BSportType.BIKE -> "Biking"
+                            BSportType.RUN -> "Running"
+                            else -> "Other"
+                        },
+                        gcName = when (initialBSportType) {
+                            BSportType.BIKE -> "bike"
+                            BSportType.RUN -> "run"
+                            else -> "walk"
+                        },
+                        linkedEquipmentIds = emptyList(),
+                        linkedEquipmentNames = "",
+                        isEditable = true,
+                        firstUsed = null,
+                        lastUsed = null,
+                        statsData = StatsData(
+                            primaryTitle = "",
+                            secondaryTitle = "",
+                            totalWorkouts = 0,
+                            totalDistanceWithUnits = "0",
+                            timeWithUnits = "0",
+                            totalAscentWithUnits = "0"
+                        )
+                    )
+                }
+            ) {
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.text_new))
+            }
+
+
         }
     }
 
@@ -262,6 +291,8 @@ fun SportTypeScreen(
     // Delete Confirmation Dialog
     itemToDelete?.let { item ->
         AlertDialog(
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp,
             onDismissRequest = { itemToDelete = null },
             title = { Text(stringResource(R.string.delete)) },
             text = { Text(stringResource(R.string.really_delete_format, item.name)) },
@@ -296,6 +327,12 @@ fun SportTypeCard(
         ElevatedCard(
             modifier = Modifier
                 .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 4.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.elevatedCardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
+            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
         ) {
             // Upper part: The equipment itself
             Column(modifier = Modifier
@@ -478,6 +515,8 @@ fun SportTypeCard(
 
         // The Menu itself (anchored to the Card via the Box)
         DropdownMenu(
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp,
             expanded = showMenu,
             onDismissRequest = { showMenu = false }
         ) {
