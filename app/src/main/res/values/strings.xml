@@ -789,7 +789,7 @@
     <!-- Zone Settings Screen -->
     <string name="prefs_training_zones">Training Zones</string>
     <string name="prefs_training_zones_summary">Configure your training zones</string>
-    <string name="title_edit_zones">Edit Zones</string>
+    <string name="title_edit_zones">Training Zones</string>
     <string name="tab_hr_run">Run HR</string>
     <string name="tab_hr_bike">Bike HR</string>
     <string name="tab_pwr_bike">Bike Power</string>
