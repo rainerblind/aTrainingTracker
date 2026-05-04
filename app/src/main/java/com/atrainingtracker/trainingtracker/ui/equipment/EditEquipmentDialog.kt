@@ -48,6 +48,8 @@ fun EditEquipmentDialog(
     var selectedSportTypeIds by remember { mutableStateOf(item.linkedSportTypeIds.toSet()) }
 
     AlertDialog(
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 0.dp,
         onDismissRequest = onDismiss,
         title = { Text(stringResource(id = R.string.equipment_configure_equipment)) },
         text = {
@@ -143,6 +145,8 @@ fun MultiSelectSportTypeSpinner(
         )
 
         ExposedDropdownMenu(
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp,
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
@@ -192,6 +196,8 @@ fun MultiSelectSensorSpinner(
         )
 
         ExposedDropdownMenu(
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp,
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
