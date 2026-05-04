@@ -458,7 +458,10 @@ fun EquipmentItem(
 
         }
 
-        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+        DropdownMenu(
+            containerColor = MaterialTheme.colorScheme.surface,
+            expanded = showMenu,
+            onDismissRequest = { showMenu = false }) {
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.delete)) },
                 onClick = { showMenu = false; onDelete() },
