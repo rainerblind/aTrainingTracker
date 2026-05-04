@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.segments.segmentlist
 
+import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -91,12 +92,16 @@ fun SegmentsTabsScreen(
         CollapsingAppBarNestedScrollConnection(appBarMaxHeightPx)
     }
 
-    // Reset scroll position to top whenever the sorting order changes
+    // Reset scroll position to top ONLY when the sorting order actually changes
+    // We remember the "current" sort order to detect changes vs initial load
+    var previousSortOrder by remember { mutableStateOf(sortOrder) }
+
     LaunchedEffect(sortOrder) {
-        // We use scrollToItem(0) for an immediate jump.
-        // We could also use animateScrollToItem(0) for a smooth slide.
-        bikeListState.scrollToItem(0)
-        runListState.scrollToItem(0)
+        if (sortOrder != previousSortOrder) {
+            bikeListState.scrollToItem(0)
+            runListState.scrollToItem(0)
+            previousSortOrder = sortOrder
+        }
     }
 
     var showSortMenu by remember { mutableStateOf(false) } // Track sort order menu visibility
