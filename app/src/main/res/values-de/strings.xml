@@ -986,6 +986,7 @@
     <string name="sort_closest">Entfernung</string>
     <string name="sort_climb_category">Bergkategorie</string>
     <string name="sort_elevation_gain">Höhenmeter</string>
+    <string name="sort_average_grade">Durchschnittliche Steigung</string>
     <string name="sort_segment_length">Länge</string>
     <string name="sort_name">Name</string>
 

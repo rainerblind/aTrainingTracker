@@ -41,6 +41,7 @@ enum class SegmentSortOrder(@StringRes val labelResId: Int) {
     DISTANCE_TO_USER(R.string.sort_closest),
     CLIMB_CATEGORY(R.string.sort_climb_category),
     TOTAL_ELEVATION_GAIN(R.string.sort_elevation_gain),
+    AVERAGE_GRADE(R.string.sort_average_grade),
     SEGMENT_DISTANCE(R.string.sort_segment_length),
     NAME(R.string.sort_name)
 }
@@ -73,6 +74,12 @@ class SegmentListViewModel(
             SegmentSortOrder.TOTAL_ELEVATION_GAIN ->
                 segments.sortedWith(
                     compareByDescending<LiveSegment> { it.summary.elevationGain_raw }
+                        .thenBy { it.summary.name.lowercase() }
+                )
+
+            SegmentSortOrder.AVERAGE_GRADE ->
+                segments.sortedWith(
+                    compareByDescending<LiveSegment> { it.summary.averageGrade_raw }
                         .thenBy { it.summary.name.lowercase() }
                 )
 

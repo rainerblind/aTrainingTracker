@@ -1090,6 +1090,7 @@
     <string name="sort_closest">Closest</string>
     <string name="sort_climb_category">Climb Category</string>
     <string name="sort_elevation_gain">Elevation Gain</string>
+    <string name="sort_average_grade">Average Grade</string>
     <string name="sort_segment_length">Segment Length</string>
     <string name="sort_name">Name</string>
 
