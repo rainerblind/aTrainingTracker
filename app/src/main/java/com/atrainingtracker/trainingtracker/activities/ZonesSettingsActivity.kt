@@ -22,6 +22,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -86,6 +87,22 @@ fun ZoneSettingsScreen(
     onFinish: () -> Unit = {}
 ) {
     val context = LocalContext.current
+
+    val view = androidx.compose.ui.platform.LocalView.current
+    val isDarkTheme = isSystemInDarkTheme()
+
+    // Force status bar icons to be dark when in Light Mode
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (context as android.app.Activity).window
+            val windowInsetsController = androidx.core.view.WindowCompat.getInsetsController(window, view)
+
+            // appearanceLightStatusBars = true makes icons DARK
+            // appearanceLightStatusBars = false makes icons WHITE
+            windowInsetsController.isAppearanceLightStatusBars = !isDarkTheme
+        }
+    }
+
     val dataStore = remember { SettingsDataStore(context) }
     val scope = rememberCoroutineScope()
 
