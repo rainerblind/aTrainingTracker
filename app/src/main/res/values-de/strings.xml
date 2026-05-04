@@ -702,7 +702,7 @@
     <!-- Zone Settings Screen -->
     <string name="prefs_training_zones">Trainings Zonen</string>
     <string name="prefs_training_zones_summary">Passe deine Trainingszonen an</string>
-    <string name="title_edit_zones">Trainings Zonen anpassen</string>
+    <string name="title_edit_zones">Trainings Zonen</string>
     <string name="tab_hr_run">Lauf HF</string>
     <string name="tab_hr_bike">Rad HF</string>
     <string name="tab_pwr_bike">Rad Leistung</string>
