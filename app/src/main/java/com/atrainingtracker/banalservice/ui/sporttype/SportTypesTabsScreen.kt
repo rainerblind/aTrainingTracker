@@ -78,7 +78,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SportTypeScreen(
+fun SportTypesTabsScreen(
     viewModel: SportTypeViewModel,
     onNavigateToWorkouts: (StatsData) -> Unit
 ) {
