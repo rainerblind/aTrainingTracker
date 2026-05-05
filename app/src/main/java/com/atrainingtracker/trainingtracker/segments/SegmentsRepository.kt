@@ -219,7 +219,8 @@ class SegmentsRepository private constructor(context: Context) {
     private val _liveSegments = MutableStateFlow(emptyList<LiveSegment>())
     val liveSegments: StateFlow<List<LiveSegment>> = _liveSegments
 
-    val connectedToStrava = TrainingApplication.getStravaAccessToken() != null
+    val connectedToStrava: Boolean
+        get() = TrainingApplication.getStravaAccessToken() != null
 
     init {
         if (DEBUG) Log.i(TAG, "init")
@@ -237,6 +238,8 @@ class SegmentsRepository private constructor(context: Context) {
                 calculateInitialLiveSegmentState(segmentSummary, path)?.let { liveSegment ->
                     _liveSegments.value += liveSegment
                 }
+
+                // deleteSegment(segmentSummary.stravaId) // ONLY FOR TESTING!!
             }
 
             // 2. Observe the BANALServiceRepository for Location and Bearing updates
@@ -581,7 +584,7 @@ class SegmentsRepository private constructor(context: Context) {
 
         val newIds = mutableSetOf<Long>()
         // Create a local copy of the current list to modify
-        val currentLiveSegments = _liveSegments.value.toMutableList()
+        // val currentLiveSegments = _liveSegments.value.toMutableList()
 
         var page = 1
         var hasMore = true
@@ -616,24 +619,24 @@ class SegmentsRepository private constructor(context: Context) {
                     // add it to the live segment list
                     val newLiveSegment = calculateInitialLiveSegmentState(detailedSegment.toSummary(), path)
                     if (newLiveSegment != null) {
-                        currentLiveSegments.add(newLiveSegment)
+                        _liveSegments.value += newLiveSegment
                     }
                 }
                 else {
-                    // only update (PB might have changed)
+                    // update (PB might have changed)
                     addOrUpdateSegment(detailedSegment)
-                    // update list of LiveSegments
-                    val index = currentLiveSegments.indexOfFirst { it.summary.stravaId == segment.id }
-                    if (index != -1) {
-                        val existing = currentLiveSegments[index]
-                        currentLiveSegments[index] = existing.copy(
-                            summary = segment.toSummary() // Update PB, name, etc but keep path/state
-                        )
+
+                    // Update the item in the list if it exists
+                    _liveSegments.update { currentList ->
+                        currentList.map { item ->
+                            if (item.summary.stravaId == segment.id) {
+                                item.copy(summary = detailedSegment.toSummary())
+                            } else {
+                                item
+                            }
+                        }
                     }
                 }
-
-                // Emit progress after every segment if you want the list to grow live
-                _liveSegments.value = currentLiveSegments.toList()
             }
             page++
             hasMore = segments.size >= 30 // Strava default page size
@@ -644,8 +647,11 @@ class SegmentsRepository private constructor(context: Context) {
         // val toDelete = oldIds + newIds // uncomment to delete all segments (ONLY FOR TESTING!)
         if (toDelete.isNotEmpty()) {
             toDelete.forEach { deleteSegment(it) }
-            currentLiveSegments.removeAll { toDelete.contains(it.summary.stravaId) }
-            _liveSegments.value = currentLiveSegments.toList()
+
+            // Filter the StateFlow list directly
+            _liveSegments.update { currentList ->
+                currentList.filterNot { toDelete.contains(it.summary.stravaId) }
+            }
         }
 
         _refreshingSports.update { it - bSportType } // Remove sport when done
