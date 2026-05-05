@@ -47,7 +47,7 @@ class EquipmentFragment : Fragment() {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
                 ATrainingTrackerTheme {
-                    EquipmentScreen(
+                    EquipmentTabsScreen(
                         viewModel = viewModel,
                         initialTab = startingTab,
                         onNavigateToWorkouts = { stats ->

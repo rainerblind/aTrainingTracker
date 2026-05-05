@@ -60,7 +60,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EquipmentScreen(
+fun EquipmentTabsScreen(
     viewModel: EquipmentViewModel,
     initialTab: Int,
     onNavigateToWorkouts: (StatsData) -> Unit
