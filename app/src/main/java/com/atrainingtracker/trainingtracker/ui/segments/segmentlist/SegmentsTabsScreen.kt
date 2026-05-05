@@ -52,6 +52,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -77,6 +78,7 @@ fun SegmentsTabsScreen(
     onRefresh: (BSportType) -> Unit,
     onSegmentClick: (Long) -> Unit,
     sortOrder: SegmentSortOrder,
+    scrollToTop: Boolean,
     onSortOrderChange: (SegmentSortOrder) -> Unit
 ) {
     val tabs = listOf(
@@ -92,15 +94,12 @@ fun SegmentsTabsScreen(
         CollapsingAppBarNestedScrollConnection(appBarMaxHeightPx)
     }
 
-    // Reset scroll position to top ONLY when the sorting order actually changes
-    // We remember the "current" sort order to detect changes vs initial load
-    var previousSortOrder by remember { mutableStateOf(sortOrder) }
-
-    LaunchedEffect(sortOrder) {
-        if (sortOrder != previousSortOrder) {
+    Log.i("SegmentTabsScreen", "scrollToTop=$scrollToTop")
+    // Reset scroll position to top when sort order changes
+    LaunchedEffect(scrollToTop, sortOrder) {
+        if (scrollToTop) {
             bikeListState.scrollToItem(0)
             runListState.scrollToItem(0)
-            previousSortOrder = sortOrder
         }
     }
 

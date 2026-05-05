@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.segments.segmentlist
 
 import android.content.Context
+import android.util.Log
 import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -53,6 +54,17 @@ class SegmentListViewModel(
 
     private val _sortOrder = MutableStateFlow(SegmentSortOrder.DISTANCE_TO_USER)
     val sortOrder = _sortOrder.asStateFlow()
+
+    private var lastScrolledOrder: SegmentSortOrder? = null
+
+    fun shouldScrollToTop(currentOrder: SegmentSortOrder): Boolean {
+        Log.i("SegmentListViewModel", "shouldScroll(currentOrder=$currentOrder), lastScrolledOrder=$lastScrolledOrder")
+        if (lastScrolledOrder != currentOrder) {
+            lastScrolledOrder = currentOrder
+            return true
+        }
+        return false
+    }
 
     // Reactive sorted list
     val liveSegments: StateFlow<List<LiveSegment>> = combine(

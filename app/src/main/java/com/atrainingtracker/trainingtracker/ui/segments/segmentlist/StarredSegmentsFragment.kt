@@ -83,6 +83,7 @@ class StarredSegmentsFragment : Fragment() {
                                 selectedSegmentId = id
                             },
                             sortOrder = sortOrder,
+                            scrollToTop = viewModel.shouldScrollToTop(sortOrder),
                             onSortOrderChange = { viewModel.setSortOrder(it) }
                         )
                     } else {
