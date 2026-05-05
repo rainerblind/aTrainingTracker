@@ -68,6 +68,7 @@ data class WorkoutData(
     val equipmentId: Long,
     val commute: Boolean,
     val trainer: Boolean,
+    val map_polyline: String,
 
     val totalDistance: Double,
     val maxDisplacement: Double?,
