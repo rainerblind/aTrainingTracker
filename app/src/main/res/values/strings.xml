@@ -640,6 +640,7 @@
     <string name="units_radius" translatable="false">m</string>
     <string name="create_new_my_location">Creating new known location.</string>
     <string name="calc_workout_name">Calculating workout name.</string>
+    <string name="calc_map_polyline">Calculating map polyline.</string>
     <string name="edit_counter">edit</string>
     <string name="edit_counter_format">Edit %1$s counter.</string>
     <string name="editWorkoutNameCounters">Edit workout name counters.</string>
