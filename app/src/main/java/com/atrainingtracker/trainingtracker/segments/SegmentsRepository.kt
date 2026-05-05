@@ -29,6 +29,7 @@ import com.google.maps.android.PolyUtil
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
@@ -201,7 +202,6 @@ private val json = Json {
 
 class SegmentsRepository private constructor(context: Context) {
 
-
     private val tf = TimeFormatter()
     private val df = DistanceFormatter()
 
@@ -218,6 +218,8 @@ class SegmentsRepository private constructor(context: Context) {
 
     private val _liveSegments = MutableStateFlow(emptyList<LiveSegment>())
     val liveSegments: StateFlow<List<LiveSegment>> = _liveSegments
+
+    val connectedToStrava = TrainingApplication.getStravaAccessToken() != null
 
     init {
         if (DEBUG) Log.i(TAG, "init")
@@ -550,8 +552,18 @@ class SegmentsRepository private constructor(context: Context) {
         }
     }
 
-    suspend fun syncStarredSegments(bSportType: BSportType) = withContext(Dispatchers.IO) {
-        _refreshingSports.update { it + bSportType } // Add sport to refreshing set
+    suspend fun syncStarredSegments(bSportType: BSportType) {
+        if (bSportType == BSportType.UNKNOWN) {
+            syncStarredSegmentsWorker(BSportType.BIKE)
+            syncStarredSegmentsWorker(BSportType.RUN)
+        }
+        else {
+            syncStarredSegmentsWorker(bSportType)
+        }
+    }
+
+    private suspend fun syncStarredSegmentsWorker(bSportType: BSportType) = withContext(Dispatchers.IO) {
+            _refreshingSports.update { it + bSportType } // Add sport to refreshing set
 
         // sport to ignore:  For Run we ignore Ride and for Run we ignore Bike.  For Unknown we should not ignore.
         val ignoreSport = when (bSportType) {

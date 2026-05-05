@@ -74,6 +74,8 @@ fun SegmentsTabsScreen(
     pagerState: PagerState,
     bikeListState: LazyListState,
     runListState: LazyListState,
+    isStravaConnected: Boolean,
+    onConnectToStrava: () -> Unit,
     isRefreshing: (BSportType) -> Boolean,
     onRefresh: (BSportType) -> Unit,
     onSegmentClick: (Long) -> Unit,
@@ -121,6 +123,8 @@ fun SegmentsTabsScreen(
                 SegmentList(
                     liveSegments = filteredLiveSegments,
                     scrollState = listState,
+                    isStravaConnected = isStravaConnected,
+                    onConnectToStrava = onConnectToStrava,
                     isRefreshing = isRefreshing(currentSport),
                     onRefresh = { onRefresh(currentSport) },
                     onSegmentClick = onSegmentClick,

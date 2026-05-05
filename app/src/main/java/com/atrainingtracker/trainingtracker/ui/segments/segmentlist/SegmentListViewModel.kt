@@ -55,6 +55,8 @@ class SegmentListViewModel(
     private val _sortOrder = MutableStateFlow(SegmentSortOrder.DISTANCE_TO_USER)
     val sortOrder = _sortOrder.asStateFlow()
 
+    val connectedToStrava = segmentsRepository.connectedToStrava
+
     private var lastScrolledOrder: SegmentSortOrder? = null
 
     fun shouldScrollToTop(currentOrder: SegmentSortOrder): Boolean {

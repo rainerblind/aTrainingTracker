@@ -1054,6 +1054,8 @@
 
     <!-- starred Strava segments -->
     <string name="starred_segments__no_update_because_upload_to_strava_is_disabled">Not connected to Strava. -> No update of your starred Strava segments.</string>
+    <string name="starred_segments__no_strava_connection">Not connected to Strava</string>
+    <string name="starred_segments__connect_to_strava">Connect to Strava</string>
 
     <!-- Control tracking -->
     <string name="control_tracking_connecting">Connecting…</string>
