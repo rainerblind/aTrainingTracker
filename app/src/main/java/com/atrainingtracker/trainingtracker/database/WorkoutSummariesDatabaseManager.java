@@ -34,9 +34,14 @@ import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
+import com.atrainingtracker.trainingtracker.ui.map.PathPoint;
+import com.atrainingtracker.trainingtracker.ui.map.TrackType;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.maps.android.PolyUtil;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -734,6 +739,7 @@ public class WorkoutSummariesDatabaseManager {
         public static final String TRAINER = "trainer";
         public static final String ASCENDING = "ascending";
         public static final String DESCENDING = "descending";
+        public static final String MAP_POLYLINE = "mapPolyline"; // added in Version 13
         // new entries in version 5 of the DB
         public static final String EXTREMA_VALUES_CALCULATED = "extremumValuesCalculated";
         // new entries in version 6 of the DB
@@ -777,6 +783,8 @@ public class WorkoutSummariesDatabaseManager {
     // The database itself
     ////////////////////////////////////////////////////////////////////////////////////////////////
     public static class WorkoutSummariesDbHelper extends SQLiteOpenHelper {
+        private final Context mContext;
+
         public static final String DB_NAME = "WorkoutSummaries.db";
         // public static final int DB_VERSION  = 4; // upgrade to Version 4 around November 2015
         // public static final int DB_VERSION  = 5; // upgrade to Version 5 at 1. December 2015
@@ -786,8 +794,40 @@ public class WorkoutSummariesDatabaseManager {
         // public static final int DB_VERSION = 9; // upgrade to Version 9 at 7. June 2016
         // public static final int DB_VERSION = 10; // upgrade to Version 10 at 8. June 2016
         // public static final int DB_VERSION = 11; // upgrade to Version 11 at 19. 01. 2017
-        public static final int DB_VERSION = 11; // upgrade to Version 12 at 22.01.2026
+        // public static final int DB_VERSION = 12; // upgrade to Version 12 at 22.01.2026
+        public static final int DB_VERSION = 13; // upgrade to Version 13 at 05.05.2026
 
+        protected static final String CREATE_TABLE_V13 = "create table " + WorkoutSummaries.TABLE + " ("
+                + WorkoutSummaries.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + WorkoutSummaries.WORKOUT_NAME + " text,"
+                + WorkoutSummaries.FILE_BASE_NAME + " text,"
+                // + WorkoutSummaries.ATHLETE_NAME + " text,"  // removed in verison 12
+                + WorkoutSummaries.DESCRIPTION + " text,"
+                + WorkoutSummaries.GOAL + " text,"
+                + WorkoutSummaries.METHOD + " text,"
+                // + WorkoutSummaries.SPORT + " text,"
+                + WorkoutSummaries.B_SPORT + " text,"
+                + WorkoutSummaries.SPORT_ID + " int,"
+                + WorkoutSummaries.EQUIPMENT_ID + " int,"
+                // + WorkoutSummaries.SAMPLING_TIME + " int,"  // removed in version 12.
+                + WorkoutSummaries.TIME_START + " DATETIME DEFAULT CURRENT_TIMESTAMP,"
+                + WorkoutSummaries.TIME_ACTIVE_s + " int,"
+                + WorkoutSummaries.TIME_TOTAL_s + " int,"
+                + WorkoutSummaries.DISTANCE_TOTAL_m + " real,"
+                + WorkoutSummaries.SPEED_AVERAGE_mps + " real,"
+                + WorkoutSummaries.GC_DATA + " text,"
+                + WorkoutSummaries.CALORIES + " int,"
+                + WorkoutSummaries.LAPS + " int,"
+                + WorkoutSummaries.FINISHED + " int," // end of version 3
+                // + WorkoutSummaries.PRIVATE + " int,"  removed in version 12.
+                + WorkoutSummaries.COMMUTE + " int,"
+                + WorkoutSummaries.TRAINER + " int,"
+                + WorkoutSummaries.ASCENDING + " int,"
+                + WorkoutSummaries.DESCENDING + " int," // end of version 4
+                + WorkoutSummaries.MAP_POLYLINE + " text,"    // added in verison 13
+                + WorkoutSummaries.EXTREMA_VALUES_CALCULATED + " int)";
+
+        @Deprecated
         protected static final String CREATE_TABLE_V12 = "create table " + WorkoutSummaries.TABLE + " ("
                 + WorkoutSummaries.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                 + WorkoutSummaries.WORKOUT_NAME + " text,"
@@ -883,6 +923,7 @@ public class WorkoutSummariesDatabaseManager {
         public WorkoutSummariesDbHelper(Context context) {
             super(context, DB_NAME, null, DB_VERSION);
 
+            this.mContext = context.getApplicationContext();
         }
         // TODO: add location (latitude and longitude) and add them when needed
 
@@ -890,8 +931,8 @@ public class WorkoutSummariesDatabaseManager {
         @Override
         public void onCreate(@NonNull SQLiteDatabase db) {
 
-            db.execSQL(CREATE_TABLE_V12);
-            if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_V11);
+            db.execSQL(CREATE_TABLE_V13);
+            if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_V13);
 
             // new in version 4:
             db.execSQL(CREATE_TABLE_EXTREMA_VALUES_V6);
@@ -1010,6 +1051,87 @@ public class WorkoutSummariesDatabaseManager {
                 // do nothing.  The removed rows does not matter.
             }
 
+            if (oldVersion < 13) {
+
+                // first, add the new column
+                addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.MAP_POLYLINE, "text");
+
+                // 2. Perform the migration
+                migrateExistingWorkouts(db);
+            }
+        }
+
+        /**
+         * Iterates through all existing workouts, fetches their points from the
+         * samples database, encodes them into a polyline string, and saves it.
+         */
+        private void migrateExistingWorkouts(SQLiteDatabase db) {
+            Log.i(TAG, "Starting Migration: Encoding tracks to polylines...");
+
+            // 1. Get IDs and BaseFileNames from the Summaries table (the one being upgraded)
+            String[] projection = {WorkoutSummaries.C_ID, WorkoutSummaries.FILE_BASE_NAME};
+
+            try (Cursor summaryCursor = db.query(WorkoutSummaries.TABLE, projection, null, null, null, null, null)) {
+                if (summaryCursor != null) {
+                    int idIdx = summaryCursor.getColumnIndex(WorkoutSummaries.C_ID);
+                    int fileIdx = summaryCursor.getColumnIndex(WorkoutSummaries.FILE_BASE_NAME);
+
+                    while (summaryCursor.moveToNext()) {
+                        long workoutId = summaryCursor.getLong(idIdx);
+                        String baseFileName = summaryCursor.getString(fileIdx);
+
+                        if (baseFileName != null) {
+                            // 2. Derive the points
+                            String polyline = getEncodedStringForWorkout(baseFileName);
+
+                            if (polyline != null) {
+                                // 3. Update the summary table
+                                ContentValues values = new ContentValues();
+                                values.put(WorkoutSummaries.MAP_POLYLINE, polyline);
+                                db.update(WorkoutSummaries.TABLE, values, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(workoutId)});
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Migration failed", e);
+            }
+        }
+
+        /**
+         * Ported logic from WorkoutRepository.kt to fetch and encode points in Java
+         */
+        private String getEncodedStringForWorkout(String baseFileName) {
+            List<LatLng> latLngs = new ArrayList<>();
+
+            // Access the Samples database via its manager
+            // Note: Ensure WorkoutSamplesDatabaseManager.getInstance(mContext) is available
+            SQLiteDatabase samplesDb = WorkoutSamplesDatabaseManager.getInstance(mContext).getDatabase();
+            String tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName);
+
+            String latName = "LATITUDE";
+            String lonName = "LONGITUDE";
+
+            try (Cursor cursor = samplesDb.query(tableName, null, null, null, null, null, null)) {
+                if (cursor != null) {
+                    int latIdx = cursor.getColumnIndex(latName);
+                    int lonIdx = cursor.getColumnIndex(lonName);
+
+                    while (cursor.moveToNext()) {
+                        if (latIdx != -1 && lonIdx != -1 && !cursor.isNull(latIdx) && !cursor.isNull(lonIdx)) {
+                            latLngs.add(new LatLng(cursor.getDouble(latIdx), cursor.getDouble(lonIdx)));
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error reading samples for " + baseFileName, e);
+                return null;
+            }
+
+            if (latLngs.isEmpty()) return null;
+
+            // Use Google Maps Utility to encode
+            return PolyUtil.encode(latLngs);
         }
     }
 }

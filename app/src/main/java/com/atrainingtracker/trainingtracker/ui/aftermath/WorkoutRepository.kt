@@ -24,6 +24,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.util.Log
+import androidx.compose.animation.core.copy
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
@@ -31,7 +32,6 @@ import androidx.lifecycle.map
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
-import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.TrainingApplication
@@ -51,10 +51,6 @@ import com.atrainingtracker.trainingtracker.helpers.CalcExtremaWorker
 import com.atrainingtracker.trainingtracker.tracker.TrackerService
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusGroupData
-import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.DescriptionDataProvider
-import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsDataProvider
-import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaDataProvider
-import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderDataProvider
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.map.Roughness
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
@@ -343,7 +339,7 @@ class WorkoutRepository private constructor(private val application: Application
 
     suspend fun loadAllWorkouts() {
         withContext(Dispatchers.IO) {
-            val summaryList = mutableListOf<WorkoutData>()
+            val currentList = mutableListOf<WorkoutData>()
             val cursor = summariesManager.getCursorForAllWorkouts()
             // Safely iterate through the cursor and convert each row to a data object
             cursor.use { c ->
@@ -352,21 +348,26 @@ class WorkoutRepository private constructor(private val application: Application
 
                         // Thread.sleep(50) // adding some delay for testing.
 
-                        val data = mapper.fromCursor(c)
+                        val workoutData = mapper.fromCursor(c)
+
+                        // check for any ongoing calculations and observe the extrema calculation if necessary.
+                        if (workoutData.extremaData.isCalculating) {
+                            observeExtremaCalculation(workoutData.id)
+                        }
 
                         // TODO: rewrite this part.
                         // -> own repository for the track points; merged by the viewModel
                         // -> own repository for the export status; merged by the viewModel
 
-                        val trackPoints = getWorkoutTrackPoints(data.id, Roughness.MEDIUM, TrackType.BEST)
+                        val trackPoints = getWorkoutTrackPoints(workoutData.id, Roughness.MEDIUM, TrackType.BEST)
 
                         val exportStatuses: MutableList<ExportStatusGroupData> = mutableListOf()
-                        if (data.fileBaseName != null) {
+                        if (workoutData.fileBaseName != null) {
                             for (type in orderedExportTypes) {
                                 // Get the export statuses from our central provider
                                 val groupData =
                                     exportStatusDataProvider.createGroupData(
-                                        data.fileBaseName,
+                                        workoutData.fileBaseName,
                                         type
                                     )
                                 if (groupData.hasContent) {
@@ -375,27 +376,21 @@ class WorkoutRepository private constructor(private val application: Application
                             }
                         }
 
-                        summaryList.add(
-                            data.copy(
-                                trackPoints = trackPoints,
-                                exportStatuses = exportStatuses
-                            )
+                        val completedWorkout = workoutData.copy(
+                            trackPoints = trackPoints,
+                            exportStatuses = exportStatuses
                         )
+
+                        currentList.add(
+                            completedWorkout
+                        )
+
+                        _allWorkouts.postValue(currentList.toList())
 
                     } while (c.moveToNext())
                 }
             }
             cursor.close()
-
-            // Post the final list to the LiveData. This will update the UI on the main thread.
-            _allWorkouts.postValue(summaryList)
-        }
-
-        // After the initial list is loaded and posted, check for any ongoing calculations.
-        allWorkouts.value?.forEach { workoutData ->
-            if (workoutData.extremaData.isCalculating) {
-                observeExtremaCalculation(workoutData.id)
-            }
         }
     }
 

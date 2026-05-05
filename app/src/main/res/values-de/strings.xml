@@ -566,6 +566,7 @@
     <string name="edit_my_location">Bearbeite Zähler</string>
     <string name="create_new_my_location">Neuer Ort wird erstellt.</string>
     <string name="calc_workout_name">Bestimme passendem Namen.</string>
+    <string name="calc_map_polyline">Berechne vereinfachte Karte.</string>
     <string name="edit_counter">bearbeiten</string>
     <string name="edit_counter_format">Bearbeite %1$s Zähler.</string>
     <string name="editWorkoutNameCounters">Überarbeite die Zähler der Einheiten</string>

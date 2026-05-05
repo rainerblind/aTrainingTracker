@@ -47,6 +47,7 @@ import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.map.MapState
 import com.atrainingtracker.trainingtracker.ui.map.MapTrack
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
+import com.atrainingtracker.trainingtracker.ui.map.TrackOrSegmentOnMap
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -124,7 +125,8 @@ fun WorkoutSummary(
 
         if (isPlayServiceAvailable && workoutData.trackPoints.isNotEmpty()) {
             WorkoutMediaSection(
-                workoutId = workoutData.id,
+                // workoutId = workoutData.id,
+                map_polyline = workoutData.map_polyline,
                 points = workoutData.trackPoints,
                 onMapClick = onMapClick
             )
@@ -146,31 +148,25 @@ fun WorkoutSummary(
  */
 @Composable
 private fun WorkoutMediaSection(
-    workoutId: Long,
+    map_polyline: String,
     points: List<PathPoint>,
     onMapClick: () -> Unit
 ) {
-    // Replicating rowMapState from SummaryViewHolder
-    val mapState = remember(points) {
-        MapState(
-            tracks = listOf(
-                MapTrack(
-                    id = workoutId,
-                    path = points,
-                    type = TrackType.BEST,
-                    isVisible = true
-                )
-            ),
-            isFollowMeEnabled = false
-        )
-    }
-
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .height(300.dp) // Total height for map + profile area
     ) {
         // 1. The Map (Weight 1 lets it take remaining space above profile)
+        TrackOrSegmentOnMap(
+            polyline = map_polyline,
+            color = TrackType.BEST.color,
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+            onMapClick = { onMapClick() }
+        )
+        /*
         ATrainingTrackerMap(
             mapState = mapState,
             currentLocationFlow = MutableStateFlow(null),
@@ -180,6 +176,7 @@ private fun WorkoutMediaSection(
             onMapClick = { onMapClick() },
             onSegmentClick = { }  // nothing to do here.
         )
+         */
 
         // 2. The Elevation Profile
         Box(

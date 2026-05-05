@@ -116,15 +116,12 @@ class WorkoutSummariesListFragment : Fragment() {
 
                     val workouts by filteredWorkoutsFlow.collectAsStateWithLifecycle(initialValue = emptyList())
 
-                    // 2. Observe the loading state
-                    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
-
                     val isPlayAvailable = remember {
                         GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(requireActivity()) == ConnectionResult.SUCCESS
                     }
 
                     // 4. Implement Collapsing Header Logic for the Titles
-                    val density = androidx.compose.ui.platform.LocalDensity.current
+                    val density = LocalDensity.current
 
                     val headerHeightDp = 110.dp
                     val headerHeightPx = with(density) { headerHeightDp.roundToPx() }
@@ -191,38 +188,6 @@ class WorkoutSummariesListFragment : Fragment() {
                                 }
                             }
 
-                            // 2. LOADING OVERLAY
-                            if (isLoading) {
-                                Surface(
-                                    modifier = Modifier
-                                        .align(Alignment.TopCenter)
-                                        .padding(top = with(LocalDensity.current) {
-                                            // Position it just below the header area
-                                            (headerHeightPx + connection.appBarOffset).toDp() + 16.dp
-                                        })
-                                        .padding(horizontal = 32.dp),
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = MaterialTheme.colorScheme.surfaceVariant,
-                                    tonalElevation = 4.dp
-                                ) {
-                                    Column(
-                                        modifier = Modifier.padding(12.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(36.dp),
-                                            color = MaterialTheme.colorScheme.primary,
-                                            strokeWidth = 3.dp
-                                        )
-                                        Text(
-                                            text = stringResource(R.string.workout_summaries_loading),
-                                            style = MaterialTheme.typography.titleMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-                            }
                         }
                     }
                     // TODO: almost same code as in WorkoutSummariesTabbedFragment -> somehow unify!
