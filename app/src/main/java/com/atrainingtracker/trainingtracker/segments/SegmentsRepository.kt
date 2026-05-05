@@ -29,6 +29,7 @@ import com.google.maps.android.PolyUtil
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
@@ -201,7 +202,6 @@ private val json = Json {
 
 class SegmentsRepository private constructor(context: Context) {
 
-
     private val tf = TimeFormatter()
     private val df = DistanceFormatter()
 
@@ -219,6 +219,9 @@ class SegmentsRepository private constructor(context: Context) {
     private val _liveSegments = MutableStateFlow(emptyList<LiveSegment>())
     val liveSegments: StateFlow<List<LiveSegment>> = _liveSegments
 
+    val connectedToStrava: Boolean
+        get() = TrainingApplication.getStravaAccessToken() != null
+
     init {
         if (DEBUG) Log.i(TAG, "init")
 
@@ -235,6 +238,8 @@ class SegmentsRepository private constructor(context: Context) {
                 calculateInitialLiveSegmentState(segmentSummary, path)?.let { liveSegment ->
                     _liveSegments.value += liveSegment
                 }
+
+                // deleteSegment(segmentSummary.stravaId) // ONLY FOR TESTING!!
             }
 
             // 2. Observe the BANALServiceRepository for Location and Bearing updates
@@ -550,8 +555,18 @@ class SegmentsRepository private constructor(context: Context) {
         }
     }
 
-    suspend fun syncStarredSegments(bSportType: BSportType) = withContext(Dispatchers.IO) {
-        _refreshingSports.update { it + bSportType } // Add sport to refreshing set
+    suspend fun syncStarredSegments(bSportType: BSportType) {
+        if (bSportType == BSportType.UNKNOWN) {
+            syncStarredSegmentsWorker(BSportType.BIKE)
+            syncStarredSegmentsWorker(BSportType.RUN)
+        }
+        else {
+            syncStarredSegmentsWorker(bSportType)
+        }
+    }
+
+    private suspend fun syncStarredSegmentsWorker(bSportType: BSportType) = withContext(Dispatchers.IO) {
+            _refreshingSports.update { it + bSportType } // Add sport to refreshing set
 
         // sport to ignore:  For Run we ignore Ride and for Run we ignore Bike.  For Unknown we should not ignore.
         val ignoreSport = when (bSportType) {
@@ -569,7 +584,7 @@ class SegmentsRepository private constructor(context: Context) {
 
         val newIds = mutableSetOf<Long>()
         // Create a local copy of the current list to modify
-        val currentLiveSegments = _liveSegments.value.toMutableList()
+        // val currentLiveSegments = _liveSegments.value.toMutableList()
 
         var page = 1
         var hasMore = true
@@ -604,24 +619,24 @@ class SegmentsRepository private constructor(context: Context) {
                     // add it to the live segment list
                     val newLiveSegment = calculateInitialLiveSegmentState(detailedSegment.toSummary(), path)
                     if (newLiveSegment != null) {
-                        currentLiveSegments.add(newLiveSegment)
+                        _liveSegments.value += newLiveSegment
                     }
                 }
                 else {
-                    // only update (PB might have changed)
+                    // update (PB might have changed)
                     addOrUpdateSegment(detailedSegment)
-                    // update list of LiveSegments
-                    val index = currentLiveSegments.indexOfFirst { it.summary.stravaId == segment.id }
-                    if (index != -1) {
-                        val existing = currentLiveSegments[index]
-                        currentLiveSegments[index] = existing.copy(
-                            summary = segment.toSummary() // Update PB, name, etc but keep path/state
-                        )
+
+                    // Update the item in the list if it exists
+                    _liveSegments.update { currentList ->
+                        currentList.map { item ->
+                            if (item.summary.stravaId == segment.id) {
+                                item.copy(summary = detailedSegment.toSummary())
+                            } else {
+                                item
+                            }
+                        }
                     }
                 }
-
-                // Emit progress after every segment if you want the list to grow live
-                _liveSegments.value = currentLiveSegments.toList()
             }
             page++
             hasMore = segments.size >= 30 // Strava default page size
@@ -632,8 +647,11 @@ class SegmentsRepository private constructor(context: Context) {
         // val toDelete = oldIds + newIds // uncomment to delete all segments (ONLY FOR TESTING!)
         if (toDelete.isNotEmpty()) {
             toDelete.forEach { deleteSegment(it) }
-            currentLiveSegments.removeAll { toDelete.contains(it.summary.stravaId) }
-            _liveSegments.value = currentLiveSegments.toList()
+
+            // Filter the StateFlow list directly
+            _liveSegments.update { currentList ->
+                currentList.filterNot { toDelete.contains(it.summary.stravaId) }
+            }
         }
 
         _refreshingSports.update { it - bSportType } // Remove sport when done

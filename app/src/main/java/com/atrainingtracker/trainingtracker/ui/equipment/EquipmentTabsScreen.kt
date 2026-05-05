@@ -60,7 +60,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EquipmentScreen(
+fun EquipmentTabsScreen(
     viewModel: EquipmentViewModel,
     initialTab: Int,
     onNavigateToWorkouts: (StatsData) -> Unit
@@ -87,7 +87,7 @@ fun EquipmentScreen(
 
     // --- Header Animation Logic (Matches SegmentsTabsScreen) ---
     val density = LocalDensity.current
-    val appBarMaxHeightPx = with(density) { 125.dp.roundToPx() }
+    val appBarMaxHeightPx = with(density) { 130.dp.roundToPx() }
     val connection = remember(appBarMaxHeightPx) {
         CollapsingAppBarNestedScrollConnection(appBarMaxHeightPx)
     }

@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.segments.segmentlist
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -37,6 +38,9 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.fragments.preferences.StravaUploadFragment
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
 import com.atrainingtracker.trainingtracker.ui.map.MapState
 import com.atrainingtracker.trainingtracker.ui.segments.SegmentOnMapScreen
@@ -77,6 +81,10 @@ class StarredSegmentsFragment : Fragment() {
                             pagerState = pagerState,
                             bikeListState = bikeListState,
                             runListState = runListState,
+                            isStravaConnected = viewModel.connectedToStrava,
+                            onConnectToStrava = {
+                                startStravaUploadFragment()
+                            },
                             isRefreshing = { sport -> refreshingSports.contains(sport) },
                             onRefresh = { sport -> viewModel.onRefresh(sport) },
                             onSegmentClick = { id ->
@@ -125,6 +133,28 @@ class StarredSegmentsFragment : Fragment() {
                 }
             }
         }
+    }
+
+    fun startStravaUploadFragment() {
+        Log.i(TAG, "startStravaUploadFragment()")
+        // 1. Create the Strava fragment
+        val fragment = StravaUploadFragment()
+
+        // 2. Prepare arguments to tell the fragment it's being opened
+        // as the Strava preference screen (matches MainActivity logic)
+        val args = Bundle().apply {
+            putString(
+                androidx.preference.PreferenceFragmentCompat.ARG_PREFERENCE_ROOT,
+                TrainingApplication.PREFERENCE_SCREEN_STRAVA
+            )
+        }
+        fragment.arguments = args
+
+        // 3. Perform the transaction using the container ID from MainActivity
+        parentFragmentManager.beginTransaction()
+            .replace(R.id.content, fragment, TrainingApplication.PREFERENCE_SCREEN_STRAVA)
+            .addToBackStack(null) // Allows user to press 'Back' to return to segments
+            .commit()
     }
 
     companion object {

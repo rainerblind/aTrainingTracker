@@ -74,6 +74,8 @@ fun SegmentsTabsScreen(
     pagerState: PagerState,
     bikeListState: LazyListState,
     runListState: LazyListState,
+    isStravaConnected: Boolean,
+    onConnectToStrava: () -> Unit,
     isRefreshing: (BSportType) -> Boolean,
     onRefresh: (BSportType) -> Unit,
     onSegmentClick: (Long) -> Unit,
@@ -89,7 +91,7 @@ fun SegmentsTabsScreen(
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
 
-    val appBarMaxHeightPx = with(density) { 125.dp.roundToPx() }
+    val appBarMaxHeightPx = with(density) { 135.dp.roundToPx() }
     val connection = remember(appBarMaxHeightPx) {
         CollapsingAppBarNestedScrollConnection(appBarMaxHeightPx)
     }
@@ -121,6 +123,8 @@ fun SegmentsTabsScreen(
                 SegmentList(
                     liveSegments = filteredLiveSegments,
                     scrollState = listState,
+                    isStravaConnected = isStravaConnected,
+                    onConnectToStrava = onConnectToStrava,
                     isRefreshing = isRefreshing(currentSport),
                     onRefresh = { onRefresh(currentSport) },
                     onSegmentClick = onSegmentClick,

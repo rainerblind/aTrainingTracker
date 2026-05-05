@@ -78,7 +78,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SportTypeScreen(
+fun SportTypesTabsScreen(
     viewModel: SportTypeViewModel,
     onNavigateToWorkouts: (StatsData) -> Unit
 ) {
@@ -102,7 +102,7 @@ fun SportTypeScreen(
 
     val density = LocalDensity.current
 
-    val appBarMaxHeightPx = with(density) { 125.dp.roundToPx() }
+    val appBarMaxHeightPx = with(density) { 127.dp.roundToPx() }
     val connection = remember(appBarMaxHeightPx) {
         CollapsingAppBarNestedScrollConnection(appBarMaxHeightPx)
     }

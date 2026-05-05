@@ -39,7 +39,7 @@ class SportTypeListFragment : Fragment() {
             setContent {
                 ATrainingTrackerTheme {
                     // The Screen now handles its own state for adding/editing/deleting
-                    SportTypeScreen(
+                    SportTypesTabsScreen(
                         viewModel = viewModel,
                         onNavigateToWorkouts = { stats ->
                             // When a stats block is clicked, navigate to the filtered workout list
