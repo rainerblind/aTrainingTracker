@@ -29,7 +29,9 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.segments.SegmentSummary
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
+import com.atrainingtracker.trainingtracker.ui.map.TrackOrSegmentOnMap
 import com.atrainingtracker.trainingtracker.ui.segments.SegmentSummaryHeader
+import com.atrainingtracker.trainingtracker.ui.theme.StravaOrange
 
 @Composable
 fun SegmentItem(
@@ -57,8 +59,9 @@ fun SegmentItem(
                     .height(IntrinsicSize.Min) // Balance Map and Header height
             ) {
                 // 1. Static Segment Map (120dp square)
-                SegmentOnMap(
+                TrackOrSegmentOnMap(
                     polyline = summary.map_polyline,
+                    color = StravaOrange,
                     modifier = Modifier.size(120.dp),
                     onMapClick = { onSegmentClick(summary.stravaId) }
                 )

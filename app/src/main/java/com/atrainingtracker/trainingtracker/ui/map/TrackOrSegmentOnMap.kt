@@ -16,14 +16,16 @@
  * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
-package com.atrainingtracker.trainingtracker.ui.segments.segmentlist
+package com.atrainingtracker.trainingtracker.ui.map
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import com.atrainingtracker.trainingtracker.ui.map.PathPoint
-import com.atrainingtracker.trainingtracker.ui.theme.StravaOrange
+import androidx.compose.ui.graphics.Color
+import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.LatLngBounds
+import com.google.maps.android.PolyUtil
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapType
@@ -32,8 +34,9 @@ import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
 
 @Composable
-fun SegmentOnMap(
+fun TrackOrSegmentOnMap(
     polyline: String,
+    color: Color,
     modifier: Modifier = Modifier,
     onMapClick: () -> Unit = {}
 ) {
@@ -42,10 +45,10 @@ fun SegmentOnMap(
     // Decode the polyline into LatLngs.
     // We 'remember' it so it doesn't re-decode on every recomposition.
     val latLngs = remember(polyline) {
-        val decoded = com.google.maps.android.PolyUtil.decode(polyline)
+        val decoded = PolyUtil.decode(polyline)
         // If the path is huge, simplify it for the preview map to save GPU memory
         if (decoded.size > 100) {
-            com.google.maps.android.PolyUtil.simplify(decoded, 10.0) // 10 meter tolerance
+            PolyUtil.simplify(decoded, 10.0) // 10 meter tolerance
         } else {
             decoded
         }
@@ -69,16 +72,16 @@ fun SegmentOnMap(
 
             Polyline(
                 points = latLngs,
-                color = StravaOrange,
+                color = color,
                 width = 8f
             )
 
             // Auto-zoom to fit the segment whenever pathPoints change
             LaunchedEffect(latLngs) {
-                val boundsBuilder = com.google.android.gms.maps.model.LatLngBounds.Builder()
+                val boundsBuilder = LatLngBounds.Builder()
                 latLngs.forEach { boundsBuilder.include(it) }
                 cameraPositionState.move(
-                    com.google.android.gms.maps.CameraUpdateFactory.newLatLngBounds(
+                    CameraUpdateFactory.newLatLngBounds(
                         boundsBuilder.build(),
                         20 // padding in px
                     )
