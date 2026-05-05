@@ -42,7 +42,13 @@ fun SegmentOnMap(
     // Decode the polyline into LatLngs.
     // We 'remember' it so it doesn't re-decode on every recomposition.
     val latLngs = remember(polyline) {
-        com.google.maps.android.PolyUtil.decode(polyline)
+        val decoded = com.google.maps.android.PolyUtil.decode(polyline)
+        // If the path is huge, simplify it for the preview map to save GPU memory
+        if (decoded.size > 100) {
+            com.google.maps.android.PolyUtil.simplify(decoded, 10.0) // 10 meter tolerance
+        } else {
+            decoded
+        }
     }
 
     GoogleMap(
