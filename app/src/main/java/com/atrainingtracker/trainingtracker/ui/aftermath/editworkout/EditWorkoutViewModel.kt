@@ -20,19 +20,28 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.editworkout
 
 import android.app.Application
 import android.util.Log
+import androidx.compose.animation.core.copy
 import androidx.lifecycle.*
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
+import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.SimpleSportTypeInfo
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
+import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper.EquipmentData
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDiffCallback
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutUpdatePayload
+import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository
+import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
 import com.atrainingtracker.trainingtracker.ui.util.Event
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class EditWorkoutViewModel(application: Application, private val workoutId: Long) : AndroidViewModel(application) {
@@ -47,23 +56,22 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     private val sportTypeDatabaseManager by lazy { SportTypeDatabaseManager.getInstance(application) }
 
     private val discoveryManager by lazy { EquipmentAndSportTypeDiscoveryManager.getInstance(application) }
-    private val equipmentManager by lazy { EquipmentDbHelper(application) }
+    private val equipmentManager by lazy { EquipmentDbHelper(application) }        // TODO: replace by EquipmentRepository
 
+    private val equipmentList: List<EquipmentData> = EquipmentRepository.getInstance(application).equipmentList
+    private val sportTypesList: List<SimpleSportTypeInfo> = SportTypesRepository.getInstance(application).sportTypesList
 
-    // LiveData to hold the entire WorkoutData object. The UI will observe this.
-    // val workoutData: LiveData<WorkoutData?>
+    // 1. The Single Source of Truth for the UI
+    private val _workoutData = MutableStateFlow<WorkoutData?>(null)
+    val workoutData: StateFlow<WorkoutData?> = _workoutData.asStateFlow()
 
-    val initialWorkoutLoaded: LiveData<WorkoutData> = repository.initialWorkoutLoaded
-
-    // The current, stable state of the workout as known by the UI.
-    public var currentWorkoutState: WorkoutData? = null
 
     private lateinit var currentBSportType: BSportType
 
     // LiveData for the SportType spinner
     private val _sportTypeNames = MutableLiveData<List<String>>()
     val sportTypeNames: LiveData<List<String>> = _sportTypeNames
-    lateinit var suggestedSportTypeName: String
+    var suggestedSportTypeName: String = ""
     var userSelectedSportTypeName: String? = null
     private var showAllSportTypes = false
     private var showAbsolutelyAllSportTypes = false
@@ -87,16 +95,8 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     val ALL_SHOES = application.getString(R.string.equipment_all_shoes)
     val ALL_BIKES = application.getString(R.string.equipment_all_bikes)
     val ALL_SPORT_TYPES = application.getString(R.string.show_all_sport_types)
+    // TODO: really all sports
 
-
-
-
-    // LiveData to emit specific update payloads ---
-    private val _updatePayloads = MutableLiveData<Event<List<WorkoutUpdatePayload>>>()
-    val updatePayloads: LiveData<Event<List<WorkoutUpdatePayload>>> = _updatePayloads
-
-    // Diffing utility
-    private val diffCallback = WorkoutDiffCallback()
 
     val saveFinishedEvent: MutableLiveData<Pair<Long, Boolean>> = repository.saveFinishedEvent
 
@@ -109,39 +109,26 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
             repository.loadWorkout(workoutId)
         }
 
-        initialWorkoutLoaded.observeForever { initialWorkout ->
+        repository.initialWorkoutLoaded.observeForever { initialWorkout ->
             initSuggestedSportAndEquipmentNames(initialWorkout)
+            _workoutData.value = initialWorkout
         }
 
         // Observe the single source of truth from the repository.
         repository.allWorkouts.observeForever { list ->
             val newWorkoutState = list.find { it.id == workoutId }
 
-            // If we have both old and new state, perform a diff.
-            if (currentWorkoutState != null && newWorkoutState != null) {
-                // Check if contents have actually changed.
-                if (!diffCallback.areContentsTheSame(currentWorkoutState!!, newWorkoutState)) {
-
-                    // Manually get the change payloads.
-                    val payloads = diffCallback.getChangePayload(currentWorkoutState!!, newWorkoutState)
-
-                    if (payloads is List<*>) {
-                        @Suppress("UNCHECKED_CAST")
-                        _updatePayloads.postValue(Event(payloads as List<WorkoutUpdatePayload>))
-                    }
-                }
+            if (newWorkoutState != null) {
+                _workoutData.value = newWorkoutState
             }
-
-            // Always update the current state to the latest version.
-            currentWorkoutState = newWorkoutState
         }
     }
 
     fun initSuggestedSportAndEquipmentNames(initialWorkout: WorkoutData) {
 
-        currentBSportType = initialWorkout.sportData.bSportType
-        suggestedSportTypeName = initialWorkout.sportData.sportName
-        suggestedEquipmentName = initialWorkout.equipmentData.equipmentName
+        currentBSportType = initialWorkout.bSportType
+        suggestedSportTypeName = initialWorkout.sportName
+        suggestedEquipmentName = initialWorkout.equipmentName
 
         // get the linked sport types
         var suggestedSportNames = discoveryManager.getLinkedSportTypeNames(workoutId)
@@ -149,7 +136,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
             // when the linked sport types are empty, use the speed-based guess
             suggestedSportNames = discoveryManager.getSpeedBasedSportTypeNames(
                 currentBSportType,
-                initialWorkout.sportData.avgSpeedMps
+                initialWorkout.avgSpeedMps
             )
         }
 
@@ -321,29 +308,30 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     }
 
     fun updateWorkoutName(newName: String) {
-        repository.updateWorkoutName(workoutId, newName)
+        _workoutData.update { it?.copy(workoutName = newName) }
     }
 
 
     // --- Smart handler for sport type changes ---
     fun updateSportName(newSportName: String) {
         if (DEBUG) Log.i(TAG, "updateSportName: Start with {newSportName: $newSportName}")
-        val workout = currentWorkoutState ?: return
 
         if (newSportName == ALL_SPORT_TYPES) {
             showAllSportTypes()
             return
         }
 
-        if (newSportName == workout.sportData.sportName) return
-
+        if (newSportName == workoutData.value?.sportName) return
+        val simpleSportTypeInfo = sportTypesList.find { it.name == newSportName }
+        _workoutData.update { it?.copy(
+            sportName = newSportName,
+            bSportType = simpleSportTypeInfo?.bSportType ?: BSportType.UNKNOWN,
+            sportId = simpleSportTypeInfo?.id ?: -1
+        ) }
 
         // first, get the new sportId and bSportType
         val newSportId = sportTypeDatabaseManager.getSportTypeIdFromUIName(newSportName)
         val newBSportType = sportTypeDatabaseManager.getBSportType(newSportId)
-
-        // finally, call a repository method that updates the sport and equipment data
-        repository.updateSport(workoutId, newSportName, newSportId, newBSportType)
 
         if (newSportName != suggestedSportTypeName) {
             userSelectedSportTypeName = newSportName
@@ -357,7 +345,6 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     // --- Smart handler for equipment changes ---
     fun updateEquipmentName(selectedEquipmentName: String) {
         if (DEBUG) Log.i(TAG, "updateEquipmentName, {selectedEquipmentName: $selectedEquipmentName}")
-        val workout = currentWorkoutState ?: return
 
         // first, the special cases
         // NO_EQUIPMENT means equipment name = null
@@ -368,10 +355,11 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
             return
         }
 
-        if (newEquipmentName == workout.equipmentData.equipmentName) return
-
-        // call the repository method that updates the equipment data
-        repository.updateEquipmentName(workoutId, newEquipmentName)
+        if (newEquipmentName == workoutData.value?.equipmentName) return
+        val equipmentId = equipmentList.find { it.name == newEquipmentName }?.id ?: -1
+        _workoutData.update { it?.copy(
+            equipmentName = newEquipmentName,
+            equipmentId = equipmentId) }
 
         suggestedEquipmentName = newEquipmentName
         updateSuggestedSportNames(newEquipmentName)
@@ -379,23 +367,27 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
 
 
     fun updateDescription(newDescription: String) {
-        repository.updateDescription(workoutId, newDescription)
+        _workoutData.update { it?.copy(description = newDescription) }
     }
 
     fun updateGoal(newGoal: String) {
-        repository.updateGoal(workoutId, newGoal)
+        _workoutData.update { it?.copy(goal = newGoal) }
     }
 
     fun updateMethod(newMethod: String) {
-        repository.updateMethod(workoutId, newMethod)
+        _workoutData.update { it?.copy(method = newMethod) }
     }
 
     fun updateIsCommute(isChecked: Boolean) {
-        repository.updateIsCommute(workoutId, isChecked)
+        val isTrainer = if (isChecked) { false } else { workoutData.value?.trainer ?: false }
+
+        _workoutData.update { it?.copy(commute = isChecked, trainer = isTrainer) }
     }
 
     fun updateIsTrainer(isChecked: Boolean) {
-        repository.updateIsTrainer(workoutId, isChecked)
+        val isCommute = if (isChecked) { false } else { workoutData.value?.commute ?: false }
+
+        _workoutData.update { it?.copy(trainer = isChecked, commute = isCommute) }
     }
 
 
@@ -416,7 +408,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
      * Saves the current state of the WorkoutData object to the database.
      */
     fun saveChanges() {
-        repository.saveWorkout(workoutId)
+        repository.saveWorkout(workoutData.value)
     }
 }
 

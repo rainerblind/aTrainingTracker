@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.segments;
 
+import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.SQLException;
@@ -169,12 +170,14 @@ public class SegmentsDatabaseManager {
             double distance = cursor.getDouble(cursor.getColumnIndexOrThrow(Segments.DISTANCE));
             double avgGrade = cursor.getDouble(cursor.getColumnIndexOrThrow(Segments.AVERAGE_GRADE));
             double maxGrade = cursor.getDouble(cursor.getColumnIndexOrThrow(Segments.MAXIMUM_GRADE));
+            double elevationGain = cursor.getDouble(cursor.getColumnIndexOrThrow(Segments.TOTAL_ELEVATION_GAIN));
             double elevLow = cursor.getDouble(cursor.getColumnIndexOrThrow(Segments.ELEVATION_LOW));
             double elevHigh = cursor.getDouble(cursor.getColumnIndexOrThrow(Segments.ELEVATION_HIGH));
             int prTimeSeconds = cursor.getInt(cursor.getColumnIndexOrThrow(Segments.PR_TIME));
             int climbCategory = cursor.getInt(cursor.getColumnIndexOrThrow(Segments.CLIMB_CATEGORY));
             String city = cursor.getString(cursor.getColumnIndexOrThrow(Segments.CITY));
             String name = cursor.getString(cursor.getColumnIndexOrThrow(Segments.SEGMENT_NAME));
+            String polyline = cursor.getString(cursor.getColumnIndexOrThrow(Segments.MAP_POLYLINE));
 
             // 3. Format strings
             DistanceFormatter df = new DistanceFormatter();
@@ -184,17 +187,21 @@ public class SegmentsDatabaseManager {
                     segmentId,
                     name,
                     sportType,
+                    climbCategory,
                     climbCategory > 0 ? StravaHelper.translateClimbCategory(climbCategory) : "",
                     prTimeSeconds,
                     prTimeSeconds > 0 ? tf.format(prTimeSeconds) : "",
                     (city != null && !city.isEmpty()) ? city : "",
                     df.format_with_units(distance),
                     distance,
+                    avgGrade,
                     String.format(Locale.getDefault(), "Ø %.1f%%", avgGrade),
                     String.format(Locale.getDefault(), "%.1f%% Max", maxGrade),
-                    String.format(Locale.getDefault(), "%d m", Math.round(elevHigh - elevLow)),
+                    elevationGain,
+                    String.format(Locale.getDefault(), "%d m", Math.round(elevationGain)),
                     String.format(Locale.getDefault(), "%d m", Math.round(elevLow)),
-                    String.format(Locale.getDefault(), "%d m", Math.round(elevHigh))
+                    String.format(Locale.getDefault(), "%d m", Math.round(elevHigh)),
+                    polyline
             );
         }
         cursor.close();
@@ -216,12 +223,14 @@ public class SegmentsDatabaseManager {
         int dist_index = cursor.getColumnIndexOrThrow(Segments.DISTANCE);
         int avg_grade_index = cursor.getColumnIndexOrThrow(Segments.AVERAGE_GRADE);
         int max_grade_index = cursor.getColumnIndexOrThrow(Segments.MAXIMUM_GRADE);
+        int elev_gain_index = cursor.getColumnIndexOrThrow(Segments.TOTAL_ELEVATION_GAIN);
         int elev_low_index = cursor.getColumnIndexOrThrow(Segments.ELEVATION_LOW);
         int elev_high_index = cursor.getColumnIndexOrThrow(Segments.ELEVATION_HIGH);
         int pr_time_index = cursor.getColumnIndexOrThrow(Segments.PR_TIME);
         int climb_category_index = cursor.getColumnIndexOrThrow(Segments.CLIMB_CATEGORY);
         int city_index = cursor.getColumnIndexOrThrow(Segments.CITY);
         int name_index = cursor.getColumnIndexOrThrow(Segments.SEGMENT_NAME);
+        int map_polyline_index = cursor.getColumnIndexOrThrow(Segments.MAP_POLYLINE);
 
 
         while (cursor.moveToNext()) {
@@ -231,34 +240,180 @@ public class SegmentsDatabaseManager {
             double distance = cursor.getDouble(dist_index);
             double avgGrade = cursor.getDouble(avg_grade_index);
             double maxGrade = cursor.getDouble(max_grade_index);
+            double elevation_gain = cursor.getDouble(elev_gain_index);
             double elevLow = cursor.getDouble(elev_low_index);
             double elevHigh = cursor.getDouble(elev_high_index);
             int prTimeSeconds = cursor.getInt(pr_time_index);
             int climbCategory = cursor.getInt(climb_category_index);
             String city = cursor.getString(city_index);
             String name = cursor.getString(name_index);
+            String polyline = cursor.getString(map_polyline_index);
+            if (polyline == null) {
+                polyline = "";
+            }
+
 
             summaries.add(new SegmentSummary(
                             segmentId,
                             name,
                             sportType,
-                            climbCategory > 0 ? StravaHelper.translateClimbCategory(climbCategory) : "",
+                            climbCategory,
+                            StravaHelper.translateClimbCategory(climbCategory),
                             prTimeSeconds,
                             prTimeSeconds > 0 ? tf.format(prTimeSeconds) : "",
                             (city != null && !city.isEmpty()) ? city : "",
                             df.format_with_units(distance),
                             distance,
+                            avgGrade,
                             String.format(Locale.getDefault(), "Ø %.1f%%", avgGrade),
                             String.format(Locale.getDefault(), "%.1f%% Max", maxGrade),
-                            String.format(Locale.getDefault(), "%d m", Math.round(elevHigh - elevLow)),
+                            elevation_gain,
+                            String.format(Locale.getDefault(), "%d m", Math.round(elevation_gain)),
                             String.format(Locale.getDefault(), "%d m", Math.round(elevLow)),
-                            String.format(Locale.getDefault(), "%d m", Math.round(elevHigh))
+                            String.format(Locale.getDefault(), "%d m", Math.round(elevHigh)),
+                            polyline
                     )
             );
         }
         cursor.close();
 
         return summaries;
+    }
+
+    /**
+     * Adds or updates a Strava segment in the database using the modern StravaSegment data class.
+     * This method maps the Kotlin object properties to the SQLite columns.
+     *
+     * @param segment The StravaSegment object parsed from JSON
+     */
+    public void addOrUpdateSegment(StravaSegment segment) {
+        SQLiteDatabase db = getDatabase();
+        ContentValues cv = new ContentValues();
+
+        // Mapping Kotlin fields to Database Columns
+        cv.put(Segments.STRAVA_SEGMENT_ID, segment.getId());
+        cv.put(Segments.SEGMENT_NAME, segment.getName());
+        cv.put(Segments.ACTIVITY_TYPE, segment.getActivity_type());
+        cv.put(Segments.DISTANCE, segment.getDistance());
+        cv.put(Segments.AVERAGE_GRADE, segment.getAverage_grade());
+        cv.put(Segments.MAXIMUM_GRADE, segment.getMaximum_grade());
+        cv.put(Segments.ELEVATION_HIGH, segment.getElevation_high());
+        cv.put(Segments.ELEVATION_LOW, segment.getElevation_low());
+        cv.put(Segments.TOTAL_ELEVATION_GAIN, segment.getTotal_elevation_gain());
+        cv.put(Segments.CLIMB_CATEGORY, segment.getClimb_category());
+        cv.put(Segments.CITY, segment.getCity());
+        cv.put(Segments.STATE, segment.getState());
+        cv.put(Segments.COUNTRY, segment.getCountry());
+        cv.put(Segments.PR_TIME, segment.getPr_time());
+
+        // Extract the polyline from the nested Map object
+        if (segment.getMap() != null) {
+            cv.put(Segments.MAP_POLYLINE, segment.getMap().getPolyline());
+        }
+
+        // Handle LatLng arrays (Strava returns [lat, lng])
+        if (segment.getStart_latlng().size() >= 2) {
+            cv.put(Segments.START_LATITUDE, segment.getStart_latlng().get(0));
+            cv.put(Segments.START_LONGITUDE, segment.getStart_latlng().get(1));
+        }
+        if (segment.getEnd_latlng().size() >= 2) {
+            cv.put(Segments.END_LATITUDE, segment.getEnd_latlng().get(0));
+            cv.put(Segments.END_LONGITUDE, segment.getEnd_latlng().get(1));
+        }
+
+
+        // Insert or Replace logic
+        db.beginTransaction();
+        try {
+            // Check if segment already exists to handle updates vs inserts
+            int rowsAffected = db.update(Segments.TABLE_STARRED_SEGMENTS, cv,
+                    Segments.STRAVA_SEGMENT_ID + "=?",
+                    new String[]{String.valueOf(segment.getId())});
+
+            if (rowsAffected == 0) {
+                db.insert(Segments.TABLE_STARRED_SEGMENTS, null, cv);
+            }
+
+            db.setTransactionSuccessful();
+        } catch (Exception e) {
+            Log.e(TAG, "Error inserting/updating segment: " + segment.getId(), e);
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    /**
+     * Deletes a specific segment and its associated streams.
+     * Useful for when a user un-stars a segment on Strava.
+     */
+    public void deleteSegment(long stravaSegmentId) {
+        SQLiteDatabase db = getDatabase();
+        db.beginTransaction();
+        try {
+            db.delete(Segments.TABLE_STARRED_SEGMENTS,
+                    Segments.STRAVA_SEGMENT_ID + "=?",
+                    new String[]{String.valueOf(stravaSegmentId)});
+
+            db.delete(Segments.TABLE_SEGMENT_STREAMS,
+                    Segments.STRAVA_SEGMENT_ID + "=?",
+                    new String[]{String.valueOf(stravaSegmentId)});
+
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    /**
+     * Inserts the segment stream data into the database.
+     * Handles the 1-second interpolation logic if time data is present.
+     *
+     * @param segmentId The Strava ID of the segment
+     * @param effortRows List of ContentValues prepared from the Strava Stream
+     * @param haveTime Boolean indicating if time data is present for interpolation
+     */
+    public void insertSegmentStreams(long segmentId, List<ContentValues> effortRows, boolean haveTime) {
+        if (effortRows == null || effortRows.isEmpty()) return;
+
+        haveTime = false;
+
+        SQLiteDatabase db = getDatabase();
+        db.beginTransaction();
+        try {
+            if (haveTime) {
+                // Strava time starts at 0, but we need the first prevTime to be -1
+                // to ensure the first point is inserted correctly via the delta logic
+                Integer firstTime = effortRows.get(0).getAsInteger("time");
+                int prevTime = (firstTime != null ? firstTime : 0) - 1;
+
+                for (ContentValues row : effortRows) {
+                    Integer curTimeObj = row.getAsInteger("time");
+                    int curTime = (curTimeObj != null ? curTimeObj : prevTime + 1);
+
+                    // Clean up the row for insertion
+                    row.remove("time");
+                    row.put(Segments.STRAVA_SEGMENT_ID, segmentId);
+
+                    // Fill gaps if time jumps (ensure 1 row per second in the DB)
+                    int delta = Math.max(1, curTime - prevTime);
+                    for (int i = 0; i < delta; i++) {
+                        db.insert(Segments.TABLE_SEGMENT_STREAMS, null, row);
+                    }
+                    prevTime = curTime;
+                }
+            } else {
+                // Simple insertion if no time interpolation is needed
+                for (ContentValues row : effortRows) {
+                    row.put(Segments.STRAVA_SEGMENT_ID, segmentId);
+                    db.insert(Segments.TABLE_SEGMENT_STREAMS, null, row);
+                }
+            }
+            db.setTransactionSuccessful();
+        } catch (Exception e) {
+            Log.e(TAG, "Error inserting streams for segment: " + segmentId, e);
+        } finally {
+            db.endTransaction();
+        }
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -305,6 +460,7 @@ public class SegmentsDatabaseManager {
         public static final String MAXIMUM_GRADE = "MaximumGrade";  // maximum_grade: 	float percent
         public static final String ELEVATION_HIGH = "ElevationHigh"; // elevation_high: 	float meters
         public static final String ELEVATION_LOW = "ElevationLow";  // elevation_low: 	float meters
+        public static final String TOTAL_ELEVATION_GAIN = "TotalElevationGain"; // total_elevation_gain: 	float meters
         public static final String START_LATITUDE = "StartLatitude";
         public static final String START_LONGITUDE = "StartLongitude";
         public static final String END_LATITUDE = "EndLatitude";
@@ -317,6 +473,7 @@ public class SegmentsDatabaseManager {
         public static final String STARRED = "Starred";       // starred: 	boolean
         public static final String HAZARDOUS = "Hazardous";     // hazardous: boolean
         public static final String PR_TIME = "pr_time";
+        public static final String MAP_POLYLINE = "MapPolyline";
 
 
         // for TABLE_SEGMENT_STREAMS
@@ -335,8 +492,10 @@ public class SegmentsDatabaseManager {
         // public static final int DB_VERSION = 1; // created  3.8.2016
         // public static final int DB_VERSION = 2; // updated 19.8.2016
         // public static final int DB_VERSION = 3; // updated 26.9.2016
-        public static final int DB_VERSION = 5; // updated 11.01.2026: add PR_TIME
-        protected static final String CREATE_TABLE_STARRED_SEGMENTS_V2 = "create table " + Segments.TABLE_STARRED_SEGMENTS + " ("
+        // public static final int DB_VERSION = 5; // updated 11.01.2026: add PR_TIME
+        public static final int DB_VERSION = 6; // updated 02.05.2026: add TOTAL_ELEVATION_GAIN & MAP_POLYLINE
+
+        protected static final String CREATE_TABLE_STARRED_SEGMENTS_V6 = "create table " + Segments.TABLE_STARRED_SEGMENTS + " ("
                 + Segments.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                 + Segments.STRAVA_SEGMENT_ID + " int, "
                 + Segments.RESOURCE_STATE + " int, "
@@ -347,6 +506,8 @@ public class SegmentsDatabaseManager {
                 + Segments.MAXIMUM_GRADE + " real, "
                 + Segments.ELEVATION_HIGH + " real, "
                 + Segments.ELEVATION_LOW + " real, "
+                + Segments.TOTAL_ELEVATION_GAIN + " real, " // introduced in Version 6
+                + Segments.MAP_POLYLINE + " text, "         // introduced in Version 6
                 + Segments.START_LATITUDE + " real, "
                 + Segments.START_LONGITUDE + " real, "
                 + Segments.END_LATITUDE + " real, "
@@ -382,16 +543,12 @@ public class SegmentsDatabaseManager {
         @Override
         public void onCreate(@NonNull SQLiteDatabase db) {
 
-            db.execSQL(CREATE_TABLE_STARRED_SEGMENTS_V2);
-            if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_STARRED_SEGMENTS_V2);
+            db.execSQL(CREATE_TABLE_STARRED_SEGMENTS_V6);
+            if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_STARRED_SEGMENTS_V6);
 
             db.execSQL(CREATE_TABLE_SEGMENT_STREAMS_V1);
             if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_SEGMENT_STREAMS_V1);
 
-        }
-
-        private void addColumn(@NonNull SQLiteDatabase db, String table, String column, String type) {
-            db.execSQL("ALTER TABLE " + table + " ADD COLUMN " + column + " " + type + ";");
         }
 
         //Called whenever newVersion != oldVersion

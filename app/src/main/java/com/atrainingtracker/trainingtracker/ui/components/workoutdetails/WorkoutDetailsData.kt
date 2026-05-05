@@ -29,11 +29,11 @@ import com.atrainingtracker.banalservice.BSportType
  */
 data class WorkoutDetailsData(
     val totalDistance: Double,
-    val activeTimeSec: Int,
-    val totalTimeSec: Int,
-    val avgSpeedMps: Float,
-    val ascentMeters: Int,
-    val descentMeters: Int,
+    val activeTimeSec: Long,
+    val totalTimeSec: Long,
+    val avgSpeedMps: Double,
+    val ascentMeters: Long,
+    val descentMeters: Long,
     val bSportType: BSportType,  // necessary for distinguishing to show speed or pace
 
     val maxDisplacement: Double?,

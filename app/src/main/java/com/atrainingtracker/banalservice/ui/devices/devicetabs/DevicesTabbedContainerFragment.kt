@@ -75,6 +75,22 @@ class DevicesTabbedContainerFragment : Fragment() {
                 }
             }
         }
+
+        // Handle Window Insets to prevent drawing under Status Bar and Navigation Bar
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, insets ->
+            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+
+            // Apply padding to the root view so the Tabs and ViewPager
+            // stay within the visible screen area
+            v.setPadding(
+                systemBars.left,
+                systemBars.top,
+                systemBars.right,
+                systemBars.bottom
+            )
+
+            insets
+        }
     }
 
     private fun showDeviceTypeSelectionDialog() {

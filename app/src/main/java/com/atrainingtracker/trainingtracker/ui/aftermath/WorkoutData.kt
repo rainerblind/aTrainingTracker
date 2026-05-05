@@ -18,16 +18,21 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath
 
+import androidx.compose.runtime.Immutable
+import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusGroupData
 import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.DescriptionData
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsData
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaData
+import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaDataRow
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderData
+import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 
 /**
  * A composite data class that represents all data needed for a single row in the workout list.
  * It holds the raw data AND the structured data for each component.
  */
-data class WorkoutData(
+data class WorkoutDataClassic(
     // --- Raw Data (Primary Key) ---
     val id: Long,
     val fileBaseName: String?,
@@ -39,7 +44,102 @@ data class WorkoutData(
     val headerData: WorkoutHeaderData,
     val detailsData: WorkoutDetailsData,
     val descriptionData: DescriptionData,
-    val extremaData: ExtremaData
+    val extremaData: ExtremaData,
+    val trackPoints: List<PathPoint>,
+    val exportStatuses: List<ExportStatusGroupData>
 )
 
 // TODO: move the methods to update redundant data to here???
+
+@Immutable
+data class WorkoutData(
+    // --- 1. Raw Data (The "Source of Truth") ---
+    val id: Long,
+    val finished: Boolean,
+    val fileBaseName: String?,
+    val workoutName: String,
+    val sportId: Long,
+    val sportName: String,
+    val bSportType: BSportType,
+    val startTimeS: Long,
+    val formattedDate: String,
+    val formattedTime: String,
+    val equipmentName: String?,
+    val equipmentId: Long,
+    val commute: Boolean,
+    val trainer: Boolean,
+    val map_polyline: String,
+
+    val totalDistance: Double,
+    val maxDisplacement: Double?,
+    val activeTimeSec: Long,
+    val totalTimeSec: Long,
+    val avgSpeedMps: Double,
+    val ascentMeters: Long,
+    val descentMeters: Long,
+    val minAltitude: Double?,
+    val maxAltitude: Double?,
+
+    val description: String?,
+    val goal: String?,
+    val method: String?,
+
+    val isCalculatingExtrema: Boolean = false,
+    val extremaCalculationMessage: String? = null,
+
+    // --- 2. Heavy/Live Data ---
+    val trackPoints: List<PathPoint> = emptyList(),
+    val exportStatuses: List<ExportStatusGroupData> = emptyList(),
+    val extremaRows: List<ExtremaDataRow> = emptyList()
+) {
+
+    // --- 3. Computed Component Properties ---
+    // These replace the previous nested constructor objects.
+    // They are computed on-demand, keeping the data class "flat".
+
+    val headerData: WorkoutHeaderData
+        get() = WorkoutHeaderData(
+            workoutName = workoutName,
+            sportName = sportName,
+            bSportType = bSportType,
+            startTimeS = startTimeS,
+            finished = finished,
+            formattedDate = formattedDate,
+            formattedTime = formattedTime,
+            equipmentName = equipmentName,
+            commute = commute,
+            trainer = trainer
+        )
+
+    val detailsData: WorkoutDetailsData
+        get() = WorkoutDetailsData(
+            totalDistance = totalDistance,
+            activeTimeSec = activeTimeSec,
+            totalTimeSec = totalTimeSec,
+            avgSpeedMps = avgSpeedMps,
+            bSportType = bSportType,
+            ascentMeters = ascentMeters,
+            descentMeters = descentMeters,
+            maxDisplacement = maxDisplacement,
+            minAltitude = minAltitude,
+            maxAltitude = maxAltitude
+        )
+
+    val descriptionData: DescriptionData
+        get() = DescriptionData(
+            description = description,
+            goal = goal,
+            method = method
+        )
+
+    val extremaData: ExtremaData
+        get() = ExtremaData(
+            dataRows = extremaRows,
+            isCalculating = isCalculatingExtrema,
+            workoutId = id,
+            calculationMessage = extremaCalculationMessage
+        )
+
+    // --- 4. Logic Helpers ---
+    val hasTrackPoints: Boolean get() = !trackPoints.isNullOrEmpty()
+}

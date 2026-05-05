@@ -152,9 +152,18 @@ class TrackingViewModel(
     )
 
     init {
+        // ensure the repository is bound to the BANALService
+        banalServiceRepository.bindToBANALService()
+
         // Load both the main UI state and the activity type
         loadSensorFieldStates()
         loadActivityType()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        // Trigger the unbind logic in the repository
+        banalServiceRepository.unbindFromBANALService()
     }
 
     private fun loadActivityType() {

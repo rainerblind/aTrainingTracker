@@ -640,6 +640,7 @@
     <string name="units_radius" translatable="false">m</string>
     <string name="create_new_my_location">Creating new known location.</string>
     <string name="calc_workout_name">Calculating workout name.</string>
+    <string name="calc_map_polyline">Calculating map polyline.</string>
     <string name="edit_counter">edit</string>
     <string name="edit_counter_format">Edit %1$s counter.</string>
     <string name="editWorkoutNameCounters">Edit workout name counters.</string>
@@ -789,7 +790,7 @@
     <!-- Zone Settings Screen -->
     <string name="prefs_training_zones">Training Zones</string>
     <string name="prefs_training_zones_summary">Configure your training zones</string>
-    <string name="title_edit_zones">Edit Zones</string>
+    <string name="title_edit_zones">Training Zones</string>
     <string name="tab_hr_run">Run HR</string>
     <string name="tab_hr_bike">Bike HR</string>
     <string name="tab_pwr_bike">Bike Power</string>
@@ -1005,7 +1006,6 @@
 
     <!-- Equipment -->
     <string name="equipment_management_title">Equipment</string>
-    <string name="equipment_management_title_full">Configure Equipment</string>
     <string name="equipment_management_summary">Configure your equipment</string>
     <string name="prefs_manage_bikes_title">Bikes</string>
     <string name="prefs_manage_bikes_summary">Configure all your bikes</string>
@@ -1055,6 +1055,8 @@
 
     <!-- starred Strava segments -->
     <string name="starred_segments__no_update_because_upload_to_strava_is_disabled">Not connected to Strava. -> No update of your starred Strava segments.</string>
+    <string name="starred_segments__no_strava_connection">Not connected to Strava</string>
+    <string name="starred_segments__connect_to_strava">Connect to Strava</string>
 
     <!-- Control tracking -->
     <string name="control_tracking_connecting">Connecting…</string>
@@ -1085,5 +1087,13 @@
     <!-- Tracking -->
     <string name="Done">Done</string>
     <string name="Edit">Edit</string>
+
+    <!-- Segment Sorting -->
+    <string name="sort_closest">Closest</string>
+    <string name="sort_climb_category">Climb Category</string>
+    <string name="sort_elevation_gain">Elevation Gain</string>
+    <string name="sort_average_grade">Average Grade</string>
+    <string name="sort_segment_length">Segment Length</string>
+    <string name="sort_name">Name</string>
 
 </resources>

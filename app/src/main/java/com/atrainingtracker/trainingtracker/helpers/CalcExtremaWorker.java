@@ -50,8 +50,9 @@ import java.util.Set;
 
 
 public class CalcExtremaWorker extends Worker {
-    private static final String TAG = CalcExtremaWorker.class.getSimpleName();
+    private static final String TAG = "CalcExtremaWorker";
     private static final boolean DEBUG = TrainingApplication.getDebug(true);
+    private static final boolean DELAY = false;
 
     // --- KEYS for Input/Output/Progress Data ---
     public static final String KEY_WORKOUT_ID = "WORKOUT_ID";
@@ -93,6 +94,15 @@ public class CalcExtremaWorker extends Worker {
 
 
     private void publishStarting(String message) {
+        if (DEBUG) Log.i(TAG, "publishStarting: " + message);
+        if (DEBUG && DELAY) {
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                // do nothing.
+            }
+        }
+
         progressCounter++;
         Data progressData = new Data.Builder()
                 .putString(KEY_STARTING_MESSAGE, message)
@@ -138,6 +148,10 @@ public class CalcExtremaWorker extends Worker {
             calcFancyName(context, workoutId);
 
             guessCommuteAndTrainer(context, workoutId);
+
+            // Calculate and save the map polyline string
+            publishStarting(context.getString(R.string.calc_map_polyline));
+            calcAndSaveMapPolyline(context, workoutId, baseFileName);
 
             // -- calc min, mean, and max values --
             // first, we need the accumulated sensors of this workout
@@ -335,6 +349,54 @@ public class CalcExtremaWorker extends Worker {
         // inform others that this is done
         publishFinished(FINISHED_COMMUTE_AND_TRAINER);
     }
+
+    private void calcAndSaveMapPolyline(Context context, long workoutId, String baseFileName) {
+        if (DEBUG) Log.i(TAG, "calcAndSaveMapPolyline: workoutId=" + workoutId);
+
+        if (baseFileName == null) return;
+
+        // 1. Fetch points from the samples database
+        WorkoutSamplesDatabaseManager samplesManager = WorkoutSamplesDatabaseManager.getInstance(context);
+
+        String tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName);
+        SQLiteDatabase samplesDb = samplesManager.getDatabase();
+
+        java.util.List<LatLng> latLngs = new java.util.ArrayList<>();
+
+        try (Cursor cursor = samplesDb.query(tableName,
+                new String[]{"LATITUDE", "LONGITUDE"},
+                "LATITUDE IS NOT NULL AND LONGITUDE IS NOT NULL",
+                null, null, null, null)) {
+
+            if (cursor != null) {
+                int latIdx = cursor.getColumnIndex("LATITUDE");
+                int lonIdx = cursor.getColumnIndex("LONGITUDE");
+
+                while (cursor.moveToNext()) {
+                    latLngs.add(new LatLng(cursor.getDouble(latIdx), cursor.getDouble(lonIdx)));
+                }
+            }
+        }
+
+        if (!latLngs.isEmpty()) {
+            // 2. Encode to String
+            String encodedPath = com.google.maps.android.PolyUtil.encode(latLngs);
+
+            // 3. Save to WorkoutSummaries table
+            ContentValues values = new ContentValues();
+            values.put(WorkoutSummaries.MAP_POLYLINE, encodedPath);
+
+            WorkoutSummariesDatabaseManager.getInstance(context).getDatabase().update(
+                    WorkoutSummaries.TABLE,
+                    values,
+                    WorkoutSummaries.C_ID + "=?",
+                    new String[]{String.valueOf(workoutId)}
+            );
+
+            if (DEBUG) Log.d(TAG, "Saved polyline for workout " + workoutId + " (" + latLngs.size() + " points)");
+        }
+    }
+
 
     private void calcAndSaveExtremaValues(Context context, long workoutId, String baseFileName, @NonNull Iterable<SensorType> sensorTypeList, @NonNull Iterable<ExtremaType> extremaTypeList) {
         if (DEBUG) Log.i(TAG, "calcAndSaveExtremaValues(" + workoutId + "...)");

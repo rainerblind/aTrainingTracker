@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.activities;
 
 import android.Manifest;
 
+import androidx.activity.EdgeToEdge;
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -48,10 +49,12 @@ import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedCont
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFragmentFactory;
 import com.atrainingtracker.trainingtracker.fragments.preferences.PebbleScreenFragment;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
-import com.atrainingtracker.trainingtracker.segments.StarredSegmentsTabbedContainer;
 import com.atrainingtracker.trainingtracker.tracker.TrackerService;
+import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents;
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedFragment;
 import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentFragment;
 import com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrack;
+import com.atrainingtracker.trainingtracker.ui.segments.segmentlist.StarredSegmentsFragment;
 import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository;
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsFragment;
 import com.dsi.ant.plugins.antplus.pccbase.AntPluginPcc;
@@ -59,27 +62,24 @@ import com.google.android.material.navigation.NavigationView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
-import androidx.core.view.OnApplyWindowInsetsListener;
 import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
-import androidx.appcompat.app.ActionBar;
-import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.LifecycleOwnerKt;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceScreen;
-import androidx.appcompat.widget.Toolbar;
 
 import android.provider.Settings;
 import android.util.Log;
 import android.view.MenuItem;
-import android.view.View;
-import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -97,7 +97,6 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
 import com.atrainingtracker.trainingtracker.dialogs.GPSDisabledDialog;
 import com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialog;
-import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.CloudUploadFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.FancyWorkoutNameListFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.RootPrefsFragment;
@@ -106,14 +105,14 @@ import com.atrainingtracker.trainingtracker.fragments.preferences.SearchFragment
 import com.atrainingtracker.trainingtracker.fragments.preferences.StravaUploadFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.TrainingpeaksUploadFragment;
 import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface;
-import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager;
-import com.atrainingtracker.trainingtracker.segments.StarredSegmentsListFragment;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+
+import kotlinx.coroutines.flow.FlowKt;
 
 // import android.support.v7.app.AlertDialog;
 
@@ -127,7 +126,6 @@ public class MainActivityWithNavigation
         NavigationView.OnNavigationItemSelectedListener,
         BANALService.GetBanalServiceInterface,
         PreferenceFragmentCompat.OnPreferenceStartScreenCallback,
-        StarredSegmentsListFragment.StartSegmentDetailsActivityInterface,
         StartOrResumeInterface {
     public static final String SELECTED_FRAGMENT_ID = "SELECTED_FRAGMENT_ID";
     public static final String SELECTED_FRAGMENT = "SELECTED_FRAGMENT";
@@ -311,6 +309,8 @@ public class MainActivityWithNavigation
         super.onCreate(savedInstanceState);
         if (DEBUG) Log.d(TAG, "onCreate");
 
+        EdgeToEdge.enable(this);
+
         // some initialization
         mTrainingApplication = (TrainingApplication) getApplication();
         mHandler = new Handler();
@@ -321,17 +321,7 @@ public class MainActivityWithNavigation
         // now, create the UI
         setContentView(R.layout.main_activity_with_navigation);
 
-        Toolbar toolbar = findViewById(R.id.apps_toolbar);
-        setSupportActionBar(toolbar);
-
-        final ActionBar supportAB = getSupportActionBar();
-        // supportAB.setHomeAsUpIndicator(R.drawable.abc_ic_ab_back_mtrl_am_alpha);
-        supportAB.setDisplayHomeAsUpEnabled(true);
-
         mDrawerLayout = findViewById(R.id.drawer_layout);
-
-        ActionBarDrawerToggle actionBarDrawerToggle = new ActionBarDrawerToggle(this, mDrawerLayout, toolbar, R.string.TrainingTracker, R.string.TrainingTracker);
-        actionBarDrawerToggle.syncState();
 
         mNavigationView = findViewById(R.id.nav_view);
         mNavigationView.setItemIconTintList(null);  // avoid converting the icons to black and white or gray and white
@@ -388,20 +378,23 @@ public class MainActivityWithNavigation
                 dialog.show();
             }
         }
-        ViewCompat.setOnApplyWindowInsetsListener(
-                mDrawerLayout,
-                new OnApplyWindowInsetsListener() {
-                    @NonNull
-                    @Override
-                    public WindowInsetsCompat onApplyWindowInsets(
-                            @NonNull View v, @NonNull WindowInsetsCompat windowInsets) {
-                        Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
-                        v.setPadding(insets.left, 0, insets.right, insets.bottom);
-                        ViewGroup.MarginLayoutParams mlp = (ViewGroup.MarginLayoutParams) v.getLayoutParams();
-                        mlp.topMargin = insets.top;
-                        return WindowInsetsCompat.CONSUMED;
-                    }
-                });
+
+
+        ViewCompat.setOnApplyWindowInsetsListener(mDrawerLayout, (v, windowInsets) -> {
+            Insets systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+
+            // We only apply horizontal padding to the DrawerLayout
+            // We leave TOP at 0 because Compose will handle the status bar.
+            v.setPadding(systemBars.left, 0, systemBars.right, 0);
+
+            // Keep the status bar icons dark (since your background is baby blue)
+            WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+            if (controller != null) {
+                controller.setAppearanceLightStatusBars(true);
+            }
+
+            return windowInsets;
+        });
 
         getOnBackPressedDispatcher().addCallback(this,
                 new OnBackPressedCallback(true) {
@@ -422,6 +415,36 @@ public class MainActivityWithNavigation
                     }
                 }
         );
+
+        observeNavigationEvents();
+    }
+
+    private void observeNavigationEvents() {
+        // Observe the LiveData. This is standard Java/Android code.
+        // No more Flows, Continuations, or Units.
+        WorkoutNavigationEvents.getNavigateToEditLiveData().observe(this, workoutId -> {
+            if (workoutId == null) return;
+
+            // 1. Update the internal state
+            mSelectedFragmentId = R.id.drawer_workouts;
+
+            // 2. Update the Drawer UI checkmark
+            mNavigationView.setCheckedItem(mSelectedFragmentId);
+
+            // 3. Instantiate the new Fragment
+            mFragment = new WorkoutSummariesTabbedFragment();
+
+            // Ensure this TAG is defined in your Kotlin Fragment's companion object
+            String tag = WorkoutSummariesTabbedFragment.TAG;
+
+            // 4. Clear the backstack
+            getSupportFragmentManager().popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE);
+
+            // 5. Perform the Transaction
+            getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.content, mFragment, tag)
+                    .commit();
+        });
     }
 
     @NonNull
@@ -695,8 +718,8 @@ public class MainActivityWithNavigation
                 break;
 
             case R.id.drawer_segments:
-                mFragment = new StarredSegmentsTabbedContainer();
-                tag = StarredSegmentsTabbedContainer.TAG;
+                mFragment = StarredSegmentsFragment.newInstance();
+                tag = StarredSegmentsFragment.TAG;
                 break;
 
             case R.id.drawer_workouts:
@@ -817,18 +840,6 @@ public class MainActivityWithNavigation
             builder.create().show();
         }
     }
-
-    @Override
-    public void startSegmentDetailsActivity(int segmentId) {
-        if (DEBUG) Log.i(TAG, "startSegmentDetailsActivity: segmentId=" + segmentId);
-
-        Bundle bundle = new Bundle();
-        bundle.putLong(SegmentsDatabaseManager.Segments.STRAVA_SEGMENT_ID, segmentId);
-        Intent segmentDetailsIntent = new Intent(this, SegmentDetailsActivity.class);
-        segmentDetailsIntent.putExtras(bundle);
-        startActivity(segmentDetailsIntent);
-    }
-
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // the connection to the BANALService

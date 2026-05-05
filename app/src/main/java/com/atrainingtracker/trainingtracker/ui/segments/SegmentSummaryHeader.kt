@@ -25,6 +25,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -44,18 +45,19 @@ import com.atrainingtracker.trainingtracker.ui.theme.Zone4
 @Composable
 fun SegmentSummaryHeader(
     summary: SegmentSummary,
+    compact: Boolean = false,
     liveSegmentData: LiveSegmentData? = null,
     modifier: Modifier = Modifier
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+        shape = RectangleShape, //RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(8.dp)
+                .padding(if (compact) 2.dp else 8.dp)
         ) {
             // --- TOP ROW: Name and City on Left, Category and PR on Right ---
             Row(
@@ -67,14 +69,14 @@ fun SegmentSummaryHeader(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = summary.name,
-                        style = MaterialTheme.typography.titleLarge,
+                        style = if (compact) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         maxLines = 2
                     )
                     if (liveSegmentData == null) {
                         Text(
                             text = summary.city,
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = if (compact) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     } else {
@@ -101,7 +103,7 @@ fun SegmentSummaryHeader(
                                 Text(
                                     text = summary.climbCategory,
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                    style = if (compact) MaterialTheme.typography.labelSmall else MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSecondaryContainer
                                 )
@@ -114,13 +116,13 @@ fun SegmentSummaryHeader(
                                 Icon(
                                     painter = painterResource(id = R.drawable.ic_pr_time),
                                     contentDescription = null,
-                                    modifier = Modifier.size(18.dp),
+                                    modifier = Modifier.size(if (compact) 14.dp else 18.dp),
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
                                     text = summary.prTime,
-                                    style = MaterialTheme.typography.bodyLarge,
+                                    style = if (compact) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodyLarge,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
@@ -130,39 +132,45 @@ fun SegmentSummaryHeader(
             }
 
             if (liveSegmentData == null) {
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(if (compact) 2.dp else 6.dp))
 
                 // --- ROW 1: Distance ---
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    StatItem(R.drawable.ic_distance, summary.distance)
+                    StatItem(R.drawable.ic_distance, summary.distance, compact)
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                if (!compact) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
 
                 // --- ROW 2: Grades (Avg and Max) ---
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    StatItem(R.drawable.ic_grade, summary.averageGrade)
-                    VerticalDivider()
-                    Text(text = summary.maxGrade, style = MaterialTheme.typography.bodyMedium)
+                    StatItem(R.drawable.ic_grade, summary.averageGrade, compact)
+                    VerticalDivider(compact)
+                    Text(text = summary.maxGrade, style = if (compact) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyMedium)
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                if (!compact) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
 
                 // --- ROW 3: Elevations (Gain, Min, Max) ---
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_altitude),
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
+                    if (!compact) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_altitude),
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                    }
 
-                    StatItem(R.drawable.ic_elevation_gain, summary.elevationGain)
-                    VerticalDivider()
-                    StatItem(R.drawable.ic_altitude_min, summary.elevationMin)
-                    VerticalDivider()
-                    StatItem(R.drawable.ic_altitude_max, summary.elevationMax)
+                    StatItem(R.drawable.ic_elevation_gain, summary.elevationGain, compact)
+                    VerticalDivider(compact)
+                    StatItem(R.drawable.ic_altitude_min, summary.elevationMin, compact)
+                    VerticalDivider(compact)
+                    StatItem(R.drawable.ic_altitude_max, summary.elevationMax, compact)
                 }
             }
 
@@ -243,26 +251,26 @@ fun LiveSegmentStatus.label(): String {
 }
 
 @Composable
-private fun StatItem(iconRes: Int, value: String) {
+private fun StatItem(iconRes: Int, value: String, compact: Boolean) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
             painter = painterResource(id = iconRes),
             contentDescription = null,
-            modifier = Modifier.size(16.dp),
+            modifier = Modifier.size(if (compact) 14.dp else 16.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.width(4.dp))
-        Text(text = value, style = MaterialTheme.typography.bodyMedium)
+        Text(text = value, style = if (compact) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyMedium)
     }
 }
 
 @Composable
-private fun VerticalDivider() {
+private fun VerticalDivider(compact: Boolean) {
     Box(
         modifier = Modifier
             .padding(horizontal = 8.dp)
             .width(1.dp)
-            .height(12.dp)
+            .height(if (compact) 10.dp else 12.dp)
             .background(MaterialTheme.colorScheme.outlineVariant)
     )
 }
@@ -276,18 +284,52 @@ fun PreviewSegmentSummaryFull() {
                 stravaId = 12345L,
                 name = "Alpe d'Huez Climb",
                 bSportType = BSportType.BIKE,
+                climbCategory_raw = 5,
                 climbCategory = "HC",
                 prTime_raw = 45 * 60 + 20,
                 prTime = "45:20",
                 city = "Bourg d'Oisans",
                 distance = "13.80 km",
                 distance_raw = 13800.0,
+                averageGrade_raw = 8.1,
                 averageGrade = "Ø 8.1%",
                 maxGrade = "12.0% Max",
+                elevationGain_raw = 1073.0,
                 elevationGain = "1073 m",
                 elevationMin = "720 m",
-                elevationMax = "1793 m"
+                elevationMax = "1793 m",
+                map_polyline = ""
             )
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Compact Full Info")
+@Composable
+fun PreviewSegmentSummaryFullCompact() {
+    ATrainingTrackerTheme {
+        SegmentSummaryHeader(
+            summary = SegmentSummary(
+                stravaId = 12345L,
+                name = "Alpe d'Huez Climb",
+                bSportType = BSportType.BIKE,
+                climbCategory_raw = 5,
+                climbCategory = "HC",
+                prTime_raw = 45 * 60 + 20,
+                prTime = "45:20",
+                city = "Bourg d'Oisans",
+                distance = "13.80 km",
+                distance_raw = 13800.0,
+                averageGrade_raw = 8.1,
+                averageGrade = "Ø 8.1%",
+                maxGrade = "12.0% Max",
+                elevationGain_raw = 1073.1,
+                elevationGain = "1073 m",
+                elevationMin = "720 m",
+                elevationMax = "1793 m",
+                map_polyline = ""
+            ),
+            compact = true
         )
     }
 }
@@ -301,17 +343,21 @@ fun PreviewSegmentSummaryMinimal() {
                 stravaId = 67890L,
                 name = "Short Flat Sprint",
                 bSportType = BSportType.BIKE,
+                climbCategory_raw = 0,
                 climbCategory = "", // Empty category
                 prTime_raw = -1,
                 prTime = "",   // Empty/Placeholder PR
                 city = "Berlin",
                 distance = "1.20 km",
                 distance_raw = 1200.0,
+                averageGrade_raw = 0.5,
                 averageGrade = "Ø 0.5%",
                 maxGrade = "1.2% Max",
+                elevationGain_raw = 5.2,
                 elevationGain = "5 m",
                 elevationMin = "34 m",
-                elevationMax = "39 m"
+                elevationMax = "39 m",
+                map_polyline = ""
             )
         )
     }
@@ -326,17 +372,21 @@ fun PreviewSegmentSummaryLiveApproaching() {
                 stravaId = 12345L,
                 name = "Alpe d'Huez Climb",
                 bSportType = BSportType.BIKE,
+                climbCategory_raw = 5,
                 climbCategory = "HC",
                 prTime_raw = 2720,
                 prTime = "45:20",
                 city = "Bourg d'Oisans",
                 distance = "13.80 km",
                 distance_raw = 13800.0,
+                averageGrade_raw = 8.1,
                 averageGrade = "Ø 8.1%",
                 maxGrade = "12.0% Max",
+                elevationGain_raw = 1073.1,
                 elevationGain = "1073 m",
                 elevationMin = "720 m",
-                elevationMax = "1793 m"
+                elevationMax = "1793 m",
+                map_polyline = ""
             ),
             liveSegmentData = LiveSegmentData(
                 segmentStatus = LiveSegmentStatus.APPROACHING,
@@ -359,17 +409,21 @@ fun PreviewSegmentSummaryLiveOnSegment() {
                 stravaId = 12345L,
                 name = "Alpe d'Huez Climb",
                 bSportType = BSportType.BIKE,
+                climbCategory_raw = 5,
                 climbCategory = "HC",
                 prTime_raw = 2720,
                 prTime = "45:20",
                 city = "Bourg d'Oisans",
                 distance = "13.80 km",
                 distance_raw = 13800.0,
+                averageGrade_raw = 8.1,
                 averageGrade = "Ø 8.1%",
                 maxGrade = "12.0% Max",
+                elevationGain_raw = 1073.1,
                 elevationGain = "1073 m",
                 elevationMin = "720 m",
-                elevationMax = "1793 m"
+                elevationMax = "1793 m",
+                map_polyline = ""
             ),
             liveSegmentData = LiveSegmentData(
                 segmentStatus = LiveSegmentStatus.ON_SEGMENT,
@@ -392,17 +446,21 @@ fun PreviewSegmentSummaryLive() {
                 stravaId = 12345L,
                 name = "Alpe d'Huez Climb",
                 bSportType = BSportType.BIKE,
+                climbCategory_raw = 5,
                 climbCategory = "HC",
                 prTime_raw = 2720,
                 prTime = "45:20",
                 city = "Bourg d'Oisans",
                 distance = "13.80 km",
                 distance_raw = 13800.0,
+                averageGrade_raw = 8.1,
                 averageGrade = "Ø 8.1%",
                 maxGrade = "12.0% Max",
+                elevationGain_raw = 1073.1,
                 elevationGain = "1073 m",
                 elevationMin = "720 m",
-                elevationMax = "1793 m"
+                elevationMax = "1793 m",
+                map_polyline = ""
             ),
             liveSegmentData = LiveSegmentData(
                 segmentStatus = LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH,

@@ -21,8 +21,10 @@ package com.atrainingtracker.trainingtracker.ui.components.stats
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -42,6 +44,9 @@ fun RichStatsSheet(
     onStatsClick: (StatsData) -> Unit
 ) {
     ModalBottomSheet(
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 0.dp,
+
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false),
         modifier = Modifier.fillMaxHeight() // Prevent an oscillation when the sheet is expanded

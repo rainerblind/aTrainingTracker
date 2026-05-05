@@ -300,6 +300,44 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         return itemList;
     }
 
+    // Get list of all equipment
+    @NonNull
+    public List<EquipmentData> getEquipmentItems() {
+        if (DEBUG) Log.d(TAG, "getEquipmentItems");
+
+        List<EquipmentData> itemList = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+
+        // Query all relevant columns
+        Cursor cursor = db.query(EQUIPMENT,
+                new String[]{C_ID, NAME, SPORT_TYPE, FRAME_TYPE, STRAVA_NAME, STRAVA_ID},
+                null,
+                null,
+                null, null, null);
+
+        if (cursor.moveToFirst()) {
+            int idIdx = cursor.getColumnIndex(C_ID);
+            int nameIdx = cursor.getColumnIndex(NAME);
+            int sportIdx = cursor.getColumnIndex(SPORT_TYPE);
+            int frameIdx = cursor.getColumnIndex(FRAME_TYPE);
+            int stravaNameIdx = cursor.getColumnIndex(STRAVA_NAME);
+            int stravaIdIdx = cursor.getColumnIndex(STRAVA_ID);
+
+            do {
+                itemList.add(new EquipmentData(
+                        cursor.getLong(idIdx),
+                        cursor.getString(nameIdx),
+                        BSportType.valueOf(cursor.getString(sportIdx)),
+                        cursor.getInt(frameIdx),
+                        cursor.getString(stravaNameIdx),
+                        cursor.getString(stravaIdIdx)
+                ));
+            } while (cursor.moveToNext());
+        }
+        cursor.close();
+        return itemList;
+    }
+
     /**
      * New method to get all ANT device IDs linked to a specific Equipment ID
      */

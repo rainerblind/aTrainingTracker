@@ -34,13 +34,12 @@ import android.util.Log;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BSportType;
-import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaDeauthorizationThread;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSynchronizeThread;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaOAuthCallbackActivity;
-import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaSegmentsHelper;
+import com.atrainingtracker.trainingtracker.segments.SegmentsRepository;
 
 /**
  * Created by rainer on 01.02.16.
@@ -59,6 +58,7 @@ public class StravaUploadFragment extends androidx.preference.PreferenceFragment
         REQUESTING,
         GOT
     }
+
     @Nullable
     private RequestTokenState requestTokenState = null;
 
@@ -80,6 +80,28 @@ public class StravaUploadFragment extends androidx.preference.PreferenceFragment
         mUpdateStravaEquipment = this.getPreferenceScreen().findPreference(TrainingApplication.UPDATE_STRAVA_EQUIPMENT);
 
         LocalBroadcastManager.getInstance(getActivity()).registerReceiver(tokenReceiver, new IntentFilter(StravaOAuthCallbackActivity.StravaOAuthSuccess));
+    }
+
+    @Override
+    public void onViewCreated(@NonNull android.view.View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+
+        androidx.recyclerview.widget.RecyclerView listView = getListView();
+        if (listView != null) {
+            // Allow the list to scroll under the system bars
+            listView.setClipToPadding(false);
+
+            androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(listView, (v, insets) -> {
+                androidx.core.graphics.Insets systemBars = insets.getInsets(
+                        androidx.core.view.WindowInsetsCompat.Type.systemBars()
+                );
+
+                // Set padding so content doesn't get stuck under the nav bar/status bar
+                v.setPadding(0, systemBars.top, 0, systemBars.bottom);
+
+                return insets;
+            });
+        }
     }
 
     @Override
@@ -150,9 +172,9 @@ public class StravaUploadFragment extends androidx.preference.PreferenceFragment
             new StravaEquipmentSynchronizeThread(getActivity()).start();
 
             // update Segments
-            StravaSegmentsHelper stravaSegmentsHelper = new StravaSegmentsHelper(getContext());
-            stravaSegmentsHelper.getStarredStravaSegments(SportTypeDatabaseManager.getSportTypeId(BSportType.BIKE));
-            stravaSegmentsHelper.getStarredStravaSegments(SportTypeDatabaseManager.getSportTypeId(BSportType.RUN));
+            SegmentsRepository repository = SegmentsRepository.Companion.getInstance(getContext());
+            repository.syncSegmentsAsync(BSportType.BIKE);
+            repository.syncSegmentsAsync(BSportType.RUN);
         }
     }
 }

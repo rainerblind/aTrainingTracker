@@ -18,230 +18,160 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 
+
 import android.os.Bundle
-import android.text.InputType
-import android.util.Log
-import android.view.Gravity
 import android.view.LayoutInflater
-import android.view.Menu
-import android.view.MenuInflater
-import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
-import android.view.ViewGroup.LayoutParams.MATCH_PARENT
-import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
-import android.widget.EditText
-import android.widget.FrameLayout
-import android.widget.LinearLayout
-import android.widget.ProgressBar
-import android.widget.TextView
-import androidx.appcompat.app.AlertDialog
-import androidx.core.view.MenuProvider
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.Lifecycle
-import com.atrainingtracker.R
-import com.atrainingtracker.banalservice.BSportType
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.trainingtracker.TrainingApplication
-import com.atrainingtracker.trainingtracker.ui.aftermath.DeletionProgress
-import com.google.android.material.tabs.TabLayoutMediator
+import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents
+import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreen
+import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutScreen
+import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModel
+import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModelFactory
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModel
+import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.common.GoogleApiAvailability
+import kotlin.getValue
 
-/**
- * A fragment that displays a list of workout summaries using a modern,
- * ViewModel-driven architecture with a RecyclerView.
- */
 class WorkoutSummariesTabbedFragment : Fragment() {
 
-    companion object {
-        val DEBUG: Boolean = TrainingApplication.getDebug(true)
-        @JvmField
-        val TAG: String = "WorkoutSummariesTabbedFragment"
-    }
-
-    // Use the Kotlin property delegate for a cleaner ViewModel initialization.
+    // Initialize the existing ViewModel
     private val viewModel: WorkoutSummariesViewModel by viewModels()
+    private val trackOnMapViewModel: TrackOnMapAftermathViewModel by viewModels()
 
-    private lateinit var progressContainer: View // Will hold the ProgressBar and TextView
-
-    private lateinit var tabLayout: com.google.android.material.tabs.TabLayout
-    private lateinit var viewPager: androidx.viewpager2.widget.ViewPager2
-    private lateinit var progressText: TextView
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        val context = requireContext()
 
-        // 1. Root FrameLayout (to allow overlaying the progress bar)
-        val root = FrameLayout(context).apply {
-            layoutParams = ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT)
-        }
-
-        // 2. Main Content Container (Tabs + Pager)
-        val contentContainer = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT)
-        }
-
-        tabLayout = com.google.android.material.tabs.TabLayout(context).apply {
-            layoutParams = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT)
-            tabMode = com.google.android.material.tabs.TabLayout.MODE_SCROLLABLE
-        }
-
-        viewPager = androidx.viewpager2.widget.ViewPager2(context).apply {
-            layoutParams = LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f)
-            // Essential: Generate a unique ID so FragmentManager can save/restore state
-            id = View.generateViewId()
-        }
-
-        contentContainer.addView(tabLayout)
-        contentContainer.addView(viewPager)
-
-        // --- Create a container for the progress indicators ---
-        progressContainer = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            visibility = View.GONE // Initially hidden
-
-            setBackgroundResource(R.drawable.progress_container_background)
-
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                Gravity.TOP
-            )
-
-            // Add some padding inside the container
-            val padding = (16 * resources.displayMetrics.density).toInt()
-            setPadding(padding, padding, padding, padding)
-
-            // Add the ProgressBar to the container
-            addView(ProgressBar(context))
-
-            // Add the TextView for progress text
-            progressText = TextView(context).apply {
-                setTextAppearance(android.R.style.TextAppearance_Material_Body2)
-                setPadding(0, (8 * resources.displayMetrics.density).toInt(), 0, 0) // 8dp top padding
-                gravity = Gravity.CENTER_HORIZONTAL
-            }
-            addView(progressText)
-        }
-
-        // Add everything to root
-        root.addView(contentContainer)
-        root.addView(progressContainer)
-
-        return root
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        if (DEBUG) Log.i(TAG, "onViewCreated()")
+        val isPlayAvailable = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(requireActivity()) == ConnectionResult.SUCCESS
 
         // Tell the ViewModel to ensure all data is loaded from the DB
         viewModel.loadWorkouts()
 
-        val pagerAdapter = WorkoutPagerAdapter(this)
-        viewPager.adapter = pagerAdapter
+        return ComposeView(requireContext()).apply {
+            setContent {
+                ATrainingTrackerTheme {
+                    // 1. HOIST SCROLL STATES
+                    // These will live as long as the Fragment's View is alive
+                    val pagerState = rememberPagerState(pageCount = { 4 })
+                    val allListState = rememberLazyListState()
+                    val bikeListState = rememberLazyListState()
+                    val runListState = rememberLazyListState()
+                    val otherListState = rememberLazyListState()
 
-        TabLayoutMediator(tabLayout, viewPager) { tab, position ->
-            tab.text = when (pagerAdapter.getTabType(position)) {
-                null -> getString(R.string.workout_summaries_tab_all)
-                BSportType.RUN -> getString(R.string.workout_summaries_tab_run)
-                BSportType.BIKE -> getString(R.string.workout_summaries_tab_bike)
-                else -> getString(R.string.workout_summaries_tab_other)
-            }
-        }.attach()
+                    // 1. Observe the workouts list from ViewModel
+                    val workouts by viewModel.workouts.collectAsStateWithLifecycle()
 
-        setupMenu()
-        observeViewModel()
-    }
+                    var selectedWorkoutIdForDetails by rememberSaveable { mutableStateOf<Long?>(null) }
+                    var selectedWorkoutIdForEdit by rememberSaveable { mutableStateOf<Long?>(null) }
 
-    private fun setupMenu() {
-        // Add the MenuProvider to the Fragment's Lifecycle
-        requireActivity().addMenuProvider(object : MenuProvider {
-            override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
-                // Inflate the menu resource file
-                menuInflater.inflate(R.menu.workout_summaries_list_menu, menu)
-            }
-
-            override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
-                return when (menuItem.itemId) {
-                    R.id.menu_delete_old_workouts -> {
-                        viewModel.onDeleteOldWorkoutsClicked()
-                        true
+                    // Observe the event stream
+                    LaunchedEffect(Unit) {
+                        WorkoutNavigationEvents.navigateToEdit.collect { workoutId ->
+                            if (workoutId != -1L) {
+                                selectedWorkoutIdForEdit = workoutId
+                            }
+                        }
                     }
 
-                    else -> false
+                    if (selectedWorkoutIdForDetails != null) {
+                        TrackOnMapScreen(
+                            workoutData = workouts.find { it.id == selectedWorkoutIdForDetails }!!,
+                            mapState = trackOnMapViewModel.aftermathState.collectAsStateWithLifecycle().value
+                        )
+
+                        // 4. Handle System Back Button
+                        BackHandler {
+                            selectedWorkoutIdForDetails = null
+                        }
+                    }
+                    else if (selectedWorkoutIdForEdit != null) {
+                        val editViewModel: EditWorkoutViewModel = viewModel(
+                            factory = EditWorkoutViewModelFactory(requireActivity().application, selectedWorkoutIdForEdit!!)
+                        )
+
+                        EditWorkoutScreen(
+                            viewModel = editViewModel,
+                            onBack = {
+                                selectedWorkoutIdForEdit = null
+                                WorkoutNavigationEvents.reset()
+                            }
+                        )
+
+                        // 4. Handle System Back Button
+                        BackHandler {
+                            selectedWorkoutIdForEdit = null
+                            WorkoutNavigationEvents.reset()
+                        }
+
+                    }
+                    else {
+                        // 3. Render the Tabbed UI
+                        WorkoutTabsScreen(
+                            workouts = workouts,
+                            pagerState = pagerState,
+                            allListState = allListState,
+                            bikeListState = bikeListState,
+                            runListState = runListState,
+                            otherListState = otherListState,
+                            onExportWorkoutTo = { workoutId, fileFormat ->
+                                viewModel.onExportWorkoutTo(workoutId, fileFormat)
+                            },
+                            onDeleteConfirmed = { workoutId ->
+                                viewModel.deleteWorkout(workoutId)
+                            },
+                            onEditWorkout = { workoutId ->
+                                selectedWorkoutIdForEdit = workoutId
+                            },
+                            onMapClick = { workoutId ->
+                                selectedWorkoutIdForDetails = workoutId
+                                trackOnMapViewModel.loadAftermathData(workoutId)
+                            },
+                            isPlayServiceAvailable = isPlayAvailable
+                        )
+                    }
                 }
             }
-        }, viewLifecycleOwner, Lifecycle.State.RESUMED)
+        }
     }
 
-    private fun observeViewModel() {
-        // Observe loading state to show/hide progress
-        viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
-            if (isLoading) {
-                progressContainer.visibility = View.VISIBLE
-                progressText.text = getString(R.string.workout_summaries_loading)
-            }
-            else {
-                progressContainer.visibility = View.GONE
-            }
-        }
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
-        viewModel.showDeleteOldWorkoutsDialogEvent.observe(viewLifecycleOwner) {
-            showDeleteOldWorkoutsDialog()
+        // Handle deletion events or other one-time events from the ViewModel
+        viewModel.confirmDeleteWorkoutEvent.observe(viewLifecycleOwner) { workoutId ->
+            // Trigger your existing Delete Dialog logic here if needed
         }
-
-        viewModel.deletionProgress.observe(viewLifecycleOwner) { state ->
-            when (state) {
-                is DeletionProgress.Idle -> {
-                    progressContainer.visibility = View.GONE
-                    viewPager.alpha = 1.0f
-                }
-                is DeletionProgress.InProgress -> {
-                    progressContainer.visibility = View.VISIBLE
-                    progressText.text = getString(R.string.deleting_workout, state.workoutName)
-                    viewPager.alpha = 0.5f // Keep the list dimmed
-                }
-            }
-        }
-
     }
 
-    private fun showDeleteOldWorkoutsDialog() {
-        val context = requireContext()
 
-        // Create an EditText for the user to input the number of days.
-        val input = EditText(context).apply {
-            inputType = InputType.TYPE_CLASS_NUMBER
-            setText(R.string.defaultDaysToKeep)
-            textAlignment = View.TEXT_ALIGNMENT_CENTER
+    // Companion object for Java compatibility
+    companion object {
+        @JvmField
+        val TAG: String = "WorkoutSummariesTabbedFragment"
+
+        @JvmStatic
+        fun newInstance(): WorkoutSummariesTabbedFragment {
+            return WorkoutSummariesTabbedFragment()
         }
-
-        // We need a container to add some padding around the EditText.
-        val container = FrameLayout(context).apply {
-            val padding = (20 * resources.displayMetrics.density).toInt() // 20dp
-            setPadding(padding, 0, padding, 0)
-            addView(input)
-        }
-
-        AlertDialog.Builder(context)
-            .setTitle(R.string.deleteOldWorkouts)
-            .setMessage(R.string.deleteWorkoutsThatAreOlderThanDays)
-            .setView(container) // Set the container with the EditText
-            .setPositiveButton(R.string.OK) { _, _ ->
-                // When the user clicks OK, parse the input and call the ViewModel.
-                val daysToKeep = input.text.toString().toIntOrNull()
-                if (daysToKeep != null) {
-                    viewModel.executeDeleteOldWorkouts(daysToKeep)
-                }
-            }
-            .setNegativeButton(R.string.Cancel, null) // Do nothing on cancel
-            .show()
     }
 }

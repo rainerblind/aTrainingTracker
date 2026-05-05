@@ -82,9 +82,9 @@ data class LocationMarker(
 
 /* Data class to encapsulate a single point in a track */
 data class PathPoint(
-    val distance: Float,
+    val distance: Double,
     val latLng: LatLng,
-    val altitude: Float
+    val altitude: Double
 )
 
 /**

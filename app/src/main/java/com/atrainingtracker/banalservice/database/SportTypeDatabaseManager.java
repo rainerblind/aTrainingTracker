@@ -397,10 +397,12 @@ public class SportTypeDatabaseManager {
     public static class SimpleSportTypeInfo {
         public final long id;
         public final String name;
+        public final BSportType bSportType;
 
-        public SimpleSportTypeInfo(long id, String name) {
+        public SimpleSportTypeInfo(long id, String name, BSportType bSportType) {
             this.id = id;
             this.name = name;
+            this.bSportType = bSportType;
         }
     }
 
@@ -425,17 +427,19 @@ public class SportTypeDatabaseManager {
         }
 
         Cursor cursor = getDatabase().query(SportType.TABLE,
-                new String[]{SportType.C_ID, SportType.UI_NAME},
+                new String[]{SportType.C_ID, SportType.UI_NAME, SportType.BASE_SPORT_TYPE},
                 selection,
                 null, null, null, SportType.UI_NAME + " ASC");
 
         int idCol = cursor.getColumnIndex(SportType.C_ID);
         int nameCol = cursor.getColumnIndex(SportType.UI_NAME);
+        int bSportTypeCol = cursor.getColumnIndexOrThrow(SportType.BASE_SPORT_TYPE);
 
         while (cursor.moveToNext()) {
             sensors.add(new SimpleSportTypeInfo(
                     cursor.getLong(idCol),
-                    cursor.getString(nameCol)
+                    cursor.getString(nameCol),
+                    BSportType.valueOf(cursor.getString(bSportTypeCol))
             ));
         }
         cursor.close();

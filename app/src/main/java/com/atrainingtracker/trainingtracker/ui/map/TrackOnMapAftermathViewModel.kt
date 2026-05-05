@@ -59,7 +59,7 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
 
             // Get the Sport Type
             val workout = workoutRepository.getWorkoutById(workoutId).value
-            val bSportType = workout?.sportData?.bSportType ?: BSportType.UNKNOWN
+            val bSportType = workout?.bSportType ?: BSportType.UNKNOWN
 
             // Load Track
             val trackList = TrackType.entries.mapNotNull { type ->

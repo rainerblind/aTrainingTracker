@@ -73,12 +73,10 @@ fun TrackingTabConfigHeader(
     var localName by remember(viewInfo.tabViewId) { mutableStateOf(viewInfo.name) }
 
     Surface(
-        tonalElevation = 2.dp,
-        shadowElevation = 4.dp,
+        color = androidx.compose.ui.graphics.Color.Transparent,
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-            .padding(8.dp)
+            .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
         Column {
             // Row 1: Tab Name Input & Done Button

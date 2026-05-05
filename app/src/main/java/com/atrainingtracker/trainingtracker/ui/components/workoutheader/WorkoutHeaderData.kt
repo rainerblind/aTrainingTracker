@@ -21,10 +21,10 @@ package com.atrainingtracker.trainingtracker.ui.components.workoutheader
 import com.atrainingtracker.banalservice.BSportType
 
 data class WorkoutHeaderData(
-    val workoutName: String,
+    val workoutName: String,    // TODO: Add Id?
     val formattedDate: String,
     val formattedTime: String,
-    val startTimeS: Long,        // start time in seconds
+    val startTimeS: Long,        // start time in seconds  // TODO: really necessary?
     val bSportType: BSportType,  // necessary to get the icon and the text for an indoor activity
     var sportName: String,
     var equipmentName: String?,

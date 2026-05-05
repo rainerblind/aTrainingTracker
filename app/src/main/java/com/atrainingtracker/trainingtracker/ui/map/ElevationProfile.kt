@@ -45,10 +45,10 @@ import com.atrainingtracker.trainingtracker.ui.theme.Zone5
 // Data class to cache the pre-calculated geometry and metadata
 private data class CachedProfileData(
     val segments: List<ElevationSegment>,
-    val minAlt: Float,
-    val maxAlt: Float,
-    val totalDist: Float,
-    val altRange: Float,
+    val minAlt: Double,
+    val maxAlt: Double,
+    val totalDist: Double,
+    val altRange: Double,
     val kmStep: Float,
     val altStep: Float
 )
@@ -91,7 +91,7 @@ fun ElevationProfile(
         val smoothedAltitudes = pathPoints.indices.map { i ->
             val start = (i - halfWindow).coerceAtLeast(0)
             val end = (i + halfWindow).coerceAtMost(pathPoints.size - 1)
-            var sum = 0f
+            var sum = 0.0
             var count = 0
             for (j in start..end) {
                 sum += pathPoints[j].altitude
@@ -101,9 +101,9 @@ fun ElevationProfile(
         }
 
         // Use smoothed altitudes for Min/Max to avoid "spikes" affecting the scale
-        val min = smoothedAltitudes.minOrNull() ?: 0f
-        val max = smoothedAltitudes.maxOrNull() ?: 1f
-        val range = (max - min).coerceAtLeast(1f)
+        val min = smoothedAltitudes.minOrNull() ?: 0.0
+        val max = smoothedAltitudes.maxOrNull() ?: 1.0
+        val range = (max - min).coerceAtLeast(1.0)
 
         // Adaptive Distance Ticks
         val kmStep = when {
@@ -133,8 +133,8 @@ fun ElevationProfile(
             val sAlt1 = smoothedAltitudes[i]
             val sAlt2 = smoothedAltitudes[i + 1]
 
-            val d1 = p1.distance / totalDist
-            val a1 = (sAlt1 - min) / range
+            val d1: Double = p1.distance / totalDist
+            val a1: Double = (sAlt1 - min) / range
             val d2 = p2.distance / totalDist
             val a2 = (sAlt2 - min) / range
 
@@ -143,18 +143,18 @@ fun ElevationProfile(
             // Use Smoothed Altitudes for Grade calculation (much more stable colors!)
             val grade = if (distDiff > 1.0) { // Small threshold to avoid division issues
                 ((sAlt2 - sAlt1) / distDiff) * 100
-            } else 0f
+            } else 0.0
 
             val color = when {
-                grade < 2f -> Zone1
-                grade < 5f -> Zone2
-                grade < 10f -> Zone3
-                grade < 15f -> Zone4
-                grade < 20f -> Zone5
+                grade < 2.0 -> Zone1
+                grade < 5.0 -> Zone2
+                grade < 10.0 -> Zone3
+                grade < 15.0 -> Zone4
+                grade < 20.0 -> Zone5
                 else -> Color.Black
             }
 
-            segments.add(ElevationSegment(Offset(d1, a1), Offset(d2, a2), color))
+            segments.add(ElevationSegment(Offset(d1.toFloat(), a1.toFloat()), Offset(d2.toFloat(), a2.toFloat()), color))
         }
         CachedProfileData(segments, min, max, totalDist, range, kmStep, altStep)
     }
@@ -227,7 +227,7 @@ fun ElevationProfile(
                 val isTooCloseToEnd = (width - x) < textWidthBuffer
 
                 if (!isTooCloseToStart && !isTooCloseToEnd) {
-                    canvas.nativeCanvas.drawLine(x, height, x, height + 10f, textPaint)
+                    canvas.nativeCanvas.drawLine(x.toFloat(), height, x.toFloat(), height - 10f, textPaint)
 
                     // IMPROVED LABEL LOGIC:
                     val label = when {
@@ -242,13 +242,13 @@ fun ElevationProfile(
                         else -> "${(currentKm / 1000).toInt()}"
                     }
 
-                    canvas.nativeCanvas.drawText(label, x - 15f, height + 45f, textPaint)
+                    canvas.nativeCanvas.drawText(label, x.toFloat() - 15f, height + 45f, textPaint)
                 }
                 currentKm += cachedData.kmStep
             }
 
             // 2d. Adaptive Altitude Ticks...
-            var currentAlt = (ceil(cachedData.minAlt.toDouble() / cachedData.altStep) * cachedData.altStep).toFloat()
+            var currentAlt = (ceil(cachedData.minAlt / cachedData.altStep) * cachedData.altStep).toFloat()
             while (currentAlt < cachedData.maxAlt) {
                 val y = height - ((currentAlt - cachedData.minAlt) / cachedData.altRange) * height
 
@@ -256,14 +256,14 @@ fun ElevationProfile(
                 val isTooCloseToTop = y < textHeightBuffer
 
                 if (!isTooCloseToBottom && !isTooCloseToTop) {
-                    canvas.nativeCanvas.drawLine(-10f, y, 0f, y, textPaint)
+                    canvas.nativeCanvas.drawLine(-10f, y.toFloat(), 0f, y.toFloat(), textPaint)
                     drawLine(
                         color = colorScheme.onSurfaceVariant.copy(alpha = 0.1f),
-                        start = Offset(0f, y),
-                        end = Offset(width, y),
+                        start = Offset(0f, y.toFloat()),
+                        end = Offset(width, y.toFloat()),
                         strokeWidth = 1.dp.toPx()
                     )
-                    canvas.nativeCanvas.drawText("${currentAlt.toInt()}", -110f, y + 10f, textPaint)
+                    canvas.nativeCanvas.drawText("${currentAlt.toInt()}", -110f, y.toFloat() + 10f, textPaint)
                 }
                 currentAlt += cachedData.altStep
             }
@@ -313,14 +313,14 @@ fun ElevationProfile(
 
             drawLine(
                 color = colorScheme.primary,
-                start = Offset(markerX, 0f),
-                end = Offset(markerX, height),
+                start = Offset(markerX.toFloat(), 0f),
+                end = Offset(markerX.toFloat(), height),
                 strokeWidth = 1.dp.toPx(),
                 pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f))
             )
 
-            drawCircle(color = colorScheme.onSurface, radius = 5.dp.toPx(), center = Offset(markerX, markerY))
-            drawCircle(color = colorScheme.primary, radius = 3.dp.toPx(), center = Offset(markerX, markerY))
+            drawCircle(color = colorScheme.onSurface, radius = 5.dp.toPx(), center = Offset(markerX.toFloat(), markerY.toFloat()))
+            drawCircle(color = colorScheme.primary, radius = 3.dp.toPx(), center = Offset(markerX.toFloat(), markerY.toFloat()))
         }
     }
 }

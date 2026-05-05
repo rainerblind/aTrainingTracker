@@ -238,6 +238,10 @@
         <item>CSV</item>
     </string-array>
 
+    <string-array name="default_export_formats">
+        <item>TCX</item>
+    </string-array>
+
     <!-- Display settings -->
     <string-array name="display_options_titles">
         <item>@string/forcePortrait</item>

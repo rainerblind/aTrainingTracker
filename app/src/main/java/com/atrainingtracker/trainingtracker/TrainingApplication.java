@@ -50,12 +50,10 @@ import android.widget.Toast;
 import com.atrainingtracker.BuildConfig;
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
-import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.sensor.SensorData;
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
-import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation;
 import com.atrainingtracker.trainingtracker.exporter.FileFormat;
 import com.atrainingtracker.trainingtracker.helpers.CalcExtremaWorker;
@@ -65,15 +63,12 @@ import com.atrainingtracker.trainingtracker.smartwatch.pebble.Watchapp;
 import com.atrainingtracker.trainingtracker.tracker.TrackerService;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapHelper;
-import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
-import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaSegmentsHelper;
-import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager;
-import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutActivity;
-import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapAftermathActivity;
+import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents;
 import com.dropbox.core.json.JsonReadException;
 import com.dropbox.core.oauth.DbxCredential;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Locale;
@@ -691,7 +686,9 @@ public class TrainingApplication extends Application {
 
     // File exports
     public static boolean exportToTCX() {
-        return cSharedPreferences.getStringSet(SP_EXPORT_FORMATS, new HashSet<>()).contains("TCX");
+        return cSharedPreferences.getStringSet(SP_EXPORT_FORMATS,
+                        new HashSet<>(Collections.singletonList("TCX")))  // by default, we export to TCX.
+                .contains("TCX");
     }
 
     public static boolean exportToGPX() {
@@ -754,30 +751,6 @@ public class TrainingApplication extends Application {
         cResumeFromCrash = resumeFromCrash;
     }
 
-    public static void startTrackOnMapAftermathActivity(Context context, long workoutId) {
-        if (DEBUG) Log.i(TAG, "startTrackOnMapAftermathActivity(" + workoutId + ")");
-
-        TrackOnMapAftermathActivity.start(context, workoutId);
-    }
-
-    // TODO: remove cAppContext and FLAG_ACTIVITY_NEW_TASK from here
-    public static void startEditWorkoutActivity(long workoutId, boolean showAllDetails) {
-        if (DEBUG) Log.i(TAG, "startEditWorkoutActivity(" + workoutId + ")");
-
-        Bundle bundle = new Bundle();
-        bundle.putLong(WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_ID, workoutId);
-
-        bundle.putBoolean(EditWorkoutActivity.EXTRA_SHOW_DETAILS, showAllDetails);
-        bundle.putBoolean(EditWorkoutActivity.EXTRA_SHOW_EXTREMA, showAllDetails);
-        // bundle.putBoolean(EditWorkoutActivity.EXTRA_SHOW_MAP, showAllDetails);
-
-        Intent intent = new Intent(cAppContext, EditWorkoutActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        intent.putExtras(bundle);
-        cAppContext.startActivity(intent);
-    }
-
-
     @Override
     public void onCreate() {
         super.onCreate();
@@ -809,17 +782,6 @@ public class TrainingApplication extends Application {
         ContextCompat.registerReceiver(this, mTrackingStoppedReceiver, new IntentFilter(TrackerService.TRACKING_FINISHED_INTENT), ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mPauseTrackingReceiver, new IntentFilter(REQUEST_PAUSE_TRACKING), ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mResumeFromPaused, new IntentFilter(REQUEST_RESUME_FROM_PAUSED), ContextCompat.RECEIVER_NOT_EXPORTED);
-
-        // eventually get the starred segments
-        // TODO: do this in the main activity???
-        if (new StravaHelper().getAthleteId(this) != 0 // the athlete is registered to strava
-                && !SegmentsDatabaseManager.doesDatabaseExist(this)) {  // but there is not yet a database for the segments
-            StravaSegmentsHelper stravaSegmentsHelper = new StravaSegmentsHelper(this);
-            stravaSegmentsHelper.getStarredStravaSegments(SportTypeDatabaseManager.getSportTypeId(BSportType.BIKE));
-            stravaSegmentsHelper.getStarredStravaSegments(SportTypeDatabaseManager.getSportTypeId(BSportType.RUN));
-        }
-
-
     }
 
     // helper method to create the Notification Builder
@@ -1084,7 +1046,8 @@ public class TrainingApplication extends Application {
 
         // start EditWorkoutActivity
         // startEditWorkoutActivity(mWorkoutID, true); // here, the EditWorkoutActivity shall show the details, extrema values and the map.
-        startEditWorkoutActivity(mWorkoutID, false); // although, the user might want to see the statistics as early as possible, showing them here leads to an inconsistency.  Thus, we daactivate this feature.
+        // startEditWorkoutActivity(mWorkoutID, false); // although, the user might want to see the statistics as early as possible, showing them here leads to an inconsistency.  Thus, we daactivate this feature.
+        WorkoutNavigationEvents.triggerEdit(mWorkoutID);
         mNotificationManager.cancel(TRACKING_NOTIFICATION_ID);
     }
 

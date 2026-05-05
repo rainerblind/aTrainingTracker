@@ -22,6 +22,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -32,21 +33,23 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore.ZoneType
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore.Zone
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -62,7 +65,7 @@ class ZonesSettingsActivity : ComponentActivity() {
         setContent {
             ATrainingTrackerTheme {
                 // Pass the initial tab to the route
-                SettingsScreenRoute(initialTab = targetTab)
+                ZoneSettingsScreen(initialTab = targetTab)
             }
         }
     }
@@ -79,11 +82,27 @@ data class ZoneProfileState(
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun SettingsScreenRoute(
+fun ZoneSettingsScreen(
     initialTab: Int = 0,
     onFinish: () -> Unit = {}
 ) {
     val context = LocalContext.current
+
+    val view = androidx.compose.ui.platform.LocalView.current
+    val isDarkTheme = isSystemInDarkTheme()
+
+    // Force status bar icons to be dark when in Light Mode
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (context as android.app.Activity).window
+            val windowInsetsController = androidx.core.view.WindowCompat.getInsetsController(window, view)
+
+            // appearanceLightStatusBars = true makes icons DARK
+            // appearanceLightStatusBars = false makes icons WHITE
+            windowInsetsController.isAppearanceLightStatusBars = !isDarkTheme
+        }
+    }
+
     val dataStore = remember { SettingsDataStore(context) }
     val scope = rememberCoroutineScope()
 
@@ -129,26 +148,50 @@ fun SettingsScreenRoute(
         pageCount = { profileNameResIds.size }
     )
 
-    Scaffold(
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.title_edit_zones)) }) }
-    ) { padding ->
-        Column(modifier = Modifier.padding(padding)) {
-            // TABS
-            TabRow(selectedTabIndex = pagerState.currentPage) {
-                profileNameResIds.forEachIndexed { index, titleResId ->
-                    Tab(
-                        selected = pagerState.currentPage == index,
-                        onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
-                        text = { Text(stringResource(titleResId)) }                    )
+    Surface(modifier = Modifier.fillMaxSize()) {
+        Column {
+
+            // 1. THE HEADER (Matches Segments Style)
+            Surface(
+                color = MaterialTheme.colorScheme.primaryContainer,
+            ) {
+                Column(modifier = Modifier.statusBarsPadding()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = stringResource(R.string.title_edit_zones),
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+
+                    PrimaryScrollableTabRow(
+                        selectedTabIndex = pagerState.currentPage,
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                        divider = {}
+                    ) {
+                        profileNameResIds.forEachIndexed { index, titleResId ->
+                            Tab(
+                                selected = pagerState.currentPage == index,
+                                onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
+                                text = { Text(stringResource(titleResId)) }                    )
+                        }
+                    }
                 }
             }
 
+            // 2. THE CONTENT (Pager)
             if (allProfilesData.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
-            } else {
-                // SWIPABLE CONTENT
+            }
+            else {
                 HorizontalPager(
                     state = pagerState,
                     modifier = Modifier.fillMaxSize(),
@@ -182,10 +225,12 @@ fun SettingsScreenRoute(
                             val updated = updateProfile(allProfilesData, page) { it.copy(z4 = new) }
                             allProfilesData = updated
                             saveProfile(updated[page]) // Save immediately on change
-                        }
+                        },
                     )
                 }
             }
+
+
         }
     }
 }
@@ -226,7 +271,7 @@ fun SettingsScreenContent(
     onUpdateZone1Max: (Int) -> Unit,
     onUpdateZone2Max: (Int) -> Unit,
     onUpdateZone3Max: (Int) -> Unit,
-    onUpdateZone4Max: (Int) -> Unit
+    onUpdateZone4Max: (Int) -> Unit,
 ) {
     // Load Colors from resources
     val zone1Color = colorResource(id = R.color.zone_1)
@@ -360,7 +405,7 @@ fun IntegerInputField(
     var textState by remember(currentValue) { mutableStateOf(currentValue.toString()) }
 
     OutlinedTextField(
-        value = textState,
+        value = if (enabled) {textState} else {"--"},
         onValueChange = { input ->
             if (input.all { it.isDigit() }) {
                 textState = input

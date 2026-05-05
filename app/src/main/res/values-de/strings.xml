@@ -566,6 +566,7 @@
     <string name="edit_my_location">Bearbeite Zähler</string>
     <string name="create_new_my_location">Neuer Ort wird erstellt.</string>
     <string name="calc_workout_name">Bestimme passendem Namen.</string>
+    <string name="calc_map_polyline">Berechne vereinfachte Karte.</string>
     <string name="edit_counter">bearbeiten</string>
     <string name="edit_counter_format">Bearbeite %1$s Zähler.</string>
     <string name="editWorkoutNameCounters">Überarbeite die Zähler der Einheiten</string>
@@ -702,7 +703,7 @@
     <!-- Zone Settings Screen -->
     <string name="prefs_training_zones">Trainings Zonen</string>
     <string name="prefs_training_zones_summary">Passe deine Trainingszonen an</string>
-    <string name="title_edit_zones">Trainings Zonen anpassen</string>
+    <string name="title_edit_zones">Trainings Zonen</string>
     <string name="tab_hr_run">Lauf HF</string>
     <string name="tab_hr_bike">Rad HF</string>
     <string name="tab_pwr_bike">Rad Leistung</string>
@@ -904,7 +905,6 @@
 
     <!-- equipment -->
     <string name="equipment_management_title">Ausrüstung</string>
-    <string name="equipment_management_title_full">Ausrüstung Bearbeiten</string>
     <string name="equipment_management_summary">Ausrüstung bearbeiten</string>
     <string name="prefs_manage_bikes_title">Räder</string>
     <string name="prefs_manage_bikes_summary">Konfiguriere all deine Fahrräder</string>
@@ -954,6 +954,8 @@
 
     <!-- starred Strava segments -->
     <string name="starred_segments__no_update_because_upload_to_strava_is_disabled">Nicht mit Strava verbunden. -> Keine Aktualisierung deiner favorisiertne Segmente.</string>
+    <string name="starred_segments__no_strava_connection">Nicht mit Strava verbunden.</string>
+    <string name="starred_segments__connect_to_strava">Mit Strava verbinden</string>
 
     <!-- Control tracking -->
     <string name="control_tracking_connecting">Connecting…</string>
@@ -981,5 +983,14 @@
     <string name="ant_missing_dependency_message">Die notwendige Application\n\"%1$s\"\n ist nicht installiert.  Sollen wir im Play Store nach dieser suchen?</string>
     <string name="go_to_store">Zum Play Store</string>
     <string name="Done">Done</string>
+
+    <!-- Segment Sorting -->
+    <string name="sort_closest">Entfernung</string>
+    <string name="sort_climb_category">Bergkategorie</string>
+    <string name="sort_elevation_gain">Höhenmeter</string>
+    <string name="sort_average_grade">Durchschnittliche Steigung</string>
+    <string name="sort_segment_length">Länge</string>
+    <string name="sort_name">Name</string>
+
 
 </resources>
