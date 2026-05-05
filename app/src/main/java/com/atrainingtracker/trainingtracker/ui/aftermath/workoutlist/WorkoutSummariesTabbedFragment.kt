@@ -81,9 +81,6 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                     // 1. Observe the workouts list from ViewModel
                     val workouts by viewModel.workouts.collectAsStateWithLifecycle()
 
-                    // 2. Observe the loading state
-                    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
-
                     var selectedWorkoutIdForDetails by rememberSaveable { mutableStateOf<Long?>(null) }
                     var selectedWorkoutIdForEdit by rememberSaveable { mutableStateOf<Long?>(null) }
 
@@ -131,7 +128,6 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                         // 3. Render the Tabbed UI
                         WorkoutTabsScreen(
                             workouts = workouts,
-                            isLoading = isLoading,
                             pagerState = pagerState,
                             allListState = allListState,
                             bikeListState = bikeListState,

@@ -87,10 +87,6 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
             initialValue = emptyList()
         )
 
-    // Loading State
-    private val _isLoading = MutableStateFlow(true)
-    val isLoading: StateFlow<Boolean> = _isLoading
-
     // LiveData to trigger showing the "Delete Old Workouts" dialog
     val showDeleteOldWorkoutsDialogEvent = SingleLiveEvent<Unit>()
 
@@ -108,11 +104,9 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
     }
 
     fun loadWorkouts() {
-        _isLoading.value = true // Show spinner
         // Use the ViewModel's coroutine scope to launch on a background thread.
         viewModelScope.launch {
             workoutRepo.loadAllWorkouts()
-            _isLoading.value = false // Hide spinner
         }
     }
 
