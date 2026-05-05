@@ -127,7 +127,7 @@ fun ATrainingTrackerMap(
     }
 
     // Automated Bounds Fitting (Optimized for Local Area)
-    LaunchedEffect(mapState.tracks, mapState.markers, mapState.segments, mapState.isFollowMeEnabled, currentLocation) {
+    LaunchedEffect(mapState.tracks, mapState.markers, mapState.segments, mapState.isFollowMeEnabled) {
         if (!mapState.isFollowMeEnabled) {
             val userPos = currentLocation
             val builder = LatLngBounds.Builder()
