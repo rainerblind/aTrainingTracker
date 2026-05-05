@@ -91,6 +91,7 @@
             android:summary="@string/prefsExportSummary"
             android:entries="@array/export_formats_title"
             android:entryValues="@array/export_formats_values"
+            android:defaultValue="@array/default_export_formats"
             android:layout="@layout/preference_slim"/>
 
         <PreferenceScreen

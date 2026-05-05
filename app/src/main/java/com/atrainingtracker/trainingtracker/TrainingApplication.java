@@ -68,6 +68,7 @@ import com.dropbox.core.json.JsonReadException;
 import com.dropbox.core.oauth.DbxCredential;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Locale;
@@ -685,7 +686,9 @@ public class TrainingApplication extends Application {
 
     // File exports
     public static boolean exportToTCX() {
-        return cSharedPreferences.getStringSet(SP_EXPORT_FORMATS, new HashSet<>()).contains("TCX");
+        return cSharedPreferences.getStringSet(SP_EXPORT_FORMATS,
+                        new HashSet<>(Collections.singletonList("TCX")))  // by default, we export to TCX.
+                .contains("TCX");
     }
 
     public static boolean exportToGPX() {
