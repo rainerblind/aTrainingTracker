@@ -90,7 +90,6 @@ data class WorkoutData(
     val extremaCalculationMessage: String? = null,
 
     // --- 2. Heavy/Live Data ---
-    val trackPoints: List<PathPoint> = emptyList(),
     val exportStatuses: List<ExportStatusGroupData> = emptyList(),
     val extremaRows: List<ExtremaDataRow> = emptyList()
 ) {
@@ -141,7 +140,4 @@ data class WorkoutData(
             workoutId = id,
             calculationMessage = extremaCalculationMessage
         )
-
-    // --- 4. Logic Helpers ---
-    val hasTrackPoints: Boolean get() = !trackPoints.isNullOrEmpty()
 }

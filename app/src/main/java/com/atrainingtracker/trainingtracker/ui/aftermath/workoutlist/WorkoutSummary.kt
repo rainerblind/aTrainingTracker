@@ -123,7 +123,7 @@ fun WorkoutSummary(
             )
         }
 
-        if (isPlayServiceAvailable && workoutData.trackPoints.isNotEmpty()) {
+        if (isPlayServiceAvailable && workoutData.map_polyline != "") {
             WorkoutMediaSection(
                 // workoutId = workoutData.id,
                 workoutData = workoutData,

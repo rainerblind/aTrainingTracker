@@ -149,7 +149,6 @@ class WorkoutDataMapper(
                 if (data.hasAnyData()) data else null
             },
 
-            trackPoints = emptyList(),  // will be added/merged by the repository
             exportStatuses = emptyList() // will be added/merged by the viewModel
         )
     }
