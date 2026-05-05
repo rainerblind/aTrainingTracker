@@ -20,6 +20,8 @@ package com.atrainingtracker.trainingtracker.fragments.preferences;
 
 import android.os.Bundle;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.preference.PreferenceFragmentCompat;
 import android.util.Log;
 
@@ -39,5 +41,27 @@ public class SearchFragment extends PreferenceFragmentCompat {
         if (DEBUG) Log.i(TAG, "onCreatePreferences(savedInstanceState, rootKey=" + rootKey + ")");
 
         setPreferencesFromResource(R.xml.prefs, rootKey);
+    }
+
+    @Override
+    public void onViewCreated(@NonNull android.view.View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+
+        androidx.recyclerview.widget.RecyclerView listView = getListView();
+        if (listView != null) {
+            // Allow the list to scroll under the system bars
+            listView.setClipToPadding(false);
+
+            androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(listView, (v, insets) -> {
+                androidx.core.graphics.Insets systemBars = insets.getInsets(
+                        androidx.core.view.WindowInsetsCompat.Type.systemBars()
+                );
+
+                // Set padding so content doesn't get stuck under the nav bar/status bar
+                v.setPadding(0, systemBars.top, 0, systemBars.bottom);
+
+                return insets;
+            });
+        }
     }
 }
