@@ -142,9 +142,9 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                             onEditWorkout = { workoutId ->
                                 selectedWorkoutIdForEdit = workoutId
                             },
-                            onMapClick = { workoutId ->
-                                selectedWorkoutIdForDetails = workoutId
-                                trackOnMapViewModel.loadAftermathData(workoutId)
+                            onMapClick = { workoutData ->
+                                selectedWorkoutIdForDetails = workoutData.id
+                                trackOnMapViewModel.loadAftermathData(workoutData)
                             },
                             isPlayServiceAvailable = isPlayAvailable
                         )

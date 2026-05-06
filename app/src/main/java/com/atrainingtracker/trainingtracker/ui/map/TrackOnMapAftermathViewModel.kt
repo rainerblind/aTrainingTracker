@@ -29,6 +29,7 @@ import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.Dispatchers
@@ -53,17 +54,17 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
         SensorType.HR, SensorType.POWER, SensorType.LINE_DISTANCE_m, SensorType.SPEED_mps
     )
 
-    fun loadAftermathData(workoutId: Long) {
+    fun loadAftermathData(workoutData: WorkoutData) {
         viewModelScope.launch(Dispatchers.IO) {
-            val baseFileName = summariesDb.getBaseFileName(workoutId) ?: return@launch
+            // val baseFileName = summariesDb.getBaseFileName(workoutId) ?: return@launch
 
             // Get the Sport Type
-            val workout = workoutRepository.getWorkoutById(workoutId).value
-            val bSportType = workout?.bSportType ?: BSportType.UNKNOWN
+            // val workout = workoutRepository.getWorkoutById(workoutId).value
+            val bSportType = workoutData.bSportType
 
             // Load Track
             val trackList = TrackType.entries.mapNotNull { type ->
-                val path = workoutRepository.getWorkoutTrackPoints(workoutId, Roughness.ALL, type)
+                val path = workoutRepository.getWorkoutTrackPoints(workoutData.id, Roughness.ALL, type)
                 if (path.isNotEmpty()) MapTrack(id = type.ordinal.toLong(), type = type, path = path) else null
             }
 
@@ -71,21 +72,21 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
             val markerList = mutableListOf<LocationMarker>()
 
             // Start/Stop Markers
-            getExtremaPos(workoutId, baseFileName, ExtremaType.START)?.let {
+            workoutData.fileBaseName?.let { getExtremaPos(workoutData.id, it, ExtremaType.START) }?.let {
                 markerList.add(LocationMarker(it, R.drawable.control_start, application.getString(R.string.Start)))
             }
-            getExtremaPos(workoutId, baseFileName, ExtremaType.END)?.let {
+            workoutData.fileBaseName?.let { getExtremaPos(workoutData.id, it, ExtremaType.END) }?.let {
                 markerList.add(LocationMarker(it, R.drawable.control_stop, application.getString(R.string.Stop)))
             }
 
             // Sensor Extrema (MAX for all, MIN for specific sensors)
             extremaSensorTypes.forEach { sensor ->
                 // Always check for MAX
-                addExtremaMarkerIfPresent(workoutId, sensor, ExtremaType.MAX, markerList)
+                addExtremaMarkerIfPresent(workoutData.id, sensor, ExtremaType.MAX, markerList)
 
                 // Additionally check for MIN for Altitude and Temperature
                 if (sensor == SensorType.ALTITUDE || sensor == SensorType.TEMPERATURE) {
-                    addExtremaMarkerIfPresent(workoutId, sensor, ExtremaType.MIN, markerList)
+                    addExtremaMarkerIfPresent(workoutData.id, sensor, ExtremaType.MIN, markerList)
                 }
             }
 
