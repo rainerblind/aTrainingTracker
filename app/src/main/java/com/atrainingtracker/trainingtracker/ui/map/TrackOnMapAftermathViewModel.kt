@@ -31,6 +31,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManag
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -70,12 +71,27 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
                 )
             }
 
-            // --- PHASE 2: Fast Track (From WorkoutData Polyline) ---
-            // We decode the polyline string already present in workoutData.
-            // This is near-instant because it requires NO database I/O.
+            // --- PHASE 2: Fast Track (From WorkoutData Polyline & Streams) ---
+            // Decodes the thinned data already present in workoutData for instant UI feedback.
             if (workoutData.map_polyline.isNotEmpty()) {
-                val fastPath = com.google.maps.android.PolyUtil.decode(workoutData.map_polyline).map {
-                    PathPoint(0.0, it, 0.0) // LatLng is enough for the initial render
+                val latLngs = com.google.maps.android.PolyUtil.decode(workoutData.map_polyline)
+
+                // Decode elevation streams
+                val alts = if (workoutData.encodedAltitudes.isNotEmpty()) {
+                    NumericalEncodingUtils.decodeDoubles(workoutData.encodedAltitudes)
+                } else emptyList()
+
+                val dists = if (workoutData.encodedDistances.isNotEmpty()) {
+                    NumericalEncodingUtils.decodeDoubles(workoutData.encodedDistances)
+                } else emptyList()
+
+                // Map points directly since sampling is identical
+                val fastPath = latLngs.mapIndexed { index, latLng ->
+                    PathPoint(
+                        distance = dists.getOrElse(index) { 0.0 },
+                        latLng = latLng,
+                        altitude = alts.getOrElse(index) { 0.0 }
+                    )
                 }
 
                 val fastTrack = MapTrack(
