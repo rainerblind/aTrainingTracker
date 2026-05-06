@@ -109,11 +109,3 @@ data class MapSegment(
     val path: List<PathPoint>,
     val showStartAndFinishText: Boolean = true
 )
-
-enum class Roughness(val stepSize: Int) {
-    ALL(1),
-    MEDIUM(60),  // one minute
-    LOW(5*60)   // 5 minutes
-}
-
-

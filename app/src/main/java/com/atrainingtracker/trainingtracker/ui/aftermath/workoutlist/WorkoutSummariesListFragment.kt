@@ -153,9 +153,9 @@ class WorkoutSummariesListFragment : Fragment() {
                                 onEditWorkout = { id ->
                                     selectedWorkoutIdForEdit = id
                                 },
-                                onMapClick = { id ->
-                                    selectedWorkoutForDetails = id
-                                    trackOnMapViewModel.loadAftermathData(id)
+                                onMapClick = { workoutData ->
+                                    selectedWorkoutForDetails = workoutData.id
+                                    trackOnMapViewModel.loadAftermathData(workoutData)
                                 },
                                 appBarOffsetPx = connection.appBarOffset,
                                 headerHeightPx = headerHeightPx.toFloat()

@@ -374,7 +374,7 @@ public class CalcExtremaWorker extends Worker {
                 int latIdx = cursor.getColumnIndex("LATITUDE");
                 int lonIdx = cursor.getColumnIndex("LONGITUDE");
 
-                while (cursor.moveToNext()) {
+                while (cursor.move(WorkoutSummaries.ENCODING_STEP_SIZE)) {
                     latLngs.add(new LatLng(cursor.getDouble(latIdx), cursor.getDouble(lonIdx)));
                 }
             }
@@ -423,11 +423,7 @@ public class CalcExtremaWorker extends Worker {
                 int altIdx = cursor.getColumnIndex(altColumn);
                 int distIdx = cursor.getColumnIndex(distColumn);
 
-                // Step 5 keeps the encoded string short while maintaining
-                // enough detail for a smooth elevation profile sparkline.
-                int stepSize = 5;
-
-                while (cursor.move(stepSize)) {
+                while (cursor.move(WorkoutSummaries.ENCODING_STEP_SIZE)) {
                     if (altIdx != -1 && distIdx != -1) {
                         altitudes.add(cursor.getDouble(altIdx));
                         distances.add(cursor.getDouble(distIdx));

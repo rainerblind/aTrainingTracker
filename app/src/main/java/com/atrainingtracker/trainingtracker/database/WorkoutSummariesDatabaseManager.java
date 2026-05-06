@@ -34,8 +34,6 @@ import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
-import com.atrainingtracker.trainingtracker.ui.map.PathPoint;
-import com.atrainingtracker.trainingtracker.ui.map.TrackType;
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.maps.android.PolyUtil;
@@ -780,6 +778,7 @@ public class WorkoutSummariesDatabaseManager {
         @Deprecated
         private static final String SPORT_OLD = "sport";
 
+        public final static int ENCODING_STEP_SIZE = 20;  // twenty seconds (Introduced in Version 15)
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -787,6 +786,7 @@ public class WorkoutSummariesDatabaseManager {
     ////////////////////////////////////////////////////////////////////////////////////////////////
     public static class WorkoutSummariesDbHelper extends SQLiteOpenHelper {
         private final Context mContext;
+
 
         public static final String DB_NAME = "WorkoutSummaries.db";
         // public static final int DB_VERSION  = 4; // upgrade to Version 4 around November 2015
@@ -799,7 +799,8 @@ public class WorkoutSummariesDatabaseManager {
         // public static final int DB_VERSION = 11; // upgrade to Version 11 at 19. 01. 2017
         // public static final int DB_VERSION = 12; // upgrade to Version 12 at 22.01.2026
         // public static final int DB_VERSION = 13; // upgrade to Version 13 at 05.05.2026
-        public static final int DB_VERSION = 14; // upgrade to Version 14 at 05.05.2026
+        // public static final int DB_VERSION = 14; // upgrade to Version 14 at 05.05.2026
+        public static final int DB_VERSION = 15; // upgrade to Version 15 at 06.05.2026: Unique step size for encoding map polyline, distance, and elevation: ENCODIN_STEP_SIZE
 
         protected static final String CREATE_TABLE_V14 = "create table " + WorkoutSummaries.TABLE + " ("
                 + WorkoutSummaries.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -1094,7 +1095,7 @@ public class WorkoutSummariesDatabaseManager {
                 addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.MAP_POLYLINE, "text");
 
                 // 2. Perform the migration
-                migrateExistingWorkouts(db);
+                migrateExistingWorkouts13(db);
             }
 
             if (oldVersion < 14) {
@@ -1105,13 +1106,19 @@ public class WorkoutSummariesDatabaseManager {
                 // 2. Perform the migration
                 migrateExistingWorkouts14(db);
             }
+
+            if (oldVersion < 15) {
+                // recalc the encoded strings with the unique step size.
+                migrateExistingWorkouts13(db);
+                migrateExistingWorkouts14(db);
+            }
         }
 
         /**
          * Iterates through all existing workouts, fetches their points from the
          * samples database, encodes them into a polyline string, and saves it.
          */
-        private void migrateExistingWorkouts(SQLiteDatabase db) {
+        private void migrateExistingWorkouts13(SQLiteDatabase db) {
             Log.i(TAG, "Starting Migration: Encoding tracks to polylines...");
 
             // 1. Get IDs and BaseFileNames from the Summaries table (the one being upgraded)
@@ -1163,7 +1170,7 @@ public class WorkoutSummariesDatabaseManager {
                     int latIdx = cursor.getColumnIndex(latName);
                     int lonIdx = cursor.getColumnIndex(lonName);
 
-                    while (cursor.moveToNext()) {
+                    while (cursor.move(WorkoutSummaries.ENCODING_STEP_SIZE)) {
                         if (latIdx != -1 && lonIdx != -1 && !cursor.isNull(latIdx) && !cursor.isNull(lonIdx)) {
                             latLngs.add(new LatLng(cursor.getDouble(latIdx), cursor.getDouble(lonIdx)));
                         }
@@ -1226,7 +1233,7 @@ public class WorkoutSummariesDatabaseManager {
                     int distIdx = cursor.getColumnIndex(distName);
 
                     // Step 5 for summaries creates a smooth profile and keeps the string short
-                    while (cursor.move(5)) {
+                    while (cursor.move(WorkoutSummaries.ENCODING_STEP_SIZE)) {
                         if (altIdx != -1 && distIdx != -1) {
                             altitudes.add(cursor.getDouble(altIdx));
                             distances.add(cursor.getDouble(distIdx));
