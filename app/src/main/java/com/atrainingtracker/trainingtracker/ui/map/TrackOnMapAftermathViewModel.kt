@@ -136,7 +136,7 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
             // --- PHASE 4: High-Resolution Track (From Samples DB) ---
             // Finally, load the full fidelity data for detailed analysis.
             val fullTracks = TrackType.entries.mapNotNull { type ->
-                val path = workoutRepository.getWorkoutTrackPoints(workoutId, Roughness.ALL, type)
+                val path = workoutRepository.getWorkoutTrackPoints(workoutId, type)
                 if (path.isNotEmpty()) {
                     MapTrack(id = type.ordinal.toLong(), type = type, path = path)
                 } else null

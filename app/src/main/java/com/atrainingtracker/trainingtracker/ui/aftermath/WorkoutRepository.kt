@@ -52,7 +52,6 @@ import com.atrainingtracker.trainingtracker.tracker.TrackerService
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusGroupData
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
-import com.atrainingtracker.trainingtracker.ui.map.Roughness
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
 import com.google.android.gms.maps.model.LatLng
@@ -164,7 +163,6 @@ class WorkoutRepository private constructor(private val application: Application
 
     suspend fun getWorkoutTrackPoints(
         workoutId: Long,
-        roughness: Roughness,
         trackType: TrackType
     ): List<PathPoint> = withContext(Dispatchers.IO) {
 
@@ -190,7 +188,7 @@ class WorkoutRepository private constructor(private val application: Application
             val distIdx = cursor.getColumnIndex(SensorType.DISTANCE_m.name)
 
             // 3. Replicate the Roughness stepSize logic
-            while (cursor.move(roughness.stepSize)) {
+            while (cursor.moveToNext()) {
 
                 if (latIdx != -1 && lonIdx != -1 && !cursor.isNull(latIdx) && !cursor.isNull(lonIdx)) {
                     points.add(
