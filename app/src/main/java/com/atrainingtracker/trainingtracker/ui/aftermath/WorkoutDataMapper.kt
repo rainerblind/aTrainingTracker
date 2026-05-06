@@ -105,6 +105,8 @@ class WorkoutDataMapper(
             commute = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.COMMUTE)) == 1,
             trainer = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.TRAINER)) == 1,
             map_polyline = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.MAP_POLYLINE)) ?: "",
+            encodedAltitudes = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.ALTITUDE_STREAM)) ?: "",
+            encodedDistances = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.DISTANCE_STREAM)) ?: "",
 
             totalDistance = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.DISTANCE_TOTAL_m)),
             maxDisplacement = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX),
@@ -147,7 +149,6 @@ class WorkoutDataMapper(
                 if (data.hasAnyData()) data else null
             },
 
-            trackPoints = emptyList(),  // will be added/merged by the repository
             exportStatuses = emptyList() // will be added/merged by the viewModel
         )
     }

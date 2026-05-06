@@ -41,6 +41,8 @@ import com.atrainingtracker.trainingtracker.ui.theme.Zone2
 import com.atrainingtracker.trainingtracker.ui.theme.Zone3
 import com.atrainingtracker.trainingtracker.ui.theme.Zone4
 import com.atrainingtracker.trainingtracker.ui.theme.Zone5
+import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
+import com.google.android.gms.maps.model.LatLng
 
 // Data class to cache the pre-calculated geometry and metadata
 private data class CachedProfileData(
@@ -58,6 +60,42 @@ private data class ElevationSegment(
     val p2: Offset, // Normalized 0..1
     val color: Color
 )
+
+/**
+ * Optimized ElevationProfile that accepts encoded strings.
+ * Use this in lists for maximum performance.
+ */
+@Composable
+fun ElevationProfile(
+    encodedAltitudes: String,
+    encodedDistances: String,
+    currentDistance: Double? = null,
+    onDistanceSelected: (Double?) -> Unit = {},
+    modifier: Modifier = Modifier
+) {
+    // 1. Decode strings into simple Double lists
+    // This happens only if the strings change
+    val decodedData = remember(encodedAltitudes, encodedDistances) {
+        val alts = NumericalEncodingUtils.decodeDoubles(encodedAltitudes)
+        val dists = NumericalEncodingUtils.decodeDoubles(encodedDistances)
+
+        // Map to PathPoint objects for compatibility with the existing rendering logic
+        dists.zip(alts) { dist, alt ->
+            PathPoint(distance = dist,
+                altitude = alt,
+                latLng = LatLng(0.0, 0.0) // LatLng not needed for profile
+            )
+        }
+    }
+
+    // 2. Call the existing rendering logic
+    ElevationProfile(
+        pathPoints = decodedData,
+        currentDistance = currentDistance,
+        onDistanceSelected = onDistanceSelected,
+        modifier = modifier
+    )
+}
 
 @Composable
 fun ElevationProfile(

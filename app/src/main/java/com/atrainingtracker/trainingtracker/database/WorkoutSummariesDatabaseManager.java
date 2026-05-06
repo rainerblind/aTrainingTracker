@@ -36,6 +36,7 @@ import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint;
 import com.atrainingtracker.trainingtracker.ui.map.TrackType;
+import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.maps.android.PolyUtil;
 
@@ -740,6 +741,8 @@ public class WorkoutSummariesDatabaseManager {
         public static final String ASCENDING = "ascending";
         public static final String DESCENDING = "descending";
         public static final String MAP_POLYLINE = "mapPolyline"; // added in Version 13
+        public static final String DISTANCE_STREAM = "distanceStream"; // added in Version 14
+        public static final String ALTITUDE_STREAM = "altitudeStream"; // added in Version 14
         // new entries in version 5 of the DB
         public static final String EXTREMA_VALUES_CALCULATED = "extremumValuesCalculated";
         // new entries in version 6 of the DB
@@ -795,8 +798,42 @@ public class WorkoutSummariesDatabaseManager {
         // public static final int DB_VERSION = 10; // upgrade to Version 10 at 8. June 2016
         // public static final int DB_VERSION = 11; // upgrade to Version 11 at 19. 01. 2017
         // public static final int DB_VERSION = 12; // upgrade to Version 12 at 22.01.2026
-        public static final int DB_VERSION = 13; // upgrade to Version 13 at 05.05.2026
+        // public static final int DB_VERSION = 13; // upgrade to Version 13 at 05.05.2026
+        public static final int DB_VERSION = 14; // upgrade to Version 14 at 05.05.2026
 
+        protected static final String CREATE_TABLE_V14 = "create table " + WorkoutSummaries.TABLE + " ("
+                + WorkoutSummaries.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + WorkoutSummaries.WORKOUT_NAME + " text,"
+                + WorkoutSummaries.FILE_BASE_NAME + " text,"
+                // + WorkoutSummaries.ATHLETE_NAME + " text,"  // removed in verison 12
+                + WorkoutSummaries.DESCRIPTION + " text,"
+                + WorkoutSummaries.GOAL + " text,"
+                + WorkoutSummaries.METHOD + " text,"
+                // + WorkoutSummaries.SPORT + " text,"
+                + WorkoutSummaries.B_SPORT + " text,"
+                + WorkoutSummaries.SPORT_ID + " int,"
+                + WorkoutSummaries.EQUIPMENT_ID + " int,"
+                // + WorkoutSummaries.SAMPLING_TIME + " int,"  // removed in version 12.
+                + WorkoutSummaries.TIME_START + " DATETIME DEFAULT CURRENT_TIMESTAMP,"
+                + WorkoutSummaries.TIME_ACTIVE_s + " int,"
+                + WorkoutSummaries.TIME_TOTAL_s + " int,"
+                + WorkoutSummaries.DISTANCE_TOTAL_m + " real,"
+                + WorkoutSummaries.SPEED_AVERAGE_mps + " real,"
+                + WorkoutSummaries.GC_DATA + " text,"
+                + WorkoutSummaries.CALORIES + " int,"
+                + WorkoutSummaries.LAPS + " int,"
+                + WorkoutSummaries.FINISHED + " int," // end of version 3
+                // + WorkoutSummaries.PRIVATE + " int,"  removed in version 12.
+                + WorkoutSummaries.COMMUTE + " int,"
+                + WorkoutSummaries.TRAINER + " int,"
+                + WorkoutSummaries.ASCENDING + " int,"
+                + WorkoutSummaries.DESCENDING + " int," // end of version 4
+                + WorkoutSummaries.MAP_POLYLINE + " text,"    // added in Version 13
+                + WorkoutSummaries.DISTANCE_STREAM + " text," // added in Version 14
+                + WorkoutSummaries.ALTITUDE_STREAM + " text," // added in Version 14
+                + WorkoutSummaries.EXTREMA_VALUES_CALCULATED + " int)";
+
+        @Deprecated
         protected static final String CREATE_TABLE_V13 = "create table " + WorkoutSummaries.TABLE + " ("
                 + WorkoutSummaries.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                 + WorkoutSummaries.WORKOUT_NAME + " text,"
@@ -1059,6 +1096,15 @@ public class WorkoutSummariesDatabaseManager {
                 // 2. Perform the migration
                 migrateExistingWorkouts(db);
             }
+
+            if (oldVersion < 14) {
+                // first, add the new columns
+                addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.DISTANCE_STREAM, "text");
+                addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.ALTITUDE_STREAM, "text");
+
+                // 2. Perform the migration
+                migrateExistingWorkouts14(db);
+            }
         }
 
         /**
@@ -1132,6 +1178,77 @@ public class WorkoutSummariesDatabaseManager {
 
             // Use Google Maps Utility to encode
             return PolyUtil.encode(latLngs);
+        }
+
+        /**
+         * Iterates through all existing workouts, fetches their points from the
+         * samples database, encodes them into a polyline string, and saves it.
+         */
+        private void migrateExistingWorkouts14(SQLiteDatabase db) {
+            Log.i(TAG, "Starting Migration 14: Encoding altitude and distance streams...");
+
+            String[] projection = {WorkoutSummaries.C_ID, WorkoutSummaries.FILE_BASE_NAME};
+
+            try (Cursor summaryCursor = db.query(WorkoutSummaries.TABLE, projection, null, null, null, null, null)) {
+                if (summaryCursor != null) {
+                    int idIdx = summaryCursor.getColumnIndex(WorkoutSummaries.C_ID);
+                    int fileIdx = summaryCursor.getColumnIndex(WorkoutSummaries.FILE_BASE_NAME);
+
+                    while (summaryCursor.moveToNext()) {
+                        long workoutId = summaryCursor.getLong(idIdx);
+                        String baseFileName = summaryCursor.getString(fileIdx);
+
+                        if (baseFileName != null) {
+                            // Fetch and encode numerical streams
+                            saveEncodedStreamsForWorkout(db, workoutId, baseFileName);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Migration 14 failed", e);
+            }
+        }
+
+        private void saveEncodedStreamsForWorkout(SQLiteDatabase db, long workoutId, String baseFileName) {
+            List<Double> altitudes = new ArrayList<>();
+            List<Double> distances = new ArrayList<>();
+
+            SQLiteDatabase samplesDb = WorkoutSamplesDatabaseManager.getInstance(mContext).getDatabase();
+            String tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName);
+
+            // Using standard column names from your database schema
+            String altName = "ALTITUDE";
+            String distName = "DISTANCE_m";
+
+            try (Cursor cursor = samplesDb.query(tableName, new String[]{altName, distName}, null, null, null, null, null)) {
+                if (cursor != null) {
+                    int altIdx = cursor.getColumnIndex(altName);
+                    int distIdx = cursor.getColumnIndex(distName);
+
+                    // Step 5 for summaries creates a smooth profile and keeps the string short
+                    while (cursor.move(5)) {
+                        if (altIdx != -1 && distIdx != -1) {
+                            altitudes.add(cursor.getDouble(altIdx));
+                            distances.add(cursor.getDouble(distIdx));
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error reading samples for stream encoding: " + baseFileName);
+                return;
+            }
+
+            if (!altitudes.isEmpty()) {
+                // Use the NumericalEncodingUtils (Kotlin object)
+                String encAlt = NumericalEncodingUtils.INSTANCE.encodeDoubles(altitudes);
+                String encDist = NumericalEncodingUtils.INSTANCE.encodeDoubles(distances);
+
+                ContentValues values = new ContentValues();
+                values.put(WorkoutSummaries.ALTITUDE_STREAM, encAlt);
+                values.put(WorkoutSummaries.DISTANCE_STREAM, encDist);
+
+                db.update(WorkoutSummaries.TABLE, values, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(workoutId)});
+            }
         }
     }
 }

@@ -69,6 +69,8 @@ data class WorkoutData(
     val commute: Boolean,
     val trainer: Boolean,
     val map_polyline: String,
+    val encodedAltitudes: String,
+    val encodedDistances: String,
 
     val totalDistance: Double,
     val maxDisplacement: Double?,
@@ -88,7 +90,6 @@ data class WorkoutData(
     val extremaCalculationMessage: String? = null,
 
     // --- 2. Heavy/Live Data ---
-    val trackPoints: List<PathPoint> = emptyList(),
     val exportStatuses: List<ExportStatusGroupData> = emptyList(),
     val extremaRows: List<ExtremaDataRow> = emptyList()
 ) {
@@ -139,7 +140,4 @@ data class WorkoutData(
             workoutId = id,
             calculationMessage = extremaCalculationMessage
         )
-
-    // --- 4. Logic Helpers ---
-    val hasTrackPoints: Boolean get() = !trackPoints.isNullOrEmpty()
 }
