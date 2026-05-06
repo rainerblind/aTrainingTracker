@@ -130,14 +130,16 @@ fun EditWorkoutScreen(
                     options = sportTypes,
                     selectedOption = viewModel.suggestedSportTypeName,
                     onOptionSelected = { viewModel.updateSportName(it) },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    stayOpenOn = setOf(viewModel.ALL_SPORT_TYPES)
                 )
                 DropdownSelector(
                     label = stringResource(R.string.Equipment),
                     options = equipmentNames,
                     selectedOption = viewModel.suggestedEquipmentName ?: "",
                     onOptionSelected = { viewModel.updateEquipmentName(it) },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    stayOpenOn = setOf(viewModel.ALL_EQUIPMENT, viewModel.ALL_SHOES, viewModel.ALL_BIKES)
                 )
             }
 
@@ -194,7 +196,8 @@ fun DropdownSelector(
     options: List<String>,
     selectedOption: String,
     onOptionSelected: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    stayOpenOn: Set<String>
 ) {
     var expanded by remember { mutableStateOf(false) }
     Box(modifier = modifier) {
@@ -220,7 +223,10 @@ fun DropdownSelector(
                     text = { Text(selection) },
                     onClick = {
                         onOptionSelected(selection)
-                        expanded = false
+                        // If the selection is the dummy option, don't close the menu
+                        if (selection !in stayOpenOn) {
+                            expanded = false
+                        }
                     }
                 )
             }
