@@ -182,11 +182,14 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
             showAllSportTypes = true
         }
         // when we found exactly one sport, we show all sports but preselect this one.
-        if (suggestedSportNames.size == 1) {
+        else if (suggestedSportNames.size == 1) {
             if (userSelectedSportTypeName == null) {  // but not when the user already selected one.
                 suggestedSportTypeName = suggestedSportNames.first()
             }
             showAllSportTypes = true
+        }
+        else if (suggestedSportNames.size == allSportTypes.size) {
+            showAllSportTypes = true  // we already show all sport types, so set this flag.
         }
 
         // when requested by the user or we found out that we should show all sport types, we show all
