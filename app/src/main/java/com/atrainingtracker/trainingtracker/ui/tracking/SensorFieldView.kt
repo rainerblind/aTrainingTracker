@@ -21,15 +21,19 @@ package com.atrainingtracker.trainingtracker.ui.tracking
 import android.content.Context
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Card
@@ -52,6 +56,12 @@ import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.theme.Zone1
+import com.atrainingtracker.trainingtracker.ui.theme.Zone2
+import com.atrainingtracker.trainingtracker.ui.theme.Zone3
+import com.atrainingtracker.trainingtracker.ui.theme.Zone4
+import com.atrainingtracker.trainingtracker.ui.theme.Zone5
+
 
 enum class ViewSize {
     XSMALL, SMALL, NORMAL, LARGE, XLARGE, HUGE, XHUGE
@@ -177,9 +187,26 @@ fun SensorFieldView(
             ),
         shape = RectangleShape,
         // elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.cardColors(containerColor = fieldState.zoneColor),
+        colors = CardDefaults.cardColors(
+            containerColor = if (fieldState.zoneColor == MaterialTheme.colorScheme.surfaceVariant) {
+                fieldState.zoneColor // Keep default if no zone is active
+            } else {
+                fieldState.zoneColor.copy(alpha = 0.12f)
+            }
+        ),
+        // colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
+        Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+            // 1. Vertical Indicator Strip
+            if (fieldState.zoneColor != MaterialTheme.colorScheme.surfaceVariant) {
+                Spacer(
+                    modifier = Modifier
+                        .width(6.dp)
+                        .fillMaxHeight()
+                        .background(fieldState.zoneColor)
+                )
+            }
         Column(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
@@ -243,6 +270,7 @@ fun SensorFieldView(
                     }
                 }
             }
+        }
         }
     }
 }
@@ -312,7 +340,7 @@ private fun SensorFieldViewConfigPreview() {
 
 @Preview(showBackground = true, widthDp = 320)
 @Composable
-private fun SensorFieldViewZonePreview() {
+private fun SensorFieldViewZone1Preview() {
     val mockSensorFieldStateInZone = SensorFieldState(
         configHash = 2,
         sensorFieldId = 2,
@@ -323,7 +351,103 @@ private fun SensorFieldViewZonePreview() {
         filterDescription = "Inst.",
         value = "175",
         units = "bpm",
-        zoneColor = Color(0xFF4CAF50) // A sample green zone color
+        zoneColor = Zone1
+    )
+
+    MaterialTheme {
+        SensorFieldView(
+            fieldState = mockSensorFieldStateInZone,
+            screenMode = ScreenMode.TRACKING // Default preview to tracking mode
+        )
+    }
+}
+
+@Preview(showBackground = true, widthDp = 320)
+@Composable
+private fun SensorFieldViewZone2Preview() {
+    val mockSensorFieldStateInZone = SensorFieldState(
+        configHash = 2,
+        sensorFieldId = 2,
+        rowNr = 1,
+        colNr = 2,
+        viewSize = ViewSize.NORMAL,
+        label = "Heart Rate",
+        filterDescription = "Inst.",
+        value = "175",
+        units = "bpm",
+        zoneColor = Zone2
+    )
+
+    MaterialTheme {
+        SensorFieldView(
+            fieldState = mockSensorFieldStateInZone,
+            screenMode = ScreenMode.TRACKING // Default preview to tracking mode
+        )
+    }
+}
+
+@Preview(showBackground = true, widthDp = 320)
+@Composable
+private fun SensorFieldViewZone3Preview() {
+    val mockSensorFieldStateInZone = SensorFieldState(
+        configHash = 2,
+        sensorFieldId = 2,
+        rowNr = 1,
+        colNr = 2,
+        viewSize = ViewSize.NORMAL,
+        label = "Heart Rate",
+        filterDescription = "Inst.",
+        value = "175",
+        units = "bpm",
+        zoneColor = Zone3
+    )
+
+    MaterialTheme {
+        SensorFieldView(
+            fieldState = mockSensorFieldStateInZone,
+            screenMode = ScreenMode.TRACKING // Default preview to tracking mode
+        )
+    }
+}
+
+@Preview(showBackground = true, widthDp = 320)
+@Composable
+private fun SensorFieldViewZone4Preview() {
+    val mockSensorFieldStateInZone = SensorFieldState(
+        configHash = 2,
+        sensorFieldId = 2,
+        rowNr = 1,
+        colNr = 2,
+        viewSize = ViewSize.NORMAL,
+        label = "Heart Rate",
+        filterDescription = "Inst.",
+        value = "175",
+        units = "bpm",
+        zoneColor = Zone4
+    )
+
+    MaterialTheme {
+        SensorFieldView(
+            fieldState = mockSensorFieldStateInZone,
+            screenMode = ScreenMode.TRACKING // Default preview to tracking mode
+        )
+    }
+}
+
+@Preview(showBackground = true, widthDp = 320)
+@Composable
+private fun SensorFieldViewZone5Preview() {
+    val mockSensorFieldStateInZone = SensorFieldState(
+        configHash = 2,
+        sensorFieldId = 2,
+        rowNr = 1,
+        colNr = 2,
+        viewSize = ViewSize.NORMAL,
+        label = "Heart Rate",
+        filterDescription = "Inst.",
+        value = "175",
+        units = "bpm",
+        zoneColor = Zone5
     )
 
     MaterialTheme {
