@@ -234,7 +234,7 @@ fun ElevationProfile(
                 )
             }
             .fillMaxWidth()
-            .padding(bottom = 24.dp, start = 50.dp, end = 25.dp, top = 10.dp)
+            .padding(bottom = 24.dp, start = 50.dp, end = 25.dp, top = 24.dp)
     ) {
         val width = size.width
         val height = size.height
@@ -341,14 +341,16 @@ fun ElevationProfile(
             val pLeft = pathPoints[activeIndex]
             val pRight = pathPoints.getOrNull(activeIndex + 1)
 
-            val markerY = if (pRight != null) {
+            val interAlt = if (pRight != null) {
                 val ratio = (clampedDist - pLeft.distance) / (pRight.distance - pLeft.distance)
-                val interAlt = pLeft.altitude + ratio * (pRight.altitude - pLeft.altitude)
-                height - ((interAlt - cachedData.minAlt) / cachedData.altRange) * height
+                pLeft.altitude + ratio * (pRight.altitude - pLeft.altitude)
             } else {
-                height - ((pLeft.altitude - cachedData.minAlt) / cachedData.altRange) * height
+                pLeft.altitude
             }
 
+            val markerY = height - ((interAlt - cachedData.minAlt) / cachedData.altRange) * height
+
+            // Draw Vertical Dashed Line
             drawLine(
                 color = colorScheme.primary,
                 start = Offset(markerX.toFloat(), 0f),
@@ -357,6 +359,35 @@ fun ElevationProfile(
                 pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f))
             )
 
+            // Draw Labels at the top of the line
+            drawIntoCanvas { canvas ->
+                val distLabel = if (clampedDist < 1000) {
+                    "${clampedDist.toInt()} m"
+                } else {
+                    "${String.format("%.2f", clampedDist / 1000f)} km"
+                }
+                val altLabel = "${interAlt.toInt()} m"
+                val combinedLabel = "$distLabel | $altLabel"
+
+                // Calculate text width to center it or keep it on screen
+                val labelWidth = textPaint.measureText(combinedLabel)
+                var labelX = markerX.toFloat() - (labelWidth / 2)
+
+                // Keep label within chart bounds
+                labelX = labelX.coerceIn(0f, width - labelWidth)
+
+                canvas.nativeCanvas.drawText(
+                    combinedLabel,
+                    labelX,
+                    -15f, // Draw slightly above the top of the chart
+                    textPaint.apply {
+                        // Optional: Make the active label bold or a different color
+                        isFakeBoldText = true
+                    }
+                )
+            }
+
+            // Draw Intersection Points (Circles)
             drawCircle(color = colorScheme.onSurface, radius = 5.dp.toPx(), center = Offset(markerX.toFloat(), markerY.toFloat()))
             drawCircle(color = colorScheme.primary, radius = 3.dp.toPx(), center = Offset(markerX.toFloat(), markerY.toFloat()))
         }
