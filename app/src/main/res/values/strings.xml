@@ -591,17 +591,10 @@
     <string name="notification_tracking_and_searching_format">tracking &amp; searching for %1$s</string>
     <string name="notification_pause_and_searching_format">pause &amp; searching for %1$s</string>
     <string name="copy_of">copy of %1$s</string>
-    <string name="add_view_before">add view</string>
-    <string name="delete_view">delete view</string>
-    <string name="add_view_after">add view</string>
-    <string name="EditTrackingView">edit</string>
-    <string name="showLiveSegments">show live segments</string>
-    <string name="showLapButton">show lap button</string>
     <string name="select_device_type">select device type</string>
     <string name="Preview">preview</string>
     <string name="preview_name_format">Preview: %1$s</string>
     <string name="default_device_name_format">%1$s %2$s</string>
-    <string name="showMap">Show Map</string>
     <string name="waiting_for">waiting for</string>
     <string name="ready_to">ready to</string>
     <string name="paused">paused</string>
@@ -780,6 +773,13 @@
     <string name="config_tracking__Map">Map</string>
     <string name="config_tracking__Lap">Lap</string>
     <string name="config_tracking__day_or_night">Day or night</string>
+    <string name="config_tracking__show_map">Map</string>
+    <string name="config_tracking__showLiveSegments">Live Segments</string>
+    <string name="config_tracking__showLapButton">Lap Button</string>
+    <string name="add_view_before">add view</string>
+    <string name="delete_view">delete view</string>
+    <string name="add_view_after">add view</string>
+    <string name="EditTrackingView">edit</string>
 
     <string name="location_permission_required">Permissions</string>
     <string name="location_permission_text">The main purpose of this app is to track your training sessions, even when the app is not directly visible.  Please give the app the permission to get your location (precise).</string>

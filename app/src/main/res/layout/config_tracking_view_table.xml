@@ -51,14 +51,14 @@
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="right"
-            android:text="@string/showMap" />
+            android:text="@string/config_tracking__show_map" />
 
         <CheckBox
             android:id="@+id/cbShowLapButton"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="right"
-            android:text="@string/showLapButton" />
+            android:text="@string/config_tracking__showLapButton" />
 
     </LinearLayout>
 
