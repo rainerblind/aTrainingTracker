@@ -94,7 +94,7 @@ fun WorkoutSummary(
             onClicked = onEditWorkout,
             onExport = onExport,
             onDeleteConfirmed = onDeleteConfirmed,
-            modifier = editWorkoutModifier
+            menuEnabled = workoutData.headerData.finished
         )
 
         // 2. Description Section (Notes, Goals, Method)

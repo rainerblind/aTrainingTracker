@@ -65,13 +65,16 @@ fun WorkoutHeader(
     var confirmDeletion by remember { mutableStateOf(false) }
 
     Surface(
-        modifier = modifier.fillMaxWidth()
-            .combinedClickable(
-            onClick = onClicked,
-            onLongClick = {
-                if (menuEnabled) showContextMenu = true
-            }
-        ),
+        modifier = if (menuEnabled) {
+            modifier.fillMaxWidth()
+                .combinedClickable(
+                    onClick = onClicked,
+                    onLongClick = { showContextMenu = true }
+                )
+        }
+        else {
+            modifier.fillMaxWidth()
+        },
         color = backgroundColor,
         contentColor = textColor
     ) {
@@ -152,7 +155,7 @@ fun WorkoutHeader(
             }
 
             // 4. Menu Button (Pinned to Top-End)
-            if (data.finished && menuEnabled) {
+            if (menuEnabled) {
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd) // This moves it to the right
