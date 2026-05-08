@@ -393,6 +393,10 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         _workoutData.update { it?.copy(trainer = isChecked, commute = isCommute) }
     }
 
+    fun updateUploadToStrava(isChecked: Boolean) {
+        _workoutData.update { it?.copy(uploadToStrava = if (isChecked) 1 else 0) }
+    }
+
 
     // -- fancy / auto name
     // LiveData to hold the list of fancy names for the dialog
