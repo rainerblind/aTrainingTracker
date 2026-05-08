@@ -61,6 +61,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.exporter.FileFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -157,6 +159,28 @@ fun EditWorkoutScreen(
                     onCheckedChange = { viewModel.updateIsTrainer(it) }
                 )
                 Text(stringResource(R.string.trainer_general))
+            }
+
+            // 3.5 Workout individual upload to Strava
+            // Only show this option if Strava uploading is globally enabled/available
+            if (TrainingApplication.uploadToCommunity(FileFormat.STRAVA)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    val uploadStatus = workoutData?.uploadToStrava ?: -1
+
+                    // Determine the visual state of the checkbox
+                    // If -1, it defaults to 'true' because we already checked the global status above
+                    val isChecked = when (uploadStatus) {
+                        1 -> true
+                        0 -> false
+                        else -> true
+                    }
+
+                    Checkbox(
+                        checked = isChecked,
+                        onCheckedChange = { viewModel.updateUploadToStrava(it) }
+                    )
+                    Text(text = stringResource(R.string.stravaUpload))
+                }
             }
 
             // 4. Description
