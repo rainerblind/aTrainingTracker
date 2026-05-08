@@ -30,11 +30,7 @@ import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
-import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.DescriptionDataProvider
-import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsDataProvider
-import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaDataRow
-import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderDataProvider
 import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.Date
