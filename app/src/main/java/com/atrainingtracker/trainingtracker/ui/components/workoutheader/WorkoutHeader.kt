@@ -44,6 +44,7 @@ import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
@@ -167,27 +168,54 @@ fun WorkoutHeader(
                         )
                     }
 
-                    // Material 3 Dropdown Menu replacing the legacy PopupMenu
+                    // Material 3 Dropdown Menu for exporting to various file formats.
                     DropdownMenu(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false },
                         containerColor = MaterialTheme.colorScheme.surface
                     ) {
-                        // Export Actions (Mapping same as SummaryViewHolder)
-                        val formats = listOf(
+                        // 1. Define standard formats
+                        val standardFormats = listOf(
                             FileFormat.TCX to R.string.tcxWrite,
                             FileFormat.GPX to R.string.gpxWrite,
                             FileFormat.CSV to R.string.csvWrite,
-                            FileFormat.GC to R.string.jsonWrite,
-                            FileFormat.STRAVA to R.string.stravaUpload
+                            FileFormat.GC to R.string.jsonWrite
                         )
 
-                        formats.forEach { (format, labelRes) ->
+                        // 2. Render standard formats
+                        standardFormats.forEach { (format, labelRes) ->
                             DropdownMenuItem(
                                 text = { Text(stringResource(labelRes)) },
                                 onClick = {
                                     showMenu = false
                                     onExport(format)
+                                }
+                            )
+                        }
+
+                        // 3. Conditional Strava Logic
+                        // Check if Strava is globally enabled AND if this workout specifically allows it
+                        val stravaGloballyEnabled = TrainingApplication.uploadToCommunity(FileFormat.STRAVA)
+                        val stravaIndividuallyEnabled = data.uploadToStrava != 0
+
+                        if (stravaGloballyEnabled && stravaIndividuallyEnabled) {
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                            DropdownMenuItem(
+                                text = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.logo_square_strava),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp),
+                                            tint = Color.Unspecified
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(stringResource(R.string.stravaUpload))
+                                    }
+                                },
+                                onClick = {
+                                    showMenu = false
+                                    onExport(FileFormat.STRAVA)
                                 }
                             )
                         }
@@ -269,7 +297,8 @@ class WorkoutHeaderPreviewProvider : PreviewParameterProvider<WorkoutHeaderData>
             equipmentName = "Specialized Tarmac",
             startTimeS = 0,
             commute = false,
-            trainer = false
+            trainer = false,
+            uploadToStrava = 0
         ),
         // Case 2: Commute / Trainer Run (Testing Chips)
         WorkoutHeaderData(
@@ -282,7 +311,8 @@ class WorkoutHeaderPreviewProvider : PreviewParameterProvider<WorkoutHeaderData>
             commute = false,
             trainer = true,
             startTimeS = 0,
-            equipmentName = null
+            equipmentName = null,
+            uploadToStrava = 1
         )
     )
 }
@@ -320,7 +350,8 @@ fun PreviewCommuteHeader() {
                 finished = true,
                 startTimeS = 0,
                 equipmentName = null,
-                trainer = false
+                trainer = false,
+                uploadToStrava = -1
             ),
             onClicked = {},
             onExport = {},

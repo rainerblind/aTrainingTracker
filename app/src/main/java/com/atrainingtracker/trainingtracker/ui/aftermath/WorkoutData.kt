@@ -111,7 +111,8 @@ data class WorkoutData(
             formattedTime = formattedTime,
             equipmentName = equipmentName,
             commute = commute,
-            trainer = trainer
+            trainer = trainer,
+            uploadToStrava = uploadToStrava
         )
 
     val detailsData: WorkoutDetailsData

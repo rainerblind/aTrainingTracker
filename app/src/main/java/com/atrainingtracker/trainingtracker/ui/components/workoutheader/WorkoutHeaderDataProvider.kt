@@ -73,6 +73,7 @@ class WorkoutHeaderDataProvider(
 
         val commute = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.COMMUTE)) == 1
         val trainer = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.TRAINER)) == 1
+        val uploadToStrava = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.UPLOAD_TO_STRAVA))
         val finished = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.FINISHED)) == 1
 
         return WorkoutHeaderData(
@@ -85,6 +86,7 @@ class WorkoutHeaderDataProvider(
             equipmentName = equipmentName,
             commute = commute,
             trainer = trainer,
+            uploadToStrava = uploadToStrava,
             finished = finished
         )
     }
