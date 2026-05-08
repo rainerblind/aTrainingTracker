@@ -186,8 +186,12 @@ public class ExportManager {
 
         for (FileFormat fileFormat : FileFormat.values()) {
             if (TrainingApplication.exportToFile(fileFormat)) {
-                // TODO: Add flag in Workout Summary for individual strava uplaod...
-                startFullExportProcess(workoutData.getFileBaseName(), fileFormat);
+                if (fileFormat == FileFormat.STRAVA && workoutData.getUploadToStrava() == 0) {
+                    // skip strava upload
+                }
+                else {
+                    startFullExportProcess(workoutData.getFileBaseName(), fileFormat);
+                }
             }
         }
     }
