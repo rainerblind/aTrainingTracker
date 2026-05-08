@@ -454,7 +454,7 @@ class WorkoutRepository private constructor(private val application: Application
             summariesManager.updateWorkoutData(workoutDataToSave)
 
             // -- trigger export
-            exportManager.exportWorkout(workoutDataToSave.fileBaseName)
+            exportManager.exportWorkout(workoutDataToSave)
 
             updateWorkoutInList(workoutId, workoutDataToSave)
             saveFinishedEvent.postValue(Pair(workoutId, true))
