@@ -793,7 +793,9 @@ public class WorkoutSummariesDatabaseManager {
         // public static final int DB_VERSION = 13; // upgrade to Version 13 at 05.05.2026
         // public static final int DB_VERSION = 14; // upgrade to Version 14 at 05.05.2026
         // public static final int DB_VERSION = 15; // upgrade to Version 15 at 06.05.2026: Unique step size for encoding map polyline, distance, and elevation: ENCODIN_STEP_SIZE
-        public static final int DB_VERSION = 16; // upgrade to Version 16 at 08.05.2026: Added uploadToStrava
+        // public static final int DB_VERSION = 16; // upgrade to Version 16 at 08.05.2026: Added uploadToStrava
+        public static final int DB_VERSION = 17; // 08.05.2026: Bugfix: add eventually missing columns (altitude and distance stream)
+
 
         protected static final String CREATE_TABLE = "create table " + WorkoutSummaries.TABLE + " ("
                 + WorkoutSummaries.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -884,6 +886,34 @@ public class WorkoutSummariesDatabaseManager {
 
         private void addColumn(@NonNull SQLiteDatabase db, String table, String column, String type, String defaultValue) {
             db.execSQL("ALTER TABLE " + table + " ADD COLUMN " + column + " " + type + " DEFAULT " + defaultValue + ";");
+        }
+
+        /**
+         * Safely adds a column to a table only if it does not already exist.
+         */
+        private void addColumnIfNotExists(SQLiteDatabase db, String tableName, String columnName, String columnType, String defaultValue) {
+            try (Cursor cursor = db.rawQuery("PRAGMA table_info(" + tableName + ")", null)) {
+                boolean exists = false;
+                while (cursor.moveToNext()) {
+                    // The "name" column in PRAGMA table_info holds the column names
+                    String existingColumn = cursor.getString(cursor.getColumnIndexOrThrow("name"));
+                    if (columnName.equalsIgnoreCase(existingColumn)) {
+                        exists = true;
+                        break;
+                    }
+                }
+
+                if (!exists) {
+                    String sql = "ALTER TABLE " + tableName + " ADD COLUMN " + columnName + " " + columnType;
+                    if (defaultValue != null) {
+                        sql += " DEFAULT " + defaultValue;
+                    }
+                    db.execSQL(sql);
+                    Log.i(TAG, "Added missing column [" + columnName + "] to table [" + tableName + "]");
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error checking/adding column: " + columnName, e);
+            }
         }
 
         //Called whenever newVersion != oldVersion
@@ -1000,6 +1030,16 @@ public class WorkoutSummariesDatabaseManager {
             if (oldVersion < 16) {
                 // add the new column
                 addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.UPLOAD_TO_STRAVA, "int", "-1");
+            }
+
+            if (oldVersion < 17) {
+                // while upgrading to Version 14, we continued ot create the table for versin 13 :(
+                // Thus, we add the forgotten columns
+                addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.DISTANCE_STREAM, "text", "");
+                addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.ALTITUDE_STREAM, "text", "");
+
+                migrateExistingWorkouts13(db);
+                migrateExistingWorkouts14(db);
             }
         }
 
