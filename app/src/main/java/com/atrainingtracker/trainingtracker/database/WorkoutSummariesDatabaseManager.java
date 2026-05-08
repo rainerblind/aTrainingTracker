@@ -81,6 +81,7 @@ public class WorkoutSummariesDatabaseManager {
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // some high level helper methods
     ////////////////////////////////////////////////////////////////////////////////////////////////
+    @Deprecated
     public void updateSportAndEquipment(long workoutId, long sportId, BSportType bSportType, long equipmentId) {
 
         ContentValues values = new ContentValues();
@@ -96,6 +97,7 @@ public class WorkoutSummariesDatabaseManager {
         updateValues(workoutId, values);
     }
 
+    @Deprecated
     public void updateWorkoutName(long workoutId, String newName) {
         ContentValues values = new ContentValues();
         values.put(WorkoutSummaries.WORKOUT_NAME, newName);
@@ -103,6 +105,7 @@ public class WorkoutSummariesDatabaseManager {
         updateValues(workoutId, values);
     }
 
+    @Deprecated
     public void updateDescription(long workoutId, @NotNull String newDescription, @NotNull String newGoal, @NotNull String newMethod) {
         ContentValues values = new ContentValues();
         values.put(WorkoutSummaries.DESCRIPTION, newDescription);
@@ -112,6 +115,7 @@ public class WorkoutSummariesDatabaseManager {
         updateValues(workoutId, values);
     }
 
+    @Deprecated
     public void updateCommuteAndTrainerFlag(long workoutId, boolean commute, boolean trainer) {
         ContentValues values = new ContentValues();
         values.put(WorkoutSummaries.COMMUTE, commute);
