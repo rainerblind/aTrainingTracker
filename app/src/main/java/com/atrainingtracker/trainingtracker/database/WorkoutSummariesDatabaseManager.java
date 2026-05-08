@@ -724,6 +724,7 @@ public class WorkoutSummariesDatabaseManager {
         // public static final String PRIVATE = "private";  2026-01 no longer supported / needed.
         public static final String COMMUTE = "commute";
         public static final String TRAINER = "trainer";
+        public static final String UPLOAD_TO_STRAVA = "uploadToStrava";                             // added in Version 16 (08.05.2026)
         public static final String ASCENDING = "ascending";
         public static final String DESCENDING = "descending";
         public static final String MAP_POLYLINE = "mapPolyline"; // added in Version 13
@@ -788,9 +789,10 @@ public class WorkoutSummariesDatabaseManager {
         // public static final int DB_VERSION = 12; // upgrade to Version 12 at 22.01.2026
         // public static final int DB_VERSION = 13; // upgrade to Version 13 at 05.05.2026
         // public static final int DB_VERSION = 14; // upgrade to Version 14 at 05.05.2026
-        public static final int DB_VERSION = 15; // upgrade to Version 15 at 06.05.2026: Unique step size for encoding map polyline, distance, and elevation: ENCODIN_STEP_SIZE
+        // public static final int DB_VERSION = 15; // upgrade to Version 15 at 06.05.2026: Unique step size for encoding map polyline, distance, and elevation: ENCODIN_STEP_SIZE
+        public static final int DB_VERSION = 16; // upgrade to Version 16 at 08.05.2026: Added uploadToStrava
 
-        protected static final String CREATE_TABLE_V14 = "create table " + WorkoutSummaries.TABLE + " ("
+        protected static final String CREATE_TABLE = "create table " + WorkoutSummaries.TABLE + " ("
                 + WorkoutSummaries.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                 + WorkoutSummaries.WORKOUT_NAME + " text,"
                 + WorkoutSummaries.FILE_BASE_NAME + " text,"
@@ -815,6 +817,7 @@ public class WorkoutSummariesDatabaseManager {
                 // + WorkoutSummaries.PRIVATE + " int,"  removed in version 12.
                 + WorkoutSummaries.COMMUTE + " int,"
                 + WorkoutSummaries.TRAINER + " int,"
+                + WorkoutSummaries.UPLOAD_TO_STRAVA + " int DEFAULT -1," // added in Version 16 (-1: check preferences, 0: no, 1: yes)
                 + WorkoutSummaries.ASCENDING + " int,"
                 + WorkoutSummaries.DESCENDING + " int," // end of version 4
                 + WorkoutSummaries.MAP_POLYLINE + " text,"    // added in Version 13
@@ -822,117 +825,20 @@ public class WorkoutSummariesDatabaseManager {
                 + WorkoutSummaries.ALTITUDE_STREAM + " text," // added in Version 14
                 + WorkoutSummaries.EXTREMA_VALUES_CALCULATED + " int)";
 
-        @Deprecated
-        protected static final String CREATE_TABLE_V13 = "create table " + WorkoutSummaries.TABLE + " ("
-                + WorkoutSummaries.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
-                + WorkoutSummaries.WORKOUT_NAME + " text,"
-                + WorkoutSummaries.FILE_BASE_NAME + " text,"
-                // + WorkoutSummaries.ATHLETE_NAME + " text,"  // removed in verison 12
-                + WorkoutSummaries.DESCRIPTION + " text,"
-                + WorkoutSummaries.GOAL + " text,"
-                + WorkoutSummaries.METHOD + " text,"
-                // + WorkoutSummaries.SPORT + " text,"
-                + WorkoutSummaries.B_SPORT + " text,"
-                + WorkoutSummaries.SPORT_ID + " int,"
-                + WorkoutSummaries.EQUIPMENT_ID + " int,"
-                // + WorkoutSummaries.SAMPLING_TIME + " int,"  // removed in version 12.
-                + WorkoutSummaries.TIME_START + " DATETIME DEFAULT CURRENT_TIMESTAMP,"
-                + WorkoutSummaries.TIME_ACTIVE_s + " int,"
-                + WorkoutSummaries.TIME_TOTAL_s + " int,"
-                + WorkoutSummaries.DISTANCE_TOTAL_m + " real,"
-                + WorkoutSummaries.SPEED_AVERAGE_mps + " real,"
-                + WorkoutSummaries.GC_DATA + " text,"
-                + WorkoutSummaries.CALORIES + " int,"
-                + WorkoutSummaries.LAPS + " int,"
-                + WorkoutSummaries.FINISHED + " int," // end of version 3
-                // + WorkoutSummaries.PRIVATE + " int,"  removed in version 12.
-                + WorkoutSummaries.COMMUTE + " int,"
-                + WorkoutSummaries.TRAINER + " int,"
-                + WorkoutSummaries.ASCENDING + " int,"
-                + WorkoutSummaries.DESCENDING + " int," // end of version 4
-                + WorkoutSummaries.MAP_POLYLINE + " text,"    // added in verison 13
-                + WorkoutSummaries.EXTREMA_VALUES_CALCULATED + " int)";
-
-        @Deprecated
-        protected static final String CREATE_TABLE_V12 = "create table " + WorkoutSummaries.TABLE + " ("
-                + WorkoutSummaries.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
-                + WorkoutSummaries.WORKOUT_NAME + " text,"
-                + WorkoutSummaries.FILE_BASE_NAME + " text,"
-                // + WorkoutSummaries.ATHLETE_NAME + " text,"  // removed in verison 12
-                + WorkoutSummaries.DESCRIPTION + " text,"
-                + WorkoutSummaries.GOAL + " text,"
-                + WorkoutSummaries.METHOD + " text,"
-                // + WorkoutSummaries.SPORT + " text,"
-                + WorkoutSummaries.B_SPORT + " text,"
-                + WorkoutSummaries.SPORT_ID + " int,"
-                + WorkoutSummaries.EQUIPMENT_ID + " int,"
-                // + WorkoutSummaries.SAMPLING_TIME + " int,"  // removed in version 12.
-                + WorkoutSummaries.TIME_START + " DATETIME DEFAULT CURRENT_TIMESTAMP,"
-                + WorkoutSummaries.TIME_ACTIVE_s + " int,"
-                + WorkoutSummaries.TIME_TOTAL_s + " int,"
-                + WorkoutSummaries.DISTANCE_TOTAL_m + " real,"
-                + WorkoutSummaries.SPEED_AVERAGE_mps + " real,"
-                + WorkoutSummaries.GC_DATA + " text,"
-                + WorkoutSummaries.CALORIES + " int,"
-                + WorkoutSummaries.LAPS + " int,"
-                + WorkoutSummaries.FINISHED + " int," // end of version 3
-                // + WorkoutSummaries.PRIVATE + " int,"  removed in version 12.
-                + WorkoutSummaries.COMMUTE + " int,"
-                + WorkoutSummaries.TRAINER + " int,"
-                + WorkoutSummaries.ASCENDING + " int,"
-                + WorkoutSummaries.DESCENDING + " int," // end of version 4
-                + WorkoutSummaries.EXTREMA_VALUES_CALCULATED + " int)";
-
-        protected static final String CREATE_TABLE_V11 = "create table " + WorkoutSummaries.TABLE + " ("
-                + WorkoutSummaries.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
-                + WorkoutSummaries.WORKOUT_NAME + " text,"
-                + WorkoutSummaries.FILE_BASE_NAME + " text,"
-                // + WorkoutSummaries.ATHLETE_NAME + " text," Note that this was part of version 11.
-                + WorkoutSummaries.DESCRIPTION + " text,"
-                + WorkoutSummaries.GOAL + " text,"
-                + WorkoutSummaries.METHOD + " text,"
-                // + WorkoutSummaries.SPORT + " text,"
-                + WorkoutSummaries.B_SPORT + " text,"
-                + WorkoutSummaries.SPORT_ID + " int,"
-                + WorkoutSummaries.EQUIPMENT_ID + " int,"
-                // + WorkoutSummaries.SAMPLING_TIME + " int,"  // Note that this was part of version 11.
-                + WorkoutSummaries.TIME_START + " DATETIME DEFAULT CURRENT_TIMESTAMP,"
-                + WorkoutSummaries.TIME_ACTIVE_s + " int,"
-                + WorkoutSummaries.TIME_TOTAL_s + " int,"
-                + WorkoutSummaries.DISTANCE_TOTAL_m + " real,"
-                + WorkoutSummaries.SPEED_AVERAGE_mps + " real,"
-                + WorkoutSummaries.GC_DATA + " text,"
-                + WorkoutSummaries.CALORIES + " int,"
-                + WorkoutSummaries.LAPS + " int,"
-                + WorkoutSummaries.FINISHED + " int," // end of version 3
-                // + WorkoutSummaries.PRIVATE + " int,"  Note that this was part of version 11.
-                + WorkoutSummaries.COMMUTE + " int,"
-                + WorkoutSummaries.TRAINER + " int,"
-                + WorkoutSummaries.ASCENDING + " int,"
-                + WorkoutSummaries.DESCENDING + " int," // end of version 4
-                + WorkoutSummaries.EXTREMA_VALUES_CALCULATED + " int)";
-        protected static final String CREATE_TABLE_EXTREMA_VALUES_V6 = "create table " + WorkoutSummaries.TABLE_EXTREMA_VALUES + " ("
+        protected static final String CREATE_TABLE_EXTREMA_VALUES = "create table " + WorkoutSummaries.TABLE_EXTREMA_VALUES + " ("
                 + WorkoutSummaries.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                 + WorkoutSummaries.WORKOUT_ID + " int,"
                 + WorkoutSummaries.EXTREMA_TYPE + " text,"
                 + WorkoutSummaries.SENSOR_TYPE + " text,"
                 + WorkoutSummaries.VALUE + " real," // end of version 5
                 + WorkoutSummaries.SAMPLES_COLUMN_ID + " int)";
-        protected static final String CREATE_TABLE_ACCUMULATED_SENSORS_V6 = "create table " + WorkoutSummaries.TABLE_ACCUMULATED_SENSORS + " ("
+
+        protected static final String CREATE_TABLE_ACCUMULATED_SENSORS = "create table " + WorkoutSummaries.TABLE_ACCUMULATED_SENSORS + " ("
                 + WorkoutSummaries.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                 + WorkoutSummaries.WORKOUT_ID + " int,"
                 + WorkoutSummaries.SENSOR_TYPE + " text)";
-        protected static final String CREATE_TABLE_WORKOUT_NAME_PATTERNS_V10
-                = "create table " + WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS + " ("
-                + WorkoutSummaries.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
-                + WorkoutSummaries.SPORT_OLD + " text, "
-                + WorkoutSummaries.START_LOCATION_NAME + " text, "
-                + WorkoutSummaries.END_LOCATION_NAME + " text, "
-                + WorkoutSummaries.FANCY_NAME + " text, "
-                + WorkoutSummaries.ADD_COUNTER + " int, "
-                + WorkoutSummaries.COUNTER + " int, "
-                + WorkoutSummaries.ADD_VIA + " int)";
-        protected static final String CREATE_TABLE_WORKOUT_NAME_PATTERNS_V11
+
+        protected static final String CREATE_TABLE_WORKOUT_NAME_PATTERNS
                 = "create table " + WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS + " ("
                 + WorkoutSummaries.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                 + WorkoutSummaries.SPORT_ID + " int, "
@@ -942,6 +848,7 @@ public class WorkoutSummariesDatabaseManager {
                 + WorkoutSummaries.ADD_COUNTER + " int, "
                 + WorkoutSummaries.COUNTER + " int, "
                 + WorkoutSummaries.ADD_VIA + " int)";
+
         private static final String TAG = "WorkoutSummariesDbHelper";
         private static final boolean DEBUG = TrainingApplication.getDebug(true);
 
@@ -957,37 +864,23 @@ public class WorkoutSummariesDatabaseManager {
         @Override
         public void onCreate(@NonNull SQLiteDatabase db) {
 
-            db.execSQL(CREATE_TABLE_V13);
-            if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_V13);
+            db.execSQL(CREATE_TABLE);
+            if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE);
 
             // new in version 4:
-            db.execSQL(CREATE_TABLE_EXTREMA_VALUES_V6);
-            if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_EXTREMA_VALUES_V6);
+            db.execSQL(CREATE_TABLE_EXTREMA_VALUES);
+            if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_EXTREMA_VALUES);
 
-            db.execSQL(CREATE_TABLE_ACCUMULATED_SENSORS_V6);
-            if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_ACCUMULATED_SENSORS_V6);
+            db.execSQL(CREATE_TABLE_ACCUMULATED_SENSORS);
+            if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_ACCUMULATED_SENSORS);
 
-            db.execSQL(CREATE_TABLE_WORKOUT_NAME_PATTERNS_V11);
-            if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_WORKOUT_NAME_PATTERNS_V11);
+            db.execSQL(CREATE_TABLE_WORKOUT_NAME_PATTERNS);
+            if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_WORKOUT_NAME_PATTERNS);
 
         }
 
-        // protected static final String CREATE_TABLE_WORKOUT_NAME_COUNTERS_V8 = "create table " + WorkoutSummaries.TABLE_WORKOUT_NAME_COUNTERS + " ("
-        //         + WorkoutSummaries.C_ID                  + " INTEGER PRIMARY KEY AUTOINCREMENT, "
-        //         + WorkoutSummaries.WORKOUT_NAME_HASH_KEY + " text, "
-        //         + WorkoutSummaries.COUNTER               + " int)";
-
-        // protected static final String CREATE_TABLE_WORKOUT_NAME_PATTERNS_V9 = "create table " + WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS + " ("
-        //         + WorkoutSummaries.C_ID                 + " INTEGER PRIMARY KEY AUTOINCREMENT, "
-        //         + WorkoutSummaries.SPORT                + " text, "
-        //         + WorkoutSummaries.START_LOCATION_NAME  + " text, "
-        //         + WorkoutSummaries.END_LOCATION_NAME    + " text, "
-        //         + WorkoutSummaries.FANCY_NAME           + " text, "
-        //         + WorkoutSummaries.ADD_COUNTER          + " int, "
-        //         + WorkoutSummaries.ADD_VIA              + " int)";
-
-        private void addColumn(@NonNull SQLiteDatabase db, String table, String column, String type) {
-            db.execSQL("ALTER TABLE " + table + " ADD COLUMN " + column + " " + type + ";");
+        private void addColumn(@NonNull SQLiteDatabase db, String table, String column, String type, String defaultValue) {
+            db.execSQL("ALTER TABLE " + table + " ADD COLUMN " + column + " " + type + " DEFAULT " + defaultValue + ";");
         }
 
         //Called whenever newVersion != oldVersion
@@ -996,19 +889,19 @@ public class WorkoutSummariesDatabaseManager {
             if (oldVersion < 4) {
                 Log.i(TAG, "upgrading to DB version 4");
                 // addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.PRIVATE, "int");  // removed in version 12
-                addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.COMMUTE, "int");
-                addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.TRAINER, "int");
-                addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.ASCENDING, "int");
-                addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.DESCENDING, "int");
+                addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.COMMUTE, "int", "0");
+                addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.TRAINER, "int", "0");
+                addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.ASCENDING, "int", "0");
+                addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.DESCENDING, "int", "0");
 
-                db.execSQL(CREATE_TABLE_EXTREMA_VALUES_V6);
-                db.execSQL(CREATE_TABLE_ACCUMULATED_SENSORS_V6);
+                db.execSQL(CREATE_TABLE_EXTREMA_VALUES);
+                db.execSQL(CREATE_TABLE_ACCUMULATED_SENSORS);
             }
 
             if (oldVersion < 5) {  // this version of the database was never released.
                 Log.i(TAG, "upgrading to DB version 5");
 
-                addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.EXTREMA_VALUES_CALCULATED, "int");
+                addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.EXTREMA_VALUES_CALCULATED, "int", "0");
             }
 
             if (oldVersion < 6) {
@@ -1025,17 +918,17 @@ public class WorkoutSummariesDatabaseManager {
             }
 
             if (oldVersion == 9) {
-                addColumn(db, WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS, WorkoutSummaries.COUNTER, "int");
+                addColumn(db, WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS, WorkoutSummaries.COUNTER, "int", "0");
             } else if (oldVersion < 10) {
                 Log.i(TAG, "upgrading to DB version 10");
 
-                db.execSQL(CREATE_TABLE_WORKOUT_NAME_PATTERNS_V10);
+                db.execSQL(CREATE_TABLE_WORKOUT_NAME_PATTERNS);
             }
 
             if (oldVersion < 11) {
                 Log.i(TAG, "upgrading to DB version 11");
                 db.beginTransaction();
-                addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.SPORT_ID, "int");
+                addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.SPORT_ID, "int", "0");
                 // addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.B_SPORT,  "text");
                 db.setTransactionSuccessful();
                 db.endTransaction();
@@ -1057,7 +950,7 @@ public class WorkoutSummariesDatabaseManager {
                 cursor.close();
 
 
-                addColumn(db, WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS, WorkoutSummaries.SPORT_ID, "text");
+                addColumn(db, WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS, WorkoutSummaries.SPORT_ID, "text", "???");
 
                 cursor = db.query(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS,
                         new String[]{WorkoutSummaries.C_ID, WorkoutSummaries.SPORT_OLD},
@@ -1080,7 +973,7 @@ public class WorkoutSummariesDatabaseManager {
             if (oldVersion < 13) {
 
                 // first, add the new column
-                addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.MAP_POLYLINE, "text");
+                addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.MAP_POLYLINE, "text", "");
 
                 // 2. Perform the migration
                 migrateExistingWorkouts13(db);
@@ -1088,8 +981,8 @@ public class WorkoutSummariesDatabaseManager {
 
             if (oldVersion < 14) {
                 // first, add the new columns
-                addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.DISTANCE_STREAM, "text");
-                addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.ALTITUDE_STREAM, "text");
+                addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.DISTANCE_STREAM, "text", "");
+                addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.ALTITUDE_STREAM, "text", "");
 
                 // 2. Perform the migration
                 migrateExistingWorkouts14(db);
@@ -1099,6 +992,11 @@ public class WorkoutSummariesDatabaseManager {
                 // recalc the encoded strings with the unique step size.
                 migrateExistingWorkouts13(db);
                 migrateExistingWorkouts14(db);
+            }
+
+            if (oldVersion < 16) {
+                // add the new column
+                addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.UPLOAD_TO_STRAVA, "int", "-1");
             }
         }
 
