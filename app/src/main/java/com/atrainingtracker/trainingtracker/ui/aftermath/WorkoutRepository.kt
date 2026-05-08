@@ -451,34 +451,7 @@ class WorkoutRepository private constructor(private val application: Application
         launch(Dispatchers.IO) {
 
             // -- update the Database
-            // Update Workout Name
-            summariesManager.updateWorkoutName(
-                workoutId,
-                workoutDataToSave.headerData.workoutName
-            )
-
-            // Update Sport and Equipment
-            summariesManager.updateSportAndEquipment(
-                workoutId,
-                workoutDataToSave.sportId,
-                workoutDataToSave.bSportType,
-                workoutDataToSave.equipmentId
-            )
-
-            // Update Commute and Trainer flags
-            summariesManager.updateCommuteAndTrainerFlag(
-                workoutId,
-                workoutDataToSave.headerData.commute,
-                workoutDataToSave.headerData.trainer
-            )
-
-            // Update Description, Goal, and Method
-            summariesManager.updateDescription(
-                workoutId,
-                workoutDataToSave.descriptionData.description ?: "",
-                workoutDataToSave.descriptionData.goal ?: "",
-                workoutDataToSave.descriptionData.method ?: ""
-            )
+            summariesManager.updateWorkoutData(workoutDataToSave)
 
             // -- trigger export
             exportManager.exportWorkout(workoutDataToSave.fileBaseName)

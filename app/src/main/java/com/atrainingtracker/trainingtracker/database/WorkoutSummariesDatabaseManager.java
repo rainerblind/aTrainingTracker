@@ -34,6 +34,7 @@ import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData;
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.maps.android.PolyUtil;
@@ -81,12 +82,19 @@ public class WorkoutSummariesDatabaseManager {
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // some high level helper methods
     ////////////////////////////////////////////////////////////////////////////////////////////////
-    @Deprecated
-    public void updateSportAndEquipment(long workoutId, long sportId, BSportType bSportType, long equipmentId) {
+
+    public void updateWorkoutData(WorkoutData workoutData) {
+        if (DEBUG) Log.i(TAG, "updateWorkoutData for workoutId: " + workoutData.getId());
 
         ContentValues values = new ContentValues();
-        values.put(WorkoutSummaries.SPORT_ID, sportId);
-        values.put(WorkoutSummaries.B_SPORT, bSportType.name());
+
+        // workout name
+        values.put(WorkoutSummaries.WORKOUT_NAME, workoutData.getWorkoutName());
+
+        // sport and equipment
+        values.put(WorkoutSummaries.SPORT_ID, workoutData.getSportId());
+        values.put(WorkoutSummaries.B_SPORT, workoutData.getBSportType().name());
+        long equipmentId = workoutData.getEquipmentId();
         if (equipmentId == -1) {  // when the equipmentId is -1, the link to the equipment is removed.
             values.putNull(WorkoutSummaries.EQUIPMENT_ID);
         }
@@ -94,44 +102,20 @@ public class WorkoutSummariesDatabaseManager {
             values.put(WorkoutSummaries.EQUIPMENT_ID, equipmentId);
         }
 
-        updateValues(workoutId, values);
-    }
+        // description, goal, and method
+        values.put(WorkoutSummaries.DESCRIPTION, workoutData.getDescription());
+        values.put(WorkoutSummaries.GOAL, workoutData.getGoal());
+        values.put(WorkoutSummaries.METHOD, workoutData.getMethod());
 
-    @Deprecated
-    public void updateWorkoutName(long workoutId, String newName) {
-        ContentValues values = new ContentValues();
-        values.put(WorkoutSummaries.WORKOUT_NAME, newName);
-
-        updateValues(workoutId, values);
-    }
-
-    @Deprecated
-    public void updateDescription(long workoutId, @NotNull String newDescription, @NotNull String newGoal, @NotNull String newMethod) {
-        ContentValues values = new ContentValues();
-        values.put(WorkoutSummaries.DESCRIPTION, newDescription);
-        values.put(WorkoutSummaries.GOAL, newGoal);
-        values.put(WorkoutSummaries.METHOD, newMethod);
-
-        updateValues(workoutId, values);
-    }
-
-    @Deprecated
-    public void updateCommuteAndTrainerFlag(long workoutId, boolean commute, boolean trainer) {
-        ContentValues values = new ContentValues();
-        values.put(WorkoutSummaries.COMMUTE, commute);
-        values.put(WorkoutSummaries.TRAINER, trainer);
-
-        updateValues(workoutId, values);
-    }
-
-    private void updateValues( long workoutId, ContentValues contentValues) {
+        // commute and trainer
+        values.put(WorkoutSummaries.COMMUTE, workoutData.getCommute());
+        values.put(WorkoutSummaries.TRAINER, workoutData.getTrainer());
 
         getDatabase().update(WorkoutSummaries.TABLE,
-                    contentValues,
-                    WorkoutSummaries.C_ID + "=" + workoutId,
-                    null);
+                values,
+                WorkoutSummaries.C_ID + "=" + workoutData.getId(),
+                null);
     }
-
 
     public Cursor getWorkoutCursor(long workoutId) {
         return getDatabase().query(WorkoutSummaries.TABLE,
