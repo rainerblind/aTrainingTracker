@@ -119,6 +119,25 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
             val newWorkoutState = list.find { it.id == workoutId }
 
             if (newWorkoutState != null) {
+
+                // We must not override the user selected workout name by the name from the repository.
+                val currentWorkoutName = workoutData.value?.workoutName
+                val currentFileBaseName = workoutData.value?.fileBaseName
+                val finalWorkoutName = if (currentWorkoutName == currentFileBaseName) {
+                    // If the name has NOT been edited by the user, use the fresh name from the Repository
+                    // (which may have been promoted to the fancy/auto name by the CalcExtremaWorker.)
+                    newWorkoutState.workoutName
+                } else {
+                    // If the user HAS edited the name, stick with the name currently in memory.
+                    currentWorkoutName
+                }
+
+                // Create the final workout object to be posted.
+                val finalWorkoutData = newWorkoutState.copy(
+                    // use the final, intelligently decided name.
+                    workoutName = finalWorkoutName ?: newWorkoutState.workoutName
+                )
+
                 _workoutData.value = newWorkoutState
             }
         }
