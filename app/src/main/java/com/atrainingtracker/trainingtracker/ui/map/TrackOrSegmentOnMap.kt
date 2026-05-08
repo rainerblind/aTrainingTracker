@@ -57,6 +57,10 @@ fun TrackOrSegmentOnMap(
     GoogleMap(
         modifier = modifier,
         cameraPositionState = cameraPositionState,
+        // lite mode is disabled.  When enabled, the second and third path of the workouts are not shown.
+        // googleMapOptionsFactory = {
+        //     com.google.android.gms.maps.GoogleMapOptions().liteMode(true)
+        // },
         uiSettings = MapUiSettings(
             zoomControlsEnabled = false,
             compassEnabled = false,

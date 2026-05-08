@@ -22,7 +22,6 @@ import android.app.Application
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.asFlow
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.banalservice.BSportType
@@ -32,11 +31,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.DeletionProgress
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusRepository
-import com.atrainingtracker.trainingtracker.ui.map.PathPoint
-import com.atrainingtracker.trainingtracker.ui.map.Roughness
-import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.StateFlow
@@ -134,15 +129,6 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
             }
         }
     }
-
-    /**
-     * Fetches track points for a specific workout using the repository.
-     * Replaces the logic previously handled by TrackOnMapHelper.
-     */
-    suspend fun getWorkoutTrackPoints(workoutId: Long): List<PathPoint> {
-        return workoutRepo.getWorkoutTrackPoints(workoutId, Roughness.MEDIUM, TrackType.BEST)
-    }
-
 
     fun onDeleteWorkoutClicked(id: Long) {
         // Post an event to the LiveData. The fragment will observe this

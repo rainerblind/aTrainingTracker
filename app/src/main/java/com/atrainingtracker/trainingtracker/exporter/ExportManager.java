@@ -45,6 +45,7 @@ import com.atrainingtracker.trainingtracker.exporter.writer.CSVFileWriter;
 import com.atrainingtracker.trainingtracker.exporter.writer.GCFileWriter;
 import com.atrainingtracker.trainingtracker.exporter.writer.GPXFileWriter;
 import com.atrainingtracker.trainingtracker.exporter.writer.TCXFileWriter;
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData;
 
 import org.json.JSONException;
 
@@ -178,14 +179,19 @@ public class ExportManager {
 
     /** method to trigger the ExportManager to export a Workout to the various file formats and upload it to the cloud later on.
      *
-     * @param fileBaseName
+     * @param workoutData
      */
-    public synchronized void exportWorkout(String fileBaseName) {
-        if (DEBUG) Log.d(TAG, "exportWorkout: " + fileBaseName);
+    public synchronized void exportWorkout(WorkoutData workoutData) {
+        if (DEBUG) Log.d(TAG, "exportWorkout: " + workoutData.getFileBaseName());
 
         for (FileFormat fileFormat : FileFormat.values()) {
             if (TrainingApplication.exportToFile(fileFormat)) {
-                startFullExportProcess(fileBaseName, fileFormat);
+                if (fileFormat == FileFormat.STRAVA && workoutData.getUploadToStrava() == 0) {
+                    // skip strava upload
+                }
+                else {
+                    startFullExportProcess(workoutData.getFileBaseName(), fileFormat);
+                }
             }
         }
     }

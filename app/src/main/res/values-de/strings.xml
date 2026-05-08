@@ -525,17 +525,10 @@
     <string name="notification_tracking_and_searching_format">Aufzeichnung &amp; Suche nach %1$s</string>
     <string name="notification_pause_and_searching_format">Pause &amp; Suche nach %1$s</string>
     <string name="copy_of">Kopie von %1$s</string>
-    <string name="add_view_before">neu</string>
-    <string name="delete_view">entfernen</string>
-    <string name="add_view_after">neu</string>
-    <string name="EditTrackingView">Bearbeiten</string>
-    <string name="showLiveSegments">Live Segments</string>
-    <string name="showLapButton">Lap Knopf</string>
     <string name="select_device_type">wähle Sensor Typ</string>
     <string name="Preview">Vorschau</string>
     <string name="preview_name_format">Vorschau: %1$s</string>
     <string name="default_device_name_format">%1$s %2$s</string>
-    <string name="showMap">Zeige Karte</string>
     <string name="waiting_for">Warte auf</string>
     <string name="ready_to">Bereit zum</string>
     <string name="paused">Pause vom</string>
@@ -691,6 +684,14 @@
     <string name="conffig_tracking_night_day__night">Nacht (dunkel)</string>
     <string name="config_tracking__Display">Display</string>
     <string name="config_tracking__Map">Karte</string>
+    <string name="config_tracking__show_map">Karte</string>
+    <string name="config_tracking__showLiveSegments">Live Segments</string>
+    <string name="config_tracking__showLapButton">Lap Knopf</string>
+    <string name="add_view_before">neu</string>
+    <string name="delete_view">entfernen</string>
+    <string name="add_view_after">neu</string>
+    <string name="EditTrackingView">Bearbeiten</string>
+
     <string name="config_tracking__Lap">Runde</string>
     <string name="config_tracking__day_or_night">Tag oder Nacht</string>
 

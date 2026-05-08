@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -57,10 +58,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.exporter.FileFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -130,14 +135,16 @@ fun EditWorkoutScreen(
                     options = sportTypes,
                     selectedOption = viewModel.suggestedSportTypeName,
                     onOptionSelected = { viewModel.updateSportName(it) },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    stayOpenOn = setOf(viewModel.ALL_SPORT_TYPES)
                 )
                 DropdownSelector(
                     label = stringResource(R.string.Equipment),
                     options = equipmentNames,
                     selectedOption = viewModel.suggestedEquipmentName ?: "",
                     onOptionSelected = { viewModel.updateEquipmentName(it) },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    stayOpenOn = setOf(viewModel.ALL_EQUIPMENT, viewModel.ALL_SHOES, viewModel.ALL_BIKES)
                 )
             }
 
@@ -155,6 +162,36 @@ fun EditWorkoutScreen(
                     onCheckedChange = { viewModel.updateIsTrainer(it) }
                 )
                 Text(stringResource(R.string.trainer_general))
+            }
+
+            // 3.5 Workout individual upload to Strava
+            // Only show this option if Strava uploading is globally enabled/available
+            if (TrainingApplication.uploadToCommunity(FileFormat.STRAVA)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    val uploadStatus = workoutData?.uploadToStrava ?: -1
+
+                    // Determine the visual state of the checkbox
+                    // If -1, it defaults to 'true' because we already checked the global status above
+                    val isChecked = when (uploadStatus) {
+                        1 -> true
+                        0 -> false
+                        else -> true
+                    }
+
+                    // The Strava Logo
+                    Icon(
+                        painter = painterResource(R.drawable.logo_square_strava),
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = Color.Unspecified // Important: Keeps the original orange/brand colors
+                    )
+
+                    Checkbox(
+                        checked = isChecked,
+                        onCheckedChange = { viewModel.updateUploadToStrava(it) }
+                    )
+                    Text(text = stringResource(R.string.stravaUpload))
+                }
             }
 
             // 4. Description
@@ -194,7 +231,8 @@ fun DropdownSelector(
     options: List<String>,
     selectedOption: String,
     onOptionSelected: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    stayOpenOn: Set<String>
 ) {
     var expanded by remember { mutableStateOf(false) }
     Box(modifier = modifier) {
@@ -220,7 +258,10 @@ fun DropdownSelector(
                     text = { Text(selection) },
                     onClick = {
                         onOptionSelected(selection)
-                        expanded = false
+                        // If the selection is the dummy option, don't close the menu
+                        if (selection !in stayOpenOn) {
+                            expanded = false
+                        }
                     }
                 )
             }

@@ -22,6 +22,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
@@ -357,38 +358,56 @@ fun ZoneRow(
     containerColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.surfaceVariant
 ) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = containerColor),
-        modifier = Modifier.fillMaxWidth()
+        // We use the containerColor with low alpha for the card body
+        colors = CardDefaults.cardColors(
+            containerColor = containerColor.copy(alpha = 0.12f)
+        ),
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium
     ) {
-        Column(
-            modifier = Modifier.padding(8.dp)
-        ) {
-            Text(
-                text = zoneLabel,
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 4.dp)
+        // Row with IntrinsicSize.Min allows the Spacer to match the Column height
+        Row(modifier = Modifier.height(IntrinsicSize.Min)) {
+
+            // 1. The Indicator Strip (Solid Color)
+            Spacer(
+                modifier = Modifier
+                    .width(6.dp)
+                    .fillMaxHeight()
+                    .background(containerColor)
             )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+
+            // 2. The Content
+            Column(
+                modifier = Modifier.padding(12.dp)
             ) {
-                // Min Field
-                Box(modifier = Modifier.weight(1f)) {
-                    IntegerInputField(
-                        label = stringResource(R.string.label_min),
-                        currentValue = minValue,
-                        onValueChange = onMinChange,
-                        enabled = minEnabled
-                    )
-                }
-                // Max Field
-                Box(modifier = Modifier.weight(1f)) {
-                    IntegerInputField(
-                        label = stringResource(R.string.label_max),
-                        currentValue = maxValue,
-                        onValueChange = onMaxChange,
-                        enabled = maxEnabled
-                    )
+                Text(
+                    text = zoneLabel,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Min Field
+                    Box(modifier = Modifier.weight(1f)) {
+                        IntegerInputField(
+                            label = stringResource(R.string.label_min),
+                            currentValue = minValue,
+                            onValueChange = onMinChange,
+                            enabled = minEnabled
+                        )
+                    }
+                    // Max Field
+                    Box(modifier = Modifier.weight(1f)) {
+                        IntegerInputField(
+                            label = stringResource(R.string.label_max),
+                            currentValue = maxValue,
+                            onValueChange = onMaxChange,
+                            enabled = maxEnabled
+                        )
+                    }
                 }
             }
         }

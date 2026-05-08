@@ -41,6 +41,8 @@ import com.atrainingtracker.trainingtracker.ui.theme.Zone2
 import com.atrainingtracker.trainingtracker.ui.theme.Zone3
 import com.atrainingtracker.trainingtracker.ui.theme.Zone4
 import com.atrainingtracker.trainingtracker.ui.theme.Zone5
+import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
+import com.google.android.gms.maps.model.LatLng
 
 // Data class to cache the pre-calculated geometry and metadata
 private data class CachedProfileData(
@@ -58,6 +60,42 @@ private data class ElevationSegment(
     val p2: Offset, // Normalized 0..1
     val color: Color
 )
+
+/**
+ * Optimized ElevationProfile that accepts encoded strings.
+ * Use this in lists for maximum performance.
+ */
+@Composable
+fun ElevationProfile(
+    encodedAltitudes: String,
+    encodedDistances: String,
+    currentDistance: Double? = null,
+    onDistanceSelected: (Double?) -> Unit = {},
+    modifier: Modifier = Modifier
+) {
+    // 1. Decode strings into simple Double lists
+    // This happens only if the strings change
+    val decodedData = remember(encodedAltitudes, encodedDistances) {
+        val alts = NumericalEncodingUtils.decodeDoubles(encodedAltitudes)
+        val dists = NumericalEncodingUtils.decodeDoubles(encodedDistances)
+
+        // Map to PathPoint objects for compatibility with the existing rendering logic
+        dists.zip(alts) { dist, alt ->
+            PathPoint(distance = dist,
+                altitude = alt,
+                latLng = LatLng(0.0, 0.0) // LatLng not needed for profile
+            )
+        }
+    }
+
+    // 2. Call the existing rendering logic
+    ElevationProfile(
+        pathPoints = decodedData,
+        currentDistance = currentDistance,
+        onDistanceSelected = onDistanceSelected,
+        modifier = modifier
+    )
+}
 
 @Composable
 fun ElevationProfile(
@@ -196,7 +234,7 @@ fun ElevationProfile(
                 )
             }
             .fillMaxWidth()
-            .padding(bottom = 24.dp, start = 50.dp, end = 25.dp, top = 10.dp)
+            .padding(bottom = 24.dp, start = 50.dp, end = 25.dp, top = 24.dp)
     ) {
         val width = size.width
         val height = size.height
@@ -303,14 +341,16 @@ fun ElevationProfile(
             val pLeft = pathPoints[activeIndex]
             val pRight = pathPoints.getOrNull(activeIndex + 1)
 
-            val markerY = if (pRight != null) {
+            val interAlt = if (pRight != null) {
                 val ratio = (clampedDist - pLeft.distance) / (pRight.distance - pLeft.distance)
-                val interAlt = pLeft.altitude + ratio * (pRight.altitude - pLeft.altitude)
-                height - ((interAlt - cachedData.minAlt) / cachedData.altRange) * height
+                pLeft.altitude + ratio * (pRight.altitude - pLeft.altitude)
             } else {
-                height - ((pLeft.altitude - cachedData.minAlt) / cachedData.altRange) * height
+                pLeft.altitude
             }
 
+            val markerY = height - ((interAlt - cachedData.minAlt) / cachedData.altRange) * height
+
+            // Draw Vertical Dashed Line
             drawLine(
                 color = colorScheme.primary,
                 start = Offset(markerX.toFloat(), 0f),
@@ -319,6 +359,35 @@ fun ElevationProfile(
                 pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f))
             )
 
+            // Draw Labels at the top of the line
+            drawIntoCanvas { canvas ->
+                val distLabel = if (clampedDist < 1000) {
+                    "${clampedDist.toInt()} m"
+                } else {
+                    "${String.format("%.2f", clampedDist / 1000f)} km"
+                }
+                val altLabel = "${interAlt.toInt()} m"
+                val combinedLabel = "$distLabel | $altLabel"
+
+                // Calculate text width to center it or keep it on screen
+                val labelWidth = textPaint.measureText(combinedLabel)
+                var labelX = markerX.toFloat() - (labelWidth / 2)
+
+                // Keep label within chart bounds
+                labelX = labelX.coerceIn(0f, width - labelWidth)
+
+                canvas.nativeCanvas.drawText(
+                    combinedLabel,
+                    labelX,
+                    -15f, // Draw slightly above the top of the chart
+                    textPaint.apply {
+                        // Optional: Make the active label bold or a different color
+                        isFakeBoldText = true
+                    }
+                )
+            }
+
+            // Draw Intersection Points (Circles)
             drawCircle(color = colorScheme.onSurface, radius = 5.dp.toPx(), center = Offset(markerX.toFloat(), markerY.toFloat()))
             drawCircle(color = colorScheme.primary, radius = 3.dp.toPx(), center = Offset(markerX.toFloat(), markerY.toFloat()))
         }

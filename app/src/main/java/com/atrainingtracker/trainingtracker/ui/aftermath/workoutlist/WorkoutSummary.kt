@@ -123,11 +123,10 @@ fun WorkoutSummary(
             )
         }
 
-        if (isPlayServiceAvailable && workoutData.trackPoints.isNotEmpty()) {
+        if (isPlayServiceAvailable && workoutData.map_polyline != "") {
             WorkoutMediaSection(
                 // workoutId = workoutData.id,
-                map_polyline = workoutData.map_polyline,
-                points = workoutData.trackPoints,
+                workoutData = workoutData,
                 onMapClick = onMapClick
             )
         }
@@ -148,8 +147,7 @@ fun WorkoutSummary(
  */
 @Composable
 private fun WorkoutMediaSection(
-    map_polyline: String,
-    points: List<PathPoint>,
+    workoutData: WorkoutData,
     onMapClick: () -> Unit
 ) {
     Column(
@@ -159,24 +157,13 @@ private fun WorkoutMediaSection(
     ) {
         // 1. The Map (Weight 1 lets it take remaining space above profile)
         TrackOrSegmentOnMap(
-            polyline = map_polyline,
+            polyline = workoutData.map_polyline,
             color = TrackType.BEST.color,
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth(),
             onMapClick = { onMapClick() }
         )
-        /*
-        ATrainingTrackerMap(
-            mapState = mapState,
-            currentLocationFlow = MutableStateFlow(null),
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
-            onMapClick = { onMapClick() },
-            onSegmentClick = { }  // nothing to do here.
-        )
-         */
 
         // 2. The Elevation Profile
         Box(
@@ -186,7 +173,9 @@ private fun WorkoutMediaSection(
                 .clickable { onMapClick() }
         ) {
             ElevationProfile(
-                pathPoints = points,
+                // pathPoints = points,
+                encodedAltitudes = workoutData.encodedAltitudes,
+                encodedDistances = workoutData.encodedDistances,
                 currentDistance = null,
                 modifier = Modifier.fillMaxSize()
             )

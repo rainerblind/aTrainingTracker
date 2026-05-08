@@ -40,6 +40,7 @@ import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManag
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
+import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils;
 import com.google.android.gms.maps.model.LatLng;
 
 import java.util.Arrays;
@@ -152,6 +153,7 @@ public class CalcExtremaWorker extends Worker {
             // Calculate and save the map polyline string
             publishStarting(context.getString(R.string.calc_map_polyline));
             calcAndSaveMapPolyline(context, workoutId, baseFileName);
+            calcAndSaveElevationStream(context, workoutId, baseFileName);
 
             // -- calc min, mean, and max values --
             // first, we need the accumulated sensors of this workout
@@ -372,7 +374,7 @@ public class CalcExtremaWorker extends Worker {
                 int latIdx = cursor.getColumnIndex("LATITUDE");
                 int lonIdx = cursor.getColumnIndex("LONGITUDE");
 
-                while (cursor.moveToNext()) {
+                while (cursor.move(WorkoutSummaries.ENCODING_STEP_SIZE)) {
                     latLngs.add(new LatLng(cursor.getDouble(latIdx), cursor.getDouble(lonIdx)));
                 }
             }
@@ -394,6 +396,63 @@ public class CalcExtremaWorker extends Worker {
             );
 
             if (DEBUG) Log.d(TAG, "Saved polyline for workout " + workoutId + " (" + latLngs.size() + " points)");
+        }
+    }
+
+    private void calcAndSaveElevationStream(Context context, long workoutId, String baseFileName) {
+        if (DEBUG) Log.i(TAG, "calcAndSaveElevationStream: workoutId=" + workoutId);
+
+        if (baseFileName == null) return;
+
+        WorkoutSamplesDatabaseManager samplesManager = WorkoutSamplesDatabaseManager.getInstance(context);
+        String tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName);
+        SQLiteDatabase samplesDb = samplesManager.getDatabase();
+
+        java.util.List<Double> altitudes = new java.util.ArrayList<>();
+        java.util.List<Double> distances = new java.util.ArrayList<>();
+
+        // Using standard column names for altitude and distance
+        String altColumn = "ALTITUDE";
+        String distColumn = "DISTANCE_m";
+
+        try (Cursor cursor = samplesDb.query(tableName,
+                new String[]{altColumn, distColumn},
+                null, null, null, null, null)) {
+
+            if (cursor != null) {
+                int altIdx = cursor.getColumnIndex(altColumn);
+                int distIdx = cursor.getColumnIndex(distColumn);
+
+                while (cursor.move(WorkoutSummaries.ENCODING_STEP_SIZE)) {
+                    if (altIdx != -1 && distIdx != -1) {
+                        altitudes.add(cursor.getDouble(altIdx));
+                        distances.add(cursor.getDouble(distIdx));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error reading samples for stream encoding: " + baseFileName, e);
+            return;
+        }
+
+        if (!altitudes.isEmpty() && !distances.isEmpty()) {
+            // Encode the lists using the Kotlin NumericalEncodingUtils
+            // Java accesses Kotlin 'object' via the INSTANCE field.
+            String encodedAlt = NumericalEncodingUtils.INSTANCE.encodeDoubles(altitudes);
+            String encodedDist = NumericalEncodingUtils.INSTANCE.encodeDoubles(distances);
+
+            ContentValues values = new ContentValues();
+            values.put(WorkoutSummaries.ALTITUDE_STREAM, encodedAlt);
+            values.put(WorkoutSummaries.DISTANCE_STREAM, encodedDist);
+
+            WorkoutSummariesDatabaseManager.getInstance(context).getDatabase().update(
+                    WorkoutSummaries.TABLE,
+                    values,
+                    WorkoutSummaries.C_ID + "=?",
+                    new String[]{String.valueOf(workoutId)}
+            );
+
+            if (DEBUG) Log.d(TAG, "Saved elevation/distance streams for workout " + workoutId);
         }
     }
 

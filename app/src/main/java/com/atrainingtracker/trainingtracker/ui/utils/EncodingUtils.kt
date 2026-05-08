@@ -1,0 +1,69 @@
+/*
+ * aTrainingTracker (ANT+ BTLE)
+ * Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+ */
+
+package com.atrainingtracker.trainingtracker.ui.utils
+
+object NumericalEncodingUtils {
+    /**
+     * Encodes a list of doubles (like altitudes or distances) into a compact String.
+     * It uses delta encoding (storing the difference between points) to maximize compression.
+     */
+    fun encodeDoubles(numbers: List<Double>): String {
+        val result = StringBuilder()
+        var lastValue = 0L
+
+        for (num in numbers) {
+            // Convert to fixed-point (e.g., 2 decimal places precision)
+            val current = Math.round(num * 100)
+            var delta = current - lastValue
+            lastValue = current
+
+            // Standard Google Polyline-style variable length encoding
+            delta = if (delta < 0) (delta shl 1).inv() else delta shl 1
+            var b = delta
+            while (b >= 0x20) {
+                result.append(((0x20 or (b.toInt() and 0x1f)) + 63).toChar())
+                b = b shr 5
+            }
+            result.append((b + 63).toChar())
+        }
+        return result.toString()
+    }
+
+    fun decodeDoubles(encoded: String): List<Double> {
+        val result = mutableListOf<Double>()
+        var index = 0
+        var lastValue = 0L
+
+        while (index < encoded.length) {
+            var b: Int
+            var shift = 0
+            var resultValue = 0L
+            do {
+                b = encoded[index++].code - 63
+                resultValue = resultValue or ((b and 0x1f).toLong() shl shift)
+                shift += 5
+            } while (b >= 0x20)
+
+            val delta = if (resultValue and 1L != 0L) (resultValue shr 1).inv() else resultValue shr 1
+            lastValue += delta
+            result.add(lastValue / 100.0)
+        }
+        return result
+    }
+}

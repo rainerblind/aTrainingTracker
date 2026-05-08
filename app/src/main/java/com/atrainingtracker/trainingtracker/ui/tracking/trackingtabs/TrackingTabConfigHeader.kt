@@ -18,7 +18,6 @@
 
 package com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -30,7 +29,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -49,10 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
-import com.atrainingtracker.banalservice.sensor.SensorType
-import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewInfo
-import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorStatus
 
 /**
  * Header for the Tab in Config Mode
@@ -154,12 +149,12 @@ fun TrackingTabConfigHeader(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 ConfigCheckbox(
-                    label = stringResource(R.string.showMap),
+                    label = stringResource(R.string.config_tracking__show_map),
                     checked = viewInfo.showMap,
                     onCheckedChange = { onUpdateShowMap(viewInfo.tabViewId, it) }
                 )
                 ConfigCheckbox(
-                    label = stringResource(R.string.showLiveSegments),
+                    label = stringResource(R.string.config_tracking__showLiveSegments),
                     checked = viewInfo.showLiveSegments,
                     onCheckedChange = {
                         onUpdateShowLiveSegments(
@@ -169,7 +164,7 @@ fun TrackingTabConfigHeader(
                     }
                 )
                 ConfigCheckbox(
-                    label = stringResource(R.string.showLapButton),
+                    label = stringResource(R.string.config_tracking__showLapButton),
                     checked = viewInfo.showLapButton,
                     onCheckedChange = { onUpdateShowLapButton(viewInfo.tabViewId, it) }
                 )

@@ -48,7 +48,7 @@ fun WorkoutList(
     onExportWorkout: (Long, FileFormat) -> Unit,
     onDeleteConfirmed: (Long) -> Unit,
     onEditWorkout: (Long) -> Unit,
-    onMapClick: (Long) -> Unit,
+    onMapClick: (WorkoutData) -> Unit,
     appBarOffsetPx: Int,
     headerHeightPx: Float
 ) {
@@ -71,7 +71,7 @@ fun WorkoutList(
         items(
             items = workouts,
             key = { it.id }
-        ) { workout ->
+        ) { workoutData ->
             ElevatedCard(
                 modifier = Modifier.fillMaxWidth(),
                 elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
@@ -81,12 +81,12 @@ fun WorkoutList(
                 )
             ) {
                 WorkoutSummary(
-                    workoutData = workout,
+                    workoutData = workoutData,
                     isPlayServiceAvailable = isPlayServiceAvailable,
-                    onExport = { fileFormat -> onExportWorkout(workout.id, fileFormat) },
-                    onDeleteConfirmed = { onDeleteConfirmed(workout.id) },
-                    onEditWorkout = { onEditWorkout(workout.id) },
-                    onMapClick = { onMapClick(workout.id) }
+                    onExport = { fileFormat -> onExportWorkout(workoutData.id, fileFormat) },
+                    onDeleteConfirmed = { onDeleteConfirmed(workoutData.id) },
+                    onEditWorkout = { onEditWorkout(workoutData.id) },
+                    onMapClick = { onMapClick(workoutData) }
                 )
             }
         }

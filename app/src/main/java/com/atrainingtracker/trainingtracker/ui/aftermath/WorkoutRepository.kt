@@ -52,7 +52,6 @@ import com.atrainingtracker.trainingtracker.tracker.TrackerService
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusGroupData
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
-import com.atrainingtracker.trainingtracker.ui.map.Roughness
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
 import com.google.android.gms.maps.model.LatLng
@@ -164,7 +163,6 @@ class WorkoutRepository private constructor(private val application: Application
 
     suspend fun getWorkoutTrackPoints(
         workoutId: Long,
-        roughness: Roughness,
         trackType: TrackType
     ): List<PathPoint> = withContext(Dispatchers.IO) {
 
@@ -190,7 +188,7 @@ class WorkoutRepository private constructor(private val application: Application
             val distIdx = cursor.getColumnIndex(SensorType.DISTANCE_m.name)
 
             // 3. Replicate the Roughness stepSize logic
-            while (cursor.move(roughness.stepSize)) {
+            while (cursor.moveToNext()) {
 
                 if (latIdx != -1 && lonIdx != -1 && !cursor.isNull(latIdx) && !cursor.isNull(lonIdx)) {
                     points.add(
@@ -356,10 +354,7 @@ class WorkoutRepository private constructor(private val application: Application
                         }
 
                         // TODO: rewrite this part.
-                        // -> own repository for the track points; merged by the viewModel
                         // -> own repository for the export status; merged by the viewModel
-
-                        val trackPoints = getWorkoutTrackPoints(workoutData.id, Roughness.MEDIUM, TrackType.BEST)
 
                         val exportStatuses: MutableList<ExportStatusGroupData> = mutableListOf()
                         if (workoutData.fileBaseName != null) {
@@ -377,7 +372,6 @@ class WorkoutRepository private constructor(private val application: Application
                         }
 
                         val completedWorkout = workoutData.copy(
-                            trackPoints = trackPoints,
                             exportStatuses = exportStatuses
                         )
 
@@ -427,8 +421,6 @@ class WorkoutRepository private constructor(private val application: Application
                         // If the user HAS edited the name, stick with the name currently in memory.
                         currentWorkoutName
                     }
-                    val points = getWorkoutTrackPoints(workoutId, Roughness.MEDIUM, TrackType.GPS)
-                    if (DEBUG) Log.i(TAG, "#points: ${points.size}")
 
                     // Create the final workout object to be posted.
                     val finalWorkoutData = freshWorkoutData.copy(
@@ -438,8 +430,6 @@ class WorkoutRepository private constructor(private val application: Application
                         // And always use the final, intelligently decided name.
                         // Provide a fallback to the original fresh name just in case.
                         workoutName = finalWorkoutName ?: freshWorkoutData.headerData.workoutName,
-
-                        trackPoints = points
                     )
 
                     // Update the workout list
@@ -461,37 +451,10 @@ class WorkoutRepository private constructor(private val application: Application
         launch(Dispatchers.IO) {
 
             // -- update the Database
-            // Update Workout Name
-            summariesManager.updateWorkoutName(
-                workoutId,
-                workoutDataToSave.headerData.workoutName
-            )
-
-            // Update Sport and Equipment
-            summariesManager.updateSportAndEquipment(
-                workoutId,
-                workoutDataToSave.sportId,
-                workoutDataToSave.bSportType,
-                workoutDataToSave.equipmentId
-            )
-
-            // Update Commute and Trainer flags
-            summariesManager.updateCommuteAndTrainerFlag(
-                workoutId,
-                workoutDataToSave.headerData.commute,
-                workoutDataToSave.headerData.trainer
-            )
-
-            // Update Description, Goal, and Method
-            summariesManager.updateDescription(
-                workoutId,
-                workoutDataToSave.descriptionData.description ?: "",
-                workoutDataToSave.descriptionData.goal ?: "",
-                workoutDataToSave.descriptionData.method ?: ""
-            )
+            summariesManager.updateWorkoutData(workoutDataToSave)
 
             // -- trigger export
-            exportManager.exportWorkout(workoutDataToSave.fileBaseName)
+            exportManager.exportWorkout(workoutDataToSave)
 
             updateWorkoutInList(workoutId, workoutDataToSave)
             saveFinishedEvent.postValue(Pair(workoutId, true))

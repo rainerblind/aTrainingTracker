@@ -29,7 +29,9 @@ import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -53,49 +55,97 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
         SensorType.HR, SensorType.POWER, SensorType.LINE_DISTANCE_m, SensorType.SPEED_mps
     )
 
-    fun loadAftermathData(workoutId: Long) {
+    fun loadAftermathData(workoutData: WorkoutData) {
         viewModelScope.launch(Dispatchers.IO) {
-            val baseFileName = summariesDb.getBaseFileName(workoutId) ?: return@launch
+            val workoutId = workoutData.id
+            val bSportType = workoutData.bSportType
 
-            // Get the Sport Type
-            val workout = workoutRepository.getWorkoutById(workoutId).value
-            val bSportType = workout?.bSportType ?: BSportType.UNKNOWN
-
-            // Load Track
-            val trackList = TrackType.entries.mapNotNull { type ->
-                val path = workoutRepository.getWorkoutTrackPoints(workoutId, Roughness.ALL, type)
-                if (path.isNotEmpty()) MapTrack(id = type.ordinal.toLong(), type = type, path = path) else null
+            // --- PHASE 1: Immediate Reset ---
+            // Clear previous state so the user doesn't see "ghost" data from another workout
+            withContext(Dispatchers.Main) {
+                _aftermathState.value = MapState(
+                    isFollowMeEnabled = false,
+                    bSportType = bSportType,
+                    tracks = emptyList(),
+                    markers = emptyList()
+                )
             }
 
-            // Load Markers
+            // --- PHASE 2: Fast Track (From WorkoutData Polyline & Streams) ---
+            // Decodes the thinned data already present in workoutData for instant UI feedback.
+            if (workoutData.map_polyline.isNotEmpty()) {
+                val latLngs = com.google.maps.android.PolyUtil.decode(workoutData.map_polyline)
+
+                // Decode elevation streams
+                val alts = if (workoutData.encodedAltitudes.isNotEmpty()) {
+                    NumericalEncodingUtils.decodeDoubles(workoutData.encodedAltitudes)
+                } else emptyList()
+
+                val dists = if (workoutData.encodedDistances.isNotEmpty()) {
+                    NumericalEncodingUtils.decodeDoubles(workoutData.encodedDistances)
+                } else emptyList()
+
+                // Map points directly since sampling is identical
+                val fastPath = latLngs.mapIndexed { index, latLng ->
+                    PathPoint(
+                        distance = dists.getOrElse(index) { 0.0 },
+                        latLng = latLng,
+                        altitude = alts.getOrElse(index) { 0.0 }
+                    )
+                }
+
+                val fastTrack = MapTrack(
+                    id = workoutId,
+                    type = TrackType.BEST,
+                    path = fastPath
+                )
+
+                withContext(Dispatchers.Main) {
+                    _aftermathState.value = _aftermathState.value.copy(
+                        tracks = listOf(fastTrack)
+                    )
+                }
+            }
+
+            // --- PHASE 3: Calculate Extrema (Markers) ---
+            // We keep the logic for markers separate so they appear as soon as computed
             val markerList = mutableListOf<LocationMarker>()
 
-            // Start/Stop Markers
-            getExtremaPos(workoutId, baseFileName, ExtremaType.START)?.let {
-                markerList.add(LocationMarker(it, R.drawable.control_start, application.getString(R.string.Start)))
-            }
-            getExtremaPos(workoutId, baseFileName, ExtremaType.END)?.let {
-                markerList.add(LocationMarker(it, R.drawable.control_stop, application.getString(R.string.Stop)))
+            // Add Start/Stop Markers
+            workoutData.fileBaseName?.let { baseFile ->
+                getExtremaPos(workoutId, baseFile, ExtremaType.START)?.let {
+                    markerList.add(LocationMarker(it, R.drawable.control_start, application.getString(R.string.Start)))
+                }
+                getExtremaPos(workoutId, baseFile, ExtremaType.END)?.let {
+                    markerList.add(LocationMarker(it, R.drawable.control_stop, application.getString(R.string.Stop)))
+                }
             }
 
-            // Sensor Extrema (MAX for all, MIN for specific sensors)
+            // Add Sensor Max/Min Markers
             extremaSensorTypes.forEach { sensor ->
-                // Always check for MAX
                 addExtremaMarkerIfPresent(workoutId, sensor, ExtremaType.MAX, markerList)
-
-                // Additionally check for MIN for Altitude and Temperature
                 if (sensor == SensorType.ALTITUDE || sensor == SensorType.TEMPERATURE) {
                     addExtremaMarkerIfPresent(workoutId, sensor, ExtremaType.MIN, markerList)
                 }
             }
 
             withContext(Dispatchers.Main) {
-                _aftermathState.value = _aftermathState.value.copy(
-                    tracks = trackList,
-                    markers = markerList,
-                    isFollowMeEnabled = false,
-                    bSportType = bSportType
-                )
+                _aftermathState.value = _aftermathState.value.copy(markers = markerList)
+            }
+
+            // --- PHASE 4: High-Resolution Track (From Samples DB) ---
+            // Finally, load the full fidelity data for detailed analysis.
+            val fullTracks = TrackType.entries.mapNotNull { type ->
+                val path = workoutRepository.getWorkoutTrackPoints(workoutId, type)
+                if (path.isNotEmpty()) {
+                    MapTrack(id = type.ordinal.toLong(), type = type, path = path)
+                } else null
+            }
+
+            if (fullTracks.isNotEmpty()) {
+                withContext(Dispatchers.Main) {
+                    _aftermathState.value = _aftermathState.value.copy(tracks = fullTracks)
+                }
             }
         }
     }
