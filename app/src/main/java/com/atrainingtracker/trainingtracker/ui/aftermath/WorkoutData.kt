@@ -72,6 +72,8 @@ data class WorkoutData(
     val encodedAltitudes: String,
     val encodedDistances: String,
 
+    val uploadToStrava: Int, // -1: check prefs, 0: no, 1: yes
+
     val totalDistance: Double,
     val maxDisplacement: Double?,
     val activeTimeSec: Long,

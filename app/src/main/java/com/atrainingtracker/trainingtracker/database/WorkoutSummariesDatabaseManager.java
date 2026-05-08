@@ -111,6 +111,9 @@ public class WorkoutSummariesDatabaseManager {
         values.put(WorkoutSummaries.COMMUTE, workoutData.getCommute());
         values.put(WorkoutSummaries.TRAINER, workoutData.getTrainer());
 
+        // individual Strava upload
+        values.put(WorkoutSummaries.UPLOAD_TO_STRAVA, workoutData.getUploadToStrava());
+
         getDatabase().update(WorkoutSummaries.TABLE,
                 values,
                 WorkoutSummaries.C_ID + "=" + workoutData.getId(),
