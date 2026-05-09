@@ -410,26 +410,10 @@ class WorkoutRepository private constructor(private val application: Application
                     val currentWorkoutInMemory = allWorkouts.value?.find { it.id == workoutId }
                     val currentMessage = currentWorkoutInMemory?.extremaData?.calculationMessage
 
-                    // Calculate the new workout name
-                    val currentWorkoutName = currentWorkoutInMemory?.headerData?.workoutName
-                    val currentFileBaseName = currentWorkoutInMemory?.fileBaseName
-                    val finalWorkoutName = if (currentWorkoutName == currentFileBaseName) {
-                        // If the name has NOT been edited by the user, use the fresh name from the DB
-                        // (which may have been promoted to the fancy/auto name by the CalcExtremaWorker.)
-                        freshWorkoutData.headerData.workoutName
-                    } else {
-                        // If the user HAS edited the name, stick with the name currently in memory.
-                        currentWorkoutName
-                    }
-
                     // Create the final workout object to be posted.
                     val finalWorkoutData = freshWorkoutData.copy(
                         // Always preserve the calculation message if it exists
                         extremaCalculationMessage = currentMessage,
-
-                        // And always use the final, intelligently decided name.
-                        // Provide a fallback to the original fresh name just in case.
-                        workoutName = finalWorkoutName ?: freshWorkoutData.headerData.workoutName,
                     )
 
                     // Update the workout list

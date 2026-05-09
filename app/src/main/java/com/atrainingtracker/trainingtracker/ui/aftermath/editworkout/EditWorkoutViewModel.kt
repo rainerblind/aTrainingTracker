@@ -20,7 +20,6 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.editworkout
 
 import android.app.Application
 import android.util.Log
-import androidx.compose.animation.core.copy
 import androidx.lifecycle.*
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
@@ -32,9 +31,7 @@ import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper.EquipmentData
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
-import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDiffCallback
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
-import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutUpdatePayload
 import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository
 import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
 import com.atrainingtracker.trainingtracker.ui.util.Event
@@ -116,10 +113,26 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
 
         // Observe the single source of truth from the repository.
         repository.allWorkouts.observeForever { list ->
-            val newWorkoutState = list.find { it.id == workoutId }
+            val newWorkoutData = list.find { it.id == workoutId }
+            val currentWorkoutData = workoutData.value
 
-            if (newWorkoutState != null) {
-                _workoutData.value = newWorkoutState
+            if (newWorkoutData != null && currentWorkoutData != null) {
+
+                // update the workout data
+                _workoutData.value = currentWorkoutData.copy(
+                    // only override the workoutName when it was not changed by the user
+                    workoutName = if (currentWorkoutData.workoutName == currentWorkoutData.fileBaseName) {
+                        // still the default name -> user dit not change the name -> use the (eventually) new one.
+                        newWorkoutData.workoutName
+                    } else {
+                        // user changed the name -> keep it
+                        currentWorkoutData.workoutName
+                    },
+
+                    // copy extrema status and extrema values
+                    exportStatuses = newWorkoutData.exportStatuses,
+                    extremaRows = newWorkoutData.extremaRows
+                )
             }
         }
     }
