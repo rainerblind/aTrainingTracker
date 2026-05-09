@@ -1006,7 +1006,7 @@ public class WorkoutSummariesDatabaseManager {
             if (oldVersion < 13) {
 
                 // first, add the new column
-                addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.MAP_POLYLINE, "text", "");
+                addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.MAP_POLYLINE, "text", "''");
 
                 // 2. Perform the migration
                 migrateExistingWorkouts13(db);
@@ -1014,8 +1014,8 @@ public class WorkoutSummariesDatabaseManager {
 
             if (oldVersion < 14) {
                 // first, add the new columns
-                addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.DISTANCE_STREAM, "text", "");
-                addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.ALTITUDE_STREAM, "text", "");
+                addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.DISTANCE_STREAM, "text", "''");
+                addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.ALTITUDE_STREAM, "text", "''");
 
                 // 2. Perform the migration
                 migrateExistingWorkouts14(db);
@@ -1035,8 +1035,8 @@ public class WorkoutSummariesDatabaseManager {
             if (oldVersion < 17) {
                 // while upgrading to Version 14, we continued ot create the table for versin 13 :(
                 // Thus, we add the forgotten columns
-                addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.DISTANCE_STREAM, "text", "");
-                addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.ALTITUDE_STREAM, "text", "");
+                addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.DISTANCE_STREAM, "text", "''");
+                addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.ALTITUDE_STREAM, "text", "''");
 
                 migrateExistingWorkouts13(db);
                 migrateExistingWorkouts14(db);
