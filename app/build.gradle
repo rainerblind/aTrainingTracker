@@ -46,8 +46,8 @@ android {
         minSdkVersion 26 // Android 8
         targetSdkVersion 36
         multiDexEnabled = true
-        versionName = "4.9.16"
-        versionCode = 240
+        versionName = "4.9.17"
+        versionCode = 241
     }
 
     signingConfigs {
@@ -76,7 +76,7 @@ android {
             applicationIdSuffix ""
             debuggable = false
 
-            minifyEnabled = true
+            minifyEnabled = false
             proguardFiles = [getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro']
             signingConfig = signingConfigs.release
         }
