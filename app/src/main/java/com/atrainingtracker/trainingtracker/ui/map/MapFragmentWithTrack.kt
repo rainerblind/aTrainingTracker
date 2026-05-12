@@ -141,7 +141,7 @@ class MapFragmentWithTrack : Fragment() {
                         },
                         sheetContent = {
                             // --- THE SHEET CONTENT: The Entire SimpleSegmentOnMapScreen ---
-                            val selectedSegment = mapState.segments.find { it.id == selectedSegmentId }
+                            val selectedSegment = mapState.segments.find { it.stravaId == selectedSegmentId }
 
                             // Transform the single selected LiveSegment into a MapState for the Detail Screen
                             val detailMapState = remember(selectedSegment) {

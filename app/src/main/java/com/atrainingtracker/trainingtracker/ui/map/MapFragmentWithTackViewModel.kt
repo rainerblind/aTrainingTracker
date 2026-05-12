@@ -55,7 +55,7 @@ class MapFragmentWithTrackViewModel(application: Application) : AndroidViewModel
         MapState(
             segments = liveSegments.map { liveSegment ->
                 MapSegment(
-                    id = liveSegment.summary.stravaId,
+                    stravaId = liveSegment.summary.stravaId,
                     name = liveSegment.summary.name,
                     bSportType = liveSegment.summary.bSportType,
                     path = liveSegment.path,

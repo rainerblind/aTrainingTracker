@@ -35,8 +35,6 @@ import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.segments.LiveSegment
 import com.atrainingtracker.trainingtracker.segments.LiveSegmentStatus
 import com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepository
-import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager
-import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
 import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
@@ -74,7 +72,7 @@ class TrackingViewModel(
     private val application: Application,
     val trackingViewsRepository: TrackingViewsRepository,
     val banalServiceRepository: BANALServiceRepository,
-    liveSegmentsRepository: LiveSegmentsRepository,
+    val liveSegmentsRepository: LiveSegmentsRepository,
     private val viewId: Long
 ) : ViewModel() {
 
@@ -94,8 +92,6 @@ class TrackingViewModel(
     val pendingAddition = _pendingAddition.asStateFlow()
 
     val screenMode: StateFlow<ScreenMode> = trackingViewsRepository.screenMode
-
-    private val starredSegments: List<MapSegment> = SegmentsDatabaseManager.getInstance(application).getAllMapSegments()
 
     // Filter and sort the segments from the repository:
     // TODO: also filter for activity type.
@@ -179,8 +175,9 @@ class TrackingViewModel(
                 trackingViewsRepository.getSensorFieldConfigsForView(viewId),
                 banalServiceRepository.allFilteredSensorData,
                 trackingViewsRepository.getTrackingViewInfoFlow(viewId),
+                liveSegmentsRepository.liveSegments,
                 activeLiveSegments
-            ) { configs, allSensorData, viewInfo, activeLiveSegments ->
+            ) { configs, allSensorData, viewInfo, allLiveSegments, activeLiveSegments ->
                 // This whole block will re-execute whenever configs OR sensor data change
 
                 // --- Step 1: Create the base state from the latest configurations ---
@@ -225,6 +222,16 @@ class TrackingViewModel(
                     )
                 }
 
+                // Convert LiveSegments into MapSegments for the GoogleMap to draw
+                val mapSegments = allLiveSegments.map { live ->
+                    MapSegment(
+                        stravaId = live.staticData.summary.stravaId,
+                        name = live.staticData.summary.name,
+                        bSportType = live.staticData.summary.bSportType,
+                        path = live.staticData.path
+                    )
+                }
+
                 val activeIds = activeLiveSegments.map { it.staticData.summary.stravaId }.toSet()
 
                 // --- Step 4: Package everything into the TrackingScreenState ---
@@ -237,7 +244,7 @@ class TrackingViewModel(
                         bearing = banalServiceRepository.currentBearing.value?.toFloat() ?: 0f,
                         isFollowMeEnabled = true,
                         currentTrack = currentTrack,
-                        segments = starredSegments,
+                        segments = mapSegments,
                         activeLiveSegmentIds = activeIds,
                         markers = markerList
                     )

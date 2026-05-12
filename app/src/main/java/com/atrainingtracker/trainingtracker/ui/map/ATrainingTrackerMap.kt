@@ -263,7 +263,7 @@ fun ATrainingTrackerMap(
         mapState.segments.forEach { segment ->
             SegmentLayer(
                 segment = segment,
-                isLive = mapState.activeLiveSegmentIds.contains(segment.id),
+                isLive = mapState.activeLiveSegmentIds.contains(segment.stravaId),
                 isFollowMeEnabled = mapState.isFollowMeEnabled,
                 currentZoom = cameraPositionState.position.zoom,
                 context = context,
@@ -427,7 +427,7 @@ private fun SegmentLayer(
         width = strokeWidth,
         zIndex = zIndex,
         clickable = true,
-        onClick = { onSegmentClick(segment.id) }
+        onClick = { onSegmentClick(segment.stravaId) }
     )
 
     // 2. Direction Arrows (Performance check: only at high zoom or if Live)

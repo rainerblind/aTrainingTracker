@@ -103,7 +103,7 @@ data class MapTrack(
 }
 
 data class MapSegment(
-    val id: Long,
+    val stravaId: Long,
     val name: String,
     val bSportType: BSportType,
     val path: List<PathPoint>,

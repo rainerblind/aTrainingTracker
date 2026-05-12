@@ -106,7 +106,7 @@ class StarredSegmentsFragment : Fragment() {
                                 MapState(
                                     segments = listOf(
                                             MapSegment(
-                                                id = selectedSegment.summary.stravaId,
+                                                stravaId = selectedSegment.summary.stravaId,
                                                 name = selectedSegment.summary.name,
                                                 bSportType = selectedSegment.summary.bSportType,
                                                 path = selectedSegment.path,

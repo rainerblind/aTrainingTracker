@@ -84,38 +84,6 @@ public class SegmentsDatabaseManager {
         return dbFile.exists();
     }
 
-
-
-    @Deprecated // use LiveSegment from the repository instead.
-    public List<MapSegment> getAllMapSegments() {
-        List<MapSegment> segments = new ArrayList<>();
-        SQLiteDatabase db = getDatabase();    // 1. Get all starred segments
-        Cursor cursor = db.query(Segments.TABLE_STARRED_SEGMENTS, null, null, null, null, null, null);
-
-        SportTypeDatabaseManager sportTypeMgr = SportTypeDatabaseManager.getInstance(mContext);
-
-        while (cursor.moveToNext()) {
-            long id = cursor.getLong(cursor.getColumnIndexOrThrow(Segments.STRAVA_SEGMENT_ID));
-            String name = cursor.getString(cursor.getColumnIndexOrThrow(Segments.SEGMENT_NAME));
-
-            // 3. Get the Strava activity type string (e.g., "Ride", "Run")
-            String stravaName = cursor.getString(cursor.getColumnIndexOrThrow(Segments.ACTIVITY_TYPE));
-
-            // 4. Use your new method for the translation
-            // This will check the DB first, then the TTSportType enum defaults
-            BSportType sportType = sportTypeMgr.getBSportTypeFromStravaName(stravaName);
-
-            // 5. Fetch the GPS path (stream) for this segment
-            List<PathPoint> path = getSegmentPath(id);
-
-            // 6. Create the MapSegment object
-            segments.add(new MapSegment(id, name, sportType, path, true));
-        }
-        cursor.close();
-
-        return segments;
-    }
-
     public List<PathPoint> getSegmentPath(long segmentId) {
         List<PathPoint> points = new ArrayList<>();
         SQLiteDatabase db = getDatabase();

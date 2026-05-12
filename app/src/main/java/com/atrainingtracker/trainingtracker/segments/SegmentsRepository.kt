@@ -160,9 +160,6 @@ class SegmentsRepository private constructor(context: Context) {
     // Repository scope for background loading
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    // In-memory cache of segments
-    @Deprecated("can be removed later")
-    private var _allMapSegments = MutableStateFlow<List<MapSegment>?>(null)
 
     private val _allSegmentsWithPath = MutableStateFlow(emptyList<SegmentWithPath>())
     val allSegmentsWithPath: StateFlow<List<SegmentWithPath>> = _allSegmentsWithPath
@@ -175,11 +172,9 @@ class SegmentsRepository private constructor(context: Context) {
 
         // Load segments from DB into memory immediately upon creation
         repositoryScope.launch {
-            _allMapSegments.value = segmentsDb.getAllMapSegments()
-
             val segmentSummaries = segmentsDb.getAllSegmentSummaries()
 
-            // Load the path of all segments into memory
+            // Load the path of all segments into memory (one by one)
             segmentSummaries.forEach { segmentSummary ->
                 val path = segmentsDb.getSegmentPath(segmentSummary.stravaId)
                 _allSegmentsWithPath.value += SegmentWithPath(segmentSummary, path)
