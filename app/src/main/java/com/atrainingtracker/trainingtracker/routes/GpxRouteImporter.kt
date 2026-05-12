@@ -94,10 +94,13 @@ class GpxRouteImporter(private val context: Context) {
                             // Calculate elevation if <ele> tag exists inside trkpt
                             var ele = 0.0
 
-                            // Move to next to find <ele>
-                            parser.nextTag()
-                            if (parser.name == "ele") {
-                                ele = parser.nextText().toDouble()
+                            // Search inside the trkpt tag for child tags
+                            var interiorEventType = parser.next()
+                            while (!(interiorEventType == XmlPullParser.END_TAG && (parser.name == "trkpt" || parser.name == "rtept"))) {
+                                if (interiorEventType == XmlPullParser.START_TAG && parser.name == "ele") {
+                                    ele = parser.nextText().toDouble()
+                                }
+                                interiorEventType = parser.next()
                             }
 
                             // Accumulate distance
