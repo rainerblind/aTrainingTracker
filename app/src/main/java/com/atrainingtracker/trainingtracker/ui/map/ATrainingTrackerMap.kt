@@ -83,6 +83,9 @@ fun ATrainingTrackerMap(
     val currentLocation by currentLocationFlow.collectAsStateWithLifecycle()
     val primaryColor = MaterialTheme.colorScheme.primary
 
+    // Track map readiness
+    var isMapLoaded by remember { mutableStateOf(false) }
+
     //  Camera State management
     val cameraPositionState = rememberCameraPositionState()
 
@@ -97,7 +100,7 @@ fun ATrainingTrackerMap(
     var scrubIconLeft by remember { mutableStateOf<BitmapDescriptor?>(null) }
 
     // Initialize icons inside LaunchedEffect (Safe from IBitmapDescriptorFactory error)
-    LaunchedEffect(primaryColor) {
+    LaunchedEffect(primaryColor, isMapLoaded) {
         // This runs after the composition has started, ensuring Maps SDK is likely ready
         locationIcon = bitmapDescriptorFromVectorInternal(context, R.drawable.ic_navigation_arrow, 42, primaryColor)
         directionIconSmall = bitmapDescriptorFromVectorInternal(context, R.drawable.ic_navigation_arrow, 12, primaryColor)
@@ -105,7 +108,7 @@ fun ATrainingTrackerMap(
         directionIconLarge = bitmapDescriptorFromVectorInternal(context, R.drawable.ic_navigation_arrow, 22, primaryColor)
     }
 
-    LaunchedEffect(mapState.bSportType) {
+    LaunchedEffect(mapState.bSportType, isMapLoaded) {
         // Map sport type to drawable
         val iconRes = when (mapState.bSportType) {
             BSportType.RUN -> R.drawable.bsport_run
@@ -127,7 +130,7 @@ fun ATrainingTrackerMap(
     }
 
     // Automated Bounds Fitting (Optimized for Local Area)
-    LaunchedEffect(mapState.tracks, mapState.markers, mapState.segments, mapState.isFollowMeEnabled) {
+    LaunchedEffect(mapState.tracks, mapState.markers, mapState.segments, mapState.isFollowMeEnabled, isMapLoaded) {
         if (!mapState.isFollowMeEnabled) {
             val userPos = currentLocation
             val builder = LatLngBounds.Builder()
@@ -248,7 +251,8 @@ fun ATrainingTrackerMap(
         cameraPositionState = cameraPositionState,
         onMapClick = { onMapClick?.invoke() },
         properties = MapProperties(mapType = MapType.TERRAIN),
-        uiSettings = MapUiSettings(zoomControlsEnabled = false, tiltGesturesEnabled = true)
+        uiSettings = MapUiSettings(zoomControlsEnabled = false, tiltGesturesEnabled = true),
+        onMapLoaded = { isMapLoaded = true }
     ) {
         // --- Layer 1: Segments ---
         mapState.segments.forEach { segment ->
