@@ -113,7 +113,6 @@ class RoutesDatabaseManager private constructor(context: Context) {
                 put(RouteContract.COLUMN_ELEVATION_GAIN, summary.elevationGain)
                 put(RouteContract.COLUMN_SPORT_TYPE, summary.sportType.ordinal)
                 put(RouteContract.COLUMN_SOURCE, summary.source.name)
-                put(RouteContract.COLUMN_LAST_USED, System.currentTimeMillis())
                 put(RouteContract.COLUMN_MAP_POLYLINE, encodedPolyline)
             }
             val routeId = db.insert(RouteContract.TABLE_ROUTES, null, values)
@@ -145,7 +144,6 @@ class RoutesDatabaseManager private constructor(context: Context) {
     fun getAllRouteSummaries(): List<RouteSummary> {
         val routes = mutableListOf<RouteSummary>()
         val db = dbHelper.readableDatabase
-        val orderBy = "${RouteContract.COLUMN_LAST_USED} DESC"
 
         db.query(
             RouteContract.TABLE_ROUTES,
@@ -154,7 +152,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
             null,
             null,
             null,
-            orderBy
+            null
         ).use { cursor ->
             // Fetch indices once for performance
             val idIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_ID)
@@ -222,6 +220,48 @@ class RoutesDatabaseManager private constructor(context: Context) {
 
         return RouteWithPath(actualSummary, path)
     }
+
+
+    /**
+     * Toggles whether a route is marked for detailed display on the map.
+     */
+    fun setRouteSelected(routeId: Long, isSelected: Boolean): Int {
+        val db = dbHelper.writableDatabase
+        val values = ContentValues().apply {
+            put(RouteContract.COLUMN_IS_SELECTED, if (isSelected) 1 else 0)
+        }
+        return db.update(
+            RouteContract.TABLE_ROUTES,
+            values,
+            "${RouteContract.COLUMN_ID} = ?",
+            arrayOf(routeId.toString())
+        )
+    }
+
+    /**
+     * Fetches only the routes that are currently marked as selected.
+     * Useful for the LiveGuidanceRepository to load paths into memory.
+     */
+    fun getSelectedRoutes(): List<RouteWithPath> {
+        val routes = mutableListOf<RouteWithPath>()
+        val db = dbHelper.readableDatabase
+
+        db.query(
+            RouteContract.TABLE_ROUTES,
+            null,
+            "${RouteContract.COLUMN_IS_SELECTED} = 1",
+            null, null, null, null
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                val routeId = cursor.getLong(cursor.getColumnIndexOrThrow(RouteContract.COLUMN_ID))
+                val summary = mapCursorToRouteSummary(cursor)
+                val path = getRoutePath(routeId)
+                routes.add(RouteWithPath(summary, path))
+            }
+        }
+        return routes
+    }
+
 
     /**
      * Retrieves only the path points for a specific route ID.
@@ -319,7 +359,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
         const val COLUMN_ELEVATION_GAIN = "elevation_gain"
         const val COLUMN_SPORT_TYPE = "sport_type"
         const val COLUMN_SOURCE = "source"
-        const val COLUMN_LAST_USED = "last_used"
+        const val COLUMN_IS_SELECTED = "is_selected"
         const val COLUMN_MAP_POLYLINE = "map_polyline"
 
         const val TABLE_ROUTE_POINTS = "route_points"
@@ -339,7 +379,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
             $COLUMN_ELEVATION_GAIN REAL,
             $COLUMN_SPORT_TYPE INTEGER,
             $COLUMN_SOURCE TEXT,
-            $COLUMN_LAST_USED INTEGER,
+            $COLUMN_IS_SELECTED INTEGER,
             $COLUMN_MAP_POLYLINE TEXT
         );
     """
