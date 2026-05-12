@@ -59,9 +59,9 @@ enum class TrackType(
 
 
 data class MapState(
+    val zoomFocus: MapZoomFocus,
     val bearing: Float = 0f,
     val speed: Float = 0f,
-    val isFollowMeEnabled: Boolean = true,
     val currentTrack: List<LatLng> = emptyList(),
     val tracks: List<MapTrack> = emptyList(),
     val segments: List<MapSegment> = emptyList(),
@@ -103,9 +103,15 @@ data class MapTrack(
 }
 
 data class MapSegment(
-    val id: Long,
+    val stravaId: Long,
     val name: String,
     val bSportType: BSportType,
     val path: List<PathPoint>,
     val showStartAndFinishText: Boolean = true
 )
+
+enum class MapZoomFocus {
+    TRACK_AND_MARKERS,
+    LOCAL_SEGMENTS,
+    FOLLOW_ME
+}

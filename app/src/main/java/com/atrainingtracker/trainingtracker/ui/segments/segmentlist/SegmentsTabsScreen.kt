@@ -31,9 +31,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.DropdownMenu
@@ -52,7 +50,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,13 +61,14 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.segments.LiveSegment
+import com.atrainingtracker.trainingtracker.segments.SegmentWithPath
 import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SegmentsTabsScreen(
-    liveSegments: List<LiveSegment>,
+    segmentsWithPath: List<SegmentWithPath>,
     pagerState: PagerState,
     bikeListState: LazyListState,
     runListState: LazyListState,
@@ -118,10 +116,10 @@ fun SegmentsTabsScreen(
             ) { pageIndex ->
                 val currentSport = tabs[pageIndex].second
                 val listState = if (currentSport == BSportType.BIKE) bikeListState else runListState
-                val filteredLiveSegments = liveSegments.filter { it.summary.bSportType == currentSport }
+                val filteredSegmentsWithPath = segmentsWithPath.filter { it.summary.bSportType == currentSport }
 
                 SegmentList(
-                    liveSegments = filteredLiveSegments,
+                    segmentsWithPath = filteredSegmentsWithPath,
                     scrollState = listState,
                     isStravaConnected = isStravaConnected,
                     onConnectToStrava = onConnectToStrava,

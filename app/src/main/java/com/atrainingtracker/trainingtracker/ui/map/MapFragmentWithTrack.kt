@@ -141,14 +141,14 @@ class MapFragmentWithTrack : Fragment() {
                         },
                         sheetContent = {
                             // --- THE SHEET CONTENT: The Entire SimpleSegmentOnMapScreen ---
-                            val selectedSegment = mapState.segments.find { it.id == selectedSegmentId }
+                            val selectedSegment = mapState.segments.find { it.stravaId == selectedSegmentId }
 
                             // Transform the single selected LiveSegment into a MapState for the Detail Screen
                             val detailMapState = remember(selectedSegment) {
                                 MapState(
+                                    zoomFocus = MapZoomFocus.TRACK_AND_MARKERS,
                                     segments = if (selectedSegment != null) listOf(selectedSegment) else emptyList(),
-                                    bSportType = selectedSegment?.bSportType ?: BSportType.UNKNOWN,
-                                    isFollowMeEnabled = false
+                                    bSportType = selectedSegment?.bSportType ?: BSportType.UNKNOWN
                                 )
                             }
 

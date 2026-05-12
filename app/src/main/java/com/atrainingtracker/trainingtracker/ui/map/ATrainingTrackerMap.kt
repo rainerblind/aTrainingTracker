@@ -130,8 +130,8 @@ fun ATrainingTrackerMap(
     }
 
     // Automated Bounds Fitting (Optimized for Local Area)
-    LaunchedEffect(mapState.tracks, mapState.markers, mapState.segments, mapState.isFollowMeEnabled, isMapLoaded) {
-        if (!mapState.isFollowMeEnabled) {
+    LaunchedEffect(mapState.tracks, mapState.markers, mapState.segments, isMapLoaded) {
+        if (mapState.zoomFocus == MapZoomFocus.TRACK_AND_MARKERS || mapState.zoomFocus == MapZoomFocus.LOCAL_SEGMENTS) {
             val userPos = currentLocation
             val builder = LatLngBounds.Builder()
             var hasPoints = false
@@ -150,18 +150,27 @@ fun ATrainingTrackerMap(
                 return results[0] < maxDistanceMeters
             }
 
-            // 1. Include all track points
-            mapState.tracks.forEach { track ->
-                track.path.forEach { builder.include(it.latLng); hasPoints = true }
+            if (mapState.zoomFocus == MapZoomFocus.TRACK_AND_MARKERS) {
+                // Include all track points
+                mapState.tracks.forEach { track ->
+                    track.path.forEach { builder.include(it.latLng); hasPoints = true }
+                }
+
+                // Include all sensor markers
+                mapState.markers.forEach { marker -> builder.include(marker.position); hasPoints = true }
             }
 
-            // 2. Include only local segment points
-            mapState.segments.forEach { segment ->
-                segment.path.forEach { if (isLocal(it.latLng)) { builder.include(it.latLng); hasPoints = true } }
+            if (mapState.zoomFocus == MapZoomFocus.LOCAL_SEGMENTS) {
+                // 2. Include only local segment points
+                mapState.segments.forEach { segment ->
+                    segment.path.forEach {
+                        if (isLocal(it.latLng)) {
+                            builder.include(it.latLng); hasPoints = true
+                        }
+                    }
+                }
             }
 
-            // 3. Include all sensor markers
-            mapState.markers.forEach { marker -> builder.include(marker.position); hasPoints = true }
 
             if (hasPoints) {
                 // Fit to the local cluster of data
@@ -182,7 +191,7 @@ fun ATrainingTrackerMap(
 
     // Follow Me Logic
     LaunchedEffect(currentLocation, mapState.bearing, mapState.speed) {
-        if (mapState.isFollowMeEnabled && currentLocation != null) {
+        if (mapState.zoomFocus == MapZoomFocus.FOLLOW_ME && currentLocation != null) {
             val targetZoom = (20f - 0.1f * mapState.speed).coerceIn(14f, 20f)
             cameraPositionState.animate(
                 CameraUpdateFactory.newCameraPosition(
@@ -263,8 +272,8 @@ fun ATrainingTrackerMap(
         mapState.segments.forEach { segment ->
             SegmentLayer(
                 segment = segment,
-                isLive = mapState.activeLiveSegmentIds.contains(segment.id),
-                isFollowMeEnabled = mapState.isFollowMeEnabled,
+                isLive = mapState.activeLiveSegmentIds.contains(segment.stravaId),
+                isFollowMeEnabled = mapState.zoomFocus == MapZoomFocus.FOLLOW_ME,
                 currentZoom = cameraPositionState.position.zoom,
                 context = context,
                 icons = Triple(directionIconSmall, directionIconMed, directionIconLarge),
@@ -427,7 +436,7 @@ private fun SegmentLayer(
         width = strokeWidth,
         zIndex = zIndex,
         clickable = true,
-        onClick = { onSegmentClick(segment.id) }
+        onClick = { onSegmentClick(segment.stravaId) }
     )
 
     // 2. Direction Arrows (Performance check: only at high zoom or if Live)

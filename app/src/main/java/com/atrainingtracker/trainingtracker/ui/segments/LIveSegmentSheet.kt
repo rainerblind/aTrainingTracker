@@ -55,13 +55,13 @@ fun LiveSegmentSheet(
 
         // --- Header with live data ---
         SegmentSummaryHeader(
-            summary = liveSegment.summary,
+            summary = liveSegment.staticData.summary,
             liveSegmentData = liveSegment.liveData
         )
 
         // --- Elevation Profile ---
         ElevationProfile(
-            pathPoints = liveSegment.path,
+            pathPoints = liveSegment.staticData.path,
             // Pass the raw distance double to the profile for the progress marker
             currentDistance = liveSegment.liveData.distanceOnSegment_raw,
             modifier = Modifier

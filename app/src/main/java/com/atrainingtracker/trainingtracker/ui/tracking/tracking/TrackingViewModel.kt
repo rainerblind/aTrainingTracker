@@ -34,13 +34,13 @@ import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.segments.LiveSegment
 import com.atrainingtracker.trainingtracker.segments.LiveSegmentStatus
-import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager
-import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
+import com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepository
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
 import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
 import com.atrainingtracker.trainingtracker.ui.map.MapState
+import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
 import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
@@ -50,7 +50,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.Objects
@@ -62,7 +61,7 @@ data class TrackingScreenState(
     val showMap: Boolean = false,
     val showLiveSegments: Boolean = false,
     val fields: List<SensorFieldState> = emptyList(),
-    val mapState: MapState = MapState()
+    val mapState: MapState = MapState(zoomFocus = MapZoomFocus.TRACK_AND_MARKERS)
 )
 
 /**
@@ -74,7 +73,7 @@ class TrackingViewModel(
     private val application: Application,
     val trackingViewsRepository: TrackingViewsRepository,
     val banalServiceRepository: BANALServiceRepository,
-    segmentsRepository: SegmentsRepository,
+    val liveSegmentsRepository: LiveSegmentsRepository,
     private val viewId: Long
 ) : ViewModel() {
 
@@ -95,16 +94,14 @@ class TrackingViewModel(
 
     val screenMode: StateFlow<ScreenMode> = trackingViewsRepository.screenMode
 
-    private val starredSegments: List<MapSegment> = SegmentsDatabaseManager.getInstance(application).getAllMapSegments()
-
     // Filter and sort the segments from the repository:
     // TODO: also filter for activity type.
     val activeLiveSegments: StateFlow<List<LiveSegment>> = combine(
-        segmentsRepository.liveSegments,
+        liveSegmentsRepository.liveSegments,
         banalServiceRepository.bSportType
     ) { allLiveSegments, currentBSportType ->
         allLiveSegments.filter { segment ->
-            ( segment.summary.bSportType == currentBSportType
+            ( segment.staticData.summary.bSportType == currentBSportType
                     || currentBSportType == BSportType.UNKNOWN)
                     && segment.liveData.segmentStatus != LiveSegmentStatus.FAR_FAR_AWAY
         }
@@ -179,8 +176,9 @@ class TrackingViewModel(
                 trackingViewsRepository.getSensorFieldConfigsForView(viewId),
                 banalServiceRepository.allFilteredSensorData,
                 trackingViewsRepository.getTrackingViewInfoFlow(viewId),
+                liveSegmentsRepository.liveSegments,
                 activeLiveSegments
-            ) { configs, allSensorData, viewInfo, activeLiveSegments ->
+            ) { configs, allSensorData, viewInfo, allLiveSegments, activeLiveSegments ->
                 // This whole block will re-execute whenever configs OR sensor data change
 
                 // --- Step 1: Create the base state from the latest configurations ---
@@ -225,7 +223,17 @@ class TrackingViewModel(
                     )
                 }
 
-                val activeIds = activeLiveSegments.map { it.summary.stravaId }.toSet()
+                // Convert LiveSegments into MapSegments for the GoogleMap to draw
+                val mapSegments = allLiveSegments.map { live ->
+                    MapSegment(
+                        stravaId = live.staticData.summary.stravaId,
+                        name = live.staticData.summary.name,
+                        bSportType = live.staticData.summary.bSportType,
+                        path = live.staticData.path
+                    )
+                }
+
+                val activeIds = activeLiveSegments.map { it.staticData.summary.stravaId }.toSet()
 
                 // --- Step 4: Package everything into the TrackingScreenState ---
                 TrackingScreenState(
@@ -233,11 +241,11 @@ class TrackingViewModel(
                     showMap = viewInfo?.showMap ?: false,
                     showLiveSegments =  viewInfo?.showLiveSegments ?: false,
                     mapState = MapState(
+                        zoomFocus = MapZoomFocus.FOLLOW_ME,
                         speed = banalServiceRepository.currentSpeed.value?.toFloat() ?: 0f,
                         bearing = banalServiceRepository.currentBearing.value?.toFloat() ?: 0f,
-                        isFollowMeEnabled = true,
                         currentTrack = currentTrack,
-                        segments = starredSegments,
+                        segments = mapSegments,
                         activeLiveSegmentIds = activeIds,
                         markers = markerList
                     )
@@ -376,8 +384,8 @@ class TrackingViewModelFactory(
         if (modelClass.isAssignableFrom(TrackingViewModel::class.java)) {
             val trackingViewsRepo = TrackingViewsRepository.getInstance(application)
             val banalServiceRepo = BANALServiceRepository.getInstance(application)
-            val segmentsRepository = SegmentsRepository.getInstance(application)
-            return TrackingViewModel(application, trackingViewsRepo, banalServiceRepo, segmentsRepository, viewId) as T
+            val liveSegmentsRepository = LiveSegmentsRepository.getInstance(application)
+            return TrackingViewModel(application, trackingViewsRepo, banalServiceRepo, liveSegmentsRepository, viewId) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

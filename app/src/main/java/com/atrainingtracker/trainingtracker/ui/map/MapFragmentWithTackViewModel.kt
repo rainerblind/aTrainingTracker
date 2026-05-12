@@ -32,11 +32,11 @@ class MapFragmentWithTrackViewModel(application: Application) : AndroidViewModel
     private val banalRepository = BANALServiceRepository.getInstance(application)
     private val segmentsRepository = SegmentsRepository.getInstance(application)
 
-    val liveSegments = segmentsRepository.liveSegments
+    val liveSegments = segmentsRepository.allSegmentsWithPath
 
     val mapState: StateFlow<MapState> = combine(
         banalRepository.currentTrack,
-        segmentsRepository.liveSegments // Observe the repository instead of a one-time DB hit
+        segmentsRepository.allSegmentsWithPath // Observe the repository instead of a one-time DB hit
     ) { currentTrack, liveSegments ->
 
         // Logic for Start Marker
@@ -53,9 +53,10 @@ class MapFragmentWithTrackViewModel(application: Application) : AndroidViewModel
         }
 
         MapState(
+            zoomFocus = MapZoomFocus.LOCAL_SEGMENTS,
             segments = liveSegments.map { liveSegment ->
                 MapSegment(
-                    id = liveSegment.summary.stravaId,
+                    stravaId = liveSegment.summary.stravaId,
                     name = liveSegment.summary.name,
                     bSportType = liveSegment.summary.bSportType,
                     path = liveSegment.path,
@@ -65,13 +66,12 @@ class MapFragmentWithTrackViewModel(application: Application) : AndroidViewModel
             currentTrack = currentTrack,
             bearing = 0f,
             speed = 0f,
-            isFollowMeEnabled = false,
             markers = markers
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = MapState()
+        initialValue = MapState(zoomFocus = MapZoomFocus.LOCAL_SEGMENTS)
     )
 
     val currentLocation: StateFlow<LatLng?> = banalRepository.currentLocation
