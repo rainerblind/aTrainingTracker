@@ -111,7 +111,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
                 put(RouteContract.COLUMN_NAME, summary.name)
                 put(RouteContract.COLUMN_DISTANCE, summary.distance)
                 put(RouteContract.COLUMN_ELEVATION_GAIN, summary.elevationGain)
-                put(RouteContract.COLUMN_SPORT_TYPE, summary.sportType.ordinal)
+                put(RouteContract.COLUMN_SPORT_TYPE, summary.sportType.name)
                 put(RouteContract.COLUMN_SOURCE, summary.source.name)
                 put(RouteContract.COLUMN_MAP_POLYLINE, encodedPolyline)
             }
@@ -154,40 +154,9 @@ class RoutesDatabaseManager private constructor(context: Context) {
             null,
             null
         ).use { cursor ->
-            // Fetch indices once for performance
-            val idIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_ID)
-            val extIdIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_EXTERNAL_ID)
-            val nameIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_NAME)
-            val distIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_DISTANCE)
-            val elevIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_ELEVATION_GAIN)
-            val sportIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_SPORT_TYPE)
-            val sourceIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_SOURCE)
-            val polyIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_MAP_POLYLINE)
-
             while (cursor.moveToNext()) {
-                // 1. Reconstruct RouteSource and BSportType
-                val sourceString = cursor.getString(sourceIdx)
-                val sportOrdinal = cursor.getInt(sportIdx)
-
-                val source = RouteSource.fromString(sourceString)
-                val sportType = if (sportOrdinal in BSportType.entries.indices) {
-                    BSportType.entries[sportOrdinal]
-                } else {
-                    BSportType.UNKNOWN // Fallback
-                }
-
-                // 2. Build the Summary
-                val summary = RouteSummary(
-                    id = cursor.getLong(idIdx),
-                    externalId = cursor.getString(extIdIdx) ?: "",
-                    name = cursor.getString(nameIdx) ?: "Unknown Route",
-                    distance = cursor.getDouble(distIdx),
-                    elevationGain = cursor.getDouble(elevIdx),
-                    sportType = sportType,
-                    source = source
-                )
-
-                routes.add(summary)
+                // Use the helper here to avoid duplicating the String/Enum logic
+                routes.add(mapCursorToRouteSummary(cursor))
             }
         }
         return routes
@@ -312,10 +281,10 @@ class RoutesDatabaseManager private constructor(context: Context) {
         val sportIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_SPORT_TYPE)
         val sourceIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_SOURCE)
 
-        val sportOrdinal = cursor.getInt(sportIdx)
-        val sportType = if (sportOrdinal in BSportType.entries.indices) {
-            BSportType.entries[sportOrdinal]
-        } else {
+        val sportString = cursor.getString(sportIdx)
+        val sportType = try {
+            BSportType.valueOf(sportString)
+        } catch (e: Exception) {
             BSportType.UNKNOWN
         }
 
@@ -377,7 +346,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
             $COLUMN_NAME TEXT,
             $COLUMN_DISTANCE REAL,
             $COLUMN_ELEVATION_GAIN REAL,
-            $COLUMN_SPORT_TYPE INTEGER,
+            $COLUMN_SPORT_TYPE TEXT,
             $COLUMN_SOURCE TEXT,
             $COLUMN_IS_SELECTED INTEGER,
             $COLUMN_MAP_POLYLINE TEXT
@@ -406,7 +375,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
 
         companion object {
             const val DB_NAME = "Routes.db"
-            const val DB_VERSION = 1 // Starting version for the new separate DB
+            const val DB_VERSION = 2 // Storing BSportType as String.
 
             private const val TAG = "RoutesDbHelper"
             private val DEBUG = TrainingApplication.getDebug(true)
@@ -427,7 +396,11 @@ class RoutesDatabaseManager private constructor(context: Context) {
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
             Log.i(TAG, "Upgrading Routes database from $oldVersion to $newVersion")
 
-            // Future migrations will go here
+            if (oldVersion < 2) {
+                db.execSQL("DROP TABLE IF EXISTS ${RouteContract.TABLE_ROUTE_POINTS}")
+                db.execSQL("DROP TABLE IF EXISTS ${RouteContract.TABLE_ROUTES}")
+                onCreate(db)
+            }
         }
     }
 }
