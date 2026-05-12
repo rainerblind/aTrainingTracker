@@ -139,7 +139,7 @@ data class StravaSegment(
     val state: String? = null,
     val country: String? = null,
     val map: StravaMap? = null,
-    val pr_time: Int? = null
+    var pr_time: Int? = null    // must be updated because the detailed segment does not have this property directly.
 )
 /**
  * Extension function to convert a StravaSegment (API Model)
@@ -606,6 +606,9 @@ class SegmentsRepository private constructor(context: Context) {
 
                 // get the detailed segment
                 val detailedSegment = fetchDetailedSegment(segment.id) ?: segment
+
+                // unfortunately, the detailedSegment does not contain the pr_time directly, so we have to copy it from the original segment.
+                detailedSegment.pr_time = segment.pr_time
 
                 newIds.add(segment.id)
                 if (!oldIds.contains(segment.id)) {
