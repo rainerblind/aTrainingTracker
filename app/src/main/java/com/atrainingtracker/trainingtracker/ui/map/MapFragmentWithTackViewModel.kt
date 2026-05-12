@@ -53,6 +53,7 @@ class MapFragmentWithTrackViewModel(application: Application) : AndroidViewModel
         }
 
         MapState(
+            zoomFocus = MapZoomFocus.LOCAL_SEGMENTS,
             segments = liveSegments.map { liveSegment ->
                 MapSegment(
                     stravaId = liveSegment.summary.stravaId,
@@ -65,13 +66,12 @@ class MapFragmentWithTrackViewModel(application: Application) : AndroidViewModel
             currentTrack = currentTrack,
             bearing = 0f,
             speed = 0f,
-            isFollowMeEnabled = false,
             markers = markers
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = MapState()
+        initialValue = MapState(zoomFocus = MapZoomFocus.LOCAL_SEGMENTS)
     )
 
     val currentLocation: StateFlow<LatLng?> = banalRepository.currentLocation

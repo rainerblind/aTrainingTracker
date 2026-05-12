@@ -40,6 +40,7 @@ import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
 import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
 import com.atrainingtracker.trainingtracker.ui.map.MapState
+import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
 import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
@@ -60,7 +61,7 @@ data class TrackingScreenState(
     val showMap: Boolean = false,
     val showLiveSegments: Boolean = false,
     val fields: List<SensorFieldState> = emptyList(),
-    val mapState: MapState = MapState()
+    val mapState: MapState = MapState(zoomFocus = MapZoomFocus.TRACK_AND_MARKERS)
 )
 
 /**
@@ -240,9 +241,9 @@ class TrackingViewModel(
                     showMap = viewInfo?.showMap ?: false,
                     showLiveSegments =  viewInfo?.showLiveSegments ?: false,
                     mapState = MapState(
+                        zoomFocus = MapZoomFocus.FOLLOW_ME,
                         speed = banalServiceRepository.currentSpeed.value?.toFloat() ?: 0f,
                         bearing = banalServiceRepository.currentBearing.value?.toFloat() ?: 0f,
-                        isFollowMeEnabled = true,
                         currentTrack = currentTrack,
                         segments = mapSegments,
                         activeLiveSegmentIds = activeIds,

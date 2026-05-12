@@ -23,16 +23,17 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.application
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
-import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
 import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.PolyUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -41,7 +42,9 @@ import kotlinx.coroutines.withContext
 
 class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val _aftermathState = MutableStateFlow(MapState(isFollowMeEnabled = false))
+    private val _aftermathState = MutableStateFlow(
+        MapState(zoomFocus = MapZoomFocus.TRACK_AND_MARKERS)
+    )
     val aftermathState = _aftermathState.asStateFlow()
 
     // TODO: Move to WorkoutRepository.
@@ -49,6 +52,7 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
     private val samplesDb = WorkoutSamplesDatabaseManager.getInstance(application)
 
     private val workoutRepository = WorkoutRepository.getInstance(application)
+    private val segmentsRepository = SegmentsRepository.getInstance(application)
 
     private val extremaSensorTypes = arrayOf(
         SensorType.ALTITUDE, SensorType.TEMPERATURE,
@@ -64,7 +68,7 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
             // Clear previous state so the user doesn't see "ghost" data from another workout
             withContext(Dispatchers.Main) {
                 _aftermathState.value = MapState(
-                    isFollowMeEnabled = false,
+                    zoomFocus = MapZoomFocus.TRACK_AND_MARKERS,
                     bSportType = bSportType,
                     tracks = emptyList(),
                     markers = emptyList()
@@ -74,7 +78,7 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
             // --- PHASE 2: Fast Track (From WorkoutData Polyline & Streams) ---
             // Decodes the thinned data already present in workoutData for instant UI feedback.
             if (workoutData.map_polyline.isNotEmpty()) {
-                val latLngs = com.google.maps.android.PolyUtil.decode(workoutData.map_polyline)
+                val latLngs = PolyUtil.decode(workoutData.map_polyline)
 
                 // Decode elevation streams
                 val alts = if (workoutData.encodedAltitudes.isNotEmpty()) {
@@ -147,6 +151,27 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
                     _aftermathState.value = _aftermathState.value.copy(tracks = fullTracks)
                 }
             }
+
+            // --- PHASE 5: Segments (Matches the Sport Type) ---
+            val allSegments = segmentsRepository.allSegmentsWithPath.value
+            val mapSegments = allSegments
+                .filter { it.summary.bSportType == bSportType }
+                .map { segment ->
+                    MapSegment(
+                        stravaId = segment.summary.stravaId,
+                        name = segment.summary.name,
+                        path = segment.path,
+                        bSportType = segment.summary.bSportType,
+                        showStartAndFinishText = false,
+                    )
+                }
+
+            withContext(Dispatchers.Main) {
+                _aftermathState.value = _aftermathState.value.copy(
+                    segments = mapSegments
+                )
+            }
+
         }
     }
 

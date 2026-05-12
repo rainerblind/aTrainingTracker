@@ -43,6 +43,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.fragments.preferences.StravaUploadFragment
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
 import com.atrainingtracker.trainingtracker.ui.map.MapState
+import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
 import com.atrainingtracker.trainingtracker.ui.segments.SegmentOnMapScreen
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
@@ -104,6 +105,7 @@ class StarredSegmentsFragment : Fragment() {
                             // Create MapState on the fly
                             val mapState = remember(selectedSegment) {
                                 MapState(
+                                    zoomFocus = MapZoomFocus.LOCAL_SEGMENTS,
                                     segments = listOf(
                                             MapSegment(
                                                 stravaId = selectedSegment.summary.stravaId,
@@ -113,8 +115,7 @@ class StarredSegmentsFragment : Fragment() {
                                                 showStartAndFinishText = false
                                         )
                                     ),
-                                    bSportType = selectedSegment.summary.bSportType,
-                                    isFollowMeEnabled = false
+                                    bSportType = selectedSegment.summary.bSportType
                                 )
                             }
 

@@ -146,9 +146,9 @@ class MapFragmentWithTrack : Fragment() {
                             // Transform the single selected LiveSegment into a MapState for the Detail Screen
                             val detailMapState = remember(selectedSegment) {
                                 MapState(
+                                    zoomFocus = MapZoomFocus.TRACK_AND_MARKERS,
                                     segments = if (selectedSegment != null) listOf(selectedSegment) else emptyList(),
-                                    bSportType = selectedSegment?.bSportType ?: BSportType.UNKNOWN,
-                                    isFollowMeEnabled = false
+                                    bSportType = selectedSegment?.bSportType ?: BSportType.UNKNOWN
                                 )
                             }
 
