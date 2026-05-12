@@ -44,11 +44,14 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 
+import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.ui.sporttype.SportTypeListFragment;
 import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedContainerFragment;
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFragmentFactory;
 import com.atrainingtracker.trainingtracker.fragments.preferences.PebbleScreenFragment;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
+import com.atrainingtracker.trainingtracker.routes.GpxRouteImporter;
+import com.atrainingtracker.trainingtracker.routes.RouteImportHelper;
 import com.atrainingtracker.trainingtracker.tracker.TrackerService;
 import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents;
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedFragment;
@@ -112,6 +115,7 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
+import kotlinx.coroutines.Dispatchers;
 import kotlinx.coroutines.flow.FlowKt;
 
 // import android.support.v7.app.AlertDialog;
@@ -417,6 +421,22 @@ public class MainActivityWithNavigation
         );
 
         observeNavigationEvents();
+
+        // started via file click to import a GPX file (route)
+        Intent intent = getIntent();
+        if (intent != null && Intent.ACTION_VIEW.equals(intent.getAction())) {
+            handleIncomingGpxIntent(intent.getData());
+        }
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent); // Essential: update the intent held by the activity
+
+        if (intent != null && Intent.ACTION_VIEW.equals(intent.getAction())) {
+            handleIncomingGpxIntent(intent.getData());
+        }
     }
 
     private void observeNavigationEvents() {
@@ -957,4 +977,14 @@ public class MainActivityWithNavigation
 
     public enum SelectedFragment {START_OR_TRACKING, WORKOUT_LIST}
 
+
+    /***********************************************************************************************
+     * GPX Imort
+     **********************************************************************************************/
+    private void handleIncomingGpxIntent(@Nullable Uri uri) {
+        if (uri == null) return;
+
+        // Simply all our Kotlin Bridge Utility
+        RouteImportHelper.importGpx(this, uri);
+    }
 }
