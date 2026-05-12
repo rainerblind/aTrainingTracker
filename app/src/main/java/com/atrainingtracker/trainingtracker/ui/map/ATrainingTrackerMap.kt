@@ -254,6 +254,11 @@ fun ATrainingTrackerMap(
         uiSettings = MapUiSettings(zoomControlsEnabled = false, tiltGesturesEnabled = true),
         onMapLoaded = { isMapLoaded = true }
     ) {
+        // --- GUARD CLAUSE ---
+        // If the map isn't loaded, stop here. This prevents any calls
+        // to BitmapDescriptorFactory inside the layers below.
+        if (!isMapLoaded) return@GoogleMap
+
         // --- Layer 1: Segments ---
         mapState.segments.forEach { segment ->
             SegmentLayer(
