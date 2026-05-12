@@ -36,6 +36,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.segments.LiveSegmentData
 import com.atrainingtracker.trainingtracker.segments.LiveSegmentStatus
+import com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepository
 import com.atrainingtracker.trainingtracker.segments.SegmentSummary
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
@@ -216,10 +217,10 @@ fun SegmentSummaryHeader(
                         Text(
                             text = stringResource(id = R.string.segment_status_offset, liveSegmentData.segmentOffset),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = if (liveSegmentData.segmentOffset_raw < SegmentsRepository.SEGMENT_DISTANCE_THRESHOLD * 0.5f) {
+                            color = if (liveSegmentData.segmentOffset_raw < LiveSegmentsRepository.SEGMENT_DISTANCE_THRESHOLD * 0.5f) {
                                 MaterialTheme.colorScheme.onSurfaceVariant
                             }
-                            else if (liveSegmentData.segmentOffset_raw < SegmentsRepository.SEGMENT_DISTANCE_THRESHOLD * 0.75f ) {
+                            else if (liveSegmentData.segmentOffset_raw < LiveSegmentsRepository.SEGMENT_DISTANCE_THRESHOLD * 0.75f ) {
                                 Zone3
                             }
                             else {

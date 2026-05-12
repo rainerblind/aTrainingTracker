@@ -32,11 +32,11 @@ class MapFragmentWithTrackViewModel(application: Application) : AndroidViewModel
     private val banalRepository = BANALServiceRepository.getInstance(application)
     private val segmentsRepository = SegmentsRepository.getInstance(application)
 
-    val liveSegments = segmentsRepository.liveSegments
+    val liveSegments = segmentsRepository.allSegmentsWithPath
 
     val mapState: StateFlow<MapState> = combine(
         banalRepository.currentTrack,
-        segmentsRepository.liveSegments // Observe the repository instead of a one-time DB hit
+        segmentsRepository.allSegmentsWithPath // Observe the repository instead of a one-time DB hit
     ) { currentTrack, liveSegments ->
 
         // Logic for Start Marker

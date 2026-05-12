@@ -44,12 +44,12 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
-import com.atrainingtracker.trainingtracker.segments.LiveSegment
+import com.atrainingtracker.trainingtracker.segments.SegmentWithPath
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SegmentList(
-    liveSegments: List<LiveSegment>,
+    segmentsWithPath: List<SegmentWithPath>,
     scrollState: LazyListState,
     isStravaConnected: Boolean,
     onConnectToStrava: () -> Unit,
@@ -85,7 +85,7 @@ fun SegmentList(
     ) {
         val bottomPadding = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
 
-        if (!isStravaConnected && liveSegments.isEmpty()) {
+        if (!isStravaConnected && segmentsWithPath.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -117,12 +117,12 @@ fun SegmentList(
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 items(
-                    items = liveSegments,
+                    items = segmentsWithPath,
                     key = { it.summary.stravaId } // Improves performance and scroll position handling
-                ) { liveSegment ->
+                ) { segmentWithPath ->
                     SegmentItem(
-                        summary = liveSegment.summary,
-                        pathPoints = liveSegment.path,
+                        summary = segmentWithPath.summary,
+                        pathPoints = segmentWithPath.path,
                         onSegmentClick = onSegmentClick
                     )
                 }

@@ -62,7 +62,7 @@ class StarredSegmentsFragment : Fragment() {
                         factory = SegmentListViewModel.SegmentListViewModelFactory(requireContext())
                     )
 
-                    val segments by viewModel.liveSegments.collectAsStateWithLifecycle()
+                    val segments by viewModel.segmentsWithPath.collectAsStateWithLifecycle()
                     val sortOrder by viewModel.sortOrder.collectAsState()
                     val refreshingSports by viewModel.refreshingSports.collectAsStateWithLifecycle()
 
@@ -77,7 +77,7 @@ class StarredSegmentsFragment : Fragment() {
                     if (selectedSegmentId == null) {
                         // SHOW LIST
                         SegmentsTabsScreen(
-                            liveSegments = segments,
+                            segmentsWithPath = segments,
                             pagerState = pagerState,
                             bikeListState = bikeListState,
                             runListState = runListState,

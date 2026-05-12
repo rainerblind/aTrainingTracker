@@ -27,6 +27,7 @@ import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.segments.LiveSegment
+import com.atrainingtracker.trainingtracker.segments.SegmentWithPath
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -69,8 +70,8 @@ class SegmentListViewModel(
     }
 
     // Reactive sorted list
-    val liveSegments: StateFlow<List<LiveSegment>> = combine(
-        segmentsRepository.liveSegments,
+    val segmentsWithPath: StateFlow<List<SegmentWithPath>> = combine(
+        segmentsRepository.allSegmentsWithPath,
         _sortOrder,
         banalServiceRepository.currentLocation // Directly observing the BANALService source
     ) { segments, order, location ->
@@ -80,26 +81,26 @@ class SegmentListViewModel(
 
             SegmentSortOrder.CLIMB_CATEGORY ->
                 segments.sortedWith(
-                    compareByDescending<LiveSegment> { it.summary.climbCategory_raw }
+                    compareByDescending<SegmentWithPath> { it.summary.climbCategory_raw }
                         .thenByDescending { it.summary.elevationGain_raw }
                         .thenBy { it.summary.name.lowercase() }
                 )
 
             SegmentSortOrder.TOTAL_ELEVATION_GAIN ->
                 segments.sortedWith(
-                    compareByDescending<LiveSegment> { it.summary.elevationGain_raw }
+                    compareByDescending<SegmentWithPath> { it.summary.elevationGain_raw }
                         .thenBy { it.summary.name.lowercase() }
                 )
 
             SegmentSortOrder.AVERAGE_GRADE ->
                 segments.sortedWith(
-                    compareByDescending<LiveSegment> { it.summary.averageGrade_raw }
+                    compareByDescending<SegmentWithPath> { it.summary.averageGrade_raw }
                         .thenBy { it.summary.name.lowercase() }
                 )
 
             SegmentSortOrder.SEGMENT_DISTANCE ->
                 segments.sortedWith(
-                    compareByDescending<LiveSegment> { it.summary.distance_raw }
+                    compareByDescending<SegmentWithPath> { it.summary.distance_raw }
                         .thenBy { it.summary.name.lowercase() }
                 )
 

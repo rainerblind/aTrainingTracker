@@ -34,6 +34,7 @@ import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.segments.LiveSegment
 import com.atrainingtracker.trainingtracker.segments.LiveSegmentStatus
+import com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepository
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
@@ -50,7 +51,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.Objects
@@ -74,7 +74,7 @@ class TrackingViewModel(
     private val application: Application,
     val trackingViewsRepository: TrackingViewsRepository,
     val banalServiceRepository: BANALServiceRepository,
-    segmentsRepository: SegmentsRepository,
+    liveSegmentsRepository: LiveSegmentsRepository,
     private val viewId: Long
 ) : ViewModel() {
 
@@ -100,11 +100,11 @@ class TrackingViewModel(
     // Filter and sort the segments from the repository:
     // TODO: also filter for activity type.
     val activeLiveSegments: StateFlow<List<LiveSegment>> = combine(
-        segmentsRepository.liveSegments,
+        liveSegmentsRepository.liveSegments,
         banalServiceRepository.bSportType
     ) { allLiveSegments, currentBSportType ->
         allLiveSegments.filter { segment ->
-            ( segment.summary.bSportType == currentBSportType
+            ( segment.staticData.summary.bSportType == currentBSportType
                     || currentBSportType == BSportType.UNKNOWN)
                     && segment.liveData.segmentStatus != LiveSegmentStatus.FAR_FAR_AWAY
         }
@@ -225,7 +225,7 @@ class TrackingViewModel(
                     )
                 }
 
-                val activeIds = activeLiveSegments.map { it.summary.stravaId }.toSet()
+                val activeIds = activeLiveSegments.map { it.staticData.summary.stravaId }.toSet()
 
                 // --- Step 4: Package everything into the TrackingScreenState ---
                 TrackingScreenState(
@@ -376,8 +376,8 @@ class TrackingViewModelFactory(
         if (modelClass.isAssignableFrom(TrackingViewModel::class.java)) {
             val trackingViewsRepo = TrackingViewsRepository.getInstance(application)
             val banalServiceRepo = BANALServiceRepository.getInstance(application)
-            val segmentsRepository = SegmentsRepository.getInstance(application)
-            return TrackingViewModel(application, trackingViewsRepo, banalServiceRepo, segmentsRepository, viewId) as T
+            val liveSegmentsRepository = LiveSegmentsRepository.getInstance(application)
+            return TrackingViewModel(application, trackingViewsRepo, banalServiceRepo, liveSegmentsRepository, viewId) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
