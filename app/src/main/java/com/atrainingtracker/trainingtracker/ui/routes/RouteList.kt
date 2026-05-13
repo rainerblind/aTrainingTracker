@@ -36,9 +36,12 @@ fun RouteList(
     LazyColumn(modifier = Modifier.fillMaxSize().padding(8.dp)) {
         items(routes, key = { it.summary.id }) { route ->
             RouteItem(
-                route = route,
+                summary = route.summary,
+                pathPoints = route.path,
                 onToggleSelection = { onToggle(route.summary.id, it) },
-                onDelete = { onDelete(route.summary.id) }
+                // onDelete = { onDelete(route.summary.id) },
+                onRouteClick = { },
+                modifier = Modifier
             )
         }
     }
