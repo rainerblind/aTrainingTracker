@@ -118,7 +118,10 @@ class RoutesFragment : Fragment() {
                             RouteOnMapScreen(
                                 routeSummary = selectedRoute.summary,
                                 mapState = mapState,
-                                modifier = Modifier.statusBarsPadding()
+                                modifier = Modifier.statusBarsPadding(),
+                                onToggleSelection = { isSelected ->
+                                    viewModel.toggleRouteSelection(selectedRoute.summary.id, isSelected)
+                                }
                             )
 
                             // Handle Back Press to return to list

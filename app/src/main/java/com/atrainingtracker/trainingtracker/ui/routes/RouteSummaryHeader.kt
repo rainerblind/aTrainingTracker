@@ -34,6 +34,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.database.RouteSource
 import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.RouteColorSelected
@@ -41,7 +42,7 @@ import com.atrainingtracker.trainingtracker.ui.theme.RouteColorSelected
 @Composable
 fun RouteSummaryHeader(
     summary: RouteSummary,
-    onToggleSelection: (Boolean) -> Unit = {},
+    onToggleSelection: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -156,8 +157,9 @@ fun PreviewRouteSummaryHeaderBike() {
                 distance = 68450.0,
                 elevationGain = 1250.0,
                 bSportType = BSportType.BIKE,
-                source = com.atrainingtracker.trainingtracker.database.RouteSource.LOCAL_GPX
-            )
+                source = RouteSource.LOCAL_GPX,
+            ),
+            onToggleSelection = {},
         )
     }
 }
@@ -175,8 +177,9 @@ fun PreviewRouteSummaryHeaderRun() {
                 distance = 5200.0,
                 elevationGain = 15.0,
                 bSportType = BSportType.RUN,
-                source = com.atrainingtracker.trainingtracker.database.RouteSource.STRAVA
-            )
+                source = RouteSource.STRAVA
+            ),
+            onToggleSelection = {},
         )
     }
 }

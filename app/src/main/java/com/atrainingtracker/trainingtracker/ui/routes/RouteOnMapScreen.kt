@@ -40,6 +40,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 fun RouteOnMapScreen(
     routeSummary: RouteSummary?,
     mapState: MapState,
+    onToggleSelection: (Boolean) -> Unit,
     modifier: Modifier
 ) {
     // Shared state for the "seeker" position on both Map and Profile
@@ -57,7 +58,8 @@ fun RouteOnMapScreen(
                 Column(modifier = modifier) {
                     RouteSummaryHeader(
                         summary = it,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        onToggleSelection = onToggleSelection
                     )
                 }
             }
