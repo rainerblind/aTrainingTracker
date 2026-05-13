@@ -122,5 +122,6 @@ data class MapRoute(
 enum class MapZoomFocus {
     TRACK_AND_MARKERS,
     LOCAL_SEGMENTS,
+    LOCAL_ROUTES,
     FOLLOW_ME
 }

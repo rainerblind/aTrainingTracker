@@ -133,7 +133,7 @@ fun ATrainingTrackerMap(
 
     // Automated Bounds Fitting (Optimized for Local Area)
     LaunchedEffect(mapState.tracks, mapState.markers, mapState.segments, isMapLoaded) {
-        if (mapState.zoomFocus == MapZoomFocus.TRACK_AND_MARKERS || mapState.zoomFocus == MapZoomFocus.LOCAL_SEGMENTS) {
+        if (mapState.zoomFocus == MapZoomFocus.TRACK_AND_MARKERS || mapState.zoomFocus == MapZoomFocus.LOCAL_SEGMENTS || mapState.zoomFocus == MapZoomFocus.LOCAL_ROUTES) {
             val userPos = currentLocation
             val builder = LatLngBounds.Builder()
             var hasPoints = false
@@ -163,11 +163,24 @@ fun ATrainingTrackerMap(
             }
 
             if (mapState.zoomFocus == MapZoomFocus.LOCAL_SEGMENTS) {
-                // 2. Include only local segment points
+                // 2. Include only local segments
                 mapState.segments.forEach { segment ->
-                    segment.path.forEach {
-                        if (isLocal(it.latLng)) {
-                            builder.include(it.latLng); hasPoints = true
+                    if (isLocal(segment.path.first().latLng)) {  // The segment is 'local' iff the first point is local
+                        hasPoints = true
+                        segment.path.forEach {
+                            builder.include(it.latLng);
+                        }
+                    }
+                }
+            }
+
+            if (mapState.zoomFocus == MapZoomFocus.LOCAL_ROUTES) {
+                // 3. Include only local routes
+                mapState.routes.forEach { route ->
+                    if (isLocal(route.path.first().latLng)) {  // The route is 'local' iff the first point is local
+                        hasPoints = true
+                        route.path.forEach {
+                            builder.include(it.latLng);
                         }
                     }
                 }

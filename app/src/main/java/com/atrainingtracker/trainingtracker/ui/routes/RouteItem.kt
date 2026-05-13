@@ -45,6 +45,7 @@ import com.atrainingtracker.trainingtracker.ui.theme.RouteColorUnselected
 fun RouteItem(
     summary: RouteSummary,
     pathPoints: List<PathPoint>,
+    // TODO: onHeaderClick: (Long) -> Unit,
     onRouteClick: (Long) -> Unit,
     onToggleSelection: (Boolean) -> Unit,
     modifier: Modifier = Modifier

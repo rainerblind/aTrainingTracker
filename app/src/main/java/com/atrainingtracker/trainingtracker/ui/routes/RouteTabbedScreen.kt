@@ -18,65 +18,138 @@
 
 package com.atrainingtracker.trainingtracker.ui.routes
 
-import androidx.activity.result.launch
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.pager.PagerState
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PrimaryScrollableTabRow
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
-import androidx.compose.material3.TabRowDefaults
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.isEmpty
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.database.RouteWithPath
+import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
 import kotlinx.coroutines.launch
 
 @Composable
-fun RouteTabbedScreen(viewModel: RoutesViewModel) {
-    val routes by viewModel.routes.collectAsState()
-    val pagerState = rememberPagerState(pageCount = { viewModel.sports.size })
+fun RouteTabbedScreen(
+    routesWithPath: List<RouteWithPath>,
+    pagerState: PagerState,
+    allSportsListState: LazyListState,
+    bikeListState: LazyListState,
+    runListState: LazyListState,
+    otherListState: LazyListState,
+    onRouteClick: (Long) -> Unit,
+    onToggle: (Long, Boolean) -> Unit,
+) {
+    // Define our tabs mapping to BSportType
+    val tabs = listOf(
+        stringResource(R.string.sport_type_tab_all) to null,
+        stringResource(R.string.sport_type_tab_bike) to BSportType.BIKE,
+        stringResource(R.string.sport_type_tab_run) to BSportType.RUN,
+        stringResource(R.string.sport_type_tab_unknown) to BSportType.UNKNOWN
+    )
+
     val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        TabRow(
-            selectedTabIndex = pagerState.currentPage,
-            indicator = { tabPositions ->
-                TabRowDefaults.SecondaryIndicator(
-                    Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage]),
-                    color = Color(0xFF228B22) // ForestGreen
-                )
-            }
-        ) {
-            viewModel.sports.forEachIndexed { index, sport ->
-                Tab(
-                    selected = pagerState.currentPage == index,
-                    onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
-                    text = { Text(sport.name) },
-                    selectedContentColor = Color(0xFF228B22),
-                    unselectedContentColor = Color.Gray
-                )
-            }
-        }
+    val appBarMaxHeightPx = with(density) { 135.dp.roundToPx() }
+    val connection = remember(appBarMaxHeightPx) {
+        CollapsingAppBarNestedScrollConnection(appBarMaxHeightPx)
+    }
 
-        HorizontalPager(state = pagerState) { pageIndex ->
-            val currentSport = viewModel.sports[pageIndex]
-            val filteredRoutes = routes.filter { it.summary.bSportType == currentSport }
+    Surface(modifier = Modifier.fillMaxSize()) {
+        Box(Modifier.nestedScroll(connection)) {
 
-            if (filteredRoutes.isEmpty()) {
-                EmptyRoutesPlaceholder(currentSport)
-            } else {
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize(),
+                userScrollEnabled = true,
+                verticalAlignment = Alignment.Top
+            ) { pageIndex ->
+                val currentSport = tabs[pageIndex].second
+                val listState = when (currentSport) {
+                    BSportType.BIKE -> bikeListState
+                    BSportType.RUN -> runListState
+                    BSportType.UNKNOWN -> otherListState
+                    else -> allSportsListState
+                }
+                val filteredRoutesWithPath = if (currentSport == null) {
+                    routesWithPath
+                }
+                else {
+                    routesWithPath.filter { it.summary.bSportType == currentSport }
+                }
+
                 RouteList(
-                    routes = filteredRoutes,
-                    onToggle = viewModel::toggleRouteSelection,
-                    onDelete = viewModel::deleteRoute
+                    routes = filteredRoutesWithPath,
+                    scrollState = listState,
+                    onRouteClick = onRouteClick,
+                    onToggle = onToggle,
+                    appBarOffsetPx = connection.appBarOffset,
+                    headerHeightPx = appBarMaxHeightPx.toFloat(),
                 )
+            }
+
+            // --- HEADER (Same as WorkoutTabsScreen) ---
+            Surface(
+                modifier = Modifier.offset { IntOffset(0, connection.appBarOffset) },
+                color = MaterialTheme.colorScheme.primaryContainer,
+                // tonalElevation = 3.dp
+            ) {
+                Column {
+                    Column(modifier = Modifier.statusBarsPadding()) {
+                        // Title Row with Sort Icon
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = stringResource(R.string.routes),
+                                style = MaterialTheme.typography.headlineSmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+
+                            // TODO: add Box for some menu
+                        }
+                    }
+                    PrimaryScrollableTabRow(
+                        selectedTabIndex = pagerState.currentPage,
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                        divider = {}
+                    ) {
+                        tabs.forEachIndexed { index, tab ->
+                            Tab(
+                                selected = pagerState.currentPage == index,
+                                onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
+                                text = { Text(text = tab.first) }
+                            )
+                        }
+                    }
+                }
             }
         }
     }

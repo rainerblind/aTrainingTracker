@@ -22,9 +22,23 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.atrainingtracker.trainingtracker.ui.map.MapRoute
+import com.atrainingtracker.trainingtracker.ui.map.MapState
+import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 /**
@@ -43,12 +57,77 @@ class RoutesFragment : Fragment() {
         // Initialize the ViewModel
         viewModel = ViewModelProvider(this).get(RoutesViewModel::class.java)
 
+
         return ComposeView(requireContext()).apply {
             setContent {
                 ATrainingTrackerTheme {
-                    // This calls the Tabbed screen we discussed,
-                    // which uses BSportType.BIKE, RUN, and UNKNOWN tabs.
-                    RouteTabbedScreen(viewModel)
+
+                    val routes by viewModel.routes.collectAsStateWithLifecycle()
+
+                    val pagerState = rememberPagerState(pageCount = { 4 })
+                    val allSportsListState = rememberLazyListState()
+                    val bikeListState = rememberLazyListState()
+                    val runListState = rememberLazyListState()
+                    val otherListState = rememberLazyListState()
+
+                    // 1. Manage local navigation state
+                    var selectedRouteId by rememberSaveable { mutableStateOf<Long?>(null) }
+
+                    // 2. Logic to switch between List and Detail
+                    if (selectedRouteId == null) {
+                        // SHOW LIST
+                        RouteTabbedScreen(
+                            routesWithPath = routes,
+                            pagerState = pagerState,
+                            allSportsListState = allSportsListState,
+                            bikeListState = bikeListState,
+                            runListState = runListState,
+                            otherListState = otherListState,
+                            onRouteClick = { id ->
+                                selectedRouteId = id
+                            },
+                            onToggle = { id, isSelected ->
+                                viewModel.toggleRouteSelection(id, isSelected)
+                            }
+
+                        )
+                    } else {
+                        // SHOW DETAIL
+                        // Deriving the specific route from the list we already have
+                        val selectedRoute = routes.find { it.summary.id == selectedRouteId }
+
+                        if (selectedRoute != null) {
+
+                            // Create MapState on the fly
+                            val mapState = remember(selectedRoute) {
+                                MapState(
+                                    zoomFocus = MapZoomFocus.LOCAL_ROUTES,
+                                    routes = listOf(
+                                        MapRoute(
+                                            id = selectedRoute.summary.id,
+                                            name = selectedRoute.summary.name,
+                                            isSelected = selectedRoute.summary.isSelected,
+                                            bSportType = selectedRoute.summary.bSportType,
+                                            path = selectedRoute.path
+                                        )
+                                    ),
+                                    bSportType = selectedRoute.summary.bSportType
+                                )
+                            }
+
+                            RouteOnMapScreen(
+                                routeSummary = selectedRoute.summary,
+                                mapState = mapState,
+                                modifier = Modifier.statusBarsPadding()
+                            )
+
+                            // Handle Back Press to return to list
+                            BackHandler {
+                                selectedRouteId = null
+                            }
+                        }
+                    }
+
                 }
             }
         }
