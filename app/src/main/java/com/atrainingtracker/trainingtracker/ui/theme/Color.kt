@@ -103,4 +103,9 @@ val StravaOrange = Color(0xFFFC4C02)
 
 // routes
 val RouteColorSelected = Color(0xFF228B22) // ForestGreen
-val RouteColorUnselected = Color(0xFF9ACD32) // YellowGreen
+// val RouteColorUnselected = Color(0xFF9ACD32) // YellowGreen
+// val RouteColorUnselected = Color(0xFF8FBC8B) // DarkSeaGreen
+// val RouteColorUnselected = Color(0xFF66CDAA) // MediumAquamarine
+// val RouteColorUnselected = Color(0xFF98FB98) // PaleGreen
+val RouteColorUnselected = Color(0xFF90EE90) // LightGreen
+// val RouteColorUnselected = Color(0xFF32CD32) // LimeGreen
