@@ -56,9 +56,10 @@ class GpxRouteImporter(private val context: Context) {
                     id = 0, // DB will generate this
                     externalId = uri.lastPathSegment ?: "unknown_file",
                     name = name ?: uri.lastPathSegment ?: "Imported Route",
+                    isSelected = false,
                     distance = totalDistance,
                     elevationGain = elevationGain,
-                    sportType = sportType,
+                    bSportType = sportType,
                     source = RouteSource.LOCAL_GPX
                 )
 

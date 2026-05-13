@@ -66,6 +66,7 @@ data class MapState(
     val tracks: List<MapTrack> = emptyList(),
     val segments: List<MapSegment> = emptyList(),
     val activeLiveSegmentIds: Set<Long> = emptySet(),
+    val routes: List<MapRoute> = emptyList(),
     val markers: List<LocationMarker> = emptyList(),
     val bSportType: BSportType = BSportType.UNKNOWN
 )
@@ -108,6 +109,14 @@ data class MapSegment(
     val bSportType: BSportType,
     val path: List<PathPoint>,
     val showStartAndFinishText: Boolean = true
+)
+
+data class MapRoute(
+    val id: Long,
+    val name: String,
+    val isSelected: Boolean,
+    val bSportType: BSportType,
+    val path: List<PathPoint>
 )
 
 enum class MapZoomFocus {

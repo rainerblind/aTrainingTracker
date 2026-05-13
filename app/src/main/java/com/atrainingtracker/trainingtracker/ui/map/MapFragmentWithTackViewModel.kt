@@ -22,6 +22,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository
 import com.google.android.gms.maps.model.LatLng
@@ -31,13 +32,15 @@ class MapFragmentWithTrackViewModel(application: Application) : AndroidViewModel
 
     private val banalRepository = BANALServiceRepository.getInstance(application)
     private val segmentsRepository = SegmentsRepository.getInstance(application)
+    private val routesRepository = RoutesRepository.getInstance(application)
 
     val liveSegments = segmentsRepository.allSegmentsWithPath
 
     val mapState: StateFlow<MapState> = combine(
         banalRepository.currentTrack,
-        segmentsRepository.allSegmentsWithPath // Observe the repository instead of a one-time DB hit
-    ) { currentTrack, liveSegments ->
+        segmentsRepository.allSegmentsWithPath,
+        routesRepository.allRoutes
+    ) { currentTrack, liveSegments, allRoutes ->
 
         // Logic for Start Marker
         val markers = if (currentTrack.isNotEmpty()) {
@@ -61,6 +64,15 @@ class MapFragmentWithTrackViewModel(application: Application) : AndroidViewModel
                     bSportType = liveSegment.summary.bSportType,
                     path = liveSegment.path,
                     showStartAndFinishText = true
+                )
+            },
+            routes = allRoutes.map { routeWithPath ->
+                MapRoute(
+                    id = routeWithPath.summary.id,
+                    name = routeWithPath.summary.name,
+                    isSelected = routeWithPath.summary.isSelected,
+                    bSportType = routeWithPath.summary.bSportType,
+                    path = routeWithPath.path
                 )
             },
             currentTrack = currentTrack,

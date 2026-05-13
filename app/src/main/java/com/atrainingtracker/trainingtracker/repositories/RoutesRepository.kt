@@ -26,11 +26,9 @@ import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -44,12 +42,8 @@ class RoutesRepository private constructor(context: Context) {
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     // StateFlow for the UI to observe the list of routes
-    private val _allRoutes = MutableStateFlow<List<RouteSummary>>(emptyList())
-    val allRoutes: StateFlow<List<RouteSummary>> = _allRoutes.asStateFlow()
-
-    // 2. StateFlow for the Map & Engine (Detailed Paths)
-    private val _selectedRoutes = MutableStateFlow<List<RouteWithPath>>(emptyList())
-    val selectedRoutes: StateFlow<List<RouteWithPath>> = _selectedRoutes.asStateFlow()
+    private val _allRoutes = MutableStateFlow<List<RouteWithPath>>(emptyList())
+    val allRoutes: StateFlow<List<RouteWithPath>> = _allRoutes.asStateFlow()
 
     init {
         // Initial load of route summaries from the database
@@ -63,21 +57,15 @@ class RoutesRepository private constructor(context: Context) {
     fun refreshRoutes() {
         repositoryScope.launch {
             // Fetch summaries for the list view
-            val summaries = routesDb.getAllRouteSummaries()
-            _allRoutes.value = summaries
-
-            // Fetch full paths only for those marked 'is_selected'
-            val selectedDetailed = routesDb.getSelectedRoutes()
-            _selectedRoutes.value = selectedDetailed
+            _allRoutes.value = routesDb.getAllRoutes()
         }
     }
 
     /**
-     * Fetches the full high-resolution path for a specific route.
-     * This is used when a user selects a route to "Follow".
+     * Fetches the full high-resolution path with distance and altitude for a specific route.
      */
-    suspend fun getRouteWithPath(routeId: Long): RouteWithPath? = withContext(Dispatchers.IO) {
-        routesDb.getRouteWithPath(routeId)
+    suspend fun getRoutePath(routeId: Long): List<PathPoint> = withContext(Dispatchers.IO) {
+        routesDb.getRoutePath(routeId)
     }
 
     /**

@@ -52,6 +52,8 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.segments.SegmentHelper
 import com.atrainingtracker.trainingtracker.ui.theme.StravaOrange
+import com.atrainingtracker.trainingtracker.ui.theme.RouteColorSelected
+import com.atrainingtracker.trainingtracker.ui.theme.RouteColorUnselected
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
@@ -266,7 +268,7 @@ fun ATrainingTrackerMap(
         // --- GUARD CLAUSE ---
         // If the map isn't loaded, stop here. This prevents any calls
         // to BitmapDescriptorFactory inside the layers below.
-        if (!isMapLoaded) return@GoogleMap
+        // if (!isMapLoaded) return@GoogleMap
 
         // --- Layer 1: Segments ---
         mapState.segments.forEach { segment ->
@@ -281,6 +283,7 @@ fun ATrainingTrackerMap(
             )
         }
 
+        // Tracks
         mapState.tracks.forEach { track ->
             if (track.isVisible) {
                 Polyline(
@@ -289,6 +292,15 @@ fun ATrainingTrackerMap(
                     width = 5f
                 )
             }
+        }
+
+        // Routes
+        mapState.routes.forEach { route ->
+            Polyline(
+                points = route.path.map { it.latLng },
+                color = if (route.isSelected) RouteColorSelected else RouteColorUnselected,
+                width = 5f
+            )
         }
 
         // show a marker for the selected distance

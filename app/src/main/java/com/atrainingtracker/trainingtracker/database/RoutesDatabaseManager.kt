@@ -36,9 +36,10 @@ data class RouteSummary(
     val id: Long,
     val externalId: String,
     val name: String,
+    val isSelected: Boolean,
     val distance: Double,
     val elevationGain: Double,
-    val sportType: BSportType,
+    val bSportType: BSportType,
     val source: RouteSource
 )
 
@@ -87,38 +88,23 @@ class RoutesDatabaseManager private constructor(context: Context) {
 
     /**
      * Inserts a new route into the database.
-     * Uses PolyUtil to encode the List<LatLng> into a single string.
      */
     fun insertRoute(summary: RouteSummary, path: List<PathPoint>): Long {
         val db = dbHelper.writableDatabase
         db.beginTransaction()
         return try {
-            // 1. Calculate the encoded polyline string with a step size of ENCODING_STEP_SIZE
-            val latLngsForEncoding = mutableListOf<LatLng>()
-            for (i in path.indices step RouteContract.ENCODING_STEP_SIZE) {
-                latLngsForEncoding.add(path[i].latLng)
-            }
-            // Ensure the last point is always included for visual closure
-            if (path.isNotEmpty() && (path.size - 1) % RouteContract.ENCODING_STEP_SIZE != 0) {
-                latLngsForEncoding.add(path.last().latLng)
-            }
-            // now, do the encoding
-            val encodedPolyline = PolyUtil.encode(latLngsForEncoding)
-
-            // 2. Insert Summary
+            // 1. Insert Summary
             val values = ContentValues().apply {
                 put(RouteContract.COLUMN_EXTERNAL_ID, summary.externalId)
                 put(RouteContract.COLUMN_NAME, summary.name)
                 put(RouteContract.COLUMN_DISTANCE, summary.distance)
                 put(RouteContract.COLUMN_ELEVATION_GAIN, summary.elevationGain)
-                put(RouteContract.COLUMN_SPORT_TYPE, summary.sportType.name)
+                put(RouteContract.COLUMN_SPORT_TYPE, summary.bSportType.name)
                 put(RouteContract.COLUMN_SOURCE, summary.source.name)
-                put(RouteContract.COLUMN_MAP_POLYLINE, encodedPolyline)
             }
             val routeId = db.insert(RouteContract.TABLE_ROUTES, null, values)
 
-            // 3. Insert ALL granular points (Step size = 1)
-            // We keep the high-resolution data in the points table for live navigation
+            // 2. Insert the route points
             path.forEach { point ->
                 val pValues = ContentValues().apply {
                     put(RouteContract.COLUMN_ROUTE_ID_FK, routeId)
@@ -138,13 +124,13 @@ class RoutesDatabaseManager private constructor(context: Context) {
     }
 
     /**
-     * Retrieves all routes, sorted by most recently used.
-     * Decodes the polyline string into a list of PathPoints.
+     * Retrieves all routes.
      */
-    fun getAllRouteSummaries(): List<RouteSummary> {
-        val routes = mutableListOf<RouteSummary>()
+    fun getAllRoutes(): List<RouteWithPath> {
+        val routes = mutableListOf<RouteWithPath>()
         val db = dbHelper.readableDatabase
 
+        // Index for the polyline column
         db.query(
             RouteContract.TABLE_ROUTES,
             null, // all columns
@@ -154,42 +140,16 @@ class RoutesDatabaseManager private constructor(context: Context) {
             null,
             null
         ).use { cursor ->
+
             while (cursor.moveToNext()) {
-                // Use the helper here to avoid duplicating the String/Enum logic
-                routes.add(mapCursorToRouteSummary(cursor))
+                val routeSummary = mapCursorToRouteSummary(cursor)
+                val pathPoints = getRoutePath(routeSummary.id)
+
+                routes.add(RouteWithPath(routeSummary, pathPoints))
             }
         }
         return routes
     }
-
-    /**
-     * Retrieves a specific route with its full path.
-     */
-    fun getRouteWithPath(routeId: Long): RouteWithPath? {
-        val db = dbHelper.readableDatabase
-        var summary: RouteSummary? = null
-
-        // 1. Fetch the Summary
-        db.query(
-            RouteContract.TABLE_ROUTES,
-            null,
-            "${RouteContract.COLUMN_ID} = ?",
-            arrayOf(routeId.toString()),
-            null, null, null
-        ).use { cursor ->
-            if (cursor.moveToFirst()) {
-                summary = mapCursorToRouteSummary(cursor)
-            }
-        }
-
-        val actualSummary = summary ?: return null
-
-        // 2. Fetch the Path Points
-        val path = getRoutePath(routeId)
-
-        return RouteWithPath(actualSummary, path)
-    }
-
 
     /**
      * Toggles whether a route is marked for detailed display on the map.
@@ -206,31 +166,6 @@ class RoutesDatabaseManager private constructor(context: Context) {
             arrayOf(routeId.toString())
         )
     }
-
-    /**
-     * Fetches only the routes that are currently marked as selected.
-     * Useful for the LiveGuidanceRepository to load paths into memory.
-     */
-    fun getSelectedRoutes(): List<RouteWithPath> {
-        val routes = mutableListOf<RouteWithPath>()
-        val db = dbHelper.readableDatabase
-
-        db.query(
-            RouteContract.TABLE_ROUTES,
-            null,
-            "${RouteContract.COLUMN_IS_SELECTED} = 1",
-            null, null, null, null
-        ).use { cursor ->
-            while (cursor.moveToNext()) {
-                val routeId = cursor.getLong(cursor.getColumnIndexOrThrow(RouteContract.COLUMN_ID))
-                val summary = mapCursorToRouteSummary(cursor)
-                val path = getRoutePath(routeId)
-                routes.add(RouteWithPath(summary, path))
-            }
-        }
-        return routes
-    }
-
 
     /**
      * Retrieves only the path points for a specific route ID.
@@ -276,6 +211,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
         val idIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_ID)
         val extIdIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_EXTERNAL_ID)
         val nameIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_NAME)
+        val isSelectedIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_IS_SELECTED)
         val distIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_DISTANCE)
         val elevIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_ELEVATION_GAIN)
         val sportIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_SPORT_TYPE)
@@ -292,9 +228,10 @@ class RoutesDatabaseManager private constructor(context: Context) {
             id = cursor.getLong(idIdx),
             externalId = cursor.getString(extIdIdx) ?: "",
             name = cursor.getString(nameIdx) ?: "Unknown Route",
+            isSelected = cursor.getInt(isSelectedIdx) == 1,
             distance = cursor.getDouble(distIdx),
             elevationGain = cursor.getDouble(elevIdx),
-            sportType = sportType,
+            bSportType = sportType,
             source = RouteSource.fromString(cursor.getString(sourceIdx))
         )
     }
@@ -329,7 +266,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
         const val COLUMN_SPORT_TYPE = "sport_type"
         const val COLUMN_SOURCE = "source"
         const val COLUMN_IS_SELECTED = "is_selected"
-        const val COLUMN_MAP_POLYLINE = "map_polyline"
+        // const val COLUMN_MAP_POLYLINE = "map_polyline"
 
         const val TABLE_ROUTE_POINTS = "route_points"
         const val COLUMN_POINT_ID = "id"
@@ -348,8 +285,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
             $COLUMN_ELEVATION_GAIN REAL,
             $COLUMN_SPORT_TYPE TEXT,
             $COLUMN_SOURCE TEXT,
-            $COLUMN_IS_SELECTED INTEGER,
-            $COLUMN_MAP_POLYLINE TEXT
+            $COLUMN_IS_SELECTED INTEGER
         );
     """
 
@@ -375,7 +311,8 @@ class RoutesDatabaseManager private constructor(context: Context) {
 
         companion object {
             const val DB_NAME = "Routes.db"
-            const val DB_VERSION = 2 // Storing BSportType as String.
+            // const val DB_VERSION = 2 // Storing BSportType as String.
+            const val DB_VERSION = 3    // No more storing the polyline.
 
             private const val TAG = "RoutesDbHelper"
             private val DEBUG = TrainingApplication.getDebug(true)
@@ -396,7 +333,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
             Log.i(TAG, "Upgrading Routes database from $oldVersion to $newVersion")
 
-            if (oldVersion < 2) {
+            if (oldVersion < 3) {
                 db.execSQL("DROP TABLE IF EXISTS ${RouteContract.TABLE_ROUTE_POINTS}")
                 db.execSQL("DROP TABLE IF EXISTS ${RouteContract.TABLE_ROUTES}")
                 onCreate(db)
