@@ -103,6 +103,7 @@ fun RouteTabbedScreen(
 
                 RouteList(
                     routes = filteredRoutesWithPath,
+                    bSportType = currentSport,
                     scrollState = listState,
                     onRouteClick = onRouteClick,
                     onToggle = onToggle,

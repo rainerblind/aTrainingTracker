@@ -995,7 +995,8 @@
 
     <!-- routes -->
     <string name="routes">Routen</string>
-    <string name="no_routes_available">No %s routes available</string>
+    <string name="no_routes_available">Keine %s Routen verfügbar.</string>
+    <string name="absolutely_no_routes_available">Keine Routen verfügbar.</string>
     <string name="routes_import_hint">Du kannst GPX Dateien importieren, indem Du im Datei Exploerer auf eine GPX-Datei klickst.</string>
 
 </resources>

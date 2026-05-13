@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -32,11 +31,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
 
 @Composable
 fun RouteList(
     routes: List<RouteWithPath>,
+    bSportType: BSportType?,
     scrollState: LazyListState,
     onToggle: (Long, Boolean) -> Unit,
     onRouteClick: (Long) -> Unit,
@@ -47,31 +48,37 @@ fun RouteList(
     // val topPadding = with(density) { (headerHeightPx + appBarOffsetPx).toDp() }
     val bottomPadding = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
 
-    LazyColumn(
-        state = scrollState,
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(
-            // Calculation: The initial header height (px) + the current offset (px)
-            // convert the final result to Dp.
-            top = with(density) { (headerHeightPx + appBarOffsetPx).toDp() + 16.dp },
-            bottom = bottomPadding + 16.dp,
-            start = 4.dp,
-            end = 4.dp
-        ),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        items(
-            routes,
-            key = { it.summary.id }
-        ) { route ->
-            RouteItem(
-                summary = route.summary,
-                pathPoints = route.path,
-                onToggleSelection = { onToggle(route.summary.id, it) },
-                // onDelete = { onDelete(route.summary.id) },
-                onRouteClick = onRouteClick,
-                modifier = Modifier
-            )
+    if (routes.isEmpty()) {
+        EmptyRoutesPlaceholder(bSportType = bSportType)
+    }
+    else {
+
+        LazyColumn(
+            state = scrollState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                // Calculation: The initial header height (px) + the current offset (px)
+                // convert the final result to Dp.
+                top = with(density) { (headerHeightPx + appBarOffsetPx).toDp() },
+                bottom = bottomPadding + 16.dp,
+                start = 4.dp,
+                end = 4.dp
+            ),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            items(
+                routes,
+                key = { it.summary.id }
+            ) { route ->
+                RouteItem(
+                    summary = route.summary,
+                    pathPoints = route.path,
+                    onToggleSelection = { onToggle(route.summary.id, it) },
+                    // onDelete = { onDelete(route.summary.id) },
+                    onRouteClick = onRouteClick,
+                    modifier = Modifier
+                )
+            }
         }
     }
 }

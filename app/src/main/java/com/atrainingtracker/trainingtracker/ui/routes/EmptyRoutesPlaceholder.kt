@@ -37,10 +37,9 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.R
 
 @Composable
-fun EmptyRoutesPlaceholder(bSportType: BSportType) {
+fun EmptyRoutesPlaceholder(bSportType: BSportType?) {
 
     val context = LocalContext.current
-    val sportName = bSportType.getName(context)
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -60,7 +59,11 @@ fun EmptyRoutesPlaceholder(bSportType: BSportType) {
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = stringResource(R.string.no_routes_available, bSportType.getName(context)),
+                text = if (bSportType != null) {
+                    stringResource(R.string.no_routes_available, bSportType.getName(context))
+                } else {
+                    stringResource(R.string.absolutely_no_routes_available)
+                },
                 style = MaterialTheme.typography.titleMedium,
                 color = Color.Gray,
                 textAlign = TextAlign.Center

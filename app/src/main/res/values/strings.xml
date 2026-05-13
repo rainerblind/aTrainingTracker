@@ -1098,7 +1098,8 @@
 
     <!-- routes -->
     <string name="routes">Routes</string>
-    <string name="no_routes_available">No %s routes available</string>
+    <string name="no_routes_available">No %s routes available.</string>
+    <string name="absolutely_no_routes_available">No routes available.</string>
     <string name="routes_import_hint">Import a GPX file by clicking on it in your file manager to add routes here.</string>
 
 </resources>
