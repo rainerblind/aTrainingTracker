@@ -993,5 +993,9 @@
     <string name="sort_segment_length">Länge</string>
     <string name="sort_name">Name</string>
 
+    <!-- routes -->
+    <string name="routes">Routen</string>
+    <string name="no_routes_available">No %s routes available</string>
+    <string name="routes_import_hint">Du kannst GPX Dateien importieren, indem Du im Datei Exploerer auf eine GPX-Datei klickst.</string>
 
 </resources>

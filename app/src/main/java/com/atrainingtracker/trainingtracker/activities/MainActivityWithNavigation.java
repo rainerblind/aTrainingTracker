@@ -57,6 +57,7 @@ import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents;
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedFragment;
 import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentFragment;
 import com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrack;
+import com.atrainingtracker.trainingtracker.ui.routes.RoutesFragment;
 import com.atrainingtracker.trainingtracker.ui.segments.segmentlist.StarredSegmentsFragment;
 import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository;
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsFragment;
@@ -740,6 +741,11 @@ public class MainActivityWithNavigation
             case R.id.drawer_segments:
                 mFragment = StarredSegmentsFragment.newInstance();
                 tag = StarredSegmentsFragment.TAG;
+                break;
+
+            case R.id.drawer_routes:
+                mFragment = RoutesFragment.newInstance();
+                tag = RoutesFragment.TAG;
                 break;
 
             case R.id.drawer_workouts:

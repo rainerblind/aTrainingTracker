@@ -42,6 +42,12 @@
                 android:id="@+id/drawer_segments"
                 android:icon="@drawable/ic_segment"
                 android:title="@string/segments" />
+
+            <item
+                android:id="@+id/drawer_routes"
+                android:icon="@drawable/ic_route"
+                android:title="@string/routes" />
+
 <!-- NO_MY_LOCATIONS
             <item
                 android:id="@+id/drawer_my_locations"

@@ -1096,4 +1096,9 @@
     <string name="sort_segment_length">Segment Length</string>
     <string name="sort_name">Name</string>
 
+    <!-- routes -->
+    <string name="routes">Routes</string>
+    <string name="no_routes_available">No %s routes available</string>
+    <string name="routes_import_hint">Import a GPX file by clicking on it in your file manager to add routes here.</string>
+
 </resources>
