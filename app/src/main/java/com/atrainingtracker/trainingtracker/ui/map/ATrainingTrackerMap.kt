@@ -302,7 +302,7 @@ fun ATrainingTrackerMap(
                 Polyline(
                     points = track.path.map { it.latLng },
                     color = track.color,
-                    width = 5f
+                    width = 8f
                 )
             }
         }
@@ -315,7 +315,7 @@ fun ATrainingTrackerMap(
             Polyline(
                 points = route.path.map { it.latLng },
                 color = routeColor.copy(alpha = alpha),
-                width = 5f
+                width = 8f
             )
         }
 

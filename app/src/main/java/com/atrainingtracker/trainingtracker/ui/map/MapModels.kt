@@ -23,6 +23,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.database.RouteWithPath
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.LatLng
 
@@ -118,6 +119,20 @@ data class MapRoute(
     val bSportType: BSportType,
     val path: List<PathPoint>
 )
+/**
+ * Extension function to convert a Database Route (RouteWithPath)
+ * into a Map-ready Route (MapRoute).
+ */
+fun RouteWithPath.toMapRoute(): MapRoute {
+
+    return MapRoute(
+        id = this.summary.id,
+        name = this.summary.name,
+        isSelected = this.summary.isSelected,
+        path = this.path,
+        bSportType = this.summary.bSportType
+    )
+}
 
 enum class MapZoomFocus {
     TRACK_AND_MARKERS,

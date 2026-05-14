@@ -66,15 +66,7 @@ class MapFragmentWithTrackViewModel(application: Application) : AndroidViewModel
                     showStartAndFinishText = true
                 )
             },
-            routes = allRoutes.map { routeWithPath ->
-                MapRoute(
-                    id = routeWithPath.summary.id,
-                    name = routeWithPath.summary.name,
-                    isSelected = routeWithPath.summary.isSelected,
-                    bSportType = routeWithPath.summary.bSportType,
-                    path = routeWithPath.path
-                )
-            },
+            routes = allRoutes.map { it.toMapRoute() },
             currentTrack = currentTrack,
             bearing = 0f,
             speed = 0f,

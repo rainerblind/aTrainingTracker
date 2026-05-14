@@ -39,6 +39,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atrainingtracker.trainingtracker.ui.map.MapRoute
 import com.atrainingtracker.trainingtracker.ui.map.MapState
 import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
+import com.atrainingtracker.trainingtracker.ui.map.toMapRoute
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 /**
@@ -102,15 +103,7 @@ class RoutesFragment : Fragment() {
                             val mapState = remember(selectedRoute) {
                                 MapState(
                                     zoomFocus = MapZoomFocus.LOCAL_ROUTES,
-                                    routes = listOf(
-                                        MapRoute(
-                                            id = selectedRoute.summary.id,
-                                            name = selectedRoute.summary.name,
-                                            isSelected = selectedRoute.summary.isSelected,
-                                            bSportType = selectedRoute.summary.bSportType,
-                                            path = selectedRoute.path
-                                        )
-                                    ),
+                                    routes = listOf( selectedRoute.toMapRoute() ),
                                     bSportType = selectedRoute.summary.bSportType
                                 )
                             }
