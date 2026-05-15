@@ -79,6 +79,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+        </activity>
+
+        <activity
+            android:name=".trainingtracker.activities.GpxImportActivity"
+            android:label="@string/route_import"
+            android:theme="@style/Theme.aTrainingTracker"
+            android:exported="true">
+
             <!-- Handle .gpx files by MIME Type (Preferred by Android) -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

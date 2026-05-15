@@ -21,8 +21,6 @@ package com.atrainingtracker.trainingtracker.routes
 import android.content.Context
 import android.location.Location
 import android.net.Uri
-import androidx.compose.animation.core.copy
-import androidx.compose.foundation.layout.size
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.RouteSource
 import com.atrainingtracker.trainingtracker.database.RouteSummary
@@ -38,12 +36,10 @@ import io.ticofab.androidgpxparser.parser.domain.Gpx
 
 class GpxRouteImporter(private val context: Context) {
 
-    private val routesRepository = RoutesRepository.getInstance(context)
-
     /**
-     * Parses a GPX file from a Uri and inserts it into the database.
+     * Parses a GPX file from a Uri and return the RouteSummary and PathPoints
      */
-    suspend fun importRouteFromGpx(uri: Uri): Result<Long> = withContext(Dispatchers.IO) {
+    suspend fun importRouteFromGpx(uri: Uri): Result<Pair<RouteSummary, List<PathPoint>>> = withContext(Dispatchers.IO) {
         try {
             context.contentResolver.openInputStream(uri)?.use { inputStream ->
                 val parser = GPXParser()
@@ -93,8 +89,7 @@ class GpxRouteImporter(private val context: Context) {
                     source = RouteSource.LOCAL_GPX
                 )
 
-                val id = routesRepository.insertRoute(summary, pathPoints)
-                Result.success(id)
+                Result.success(Pair(summary, pathPoints))
             } ?: Result.failure(Exception("Stream null"))
         } catch (e: Exception) {
             Result.failure(e)
