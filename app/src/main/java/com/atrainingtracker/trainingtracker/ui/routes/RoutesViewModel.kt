@@ -19,17 +19,27 @@
 package com.atrainingtracker.trainingtracker.ui.routes
 
 import android.app.Application
+import androidx.annotation.StringRes
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+
+
+enum class RouteSortOrder(@StringRes val labelResId: Int) {
+    DISTANCE_TO_USER(R.string.sort_closest),
+    TOTAL_ELEVATION_GAIN(R.string.sort_elevation_gain),
+    Route_DISTANCE(R.string.sort_route_length),
+    NAME(R.string.sort_name)
+}
 
 class RoutesViewModel(application: Application) : AndroidViewModel(application) {
     private val routesRepository = RoutesRepository.getInstance(application)

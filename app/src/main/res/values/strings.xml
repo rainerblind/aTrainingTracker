@@ -1088,12 +1088,13 @@
     <string name="Done">Done</string>
     <string name="Edit">Edit</string>
 
-    <!-- Segment Sorting -->
+    <!-- Segment / Route Sorting -->
     <string name="sort_closest">Closest</string>
     <string name="sort_climb_category">Climb Category</string>
     <string name="sort_elevation_gain">Elevation Gain</string>
     <string name="sort_average_grade">Average Grade</string>
     <string name="sort_segment_length">Segment Length</string>
+    <string name="sort_route_length">Route Length</string>
     <string name="sort_name">Name</string>
 
     <!-- routes -->
@@ -1105,5 +1106,6 @@
     <string name="route_sport_type">Sport Type</string>
     <string name="route_description">Description</string>
     <string name="route_import">Import</string>
+    <string name="sort">Sort</string>
 
 </resources>

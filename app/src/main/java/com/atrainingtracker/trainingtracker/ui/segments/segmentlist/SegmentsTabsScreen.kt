@@ -157,7 +157,7 @@ fun SegmentsTabsScreen(
                                 IconButton(onClick = { showSortMenu = true }) {
                                     Icon(
                                         imageVector = Icons.Default.Sort,
-                                        contentDescription = "Sort",
+                                        contentDescription = stringResource(R.string.sort),
                                         tint = MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                 }

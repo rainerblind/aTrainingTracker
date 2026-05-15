@@ -23,6 +23,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.compose.BackHandler
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.rememberPagerState
@@ -36,6 +37,7 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.atrainingtracker.trainingtracker.activities.GpxImportActivity
 import com.atrainingtracker.trainingtracker.ui.map.MapState
 import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
 import com.atrainingtracker.trainingtracker.ui.map.toMapRoute
@@ -57,6 +59,15 @@ class RoutesFragment : Fragment() {
         // Initialize the ViewModel
         viewModel = ViewModelProvider(this).get(RoutesViewModel::class.java)
 
+        // 1. Register the picker launcher
+        val gpxPickerLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+            uri?.let {
+                val intent = android.content.Intent(requireContext(), GpxImportActivity::class.java).apply {
+                    data = it
+                }
+                startActivity(intent)
+            }
+        }
 
         return ComposeView(requireContext()).apply {
             setContent {
@@ -143,7 +154,10 @@ class RoutesFragment : Fragment() {
                             },
                             onDeleteConfirmed = { id ->
                                 viewModel.deleteRoute(id)
-                            }
+                            },
+                            onImportClick = { gpxPickerLauncher.launch("*/*") },
+                            sortOrder = RouteSortOrder.DISTANCE_TO_USER,
+                            onSortOrderChange = {}
                         )
                     }
                 }

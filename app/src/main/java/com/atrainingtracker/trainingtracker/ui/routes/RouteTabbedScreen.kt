@@ -30,14 +30,25 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -50,6 +61,7 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
 import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
 import kotlinx.coroutines.launch
+import kotlin.collections.sort
 
 @Composable
 fun RouteTabbedScreen(
@@ -62,7 +74,10 @@ fun RouteTabbedScreen(
     onMapClick: (Long) -> Unit,
     onHeaderClick: (Long) -> Unit,
     onToggleSelection: (Long, Boolean) -> Unit,
-    onDeleteConfirmed: (Long) -> Unit
+    onDeleteConfirmed: (Long) -> Unit,
+    onImportClick: () -> Unit,
+    sortOrder: RouteSortOrder,
+    onSortOrderChange: (RouteSortOrder) -> Unit
 ) {
     // Define our tabs mapping to BSportType
     val tabs = listOf(
@@ -124,7 +139,7 @@ fun RouteTabbedScreen(
             ) {
                 Column {
                     Column(modifier = Modifier.statusBarsPadding()) {
-                        // Title Row with Sort Icon
+                        // Title Row
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -138,7 +153,53 @@ fun RouteTabbedScreen(
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                             )
 
-                            // TODO: add Box for some menu
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                // --- SORT BUTTON ---
+                                var showSortMenu by remember { mutableStateOf(false) }
+
+                                Box {
+                                    IconButton(onClick = { showSortMenu = true }) {
+                                        Icon(
+                                            imageVector = Icons.Default.Sort,
+                                            contentDescription = stringResource(R.string.sort),
+                                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                    }
+                                    DropdownMenu(
+                                        expanded = showSortMenu,
+                                        onDismissRequest = { showSortMenu = false }
+                                    ) {
+                                        RouteSortOrder.entries.forEach { order ->
+                                            DropdownMenuItem(
+                                                text = {
+                                                    Text(stringResource(order.labelResId))
+                                                },
+                                                onClick = {
+                                                    onSortOrderChange(order)
+                                                    showSortMenu = false
+                                                },
+                                                leadingIcon = {
+                                                    if (sortOrder == order) {
+                                                        Icon(
+                                                            Icons.Default.Check,
+                                                            contentDescription = null
+                                                        )
+                                                    }
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+
+                                // --- IMPORT BUTTON ---
+                                IconButton(onClick = onImportClick) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add, // Or Icons.Default.FileUpload
+                                        contentDescription = stringResource(R.string.route_import),
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                            }
                         }
                     }
                     PrimaryScrollableTabRow(

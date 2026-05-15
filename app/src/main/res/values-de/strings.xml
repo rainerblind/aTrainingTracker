@@ -985,12 +985,13 @@
     <string name="go_to_store">Zum Play Store</string>
     <string name="Done">Done</string>
 
-    <!-- Segment Sorting -->
+    <!-- Segment / Route Sorting -->
     <string name="sort_closest">Entfernung</string>
     <string name="sort_climb_category">Bergkategorie</string>
     <string name="sort_elevation_gain">Höhenmeter</string>
     <string name="sort_average_grade">Durchschnittliche Steigung</string>
     <string name="sort_segment_length">Länge</string>
+    <string name="sort_route_length">Länge</string>
     <string name="sort_name">Name</string>
 
     <!-- routes -->
@@ -1002,5 +1003,6 @@
     <string name="route_sport_type">Sportart</string>
     <string name="route_description">Beschreibung</string>
     <string name="route_import">Import</string>
+    <string name="sort">Sortierung</string>
 
 </resources>
