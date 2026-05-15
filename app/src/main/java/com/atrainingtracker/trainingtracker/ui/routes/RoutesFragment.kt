@@ -117,6 +117,11 @@ class RoutesFragment : Fragment() {
                                 selectedRouteIdForEdit = null
                             }
                         )
+
+                        // Handle Back Press to return to list
+                        BackHandler {
+                            selectedRouteIdForEdit = null
+                        }
                     }
                     else {
                         // SHOW LIST
