@@ -26,6 +26,7 @@ import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import android.graphics.Typeface
 import android.location.Location
+import android.util.Log
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -115,7 +116,7 @@ fun ATrainingTrackerMap(
         val iconRes = when (mapState.bSportType) {
             BSportType.RUN -> R.drawable.bsport_run
             BSportType.BIKE -> R.drawable.bsport_bike
-            else -> -1
+            else -> R.drawable.ic_cross
         }
 
         // Pre-calculate both versions
@@ -222,17 +223,22 @@ fun ATrainingTrackerMap(
         }
     }
 
+    // TODO: add marker here.
     // --- Auto-center Map on Scrubber Icon ---
     LaunchedEffect(selectedDistance) {
         selectedDistance?.let { targetDist ->
             // Find the point associated with the distance
             val activePath = if (mapState.tracks.isNotEmpty()) {
                 mapState.tracks.firstOrNull()?.path
-            } else {
+            }
+            else if (mapState.segments.isNotEmpty()) {
                 mapState.segments.firstOrNull()?.path
+            }
+            else {
+                mapState.routes.firstOrNull()?.path
             } ?: emptyList()
 
-            val scrubPoint = activePath.find { it.distance >= targetDist }
+            val scrubPoint = activePath!!.find { it.distance >= targetDist }
 
             scrubPoint?.let { point ->
                 /*
@@ -325,11 +331,15 @@ fun ATrainingTrackerMap(
             // 1. Identify the active path (either from tracks or segments)
             val activePath = if (mapState.tracks.isNotEmpty()) {
                 mapState.tracks.firstOrNull()?.path
-            } else {
+            }
+            else if (mapState.segments.isNotEmpty()) {
                 mapState.segments.firstOrNull()?.path
+            }
+            else {
+                mapState.routes.firstOrNull()?.path
             } ?: emptyList()
 
-            val index = activePath.indexOfFirst { it.distance >= targetDist }
+            val index = activePath!!.indexOfFirst { it.distance >= targetDist }
 
             if (index != -1) {
                 val point = activePath[index]
@@ -535,6 +545,7 @@ private fun SegmentLayer(
             )
         }
     }
+
 }
 
 
