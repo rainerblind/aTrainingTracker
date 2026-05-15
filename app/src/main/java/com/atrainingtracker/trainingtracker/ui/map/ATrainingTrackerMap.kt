@@ -309,13 +309,14 @@ fun ATrainingTrackerMap(
 
         // Routes
         mapState.routes.forEach { route ->
-            val alpha = if (route.bSportType == mapState.bSportType) 1.0f else 0.3f
+            val alpha = if (route.bSportType == mapState.bSportType) 1.0f else 0.3f  // TODO: This does not work as it should.
+            val width = if (route.bSportType == mapState.bSportType && route.isSelected) 12f else 8f  // TODO: dependency on bSportType does not work as expected
             val routeColor = if (route.isSelected) RouteColorSelected else RouteColorUnselected
 
             Polyline(
                 points = route.path.map { it.latLng },
                 color = routeColor.copy(alpha = alpha),
-                width = 8f
+                width = width
             )
         }
 
