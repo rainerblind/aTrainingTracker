@@ -19,19 +19,22 @@
 package com.atrainingtracker.trainingtracker.routes
 
 import android.content.Context
+import android.location.Location
 import android.net.Uri
-import android.util.Xml
+import androidx.compose.animation.core.copy
+import androidx.compose.foundation.layout.size
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.RouteSource
 import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.google.android.gms.maps.model.LatLng
-import com.google.maps.android.SphericalUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.xmlpull.v1.XmlPullParser
-import java.io.InputStream
+
+import io.ticofab.androidgpxparser.parser.GPXParser
+import io.ticofab.androidgpxparser.parser.domain.Gpx
+
 
 class GpxRouteImporter(private val context: Context) {
 
@@ -40,92 +43,66 @@ class GpxRouteImporter(private val context: Context) {
     /**
      * Parses a GPX file from a Uri and inserts it into the database.
      */
-    suspend fun importRouteFromGpx(uri: Uri, sportType: BSportType = BSportType.UNKNOWN): Result<Long> = withContext(Dispatchers.IO) {
+    suspend fun importRouteFromGpx(uri: Uri): Result<Long> = withContext(Dispatchers.IO) {
         try {
             context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                val (name, points) = parseGpx(inputStream)
+                val parser = GPXParser()
+                val parsedGpx: Gpx? = parser.parse(inputStream)
 
-                if (points.isEmpty()) {
-                    return@withContext Result.failure(Exception("No points found in GPX file"))
+                if (parsedGpx == null || (parsedGpx.tracks.isEmpty() && parsedGpx.routes.isEmpty())) {
+                    return@withContext Result.failure(Exception("No tracks or routes found"))
                 }
 
-                val totalDistance = points.last().distance
-                val elevationGain = calculateElevationGain(points)
+                // GPX can have multiple tracks; we'll take the first one or combine them
+                // Most GPX files use <trk>, but some older ones use <rte>
+                val firstTrack = parsedGpx.tracks.firstOrNull()
+                val trackPoints = firstTrack?.trackSegments?.flatMap { it.trackPoints }
+                    ?: parsedGpx.routes.firstOrNull()?.routePoints
+                    ?: emptyList()
+
+                // Convert library points to PathPoint
+                val pathPoints = trackPoints.mapIndexed { index, pt ->
+                    PathPoint(
+                        latLng = LatLng(pt.latitude, pt.longitude),
+                        altitude = pt.elevation ?: 0.0,
+                        distance = 0.0 // We calculate this below
+                    )
+                }.toMutableList()
+
+                // Calculate cumulative distance
+                var totalDist = 0.0
+                for (i in 1 until pathPoints.size) {
+                    val p1 = pathPoints[i-1].latLng
+                    val p2 = pathPoints[i].latLng
+                    val results = FloatArray(1)
+                    Location.distanceBetween(p1.latitude, p1.longitude, p2.latitude, p2.longitude, results)
+                    totalDist += results[0]
+                    pathPoints[i] = pathPoints[i].copy(distance = totalDist)
+                }
 
                 val summary = RouteSummary(
-                    id = 0, // DB will generate this
-                    externalId = uri.lastPathSegment ?: "unknown_file",
-                    name = name ?: uri.lastPathSegment ?: "Imported Route",
+                    id = 0,
+                    externalId = uri.lastPathSegment ?: "unknown",
+                    name = firstTrack?.trackName ?: parsedGpx.metadata?.name ?: "Imported Route",
+                    // Extract description from track or global metadata
+                    description = firstTrack?.trackDesc ?: parsedGpx.metadata?.desc ?: "",
                     isSelected = false,
-                    distance = totalDistance,
-                    elevationGain = elevationGain,
-                    bSportType = sportType,
+                    distance = totalDist,
+                    elevationGain = calculateElevationGain(pathPoints),
+                    bSportType = BSportType.UNKNOWN,
                     source = RouteSource.LOCAL_GPX
                 )
 
-                val id = routesRepository.insertRoute(summary, points)
+                val id = routesRepository.insertRoute(summary, pathPoints)
                 Result.success(id)
-            } ?: Result.failure(Exception("Could not open file"))
+            } ?: Result.failure(Exception("Stream null"))
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    private fun parseGpx(inputStream: InputStream): Pair<String?, List<PathPoint>> {
-        val points = mutableListOf<PathPoint>()
-        var routeName: String? = null
-        var cumulativeDistance = 0.0
-        var lastLatLng: LatLng? = null
-
-        val parser = Xml.newPullParser()
-        parser.setInput(inputStream, null)
-
-        var eventType = parser.eventType
-        while (eventType != XmlPullParser.END_DOCUMENT) {
-            val tagName = parser.name
-            when (eventType) {
-                XmlPullParser.START_TAG -> {
-                    when (tagName) {
-                        "name" -> if (routeName == null) routeName = parser.nextText()
-                        "trkpt", "rtept" -> {
-                            val lat = parser.getAttributeValue(null, "lat").toDouble()
-                            val lon = parser.getAttributeValue(null, "lon").toDouble()
-                            val currentLatLng = LatLng(lat, lon)
-
-                            // Calculate elevation if <ele> tag exists inside trkpt
-                            var ele = 0.0
-
-                            // Search inside the trkpt tag for child tags
-                            var interiorEventType = parser.next()
-                            while (!(interiorEventType == XmlPullParser.END_TAG && (parser.name == "trkpt" || parser.name == "rtept"))) {
-                                if (interiorEventType == XmlPullParser.START_TAG && parser.name == "ele") {
-                                    ele = parser.nextText().toDouble()
-                                }
-                                interiorEventType = parser.next()
-                            }
-
-                            // Accumulate distance
-                            lastLatLng?.let {
-                                cumulativeDistance += SphericalUtil.computeDistanceBetween(it, currentLatLng)
-                            }
-
-                            points.add(PathPoint(
-                                latLng = currentLatLng,
-                                distance = cumulativeDistance,
-                                altitude = ele
-                            ))
-                            lastLatLng = currentLatLng
-                        }
-                    }
-                }
-            }
-            eventType = parser.next()
-        }
-        return Pair(routeName, points)
-    }
-
     private fun calculateElevationGain(points: List<PathPoint>): Double {
-        // TODO: Might be too noicy. -> Implement some filtering.
+        // TODO: Might be too noisy. -> Implement some filtering.
         var gain = 0.0
         for (i in 1 until points.size) {
             val diff = points[i].altitude - points[i - 1].altitude

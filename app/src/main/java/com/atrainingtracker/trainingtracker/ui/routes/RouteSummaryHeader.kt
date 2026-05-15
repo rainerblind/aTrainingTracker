@@ -55,7 +55,7 @@ fun RouteSummaryHeader(
                 .fillMaxWidth()
                 .padding(8.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // --- LEFT COLUMN: Name, Source, and Icon-based Metrics ---
             Column(modifier = Modifier.weight(1f)) {
@@ -141,6 +141,21 @@ fun RouteSummaryHeader(
                 )
             }
         }
+        // Add the description if it is not empty
+        if (summary.description.isNotEmpty()) {
+            HorizontalDivider(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                thickness = 0.5.dp,
+                color = MaterialTheme.colorScheme.outlineVariant
+            )
+            Text(
+                text = summary.description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(4.dp)
+            )
+        }
     }
 }
 
@@ -152,7 +167,8 @@ fun PreviewRouteSummaryHeaderBike() {
             summary = RouteSummary(
                 id = 1,
                 externalId = "B-2026-X1",
-                name = "Black Forest Alpine Cross - Long Epic Stage 1",
+                name = "Black Forest Alpine Cross",
+                description =  "Long Epic Stage 1",
                 isSelected = true,
                 distance = 68450.0,
                 elevationGain = 1250.0,
@@ -173,6 +189,7 @@ fun PreviewRouteSummaryHeaderRun() {
                 id = 2,
                 externalId = "",
                 name = "Park Loop",
+                description = "",
                 isSelected = false,
                 distance = 5200.0,
                 elevationGain = 15.0,

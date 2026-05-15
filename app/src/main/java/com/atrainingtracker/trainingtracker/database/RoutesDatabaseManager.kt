@@ -36,6 +36,7 @@ data class RouteSummary(
     val id: Long,
     val externalId: String,
     val name: String,
+    val description: String,
     val isSelected: Boolean,
     val distance: Double,
     val elevationGain: Double,
@@ -97,6 +98,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
             val values = ContentValues().apply {
                 put(RouteContract.COLUMN_EXTERNAL_ID, summary.externalId)
                 put(RouteContract.COLUMN_NAME, summary.name)
+                put(RouteContract.COLUMN_DESCRIPTION, summary.description)
                 put(RouteContract.COLUMN_DISTANCE, summary.distance)
                 put(RouteContract.COLUMN_ELEVATION_GAIN, summary.elevationGain)
                 put(RouteContract.COLUMN_SPORT_TYPE, summary.bSportType.name)
@@ -211,6 +213,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
         val idIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_ID)
         val extIdIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_EXTERNAL_ID)
         val nameIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_NAME)
+        val descIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_DESCRIPTION)
         val isSelectedIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_IS_SELECTED)
         val distIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_DISTANCE)
         val elevIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_ELEVATION_GAIN)
@@ -228,6 +231,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
             id = cursor.getLong(idIdx),
             externalId = cursor.getString(extIdIdx) ?: "",
             name = cursor.getString(nameIdx) ?: "Unknown Route",
+            description = cursor.getString(descIdx) ?: "",
             isSelected = cursor.getInt(isSelectedIdx) == 1,
             distance = cursor.getDouble(distIdx),
             elevationGain = cursor.getDouble(elevIdx),
@@ -261,6 +265,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
         const val COLUMN_ID = "id"
         const val COLUMN_EXTERNAL_ID = "external_id"
         const val COLUMN_NAME = "name"
+        const val COLUMN_DESCRIPTION = "description"
         const val COLUMN_DISTANCE = "distance"
         const val COLUMN_ELEVATION_GAIN = "elevation_gain"
         const val COLUMN_SPORT_TYPE = "sport_type"
@@ -281,6 +286,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
             $COLUMN_ID INTEGER PRIMARY KEY AUTOINCREMENT,
             $COLUMN_EXTERNAL_ID TEXT,
             $COLUMN_NAME TEXT,
+            $COLUMN_DESCRIPTION TEXT,
             $COLUMN_DISTANCE REAL,
             $COLUMN_ELEVATION_GAIN REAL,
             $COLUMN_SPORT_TYPE TEXT,
@@ -312,7 +318,8 @@ class RoutesDatabaseManager private constructor(context: Context) {
         companion object {
             const val DB_NAME = "Routes.db"
             // const val DB_VERSION = 2 // Storing BSportType as String.
-            const val DB_VERSION = 3    // No more storing the polyline.
+            // const val DB_VERSION = 3    // No more storing the polyline.
+            const val DB_VERSION = 5    // Added the description
 
             private const val TAG = "RoutesDbHelper"
             private val DEBUG = TrainingApplication.getDebug(true)
@@ -333,7 +340,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
             Log.i(TAG, "Upgrading Routes database from $oldVersion to $newVersion")
 
-            if (oldVersion < 3) {
+            if (oldVersion < 5) {
                 db.execSQL("DROP TABLE IF EXISTS ${RouteContract.TABLE_ROUTE_POINTS}")
                 db.execSQL("DROP TABLE IF EXISTS ${RouteContract.TABLE_ROUTES}")
                 onCreate(db)

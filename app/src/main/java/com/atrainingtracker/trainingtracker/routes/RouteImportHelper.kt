@@ -22,7 +22,6 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
-import com.atrainingtracker.banalservice.BSportType
 import kotlinx.coroutines.launch
 
 object RouteImportHelper {
@@ -33,7 +32,7 @@ object RouteImportHelper {
         activity.lifecycleScope.launch {
             val importer = GpxRouteImporter(activity)
 
-            val result = importer.importRouteFromGpx(uri, BSportType.UNKNOWN)
+            val result = importer.importRouteFromGpx(uri)
 
             result.onSuccess {
                 Toast.makeText(activity, "TODO: Success", Toast.LENGTH_SHORT).show()

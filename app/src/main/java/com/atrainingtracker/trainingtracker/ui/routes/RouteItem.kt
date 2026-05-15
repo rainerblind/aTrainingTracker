@@ -110,6 +110,7 @@ fun PreviewSelectedRoute() {
             id = 1,
             externalId = "sample_1",
             name = "Sunday Morning Forest Ride",
+            description = "Long Epic Stage 1",
             distance = 45200.0, // 45.2 km
             elevationGain = 850.0,
             bSportType = BSportType.BIKE,
@@ -134,6 +135,7 @@ fun PreviewUnselectedRoute() {
             id = 2,
             externalId = "sample_2",
             name = "City Park Loop",
+        description = "",
             distance = 5400.0, // 5.4 km
             elevationGain = 25.0,
             bSportType = BSportType.RUN,
