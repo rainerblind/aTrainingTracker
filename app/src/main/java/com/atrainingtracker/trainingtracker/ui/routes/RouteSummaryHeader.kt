@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.routes
 
 
+import androidx.compose.animation.core.copy
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -38,6 +39,7 @@ import com.atrainingtracker.trainingtracker.database.RouteSource
 import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.RouteColorSelected
+import com.atrainingtracker.trainingtracker.ui.theme.RouteColorUnselected
 
 @Composable
 fun RouteSummaryHeader(
@@ -136,7 +138,13 @@ fun RouteSummaryHeader(
                     onCheckedChange = onToggleSelection,
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = RouteColorSelected,
-                        checkedTrackColor = RouteColorSelected.copy(alpha = 0.5f)
+                        checkedTrackColor = RouteColorSelected.copy(alpha = 0.5f),
+                        checkedBorderColor = RouteColorSelected,
+
+                        // Unselected androidx.compose.runtime.State (Gray/Muted)
+                        uncheckedThumbColor = RouteColorUnselected,
+                        uncheckedTrackColor = RouteColorUnselected.copy(alpha = 0.5f),
+                        uncheckedBorderColor = RouteColorUnselected
                     )
                 )
             }
