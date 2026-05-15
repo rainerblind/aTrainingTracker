@@ -27,6 +27,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -74,6 +75,7 @@ class RoutesFragment : Fragment() {
                 ATrainingTrackerTheme {
 
                     val routes by viewModel.routes.collectAsStateWithLifecycle()
+                    val sortOrder by viewModel.sortOrder.collectAsState()
 
                     val pagerState = rememberPagerState(pageCount = { 4 })
                     val allSportsListState = rememberLazyListState()
@@ -156,8 +158,9 @@ class RoutesFragment : Fragment() {
                                 viewModel.deleteRoute(id)
                             },
                             onImportClick = { gpxPickerLauncher.launch("*/*") },
-                            sortOrder = RouteSortOrder.DISTANCE_TO_USER,
-                            onSortOrderChange = {}
+                            sortOrder = sortOrder,
+                            onSortOrderChange = { viewModel.setSortOrder(it) },
+                            scrollToTop = viewModel.shouldScrollToTop(sortOrder),
                         )
                     }
                 }

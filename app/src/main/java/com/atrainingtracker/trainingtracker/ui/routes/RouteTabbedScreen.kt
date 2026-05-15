@@ -44,6 +44,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -77,7 +78,8 @@ fun RouteTabbedScreen(
     onDeleteConfirmed: (Long) -> Unit,
     onImportClick: () -> Unit,
     sortOrder: RouteSortOrder,
-    onSortOrderChange: (RouteSortOrder) -> Unit
+    onSortOrderChange: (RouteSortOrder) -> Unit,
+    scrollToTop: Boolean
 ) {
     // Define our tabs mapping to BSportType
     val tabs = listOf(
@@ -94,6 +96,16 @@ fun RouteTabbedScreen(
     val connection = remember(appBarMaxHeightPx) {
         CollapsingAppBarNestedScrollConnection(appBarMaxHeightPx)
     }
+
+    LaunchedEffect(scrollToTop, sortOrder) {
+        if (scrollToTop) {
+            allSportsListState.scrollToItem(0)
+            bikeListState.scrollToItem(0)
+            runListState.scrollToItem(0)
+            otherListState.scrollToItem(0)
+        }
+    }
+
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Box(Modifier.nestedScroll(connection)) {
@@ -154,6 +166,15 @@ fun RouteTabbedScreen(
                             )
 
                             Row(verticalAlignment = Alignment.CenterVertically) {
+                                // --- IMPORT BUTTON ---
+                                IconButton(onClick = onImportClick) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add, // Or Icons.Default.FileUpload
+                                        contentDescription = stringResource(R.string.route_import),
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+
                                 // --- SORT BUTTON ---
                                 var showSortMenu by remember { mutableStateOf(false) }
 
@@ -191,14 +212,6 @@ fun RouteTabbedScreen(
                                     }
                                 }
 
-                                // --- IMPORT BUTTON ---
-                                IconButton(onClick = onImportClick) {
-                                    Icon(
-                                        imageVector = Icons.Default.Add, // Or Icons.Default.FileUpload
-                                        contentDescription = stringResource(R.string.route_import),
-                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                }
                             }
                         }
                     }
