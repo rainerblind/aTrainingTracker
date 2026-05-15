@@ -106,7 +106,6 @@ fun RouteTabbedScreen(
         }
     }
 
-
     Surface(modifier = Modifier.fillMaxSize()) {
         Box(Modifier.nestedScroll(connection)) {
 
@@ -187,6 +186,7 @@ fun RouteTabbedScreen(
                                         )
                                     }
                                     DropdownMenu(
+                                        containerColor = MaterialTheme.colorScheme.surface,
                                         expanded = showSortMenu,
                                         onDismissRequest = { showSortMenu = false }
                                     ) {
