@@ -32,6 +32,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+
+import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.RouteSummary
 
@@ -49,10 +51,10 @@ fun EditRouteScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Edit Route") },
+                title = { Text(stringResource(R.string.route_edit)) },
                 navigationIcon = {
                     IconButton(onClick = onCancel) {
-                        Icon(Icons.Default.Close, contentDescription = "Cancel")
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.Cancel))
                     }
                 },
                 actions = {
@@ -63,7 +65,7 @@ fun EditRouteScreen(
                             bSportType = selectedSport
                         ))
                     }) {
-                        Icon(Icons.Default.Check, contentDescription = "Save")
+                        Icon(Icons.Default.Check, contentDescription = stringResource(R.string.save))
                     }
                 }
             )
@@ -81,12 +83,12 @@ fun EditRouteScreen(
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("Route Name") },
+                label = { Text(stringResource(R.string.name)) },
                 modifier = Modifier.fillMaxWidth()
             )
 
             // Sport Type Selection
-            Text("Sport Category", style = MaterialTheme.typography.titleSmall)
+            Text(stringResource(R.string.route_sport_type), style = MaterialTheme.typography.titleSmall)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -111,7 +113,7 @@ fun EditRouteScreen(
             OutlinedTextField(
                 value = description,
                 onValueChange = { description = it },
-                label = { Text("Description") },
+                label = { Text(stringResource(R.string.route_description)) },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 3
             )
