@@ -78,6 +78,19 @@ class RoutesRepository private constructor(context: Context) {
     }
 
     /**
+     * Updates the metadata (name, description, sport type) of an existing route.
+     *
+     * @param summary The updated RouteSummary object.
+     */
+    suspend fun updateRouteSummary(summary: RouteSummary) {
+        // 1. Update the record in the database
+        routesDb.updateRouteSummary(summary)
+
+        // 2. Trigger a refresh so all collectors (List View, Map View)
+        refreshRoutes()
+    }
+
+    /**
      * Toggles the visibility/selection of a route on the map.
      */
     suspend fun toggleRouteSelection(routeId: Long, isSelected: Boolean) = withContext(Dispatchers.IO) {

@@ -19,19 +19,23 @@
 package com.atrainingtracker.trainingtracker.ui.routes
 
 import android.app.Application
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 class RoutesViewModel(application: Application) : AndroidViewModel(application) {
-    private val repository = RoutesRepository.getInstance(application)
+    private val routesRepository = RoutesRepository.getInstance(application)
 
     // The list of routes to display
-    val routes: StateFlow<List<RouteWithPath>> = repository.allRoutes
+    val routes: StateFlow<List<RouteWithPath>> = routesRepository.allRoutes
 
     // Static list of sports for the Tabbed Layout
     val sports = listOf(
@@ -42,17 +46,37 @@ class RoutesViewModel(application: Application) : AndroidViewModel(application) 
 
     fun toggleRouteSelection(routeId: Long, isSelected: Boolean) {
         viewModelScope.launch {
-            repository.toggleRouteSelection(routeId, isSelected)
+            routesRepository.toggleRouteSelection(routeId, isSelected)
+        }
+    }
+
+    // State for navigation/editing
+    var editingRoute by mutableStateOf<RouteSummary?>(null)
+        private set
+
+    fun startEditing(route: RouteSummary) {
+        editingRoute = route
+    }
+
+    fun stopEditing() {
+        editingRoute = null
+    }
+
+    fun updateRoute(summary: RouteSummary) {
+        viewModelScope.launch {
+            routesRepository.updateRouteSummary(summary)
+            stopEditing()
+            refresh() // Reload the list
         }
     }
 
     fun deleteRoute(routeId: Long) {
         viewModelScope.launch {
-            repository.deleteRoute(routeId)
+            routesRepository.deleteRoute(routeId)
         }
     }
 
     fun refresh() {
-        repository.refreshRoutes()
+        routesRepository.refreshRoutes()
     }
 }

@@ -36,7 +36,6 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.atrainingtracker.trainingtracker.ui.map.MapRoute
 import com.atrainingtracker.trainingtracker.ui.map.MapState
 import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
 import com.atrainingtracker.trainingtracker.ui.map.toMapRoute
@@ -72,30 +71,14 @@ class RoutesFragment : Fragment() {
                     val otherListState = rememberLazyListState()
 
                     // 1. Manage local navigation state
-                    var selectedRouteId by rememberSaveable { mutableStateOf<Long?>(null) }
+                    var selectedRouteIdForDetails by rememberSaveable { mutableStateOf<Long?>(null) }
+                    var selectedRouteIdForEdit by rememberSaveable { mutableStateOf<Long?>(null) }
 
-                    // 2. Logic to switch between List and Detail
-                    if (selectedRouteId == null) {
-                        // SHOW LIST
-                        RouteTabbedScreen(
-                            routesWithPath = routes,
-                            pagerState = pagerState,
-                            allSportsListState = allSportsListState,
-                            bikeListState = bikeListState,
-                            runListState = runListState,
-                            otherListState = otherListState,
-                            onRouteClick = { id ->
-                                selectedRouteId = id
-                            },
-                            onToggle = { id, isSelected ->
-                                viewModel.toggleRouteSelection(id, isSelected)
-                            }
 
-                        )
-                    } else {
+                    if (selectedRouteIdForDetails != null) {
                         // SHOW DETAIL
                         // Deriving the specific route from the list we already have
-                        val selectedRoute = routes.find { it.summary.id == selectedRouteId }
+                        val selectedRoute = routes.find { it.summary.id == selectedRouteIdForDetails }
 
                         if (selectedRoute != null) {
 
@@ -119,11 +102,42 @@ class RoutesFragment : Fragment() {
 
                             // Handle Back Press to return to list
                             BackHandler {
-                                selectedRouteId = null
+                                selectedRouteIdForDetails = null
                             }
                         }
                     }
-
+                    else if (selectedRouteIdForEdit != null) {
+                        EditRouteScreen(
+                            routeSummary = routes.find { it.summary.id == selectedRouteIdForEdit }!!.summary,
+                            onSave = {
+                                viewModel.updateRoute(it)
+                                selectedRouteIdForEdit = null
+                            },
+                            onCancel = {
+                                selectedRouteIdForEdit = null
+                            }
+                        )
+                    }
+                    else {
+                        // SHOW LIST
+                        RouteTabbedScreen(
+                            routesWithPath = routes,
+                            pagerState = pagerState,
+                            allSportsListState = allSportsListState,
+                            bikeListState = bikeListState,
+                            runListState = runListState,
+                            otherListState = otherListState,
+                            onMapClick = { id ->
+                                selectedRouteIdForDetails = id
+                            },
+                            onHeaderClick = { id ->
+                                selectedRouteIdForEdit = id
+                            },
+                            onToggle = { id, isSelected ->
+                                viewModel.toggleRouteSelection(id, isSelected)
+                            }
+                        )
+                    }
                 }
             }
         }

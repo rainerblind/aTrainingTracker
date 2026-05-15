@@ -59,7 +59,8 @@ fun RouteTabbedScreen(
     bikeListState: LazyListState,
     runListState: LazyListState,
     otherListState: LazyListState,
-    onRouteClick: (Long) -> Unit,
+    onMapClick: (Long) -> Unit,
+    onHeaderClick: (Long) -> Unit,
     onToggle: (Long, Boolean) -> Unit,
 ) {
     // Define our tabs mapping to BSportType
@@ -105,7 +106,8 @@ fun RouteTabbedScreen(
                     routes = filteredRoutesWithPath,
                     bSportType = currentSport,
                     scrollState = listState,
-                    onRouteClick = onRouteClick,
+                    onMapClick = onMapClick,
+                    onHeaderClick = onHeaderClick,
                     onToggle = onToggle,
                     appBarOffsetPx = connection.appBarOffset,
                     headerHeightPx = appBarMaxHeightPx.toFloat(),

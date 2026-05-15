@@ -126,6 +126,26 @@ class RoutesDatabaseManager private constructor(context: Context) {
     }
 
     /**
+     * Updates the metadata of an existing route (Name, Description, SportType).
+     * @return The number of rows affected.
+     */
+    fun updateRouteSummary(summary: RouteSummary): Int {
+        val db = dbHelper.writableDatabase
+        val values = ContentValues().apply {
+            put(RouteContract.COLUMN_NAME, summary.name)
+            put(RouteContract.COLUMN_DESCRIPTION, summary.description)
+            put(RouteContract.COLUMN_SPORT_TYPE, summary.bSportType.name)
+        }
+
+        return db.update(
+            RouteContract.TABLE_ROUTES,
+            values,
+            "${RouteContract.COLUMN_ID} = ?",
+            arrayOf(summary.id.toString())
+        )
+    }
+
+    /**
      * Retrieves all routes.
      */
     fun getAllRoutes(): List<RouteWithPath> {
