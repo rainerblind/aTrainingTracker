@@ -61,7 +61,8 @@ fun RouteTabbedScreen(
     otherListState: LazyListState,
     onMapClick: (Long) -> Unit,
     onHeaderClick: (Long) -> Unit,
-    onToggle: (Long, Boolean) -> Unit,
+    onToggleSelection: (Long, Boolean) -> Unit,
+    onDeleteConfirmed: (Long) -> Unit
 ) {
     // Define our tabs mapping to BSportType
     val tabs = listOf(
@@ -108,7 +109,8 @@ fun RouteTabbedScreen(
                     scrollState = listState,
                     onMapClick = onMapClick,
                     onHeaderClick = onHeaderClick,
-                    onToggle = onToggle,
+                    onToggleSelection = onToggleSelection,
+                    onDeleteConfirmed = onDeleteConfirmed,
                     appBarOffsetPx = connection.appBarOffset,
                     headerHeightPx = appBarMaxHeightPx.toFloat(),
                 )

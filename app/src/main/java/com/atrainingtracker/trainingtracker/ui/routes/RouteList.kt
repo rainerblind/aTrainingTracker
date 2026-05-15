@@ -39,9 +39,10 @@ fun RouteList(
     routes: List<RouteWithPath>,
     bSportType: BSportType?,
     scrollState: LazyListState,
-    onToggle: (Long, Boolean) -> Unit,
+    onToggleSelection: (Long, Boolean) -> Unit,
     onMapClick: (Long) -> Unit,
     onHeaderClick: (Long) -> Unit,
+    onDeleteConfirmed: (Long) -> Unit,
     appBarOffsetPx: Int,
     headerHeightPx: Float
 ) {
@@ -74,10 +75,11 @@ fun RouteList(
                 RouteItem(
                     summary = route.summary,
                     pathPoints = route.path,
-                    onToggleSelection = { onToggle(route.summary.id, it) },
+                    onToggleSelection = onToggleSelection,
                     // onDelete = { onDelete(route.summary.id) },
                     onMapClick = onMapClick,
                     onHeaderClick = onHeaderClick,
+                    onDeleteConfirmed = onDeleteConfirmed,
                     modifier = Modifier
                 )
             }

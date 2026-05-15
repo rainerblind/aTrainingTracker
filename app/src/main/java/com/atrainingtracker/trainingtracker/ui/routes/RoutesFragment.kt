@@ -138,8 +138,11 @@ class RoutesFragment : Fragment() {
                             onHeaderClick = { id ->
                                 selectedRouteIdForEdit = id
                             },
-                            onToggle = { id, isSelected ->
+                            onToggleSelection = { id, isSelected ->
                                 viewModel.toggleRouteSelection(id, isSelected)
+                            },
+                            onDeleteConfirmed = { id ->
+                                viewModel.deleteRoute(id)
                             }
                         )
                     }
