@@ -1101,7 +1101,7 @@
     <string name="routes">Routes</string>
     <string name="no_routes_available">No %s routes available.</string>
     <string name="absolutely_no_routes_available">No routes available.</string>
-    <string name="routes_import_hint">Import a GPX file by clicking on it in your file manager to add routes here.</string>
+    <string name="routes_import_hint">Import a GPX file by clicking on the \"+\" at the top or by clicking on one in your file manager.</string>
     <string name="route_edit">Edit Route</string>
     <string name="route_sport_type">Sport Type</string>
     <string name="route_description">Description</string>
