@@ -27,6 +27,7 @@ import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 
 class MapFragmentWithTrackViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -35,6 +36,7 @@ class MapFragmentWithTrackViewModel(application: Application) : AndroidViewModel
     private val routesRepository = RoutesRepository.getInstance(application)
 
     val liveSegments = segmentsRepository.allSegmentsWithPath
+    val allRoutes = routesRepository.allRoutes
 
     val mapState: StateFlow<MapState> = combine(
         banalRepository.currentTrack,
@@ -79,4 +81,10 @@ class MapFragmentWithTrackViewModel(application: Application) : AndroidViewModel
     )
 
     val currentLocation: StateFlow<LatLng?> = banalRepository.currentLocation
+
+    fun onToggleRoute(id: Long, selected: Boolean) {
+        viewModelScope.launch {
+            routesRepository.toggleRouteSelection(routeId = id, isSelected = selected)
+        }
+    }
 }

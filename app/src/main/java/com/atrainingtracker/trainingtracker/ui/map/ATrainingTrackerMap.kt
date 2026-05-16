@@ -80,7 +80,8 @@ fun ATrainingTrackerMap(
     selectedDistance: Double? = null,
     modifier: Modifier = Modifier,
     onMapClick: (() -> Unit)? = null,
-    onSegmentClick: (Long) -> Unit
+    onSegmentClick: (Long) -> Unit = {},
+    onRouteClick: (Long) -> Unit = {},
 ) {
     val context = LocalContext.current
     val currentLocation by currentLocationFlow.collectAsStateWithLifecycle()
@@ -322,7 +323,9 @@ fun ATrainingTrackerMap(
             Polyline(
                 points = route.path.map { it.latLng },
                 color = routeColor.copy(alpha = alpha),
-                width = width
+                width = width,
+                clickable = true,
+                onClick = { onRouteClick(route.id) }
             )
         }
 
