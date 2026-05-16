@@ -103,7 +103,7 @@ fun ATrainingTrackerMap(
     var scrubIconRight by remember { mutableStateOf<BitmapDescriptor?>(null) }
     var scrubIconLeft by remember { mutableStateOf<BitmapDescriptor?>(null) }
 
-    // Initialize icons inside LaunchedEffect (Safe from IBitmapDescriptorFactory error)
+    // Initialize icons inside LaunchedEffect
     LaunchedEffect(primaryColor, isMapLoaded) {
         // This runs after the composition has started, ensuring Maps SDK is likely ready
         locationIcon = bitmapDescriptorFromVectorInternal(context, R.drawable.ic_navigation_arrow, 42, primaryColor)
@@ -285,11 +285,6 @@ fun ATrainingTrackerMap(
         uiSettings = MapUiSettings(zoomControlsEnabled = false, tiltGesturesEnabled = true),
         onMapLoaded = { isMapLoaded = true }
     ) {
-        // --- GUARD CLAUSE ---
-        // If the map isn't loaded, stop here. This prevents any calls
-        // to BitmapDescriptorFactory inside the layers below.
-        // if (!isMapLoaded) return@GoogleMap
-
         // --- Layer 1: Segments ---
         mapState.segments.forEach { segment ->
             SegmentLayer(
@@ -453,7 +448,7 @@ fun createSensorMarker(
         it.draw(canvas)
     }
 
-    return BitmapDescriptorFactory.fromBitmap(bitmap)
+    return saveBitmapDescriptorFactoryFromBitmap(bitmap)
 }
 
 @Composable
@@ -562,7 +557,7 @@ private fun bitmapDescriptorFromVectorInternal(context: Context, resId: Int, siz
     drawable.setBounds(0, 0, px, px)
     val bm = createBitmap(px, px, Bitmap.Config.ARGB_8888)
     drawable.draw(Canvas(bm))
-    return BitmapDescriptorFactory.fromBitmap(bm)
+    return saveBitmapDescriptorFactoryFromBitmap(bm)
 }
 
 fun vectorToBitmap(
@@ -571,7 +566,7 @@ fun vectorToBitmap(
     sizeDp: Int,
     mirror: Boolean = false,
     tint: Color, // only for the default marker
-): BitmapDescriptor {
+): BitmapDescriptor? {
     if (resId == -1) {
         // Convert Compose Color to HSV to get the Hue
         val hsv = FloatArray(3)
@@ -596,7 +591,7 @@ fun vectorToBitmap(
     drawable.setBounds(0, 0, sizePx, sizePx)
     drawable.draw(canvas)
 
-    return BitmapDescriptorFactory.fromBitmap(bitmap)
+    return saveBitmapDescriptorFactoryFromBitmap(bitmap)
 }
 
 /**
@@ -671,7 +666,7 @@ private fun createTextMarkerBitmap(
     // 6. Draw Actual Text
     canvas.drawText(fullText, textX, baseline, paint)
 
-    return BitmapDescriptorFactory.fromBitmap(resultImage)
+    return saveBitmapDescriptorFactoryFromBitmap(resultImage)
 }
 
 private fun calculateOrthogonalLine(point: LatLng, nextPoint: LatLng): List<LatLng> {
@@ -706,4 +701,12 @@ private fun calculateBearing(start: LatLng, end: LatLng): Double {
     val y = Math.sin(dLon) * Math.cos(lat2)
     val x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon)
     return (Math.toDegrees(Math.atan2(y, x)) + 360.0) % 360.0
+}
+
+private fun saveBitmapDescriptorFactoryFromBitmap(bm: Bitmap): BitmapDescriptor? {
+    try {
+        return BitmapDescriptorFactory.fromBitmap(bm)
+    } catch (e: Exception) {
+        return null
+    }
 }
