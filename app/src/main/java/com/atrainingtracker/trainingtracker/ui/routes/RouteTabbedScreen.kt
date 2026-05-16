@@ -41,6 +41,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -52,6 +53,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -142,6 +144,18 @@ fun RouteTabbedScreen(
                 )
             }
 
+            // Identify which routes are in the current tab
+            val currentTabSport = tabs[pagerState.currentPage].second
+            val routesInCurrentTab = if (currentTabSport == null) {
+                routesWithPath
+            } else {
+                routesWithPath.filter { it.summary.bSportType == currentTabSport }
+            }
+
+            // Check if all visible routes are currently selected
+            val isAllSelected = routesInCurrentTab.isNotEmpty() &&
+                    routesInCurrentTab.all { it.summary.isSelected }
+
             // --- HEADER (Same as WorkoutTabsScreen) ---
             Surface(
                 modifier = Modifier.offset { IntOffset(0, connection.appBarOffset) },
@@ -165,6 +179,29 @@ fun RouteTabbedScreen(
                             )
 
                             Row(verticalAlignment = Alignment.CenterVertically) {
+                                // --- SELECT ALL SWITCH ---
+                                if (routesInCurrentTab.isNotEmpty()) {
+                                    Switch(
+                                        // modifier = Modifier.scale(0.7f), // Make it slightly smaller
+                                        modifier = Modifier.padding(end = 8.dp),
+                                        checked = isAllSelected,
+                                        onCheckedChange = { checked ->
+                                            routesInCurrentTab.forEach {
+                                                onToggleSelection(it.summary.id, checked)
+                                            }
+                                        },
+                                        thumbContent = if (isAllSelected) {
+                                            {
+                                                Icon(
+                                                    imageVector = Icons.Default.Check,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.padding(2.dp)
+                                                )
+                                            }
+                                        } else null
+                                    )
+                                }
+
                                 // --- IMPORT BUTTON ---
                                 IconButton(onClick = onImportClick) {
                                     Icon(
