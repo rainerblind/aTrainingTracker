@@ -69,7 +69,7 @@ public class Manufacturer {
             "o-synce",                   // 38
             "Holux",                     // 39
             "Concept 2",                 // 40
-            "Unknown",                   // 41 there seems to be no entry
+            "Shimano",                   // 41 there seems to be no entry
             "One Giant Leap",            // 42
             "Ace Sensor",                // 43
             "Brim Brothers",             // 44
@@ -148,40 +148,40 @@ public class Manufacturer {
             "Gopher Sport",              // 117
             "WaterRower",                // 118
             "OrangeTheory",              // 119
-            "Unknown",                   // 120 there seems to be no entry
-            "Unknown",                   // 121 there seems to be no entry
-            "Unknown",                   // 122 there seems to be no entry
-            "Unknown",                   // 123 there seems to be no entry
-            "Unknown",                   // 124 there seems to be no entry
-            "Unknown",                   // 125 there seems to be no entry
-            "Unknown",                   // 126 there seems to be no entry
-            "Unknown",                   // 127 there seems to be no entry
-            "Unknown",                   // 128 there seems to be no entry
-            "Unknown",                   // 129 there seems to be no entry
-            "Unknown",                   // 130 there seems to be no entry
-            "Unknown",                   // 131 there seems to be no entry
-            "Unknown",                   // 132 there seems to be no entry
-            "Unknown",                   // 133 there seems to be no entry
-            "Unknown",                   // 134 there seems to be no entry
-            "Unknown",                   // 135 there seems to be no entry
-            "Unknown",                   // 136 there seems to be no entry
-            "Unknown",                   // 137 there seems to be no entry
-            "Unknown",                   // 138 there seems to be no entry
-            "Unknown",                   // 139 there seems to be no entry
-            "Unknown",                   // 140 there seems to be no entry
-            "Unknown",                   // 141 there seems to be no entry
-            "Unknown",                   // 142 there seems to be no entry
-            "Unknown",                   // 143 there seems to be no entry
-            "Unknown",                   // 144 there seems to be no entry
-            "Unknown",                   // 145 there seems to be no entry
-            "Unknown",                   // 146 there seems to be no entry
-            "Unknown",                   // 147 there seems to be no entry
-            "Unknown",                   // 148 there seems to be no entry
-            "Unknown",                   // 149 there seems to be no entry
-            "Unknown",                   // 150 there seems to be no entry
-            "Unknown",                   // 151 there seems to be no entry
-            "Unknown",                   // 152 there seems to be no entry
-            "Unknown",                   // 153 there seems to be no entry
+	        "Inpeak",                    // 120
+            "Kinetic",                   // 121
+            "Johnson Health Tech",       // 122
+            "Polar Electro",             // 123
+            "Seesense",                  // 124;
+            "NCI Technology",            // 125;
+            "Iqsquare",                  // 126;
+            "Leomo",                     // 127;
+            "ifit com",                  // 128;
+            "Coros Byte",                // 129;
+            "Versa Design",              // 130;
+            "Chileaf",                   // 131;
+            "Cycplus",                   // 132;
+            "Gravaa Byte",               // 133;
+            "Sigeyi",                    // 134;
+            "Coospo",                    // 135;
+            "Geoid",                     // 136;
+            "Bosch",                     // 137;
+            "Kyto",                      // 138;
+            "Kinetic Sports",            // 139;
+            "Decathlon Byte",            // 140;
+            "TQ Systems",                // 141;
+            "Tag Heuer",                 // 142;
+            "Keiser Fitness",            // 143;
+            "Zwift Byte",                // 144;
+            "Porsche EP",                // 145;
+            "Blackbird",                 // 146;
+            "Meilan Byte",               // 147;
+            "Ezon",                      // 148;
+            "Laisi",                     // 149;
+            "Myzone",                    // 150;
+            "Abawo",                     // 151;
+            "Bafang",                    // 152;
+            "Luhong Technology",         // 153;
             "Unknown",                   // 154 there seems to be no entry
             "Unknown",                   // 155 there seems to be no entry
             "Unknown",                   // 156 there seems to be no entry
@@ -316,7 +316,66 @@ public class Manufacturer {
             "FeedbackSports",            // 285
             "Omata",                     // 286
             "Vdo",                       // 287
-            "MagneticDays"};             // 288
+            "MagneticDays",              // 288
+	    "Hammerhead",                // 289
+	    "Kinetic by Kurt",           // 290
+	    "Shapelog",                  // 291
+	    "Dabuziduo",                 // 292
+	    "Jetblack",                  // 293
+	    "Coros",                     // 294
+	    "Virtugo",                   // 295
+	    "Velosense",                 // 296
+	    "Cycligentinc",              // 297
+	    "Trailforks",                // 298
+	    "Mahle Ebikemotion",         // 299
+	    "Nurvv",                     // 300
+	    "Microprogram",              // 301
+	    "Zone5cloud",                // 302
+	    "Greenteg",                  // 303
+	    "Yamaha Motors",             // 304
+	    "Whoop",                     // 305
+	    "Gravaa",                    // 306
+	    "Onelap",                    // 307
+	    "Monark Exercise",           // 308
+	    "Form",                      // 309
+	    "Decathlon",                 // 310
+	    "Syncros",                   // 311
+	    "Heatup",                    // 312
+	    "Cannondale",                // 313
+	    "True Fitness",              // 314
+	    "Rgt Cycling",               // 315
+	    "Vasa",                      // 316
+	    "Race Republic",             // 317
+	    "Fazua",                     // 318
+	    "Oreka Training",            // 319
+	    "Lishun Electric & Communication", // 320
+	    "Lululemon Studio",          // 321
+	    "Shanyue",                   // 322
+	    "Spinning MDA",              // 323
+	    "Hilldating",                // 324
+	    "Aero Sensor",               // 325
+	    "Nike",                      // 326
+	    "Magicshine",                // 327
+	    "Ictrainer",                 // 328
+	    "Absolute Cycling",          // 329
+	    "EO Swimbetter",             // 330
+	    "Mywhoosh",                  // 331
+	    "Ravemen",                   // 332
+	    "Tektro Racing Products",    // 333
+	    "Darad Innovation Corporation", // 334
+	    "Cycloptim",                 // 335;
+	    "Runna",                     // 337;
+	    "Zepp",                      // 339;
+	    "Peloton",                   // 340;
+	    "Carv",                      // 341;
+	    "Tissot",                    // 342;
+	    "Real Velo",                 // 345;
+	    "Wetech",                    // 346;
+	    "Jespr",                     // 347;
+	    "Huawei",                    // 348;
+	    "Gotoes",                    // 349;
+	    "Cadence App"};              // 350;
+    
     private static final String TAG = "Manufacturer";
     private static final boolean DEBUG = BANALService.getDebug(false);
 

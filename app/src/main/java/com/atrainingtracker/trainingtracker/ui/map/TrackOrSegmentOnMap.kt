@@ -24,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.android.PolyUtil
 import com.google.maps.android.compose.GoogleMap
@@ -35,22 +36,32 @@ import com.google.maps.android.compose.rememberCameraPositionState
 
 @Composable
 fun TrackOrSegmentOnMap(
-    polyline: String,
+    latLngs: List<LatLng>? = null,
+    polyline: String? = null,
     color: Color,
     modifier: Modifier = Modifier,
     onMapClick: () -> Unit = {}
 ) {
     val cameraPositionState = rememberCameraPositionState()
+    var latLngs = latLngs
 
-    // Decode the polyline into LatLngs.
-    // We 'remember' it so it doesn't re-decode on every recomposition.
-    val latLngs = remember(polyline) {
-        val decoded = PolyUtil.decode(polyline)
-        // If the path is huge, simplify it for the preview map to save GPU memory
-        if (decoded.size > 100) {
-            PolyUtil.simplify(decoded, 10.0) // 10 meter tolerance
-        } else {
-            decoded
+    if (latLngs == null) {
+        if (polyline != null) {
+
+            // Decode the polyline into LatLngs.
+            // We 'remember' it so it doesn't re-decode on every recomposition.
+            latLngs = remember(polyline) {
+                val decoded = PolyUtil.decode(polyline)
+                // If the path is huge, simplify it for the preview map to save GPU memory
+                if (decoded.size > 100) {
+                    PolyUtil.simplify(decoded, 10.0) // 10 meter tolerance
+                } else {
+                    decoded
+                }
+            }
+        }
+        else {
+            latLngs = emptyList()
         }
     }
 

@@ -26,7 +26,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
-import com.atrainingtracker.trainingtracker.segments.LiveSegment
+import com.atrainingtracker.trainingtracker.segments.SegmentWithPath
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,6 +34,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlin.text.lowercase
@@ -43,7 +44,7 @@ enum class SegmentSortOrder(@StringRes val labelResId: Int) {
     CLIMB_CATEGORY(R.string.sort_climb_category),
     TOTAL_ELEVATION_GAIN(R.string.sort_elevation_gain),
     AVERAGE_GRADE(R.string.sort_average_grade),
-    SEGMENT_DISTANCE(R.string.sort_segment_length),
+    SEGMENT_DISTANCE(R.string.sort_length),
     NAME(R.string.sort_name)
 }
 
@@ -59,18 +60,40 @@ class SegmentListViewModel(
 
     private var lastScrolledOrder: SegmentSortOrder? = null
 
+    private var lastLocationWasAvailable: Boolean = false
+
     fun shouldScrollToTop(currentOrder: SegmentSortOrder): Boolean {
-        Log.i("SegmentListViewModel", "shouldScroll(currentOrder=$currentOrder), lastScrolledOrder=$lastScrolledOrder")
-        if (lastScrolledOrder != currentOrder) {
+        val isLocationAvailableNow = isLocationAvailable.value
+
+        // Scenario A: The Sort Order itself changed
+        val orderChanged = lastScrolledOrder != currentOrder
+
+        // Scenario B: We are in DISTANCE mode and location just became available
+        val locationJustBecameAvailable = currentOrder == SegmentSortOrder.DISTANCE_TO_USER &&
+                !lastLocationWasAvailable && isLocationAvailableNow
+
+        if (orderChanged || locationJustBecameAvailable) {
             lastScrolledOrder = currentOrder
+            lastLocationWasAvailable = isLocationAvailableNow
             return true
         }
+
+        // Keep the location state in sync even if we don't scroll
+        lastLocationWasAvailable = isLocationAvailableNow
         return false
     }
 
+    val isLocationAvailable: StateFlow<Boolean> = banalServiceRepository.currentLocation
+        .map { it != null }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = false
+        )
+
     // Reactive sorted list
-    val liveSegments: StateFlow<List<LiveSegment>> = combine(
-        segmentsRepository.liveSegments,
+    val segmentsWithPath: StateFlow<List<SegmentWithPath>> = combine(
+        segmentsRepository.allSegmentsWithPath,
         _sortOrder,
         banalServiceRepository.currentLocation // Directly observing the BANALService source
     ) { segments, order, location ->
@@ -80,26 +103,26 @@ class SegmentListViewModel(
 
             SegmentSortOrder.CLIMB_CATEGORY ->
                 segments.sortedWith(
-                    compareByDescending<LiveSegment> { it.summary.climbCategory_raw }
+                    compareByDescending<SegmentWithPath> { it.summary.climbCategory_raw }
                         .thenByDescending { it.summary.elevationGain_raw }
                         .thenBy { it.summary.name.lowercase() }
                 )
 
             SegmentSortOrder.TOTAL_ELEVATION_GAIN ->
                 segments.sortedWith(
-                    compareByDescending<LiveSegment> { it.summary.elevationGain_raw }
+                    compareByDescending<SegmentWithPath> { it.summary.elevationGain_raw }
                         .thenBy { it.summary.name.lowercase() }
                 )
 
             SegmentSortOrder.AVERAGE_GRADE ->
                 segments.sortedWith(
-                    compareByDescending<LiveSegment> { it.summary.averageGrade_raw }
+                    compareByDescending<SegmentWithPath> { it.summary.averageGrade_raw }
                         .thenBy { it.summary.name.lowercase() }
                 )
 
             SegmentSortOrder.SEGMENT_DISTANCE ->
                 segments.sortedWith(
-                    compareByDescending<LiveSegment> { it.summary.distance_raw }
+                    compareByDescending<SegmentWithPath> { it.summary.distance_raw }
                         .thenBy { it.summary.name.lowercase() }
                 )
 

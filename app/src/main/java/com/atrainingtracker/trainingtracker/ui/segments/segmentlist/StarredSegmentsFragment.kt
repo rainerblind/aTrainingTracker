@@ -43,6 +43,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.fragments.preferences.StravaUploadFragment
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
 import com.atrainingtracker.trainingtracker.ui.map.MapState
+import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
 import com.atrainingtracker.trainingtracker.ui.segments.SegmentOnMapScreen
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
@@ -62,9 +63,10 @@ class StarredSegmentsFragment : Fragment() {
                         factory = SegmentListViewModel.SegmentListViewModelFactory(requireContext())
                     )
 
-                    val segments by viewModel.liveSegments.collectAsStateWithLifecycle()
+                    val segments by viewModel.segmentsWithPath.collectAsStateWithLifecycle()
                     val sortOrder by viewModel.sortOrder.collectAsState()
                     val refreshingSports by viewModel.refreshingSports.collectAsStateWithLifecycle()
+                    val isLocationAvailable by viewModel.isLocationAvailable.collectAsStateWithLifecycle()
 
                     val pagerState = rememberPagerState(pageCount = { 2 })
                     val bikeListState = rememberLazyListState()
@@ -77,7 +79,7 @@ class StarredSegmentsFragment : Fragment() {
                     if (selectedSegmentId == null) {
                         // SHOW LIST
                         SegmentsTabsScreen(
-                            liveSegments = segments,
+                            segmentsWithPath = segments,
                             pagerState = pagerState,
                             bikeListState = bikeListState,
                             runListState = runListState,
@@ -92,7 +94,8 @@ class StarredSegmentsFragment : Fragment() {
                             },
                             sortOrder = sortOrder,
                             scrollToTop = viewModel.shouldScrollToTop(sortOrder),
-                            onSortOrderChange = { viewModel.setSortOrder(it) }
+                            onSortOrderChange = { viewModel.setSortOrder(it) },
+                            isLocationAvailable = isLocationAvailable
                         )
                     } else {
                         // SHOW DETAIL
@@ -104,17 +107,17 @@ class StarredSegmentsFragment : Fragment() {
                             // Create MapState on the fly
                             val mapState = remember(selectedSegment) {
                                 MapState(
+                                    zoomFocus = MapZoomFocus.LOCAL_SEGMENTS,
                                     segments = listOf(
                                             MapSegment(
-                                                id = selectedSegment.summary.stravaId,
+                                                stravaId = selectedSegment.summary.stravaId,
                                                 name = selectedSegment.summary.name,
                                                 bSportType = selectedSegment.summary.bSportType,
                                                 path = selectedSegment.path,
                                                 showStartAndFinishText = false
                                         )
                                     ),
-                                    bSportType = selectedSegment.summary.bSportType,
-                                    isFollowMeEnabled = false
+                                    bSportType = selectedSegment.summary.bSportType
                                 )
                             }
 

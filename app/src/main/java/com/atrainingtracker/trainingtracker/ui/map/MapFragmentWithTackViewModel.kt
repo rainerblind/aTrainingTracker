@@ -22,22 +22,28 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 
 class MapFragmentWithTrackViewModel(application: Application) : AndroidViewModel(application) {
 
     private val banalRepository = BANALServiceRepository.getInstance(application)
     private val segmentsRepository = SegmentsRepository.getInstance(application)
+    private val routesRepository = RoutesRepository.getInstance(application)
 
-    val liveSegments = segmentsRepository.liveSegments
+    val liveSegments = segmentsRepository.allSegmentsWithPath
+    val allRoutes = routesRepository.allRoutes
 
     val mapState: StateFlow<MapState> = combine(
+        banalRepository.bSportType,
         banalRepository.currentTrack,
-        segmentsRepository.liveSegments // Observe the repository instead of a one-time DB hit
-    ) { currentTrack, liveSegments ->
+        segmentsRepository.allSegmentsWithPath,
+        routesRepository.allRoutes
+    ) { bSportType, currentTrack, liveSegments, allRoutes ->
 
         // Logic for Start Marker
         val markers = if (currentTrack.isNotEmpty()) {
@@ -53,26 +59,34 @@ class MapFragmentWithTrackViewModel(application: Application) : AndroidViewModel
         }
 
         MapState(
+            zoomFocus = MapZoomFocus.LOCAL_SEGMENTS,
             segments = liveSegments.map { liveSegment ->
                 MapSegment(
-                    id = liveSegment.summary.stravaId,
+                    stravaId = liveSegment.summary.stravaId,
                     name = liveSegment.summary.name,
                     bSportType = liveSegment.summary.bSportType,
                     path = liveSegment.path,
                     showStartAndFinishText = true
                 )
             },
+            routes = allRoutes.map { it.toMapRoute() },
+            bSportType = bSportType,
             currentTrack = currentTrack,
             bearing = 0f,
             speed = 0f,
-            isFollowMeEnabled = false,
             markers = markers
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = MapState()
+        initialValue = MapState(zoomFocus = MapZoomFocus.LOCAL_SEGMENTS)
     )
 
     val currentLocation: StateFlow<LatLng?> = banalRepository.currentLocation
+
+    fun onToggleRoute(id: Long, selected: Boolean) {
+        viewModelScope.launch {
+            routesRepository.toggleRouteSelection(routeId = id, isSelected = selected)
+        }
+    }
 }

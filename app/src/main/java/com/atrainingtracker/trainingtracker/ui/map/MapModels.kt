@@ -23,6 +23,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.database.RouteWithPath
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.LatLng
 
@@ -59,13 +60,14 @@ enum class TrackType(
 
 
 data class MapState(
+    val zoomFocus: MapZoomFocus,
     val bearing: Float = 0f,
     val speed: Float = 0f,
-    val isFollowMeEnabled: Boolean = true,
     val currentTrack: List<LatLng> = emptyList(),
     val tracks: List<MapTrack> = emptyList(),
     val segments: List<MapSegment> = emptyList(),
     val activeLiveSegmentIds: Set<Long> = emptySet(),
+    val routes: List<MapRoute> = emptyList(),
     val markers: List<LocationMarker> = emptyList(),
     val bSportType: BSportType = BSportType.UNKNOWN
 )
@@ -103,9 +105,38 @@ data class MapTrack(
 }
 
 data class MapSegment(
-    val id: Long,
+    val stravaId: Long,
     val name: String,
     val bSportType: BSportType,
     val path: List<PathPoint>,
     val showStartAndFinishText: Boolean = true
 )
+
+data class MapRoute(
+    val id: Long,
+    val name: String,
+    val isSelected: Boolean,
+    val bSportType: BSportType,
+    val path: List<PathPoint>
+)
+/**
+ * Extension function to convert a Database Route (RouteWithPath)
+ * into a Map-ready Route (MapRoute).
+ */
+fun RouteWithPath.toMapRoute(): MapRoute {
+
+    return MapRoute(
+        id = this.summary.id,
+        name = this.summary.name,
+        isSelected = this.summary.isSelected,
+        path = this.path,
+        bSportType = this.summary.bSportType
+    )
+}
+
+enum class MapZoomFocus {
+    TRACK_AND_MARKERS,
+    LOCAL_SEGMENTS,
+    LOCAL_ROUTES,
+    FOLLOW_ME
+}

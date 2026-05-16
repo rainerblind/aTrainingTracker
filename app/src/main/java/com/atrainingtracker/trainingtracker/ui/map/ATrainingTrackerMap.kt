@@ -26,6 +26,7 @@ import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import android.graphics.Typeface
 import android.location.Location
+import android.util.Log
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -52,6 +53,8 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.segments.SegmentHelper
 import com.atrainingtracker.trainingtracker.ui.theme.StravaOrange
+import com.atrainingtracker.trainingtracker.ui.theme.RouteColorSelected
+import com.atrainingtracker.trainingtracker.ui.theme.RouteColorUnselected
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
@@ -77,11 +80,15 @@ fun ATrainingTrackerMap(
     selectedDistance: Double? = null,
     modifier: Modifier = Modifier,
     onMapClick: (() -> Unit)? = null,
-    onSegmentClick: (Long) -> Unit
+    onSegmentClick: (Long) -> Unit = {},
+    onRouteClick: (Long) -> Unit = {},
 ) {
     val context = LocalContext.current
     val currentLocation by currentLocationFlow.collectAsStateWithLifecycle()
     val primaryColor = MaterialTheme.colorScheme.primary
+
+    // Track map readiness
+    var isMapLoaded by remember { mutableStateOf(false) }
 
     //  Camera State management
     val cameraPositionState = rememberCameraPositionState()
@@ -96,8 +103,8 @@ fun ATrainingTrackerMap(
     var scrubIconRight by remember { mutableStateOf<BitmapDescriptor?>(null) }
     var scrubIconLeft by remember { mutableStateOf<BitmapDescriptor?>(null) }
 
-    // Initialize icons inside LaunchedEffect (Safe from IBitmapDescriptorFactory error)
-    LaunchedEffect(primaryColor) {
+    // Initialize icons inside LaunchedEffect
+    LaunchedEffect(primaryColor, isMapLoaded) {
         // This runs after the composition has started, ensuring Maps SDK is likely ready
         locationIcon = bitmapDescriptorFromVectorInternal(context, R.drawable.ic_navigation_arrow, 42, primaryColor)
         directionIconSmall = bitmapDescriptorFromVectorInternal(context, R.drawable.ic_navigation_arrow, 12, primaryColor)
@@ -105,12 +112,12 @@ fun ATrainingTrackerMap(
         directionIconLarge = bitmapDescriptorFromVectorInternal(context, R.drawable.ic_navigation_arrow, 22, primaryColor)
     }
 
-    LaunchedEffect(mapState.bSportType) {
+    LaunchedEffect(mapState.bSportType, isMapLoaded) {
         // Map sport type to drawable
         val iconRes = when (mapState.bSportType) {
             BSportType.RUN -> R.drawable.bsport_run
             BSportType.BIKE -> R.drawable.bsport_bike
-            else -> -1
+            else -> R.drawable.ic_cross
         }
 
         // Pre-calculate both versions
@@ -127,8 +134,8 @@ fun ATrainingTrackerMap(
     }
 
     // Automated Bounds Fitting (Optimized for Local Area)
-    LaunchedEffect(mapState.tracks, mapState.markers, mapState.segments, mapState.isFollowMeEnabled) {
-        if (!mapState.isFollowMeEnabled) {
+    LaunchedEffect(mapState.tracks, mapState.markers, mapState.segments, isMapLoaded) {
+        if (mapState.zoomFocus == MapZoomFocus.TRACK_AND_MARKERS || mapState.zoomFocus == MapZoomFocus.LOCAL_SEGMENTS || mapState.zoomFocus == MapZoomFocus.LOCAL_ROUTES) {
             val userPos = currentLocation
             val builder = LatLngBounds.Builder()
             var hasPoints = false
@@ -147,18 +154,40 @@ fun ATrainingTrackerMap(
                 return results[0] < maxDistanceMeters
             }
 
-            // 1. Include all track points
-            mapState.tracks.forEach { track ->
-                track.path.forEach { builder.include(it.latLng); hasPoints = true }
+            if (mapState.zoomFocus == MapZoomFocus.TRACK_AND_MARKERS) {
+                // Include all track points
+                mapState.tracks.forEach { track ->
+                    track.path.forEach { builder.include(it.latLng); hasPoints = true }
+                }
+
+                // Include all sensor markers
+                mapState.markers.forEach { marker -> builder.include(marker.position); hasPoints = true }
             }
 
-            // 2. Include only local segment points
-            mapState.segments.forEach { segment ->
-                segment.path.forEach { if (isLocal(it.latLng)) { builder.include(it.latLng); hasPoints = true } }
+            if (mapState.zoomFocus == MapZoomFocus.LOCAL_SEGMENTS) {
+                // 2. Include only local segments
+                mapState.segments.forEach { segment ->
+                    if (isLocal(segment.path.first().latLng)) {  // The segment is 'local' iff the first point is local
+                        hasPoints = true
+                        segment.path.forEach {
+                            builder.include(it.latLng);
+                        }
+                    }
+                }
             }
 
-            // 3. Include all sensor markers
-            mapState.markers.forEach { marker -> builder.include(marker.position); hasPoints = true }
+            if (mapState.zoomFocus == MapZoomFocus.LOCAL_ROUTES) {
+                // 3. Include only local routes
+                mapState.routes.forEach { route ->
+                    if (isLocal(route.path.first().latLng)) {  // The route is 'local' iff the first point is local
+                        hasPoints = true
+                        route.path.forEach {
+                            builder.include(it.latLng);
+                        }
+                    }
+                }
+            }
+
 
             if (hasPoints) {
                 // Fit to the local cluster of data
@@ -179,7 +208,7 @@ fun ATrainingTrackerMap(
 
     // Follow Me Logic
     LaunchedEffect(currentLocation, mapState.bearing, mapState.speed) {
-        if (mapState.isFollowMeEnabled && currentLocation != null) {
+        if (mapState.zoomFocus == MapZoomFocus.FOLLOW_ME && currentLocation != null) {
             val targetZoom = (20f - 0.1f * mapState.speed).coerceIn(14f, 20f)
             cameraPositionState.animate(
                 CameraUpdateFactory.newCameraPosition(
@@ -195,17 +224,22 @@ fun ATrainingTrackerMap(
         }
     }
 
+    // TODO: add marker here.
     // --- Auto-center Map on Scrubber Icon ---
     LaunchedEffect(selectedDistance) {
         selectedDistance?.let { targetDist ->
             // Find the point associated with the distance
             val activePath = if (mapState.tracks.isNotEmpty()) {
                 mapState.tracks.firstOrNull()?.path
-            } else {
+            }
+            else if (mapState.segments.isNotEmpty()) {
                 mapState.segments.firstOrNull()?.path
+            }
+            else {
+                mapState.routes.firstOrNull()?.path
             } ?: emptyList()
 
-            val scrubPoint = activePath.find { it.distance >= targetDist }
+            val scrubPoint = activePath!!.find { it.distance >= targetDist }
 
             scrubPoint?.let { point ->
                 /*
@@ -248,14 +282,15 @@ fun ATrainingTrackerMap(
         cameraPositionState = cameraPositionState,
         onMapClick = { onMapClick?.invoke() },
         properties = MapProperties(mapType = MapType.TERRAIN),
-        uiSettings = MapUiSettings(zoomControlsEnabled = false, tiltGesturesEnabled = true)
+        uiSettings = MapUiSettings(zoomControlsEnabled = false, tiltGesturesEnabled = true),
+        onMapLoaded = { isMapLoaded = true }
     ) {
         // --- Layer 1: Segments ---
         mapState.segments.forEach { segment ->
             SegmentLayer(
                 segment = segment,
-                isLive = mapState.activeLiveSegmentIds.contains(segment.id),
-                isFollowMeEnabled = mapState.isFollowMeEnabled,
+                isLive = mapState.activeLiveSegmentIds.contains(segment.stravaId),
+                isFollowMeEnabled = mapState.zoomFocus == MapZoomFocus.FOLLOW_ME,
                 currentZoom = cameraPositionState.position.zoom,
                 context = context,
                 icons = Triple(directionIconSmall, directionIconMed, directionIconLarge),
@@ -263,14 +298,30 @@ fun ATrainingTrackerMap(
             )
         }
 
+        // Tracks
         mapState.tracks.forEach { track ->
             if (track.isVisible) {
                 Polyline(
                     points = track.path.map { it.latLng },
                     color = track.color,
-                    width = 5f
+                    width = 8f
                 )
             }
+        }
+
+        // Routes
+        mapState.routes.forEach { route ->
+            val alpha = if (route.bSportType == mapState.bSportType) 1.0f else 0.3f  // TODO: This does not work as it should.
+            val width = if (route.bSportType == mapState.bSportType && route.isSelected) 12f else 8f  // TODO: dependency on bSportType does not work as expected
+            val routeColor = if (route.isSelected) RouteColorSelected else RouteColorUnselected
+
+            Polyline(
+                points = route.path.map { it.latLng },
+                color = routeColor.copy(alpha = alpha),
+                width = width,
+                clickable = true,
+                onClick = { onRouteClick(route.id) }
+            )
         }
 
         // show a marker for the selected distance
@@ -278,11 +329,15 @@ fun ATrainingTrackerMap(
             // 1. Identify the active path (either from tracks or segments)
             val activePath = if (mapState.tracks.isNotEmpty()) {
                 mapState.tracks.firstOrNull()?.path
-            } else {
+            }
+            else if (mapState.segments.isNotEmpty()) {
                 mapState.segments.firstOrNull()?.path
+            }
+            else {
+                mapState.routes.firstOrNull()?.path
             } ?: emptyList()
 
-            val index = activePath.indexOfFirst { it.distance >= targetDist }
+            val index = activePath!!.indexOfFirst { it.distance >= targetDist }
 
             if (index != -1) {
                 val point = activePath[index]
@@ -393,7 +448,7 @@ fun createSensorMarker(
         it.draw(canvas)
     }
 
-    return BitmapDescriptorFactory.fromBitmap(bitmap)
+    return saveBitmapDescriptorFactoryFromBitmap(bitmap)
 }
 
 @Composable
@@ -418,7 +473,7 @@ private fun SegmentLayer(
         width = strokeWidth,
         zIndex = zIndex,
         clickable = true,
-        onClick = { onSegmentClick(segment.id) }
+        onClick = { onSegmentClick(segment.stravaId) }
     )
 
     // 2. Direction Arrows (Performance check: only at high zoom or if Live)
@@ -488,6 +543,7 @@ private fun SegmentLayer(
             )
         }
     }
+
 }
 
 
@@ -501,7 +557,7 @@ private fun bitmapDescriptorFromVectorInternal(context: Context, resId: Int, siz
     drawable.setBounds(0, 0, px, px)
     val bm = createBitmap(px, px, Bitmap.Config.ARGB_8888)
     drawable.draw(Canvas(bm))
-    return BitmapDescriptorFactory.fromBitmap(bm)
+    return saveBitmapDescriptorFactoryFromBitmap(bm)
 }
 
 fun vectorToBitmap(
@@ -510,7 +566,7 @@ fun vectorToBitmap(
     sizeDp: Int,
     mirror: Boolean = false,
     tint: Color, // only for the default marker
-): BitmapDescriptor {
+): BitmapDescriptor? {
     if (resId == -1) {
         // Convert Compose Color to HSV to get the Hue
         val hsv = FloatArray(3)
@@ -535,7 +591,7 @@ fun vectorToBitmap(
     drawable.setBounds(0, 0, sizePx, sizePx)
     drawable.draw(canvas)
 
-    return BitmapDescriptorFactory.fromBitmap(bitmap)
+    return saveBitmapDescriptorFactoryFromBitmap(bitmap)
 }
 
 /**
@@ -610,7 +666,7 @@ private fun createTextMarkerBitmap(
     // 6. Draw Actual Text
     canvas.drawText(fullText, textX, baseline, paint)
 
-    return BitmapDescriptorFactory.fromBitmap(resultImage)
+    return saveBitmapDescriptorFactoryFromBitmap(resultImage)
 }
 
 private fun calculateOrthogonalLine(point: LatLng, nextPoint: LatLng): List<LatLng> {
@@ -645,4 +701,12 @@ private fun calculateBearing(start: LatLng, end: LatLng): Double {
     val y = Math.sin(dLon) * Math.cos(lat2)
     val x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon)
     return (Math.toDegrees(Math.atan2(y, x)) + 360.0) % 360.0
+}
+
+private fun saveBitmapDescriptorFactoryFromBitmap(bm: Bitmap): BitmapDescriptor? {
+    try {
+        return BitmapDescriptorFactory.fromBitmap(bm)
+    } catch (e: Exception) {
+        return null
+    }
 }

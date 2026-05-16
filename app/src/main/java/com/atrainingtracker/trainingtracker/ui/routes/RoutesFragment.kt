@@ -1,0 +1,187 @@
+/*
+ * aTrainingTracker (ANT+ BTLE)
+ * Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+ */
+
+package com.atrainingtracker.trainingtracker.ui.routes
+
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import androidx.activity.compose.BackHandler
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.atrainingtracker.trainingtracker.activities.GpxImportActivity
+import com.atrainingtracker.trainingtracker.ui.map.MapState
+import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
+import com.atrainingtracker.trainingtracker.ui.map.toMapRoute
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+
+/**
+ * Fragment that hosts the tabbed Route list.
+ * Integrates with the existing Navigation Drawer via MainActivityWithNavigation.
+ */
+class RoutesFragment : Fragment() {
+
+    private lateinit var viewModel: RoutesViewModel
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        // Initialize the ViewModel
+        viewModel = ViewModelProvider(this).get(RoutesViewModel::class.java)
+
+        // 1. Register the picker launcher
+        val gpxPickerLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+            uri?.let {
+                val intent = android.content.Intent(requireContext(), GpxImportActivity::class.java).apply {
+                    data = it
+                }
+                startActivity(intent)
+            }
+        }
+
+        return ComposeView(requireContext()).apply {
+            setContent {
+                ATrainingTrackerTheme {
+
+                    val routes by viewModel.routes.collectAsStateWithLifecycle()
+                    val sortOrder by viewModel.sortOrder.collectAsState()
+                    val isLocationAvailable by viewModel.isLocationAvailable.collectAsStateWithLifecycle()
+
+                    val pagerState = rememberPagerState(pageCount = { 4 })
+                    val allSportsListState = rememberLazyListState()
+                    val bikeListState = rememberLazyListState()
+                    val runListState = rememberLazyListState()
+                    val otherListState = rememberLazyListState()
+
+                    // 1. Manage local navigation state
+                    var selectedRouteIdForDetails by rememberSaveable { mutableStateOf<Long?>(null) }
+                    var selectedRouteIdForEdit by rememberSaveable { mutableStateOf<Long?>(null) }
+
+
+                    if (selectedRouteIdForDetails != null) {
+                        // SHOW DETAIL
+                        // Deriving the specific route from the list we already have
+                        val selectedRoute = routes.find { it.summary.id == selectedRouteIdForDetails }
+
+                        if (selectedRoute != null) {
+
+                            // Create MapState on the fly
+                            val mapState = remember(selectedRoute) {
+                                MapState(
+                                    zoomFocus = MapZoomFocus.LOCAL_ROUTES,
+                                    routes = listOf( selectedRoute.toMapRoute() ),
+                                    bSportType = selectedRoute.summary.bSportType
+                                )
+                            }
+
+                            RouteOnMapScreen(
+                                routeSummary = selectedRoute.summary,
+                                mapState = mapState,
+                                modifier = Modifier.statusBarsPadding(),
+                                onToggleSelection = { isSelected ->
+                                    viewModel.toggleRouteSelection(selectedRoute.summary.id, isSelected)
+                                }
+                            )
+
+                            // Handle Back Press to return to list
+                            BackHandler {
+                                selectedRouteIdForDetails = null
+                            }
+                        }
+                    }
+                    else if (selectedRouteIdForEdit != null) {
+                        EditRouteScreen(
+                            routeSummary = routes.find { it.summary.id == selectedRouteIdForEdit }!!.summary,
+                            onSave = {
+                                viewModel.updateRoute(it)
+                                selectedRouteIdForEdit = null
+                            },
+                            onCancel = {
+                                selectedRouteIdForEdit = null
+                            }
+                        )
+
+                        // Handle Back Press to return to list
+                        BackHandler {
+                            selectedRouteIdForEdit = null
+                        }
+                    }
+                    else {
+                        // SHOW LIST
+                        RouteTabbedScreen(
+                            routesWithPath = routes,
+                            pagerState = pagerState,
+                            allSportsListState = allSportsListState,
+                            bikeListState = bikeListState,
+                            runListState = runListState,
+                            otherListState = otherListState,
+                            onMapClick = { id ->
+                                selectedRouteIdForDetails = id
+                            },
+                            onHeaderClick = { id ->
+                                selectedRouteIdForEdit = id
+                            },
+                            onToggleSelection = { id, isSelected ->
+                                viewModel.toggleRouteSelection(id, isSelected)
+                            },
+                            onDeleteConfirmed = { id ->
+                                viewModel.deleteRoute(id)
+                            },
+                            onImportClick = { gpxPickerLauncher.launch("*/*") },
+                            sortOrder = sortOrder,
+                            onSortOrderChange = { viewModel.setSortOrder(it) },
+                            scrollToTop = viewModel.shouldScrollToTop(sortOrder),
+                            isLocationAvailable = isLocationAvailable
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Ensure data is fresh when returning to this screen
+        viewModel.refresh()
+    }
+
+    companion object {
+        const val TAG = "RoutesFragment"
+
+        @JvmStatic
+        fun newInstance(): RoutesFragment {
+            return RoutesFragment()
+        }
+    }
+}
