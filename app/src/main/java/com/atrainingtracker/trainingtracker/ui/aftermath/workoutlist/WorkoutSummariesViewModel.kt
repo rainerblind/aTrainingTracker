@@ -19,11 +19,12 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 
 import android.app.Application
-import android.util.Log
+import androidx.annotation.StringRes
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asFlow
 import androidx.lifecycle.viewModelScope
+import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
@@ -32,55 +33,83 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+enum class WorkoutSortOrder(@StringRes val labelResId: Int) {
+    DATE(R.string.sort_date),
+    WORKOUT_DURATION(R.string.sort_duration),
+    WORKOUT_DISTANCE(R.string.sort_length),
+    TOTAL_ELEVATION_GAIN(R.string.sort_elevation_gain),
+}
 
 class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(application) {
-    companion object {
-        const val DEBUG = true
-        const val TAG = "WorkoutSummariesViewModel"
-    }
-
     private val workoutRepo = WorkoutRepository.getInstance(application)
     private val exportRepo = ExportStatusRepository.getInstance(application)
 
-    val workouts: StateFlow<List<WorkoutData>> = workoutRepo.allWorkouts
-        .asFlow()
-        .flatMapLatest { workoutList ->
-            // Create a combined flow that updates whenever any individual export status changes
-            if (workoutList.isEmpty()) {
-                kotlinx.coroutines.flow.flowOf(emptyList())
-            } else {
-                combine(workoutList.map { workout ->
-                    // Safely handle null fileBaseName
-                    val fileName = workout.fileBaseName
-                    if (DEBUG) Log.i(TAG, "Merging Flows: fileName=" + fileName)
+    private val _sortOrder = MutableStateFlow(WorkoutSortOrder.DATE)
+    val sortOrder = _sortOrder.asStateFlow()
 
-                    if (fileName != null) {
-                        exportRepo.getExportStatusFlow(fileName)
-                            .map { liveStatuses ->
-                                workout.copy(exportStatuses = liveStatuses)
-                            }
-                    } else {
-                        // If no fileBaseName exists, there are no live updates to track.
-                        // Return a flow containing the original workout object.
-                        flowOf(workout)
-                    }
-                }) { it.toList() }
+    private var lastScrolledOrder: WorkoutSortOrder? = null
+
+    fun shouldScrollToTop(currentOrder: WorkoutSortOrder): Boolean {
+        if (lastScrolledOrder != currentOrder) {
+            lastScrolledOrder = currentOrder
+            return true
+        }
+        return false
+    }
+
+    fun setSortOrder(order: WorkoutSortOrder) {
+        _sortOrder.value = order
+    }
+
+    val workouts: StateFlow<List<WorkoutData>> = combine(
+        workoutRepo.allWorkouts.asFlow(),
+        _sortOrder
+    ) { workoutList, order ->
+        workoutList to order
+    }.flatMapLatest { (workoutList, order) ->
+        if (workoutList.isEmpty()) {
+            flowOf(emptyList())
+        } else {
+            combine(workoutList.map { workout ->
+                val fileName = workout.fileBaseName
+                if (fileName != null) {
+                    exportRepo.getExportStatusFlow(fileName)
+                        .map { liveStatuses ->
+                            workout.copy(exportStatuses = liveStatuses)
+                        }
+                } else {
+                    flowOf(workout)
+                }
+            }) { it.toList() }.map { list ->
+                // Apply sorting logic
+                when (order) {
+                    WorkoutSortOrder.DATE ->
+                        list.sortedByDescending { it.startTimeS }
+                    WorkoutSortOrder.TOTAL_ELEVATION_GAIN ->
+                        list.sortedByDescending { it.ascentMeters }
+                    WorkoutSortOrder.WORKOUT_DISTANCE ->
+                        list.sortedByDescending { it.totalDistance }
+                    WorkoutSortOrder.WORKOUT_DURATION ->
+                        list.sortedByDescending { it.activeTimeSec }
+                }
             }
         }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
 
     // LiveData to trigger showing the "Delete Old Workouts" dialog
     val showDeleteOldWorkoutsDialogEvent = SingleLiveEvent<Unit>()
@@ -170,5 +199,10 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
         viewModelScope.launch {
             workoutRepo.exportWorkoutTo(workoutId, fileFormat)
         }
+    }
+
+    companion object {
+        const val DEBUG = false
+        const val TAG = "WorkoutSummariesViewModel"
     }
 }

@@ -1093,9 +1093,10 @@
     <string name="sort_climb_category">Climb Category</string>
     <string name="sort_elevation_gain">Elevation Gain</string>
     <string name="sort_average_grade">Average Grade</string>
-    <string name="sort_segment_length">Segment Length</string>
-    <string name="sort_route_length">Route Length</string>
+    <string name="sort_length">Length</string>
     <string name="sort_name">Name</string>
+    <string name="sort_date">Date</string>
+    <string name="sort_duration">Duration</string>
 
     <!-- routes -->
     <string name="routes">Routes</string>

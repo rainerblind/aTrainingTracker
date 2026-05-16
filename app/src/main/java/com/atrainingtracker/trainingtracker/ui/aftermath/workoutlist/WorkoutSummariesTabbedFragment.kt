@@ -27,6 +27,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -80,6 +81,7 @@ class WorkoutSummariesTabbedFragment : Fragment() {
 
                     // 1. Observe the workouts list from ViewModel
                     val workouts by viewModel.workouts.collectAsStateWithLifecycle()
+                    val sortOrder by viewModel.sortOrder.collectAsState()
 
                     var selectedWorkoutIdForDetails by rememberSaveable { mutableStateOf<Long?>(null) }
                     var selectedWorkoutIdForEdit by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -146,7 +148,10 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                                 selectedWorkoutIdForDetails = workoutData.id
                                 trackOnMapViewModel.loadAftermathData(workoutData)
                             },
-                            isPlayServiceAvailable = isPlayAvailable
+                            isPlayServiceAvailable = isPlayAvailable,
+                            sortOrder = sortOrder,
+                            onSortOrderChange = { viewModel.setSortOrder(it) },
+                            scrollToTop = viewModel.shouldScrollToTop(sortOrder),
                         )
                     }
                 }

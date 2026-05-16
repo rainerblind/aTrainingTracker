@@ -26,7 +26,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
-import com.atrainingtracker.trainingtracker.segments.LiveSegment
 import com.atrainingtracker.trainingtracker.segments.SegmentWithPath
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository
@@ -44,7 +43,7 @@ enum class SegmentSortOrder(@StringRes val labelResId: Int) {
     CLIMB_CATEGORY(R.string.sort_climb_category),
     TOTAL_ELEVATION_GAIN(R.string.sort_elevation_gain),
     AVERAGE_GRADE(R.string.sort_average_grade),
-    SEGMENT_DISTANCE(R.string.sort_segment_length),
+    SEGMENT_DISTANCE(R.string.sort_length),
     NAME(R.string.sort_name)
 }
 
