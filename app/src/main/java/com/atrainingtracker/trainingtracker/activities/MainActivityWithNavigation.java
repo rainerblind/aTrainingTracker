@@ -59,6 +59,7 @@ import com.atrainingtracker.trainingtracker.ui.segments.segmentlist.StarredSegme
 import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository;
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsFragment;
 import com.dsi.ant.plugins.antplus.pccbase.AntPluginPcc;
+import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.material.navigation.NavigationView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -311,6 +312,19 @@ public class MainActivityWithNavigation
         if (DEBUG) Log.d(TAG, "onCreate");
 
         EdgeToEdge.enable(this);
+
+        // Initialize the Google Maps SDK explicitly to prevent
+        // IBitmapDescriptorFactory errors in Compose
+        MapsInitializer.initialize(getApplicationContext(), MapsInitializer.Renderer.LATEST, renderer -> {
+            switch (renderer) {
+                case LATEST:
+                    Log.d(TAG, "The latest version of the Google Maps renderer is in use.");
+                    break;
+                case LEGACY:
+                    Log.d(TAG, "The legacy version of the Google Maps renderer is in use.");
+                    break;
+            }
+        });
 
         // some initialization
         mTrainingApplication = (TrainingApplication) getApplication();
