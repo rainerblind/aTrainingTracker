@@ -26,6 +26,7 @@ import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import android.graphics.Typeface
 import android.location.Location
+import android.util.Log
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -52,6 +53,8 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.segments.SegmentHelper
 import com.atrainingtracker.trainingtracker.ui.theme.StravaOrange
+import com.atrainingtracker.trainingtracker.ui.theme.RouteColorSelected
+import com.atrainingtracker.trainingtracker.ui.theme.RouteColorUnselected
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
@@ -77,7 +80,8 @@ fun ATrainingTrackerMap(
     selectedDistance: Double? = null,
     modifier: Modifier = Modifier,
     onMapClick: (() -> Unit)? = null,
-    onSegmentClick: (Long) -> Unit
+    onSegmentClick: (Long) -> Unit = {},
+    onRouteClick: (Long) -> Unit = {},
 ) {
     val context = LocalContext.current
     val currentLocation by currentLocationFlow.collectAsStateWithLifecycle()
@@ -113,7 +117,7 @@ fun ATrainingTrackerMap(
         val iconRes = when (mapState.bSportType) {
             BSportType.RUN -> R.drawable.bsport_run
             BSportType.BIKE -> R.drawable.bsport_bike
-            else -> -1
+            else -> R.drawable.ic_cross
         }
 
         // Pre-calculate both versions
@@ -131,7 +135,7 @@ fun ATrainingTrackerMap(
 
     // Automated Bounds Fitting (Optimized for Local Area)
     LaunchedEffect(mapState.tracks, mapState.markers, mapState.segments, isMapLoaded) {
-        if (mapState.zoomFocus == MapZoomFocus.TRACK_AND_MARKERS || mapState.zoomFocus == MapZoomFocus.LOCAL_SEGMENTS) {
+        if (mapState.zoomFocus == MapZoomFocus.TRACK_AND_MARKERS || mapState.zoomFocus == MapZoomFocus.LOCAL_SEGMENTS || mapState.zoomFocus == MapZoomFocus.LOCAL_ROUTES) {
             val userPos = currentLocation
             val builder = LatLngBounds.Builder()
             var hasPoints = false
@@ -161,11 +165,24 @@ fun ATrainingTrackerMap(
             }
 
             if (mapState.zoomFocus == MapZoomFocus.LOCAL_SEGMENTS) {
-                // 2. Include only local segment points
+                // 2. Include only local segments
                 mapState.segments.forEach { segment ->
-                    segment.path.forEach {
-                        if (isLocal(it.latLng)) {
-                            builder.include(it.latLng); hasPoints = true
+                    if (isLocal(segment.path.first().latLng)) {  // The segment is 'local' iff the first point is local
+                        hasPoints = true
+                        segment.path.forEach {
+                            builder.include(it.latLng);
+                        }
+                    }
+                }
+            }
+
+            if (mapState.zoomFocus == MapZoomFocus.LOCAL_ROUTES) {
+                // 3. Include only local routes
+                mapState.routes.forEach { route ->
+                    if (isLocal(route.path.first().latLng)) {  // The route is 'local' iff the first point is local
+                        hasPoints = true
+                        route.path.forEach {
+                            builder.include(it.latLng);
                         }
                     }
                 }
@@ -207,17 +224,22 @@ fun ATrainingTrackerMap(
         }
     }
 
+    // TODO: add marker here.
     // --- Auto-center Map on Scrubber Icon ---
     LaunchedEffect(selectedDistance) {
         selectedDistance?.let { targetDist ->
             // Find the point associated with the distance
             val activePath = if (mapState.tracks.isNotEmpty()) {
                 mapState.tracks.firstOrNull()?.path
-            } else {
+            }
+            else if (mapState.segments.isNotEmpty()) {
                 mapState.segments.firstOrNull()?.path
+            }
+            else {
+                mapState.routes.firstOrNull()?.path
             } ?: emptyList()
 
-            val scrubPoint = activePath.find { it.distance >= targetDist }
+            val scrubPoint = activePath!!.find { it.distance >= targetDist }
 
             scrubPoint?.let { point ->
                 /*
@@ -266,7 +288,7 @@ fun ATrainingTrackerMap(
         // --- GUARD CLAUSE ---
         // If the map isn't loaded, stop here. This prevents any calls
         // to BitmapDescriptorFactory inside the layers below.
-        if (!isMapLoaded) return@GoogleMap
+        // if (!isMapLoaded) return@GoogleMap
 
         // --- Layer 1: Segments ---
         mapState.segments.forEach { segment ->
@@ -281,14 +303,30 @@ fun ATrainingTrackerMap(
             )
         }
 
+        // Tracks
         mapState.tracks.forEach { track ->
             if (track.isVisible) {
                 Polyline(
                     points = track.path.map { it.latLng },
                     color = track.color,
-                    width = 5f
+                    width = 8f
                 )
             }
+        }
+
+        // Routes
+        mapState.routes.forEach { route ->
+            val alpha = if (route.bSportType == mapState.bSportType) 1.0f else 0.3f  // TODO: This does not work as it should.
+            val width = if (route.bSportType == mapState.bSportType && route.isSelected) 12f else 8f  // TODO: dependency on bSportType does not work as expected
+            val routeColor = if (route.isSelected) RouteColorSelected else RouteColorUnselected
+
+            Polyline(
+                points = route.path.map { it.latLng },
+                color = routeColor.copy(alpha = alpha),
+                width = width,
+                clickable = true,
+                onClick = { onRouteClick(route.id) }
+            )
         }
 
         // show a marker for the selected distance
@@ -296,11 +334,15 @@ fun ATrainingTrackerMap(
             // 1. Identify the active path (either from tracks or segments)
             val activePath = if (mapState.tracks.isNotEmpty()) {
                 mapState.tracks.firstOrNull()?.path
-            } else {
+            }
+            else if (mapState.segments.isNotEmpty()) {
                 mapState.segments.firstOrNull()?.path
+            }
+            else {
+                mapState.routes.firstOrNull()?.path
             } ?: emptyList()
 
-            val index = activePath.indexOfFirst { it.distance >= targetDist }
+            val index = activePath!!.indexOfFirst { it.distance >= targetDist }
 
             if (index != -1) {
                 val point = activePath[index]
@@ -506,6 +548,7 @@ private fun SegmentLayer(
             )
         }
     }
+
 }
 
 

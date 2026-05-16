@@ -50,6 +50,7 @@ import com.atrainingtracker.trainingtracker.ui.segments.SegmentOnMapScreen
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.ui.routes.RouteOnMapScreen
 
 /**
  * Fragment that displays the map with current track and segments.
@@ -107,17 +108,19 @@ class MapFragmentWithTrack : Fragment() {
                     val mapState by viewModel.mapState.collectAsStateWithLifecycle()
                     val currentLocation by viewModel.currentLocation.collectAsStateWithLifecycle()
                     val liveSegments by viewModel.liveSegments.collectAsStateWithLifecycle()
+                    val allRoutes by viewModel.allRoutes.collectAsStateWithLifecycle()
 
-                    // The ID of the segment currently being "peeked"
+                    // The ID of the segment/route currently being "peeked"
                     var selectedSegmentId by rememberSaveable { mutableStateOf<Long?>(null) }
+                    var selectedRouteId by rememberSaveable { mutableStateOf<Long?>(null) }
 
                     val scaffoldState = rememberBottomSheetScaffoldState(
                         bottomSheetState = rememberStandardBottomSheetState(skipHiddenState = false)
                     )
 
                     // Effect: When a user clicks a new segment, ensure the sheet is at least "Partially Expanded" (Peeked)
-                    LaunchedEffect(selectedSegmentId) {
-                        if (selectedSegmentId != null) {
+                    LaunchedEffect(selectedSegmentId, selectedRouteId) {
+                        if (selectedSegmentId != null || selectedRouteId != null) {
                             scaffoldState.bottomSheetState.partialExpand()
                         } else {
                             scaffoldState.bottomSheetState.hide()
@@ -126,7 +129,9 @@ class MapFragmentWithTrack : Fragment() {
 
                     BottomSheetScaffold(
                         scaffoldState = scaffoldState,
-                        sheetPeekHeight = if (selectedSegmentId != null) 225.dp else 0.dp,
+                        sheetPeekHeight = if (selectedSegmentId != null) { 225.dp
+                        } else if (selectedRouteId != null) { 175.dp
+                        } else 0.dp,
                         sheetDragHandle = {
                             // Subtle small drag handle
                             Surface(
@@ -140,23 +145,58 @@ class MapFragmentWithTrack : Fragment() {
                             }
                         },
                         sheetContent = {
-                            // --- THE SHEET CONTENT: The Entire SimpleSegmentOnMapScreen ---
-                            val selectedSegment = mapState.segments.find { it.stravaId == selectedSegmentId }
+                            when {
+                                selectedSegmentId != null -> {
+                                    // --- THE SHEET CONTENT: The Entire SimpleSegmentOnMapScreen ---
+                                    val selectedSegment =
+                                        mapState.segments.find { it.stravaId == selectedSegmentId }
 
-                            // Transform the single selected LiveSegment into a MapState for the Detail Screen
-                            val detailMapState = remember(selectedSegment) {
-                                MapState(
-                                    zoomFocus = MapZoomFocus.TRACK_AND_MARKERS,
-                                    segments = if (selectedSegment != null) listOf(selectedSegment) else emptyList(),
-                                    bSportType = selectedSegment?.bSportType ?: BSportType.UNKNOWN
-                                )
+                                    // Transform the single selected Segment into a MapState for the Detail Screen
+                                    val detailMapState = remember(selectedSegment) {
+                                        MapState(
+                                            zoomFocus = MapZoomFocus.LOCAL_SEGMENTS,
+                                            segments = if (selectedSegment != null) listOf(
+                                                selectedSegment
+                                            ) else emptyList(),
+                                            bSportType = selectedSegment?.bSportType
+                                                ?: BSportType.UNKNOWN
+                                        )
+                                    }
+
+                                    SegmentOnMapScreen(
+                                        segmentSummary = liveSegments.find { it.summary.stravaId == selectedSegmentId }?.summary,
+                                        mapState = detailMapState,
+                                        modifier = Modifier
+                                    )
+                                }
+                                selectedRouteId != null -> {
+                                    val selectedRoute =
+                                        mapState.routes.find {it.id == selectedRouteId }
+
+                                    // Transform the single selected route into a MapState for the Detail Screen
+                                    val detailMapState = remember(selectedRoute) {
+                                        MapState(
+                                            zoomFocus = MapZoomFocus.LOCAL_ROUTES,
+                                            routes = if (selectedRoute != null) listOf(
+                                                selectedRoute
+                                            ) else emptyList(),
+                                            bSportType = selectedRoute?.bSportType
+                                                ?: BSportType.UNKNOWN
+                                        )
+                                    }
+
+                                    RouteOnMapScreen(
+                                        mapState = detailMapState,
+                                        routeSummary = allRoutes.find { it.summary.id == selectedRouteId}?.summary,
+                                        onToggleSelection = { viewModel.onToggleRoute(
+                                            id = selectedRouteId!!,
+                                            selected = it
+                                        ) },
+                                        modifier = Modifier,
+                                    )
+
+                                }
                             }
-
-                            SegmentOnMapScreen(
-                                segmentSummary = liveSegments.find { it.summary.stravaId == selectedSegmentId }?.summary,
-                                mapState = detailMapState,
-                                modifier = Modifier
-                            )
                         }
                     ) { innerPadding ->
                         // --- THE MAIN BODY: The Track Map ---
@@ -165,14 +205,20 @@ class MapFragmentWithTrack : Fragment() {
                             currentLocationFlow = MutableStateFlow(currentLocation),
                             modifier = Modifier.fillMaxSize(),
                             onSegmentClick = { id ->
+                                selectedRouteId = null
                                 selectedSegmentId = id
+                            },
+                            onRouteClick = { id ->
+                                selectedSegmentId = null
+                                selectedRouteId = id
                             }
                         )
                     }
 
                     // Handle system back button to close the peek
-                    BackHandler(enabled = selectedSegmentId != null) {
+                    BackHandler(enabled = selectedSegmentId != null || selectedRouteId != null) {
                         selectedSegmentId = null
+                        selectedRouteId = null
                     }
                 }
             }

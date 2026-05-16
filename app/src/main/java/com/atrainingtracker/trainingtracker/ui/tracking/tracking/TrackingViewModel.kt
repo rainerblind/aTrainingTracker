@@ -21,6 +21,8 @@ package com.atrainingtracker.trainingtracker.ui.tracking.tracking
 import android.app.Application
 import android.content.SharedPreferences
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.vector.path
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -32,6 +34,7 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.filters.FilteredSensorData
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.MyHelper
+import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.segments.LiveSegment
 import com.atrainingtracker.trainingtracker.segments.LiveSegmentStatus
 import com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepository
@@ -39,8 +42,10 @@ import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
 import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
+import com.atrainingtracker.trainingtracker.ui.map.MapRoute
 import com.atrainingtracker.trainingtracker.ui.map.MapState
 import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
+import com.atrainingtracker.trainingtracker.ui.map.toMapRoute
 import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
@@ -50,6 +55,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.Objects
@@ -74,6 +80,7 @@ class TrackingViewModel(
     val trackingViewsRepository: TrackingViewsRepository,
     val banalServiceRepository: BANALServiceRepository,
     val liveSegmentsRepository: LiveSegmentsRepository,
+    val routesRepository: RoutesRepository,
     private val viewId: Long
 ) : ViewModel() {
 
@@ -172,14 +179,23 @@ class TrackingViewModel(
 
     private fun loadSensorFieldStates() {
         viewModelScope.launch {
+            // 1. First, create a combined flow for all Map-related data
+            val mapDataFlow = combine(
+                liveSegmentsRepository.liveSegments,
+                activeLiveSegments,
+                routesRepository.allRoutes
+            ) { allSegments, activeSegments, allRoutes ->
+                Triple(allSegments, activeSegments, allRoutes)
+            }
+
+            // 2. Now combine the Sensor data with the Map data (This keeps us under the 5-flow limit)
             combine(
                 trackingViewsRepository.getSensorFieldConfigsForView(viewId),
                 banalServiceRepository.allFilteredSensorData,
                 trackingViewsRepository.getTrackingViewInfoFlow(viewId),
-                liveSegmentsRepository.liveSegments,
-                activeLiveSegments
-            ) { configs, allSensorData, viewInfo, allLiveSegments, activeLiveSegments ->
-                // This whole block will re-execute whenever configs OR sensor data change
+                mapDataFlow // This is our 4th flow
+            ) { configs, allSensorData, viewInfo, mapData ->
+                val (allLiveSegments, activeLiveSegments, allRoutes) = mapData
 
                 // --- Step 1: Create the base state from the latest configurations ---
                 val baseFields = configs.map { config ->
@@ -223,7 +239,7 @@ class TrackingViewModel(
                     )
                 }
 
-                // Convert LiveSegments into MapSegments for the GoogleMap to draw
+                // Convert LiveSegments into MapSegments
                 val mapSegments = allLiveSegments.map { live ->
                     MapSegment(
                         stravaId = live.staticData.summary.stravaId,
@@ -244,14 +260,15 @@ class TrackingViewModel(
                         zoomFocus = MapZoomFocus.FOLLOW_ME,
                         speed = banalServiceRepository.currentSpeed.value?.toFloat() ?: 0f,
                         bearing = banalServiceRepository.currentBearing.value?.toFloat() ?: 0f,
+                        bSportType = banalServiceRepository.bSportType.value,
                         currentTrack = currentTrack,
                         segments = mapSegments,
+                        routes = allRoutes.map { it.toMapRoute() },
                         activeLiveSegmentIds = activeIds,
                         markers = markerList
                     )
                 )
             }.collect { newState ->
-                // Emit the new state to the UI
                 _uiState.value = newState
             }
         }
@@ -385,7 +402,8 @@ class TrackingViewModelFactory(
             val trackingViewsRepo = TrackingViewsRepository.getInstance(application)
             val banalServiceRepo = BANALServiceRepository.getInstance(application)
             val liveSegmentsRepository = LiveSegmentsRepository.getInstance(application)
-            return TrackingViewModel(application, trackingViewsRepo, banalServiceRepo, liveSegmentsRepository, viewId) as T
+            val routesRepository = RoutesRepository.getInstance(application)
+            return TrackingViewModel(application, trackingViewsRepo, banalServiceRepo, liveSegmentsRepository, routesRepository, viewId) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

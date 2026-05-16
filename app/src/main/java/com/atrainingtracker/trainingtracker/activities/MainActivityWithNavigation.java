@@ -54,10 +54,12 @@ import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents;
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedFragment;
 import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentFragment;
 import com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrack;
+import com.atrainingtracker.trainingtracker.ui.routes.RoutesFragment;
 import com.atrainingtracker.trainingtracker.ui.segments.segmentlist.StarredSegmentsFragment;
 import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository;
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsFragment;
 import com.dsi.ant.plugins.antplus.pccbase.AntPluginPcc;
+import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.material.navigation.NavigationView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -73,7 +75,6 @@ import androidx.fragment.app.FragmentTransaction;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.lifecycle.LifecycleOwnerKt;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceScreen;
 
@@ -112,6 +113,7 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
+import kotlinx.coroutines.Dispatchers;
 import kotlinx.coroutines.flow.FlowKt;
 
 // import android.support.v7.app.AlertDialog;
@@ -310,6 +312,19 @@ public class MainActivityWithNavigation
         if (DEBUG) Log.d(TAG, "onCreate");
 
         EdgeToEdge.enable(this);
+
+        // Initialize the Google Maps SDK explicitly to prevent
+        // IBitmapDescriptorFactory errors in Compose
+        MapsInitializer.initialize(getApplicationContext(), MapsInitializer.Renderer.LATEST, renderer -> {
+            switch (renderer) {
+                case LATEST:
+                    Log.d(TAG, "The latest version of the Google Maps renderer is in use.");
+                    break;
+                case LEGACY:
+                    Log.d(TAG, "The legacy version of the Google Maps renderer is in use.");
+                    break;
+            }
+        });
 
         // some initialization
         mTrainingApplication = (TrainingApplication) getApplication();
@@ -722,6 +737,11 @@ public class MainActivityWithNavigation
                 tag = StarredSegmentsFragment.TAG;
                 break;
 
+            case R.id.drawer_routes:
+                mFragment = RoutesFragment.newInstance();
+                tag = RoutesFragment.TAG;
+                break;
+
             case R.id.drawer_workouts:
                 mFragment = new WorkoutSummariesTabbedFragment();
                 tag = WorkoutSummariesTabbedFragment.TAG;
@@ -956,5 +976,4 @@ public class MainActivityWithNavigation
     }
 
     public enum SelectedFragment {START_OR_TRACKING, WORKOUT_LIST}
-
 }
