@@ -66,6 +66,7 @@ class StarredSegmentsFragment : Fragment() {
                     val segments by viewModel.segmentsWithPath.collectAsStateWithLifecycle()
                     val sortOrder by viewModel.sortOrder.collectAsState()
                     val refreshingSports by viewModel.refreshingSports.collectAsStateWithLifecycle()
+                    val isLocationAvailable by viewModel.isLocationAvailable.collectAsStateWithLifecycle()
 
                     val pagerState = rememberPagerState(pageCount = { 2 })
                     val bikeListState = rememberLazyListState()
@@ -93,7 +94,8 @@ class StarredSegmentsFragment : Fragment() {
                             },
                             sortOrder = sortOrder,
                             scrollToTop = viewModel.shouldScrollToTop(sortOrder),
-                            onSortOrderChange = { viewModel.setSortOrder(it) }
+                            onSortOrderChange = { viewModel.setSortOrder(it) },
+                            isLocationAvailable = isLocationAvailable
                         )
                     } else {
                         // SHOW DETAIL

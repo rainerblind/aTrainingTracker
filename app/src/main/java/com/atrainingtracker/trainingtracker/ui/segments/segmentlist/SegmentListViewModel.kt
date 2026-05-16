@@ -34,6 +34,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlin.text.lowercase
@@ -67,6 +68,14 @@ class SegmentListViewModel(
         }
         return false
     }
+
+    val isLocationAvailable: StateFlow<Boolean> = banalServiceRepository.currentLocation
+        .map { it != null }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = false
+        )
 
     // Reactive sorted list
     val segmentsWithPath: StateFlow<List<SegmentWithPath>> = combine(

@@ -79,7 +79,8 @@ fun SegmentsTabsScreen(
     onSegmentClick: (Long) -> Unit,
     sortOrder: SegmentSortOrder,
     scrollToTop: Boolean,
-    onSortOrderChange: (SegmentSortOrder) -> Unit
+    onSortOrderChange: (SegmentSortOrder) -> Unit,
+    isLocationAvailable: Boolean
 ) {
     val tabs = listOf(
         Pair(stringResource(R.string.workout_summaries_tab_bike), BSportType.BIKE),
@@ -170,7 +171,14 @@ fun SegmentsTabsScreen(
                                     SegmentSortOrder.entries.forEach { order ->
                                         DropdownMenuItem(
                                             text = {
-                                                Text(stringResource(order.labelResId))
+                                                Text(text = stringResource(order.labelResId),
+                                                    color = if (order == SegmentSortOrder.DISTANCE_TO_USER && !isLocationAvailable) {
+                                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                                    }
+                                                    else {
+                                                        MaterialTheme.colorScheme.onSurface
+                                                    }
+                                                )
                                             },
                                             onClick = {
                                                 onSortOrderChange(order)
@@ -180,10 +188,17 @@ fun SegmentsTabsScreen(
                                                 if (sortOrder == order) {
                                                     Icon(
                                                         Icons.Default.Check,
-                                                        contentDescription = null
+                                                        contentDescription = null,
+                                                        tint = if (order == SegmentSortOrder.DISTANCE_TO_USER && !isLocationAvailable) {
+                                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                                        }
+                                                        else {
+                                                            MaterialTheme.colorScheme.onSurface
+                                                        }
                                                     )
                                                 }
-                                            }
+                                            },
+                                            enabled = !(order == SegmentSortOrder.DISTANCE_TO_USER && !isLocationAvailable)
                                         )
                                     }
                                 }
