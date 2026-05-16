@@ -216,7 +216,7 @@ class MapFragmentWithTrack : Fragment() {
                     }
 
                     // Handle system back button to close the peek
-                    BackHandler(enabled = selectedSegmentId != null) {
+                    BackHandler(enabled = selectedSegmentId != null || selectedRouteId != null) {
                         selectedSegmentId = null
                         selectedRouteId = null
                     }
