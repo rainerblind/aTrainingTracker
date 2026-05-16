@@ -60,12 +60,26 @@ class SegmentListViewModel(
 
     private var lastScrolledOrder: SegmentSortOrder? = null
 
+    private var lastLocationWasAvailable: Boolean = false
+
     fun shouldScrollToTop(currentOrder: SegmentSortOrder): Boolean {
-        Log.i("SegmentListViewModel", "shouldScroll(currentOrder=$currentOrder), lastScrolledOrder=$lastScrolledOrder")
-        if (lastScrolledOrder != currentOrder) {
+        val isLocationAvailableNow = isLocationAvailable.value
+
+        // Scenario A: The Sort Order itself changed
+        val orderChanged = lastScrolledOrder != currentOrder
+
+        // Scenario B: We are in DISTANCE mode and location just became available
+        val locationJustBecameAvailable = currentOrder == SegmentSortOrder.DISTANCE_TO_USER &&
+                !lastLocationWasAvailable && isLocationAvailableNow
+
+        if (orderChanged || locationJustBecameAvailable) {
             lastScrolledOrder = currentOrder
+            lastLocationWasAvailable = isLocationAvailableNow
             return true
         }
+
+        // Keep the location state in sync even if we don't scroll
+        lastLocationWasAvailable = isLocationAvailableNow
         return false
     }
 
