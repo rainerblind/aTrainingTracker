@@ -76,6 +76,7 @@ class RoutesFragment : Fragment() {
 
                     val routes by viewModel.routes.collectAsStateWithLifecycle()
                     val sortOrder by viewModel.sortOrder.collectAsState()
+                    val isLocationAvailable by viewModel.isLocationAvailable.collectAsStateWithLifecycle()
 
                     val pagerState = rememberPagerState(pageCount = { 4 })
                     val allSportsListState = rememberLazyListState()
@@ -161,6 +162,7 @@ class RoutesFragment : Fragment() {
                             sortOrder = sortOrder,
                             onSortOrderChange = { viewModel.setSortOrder(it) },
                             scrollToTop = viewModel.shouldScrollToTop(sortOrder),
+                            isLocationAvailable = isLocationAvailable
                         )
                     }
                 }

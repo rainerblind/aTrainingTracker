@@ -81,7 +81,8 @@ fun RouteTabbedScreen(
     onImportClick: () -> Unit,
     sortOrder: RouteSortOrder,
     onSortOrderChange: (RouteSortOrder) -> Unit,
-    scrollToTop: Boolean
+    scrollToTop: Boolean,
+    isLocationAvailable: Boolean,
 ) {
     // Define our tabs mapping to BSportType
     val tabs = listOf(
@@ -230,7 +231,14 @@ fun RouteTabbedScreen(
                                         RouteSortOrder.entries.forEach { order ->
                                             DropdownMenuItem(
                                                 text = {
-                                                    Text(stringResource(order.labelResId))
+                                                    Text(text = stringResource(order.labelResId),
+                                                        color = if (order == RouteSortOrder.DISTANCE_TO_USER && !isLocationAvailable) {
+                                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                                        }
+                                                        else {
+                                                            MaterialTheme.colorScheme.onSurface
+                                                        }
+                                                    )
                                                 },
                                                 onClick = {
                                                     onSortOrderChange(order)
@@ -240,10 +248,17 @@ fun RouteTabbedScreen(
                                                     if (sortOrder == order) {
                                                         Icon(
                                                             Icons.Default.Check,
-                                                            contentDescription = null
+                                                            contentDescription = null,
+                                                            tint = if (order == RouteSortOrder.DISTANCE_TO_USER && !isLocationAvailable) {
+                                                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                                            }
+                                                            else {
+                                                                MaterialTheme.colorScheme.onSurface
+                                                            }
                                                         )
                                                     }
-                                                }
+                                                },
+                                                enabled = !(order == RouteSortOrder.DISTANCE_TO_USER && !isLocationAvailable)
                                             )
                                         }
                                     }
