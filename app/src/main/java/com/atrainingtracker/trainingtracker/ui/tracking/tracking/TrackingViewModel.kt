@@ -260,6 +260,7 @@ class TrackingViewModel(
                         zoomFocus = MapZoomFocus.FOLLOW_ME,
                         speed = banalServiceRepository.currentSpeed.value?.toFloat() ?: 0f,
                         bearing = banalServiceRepository.currentBearing.value?.toFloat() ?: 0f,
+                        bSportType = banalServiceRepository.bSportType.value,
                         currentTrack = currentTrack,
                         segments = mapSegments,
                         routes = allRoutes.map { it.toMapRoute() },

@@ -39,10 +39,11 @@ class MapFragmentWithTrackViewModel(application: Application) : AndroidViewModel
     val allRoutes = routesRepository.allRoutes
 
     val mapState: StateFlow<MapState> = combine(
+        banalRepository.bSportType,
         banalRepository.currentTrack,
         segmentsRepository.allSegmentsWithPath,
         routesRepository.allRoutes
-    ) { currentTrack, liveSegments, allRoutes ->
+    ) { bSportType, currentTrack, liveSegments, allRoutes ->
 
         // Logic for Start Marker
         val markers = if (currentTrack.isNotEmpty()) {
@@ -69,6 +70,7 @@ class MapFragmentWithTrackViewModel(application: Application) : AndroidViewModel
                 )
             },
             routes = allRoutes.map { it.toMapRoute() },
+            bSportType = bSportType,
             currentTrack = currentTrack,
             bearing = 0f,
             speed = 0f,
