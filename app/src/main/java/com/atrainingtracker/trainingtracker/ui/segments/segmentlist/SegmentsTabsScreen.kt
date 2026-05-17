@@ -33,6 +33,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -60,7 +61,6 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
-import com.atrainingtracker.trainingtracker.segments.LiveSegment
 import com.atrainingtracker.trainingtracker.segments.SegmentWithPath
 import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
 import kotlinx.coroutines.launch
@@ -106,6 +106,10 @@ fun SegmentsTabsScreen(
 
     var showSortMenu by remember { mutableStateOf(false) } // Track sort order menu visibility
 
+    // Determine the sport type of the currently visible tab for the header actions
+    val activeSport = tabs[pagerState.currentPage].second
+    val activeRefreshing = isRefreshing(activeSport)
+
     Surface(modifier = Modifier.fillMaxSize()) {
         Box(Modifier.nestedScroll(connection)) {
 
@@ -125,35 +129,50 @@ fun SegmentsTabsScreen(
                     isStravaConnected = isStravaConnected,
                     onConnectToStrava = onConnectToStrava,
                     isRefreshing = isRefreshing(currentSport),
-                    onRefresh = { onRefresh(currentSport) },
                     onSegmentClick = onSegmentClick,
                     appBarOffsetPx = connection.appBarOffset,
                     headerHeightPx = appBarMaxHeightPx.toFloat()
                 )
             }
 
-            // --- HEADER (Same as WorkoutTabsScreen) ---
+            // --- HEADER
             Surface(
                 modifier = Modifier.offset { IntOffset(0, connection.appBarOffset) },
                 color = MaterialTheme.colorScheme.primaryContainer,
-                // tonalElevation = 3.dp
             ) {
-                Column {
-                    Column(modifier = Modifier.statusBarsPadding()) {
-                        // Title Row with Sort Icon
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = stringResource(R.string.segments),
-                                style = MaterialTheme.typography.headlineSmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            )
+                Column(modifier = Modifier.statusBarsPadding()) {
+                    // Title Row with Refresh and Sort Icon
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = stringResource(R.string.segments),
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
 
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            // --- REFRESH BUTTON ---
+                            if (isStravaConnected) {
+                                IconButton(
+                                    onClick = { onRefresh(activeSport) },
+                                    enabled = !activeRefreshing // Prevent multiple clicks during update
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Refresh,
+                                        contentDescription = stringResource(R.string.starred_segments__refresh),
+                                        tint = if (activeRefreshing)
+                                            MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.38f)
+                                        else MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                            }
+
+                            // SORT BUTTON
                             Box {
                                 IconButton(onClick = { showSortMenu = true }) {
                                     Icon(
@@ -171,11 +190,13 @@ fun SegmentsTabsScreen(
                                     SegmentSortOrder.entries.forEach { order ->
                                         DropdownMenuItem(
                                             text = {
-                                                Text(text = stringResource(order.labelResId),
+                                                Text(
+                                                    text = stringResource(order.labelResId),
                                                     color = if (order == SegmentSortOrder.DISTANCE_TO_USER && !isLocationAvailable) {
-                                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                                                    }
-                                                    else {
+                                                        MaterialTheme.colorScheme.onSurface.copy(
+                                                            alpha = 0.38f
+                                                        )
+                                                    } else {
                                                         MaterialTheme.colorScheme.onSurface
                                                     }
                                                 )
@@ -190,9 +211,10 @@ fun SegmentsTabsScreen(
                                                         Icons.Default.Check,
                                                         contentDescription = null,
                                                         tint = if (order == SegmentSortOrder.DISTANCE_TO_USER && !isLocationAvailable) {
-                                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                                                        }
-                                                        else {
+                                                            MaterialTheme.colorScheme.onSurface.copy(
+                                                                alpha = 0.38f
+                                                            )
+                                                        } else {
                                                             MaterialTheme.colorScheme.onSurface
                                                         }
                                                     )

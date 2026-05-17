@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.lazy.LazyColumn
@@ -33,10 +34,8 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,7 +53,6 @@ fun SegmentList(
     isStravaConnected: Boolean,
     onConnectToStrava: () -> Unit,
     isRefreshing: Boolean,
-    onRefresh: () -> Unit,
     onSegmentClick: (Long) -> Unit,
     appBarOffsetPx: Int,
     headerHeightPx: Float
@@ -62,28 +60,20 @@ fun SegmentList(
     val density = LocalDensity.current
     val topPadding = with(density) { (headerHeightPx + appBarOffsetPx).toDp() }
 
-    val pullToRefreshState = rememberPullToRefreshState()
-
-    PullToRefreshBox(
-        isRefreshing = isRefreshing,
-        onRefresh = { if (isStravaConnected) onRefresh() },
-        state = pullToRefreshState,
-        modifier = Modifier.fillMaxSize(),
-        indicator = {
-            if (isStravaConnected) {
-                // We use the Indicator to give a visual feedback while refreshing
-                PullToRefreshDefaults.Indicator(
-                    state = pullToRefreshState,
-                    isRefreshing = isRefreshing,
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        // This padding pushes the spinner down below your header
-                        .padding(top = topPadding + 16.dp)
-                )
-            }
-        }
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
         val bottomPadding = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
+
+        // Visual feedback: A thin progress bar just below the header when updating
+        if (isRefreshing) {
+            LinearProgressIndicator(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .padding(top = topPadding),
+                color = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                trackColor = androidx.compose.material3.MaterialTheme.colorScheme.primaryContainer
+            )
+        }
 
         if (!isStravaConnected && segmentsWithPath.isEmpty()) {
             Box(
