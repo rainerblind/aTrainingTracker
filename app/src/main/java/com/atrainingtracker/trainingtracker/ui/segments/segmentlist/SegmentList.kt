@@ -35,6 +35,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -70,8 +71,8 @@ fun SegmentList(
                     .align(Alignment.TopCenter)
                     .fillMaxWidth()
                     .padding(top = topPadding),
-                color = androidx.compose.material3.MaterialTheme.colorScheme.primary,
-                trackColor = androidx.compose.material3.MaterialTheme.colorScheme.primaryContainer
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.primaryContainer
             )
         }
 
