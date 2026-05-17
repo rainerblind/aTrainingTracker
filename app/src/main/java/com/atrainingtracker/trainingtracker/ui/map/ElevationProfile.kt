@@ -110,29 +110,39 @@ fun ElevationProfile(
 
     // --- 1. Cache Static Geometry & Adaptive Labels ---
     val cachedData = remember(pathPoints) {
-        val totalDist = pathPoints.last().distance
-        val pointCount = pathPoints.size
+
+        // --- 1. DOWNSAMPLING LOGIC ---
+        // Max points to draw for performance.
+        val maxPoints = 500
+        val pathPointsDownsampled = if (pathPoints.size > maxPoints) {
+            val step = pathPoints.size / maxPoints
+            pathPoints.filterIndexed { index, _ -> index % step == 0 || index == pathPoints.size - 1 }
+        } else {
+            pathPoints
+        }
+
+        val totalDist = pathPointsDownsampled.last().distance
+        val pointCount = pathPointsDownsampled.size
 
         // --- Adaptive Smoothing Logic ---
         // Calculate average distance between points (e.g., 5m or 20m)
         val avgPointSpacing = totalDist / pointCount
 
-        // We want a smoothing window of ~80 meters.
-        // WindowSize = 80m / spacing. We ensure it's at least 3 and always odd.
-        val targetWindowMeters = 80f
+        // We want a smoothing window of ~75 meters.
+        val targetWindowMeters = 75f
         val calculatedWindow = (targetWindowMeters / avgPointSpacing).toInt()
-            .coerceIn(3, 51) // Don't go below 3 or above 51 to keep performance high
+            .coerceIn(3, 21) // Don't go below 3 or above 21 to keep performance high
 
         val windowSize = if (calculatedWindow % 2 == 0) calculatedWindow + 1 else calculatedWindow
         val halfWindow = windowSize / 2
 
-        val smoothedAltitudes = pathPoints.indices.map { i ->
+        val smoothedAltitudes = pathPointsDownsampled.indices.map { i ->
             val start = (i - halfWindow).coerceAtLeast(0)
-            val end = (i + halfWindow).coerceAtMost(pathPoints.size - 1)
+            val end = (i + halfWindow).coerceAtMost(pathPointsDownsampled.size - 1)
             var sum = 0.0
             var count = 0
             for (j in start..end) {
-                sum += pathPoints[j].altitude
+                sum += pathPointsDownsampled[j].altitude
                 count++
             }
             sum / count
@@ -163,9 +173,9 @@ fun ElevationProfile(
         }
 
         val segments = mutableListOf<ElevationSegment>()
-        for (i in 0 until pathPoints.size - 1) {
-            val p1 = pathPoints[i]
-            val p2 = pathPoints[i + 1]
+        for (i in 0 until pathPointsDownsampled.size - 1) {
+            val p1 = pathPointsDownsampled[i]
+            val p2 = pathPointsDownsampled[i + 1]
 
             // Use Smoothed Altitudes for geometry
             val sAlt1 = smoothedAltitudes[i]
