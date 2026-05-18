@@ -210,17 +210,21 @@ fun ATrainingTrackerMap(
     LaunchedEffect(currentLocation, mapState.bearing, mapState.speed) {
         if (mapState.zoomFocus == MapZoomFocus.FOLLOW_ME && currentLocation != null) {
             val targetZoom = (20f - 0.1f * mapState.speed).coerceIn(14f, 20f)
-            cameraPositionState.animate(
-                CameraUpdateFactory.newCameraPosition(
-                    CameraPosition.builder()
-                        .target(currentLocation!!)
-                        .bearing(mapState.bearing)
-                        .zoom(targetZoom)
-                        .tilt(70f)
-                        .build()
-                ),
-                400,
-            )
+            try {
+                cameraPositionState.animate(
+                    CameraUpdateFactory.newCameraPosition(
+                        CameraPosition.builder()
+                            .target(currentLocation!!)
+                            .bearing(mapState.bearing)
+                            .zoom(targetZoom)
+                            .tilt(70f)
+                            .build()
+                    ),
+                    400,
+                )
+            } catch (e: Exception) {
+                Log.e("ATrainingTrackerMap", "Error updating camera position", e)
+            }
         }
     }
 
