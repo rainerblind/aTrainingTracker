@@ -26,6 +26,7 @@ import androidx.lifecycle.asFlow
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.MyPreferenceManager
 import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.aftermath.DeletionProgress
@@ -54,6 +55,7 @@ enum class WorkoutSortOrder(@StringRes val labelResId: Int) {
 class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(application) {
     private val workoutRepo = WorkoutRepository.getInstance(application)
     private val exportRepo = ExportStatusRepository.getInstance(application)
+    private val prefManager = MyPreferenceManager(application)
 
     private val _sortOrder = MutableStateFlow(WorkoutSortOrder.DATE)
     val sortOrder = _sortOrder.asStateFlow()
@@ -110,6 +112,24 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
+
+    // 2. Observe the preference from DataStore
+    // We use stateIn to convert the Flow to a StateFlow for the UI
+    val isCompactView: StateFlow<Boolean> = prefManager.isCompactViewFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = false
+        )
+
+    // 3. Update the toggle logic to save to DataStore
+    fun toggleCompactView() {
+        viewModelScope.launch {
+            val currentValue = isCompactView.value
+            prefManager.setCompactView(!currentValue)
+        }
+    }
+
 
     // LiveData to trigger showing the "Delete Old Workouts" dialog
     val showDeleteOldWorkoutsDialogEvent = SingleLiveEvent<Unit>()
