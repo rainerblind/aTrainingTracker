@@ -177,50 +177,53 @@ fun WorkoutTabsScreen(
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
 
-                        // Toggle View Mode Button
-                        IconButton(onClick = onToggleCompactView ) {
-                            Icon(
-                                imageVector = if (isCompactView) Icons.Default.ViewStream else Icons.Default.ViewHeadline,
-                                contentDescription = "Switch View Mode",
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
 
-                        // Sort Dropdown
-                        var showSortMenu by remember {
-                            mutableStateOf(false)
-                        }
-                        Box {
-                            IconButton(onClick = { showSortMenu = true }) {
+                            // Toggle View Mode Button
+                            IconButton(onClick = onToggleCompactView ) {
                                 Icon(
-                                    imageVector = androidx.compose.material.icons.Icons.Default.Sort,
-                                    contentDescription = stringResource(R.string.sort),
+                                    imageVector = if (isCompactView) Icons.Default.ViewStream else Icons.Default.ViewHeadline,
+                                    contentDescription = "Switch View Mode",
                                     tint = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
                             }
-                            DropdownMenu(
-                                containerColor = MaterialTheme.colorScheme.surface,
-                                expanded = showSortMenu,
-                                onDismissRequest = { showSortMenu = false }
-                            ) {
-                                WorkoutSortOrder.entries.forEach { order ->
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(stringResource(order.labelResId))
-                                        },
-                                        onClick = {
-                                            onSortOrderChange(order)
-                                            showSortMenu = false
-                                        },
-                                        leadingIcon = {
-                                            if (sortOrder == order) {
-                                                Icon(
-                                                    Icons.Default.Check,
-                                                    contentDescription = null
-                                                )
-                                            }
-                                        }
+
+                            // Sort Dropdown
+                            var showSortMenu by remember {
+                                mutableStateOf(false)
+                            }
+                            Box {
+                                IconButton(onClick = { showSortMenu = true }) {
+                                    Icon(
+                                        imageVector = androidx.compose.material.icons.Icons.Default.Sort,
+                                        contentDescription = stringResource(R.string.sort),
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
                                     )
+                                }
+                                DropdownMenu(
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    expanded = showSortMenu,
+                                    onDismissRequest = { showSortMenu = false }
+                                ) {
+                                    WorkoutSortOrder.entries.forEach { order ->
+                                        DropdownMenuItem(
+                                            text = {
+                                                Text(stringResource(order.labelResId))
+                                            },
+                                            onClick = {
+                                                onSortOrderChange(order)
+                                                showSortMenu = false
+                                            },
+                                            leadingIcon = {
+                                                if (sortOrder == order) {
+                                                    Icon(
+                                                        Icons.Default.Check,
+                                                        contentDescription = null
+                                                    )
+                                                }
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }
