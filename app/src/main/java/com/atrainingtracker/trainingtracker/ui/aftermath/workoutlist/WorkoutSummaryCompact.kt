@@ -91,7 +91,7 @@ fun WorkoutSummaryCompact(
                 Icon(
                     painter = painterResource(id = workoutData.bSportType.iconResId),
                     contentDescription = null,
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(21.dp),
                     tint = Color.Unspecified
                 )
 
@@ -125,6 +125,7 @@ fun WorkoutSummaryCompact(
                 Text(
                     text = "${workoutData.headerData.formattedDate}  ${workoutData.headerData.formattedTime}",
                     style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.secondary,
                 )
             }
