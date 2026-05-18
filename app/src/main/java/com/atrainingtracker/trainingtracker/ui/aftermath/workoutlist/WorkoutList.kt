@@ -88,6 +88,13 @@ fun WorkoutList(
                     onEditWorkout = { onEditWorkout(workoutData.id) },
                     onMapClick = { onMapClick(workoutData) }
                 )
+                /*
+                WorkoutSummaryCompact(
+                    workoutData = workoutData,
+                    onEditWorkout = { onEditWorkout(workoutData.id) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                 */
             }
         }
     }
