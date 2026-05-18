@@ -28,6 +28,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material.icons.filled.ViewHeadline
+import androidx.compose.material.icons.filled.ViewStream
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -80,6 +82,8 @@ fun WorkoutTabsScreen(
     sortOrder: WorkoutSortOrder,
     onSortOrderChange: (WorkoutSortOrder) -> Unit,
     scrollToTop: Boolean,
+    isCompactView: Boolean,
+    onToggleCompactView: () -> Unit
 ) {
     val tabs = listOf(
         stringResource(R.string.workout_summaries_tab_all),
@@ -145,6 +149,7 @@ fun WorkoutTabsScreen(
                     onDeleteConfirmed = onDeleteConfirmed,
                     onEditWorkout = onEditWorkout,
                     onMapClick = onMapClick,
+                    isCompactView = isCompactView,
                     // Use a Spacer or contentPadding that reacts to the offset
                     appBarOffsetPx = connection.appBarOffset,
                     headerHeightPx = appBarMaxHeightPx.toFloat()
@@ -172,41 +177,53 @@ fun WorkoutTabsScreen(
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
 
-                        // Sort Dropdown
-                        var showSortMenu by remember {
-                            mutableStateOf(false)
-                        }
-                        Box {
-                            IconButton(onClick = { showSortMenu = true }) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+
+                            // Toggle View Mode Button
+                            IconButton(onClick = onToggleCompactView ) {
                                 Icon(
-                                    imageVector = androidx.compose.material.icons.Icons.Default.Sort,
-                                    contentDescription = stringResource(R.string.sort),
+                                    imageVector = if (isCompactView) Icons.Default.ViewStream else Icons.Default.ViewHeadline,
+                                    contentDescription = "Switch View Mode",
                                     tint = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
                             }
-                            DropdownMenu(
-                                containerColor = MaterialTheme.colorScheme.surface,
-                                expanded = showSortMenu,
-                                onDismissRequest = { showSortMenu = false }
-                            ) {
-                                WorkoutSortOrder.entries.forEach { order ->
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(stringResource(order.labelResId))
-                                        },
-                                        onClick = {
-                                            onSortOrderChange(order)
-                                            showSortMenu = false
-                                        },
-                                        leadingIcon = {
-                                            if (sortOrder == order) {
-                                                Icon(
-                                                    Icons.Default.Check,
-                                                    contentDescription = null
-                                                )
-                                            }
-                                        }
+
+                            // Sort Dropdown
+                            var showSortMenu by remember {
+                                mutableStateOf(false)
+                            }
+                            Box {
+                                IconButton(onClick = { showSortMenu = true }) {
+                                    Icon(
+                                        imageVector = androidx.compose.material.icons.Icons.Default.Sort,
+                                        contentDescription = stringResource(R.string.sort),
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
                                     )
+                                }
+                                DropdownMenu(
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    expanded = showSortMenu,
+                                    onDismissRequest = { showSortMenu = false }
+                                ) {
+                                    WorkoutSortOrder.entries.forEach { order ->
+                                        DropdownMenuItem(
+                                            text = {
+                                                Text(stringResource(order.labelResId))
+                                            },
+                                            onClick = {
+                                                onSortOrderChange(order)
+                                                showSortMenu = false
+                                            },
+                                            leadingIcon = {
+                                                if (sortOrder == order) {
+                                                    Icon(
+                                                        Icons.Default.Check,
+                                                        contentDescription = null
+                                                    )
+                                                }
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }

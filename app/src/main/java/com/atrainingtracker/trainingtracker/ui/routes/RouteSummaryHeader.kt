@@ -104,7 +104,7 @@ fun RouteSummaryHeader(
                     // Elevation Group
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            painter = painterResource(id = R.drawable.ic_elevation_gain),
+                            painter = painterResource(id = R.drawable.ic_ascent),
                             contentDescription = null,
                             modifier = Modifier.size(16.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant

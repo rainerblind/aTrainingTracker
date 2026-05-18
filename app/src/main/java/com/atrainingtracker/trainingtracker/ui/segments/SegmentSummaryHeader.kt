@@ -167,7 +167,7 @@ fun SegmentSummaryHeader(
                         Spacer(modifier = Modifier.width(4.dp))
                     }
 
-                    StatItem(R.drawable.ic_elevation_gain, summary.elevationGain, compact)
+                    StatItem(R.drawable.ic_ascent, summary.elevationGain, compact)
                     VerticalDivider(compact)
                     StatItem(R.drawable.ic_altitude_min, summary.elevationMin, compact)
                     VerticalDivider(compact)

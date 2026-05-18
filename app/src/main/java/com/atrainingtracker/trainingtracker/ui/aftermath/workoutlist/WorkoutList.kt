@@ -49,6 +49,7 @@ fun WorkoutList(
     onDeleteConfirmed: (Long) -> Unit,
     onEditWorkout: (Long) -> Unit,
     onMapClick: (WorkoutData) -> Unit,
+    isCompactView: Boolean,
     appBarOffsetPx: Int,
     headerHeightPx: Float
 ) {
@@ -80,14 +81,23 @@ fun WorkoutList(
                     containerColor = MaterialTheme.colorScheme.surface
                 )
             ) {
-                WorkoutSummary(
-                    workoutData = workoutData,
-                    isPlayServiceAvailable = isPlayServiceAvailable,
-                    onExport = { fileFormat -> onExportWorkout(workoutData.id, fileFormat) },
-                    onDeleteConfirmed = { onDeleteConfirmed(workoutData.id) },
-                    onEditWorkout = { onEditWorkout(workoutData.id) },
-                    onMapClick = { onMapClick(workoutData) }
-                )
+                if (isCompactView) {
+                    WorkoutSummaryCompact(
+                        workoutData = workoutData,
+                        onEditWorkout = { onEditWorkout(workoutData.id) },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                else {
+                    WorkoutSummary(
+                        workoutData = workoutData,
+                        isPlayServiceAvailable = isPlayServiceAvailable,
+                        onExport = { fileFormat -> onExportWorkout(workoutData.id, fileFormat) },
+                        onDeleteConfirmed = { onDeleteConfirmed(workoutData.id) },
+                        onEditWorkout = { onEditWorkout(workoutData.id) },
+                        onMapClick = { onMapClick(workoutData) }
+                    )
+                }
             }
         }
     }
