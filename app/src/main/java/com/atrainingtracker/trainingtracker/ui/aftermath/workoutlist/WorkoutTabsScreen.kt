@@ -28,6 +28,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material.icons.filled.ViewHeadline
+import androidx.compose.material.icons.filled.ViewStream
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -80,6 +82,8 @@ fun WorkoutTabsScreen(
     sortOrder: WorkoutSortOrder,
     onSortOrderChange: (WorkoutSortOrder) -> Unit,
     scrollToTop: Boolean,
+    isCompactView: Boolean,
+    onToggleCompactView: () -> Unit
 ) {
     val tabs = listOf(
         stringResource(R.string.workout_summaries_tab_all),
@@ -145,6 +149,7 @@ fun WorkoutTabsScreen(
                     onDeleteConfirmed = onDeleteConfirmed,
                     onEditWorkout = onEditWorkout,
                     onMapClick = onMapClick,
+                    isCompactView = isCompactView,
                     // Use a Spacer or contentPadding that reacts to the offset
                     appBarOffsetPx = connection.appBarOffset,
                     headerHeightPx = appBarMaxHeightPx.toFloat()
@@ -171,6 +176,15 @@ fun WorkoutTabsScreen(
                             style = MaterialTheme.typography.headlineSmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
+
+                        // Toggle View Mode Button
+                        IconButton(onClick = onToggleCompactView ) {
+                            Icon(
+                                imageVector = if (isCompactView) Icons.Default.ViewStream else Icons.Default.ViewHeadline,
+                                contentDescription = "Switch View Mode",
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
 
                         // Sort Dropdown
                         var showSortMenu by remember {

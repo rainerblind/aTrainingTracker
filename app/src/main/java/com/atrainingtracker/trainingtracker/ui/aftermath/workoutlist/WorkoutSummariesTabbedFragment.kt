@@ -82,6 +82,7 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                     // 1. Observe the workouts list from ViewModel
                     val workouts by viewModel.workouts.collectAsStateWithLifecycle()
                     val sortOrder by viewModel.sortOrder.collectAsState()
+                    val isCompactView by viewModel.isCompactView.collectAsState()
 
                     var selectedWorkoutIdForDetails by rememberSaveable { mutableStateOf<Long?>(null) }
                     var selectedWorkoutIdForEdit by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -152,6 +153,8 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                             sortOrder = sortOrder,
                             onSortOrderChange = { viewModel.setSortOrder(it) },
                             scrollToTop = viewModel.shouldScrollToTop(sortOrder),
+                            isCompactView = isCompactView,
+                            onToggleCompactView = { viewModel.toggleCompactView() },
                         )
                     }
                 }

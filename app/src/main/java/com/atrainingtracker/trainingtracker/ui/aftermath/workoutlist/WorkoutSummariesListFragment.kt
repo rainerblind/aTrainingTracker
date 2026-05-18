@@ -157,6 +157,7 @@ class WorkoutSummariesListFragment : Fragment() {
                                     selectedWorkoutForDetails = workoutData.id
                                     trackOnMapViewModel.loadAftermathData(workoutData)
                                 },
+                                isCompactView = viewModel.isCompactView.collectAsStateWithLifecycle().value,
                                 appBarOffsetPx = connection.appBarOffset,
                                 headerHeightPx = headerHeightPx.toFloat()
                             )
