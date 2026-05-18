@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -49,17 +50,9 @@ fun PeriodSummaryCard(
         colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column {
-            // --- 1. THE MAP SECTION ---
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-            ) {
-                PeriodMultiWorkoutMap(polylines = summary.polylines)
-            }
-
+            // --- 1. CONTENT SECTION ---
             Column(modifier = Modifier.padding(16.dp)) {
-                // --- 2. PERIOD HEADER ---
+                // PERIOD HEADER
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -92,35 +85,44 @@ fun PeriodSummaryCard(
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
-                // --- 3. SPORT SPECIFIC BREAKDOWN ---
+                // SPORT SPECIFIC BREAKDOWN
                 summary.sportStats.forEach { (sport, stats) ->
                     SportStatsRow(sport, stats)
                     Spacer(modifier = Modifier.height(8.dp))
                 }
+            }
+
+            // --- 2. THE MAP SECTION ---
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+            ) {
+                PeriodMultiWorkoutMap(polylines = summary.polylines)
             }
         }
     }
 }
 
 @Composable
-private fun SportStatsRow(sport: BSportType, stats: SportStats) {
+private fun SportStatsRow(bSportType: BSportType, stats: SportStats) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Sport Icon
         Icon(
-            painter = painterResource(id = sport.iconResId),
+            painter = painterResource(id = bSportType.iconResId),
             contentDescription = null,
             modifier = Modifier.size(24.dp),
-            tint = MaterialTheme.colorScheme.primary
+            tint = Color.Unspecified
         )
 
         Spacer(modifier = Modifier.width(12.dp))
 
         // Sport Name & Count
         Column(modifier = Modifier.weight(1.2f)) {
-            Text(text = sport.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+            Text(text = stringResource(bSportType.stringResId), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
             Text(
                 text = "${stats.count} sessions",
                 style = MaterialTheme.typography.labelSmall,
@@ -138,7 +140,7 @@ private fun SportStatsRow(sport: BSportType, stats: SportStats) {
             Text(
                 text = "${stats.totalAscentMeters.toInt()} m ↑",
                 style = MaterialTheme.typography.labelSmall,
-                color = Color(0xFF4CAF50) // Green for elevation
+                color = MaterialTheme.colorScheme.primary
             )
         }
 
