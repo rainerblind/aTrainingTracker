@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,6 +41,8 @@ import com.google.maps.android.compose.*
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
+import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.LatLngBounds
 
 @Composable
 fun PeriodSummaryCard(
@@ -184,7 +187,29 @@ private fun PeriodMultiWorkoutMap(
         return
     }
 
+    // 2. Calculate the Bounds for all points in all paths
+    val bounds = remember(allPaths) {
+        val builder = LatLngBounds.Builder()
+        var hasPoints = false
+        allPaths.forEach { path ->
+            path.forEach { point ->
+                builder.include(point)
+                hasPoints = true
+            }
+        }
+        if (hasPoints) builder.build() else null
+    }
+
     val cameraPositionState = rememberCameraPositionState()
+
+    // 3. Apply the zoom as soon as the map is loaded or bounds change
+    LaunchedEffect(bounds) {
+        bounds?.let {
+            cameraPositionState.move(
+                CameraUpdateFactory.newLatLngBounds(it, 50) // 50dp padding
+            )
+        }
+    }
 
     GoogleMap(
         modifier = Modifier.fillMaxSize(),
@@ -200,7 +225,7 @@ private fun PeriodMultiWorkoutMap(
         allPaths.forEach { path ->
             Polyline(
                 points = path,
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.75f),
                 width = 6f,
                 startCap = RoundCap(),
                 endCap = RoundCap(),
@@ -209,16 +234,6 @@ private fun PeriodMultiWorkoutMap(
         }
     }
 }
-
-/*
-// Helper Formatters (Update to match your project's formatting utils)
-private fun Double.format(digits: Int) = "%.${digits}f".format(this)
-private fun formatDuration(seconds: Long): String {
-    val h = seconds / 3600
-    val m = (seconds % 3600) / 60
-    return if (h > 0) "${h}h ${m}m" else "${m}m"
-}
- */
 
 
 
