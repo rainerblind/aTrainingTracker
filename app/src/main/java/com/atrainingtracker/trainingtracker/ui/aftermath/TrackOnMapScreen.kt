@@ -44,7 +44,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 @Composable
 fun TrackOnMapScreen(
     workoutData: WorkoutData,
-    mapState: MapState
+    mapState: MapState,
+    modifier: Modifier
 ) {
     var selectedDistance by remember { mutableStateOf<Double?>(null) }
     val noLocation = remember { MutableStateFlow<LatLng?>(null) }
@@ -56,7 +57,7 @@ fun TrackOnMapScreen(
             shape = RectangleShape
         ) {
             WorkoutHeader(
-                modifier = Modifier.statusBarsPadding(),
+                modifier = modifier,
                 data = workoutData.headerData,
                 backgroundColor = MaterialTheme.colorScheme.surface,
                 textColor = MaterialTheme.colorScheme.onSurface,

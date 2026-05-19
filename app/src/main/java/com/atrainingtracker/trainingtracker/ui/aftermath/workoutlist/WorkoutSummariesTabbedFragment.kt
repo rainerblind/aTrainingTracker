@@ -24,6 +24,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.LaunchedEffect
@@ -32,6 +33,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -99,7 +101,8 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                     if (selectedWorkoutIdForDetails != null) {
                         TrackOnMapScreen(
                             workoutData = workouts.find { it.id == selectedWorkoutIdForDetails }!!,
-                            mapState = trackOnMapViewModel.aftermathState.collectAsStateWithLifecycle().value
+                            mapState = trackOnMapViewModel.aftermathState.collectAsStateWithLifecycle().value,
+                            modifier = Modifier.statusBarsPadding()
                         )
 
                         // 4. Handle System Back Button

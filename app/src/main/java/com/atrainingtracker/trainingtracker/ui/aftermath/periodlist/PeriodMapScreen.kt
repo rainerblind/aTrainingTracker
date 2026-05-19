@@ -102,7 +102,7 @@ fun PeriodMapScreen(
     }
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
-        sheetPeekHeight = if (peekedWorkoutData != null) 250.dp else 0.dp,
+        sheetPeekHeight = if (peekedWorkoutData != null) 200.dp else 0.dp,
         sheetDragHandle = {
             Surface(
                 modifier = Modifier.statusBarsPadding(),
@@ -117,7 +117,8 @@ fun PeriodMapScreen(
                 // Here we show the TrackOnMapScreen for the specific workout
                 TrackOnMapScreen(
                     workoutData = peekedWorkoutData,
-                    mapState = mapState!!
+                    mapState = mapState!!,
+                    modifier = Modifier
                 )
             }
         }
