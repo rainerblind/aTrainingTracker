@@ -26,6 +26,8 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.atrainingtracker.trainingtracker.ui.map.PathPoint
+import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -80,7 +82,11 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
             } else {
                 listOf<List<PeriodSummary>>(
                     // Tab 0: Daily
-                    groupWorkouts(workouts, PeriodGroupLevel.DAY) { it.localDateTime.format(DateTimeFormatter.ISO_LOCAL_DATE) },
+                    groupWorkouts(workouts, PeriodGroupLevel.DAY) {
+                        it.localDateTime.format(
+                            DateTimeFormatter.ISO_LOCAL_DATE
+                        )
+                    },
 
                     // Tab 1: Weekly (ISO Week based)
                     groupWorkouts(workouts, PeriodGroupLevel.WEEK) {
@@ -90,10 +96,17 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
                     },
 
                     // Tab 2: Monthly
-                    groupWorkouts(workouts, PeriodGroupLevel.MONTH) { it.localDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM")) },
+                    groupWorkouts(workouts, PeriodGroupLevel.MONTH) {
+                        it.localDateTime.format(
+                            DateTimeFormatter.ofPattern("yyyy-MM")
+                        )
+                    },
 
                     // Tab 3: Yearly
-                    groupWorkouts(workouts, PeriodGroupLevel.YEAR) { it.localDateTime.year.toString() }
+                    groupWorkouts(
+                        workouts,
+                        PeriodGroupLevel.YEAR
+                    ) { it.localDateTime.year.toString() }
                 )
             }
         }
@@ -119,20 +132,27 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
             .sortedByDescending { it.sortKey }
     }
 
-    private fun aggregateToPeriod(key: String, items: List<WorkoutData>, level: PeriodGroupLevel): PeriodSummary {
+    private fun aggregateToPeriod(
+        key: String,
+        items: List<WorkoutData>,
+        level: PeriodGroupLevel
+    ): PeriodSummary {
         val firstItem = items.first()
 
         // Generate nice labels based on the key type
         val (label, range) = when (level) {
-            PeriodGroupLevel.DAY ->  { // Daily
+            PeriodGroupLevel.DAY -> { // Daily
                 Pair(firstItem.localDateTime.format(dayFormatter), "")
             }
+
             PeriodGroupLevel.WEEK -> { // Weekly
                 Pair(key, "${items.last().formattedDate} - ${items.first().formattedDate}")
             }
+
             PeriodGroupLevel.MONTH -> { // Monthly
                 Pair(firstItem.localDateTime.format(monthFormatter), "")
             }
+
             PeriodGroupLevel.YEAR -> { // Yearly
                 Pair(firstItem.localDateTime.format(yearFormatter), "")
             }
@@ -179,5 +199,34 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             workoutRepo.loadAllWorkouts()
         }
+    }
+
+    // states for the "Peek" (BottomSheet) functionality
+    private val _peekedWorkout = MutableStateFlow<WorkoutData?>(null)
+    val peekedWorkout = _peekedWorkout.asStateFlow()
+
+    private val _peekedTrack = MutableStateFlow<List<PathPoint>?>(null)
+    val peekedTrack = _peekedTrack.asStateFlow()
+
+    /**
+     * Called when a polyline is clicked. Handles the background loading
+     * so the UI doesn't have to deal with coroutines or suspend functions.
+     */
+    fun selectWorkoutForPeek(id: Long) {
+        viewModelScope.launch {
+            // 1. Get the basic workout data from memory
+            _peekedWorkout.value = workoutRepo.allWorkouts.value?.find { it.id == id }
+
+            // 2. Fetch the GPS track from the database
+            _peekedTrack.value = workoutRepo.getWorkoutTrackPoints(id, TrackType.BEST)
+        }
+    }
+
+    /**
+     * Clears the selection when the bottom sheet is hidden
+     */
+    fun clearPeekSelection() {
+        _peekedWorkout.value = null
+        _peekedTrack.value = null
     }
 }

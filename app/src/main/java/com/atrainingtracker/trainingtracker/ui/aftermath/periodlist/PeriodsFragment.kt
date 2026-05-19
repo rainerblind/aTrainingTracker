@@ -26,6 +26,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -60,6 +61,9 @@ class PeriodsFragment : Fragment() {
                     val selectedPeriod by viewModel.selectedPeriod.collectAsStateWithLifecycle()
                     val groups = viewModel.groups
 
+                    val peekedWorkoutData by viewModel.peekedWorkout.collectAsStateWithLifecycle()
+                    val peekedTrackPoints by viewModel.peekedTrack.collectAsStateWithLifecycle()
+
                     // 1. HOIST SCROLL STATES
                     // These will live as long as the Fragment's View is alive
                     val pagerState = rememberPagerState(
@@ -69,12 +73,12 @@ class PeriodsFragment : Fragment() {
 
 
                     if (selectedPeriod != null) {
+
                         PeriodMapScreen(
                             summary = selectedPeriod!!,
-                            onWorkoutSelected = { workoutId ->
-                                // Navigate to your existing workout detail screen
-                                // e.g., TrackOnMapActivity.start(requireContext(), workoutId)
-                            },
+                            onWorkoutClick = { id -> viewModel.selectWorkoutForPeek(id) },
+                            peekedWorkoutData = peekedWorkoutData,
+                            peekedTrackPoints = peekedTrackPoints
                         )
                         // Handle Back Press to return to list
                         BackHandler {
