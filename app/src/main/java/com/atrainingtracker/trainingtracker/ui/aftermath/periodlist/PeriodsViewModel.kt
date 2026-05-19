@@ -25,6 +25,7 @@ import androidx.lifecycle.asFlow
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataWithTrack
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
@@ -202,11 +203,8 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
     }
 
     // states for the "Peek" (BottomSheet) functionality
-    private val _peekedWorkout = MutableStateFlow<WorkoutData?>(null)
-    val peekedWorkout = _peekedWorkout.asStateFlow()
-
-    private val _peekedTrack = MutableStateFlow<List<PathPoint>?>(null)
-    val peekedTrack = _peekedTrack.asStateFlow()
+    private val _peekedWorkoutDataWithTrack = MutableStateFlow<WorkoutDataWithTrack?>(null)
+    val peekedWorkoutDataWithTrack = _peekedWorkoutDataWithTrack.asStateFlow()
 
     /**
      * Called when a polyline is clicked. Handles the background loading
@@ -215,10 +213,10 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
     fun selectWorkoutForPeek(id: Long) {
         viewModelScope.launch {
             // 1. Get the basic workout data from memory
-            _peekedWorkout.value = workoutRepo.allWorkouts.value?.find { it.id == id }
-
-            // 2. Fetch the GPS track from the database
-            _peekedTrack.value = workoutRepo.getWorkoutTrackPoints(id, TrackType.BEST)
+            _peekedWorkoutDataWithTrack.value = WorkoutDataWithTrack(
+                workoutRepo.allWorkouts.value?.find { it.id == id },
+                 workoutRepo.getWorkoutTrackPoints(id, TrackType.BEST)
+            )
         }
     }
 
@@ -226,7 +224,6 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
      * Clears the selection when the bottom sheet is hidden
      */
     fun clearPeekSelection() {
-        _peekedWorkout.value = null
-        _peekedTrack.value = null
+        _peekedWorkoutDataWithTrack.value = null
     }
 }

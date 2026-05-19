@@ -50,6 +50,11 @@ data class WorkoutDataClassic(
     val exportStatuses: List<ExportStatusGroupData>
 )
 
+data class WorkoutDataWithTrack(
+    val workoutData: WorkoutData?,
+    val trackPoints: List<PathPoint>
+)
+
 // TODO: move the methods to update redundant data to here???
 
 @Immutable

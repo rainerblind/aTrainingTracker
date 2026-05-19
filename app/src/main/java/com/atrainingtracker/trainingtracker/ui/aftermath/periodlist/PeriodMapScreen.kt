@@ -40,11 +40,7 @@ import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
@@ -54,11 +50,10 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
 import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreen
-import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataWithTrack
 import com.atrainingtracker.trainingtracker.ui.map.MapState
 import com.atrainingtracker.trainingtracker.ui.map.MapTrack
 import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
-import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -66,21 +61,21 @@ import com.atrainingtracker.trainingtracker.ui.map.TrackType
 fun PeriodMapScreen(
     summary: PeriodSummary,
     onWorkoutClick: (Long) -> Unit,
-    peekedWorkoutData: WorkoutData?,
-    peekedTrackPoints: List<PathPoint>?,
+    peekedWorkoutDataWithTrack: WorkoutDataWithTrack?,
+    clearPeekSelection: () -> Unit
 ) {
     val df = DistanceFormatter()
     val tf = TimeFormatter()
 
     // Prepare MapState for the TrackOnMapScreen
-    val mapState = remember(peekedWorkoutData) {
-        peekedWorkoutData?.let { workout ->
+    val mapState = remember(peekedWorkoutDataWithTrack) {
+        peekedWorkoutDataWithTrack?.let { workout ->
             MapState(
                 tracks = listOf(
                     MapTrack(
-                        id = workout.id,
+                        id = workout.workoutData!!.id,
                         type = TrackType.BEST,
-                        path = peekedTrackPoints ?: emptyList(),
+                        path = workout.trackPoints
                     )
                 ),
                 zoomFocus = MapZoomFocus.TRACK_AND_MARKERS
@@ -93,8 +88,8 @@ fun PeriodMapScreen(
     )
 
     // 2. Control sheet expansion when a workout is tapped
-    LaunchedEffect(peekedWorkoutData) {
-        if (peekedWorkoutData != null) {
+    LaunchedEffect(peekedWorkoutDataWithTrack) {
+        if (peekedWorkoutDataWithTrack != null) {
             scaffoldState.bottomSheetState.partialExpand()
         } else {
             scaffoldState.bottomSheetState.hide()
@@ -102,7 +97,7 @@ fun PeriodMapScreen(
     }
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
-        sheetPeekHeight = if (peekedWorkoutData != null) 200.dp else 0.dp,
+        sheetPeekHeight = if (peekedWorkoutDataWithTrack != null) 200.dp else 0.dp,
         sheetDragHandle = {
             Surface(
                 modifier = Modifier.statusBarsPadding(),
@@ -113,10 +108,10 @@ fun PeriodMapScreen(
             }
         },
         sheetContent = {
-            if (peekedWorkoutData != null) {
+            if (peekedWorkoutDataWithTrack != null) {
                 // Here we show the TrackOnMapScreen for the specific workout
                 TrackOnMapScreen(
-                    workoutData = peekedWorkoutData,
+                    workoutData = peekedWorkoutDataWithTrack.workoutData!!,
                     mapState = mapState!!,
                     modifier = Modifier
                 )
