@@ -22,6 +22,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.getValue
@@ -50,11 +51,13 @@ class PeriodsFragment : Fragment() {
         // Tell the ViewModel to ensure all data is loaded from the DB
         viewModel.loadPeriods()
 
+
         return ComposeView(requireContext()).apply {
             setContent {
                 ATrainingTrackerTheme {
                     // 1. Observe the periods list from ViewModel
                     val groupedPeriods by viewModel.groupedPeriods.collectAsStateWithLifecycle()
+                    val selectedPeriod by viewModel.selectedPeriod.collectAsStateWithLifecycle()
                     val groups = viewModel.groups
 
                     // 1. HOIST SCROLL STATES
@@ -65,14 +68,29 @@ class PeriodsFragment : Fragment() {
                     val listStates = List(groups.size) { rememberLazyListState() }
 
 
-                    PeriodsTabsScreen(
-                        groupedPeriods = groupedPeriods,
-                        pagerState = pagerState,
-                        listStates = listStates,
-                        onMapClick = { /* TODO: show workouts on map */ },
-                        isPlayServiceAvailable = isPlayAvailable,
-                        tabs = groups
-                    )
+                    if (selectedPeriod != null) {
+                        PeriodMapScreen(
+                            summary = selectedPeriod!!,
+                            onWorkoutSelected = { workoutId ->
+                                // Navigate to your existing workout detail screen
+                                // e.g., TrackOnMapActivity.start(requireContext(), workoutId)
+                            },
+                        )
+                        // Handle Back Press to return to list
+                        BackHandler {
+                            viewModel.dismissPeriodMap()
+                        }
+                    }
+                    else {
+                        PeriodsTabsScreen(
+                            groupedPeriods = groupedPeriods,
+                            pagerState = pagerState,
+                            listStates = listStates,
+                            onMapClick = { summary -> viewModel.showPeriodMap(summary) },
+                            isPlayServiceAvailable = isPlayAvailable,
+                            tabs = groups
+                        )
+                    }
                 }
             }
         }

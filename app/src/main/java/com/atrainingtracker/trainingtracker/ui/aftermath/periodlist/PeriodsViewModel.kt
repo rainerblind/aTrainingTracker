@@ -26,10 +26,12 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
 import java.time.temporal.IsoFields
@@ -45,6 +47,17 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
         application.getString(R.string.workout_periods__months),
         application.getString(R.string.workout_periods__years)
     )
+
+    private val _selectedPeriod = MutableStateFlow<PeriodSummary?>(null)
+    val selectedPeriod = _selectedPeriod.asStateFlow()
+
+    fun showPeriodMap(summary: PeriodSummary) {
+        _selectedPeriod.value = summary
+    }
+
+    fun dismissPeriodMap() {
+        _selectedPeriod.value = null
+    }
 
     enum class PeriodGroupLevel {
         DAY, WEEK, MONTH, YEAR
@@ -125,6 +138,10 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
             }
         }
 
+        val idToPolyMap = items
+            .filter { it.mapPolyline != null && it.mapPolyline.isNotEmpty() }
+            .associate { it.id to it.mapPolyline!! }
+
         // Aggregate Sport Stats
         val sportStatsMap = items.groupBy { it.bSportType }.mapValues { (_, sportWorkouts) ->
             SportStats(
@@ -152,6 +169,7 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
             totalDurationSec = items.sumOf { it.detailsData.activeTimeSec.toLong() },
             sportStats = sportStatsMap,
             polylines = items.mapNotNull { it.mapPolyline }.filter { it.isNotEmpty() },
+            workoutIdToPolylineMap = idToPolyMap,
             sortKey = key // Used for descending sort
         )
     }

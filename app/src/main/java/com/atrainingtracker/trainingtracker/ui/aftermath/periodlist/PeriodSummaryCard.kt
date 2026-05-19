@@ -48,7 +48,7 @@ import com.google.android.gms.maps.model.LatLngBounds
 fun PeriodSummaryCard(
     summary: PeriodSummary,
     isPlayServiceAvailable: Boolean,
-    onMapClick: () -> Unit,
+    onMapClick: (PeriodSummary) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val df = DistanceFormatter()
@@ -113,7 +113,7 @@ fun PeriodSummaryCard(
                 ) {
                     PeriodMultiWorkoutMap(
                         polylines = summary.polylines,
-                        onMapClick = onMapClick
+                        onMapClick = { onMapClick(summary) }
                     )
                 }
             }
@@ -122,7 +122,7 @@ fun PeriodSummaryCard(
 }
 
 @Composable
-private fun SportStatsRow(bSportType: BSportType, stats: SportStats, tf: TimeFormatter, df: DistanceFormatter) {
+fun SportStatsRow(bSportType: BSportType, stats: SportStats, tf: TimeFormatter, df: DistanceFormatter) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -260,7 +260,8 @@ fun PreviewPeriodSummary() {
                 totalAscentMeters = 120
             )
         ),
-        sortKey = ""
+        sortKey = "",
+        workoutIdToPolylineMap = emptyMap()
     )
 
     MaterialTheme {
@@ -282,7 +283,8 @@ fun PreviewEmptyPeriod() {
         totalDurationSec = 0,
         polylines = emptyList(),
         sportStats = emptyMap(),
-        sortKey = ""
+        sortKey = "",
+        workoutIdToPolylineMap = emptyMap()
     )
 
     MaterialTheme {

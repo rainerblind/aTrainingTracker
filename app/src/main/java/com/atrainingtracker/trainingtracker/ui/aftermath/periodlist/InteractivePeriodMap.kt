@@ -18,15 +18,15 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
-import androidx.compose.animation.core.copy
-import androidx.compose.foundation.gestures.forEach
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.JointType
 import com.google.android.gms.maps.model.LatLngBounds
+import com.google.android.gms.maps.model.RoundCap
 import com.google.maps.android.PolyUtil
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.Polyline
@@ -76,6 +76,9 @@ fun InteractivePeriodMap(
                 clickable = true, // KEY CHANGE
                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.75f),
                 width = 12f, // Thicker for easier tapping
+                startCap = RoundCap(),
+                endCap = RoundCap(),
+                jointType = JointType.ROUND,
                 onClick = { onWorkoutClick(workoutId) }
             )
         }
