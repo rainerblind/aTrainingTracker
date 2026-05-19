@@ -227,15 +227,16 @@ fun PreviewPeriodSummary() {
                 count = 3,
                 totalDurationSec = 10800,
                 totalDistanceMeters = 85400.0,
-                totalAscentMeters = 1250.0
+                totalAscentMeters = 1250
             ),
             BSportType.RUN to SportStats(
                 count = 2,
                 totalDurationSec = 4600,
                 totalDistanceMeters = 18200.0,
-                totalAscentMeters = 120.0
+                totalAscentMeters = 120
             )
-        )
+        ),
+        sortKey = ""
     )
 
     MaterialTheme {
@@ -256,7 +257,8 @@ fun PreviewEmptyPeriod() {
         totalWorkouts = 0,
         totalDurationSec = 0,
         polylines = emptyList(),
-        sportStats = emptyMap()
+        sportStats = emptyMap(),
+        sortKey = ""
     )
 
     MaterialTheme {

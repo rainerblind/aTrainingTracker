@@ -26,12 +26,13 @@ data class PeriodSummary(
     val totalWorkouts: Int,
     val totalDurationSec: Long,
     val sportStats: Map<BSportType, SportStats>,
-    val polylines: List<String> // List of encoded polylines for the map
+    val polylines: List<String>, // List of encoded polylines for the map
+    val sortKey: String // Used for sorting
 )
 
 data class SportStats(
     val count: Int,
     val totalDurationSec: Long,
     val totalDistanceMeters: Double,
-    val totalAscentMeters: Double
+    val totalAscentMeters: Long
 )

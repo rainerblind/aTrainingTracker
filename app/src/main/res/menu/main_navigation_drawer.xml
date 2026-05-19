@@ -29,6 +29,12 @@
                 android:id="@+id/drawer_workouts"
                 android:icon="@drawable/workout_list"
                 android:title="@string/tab_workouts" />
+
+            <item
+                android:id="@+id/drawer_periods"
+                android:icon="@drawable/workout_list"
+                android:title="@string/tab_workouts" />
+
         </menu>
     </item>
     <item android:title="@string/drawer__maps">

@@ -73,14 +73,7 @@ fun PeriodsTabsScreen(
     isPlayServiceAvailable: Boolean,
     onMapClick: (PeriodSummary) -> Unit
 ) {
-    /*  TODO: get from viewModel
-    val tabs = listOf(
-        stringResource(R.string.workout_periods__days),
-        stringResource(R.string.workout_periods__weeks),
-        stringResource(R.string.workout_periods__months),
-        stringResource(R.string.workout_periods__years)
-    )
-     */
+
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
 

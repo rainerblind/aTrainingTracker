@@ -77,8 +77,8 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
 
             // --- PHASE 2: Fast Track (From WorkoutData Polyline & Streams) ---
             // Decodes the thinned data already present in workoutData for instant UI feedback.
-            if (workoutData.map_polyline.isNotEmpty()) {
-                val latLngs = PolyUtil.decode(workoutData.map_polyline)
+            if (workoutData.mapPolyline.isNotEmpty()) {
+                val latLngs = PolyUtil.decode(workoutData.mapPolyline)
 
                 // Decode elevation streams
                 val alts = if (workoutData.encodedAltitudes.isNotEmpty()) {
