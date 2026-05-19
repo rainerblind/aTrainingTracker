@@ -129,7 +129,7 @@ fun PeriodsTabsScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = stringResource(R.string.tab_workouts),
+                            text = stringResource(R.string.workout_periods__periods),
                             style = MaterialTheme.typography.headlineSmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )

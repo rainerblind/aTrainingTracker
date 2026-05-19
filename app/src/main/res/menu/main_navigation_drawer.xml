@@ -32,8 +32,8 @@
 
             <item
                 android:id="@+id/drawer_periods"
-                android:icon="@drawable/workout_list"
-                android:title="@string/tab_workouts" />
+                android:icon="@drawable/ic_calendar_month"
+                android:title="@string/workout_periods__periods" />
 
         </menu>
     </item>
