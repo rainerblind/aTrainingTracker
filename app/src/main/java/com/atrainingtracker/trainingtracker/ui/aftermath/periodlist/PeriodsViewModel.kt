@@ -23,6 +23,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.asFlow
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import kotlinx.coroutines.flow.StateFlow
@@ -72,7 +73,7 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
                     groupWorkouts(workouts, PeriodGroupLevel.WEEK) {
                         val week = it.localDateTime.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
                         val year = it.localDateTime.get(IsoFields.WEEK_BASED_YEAR)
-                        "$year-$week"
+                        "$year-${week.toString().padStart(2, '0')}"
                     },
 
                     // Tab 2: Monthly
@@ -133,6 +134,16 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
                 totalAscentMeters = sportWorkouts.sumOf { it.ascentMeters }
             )
         }
+            // Convert to list to sort by specific sport priority
+            .toList()
+            .sortedBy { (sport, _) ->
+                when (sport) {
+                    BSportType.BIKE -> 0
+                    BSportType.RUN -> 1
+                    else -> 2 // OTHER or any new types
+                }
+            }
+            .toMap() // Converts back to a LinkedHashMap which preserves this order
 
         return PeriodSummary(
             periodLabel = label,
