@@ -59,9 +59,10 @@ class PeriodsFragment : Fragment() {
 
                     // 1. HOIST SCROLL STATES
                     // These will live as long as the Fragment's View is alive
-                    // TODO: use size of groups
-                    val pagerState = rememberPagerState(pageCount = { 4 })
-                    val listStates = List(4) { rememberLazyListState() }
+                    val pagerState = rememberPagerState(
+                        pageCount = { groups.size },
+                        initialPage = 1) // Set the initial page to the weeks.
+                    val listStates = List(groups.size) { rememberLazyListState() }
 
 
                     PeriodsTabsScreen(
