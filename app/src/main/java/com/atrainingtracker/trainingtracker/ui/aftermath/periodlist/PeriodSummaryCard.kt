@@ -40,6 +40,8 @@ import com.google.maps.android.compose.*
 @Composable
 fun PeriodSummaryCard(
     summary: PeriodSummary,
+    isPlayServiceAvailable: Boolean,
+    onMapClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     ElevatedCard(
@@ -93,12 +95,17 @@ fun PeriodSummaryCard(
             }
 
             // --- 2. THE MAP SECTION ---
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-            ) {
-                PeriodMultiWorkoutMap(polylines = summary.polylines)
+            if (isPlayServiceAvailable) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                ) {
+                    PeriodMultiWorkoutMap(
+                        polylines = summary.polylines,
+                        onMapClick = onMapClick
+                    )
+                }
             }
         }
     }
@@ -155,7 +162,9 @@ private fun SportStatsRow(bSportType: BSportType, stats: SportStats) {
 }
 
 @Composable
-private fun PeriodMultiWorkoutMap(polylines: List<String>) {
+private fun PeriodMultiWorkoutMap(
+    polylines: List<String>,
+    onMapClick: () -> Unit) {
     // Decode all polylines once
     val allPaths = remember(polylines) {
         polylines.mapNotNull { if (it.isNotEmpty()) PolyUtil.decode(it) else null }
@@ -178,7 +187,8 @@ private fun PeriodMultiWorkoutMap(polylines: List<String>) {
             scrollGesturesEnabled = false,
             zoomGesturesEnabled = false,
             tiltGesturesEnabled = false
-        )
+        ),
+        onMapClick = { onMapClick() }
     ) {
         allPaths.forEach { path ->
             Polyline(
@@ -229,7 +239,11 @@ fun PreviewPeriodSummary() {
     )
 
     MaterialTheme {
-        PeriodSummaryCard(summary = mockSummary)
+        PeriodSummaryCard(
+            summary = mockSummary,
+            isPlayServiceAvailable = true,
+            onMapClick = {}
+        )
     }
 }
 
@@ -246,6 +260,10 @@ fun PreviewEmptyPeriod() {
     )
 
     MaterialTheme {
-        PeriodSummaryCard(summary = emptySummary)
+        PeriodSummaryCard(
+            summary = emptySummary,
+            isPlayServiceAvailable = false,
+            onMapClick = {}
+        )
     }
 }
