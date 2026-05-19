@@ -1116,5 +1116,9 @@
     <string name="workout_periods__weeks">Weeks</string>
     <string name="workout_periods__months">Months</string>
     <string name="workout_periods__years">Years</string>
+    <plurals name="workout_periods__workouts">
+        <item quantity="one">%1$d Workout</item>
+        <item quantity="other">%1$d Workouts</item>
+    </plurals>
 
 </resources>

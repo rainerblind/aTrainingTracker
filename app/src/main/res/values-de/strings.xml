@@ -1014,5 +1014,9 @@
     <string name="workout_periods__weeks">Wochen</string>
     <string name="workout_periods__months">Monate</string>
     <string name="workout_periods__years">Jahre</string>
+    <plurals name="workout_periods__workouts">
+        <item quantity="one">%1$d Einheit</item>
+        <item quantity="other">%1$d Einheiten</item>
+    </plurals>
 
 </resources>
