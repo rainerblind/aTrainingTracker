@@ -1110,4 +1110,10 @@
     <string name="route_import">Import</string>
     <string name="sort">Sort</string>
 
+    <!-- workout periods -->
+    <string name="workout_periods__days">Days</string>
+    <string name="workout_periods__weeks">Weeks</string>
+    <string name="workout_periods__months">Months</string>
+    <string name="workout_periods__years">Years</string>
+
 </resources>
