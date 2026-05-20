@@ -22,11 +22,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -36,12 +38,23 @@ import com.google.android.gms.maps.model.JointType
 import com.google.android.gms.maps.model.RoundCap
 import com.google.maps.android.PolyUtil
 import com.google.maps.android.compose.*
+import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
+import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
+import com.atrainingtracker.trainingtracker.ui.map.TrackType
+import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.LatLngBounds
 
 @Composable
 fun PeriodSummaryCard(
     summary: PeriodSummary,
+    isPlayServiceAvailable: Boolean,
+    onMapClick: (PeriodSummary) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val df = DistanceFormatter()
+    val tf = TimeFormatter()
+
     ElevatedCard(
         modifier = modifier
             .fillMaxWidth()
@@ -72,12 +85,12 @@ fun PeriodSummaryCard(
                     }
                     Column(horizontalAlignment = Alignment.End) {
                         Text(
-                            text = "${summary.totalWorkouts} Workouts",
+                            text = pluralStringResource(R.plurals.workout_periods__workouts, summary.totalWorkouts, summary.totalWorkouts),
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
                         Text(
-                            text = formatDuration(summary.totalDurationSec),
+                            text = tf.format_with_units(summary.totalDurationSec),
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
@@ -87,25 +100,30 @@ fun PeriodSummaryCard(
 
                 // SPORT SPECIFIC BREAKDOWN
                 summary.sportStats.forEach { (sport, stats) ->
-                    SportStatsRow(sport, stats)
+                    SportStatsRow(sport, stats, tf, df)
                     Spacer(modifier = Modifier.height(8.dp))
                 }
             }
 
             // --- 2. THE MAP SECTION ---
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-            ) {
-                PeriodMultiWorkoutMap(polylines = summary.polylines)
+            if (isPlayServiceAvailable) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                ) {
+                    PeriodMultiWorkoutMap(
+                        polylines = summary.polylines,
+                        onMapClick = { onMapClick(summary) }
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun SportStatsRow(bSportType: BSportType, stats: SportStats) {
+fun SportStatsRow(bSportType: BSportType, stats: SportStats, tf: TimeFormatter, df: DistanceFormatter) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -124,7 +142,7 @@ private fun SportStatsRow(bSportType: BSportType, stats: SportStats) {
         Column(modifier = Modifier.weight(1.2f)) {
             Text(text = stringResource(bSportType.stringResId), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
             Text(
-                text = "${stats.count} sessions",
+                text = pluralStringResource(R.plurals.workout_periods__workouts, stats.count, stats.count),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.secondary
             )
@@ -133,7 +151,7 @@ private fun SportStatsRow(bSportType: BSportType, stats: SportStats) {
         // Distance & Ascent
         Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
             Text(
-                text = "${(stats.totalDistanceMeters / 1000).format(1)} km",
+                text = df.format_with_units(stats.totalDistanceMeters),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -147,7 +165,7 @@ private fun SportStatsRow(bSportType: BSportType, stats: SportStats) {
         // Time for this sport
         Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
             Text(
-                text = formatDuration(stats.totalDurationSec),
+                text = tf.format_with_units(stats.totalDurationSec),
                 style = MaterialTheme.typography.bodyMedium
             )
         }
@@ -155,7 +173,9 @@ private fun SportStatsRow(bSportType: BSportType, stats: SportStats) {
 }
 
 @Composable
-private fun PeriodMultiWorkoutMap(polylines: List<String>) {
+private fun PeriodMultiWorkoutMap(
+    polylines: List<String>,
+    onMapClick: () -> Unit) {
     // Decode all polylines once
     val allPaths = remember(polylines) {
         polylines.mapNotNull { if (it.isNotEmpty()) PolyUtil.decode(it) else null }
@@ -168,7 +188,29 @@ private fun PeriodMultiWorkoutMap(polylines: List<String>) {
         return
     }
 
+    // 2. Calculate the Bounds for all points in all paths
+    val bounds = remember(allPaths) {
+        val builder = LatLngBounds.Builder()
+        var hasPoints = false
+        allPaths.forEach { path ->
+            path.forEach { point ->
+                builder.include(point)
+                hasPoints = true
+            }
+        }
+        if (hasPoints) builder.build() else null
+    }
+
     val cameraPositionState = rememberCameraPositionState()
+
+    // 3. Apply the zoom as soon as the map is loaded or bounds change
+    LaunchedEffect(bounds) {
+        bounds?.let {
+            cameraPositionState.move(
+                CameraUpdateFactory.newLatLngBounds(it, 50) // 50dp padding
+            )
+        }
+    }
 
     GoogleMap(
         modifier = Modifier.fillMaxSize(),
@@ -178,27 +220,20 @@ private fun PeriodMultiWorkoutMap(polylines: List<String>) {
             scrollGesturesEnabled = false,
             zoomGesturesEnabled = false,
             tiltGesturesEnabled = false
-        )
+        ),
+        onMapClick = { onMapClick() }
     ) {
         allPaths.forEach { path ->
             Polyline(
                 points = path,
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
-                width = 6f,
+                color = TrackType.BEST.color,
+                width = 8f,
                 startCap = RoundCap(),
                 endCap = RoundCap(),
                 jointType = JointType.ROUND
             )
         }
     }
-}
-
-// Helper Formatters (Update to match your project's formatting utils)
-private fun Double.format(digits: Int) = "%.${digits}f".format(this)
-private fun formatDuration(seconds: Long): String {
-    val h = seconds / 3600
-    val m = (seconds % 3600) / 60
-    return if (h > 0) "${h}h ${m}m" else "${m}m"
 }
 
 
@@ -217,19 +252,25 @@ fun PreviewPeriodSummary() {
                 count = 3,
                 totalDurationSec = 10800,
                 totalDistanceMeters = 85400.0,
-                totalAscentMeters = 1250.0
+                totalAscentMeters = 1250
             ),
             BSportType.RUN to SportStats(
                 count = 2,
                 totalDurationSec = 4600,
                 totalDistanceMeters = 18200.0,
-                totalAscentMeters = 120.0
+                totalAscentMeters = 120
             )
-        )
+        ),
+        sortKey = "",
+        workoutIdToPolylineMap = emptyMap()
     )
 
     MaterialTheme {
-        PeriodSummaryCard(summary = mockSummary)
+        PeriodSummaryCard(
+            summary = mockSummary,
+            isPlayServiceAvailable = true,
+            onMapClick = {}
+        )
     }
 }
 
@@ -242,10 +283,16 @@ fun PreviewEmptyPeriod() {
         totalWorkouts = 0,
         totalDurationSec = 0,
         polylines = emptyList(),
-        sportStats = emptyMap()
+        sportStats = emptyMap(),
+        sortKey = "",
+        workoutIdToPolylineMap = emptyMap()
     )
 
     MaterialTheme {
-        PeriodSummaryCard(summary = emptySummary)
+        PeriodSummaryCard(
+            summary = emptySummary,
+            isPlayServiceAvailable = false,
+            onMapClick = {}
+        )
     }
 }

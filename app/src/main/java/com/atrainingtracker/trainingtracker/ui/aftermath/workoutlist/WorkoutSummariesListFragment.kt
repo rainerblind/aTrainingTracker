@@ -199,7 +199,8 @@ class WorkoutSummariesListFragment : Fragment() {
                         // will handle loading the specific data for this ID.
                         TrackOnMapScreen(
                             workoutData = workouts.find { it.id == selectedWorkoutForDetails }!!,
-                            mapState = trackOnMapViewModel.aftermathState.collectAsStateWithLifecycle().value
+                            mapState = trackOnMapViewModel.aftermathState.collectAsStateWithLifecycle().value,
+                            modifier = Modifier.statusBarsPadding()
                         )
 
                         // 4. Handle System Back Button

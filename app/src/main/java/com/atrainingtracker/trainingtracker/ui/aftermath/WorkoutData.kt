@@ -27,6 +27,7 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.Extrema
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaDataRow
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderData
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
+import java.time.LocalDateTime
 
 /**
  * A composite data class that represents all data needed for a single row in the workout list.
@@ -49,6 +50,11 @@ data class WorkoutDataClassic(
     val exportStatuses: List<ExportStatusGroupData>
 )
 
+data class WorkoutDataWithTrack(
+    val workoutData: WorkoutData?,
+    val trackPoints: List<PathPoint>
+)
+
 // TODO: move the methods to update redundant data to here???
 
 @Immutable
@@ -64,11 +70,12 @@ data class WorkoutData(
     val startTimeS: Long,
     val formattedDate: String,
     val formattedTime: String,
+    val localDateTime: LocalDateTime,
     val equipmentName: String?,
     val equipmentId: Long,
     val commute: Boolean,
     val trainer: Boolean,
-    val map_polyline: String,
+    val mapPolyline: String,
     val encodedAltitudes: String,
     val encodedDistances: String,
 
