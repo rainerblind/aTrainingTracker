@@ -169,7 +169,7 @@ fun PeriodMapScreen(
 
                 // SPORT SPECIFIC BREAKDOWN
                 summary.sportStats.forEach { (sport, stats) ->
-                    SportStatsRow(sport, stats, tf, df)
+                    SportStatsRow(sport, stats, tf, df, onClick = {})
                     Spacer(modifier = Modifier.height(8.dp))
                 }
             }

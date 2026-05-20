@@ -23,6 +23,8 @@ import com.atrainingtracker.banalservice.BSportType
 data class PeriodSummary(
     val periodLabel: String,         // e.g., "Week20, 2026" or "May 2026"
     val periodDateRange: String,     // e.g., "May 11 - May 17"
+    val startTimestampS: Long,       // Start of the period in seconds
+    val endTimestampS: Long,         // End of the period in seconds
     val totalWorkouts: Int,
     val totalDurationSec: Long,
     val sportStats: Map<BSportType, SportStats>,
