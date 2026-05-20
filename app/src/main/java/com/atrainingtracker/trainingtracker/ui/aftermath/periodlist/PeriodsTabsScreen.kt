@@ -97,7 +97,6 @@ fun PeriodsTabsScreen(
             Surface(
                 modifier = Modifier.offset { IntOffset(0, connection.appBarOffset) },
                 color = MaterialTheme.colorScheme.primaryContainer,
-                tonalElevation = 3.dp
             ) {
                 Column(modifier = Modifier.statusBarsPadding()) {
                     // --- Heading Row with Sort Button ---
@@ -120,7 +119,7 @@ fun PeriodsTabsScreen(
                     }
                     PrimaryScrollableTabRow(
                         selectedTabIndex = pagerState.currentPage,
-                        containerColor = MaterialTheme.colorScheme.surface,
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                         divider = {}
                     ) {
                         tabs.forEachIndexed { index, title ->
