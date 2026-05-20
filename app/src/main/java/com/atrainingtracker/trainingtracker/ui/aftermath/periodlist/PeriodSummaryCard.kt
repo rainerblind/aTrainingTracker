@@ -49,6 +49,7 @@ import com.google.android.gms.maps.model.LatLngBounds
 fun PeriodSummaryCard(
     summary: PeriodSummary,
     isPlayServiceAvailable: Boolean,
+    onHeaderClick: (PeriodSummary) -> Unit,
     onMapClick: (PeriodSummary) -> Unit,
     onSportClick: (PeriodSummary, BSportType) -> Unit,
     modifier: Modifier = Modifier
@@ -67,33 +68,43 @@ fun PeriodSummaryCard(
             // --- 1. CONTENT SECTION ---
             Column(modifier = Modifier.padding(16.dp)) {
                 // PERIOD HEADER
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top
+                Surface(
+                    onClick = { onHeaderClick(summary) },
+                    color = Color.Transparent,
+                    shape = RoundedCornerShape(8.dp)
                 ) {
-                    Column {
-                        Text(
-                            text = summary.periodLabel,
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = summary.periodDateRange,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text(
-                            text = pluralStringResource(R.plurals.workout_periods__workouts, summary.totalWorkouts, summary.totalWorkouts),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = tf.format_with_units(summary.totalDurationSec),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Column {
+                            Text(
+                                text = summary.periodLabel,
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = summary.periodDateRange,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                text = pluralStringResource(
+                                    R.plurals.workout_periods__workouts,
+                                    summary.totalWorkouts,
+                                    summary.totalWorkouts
+                                ),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = tf.format_with_units(summary.totalDurationSec),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
                     }
                 }
 
@@ -301,6 +312,7 @@ fun PreviewPeriodSummary() {
         PeriodSummaryCard(
             summary = mockSummary,
             isPlayServiceAvailable = true,
+            onHeaderClick = {},
             onMapClick = {},
             onSportClick = { _, _ ->}
         )
@@ -327,6 +339,7 @@ fun PreviewEmptyPeriod() {
         PeriodSummaryCard(
             summary = emptySummary,
             isPlayServiceAvailable = false,
+            onHeaderClick = {},
             onMapClick = {},
             onSportClick = { _, _ ->}
         )

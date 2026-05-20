@@ -87,6 +87,7 @@ class PeriodsFragment : Fragment() {
                             groupedPeriods = groupedPeriods,
                             pagerState = pagerState,
                             listStates = listStates,
+                            onHeaderClick = { summary -> startWorkoutSummaryList(summary) },
                             onMapClick = { summary -> viewModel.showPeriodMap(summary) },
                             onSportClick = { summary, bSportType -> startWorkoutSummaryList(summary, bSportType) },
                             isPlayServiceAvailable = isPlayAvailable,
@@ -98,10 +99,10 @@ class PeriodsFragment : Fragment() {
         }
     }
 
-    fun startWorkoutSummaryList(periodSummary: PeriodSummary, bSportType: BSportType) {
+    fun startWorkoutSummaryList(periodSummary: PeriodSummary, bSportType: BSportType? = null) {
         val fragment = WorkoutSummariesListFragment.newInstance(
             primaryTitle = periodSummary.periodLabel,
-            secondaryTitle = getString(bSportType.stringResId),
+            secondaryTitle = if (bSportType != null) getString(bSportType.stringResId) else "",
             bSportType = bSportType,
             startS = periodSummary.startTimestampS,
             endS = periodSummary.endTimestampS
