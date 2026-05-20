@@ -155,6 +155,10 @@ fun TrackingTabsScreen(
                 }
             )
         }
+        else {
+            // When the control tracking screen is shown, clear the lap event immediately.
+            trackingTabsViewModel.clearLapEvent()
+        }
     }
 
 
