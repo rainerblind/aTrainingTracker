@@ -31,7 +31,6 @@ import androidx.compose.material3.*
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
@@ -42,14 +41,9 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.Wor
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.*
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.WorkoutExtrema
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeader
-import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
-import com.atrainingtracker.trainingtracker.ui.map.MapState
-import com.atrainingtracker.trainingtracker.ui.map.MapTrack
-import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.map.TrackOrSegmentOnMap
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
-import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
  * A comprehensive summary of a workout.
@@ -123,7 +117,7 @@ fun WorkoutSummary(
             )
         }
 
-        if (isPlayServiceAvailable && workoutData.map_polyline != "") {
+        if (isPlayServiceAvailable && workoutData.mapPolyline != "") {
             WorkoutMediaSection(
                 // workoutId = workoutData.id,
                 workoutData = workoutData,
@@ -157,7 +151,7 @@ private fun WorkoutMediaSection(
     ) {
         // 1. The Map (Weight 1 lets it take remaining space above profile)
         TrackOrSegmentOnMap(
-            polyline = workoutData.map_polyline,
+            polyline = workoutData.mapPolyline,
             color = TrackType.BEST.color,
             modifier = Modifier
                 .weight(1f)

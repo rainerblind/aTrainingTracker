@@ -33,6 +33,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseMan
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaDataRow
 import java.text.ParseException
 import java.text.SimpleDateFormat
+import java.time.LocalDateTime
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
@@ -95,13 +96,14 @@ class WorkoutDataMapper(
             formattedDate = dateTimeResult.date,
             formattedTime = dateTimeResult.time,
             startTimeS = dateTimeResult.timestampS,
+            localDateTime = dateTimeResult.localDateTime,
             bSportType = bSportType,
             equipmentName = equipmentName,
             equipmentId = equipmentId,
             commute = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.COMMUTE)) == 1,
             trainer = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.TRAINER)) == 1,
             uploadToStrava = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.UPLOAD_TO_STRAVA)),
-            map_polyline = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.MAP_POLYLINE)) ?: "",
+            mapPolyline = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.MAP_POLYLINE)) ?: "",
             encodedAltitudes = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.ALTITUDE_STREAM)) ?: "",
             encodedDistances = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.DISTANCE_STREAM)) ?: "",
 
@@ -150,7 +152,11 @@ class WorkoutDataMapper(
         )
     }
 
-    private data class DateTimeResult(val date: String, val time: String, val timestampS: Long)
+    private data class DateTimeResult(
+        val date: String,
+        val time: String,
+        val timestampS: Long,
+        val localDateTime: LocalDateTime)
 
     private fun formatDateTime(cursor: Cursor): DateTimeResult {
         val startTimeString = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_START))
@@ -162,15 +168,20 @@ class WorkoutDataMapper(
             val startTimeDate: Date = dbFormat.parse(startTimeString) ?: throw ParseException("Parsed date is null", 0)
             val localeDateFormat = java.text.DateFormat.getDateInstance(java.text.DateFormat.DEFAULT)
             val localeTimeFormat = java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT)
+            // Convert java.util.Date to java.time.LocalDateTime using the system default timezone
+            val localDateTime = startTimeDate.toInstant()
+                .atZone(java.time.ZoneId.systemDefault())
+                .toLocalDateTime()
 
             DateTimeResult(
                 date = localeDateFormat.format(startTimeDate),
                 time = localeTimeFormat.format(startTimeDate),
-                timestampS = startTimeDate.time / 1000 // Convert ms to seconds
+                timestampS = startTimeDate.time / 1000, // Convert ms to seconds
+                localDateTime = localDateTime
             )
         } catch (e: ParseException) {
             Log.e("WorkoutHeaderProvider", "Failed to parse date string: $startTimeString", e)
-            DateTimeResult(context.getString(R.string.invalid_date), "", 0L)
+            DateTimeResult(context.getString(R.string.invalid_date), "", 0L, java.time.LocalDateTime.now())
         }
     }
 
