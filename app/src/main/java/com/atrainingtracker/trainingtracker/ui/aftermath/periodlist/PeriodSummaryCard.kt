@@ -41,6 +41,7 @@ import com.google.maps.android.compose.*
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
+import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.LatLngBounds
 
@@ -225,8 +226,8 @@ private fun PeriodMultiWorkoutMap(
         allPaths.forEach { path ->
             Polyline(
                 points = path,
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.75f),
-                width = 6f,
+                color = TrackType.BEST.color,
+                width = 8f,
                 startCap = RoundCap(),
                 endCap = RoundCap(),
                 jointType = JointType.ROUND

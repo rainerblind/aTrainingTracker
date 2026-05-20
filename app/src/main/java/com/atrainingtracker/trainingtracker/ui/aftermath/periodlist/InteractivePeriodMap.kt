@@ -23,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.JointType
 import com.google.android.gms.maps.model.LatLngBounds
@@ -73,9 +74,9 @@ fun InteractivePeriodMap(
         allPaths.forEach { (workoutId, path) ->
             Polyline(
                 points = path,
-                clickable = true, // KEY CHANGE
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.75f),
-                width = 12f, // Thicker for easier tapping
+                clickable = true, // each workout can be clicked
+                color = TrackType.BEST.color,
+                width = 8f,
                 startCap = RoundCap(),
                 endCap = RoundCap(),
                 jointType = JointType.ROUND,
