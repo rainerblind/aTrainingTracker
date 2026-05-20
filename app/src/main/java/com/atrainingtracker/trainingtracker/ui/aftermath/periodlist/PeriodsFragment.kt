@@ -76,6 +76,7 @@ class PeriodsFragment : Fragment() {
                         PeriodMapScreen(
                             summary = selectedPeriod!!,
                             onWorkoutClick = { id -> viewModel.selectWorkoutForPeek(id) },
+                            onSportClick = { summary, bSportType -> startWorkoutSummaryList(summary, bSportType) },
                             peekedWorkoutDataWithTrack = peekedWorkoutDataWithTrack,
                             clearPeekSelection = { viewModel.clearPeekSelection() },
                             onBack = { viewModel.dismissPeriodMap() }
