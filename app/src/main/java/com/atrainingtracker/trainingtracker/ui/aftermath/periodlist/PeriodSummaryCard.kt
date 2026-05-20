@@ -215,6 +215,7 @@ private fun PeriodMultiWorkoutMap(
     GoogleMap(
         modifier = Modifier.fillMaxSize(),
         cameraPositionState = cameraPositionState,
+        properties = MapProperties(mapType = MapType.TERRAIN),
         uiSettings = MapUiSettings(
             zoomControlsEnabled = false,
             scrollGesturesEnabled = false,

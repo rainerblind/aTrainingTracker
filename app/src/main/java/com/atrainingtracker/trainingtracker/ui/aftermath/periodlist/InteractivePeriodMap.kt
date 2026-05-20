@@ -30,6 +30,8 @@ import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.RoundCap
 import com.google.maps.android.PolyUtil
 import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapProperties
+import com.google.maps.android.compose.MapType
 import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
 
@@ -69,7 +71,8 @@ fun InteractivePeriodMap(
     }
     GoogleMap(
         modifier = modifier,
-        cameraPositionState = cameraPositionState
+        cameraPositionState = cameraPositionState,
+        properties = MapProperties(mapType = MapType.TERRAIN),
     ) {
         allPaths.forEach { (workoutId, path) ->
             Polyline(
