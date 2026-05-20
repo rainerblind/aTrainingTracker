@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -62,7 +63,8 @@ fun PeriodMapScreen(
     summary: PeriodSummary,
     onWorkoutClick: (Long) -> Unit,
     peekedWorkoutDataWithTrack: WorkoutDataWithTrack?,
-    clearPeekSelection: () -> Unit
+    clearPeekSelection: () -> Unit,
+    onBack: () -> Unit
 ) {
     val df = DistanceFormatter()
     val tf = TimeFormatter()
@@ -95,6 +97,8 @@ fun PeriodMapScreen(
             scaffoldState.bottomSheetState.hide()
         }
     }
+
+
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
         sheetPeekHeight = if (peekedWorkoutDataWithTrack != null) 200.dp else 0.dp,
@@ -175,6 +179,16 @@ fun PeriodMapScreen(
                 onWorkoutClick = onWorkoutClick,
                 modifier = Modifier.weight(1f)
             )
+        }
+    }
+
+    // Handle Back Press to remove the peeked workout or return to list
+    BackHandler() {
+        if (peekedWorkoutDataWithTrack != null) {
+            clearPeekSelection()
+        }
+        else {
+            onBack()
         }
     }
 }

@@ -69,19 +69,14 @@ class PeriodsFragment : Fragment() {
                         initialPage = 1) // Set the initial page to the weeks.
                     val listStates = List(groups.size) { rememberLazyListState() }
 
-
                     if (selectedPeriod != null) {
-
                         PeriodMapScreen(
                             summary = selectedPeriod!!,
                             onWorkoutClick = { id -> viewModel.selectWorkoutForPeek(id) },
                             peekedWorkoutDataWithTrack = peekedWorkoutDataWithTrack,
-                            clearPeekSelection = { viewModel.clearPeekSelection() }
+                            clearPeekSelection = { viewModel.clearPeekSelection() },
+                            onBack = { viewModel.dismissPeriodMap() }
                         )
-                        // Handle Back Press to return to list
-                        BackHandler {
-                            viewModel.dismissPeriodMap()
-                        }
                     }
                     else {
                         PeriodsTabsScreen(
