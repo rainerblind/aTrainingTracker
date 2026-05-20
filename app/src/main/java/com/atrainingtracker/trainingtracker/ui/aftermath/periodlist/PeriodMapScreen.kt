@@ -80,7 +80,8 @@ fun PeriodMapScreen(
                         path = workout.trackPoints
                     )
                 ),
-                zoomFocus = MapZoomFocus.TRACK_AND_MARKERS
+                zoomFocus = MapZoomFocus.TRACK_AND_MARKERS,
+                bSportType = workout.workoutData.bSportType
             )
         }
     }
