@@ -30,6 +30,9 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesListFragment
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
@@ -73,6 +76,7 @@ class PeriodsFragment : Fragment() {
                         PeriodMapScreen(
                             summary = selectedPeriod!!,
                             onWorkoutClick = { id -> viewModel.selectWorkoutForPeek(id) },
+                            onSportClick = { summary, bSportType -> startWorkoutSummaryList(summary, bSportType) },
                             peekedWorkoutDataWithTrack = peekedWorkoutDataWithTrack,
                             clearPeekSelection = { viewModel.clearPeekSelection() },
                             onBack = { viewModel.dismissPeriodMap() }
@@ -84,6 +88,7 @@ class PeriodsFragment : Fragment() {
                             pagerState = pagerState,
                             listStates = listStates,
                             onMapClick = { summary -> viewModel.showPeriodMap(summary) },
+                            onSportClick = { summary, bSportType -> startWorkoutSummaryList(summary, bSportType) },
                             isPlayServiceAvailable = isPlayAvailable,
                             tabs = groups
                         )
@@ -91,6 +96,21 @@ class PeriodsFragment : Fragment() {
                 }
             }
         }
+    }
+
+    fun startWorkoutSummaryList(periodSummary: PeriodSummary, bSportType: BSportType) {
+        val fragment = WorkoutSummariesListFragment.newInstance(
+            primaryTitle = periodSummary.periodLabel,
+            secondaryTitle = getString(bSportType.stringResId),
+            bSportType = bSportType,
+            startS = periodSummary.startTimestampS,
+            endS = periodSummary.endTimestampS
+        )
+
+        parentFragmentManager.beginTransaction()
+            .replace(R.id.content, fragment)
+            .addToBackStack(null)
+            .commit()
     }
 
 

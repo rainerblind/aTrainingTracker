@@ -183,9 +183,42 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
             }
             .toMap() // Converts back to a LinkedHashMap which preserves this order
 
+        // Calculate the start/end based on the period type
+        val ldt = firstItem.localDateTime
+        val zoneOffset = java.time.OffsetDateTime.now().offset
+
+        val (startS, endS) = when (level) {
+            PeriodGroupLevel.DAY -> {
+                val s = ldt.toLocalDate().atStartOfDay().toEpochSecond(zoneOffset)
+                Pair(s, s + 86399) // + 23:59:59
+            }
+            PeriodGroupLevel.WEEK -> {
+                // Find Monday of this week
+                val s = ldt.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
+                    .toLocalDate().atStartOfDay().toEpochSecond(zoneOffset)
+                Pair(s, s + (7 * 86400) - 1)
+            }
+            PeriodGroupLevel.MONTH -> {
+                val s = ldt.with(java.time.temporal.TemporalAdjusters.firstDayOfMonth())
+                    .toLocalDate().atStartOfDay().toEpochSecond(zoneOffset)
+                val e = ldt.with(java.time.temporal.TemporalAdjusters.lastDayOfMonth())
+                    .toLocalDate().atTime(23, 59, 59).toEpochSecond(zoneOffset)
+                Pair(s, e)
+            }
+            PeriodGroupLevel.YEAR -> {
+                val s = ldt.with(java.time.temporal.TemporalAdjusters.firstDayOfYear())
+                    .toLocalDate().atStartOfDay().toEpochSecond(zoneOffset)
+                val e = ldt.with(java.time.temporal.TemporalAdjusters.lastDayOfYear())
+                    .toLocalDate().atTime(23, 59, 59).toEpochSecond(zoneOffset)
+                Pair(s, e)
+            }
+        }
+
         return PeriodSummary(
             periodLabel = label,
             periodDateRange = range,
+            startTimestampS = startS,
+            endTimestampS = endS,
             totalWorkouts = items.size,
             totalDurationSec = items.sumOf { it.detailsData.activeTimeSec.toLong() },
             sportStats = sportStatsMap,

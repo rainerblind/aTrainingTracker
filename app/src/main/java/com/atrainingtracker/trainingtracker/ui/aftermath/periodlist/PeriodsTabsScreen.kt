@@ -39,6 +39,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
 import kotlinx.coroutines.launch
 
@@ -51,7 +52,8 @@ fun PeriodsTabsScreen(
     pagerState: PagerState,
     listStates: List<LazyListState>,
     isPlayServiceAvailable: Boolean,
-    onMapClick: (PeriodSummary) -> Unit
+    onMapClick: (PeriodSummary) -> Unit,
+    onSportClick: (PeriodSummary, BSportType) -> Unit
 ) {
 
     val scope = rememberCoroutineScope()
@@ -87,6 +89,7 @@ fun PeriodsTabsScreen(
                     scrollState = scrollState,
                     isPlayServiceAvailable = isPlayServiceAvailable,
                     onMapClick = onMapClick,
+                    onSportClick = onSportClick,
                     // Use a Spacer or contentPadding that reacts to the offset
                     appBarOffsetPx = connection.appBarOffset,
                     headerHeightPx = appBarMaxHeightPx.toFloat()
@@ -97,7 +100,6 @@ fun PeriodsTabsScreen(
             Surface(
                 modifier = Modifier.offset { IntOffset(0, connection.appBarOffset) },
                 color = MaterialTheme.colorScheme.primaryContainer,
-                tonalElevation = 3.dp
             ) {
                 Column(modifier = Modifier.statusBarsPadding()) {
                     // --- Heading Row with Sort Button ---
@@ -120,7 +122,7 @@ fun PeriodsTabsScreen(
                     }
                     PrimaryScrollableTabRow(
                         selectedTabIndex = pagerState.currentPage,
-                        containerColor = MaterialTheme.colorScheme.surface,
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                         divider = {}
                     ) {
                         tabs.forEachIndexed { index, title ->

@@ -50,6 +50,7 @@ fun PeriodSummaryCard(
     summary: PeriodSummary,
     isPlayServiceAvailable: Boolean,
     onMapClick: (PeriodSummary) -> Unit,
+    onSportClick: (PeriodSummary, BSportType) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val df = DistanceFormatter()
@@ -99,8 +100,14 @@ fun PeriodSummaryCard(
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
                 // SPORT SPECIFIC BREAKDOWN
-                summary.sportStats.forEach { (sport, stats) ->
-                    SportStatsRow(sport, stats, tf, df)
+                summary.sportStats.forEach { (bSportType, stats) ->
+                    SportStatsRow(
+                        bSportType = bSportType,
+                        stats = stats,
+                        tf = tf,
+                        df = df,
+                        onClick = { onSportClick(summary, bSportType) }
+                    )
                     Spacer(modifier = Modifier.height(8.dp))
                 }
             }
@@ -123,51 +130,73 @@ fun PeriodSummaryCard(
 }
 
 @Composable
-fun SportStatsRow(bSportType: BSportType, stats: SportStats, tf: TimeFormatter, df: DistanceFormatter) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
+fun SportStatsRow(
+    bSportType: BSportType,
+    stats: SportStats,
+    tf: TimeFormatter,
+    df: DistanceFormatter,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        color = Color.Transparent,
+        shape = RoundedCornerShape(8.dp)
     ) {
-        // Sport Icon
-        Icon(
-            painter = painterResource(id = bSportType.iconResId),
-            contentDescription = null,
-            modifier = Modifier.size(24.dp),
-            tint = Color.Unspecified
-        )
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        // Sport Name & Count
-        Column(modifier = Modifier.weight(1.2f)) {
-            Text(text = stringResource(bSportType.stringResId), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-            Text(
-                text = pluralStringResource(R.plurals.workout_periods__workouts, stats.count, stats.count),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.secondary
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp), // Add slight padding for touch target
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Sport Icon
+            Icon(
+                painter = painterResource(id = bSportType.iconResId),
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = Color.Unspecified
             )
-        }
 
-        // Distance & Ascent
-        Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-            Text(
-                text = df.format_with_units(stats.totalDistanceMeters),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "${stats.totalAscentMeters.toInt()} m ↑",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
+            Spacer(modifier = Modifier.width(12.dp))
 
-        // Time for this sport
-        Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-            Text(
-                text = tf.format_with_units(stats.totalDurationSec),
-                style = MaterialTheme.typography.bodyMedium
-            )
+            // Sport Name & Count
+            Column(modifier = Modifier.weight(1.2f)) {
+                Text(
+                    text = stringResource(bSportType.stringResId),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = pluralStringResource(
+                        R.plurals.workout_periods__workouts,
+                        stats.count,
+                        stats.count
+                    ),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+            }
+
+            // Distance & Ascent
+            Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+                Text(
+                    text = df.format_with_units(stats.totalDistanceMeters),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "${stats.totalAscentMeters.toInt()} m ↑",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            // Time for this sport
+            Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+                Text(
+                    text = tf.format_with_units(stats.totalDurationSec),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
         }
     }
 }
@@ -215,6 +244,7 @@ private fun PeriodMultiWorkoutMap(
     GoogleMap(
         modifier = Modifier.fillMaxSize(),
         cameraPositionState = cameraPositionState,
+        properties = MapProperties(mapType = MapType.TERRAIN),
         uiSettings = MapUiSettings(
             zoomControlsEnabled = false,
             scrollGesturesEnabled = false,
@@ -244,6 +274,8 @@ fun PreviewPeriodSummary() {
     val mockSummary = PeriodSummary(
         periodLabel = "Week 20",
         periodDateRange = "May 11 - May 17, 2026",
+        startTimestampS = 1000,
+        endTimestampS = 15000,
         totalWorkouts = 5,
         totalDurationSec = 15400,
         polylines = listOf("_p~iF~ps|U_ulLnnqC", "a~lF|ym|U_geC~izE"), // Mock short polylines
@@ -269,7 +301,8 @@ fun PreviewPeriodSummary() {
         PeriodSummaryCard(
             summary = mockSummary,
             isPlayServiceAvailable = true,
-            onMapClick = {}
+            onMapClick = {},
+            onSportClick = { _, _ ->}
         )
     }
 }
@@ -280,6 +313,8 @@ fun PreviewEmptyPeriod() {
     val emptySummary = PeriodSummary(
         periodLabel = "June 2026",
         periodDateRange = "No workouts recorded",
+        startTimestampS = 0,
+        endTimestampS = 0,
         totalWorkouts = 0,
         totalDurationSec = 0,
         polylines = emptyList(),
@@ -292,7 +327,8 @@ fun PreviewEmptyPeriod() {
         PeriodSummaryCard(
             summary = emptySummary,
             isPlayServiceAvailable = false,
-            onMapClick = {}
+            onMapClick = {},
+            onSportClick = { _, _ ->}
         )
     }
 }

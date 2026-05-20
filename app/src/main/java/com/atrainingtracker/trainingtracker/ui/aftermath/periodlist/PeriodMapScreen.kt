@@ -48,6 +48,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
 import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreen
@@ -62,6 +63,7 @@ import com.atrainingtracker.trainingtracker.ui.map.TrackType
 fun PeriodMapScreen(
     summary: PeriodSummary,
     onWorkoutClick: (Long) -> Unit,
+    onSportClick: (PeriodSummary, BSportType) -> Unit,
     peekedWorkoutDataWithTrack: WorkoutDataWithTrack?,
     clearPeekSelection: () -> Unit,
     onBack: () -> Unit
@@ -168,8 +170,10 @@ fun PeriodMapScreen(
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
                 // SPORT SPECIFIC BREAKDOWN
-                summary.sportStats.forEach { (sport, stats) ->
-                    SportStatsRow(sport, stats, tf, df)
+                summary.sportStats.forEach { (bSportType, stats) ->
+                    SportStatsRow(bSportType, stats, tf, df,
+                        onClick = { onSportClick(summary, bSportType) }
+                    )
                     Spacer(modifier = Modifier.height(8.dp))
                 }
             }

@@ -28,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import com.atrainingtracker.banalservice.BSportType
 
 /**
  * The scrollable list of WorkoutSummaries.
@@ -40,6 +41,7 @@ fun PeriodList(
     periods: List<PeriodSummary>,
     isPlayServiceAvailable: Boolean,
     onMapClick: (PeriodSummary) -> Unit,
+    onSportClick: (PeriodSummary, BSportType) -> Unit,
     appBarOffsetPx: Int,
     headerHeightPx: Float
 ) {
@@ -66,7 +68,8 @@ fun PeriodList(
             PeriodSummaryCard(
                 summary = periodSummary,
                 isPlayServiceAvailable = isPlayServiceAvailable,
-                onMapClick = { onMapClick(periodSummary) }
+                onMapClick = { onMapClick(periodSummary) },
+                onSportClick = onSportClick
             )
         }
     }
