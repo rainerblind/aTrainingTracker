@@ -167,7 +167,9 @@ fun PeriodMapScreen(
         Column(modifier = Modifier.fillMaxSize()) {
             // 1. HEADER (Stats) - Wrapped in GraphicsLayer for sharing
             Surface(
-                modifier = Modifier.drawWithContent {
+                modifier = Modifier
+                    .statusBarsPadding()
+                    .drawWithContent {
                     statsGraphicsLayer.record {
                         this@drawWithContent.drawContent()
                     }
@@ -175,9 +177,7 @@ fun PeriodMapScreen(
                 }
             ) {
                 Column(
-                    modifier = Modifier
-                        .statusBarsPadding()
-                        .padding(16.dp)
+                    modifier = Modifier.padding(16.dp)
                 ) {
                     // PERIOD HEADER
                     Row(
