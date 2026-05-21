@@ -27,7 +27,6 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataWithTrack
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
-import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -159,9 +158,10 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
             }
         }
 
-        val idToPolyMap = items
-            .filter { it.mapPolyline != null && it.mapPolyline.isNotEmpty() }
-            .associate { it.id to it.mapPolyline!! }
+        // CREATE THE MAPPINGS FOR THE INTERACTIVE MAP
+        // This allows the map to filter polylines based on ID and SportType
+        val workoutIdToPolylineMap = items.associate { it.id to it.mapPolyline }
+        val workoutIdToSportMap = items.associate { it.id to it.bSportType }
 
         // Aggregate Sport Stats
         val sportStatsMap = items.groupBy { it.bSportType }.mapValues { (_, sportWorkouts) ->
@@ -223,7 +223,8 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
             totalDurationSec = items.sumOf { it.detailsData.activeTimeSec.toLong() },
             sportStats = sportStatsMap,
             polylines = items.mapNotNull { it.mapPolyline }.filter { it.isNotEmpty() },
-            workoutIdToPolylineMap = idToPolyMap,
+            workoutIdToPolylineMap = workoutIdToPolylineMap,
+            workoutIdToSportMap = workoutIdToSportMap,
             sortKey = key // Used for descending sort
         )
     }

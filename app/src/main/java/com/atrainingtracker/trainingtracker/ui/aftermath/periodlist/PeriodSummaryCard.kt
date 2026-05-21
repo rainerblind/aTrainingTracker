@@ -305,7 +305,8 @@ fun PreviewPeriodSummary() {
             )
         ),
         sortKey = "",
-        workoutIdToPolylineMap = emptyMap()
+        workoutIdToPolylineMap = emptyMap(),
+        workoutIdToSportMap = emptyMap()
     )
 
     MaterialTheme {
@@ -332,7 +333,8 @@ fun PreviewEmptyPeriod() {
         polylines = emptyList(),
         sportStats = emptyMap(),
         sortKey = "",
-        workoutIdToPolylineMap = emptyMap()
+        workoutIdToPolylineMap = emptyMap(),
+        workoutIdToSportMap = emptyMap()
     )
 
     MaterialTheme {
