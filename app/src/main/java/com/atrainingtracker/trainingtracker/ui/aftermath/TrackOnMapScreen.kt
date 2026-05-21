@@ -80,7 +80,9 @@ fun TrackOnMapScreen(
         Surface(
             color = MaterialTheme.colorScheme.primaryContainer,
             shape = RectangleShape,
-            modifier = Modifier.drawWithContent {
+            modifier = Modifier
+                .statusBarsPadding()
+                .drawWithContent {
                 headerLayer.record {
                     this@drawWithContent.drawContent()
                 }
