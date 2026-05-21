@@ -57,7 +57,7 @@ import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentFragment;
 import com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrack;
 import com.atrainingtracker.trainingtracker.ui.routes.RoutesFragment;
 import com.atrainingtracker.trainingtracker.ui.segments.segmentlist.StarredSegmentsFragment;
-import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository;
+import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository;
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsFragment;
 import com.dsi.ant.plugins.antplus.pccbase.AntPluginPcc;
 import com.google.android.gms.maps.MapsInitializer;
@@ -113,9 +113,6 @@ import com.google.android.gms.common.GooglePlayServicesUtil;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-
-import kotlinx.coroutines.Dispatchers;
-import kotlinx.coroutines.flow.FlowKt;
 
 // import android.support.v7.app.AlertDialog;
 

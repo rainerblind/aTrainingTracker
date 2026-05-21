@@ -24,7 +24,7 @@ import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
-import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository
+import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch

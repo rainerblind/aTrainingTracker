@@ -16,7 +16,7 @@
  * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
-package com.atrainingtracker.trainingtracker.ui.tracking
+package com.atrainingtracker.trainingtracker.repositories
 
 import android.content.BroadcastReceiver
 import android.content.ComponentName
@@ -339,7 +339,7 @@ class BANALServiceRepository private constructor(private val context: Context) {
      */
     private fun sendBroadcast(action: String) {
         val intent = Intent(action).apply {
-            `package` = context.packageName
+            Intent.setPackage = context.packageName
         }
         context.sendBroadcast(intent)
     }
