@@ -76,7 +76,6 @@ class PeriodsFragment : Fragment() {
                         PeriodMapScreen(
                             summary = selectedPeriod!!,
                             onWorkoutClick = { id -> viewModel.selectWorkoutForPeek(id) },
-                            onSportClick = { summary, bSportType -> startWorkoutSummaryList(summary, bSportType) },
                             peekedWorkoutDataWithTrack = peekedWorkoutDataWithTrack,
                             clearPeekSelection = { viewModel.clearPeekSelection() },
                             onBack = { viewModel.dismissPeriodMap() }
@@ -87,6 +86,7 @@ class PeriodsFragment : Fragment() {
                             groupedPeriods = groupedPeriods,
                             pagerState = pagerState,
                             listStates = listStates,
+                            onHeaderClick = { summary -> startWorkoutSummaryList(summary) },
                             onMapClick = { summary -> viewModel.showPeriodMap(summary) },
                             onSportClick = { summary, bSportType -> startWorkoutSummaryList(summary, bSportType) },
                             isPlayServiceAvailable = isPlayAvailable,
@@ -98,10 +98,31 @@ class PeriodsFragment : Fragment() {
         }
     }
 
-    fun startWorkoutSummaryList(periodSummary: PeriodSummary, bSportType: BSportType) {
+    fun startWorkoutSummaryList(periodSummary: PeriodSummary, bSportType: BSportType? = null) {
+        // calc the secondary title
+        // Either "Runs (3 workouts)" or "3 Running, 5 Cycling"
+        val secondaryTitle = if (bSportType != null) {
+            // Case 1: Specific sport clicked
+            val count = periodSummary.sportStats[bSportType]?.count ?: 0
+            val workoutsCountString = resources.getQuantityString(
+                R.plurals.workout_periods__workouts,
+                count,
+                count
+            )
+            "${getString(bSportType.stringResId)} ($workoutsCountString)"
+        } else {
+            // Case 2: Header clicked (No specific sport)
+            // Creates a string like: "3 Running, 2 Cycling"
+            periodSummary.sportStats.entries
+                .filter { it.value.count > 0 } // Only show sports that have workouts
+                .joinToString(", ") { (sport, stats) ->
+                    "${stats.count} ${getString(sport.stringResId)}"
+                }
+        }
+
         val fragment = WorkoutSummariesListFragment.newInstance(
             primaryTitle = periodSummary.periodLabel,
-            secondaryTitle = getString(bSportType.stringResId),
+            secondaryTitle = secondaryTitle,
             bSportType = bSportType,
             startS = periodSummary.startTimestampS,
             endS = periodSummary.endTimestampS

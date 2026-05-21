@@ -30,6 +30,7 @@ data class PeriodSummary(
     val sportStats: Map<BSportType, SportStats>,
     val polylines: List<String>, // List of encoded polylines for the map
     val workoutIdToPolylineMap: Map<Long, String>, // ID -> Encoded Polyline
+    val workoutIdToSportMap: Map<Long, BSportType>,
     val sortKey: String // Used for sorting
 )
 

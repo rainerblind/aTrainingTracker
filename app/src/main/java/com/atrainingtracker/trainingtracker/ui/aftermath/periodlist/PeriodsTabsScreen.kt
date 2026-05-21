@@ -52,6 +52,7 @@ fun PeriodsTabsScreen(
     pagerState: PagerState,
     listStates: List<LazyListState>,
     isPlayServiceAvailable: Boolean,
+    onHeaderClick: (PeriodSummary) -> Unit,
     onMapClick: (PeriodSummary) -> Unit,
     onSportClick: (PeriodSummary, BSportType) -> Unit
 ) {
@@ -88,6 +89,7 @@ fun PeriodsTabsScreen(
                     periods = periods,
                     scrollState = scrollState,
                     isPlayServiceAvailable = isPlayServiceAvailable,
+                    onHeaderClick = onHeaderClick,
                     onMapClick = onMapClick,
                     onSportClick = onSportClick,
                     // Use a Spacer or contentPadding that reacts to the offset
