@@ -29,7 +29,7 @@ import com.atrainingtracker.banalservice.ui.devices.devicedata.BikePowerFeatures
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.banalservice.ui.devices.devicedata.PowerFeatureDisplay
-import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository
+import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import kotlinx.coroutines.launch
 
 /**

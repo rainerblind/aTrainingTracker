@@ -29,7 +29,7 @@ import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.banalservice.filters.FilterData
 import com.atrainingtracker.banalservice.filters.FilterType
 import com.atrainingtracker.banalservice.sensor.SensorType
-import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository
+import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldConfig
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize

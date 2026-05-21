@@ -27,7 +27,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.trainingtracker.MyHelper
-import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository
+import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 
 class GetMergedDevicesUseCase(
     private val dbRepo: DeviceDataRepository,

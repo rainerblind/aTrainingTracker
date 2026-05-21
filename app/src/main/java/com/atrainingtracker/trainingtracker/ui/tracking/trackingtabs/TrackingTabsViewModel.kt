@@ -26,18 +26,16 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.asFlow
-import androidx.lifecycle.asLiveData
 
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.trainingtracker.TrackingMode
-import com.atrainingtracker.trainingtracker.ui.tracking.BANALServiceRepository
-import com.atrainingtracker.trainingtracker.ui.tracking.LapEvent
+import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import com.atrainingtracker.trainingtracker.repositories.LapEvent
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewInfo
 import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
