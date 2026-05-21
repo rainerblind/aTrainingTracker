@@ -63,9 +63,11 @@ import com.google.android.gms.maps.model.JointType
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapEffect
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapType
 import com.google.maps.android.compose.MapUiSettings
+import com.google.maps.android.compose.MapsComposeExperimentalApi
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.Polyline
@@ -73,6 +75,7 @@ import com.google.maps.android.compose.rememberCameraPositionState
 import kotlinx.coroutines.flow.StateFlow
 
 
+@OptIn(MapsComposeExperimentalApi::class)
 @Composable
 fun ATrainingTrackerMap(
     mapState: MapState,
@@ -82,6 +85,9 @@ fun ATrainingTrackerMap(
     onMapClick: (() -> Unit)? = null,
     onSegmentClick: (Long) -> Unit = {},
     onRouteClick: (Long) -> Unit = {},
+    // Take a snapshot
+    shouldTakeSnapshot: Boolean = false,
+    onSnapshotReady: (Bitmap) -> Unit = {}
 ) {
     val context = LocalContext.current
     val currentLocation by currentLocationFlow.collectAsStateWithLifecycle()
@@ -289,6 +295,13 @@ fun ATrainingTrackerMap(
         uiSettings = MapUiSettings(zoomControlsEnabled = false, tiltGesturesEnabled = true),
         onMapLoaded = { isMapLoaded = true }
     ) {
+        // make snapshot
+        MapEffect(shouldTakeSnapshot) { map ->
+            if (shouldTakeSnapshot) {
+                map.snapshot { onSnapshotReady(it!!) }
+            }
+        }
+
         // --- Layer 1: Segments ---
         mapState.segments.forEach { segment ->
             SegmentLayer(

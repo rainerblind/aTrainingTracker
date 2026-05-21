@@ -34,82 +34,119 @@ import com.atrainingtracker.R
 import java.io.File
 import java.io.FileOutputStream
 
+/**
+ * Shares a summary consisting of a Header and a Map.
+ */
 fun combineAndShare(context: Context, header: Bitmap, map: Bitmap) {
-    // 1. Handle Hardware Bitmaps
-    val softwareHeader = if (header.config == Bitmap.Config.HARDWARE) {
-        header.copy(Bitmap.Config.ARGB_8888, false)
-    } else header
+    val sHeader = ensureSoftwareBitmap(header)
+    val sMap = ensureSoftwareBitmap(map)
 
-    val softwareMap = if (map.config == Bitmap.Config.HARDWARE) {
-        map.copy(Bitmap.Config.ARGB_8888, false)
-    } else map
-
-    // 2. Define Footer Dimensions
     val footerHeight = 125
-    val totalWidth = softwareHeader.width.coerceAtLeast(softwareMap.width)
-    val totalHeight = softwareHeader.height + softwareMap.height + footerHeight
+    val totalWidth = sHeader.width.coerceAtLeast(sMap.width)
+    val totalHeight = sHeader.height + sMap.height + footerHeight
 
-    // 3. Create the Bitmap and Canvas
     val combined = createBitmap(totalWidth, totalHeight)
     val canvas = Canvas(combined)
     canvas.drawColor(Color.WHITE)
 
-    // 4. Draw Header and Map
-    canvas.drawBitmap(softwareHeader, 0f, 0f, null)
-    canvas.drawBitmap(softwareMap, 0f, softwareHeader.height.toFloat(), null)
+    // Draw Sections
+    canvas.drawBitmap(sHeader, 0f, 0f, null)
+    canvas.drawBitmap(sMap, 0f, sHeader.height.toFloat(), null)
 
-    // 5. DRAW THE WATERMARK FOOTER
-    val footerTop = (softwareHeader.height + softwareMap.height).toFloat()
+    // Draw Branding
+    val footerTop = (sHeader.height + sMap.height).toFloat()
+    drawFooter(context, canvas, totalWidth, footerTop, footerHeight)
 
-    // Footer Background
+    saveAndShare(context, combined, "period_summary.png")
+}
+
+/**
+ * Shares a detailed workout consisting of a Header, Map, and Elevation profile.
+ */
+fun combineWorkoutAndShare(context: Context, header: Bitmap, map: Bitmap, elevation: Bitmap) {
+    val sHeader = ensureSoftwareBitmap(header)
+    val sMap = ensureSoftwareBitmap(map)
+    val sElevation = ensureSoftwareBitmap(elevation)
+
+    val footerHeight = 125
+    val totalWidth = sMap.width // Use map width as the base
+    val totalHeight = sHeader.height + sMap.height + sElevation.height + footerHeight
+
+    val combined = createBitmap(totalWidth, totalHeight)
+    val canvas = Canvas(combined)
+    canvas.drawColor(Color.WHITE)
+
+    var currentY = 0f
+
+    // 1. Header
+    canvas.drawBitmap(sHeader, 0f, currentY, null)
+    currentY += sHeader.height
+
+    // 2. Map
+    canvas.drawBitmap(sMap, 0f, currentY, null)
+    currentY += sMap.height
+
+    // 3. Elevation
+    canvas.drawBitmap(sElevation, 0f, currentY, null)
+    currentY += sElevation.height
+
+    // 4. Branding
+    drawFooter(context, canvas, totalWidth, currentY, footerHeight)
+
+    saveAndShare(context, combined, "workout_summary.png")
+}
+
+// --- PRIVATE HELPERS ---
+
+private fun ensureSoftwareBitmap(bitmap: Bitmap): Bitmap {
+    return if (bitmap.config == Bitmap.Config.HARDWARE) {
+        bitmap.copy(Bitmap.Config.ARGB_8888, false)
+    } else bitmap
+}
+
+private fun drawFooter(context: Context, canvas: Canvas, width: Int, top: Float, height: Int) {
+    // Background
     val bgPaint = Paint().apply {
         color = Color.parseColor("#F5F5F5")
         isAntiAlias = true
     }
-    canvas.drawRect(0f, footerTop, totalWidth.toFloat(), totalHeight.toFloat(), bgPaint)
+    canvas.drawRect(0f, top, width.toFloat(), top + height, bgPaint)
 
-    // Draw Logo (using android.graphics.Bitmap)
+    // Logo
     val logo = BitmapFactory.decodeResource(context.resources, R.drawable.logo_512)
     val logoSize = 80
     val scaledLogo = logo.scale(logoSize, logoSize)
-
     val margin = 24f
-    canvas.drawBitmap(scaledLogo, margin, footerTop + (footerHeight - logoSize) / 2f, null)
+    canvas.drawBitmap(scaledLogo, margin, top + (height - logoSize) / 2f, null)
 
-    // Draw App Name (using android.graphics.Paint)
+    // Text
     val textPaint = Paint().apply {
         color = Color.DKGRAY
         textSize = 42f
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
         isAntiAlias = true
     }
-
-    // Calculate vertical center for text
-    val textBounds = android.graphics.Rect()
     val appName = "aTrainingTracker"
+    val textBounds = android.graphics.Rect()
     textPaint.getTextBounds(appName, 0, appName.length, textBounds)
-    val textY = footerTop + (footerHeight / 2f) + (textBounds.height() / 2f)
+    val textY = top + (height / 2f) + (textBounds.height() / 2f)
 
-    canvas.drawText(
-        appName,
-        margin + logoSize + 20f,
-        textY,
-        textPaint
-    )
+    canvas.drawText(appName, margin + logoSize + 20f, textY, textPaint)
+}
 
-    // 6. Save and Share
+private fun saveAndShare(context: Context, bitmap: Bitmap, fileName: String) {
     val imagesFolder = File(context.cacheDir, "images")
     if (!imagesFolder.exists()) imagesFolder.mkdirs()
 
-    val file = File(imagesFolder, "period_summary.png")
-    FileOutputStream(file).use { combined.compress(Bitmap.CompressFormat.PNG, 100, it) }
+    val file = File(imagesFolder, fileName)
+    FileOutputStream(file).use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
 
     val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
     val intent = Intent(Intent.ACTION_SEND).apply {
         type = "image/png"
         putExtra(Intent.EXTRA_STREAM, uri)
-        clipData = ClipData.newRawUri("Training Summary", uri)
+        clipData = ClipData.newRawUri("Summary", uri)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
-    context.startActivity(Intent.createChooser(intent, "Share Training Stats"))
+    context.startActivity(Intent.createChooser(intent, "Share with"))
 }

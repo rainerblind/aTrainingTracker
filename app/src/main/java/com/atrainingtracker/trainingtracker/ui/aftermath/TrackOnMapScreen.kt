@@ -30,9 +30,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeader
 import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
@@ -40,6 +43,20 @@ import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.map.MapState
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.flow.MutableStateFlow
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.drawWithContent
+import com.atrainingtracker.trainingtracker.helpers.combineWorkoutAndShare
+import kotlinx.coroutines.launch
 
 @Composable
 fun TrackOnMapScreen(
@@ -47,14 +64,28 @@ fun TrackOnMapScreen(
     mapState: MapState,
     modifier: Modifier
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    val headerLayer = rememberGraphicsLayer()
+    val elevationLayer = rememberGraphicsLayer()
+
+    var isSharing by remember { mutableStateOf(false) }
     var selectedDistance by remember { mutableStateOf<Double?>(null) }
     val noLocation = remember { MutableStateFlow<LatLng?>(null) }
 
     Column(modifier = Modifier.fillMaxSize()) {
 
+        // 1. HEADER
         Surface(
             color = MaterialTheme.colorScheme.primaryContainer,
-            shape = RectangleShape
+            shape = RectangleShape,
+            modifier = Modifier.drawWithContent {
+                headerLayer.record {
+                    this@drawWithContent.drawContent()
+                }
+                drawLayer(headerLayer)
+            }
         ) {
             WorkoutHeader(
                 modifier = modifier,
@@ -68,22 +99,58 @@ fun TrackOnMapScreen(
             )
         }
 
-        ATrainingTrackerMap(
-            mapState = mapState,
-            currentLocationFlow = noLocation,
-            selectedDistance = selectedDistance,
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            onSegmentClick = { } // since we do not show the segments here, nothing must be done here.
-            // TODO: show Segments and show segment details...
-        )
+        // 2. MAP AREA with OVERLAYED SHARE BUTTON
+        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            ATrainingTrackerMap(
+                mapState = mapState,
+                currentLocationFlow = noLocation,
+                selectedDistance = selectedDistance,
+                modifier = Modifier.fillMaxSize(),
+                onSegmentClick = { },
+                shouldTakeSnapshot = isSharing,
+                onSnapshotReady = { mapBitmap ->
+                    scope.launch {
+                        val hBmp = headerLayer.toImageBitmap().asAndroidBitmap()
+                        val eBmp = elevationLayer.toImageBitmap().asAndroidBitmap()
+                        combineWorkoutAndShare(context, hBmp, mapBitmap, eBmp)
+                        isSharing = false
+                    }
+                }
+            )
 
+            // SHARE BUTTON positioned on top-right of the MAP
+            Surface(
+                onClick = { isSharing = true }, // Set click action directly on Surface
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(16.dp)            // Standard distance from screen edge
+                    .size(44.dp),              // Fixed size to match standard map controls
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f), // Slightly more opaque for better contrast
+                shadowElevation = 6.dp,        // More pronounced shadow for "floating" look
+                tonalElevation = 2.dp          // Material 3 tonal color
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.Share,
+                        contentDescription = "Share",
+                        modifier = Modifier.size(22.dp), // Precisely sized icon
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
+
+        // 3. ELEVATION
         Surface(
-            color = MaterialTheme.colorScheme.surface
+            color = MaterialTheme.colorScheme.surface,
+            modifier = Modifier.drawWithContent {
+                elevationLayer.record {
+                    this@drawWithContent.drawContent()
+                }
+                drawLayer(elevationLayer)
+            }
         ) {
-            // The Elevation Profile takes the bottom 30%
-            // We extract the track points from the mapState
             ElevationProfile(
                 pathPoints = mapState.tracks.firstOrNull()?.path ?: emptyList(),
                 modifier = Modifier
@@ -91,10 +158,7 @@ fun TrackOnMapScreen(
                     .fillMaxWidth()
                     .height(150.dp),
                 currentDistance = selectedDistance,
-                // Callback when the user slides their finger
-                onDistanceSelected = { dist ->
-                    selectedDistance = dist
-                }
+                onDistanceSelected = { selectedDistance = it }
             )
         }
     }
