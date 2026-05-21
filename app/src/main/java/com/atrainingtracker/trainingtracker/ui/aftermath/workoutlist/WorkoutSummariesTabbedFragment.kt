@@ -102,7 +102,7 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                         TrackOnMapScreen(
                             workoutData = workouts.find { it.id == selectedWorkoutIdForDetails }!!,
                             mapState = trackOnMapViewModel.aftermathState.collectAsStateWithLifecycle().value,
-                            modifier = Modifier.statusBarsPadding()
+                            modifier = Modifier
                         )
 
                         // 4. Handle System Back Button
