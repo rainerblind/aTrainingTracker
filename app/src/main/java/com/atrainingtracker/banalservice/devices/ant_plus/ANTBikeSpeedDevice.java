@@ -52,7 +52,7 @@ public class ANTBikeSpeedDevice extends MyANTDevice {
 
     // protected int mAccumulatedRevolutionCount;
     protected AntPlusBikeSpeedDistancePcc bikeSpeedDistancePcc = null;
-    protected MySensor<BigDecimal> mSpeedSensor;
+    protected MySensor<Double> mSpeedSensor;
     protected MySensor<Double> mPaceSensor;
     protected MyDoubleAccumulatorSensor mDistanceSensor;
     protected MyDoubleAccumulatorSensor mLapDistanceSensor;
@@ -70,7 +70,7 @@ public class ANTBikeSpeedDevice extends MyANTDevice {
 
     @Override
     protected void addSensors() {
-        mSpeedSensor = new ThresholdSensor<BigDecimal>(this, SensorType.SPEED_mps, SPEED_THRESHOLD);
+        mSpeedSensor = new ThresholdSensor<Double>(this, SensorType.SPEED_mps, SPEED_THRESHOLD);
         mPaceSensor = new ThresholdSensor<Double>(this, SensorType.PACE_spm, SPEED_THRESHOLD);
         mDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m, false);
         mLapDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m_LAP, false);
@@ -112,7 +112,7 @@ public class ANTBikeSpeedDevice extends MyANTDevice {
                 public void onNewCalculatedSpeed(long estTimestamp, EnumSet<EventFlag> eventFlags, BigDecimal calculatedSpeed) {
                     myLog("onNewCalculatedSpeed:timeStamp=" + estTimestamp + ": " + calculatedSpeed.doubleValue());
 
-                    mSpeedSensor.newValue(calculatedSpeed);
+                    mSpeedSensor.newValue(calculatedSpeed.doubleValue());
                     mPaceSensor.newValue(1 / calculatedSpeed.doubleValue());   // TODO: correct?
                 }
             });
