@@ -99,6 +99,8 @@ class PeriodsFragment : Fragment() {
     }
 
     fun startWorkoutSummaryList(periodSummary: PeriodSummary, bSportType: BSportType? = null) {
+        // calc the secondary title
+        // Either "Runs (3 workouts)" or "3 Running, 5 Cycling"
         val secondaryTitle = if (bSportType != null) {
             // Case 1: Specific sport clicked
             val count = periodSummary.sportStats[bSportType]?.count ?: 0
