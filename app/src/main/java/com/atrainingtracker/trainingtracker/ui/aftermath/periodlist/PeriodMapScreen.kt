@@ -198,18 +198,6 @@ fun PeriodMapScreen(
                             )
                         }
 
-                        // SHARE BUTTON
-                        IconButton(onClick = {
-                            scope.launch {
-                                // Trigger the snapshot sequence
-                                mapSnapshotTrigger = true
-                            }
-                        }) {
-                            Icon(
-                                imageVector = Icons.Default.Share,
-                                contentDescription = stringResource(R.string.share))
-                        }
-
                         Column(horizontalAlignment = Alignment.End) {
                             Text(
                                 text = pluralStringResource(
@@ -268,21 +256,45 @@ fun PeriodMapScreen(
                 }
             }
 
-            // 2. INTERACTIVE MAP
-            InteractivePeriodMap(
-                workouts = filteredWorkouts,
-                onWorkoutClick = onWorkoutClick,
-                modifier = Modifier.weight(1f),
-                // snapshot support
-                shouldTakeSnapshot = mapSnapshotTrigger,
-                onSnapshotReady = { mapBitmap ->
-                    scope.launch {
-                        val headerBitmap = statsGraphicsLayer.toImageBitmap().asAndroidBitmap()
-                        combineAndShare(context, headerBitmap, mapBitmap)
-                        mapSnapshotTrigger = false
+
+            // 2. INTERACTIVE MAP WITH OVERLAYED BUTTON
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                InteractivePeriodMap(
+                    workouts = filteredWorkouts,
+                    onWorkoutClick = onWorkoutClick,
+                    modifier = Modifier.fillMaxSize(),
+                    shouldTakeSnapshot = mapSnapshotTrigger,
+                    onSnapshotReady = { mapBitmap ->
+                        scope.launch {
+                            val headerBitmap = statsGraphicsLayer.toImageBitmap().asAndroidBitmap()
+                            combineAndShare(context, headerBitmap, mapBitmap)
+                            mapSnapshotTrigger = false
+                        }
+                    },
+                )
+
+                // FLOATING SHARE BUTTON
+                Surface(
+                    onClick = { mapSnapshotTrigger = true },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(16.dp)
+                        .size(44.dp),
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                    shadowElevation = 6.dp,
+                    tonalElevation = 2.dp
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = stringResource(R.string.share),
+                            modifier = Modifier.size(22.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
-                },
-            )
+                }
+            }
         }
     }
 
