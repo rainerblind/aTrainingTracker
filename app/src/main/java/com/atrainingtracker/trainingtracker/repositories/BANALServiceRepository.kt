@@ -339,7 +339,7 @@ class BANALServiceRepository private constructor(private val context: Context) {
      */
     private fun sendBroadcast(action: String) {
         val intent = Intent(action).apply {
-            Intent.setPackage = context.packageName
+            `package` = context.packageName
         }
         context.sendBroadcast(intent)
     }
