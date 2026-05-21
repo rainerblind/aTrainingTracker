@@ -68,7 +68,6 @@ import com.atrainingtracker.trainingtracker.ui.map.TrackType
 fun PeriodMapScreen(
     summary: PeriodSummary,
     onWorkoutClick: (Long) -> Unit,
-    onSportClick: (PeriodSummary, BSportType) -> Unit,
     peekedWorkoutDataWithTrack: WorkoutDataWithTrack?,
     clearPeekSelection: () -> Unit,
     onBack: () -> Unit
