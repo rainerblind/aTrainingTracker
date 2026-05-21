@@ -1121,4 +1121,7 @@
         <item quantity="other">%1$d Workouts</item>
     </plurals>
 
+    <!-- share screenshots -->
+    <string name="share">Share</string>
+
 </resources>

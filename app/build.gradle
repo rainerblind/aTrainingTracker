@@ -46,8 +46,8 @@ android {
         minSdkVersion 26 // Android 8
         targetSdkVersion 36
         multiDexEnabled = true
-        versionName = "4.9.23"
-        versionCode = 247
+        versionName = "4.9.24"
+        versionCode = 248
     }
 
     signingConfigs {
@@ -128,6 +128,7 @@ dependencies {
     implementation 'androidx.compose.runtime:runtime-livedata'
     implementation 'androidx.compose.ui:ui:1.11.1'
     implementation 'androidx.compose.runtime:runtime-saveable:1.11.1'
+    implementation 'androidx.compose.foundation:foundation-layout:1.11.2'
 // Version managed by Compose Plugin
 
     // --- Compose BOM (Ensures all Compose libs work together) ---
