@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
 import androidx.activity.compose.BackHandler
+import androidx.activity.result.launch
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,9 +32,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -44,24 +49,33 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
+import com.atrainingtracker.trainingtracker.helpers.combineAndShare
 import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreen
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataWithTrack
 import com.atrainingtracker.trainingtracker.ui.map.MapState
 import com.atrainingtracker.trainingtracker.ui.map.MapTrack
 import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -118,6 +132,14 @@ fun PeriodMapScreen(
         }
     }
 
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    // This layer will "record" the stats header
+    val statsGraphicsLayer = rememberGraphicsLayer()
+
+    // We need a reference to trigger the map snapshot
+    var mapSnapshotTrigger by remember { mutableStateOf(false) }
 
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
@@ -143,83 +165,105 @@ fun PeriodMapScreen(
         }
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize()) {
-            // 1. HEADER (Stats)
-            Column(
-                modifier = Modifier
-                    .statusBarsPadding()
-                    .padding(16.dp)
-            ) {
-                // PERIOD HEADER
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top
-                ) {
-                    Column {
-                        Text(
-                            text = summary.periodLabel,
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = summary.periodDateRange,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+            // 1. HEADER (Stats) - Wrapped in GraphicsLayer for sharing
+            Surface(
+                modifier = Modifier.drawWithContent {
+                    statsGraphicsLayer.record {
+                        this@drawWithContent.drawContent()
                     }
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text(
-                            text = pluralStringResource(
-                                R.plurals.workout_periods__workouts,
-                                summary.totalWorkouts,
-                                summary.totalWorkouts
-                            ),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = tf.format_with_units(summary.totalDurationSec),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
+                    drawLayer(statsGraphicsLayer)
                 }
+            ) {
+                Column(
+                    modifier = Modifier
+                        .statusBarsPadding()
+                        .padding(16.dp)
+                ) {
+                    // PERIOD HEADER
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = summary.periodLabel,
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = summary.periodDateRange,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
 
-                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                        // SHARE BUTTON
+                        IconButton(onClick = {
+                            scope.launch {
+                                // Trigger the snapshot sequence
+                                mapSnapshotTrigger = true
+                            }
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = stringResource(R.string.share))
+                        }
 
-                // SPORT SPECIFIC BREAKDOWN
-                summary.sportStats.forEach { (sport, stats) ->
-                    val isSelected = selectedSports.contains(sport)
-                    // Logic: If nothing is selected, everything is 1f.
-                    // If something is selected, dim everything except the selected ones.
-                    // val rowAlpha = if (selectedSports.isEmpty() || isSelected) 1f else 0.5f
-                    val rowAlpha = if (isSelected) 1f else 0.5f
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                text = pluralStringResource(
+                                    R.plurals.workout_periods__workouts,
+                                    summary.totalWorkouts,
+                                    summary.totalWorkouts
+                                ),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = tf.format_with_units(summary.totalDurationSec),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
 
-                    Box(modifier = Modifier.alpha(rowAlpha)) {
-                        SportStatsRow(
-                            bSportType = sport,
-                            stats = stats,
-                            df = df, tf = tf,
-                            onClick = {
-                                // Multi-select toggle logic
-                                selectedSports = if (isSelected) {
-                                    selectedSports - sport // Remove if already there
-                                } else {
-                                    selectedSports + sport // Add if not there
-                                }
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
-                                // Close peek if a filter change makes the peeked workout disappear
-                                if (peekedWorkoutDataWithTrack != null) {
-                                    val peekedSport =
-                                        peekedWorkoutDataWithTrack.workoutData?.bSportType
-                                    if (selectedSports.isNotEmpty() && !selectedSports.contains(
-                                            peekedSport
-                                        )
-                                    ) {
-                                        clearPeekSelection()
+                    // SPORT SPECIFIC BREAKDOWN
+                    summary.sportStats.forEach { (sport, stats) ->
+                        val isSelected = selectedSports.contains(sport)
+                        // Logic: If nothing is selected, everything is 1f.
+                        // If something is selected, dim everything except the selected ones.
+                        // val rowAlpha = if (selectedSports.isEmpty() || isSelected) 1f else 0.5f
+                        val rowAlpha = if (isSelected) 1f else 0.5f
+
+                        Box(modifier = Modifier.alpha(rowAlpha)) {
+                            SportStatsRow(
+                                bSportType = sport,
+                                stats = stats,
+                                df = df, tf = tf,
+                                onClick = {
+                                    // Multi-select toggle logic
+                                    selectedSports = if (isSelected) {
+                                        selectedSports - sport // Remove if already there
+                                    } else {
+                                        selectedSports + sport // Add if not there
+                                    }
+
+                                    // Close peek if a filter change makes the peeked workout disappear
+                                    if (peekedWorkoutDataWithTrack != null) {
+                                        val peekedSport =
+                                            peekedWorkoutDataWithTrack.workoutData?.bSportType
+                                        if (selectedSports.isNotEmpty() && !selectedSports.contains(
+                                                peekedSport
+                                            )
+                                        ) {
+                                            clearPeekSelection()
+                                        }
                                     }
                                 }
-                            }
-                        )
+                            )
+                        }
                     }
                 }
             }
@@ -228,7 +272,16 @@ fun PeriodMapScreen(
             InteractivePeriodMap(
                 workouts = filteredWorkouts,
                 onWorkoutClick = onWorkoutClick,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                // snapshot support
+                shouldTakeSnapshot = mapSnapshotTrigger,
+                onSnapshotReady = { mapBitmap ->
+                    scope.launch {
+                        val headerBitmap = statsGraphicsLayer.toImageBitmap().asAndroidBitmap()
+                        combineAndShare(context, headerBitmap, mapBitmap)
+                        mapSnapshotTrigger = false
+                    }
+                },
             )
         }
     }

@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
+import android.graphics.Bitmap
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -29,18 +30,25 @@ import com.google.android.gms.maps.model.JointType
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.RoundCap
 import com.google.maps.android.PolyUtil
+import com.google.maps.android.compose.CameraPositionState
 import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapEffect
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapType
+import com.google.maps.android.compose.MapsComposeExperimentalApi
 import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
 
+@OptIn(MapsComposeExperimentalApi::class)
 @Composable
 fun InteractivePeriodMap(
     // Map of WorkoutID to its Polyline String
     workouts: Map<Long, String>,
     onWorkoutClick: (Long) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    cameraPositionState: CameraPositionState = rememberCameraPositionState(),
+    shouldTakeSnapshot: Boolean = false, // Trigger a snapshot
+    onSnapshotReady: (Bitmap) -> Unit = {}
 ) {
     val allPaths = remember(workouts) {
         workouts.mapValues { PolyUtil.decode(it.value) }
@@ -59,9 +67,7 @@ fun InteractivePeriodMap(
         if (hasPoints) builder.build() else null
     }
 
-    val cameraPositionState = rememberCameraPositionState()
-
-    // 3. Apply the zoom as soon as the map is loaded or bounds change
+    // Apply the zoom as soon as the map is loaded or bounds change
     LaunchedEffect(bounds) {
         bounds?.let {
             cameraPositionState.move(
@@ -73,7 +79,23 @@ fun InteractivePeriodMap(
         modifier = modifier,
         cameraPositionState = cameraPositionState,
         properties = MapProperties(mapType = MapType.TERRAIN),
+        // Ensure UI stays clean during snapshot if needed
+        uiSettings = com.google.maps.android.compose.MapUiSettings(
+            zoomControlsEnabled = false,
+            myLocationButtonEnabled = false
+        )
     ) {
+        // Snapshot Logic
+        MapEffect(shouldTakeSnapshot) { map ->
+            if (shouldTakeSnapshot) {
+                map.snapshot { bitmap ->
+                    if (bitmap != null) {
+                        onSnapshotReady(bitmap)
+                    }
+                }
+            }
+        }
+
         allPaths.forEach { (workoutId, path) ->
             Polyline(
                 points = path,

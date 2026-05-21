@@ -201,6 +201,7 @@
         <service android:name=".banalservice.BANALService" />
         <service android:name=".trainingtracker.onlinecommunities.strava.StravaSegmentsIntentService" />
 
+        <!-- TODO: still necessary? -->
         <provider
             android:name=".trainingtracker.exporter.GenericFileProvider"
             android:authorities="${applicationId}.com.atrainingtracker.file.provider"
@@ -210,6 +211,17 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/provider_paths" />
         </provider>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
 
         <meta-data
             android:name="com.google.android.gms.version"

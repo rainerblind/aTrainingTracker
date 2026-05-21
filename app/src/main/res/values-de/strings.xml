@@ -1019,4 +1019,8 @@
         <item quantity="other">%1$d Einheiten</item>
     </plurals>
 
+    <!-- share screenshots -->
+    <string name="share">Teilen</string>
+
+
 </resources>
