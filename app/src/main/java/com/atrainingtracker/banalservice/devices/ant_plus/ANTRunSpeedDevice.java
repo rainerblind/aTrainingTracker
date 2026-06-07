@@ -45,7 +45,7 @@ import java.math.BigDecimal;
 public class ANTRunSpeedDevice extends MyANTDevice {
     private static final String TAG = "ANTRunSpeedDevice";
     private static final boolean DEBUG = BANALService.getDebug(false);
-    protected MySensor<BigDecimal> mCadenceSensor;
+    protected MySensor<Double> mCadenceSensor;
     protected MySensor<Double> mSpeedSensor;
     protected MySensor<Double> mPaceSensor;
     protected MyDoubleAccumulatorSensor mDistanceSensor;
@@ -64,7 +64,7 @@ public class ANTRunSpeedDevice extends MyANTDevice {
 
     @Override
     protected void addSensors() {
-        mCadenceSensor = new MySensor<BigDecimal>(this, SensorType.CADENCE);
+        mCadenceSensor = new MySensor<Double>(this, SensorType.CADENCE);
         mSpeedSensor = new MySensor<Double>(this, SensorType.SPEED_mps);
         mPaceSensor = new MySensor<Double>(this, SensorType.PACE_spm);
         mDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m, false);
@@ -127,7 +127,7 @@ public class ANTRunSpeedDevice extends MyANTDevice {
             mStrideSdmPcc.subscribeInstantaneousCadenceEvent(new IInstantaneousCadenceReceiver() {
                 @Override
                 public void onNewInstantaneousCadence(long estTimestamp, java.util.EnumSet<EventFlag> eventFlags, java.math.BigDecimal instantaneousCadence) {
-                    mCadenceSensor.newValue(instantaneousCadence);
+                    mCadenceSensor.newValue(instantaneousCadence.doubleValue());
                 }
 
             });

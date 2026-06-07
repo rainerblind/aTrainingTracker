@@ -54,7 +54,7 @@ public class ANTBikeSpeedAndCadenceDevice extends MyANTDevice {
     protected MySensor<Double> mPaceSensor;
     protected MyDoubleAccumulatorSensor mDistanceSensor;
     protected MyDoubleAccumulatorSensor mLapDistanceSensor;
-    protected MySensor<BigDecimal> mCadenceSensor;
+    protected MySensor<Double> mCadenceSensor;
 
     /**
      * constructor
@@ -70,7 +70,7 @@ public class ANTBikeSpeedAndCadenceDevice extends MyANTDevice {
         mPaceSensor = new ThresholdSensor<Double>(this, SensorType.PACE_spm, SPEED_THRESHOLD);
         mDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m, false);
         mLapDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m_LAP, false);
-        mCadenceSensor = new ThresholdSensor<BigDecimal>(this, SensorType.CADENCE, CADENCE_THRESHOLD);
+        mCadenceSensor = new ThresholdSensor<Double>(this, SensorType.CADENCE, CADENCE_THRESHOLD);
 
         addSensor(mSpeedSensor);
         addSensor(mPaceSensor);
@@ -155,7 +155,7 @@ public class ANTBikeSpeedAndCadenceDevice extends MyANTDevice {
             cadencePcc.subscribeCalculatedCadenceEvent(new ICalculatedCadenceReceiver() {
                 @Override
                 public void onNewCalculatedCadence(long estTimestamp, EnumSet<EventFlag> eventFlags, BigDecimal calculatedCadence) {
-                    mCadenceSensor.newValue(calculatedCadence);
+                    mCadenceSensor.newValue(calculatedCadence.doubleValue());
                 }
             });
         }
