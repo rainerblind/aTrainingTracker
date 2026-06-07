@@ -24,6 +24,8 @@ public enum ExportStatus {
     TRACKING_FINISHED,
     WAITING,
     PROCESSING,
+    @Deprecated  // No longer used but might be still in some database.
+    FINISHED_RETRY,
     FINISHED_SUCCESS,
     FINISHED_FAILED
 }
