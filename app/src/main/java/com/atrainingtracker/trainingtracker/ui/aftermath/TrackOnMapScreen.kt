@@ -97,7 +97,7 @@ fun TrackOnMapScreen(
                 menuEnabled = false,
                 onClicked = { },
                 onExport = { },
-                onDeleteConfirmed = { }
+                onDeleteRequest = { }
             )
         }
 

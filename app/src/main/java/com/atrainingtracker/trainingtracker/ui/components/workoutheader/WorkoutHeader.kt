@@ -53,7 +53,7 @@ fun WorkoutHeader(
     data: WorkoutHeaderData,
     onClicked: () -> Unit,
     onExport: (FileFormat) -> Unit,
-    onDeleteConfirmed: () -> Unit,
+    onDeleteRequest: () -> Unit,
     modifier: Modifier = Modifier,
     backgroundColor: Color = MaterialTheme.colorScheme.surfaceContainerHighest,
     textColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -62,7 +62,6 @@ fun WorkoutHeader(
     // State to control menu visibility
     var showMenu by remember { mutableStateOf(false) }
     var showContextMenu by remember { mutableStateOf(false) }
-    var confirmDeletion by remember { mutableStateOf(false) }
 
     Surface(
         modifier = if (menuEnabled) {
@@ -232,29 +231,8 @@ fun WorkoutHeader(
                     ) {
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.delete)) },
-                            onClick = { showContextMenu = false; confirmDeletion = true },
+                            onClick = { showContextMenu = false; onDeleteRequest() },
                             leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
-                        )
-                    }
-
-                    // Delete Confirmation Dialog
-                    if (confirmDeletion) {
-                        AlertDialog(
-                            onDismissRequest = { confirmDeletion = false },
-                            containerColor = MaterialTheme.colorScheme.surface,
-                            title = { Text(stringResource(R.string.delete)) },
-                            text = { Text(stringResource(R.string.really_delete_format, data.workoutName)) },
-                            confirmButton = {
-                                TextButton(onClick = {
-                                    onDeleteConfirmed()
-                                    confirmDeletion = false
-                                }) {
-                                    Text(stringResource(R.string.delete))
-                                }
-                            },
-                            dismissButton = {
-                                TextButton(onClick = { confirmDeletion = false }) { Text(stringResource(R.string.Cancel)) }
-                            }
                         )
                     }
                 }
@@ -332,7 +310,7 @@ fun PreviewWorkoutHeader(
                 data = data,
                 onClicked = {},
                 onExport = {},
-                onDeleteConfirmed = {}
+                onDeleteRequest = {}
             )
         }
     }
@@ -358,7 +336,7 @@ fun PreviewCommuteHeader() {
             ),
             onClicked = {},
             onExport = {},
-            onDeleteConfirmed = {}
+            onDeleteRequest = {}
         )
     }
 }

@@ -55,7 +55,7 @@ fun WorkoutSummary(
     workoutData: WorkoutData,
     isPlayServiceAvailable: Boolean,
     onExport: (FileFormat) -> Unit,
-    onDeleteConfirmed: () -> Unit,
+    onDeleteRequest: () -> Unit,
     onEditWorkout: () -> Unit,
     onMapClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -87,7 +87,7 @@ fun WorkoutSummary(
             data = workoutData.headerData,
             onClicked = onEditWorkout,
             onExport = onExport,
-            onDeleteConfirmed = onDeleteConfirmed,
+            onDeleteRequest = onDeleteRequest,
             menuEnabled = workoutData.headerData.finished
         )
 
