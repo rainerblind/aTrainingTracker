@@ -98,9 +98,13 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                         }
                     }
 
-                    if (selectedWorkoutIdForDetails != null) {
+                    val selectedWorkoutForDetails = selectedWorkoutIdForDetails?.let { id ->
+                        workouts.find { it.id == id }
+                    }
+
+                    if (selectedWorkoutForDetails != null) {
                         TrackOnMapScreen(
-                            workoutData = workouts.find { it.id == selectedWorkoutIdForDetails }!!,
+                            workoutData = selectedWorkoutForDetails,
                             mapState = trackOnMapViewModel.aftermathState.collectAsStateWithLifecycle().value,
                             modifier = Modifier
                         )

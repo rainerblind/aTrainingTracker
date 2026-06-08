@@ -104,17 +104,17 @@ fun PeriodMapScreen(
 
     // Prepare MapState for the TrackOnMapScreen
     val mapState = remember(peekedWorkoutDataWithTrack) {
-        peekedWorkoutDataWithTrack?.let { workout ->
+        peekedWorkoutDataWithTrack?.workoutData?.let { workoutData ->
             MapState(
                 tracks = listOf(
                     MapTrack(
-                        id = workout.workoutData!!.id,
+                        id = workoutData.id,
                         type = TrackType.BEST,
-                        path = workout.trackPoints
+                        path = peekedWorkoutDataWithTrack.trackPoints
                     )
                 ),
                 zoomFocus = MapZoomFocus.TRACK_AND_MARKERS,
-                bSportType = workout.workoutData.bSportType
+                bSportType = workoutData.bSportType
             )
         }
     }
@@ -154,11 +154,11 @@ fun PeriodMapScreen(
             }
         },
         sheetContent = {
-            if (peekedWorkoutDataWithTrack != null) {
+            if (peekedWorkoutDataWithTrack?.workoutData != null && mapState != null) {
                 // Here we show the TrackOnMapScreen for the specific workout
                 TrackOnMapScreen(
-                    workoutData = peekedWorkoutDataWithTrack.workoutData!!,
-                    mapState = mapState!!,
+                    workoutData = peekedWorkoutDataWithTrack.workoutData,
+                    mapState = mapState,
                     modifier = Modifier
                 )
             }

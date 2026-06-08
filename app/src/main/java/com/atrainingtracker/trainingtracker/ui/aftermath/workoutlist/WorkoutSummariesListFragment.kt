@@ -135,7 +135,42 @@ class WorkoutSummariesListFragment : Fragment() {
 
                     val scrollState = rememberLazyListState()
 
-                    if (selectedWorkoutForDetails == null && selectedWorkoutIdForEdit == null) {
+                    val selectedWorkoutForDetailsData = selectedWorkoutForDetails?.let { id ->
+                        workouts.find { it.id == id }
+                    }
+
+                    if (selectedWorkoutForDetailsData != null) {
+                        // 3. Render the Detail Map Screen
+                        TrackOnMapScreen(
+                            workoutData = selectedWorkoutForDetailsData,
+                            mapState = trackOnMapViewModel.aftermathState.collectAsStateWithLifecycle().value,
+                            modifier = Modifier
+                        )
+
+                        // 4. Handle System Back Button
+                        BackHandler {
+                            selectedWorkoutForDetails = null
+                        }
+                    } else if (selectedWorkoutIdForEdit != null) {
+                        val editViewModel: EditWorkoutViewModel = viewModel(
+                            factory = EditWorkoutViewModelFactory(
+                                requireActivity().application,
+                                selectedWorkoutIdForEdit!!
+                            )
+                        )
+
+                        ATrainingTrackerTheme {
+                            EditWorkoutScreen(
+                                viewModel = editViewModel,
+                                onBack = { selectedWorkoutIdForEdit = null }
+                            )
+                        }
+
+                        // 4. Handle System Back Button
+                        BackHandler {
+                            selectedWorkoutIdForEdit = null
+                        }
+                    } else {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -188,46 +223,6 @@ class WorkoutSummariesListFragment : Fragment() {
                                     )
                                 }
                             }
-
-                        }
-                    }
-                    // TODO: almost same code as in WorkoutSummariesTabbedFragment -> somehow unify!
-                    else if (selectedWorkoutForDetails != null){
-
-                        // 3. Render the Detail Map Screen
-                        // We pass the ID to the screen. The screen (or its internal VM)
-                        // will handle loading the specific data for this ID.
-                        TrackOnMapScreen(
-                            workoutData = workouts.find { it.id == selectedWorkoutForDetails }!!,
-                            mapState = trackOnMapViewModel.aftermathState.collectAsStateWithLifecycle().value,
-                            modifier = Modifier
-                        )
-
-                        // 4. Handle System Back Button
-                        BackHandler {
-                            selectedWorkoutForDetails = null
-                        }
-
-                    }
-                    else if (selectedWorkoutIdForEdit != null) {
-
-                        val editViewModel: EditWorkoutViewModel = viewModel(
-                            factory = EditWorkoutViewModelFactory(
-                                requireActivity().application,
-                                selectedWorkoutIdForEdit!!
-                            )
-                        )
-
-                        ATrainingTrackerTheme {
-                            EditWorkoutScreen(
-                                viewModel = editViewModel,
-                                onBack = { selectedWorkoutIdForEdit = null }
-                            )
-                        }
-
-                        // 4. Handle System Back Button
-                        BackHandler {
-                            selectedWorkoutIdForEdit = null
                         }
                     }
                 }
