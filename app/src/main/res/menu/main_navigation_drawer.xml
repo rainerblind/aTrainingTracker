@@ -83,11 +83,9 @@
     </item>
     <item android:title="@string/drawer__settings">
         <menu>
-            android:id="@+id/drawer_group_settings"
-            android:checkableBehavior="single">
             <item
                 android:id="@+id/drawer_settings"
-                android:icon="@drawable/ic_settings_black_48dp"
+                android:icon="@drawable/ic_settings_24"
                 android:title="@string/Preferences" />
             <item
                 android:id="@+id/drawer_privacy_policy"
