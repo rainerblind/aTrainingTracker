@@ -28,9 +28,15 @@ import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
+import android.bluetooth.le.BluetoothLeScanner;
+import android.bluetooth.le.ScanCallback;
+import android.bluetooth.le.ScanFilter;
+import android.bluetooth.le.ScanResult;
+import android.bluetooth.le.ScanSettings;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Handler;
+import android.os.ParcelUuid;
 import android.util.Log;
 
 import androidx.core.app.ActivityCompat;
@@ -43,8 +49,10 @@ import com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEBikePowerDevic
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BluetoothConstants;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
@@ -213,12 +221,13 @@ public class BTSearchForNewDevicesEngine
     };
 
     // Device scan callback.
-    private final BluetoothAdapter.LeScanCallback mLeScanCallback = new BluetoothAdapter.LeScanCallback() {
+    private final ScanCallback mScanCallback = new ScanCallback() {
         @Override
-        public void onLeScan(final BluetoothDevice device, int rssi, byte[] scanRecord) {
+        public void onScanResult(int callbackType, ScanResult result) {
             if (ContextCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
                 return;
             }
+            final BluetoothDevice device = result.getDevice();
             if (DEBUG)
                 Log.i(TAG, "wow, we found a device: address=" + device.getAddress() + ", name=" + device.getName());
 
@@ -234,6 +243,11 @@ public class BTSearchForNewDevicesEngine
                     }
                 });
             }
+        }
+
+        @Override
+        public void onScanFailed(int errorCode) {
+            Log.e(TAG, "Scan failed with error: " + errorCode);
         }
     };
 
@@ -265,8 +279,28 @@ public class BTSearchForNewDevicesEngine
             if (ContextCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
                 return;
             }
+
+            BluetoothLeScanner scanner = mBluetoothAdapter.getBluetoothLeScanner();
+            if (scanner == null) {
+                Log.e(TAG, "BluetoothLeScanner is null (is Bluetooth on?)");
+                return;
+            }
+
             scanning = true;
-            mBluetoothAdapter.startLeScan(new UUID[]{BluetoothConstants.getServiceUUID(getDeviceType())}, mLeScanCallback);
+
+            List<ScanFilter> filters = null;
+            UUID serviceUuid = BluetoothConstants.getServiceUUID(getDeviceType());
+            if (serviceUuid != null) {
+                filters = Collections.singletonList(new ScanFilter.Builder()
+                        .setServiceUuid(new ParcelUuid(serviceUuid))
+                        .build());
+            }
+
+            ScanSettings settings = new ScanSettings.Builder()
+                    .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+                    .build();
+
+            scanner.startScan(filters, settings, mScanCallback);
         } else if (DEBUG) {
             Log.i(TAG, "already searching");
         }
@@ -281,7 +315,10 @@ public class BTSearchForNewDevicesEngine
 
         if (scanning) {
             scanning = false;
-            mBluetoothAdapter.stopLeScan(mLeScanCallback);
+            BluetoothLeScanner scanner = mBluetoothAdapter.getBluetoothLeScanner();
+            if (scanner != null) {
+                scanner.stopScan(mScanCallback);
+            }
         }
 
         for (final BluetoothGatt btGatt : mBTGatts.values()) {
