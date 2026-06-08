@@ -141,6 +141,8 @@ fun ATrainingTrackerMap(
 
     // Automated Bounds Fitting (Optimized for Local Area)
     LaunchedEffect(mapState.tracks, mapState.markers, mapState.segments, isMapLoaded) {
+        if (!isMapLoaded) return@LaunchedEffect
+
         if (mapState.zoomFocus == MapZoomFocus.TRACK_AND_MARKERS || mapState.zoomFocus == MapZoomFocus.LOCAL_SEGMENTS || mapState.zoomFocus == MapZoomFocus.LOCAL_ROUTES) {
             val userPos = currentLocation
             val builder = LatLngBounds.Builder()
@@ -200,8 +202,8 @@ fun ATrainingTrackerMap(
                 val padding = (40 * context.resources.displayMetrics.density).toInt()
                 try {
                     cameraPositionState.move(CameraUpdateFactory.newLatLngBounds(builder.build(), padding))
-                } catch (e: IllegalStateException) {
-                    // Map not laid out yet
+                } catch (e: Exception) {
+                    // Map not laid out yet or size is 0
                 }
             } else if (userPos != null) {
                 // If no points are there, just zoom to the user's current city/area

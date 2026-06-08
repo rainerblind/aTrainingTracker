@@ -23,7 +23,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -242,13 +245,20 @@ private fun PeriodMultiWorkoutMap(
     }
 
     val cameraPositionState = rememberCameraPositionState()
+    var isMapLoaded by remember { mutableStateOf(false) }
 
     // 3. Apply the zoom as soon as the map is loaded or bounds change
-    LaunchedEffect(bounds) {
-        bounds?.let {
-            cameraPositionState.move(
-                CameraUpdateFactory.newLatLngBounds(it, 50) // 50dp padding
-            )
+    LaunchedEffect(bounds, isMapLoaded) {
+        if (isMapLoaded) {
+            bounds?.let {
+                try {
+                    cameraPositionState.move(
+                        CameraUpdateFactory.newLatLngBounds(it, 50) // 50dp padding
+                    )
+                } catch (e: Exception) {
+                    // Map size might still be 0
+                }
+            }
         }
     }
 
@@ -256,6 +266,7 @@ private fun PeriodMultiWorkoutMap(
         modifier = Modifier.fillMaxSize(),
         cameraPositionState = cameraPositionState,
         properties = MapProperties(mapType = MapType.TERRAIN),
+        onMapLoaded = { isMapLoaded = true },
         uiSettings = MapUiSettings(
             zoomControlsEnabled = false,
             scrollGesturesEnabled = false,
