@@ -45,7 +45,8 @@ import com.atrainingtracker.trainingtracker.ui.theme.RouteColorUnselected
 fun RouteSummaryHeader(
     summary: RouteSummary,
     onToggleSelection: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    showSwitch: Boolean = true
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -133,20 +134,22 @@ fun RouteSummaryHeader(
                 )
 
                 // Visibility Switch
-                Switch(
-                    checked = summary.isSelected,
-                    onCheckedChange = onToggleSelection,
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = RouteColorSelected,
-                        checkedTrackColor = RouteColorSelected.copy(alpha = 0.5f),
-                        checkedBorderColor = RouteColorSelected,
+                if (showSwitch) {
+                    Switch(
+                        checked = summary.isSelected,
+                        onCheckedChange = onToggleSelection,
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = RouteColorSelected,
+                            checkedTrackColor = RouteColorSelected.copy(alpha = 0.5f),
+                            checkedBorderColor = RouteColorSelected,
 
-                        // Unselected androidx.compose.runtime.State (Gray/Muted)
-                        uncheckedThumbColor = RouteColorUnselected,
-                        uncheckedTrackColor = RouteColorUnselected.copy(alpha = 0.5f),
-                        uncheckedBorderColor = RouteColorUnselected
+                            // Unselected androidx.compose.runtime.State (Gray/Muted)
+                            uncheckedThumbColor = RouteColorUnselected,
+                            uncheckedTrackColor = RouteColorUnselected.copy(alpha = 0.5f),
+                            uncheckedBorderColor = RouteColorUnselected
+                        )
                     )
-                )
+                }
             }
         }
         // Add the description if it is not empty

@@ -81,7 +81,8 @@ fun RouteOnMapScreen(
                         RouteSummaryHeader(
                             summary = it,
                             modifier = Modifier.fillMaxWidth(),
-                            onToggleSelection = onToggleSelection
+                            onToggleSelection = onToggleSelection,
+                            showSwitch = !isSharing
                         )
                     }
                 }
