@@ -19,22 +19,30 @@
 package com.atrainingtracker.trainingtracker.ui.routes
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.database.RouteSummary
-import com.atrainingtracker.trainingtracker.segments.SegmentSummary
+import com.atrainingtracker.trainingtracker.helpers.combineWorkoutAndShare
 import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.map.MapState
-import com.atrainingtracker.trainingtracker.ui.segments.SegmentSummaryHeader
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 
 @Composable
 fun RouteOnMapScreen(
@@ -43,6 +51,14 @@ fun RouteOnMapScreen(
     onToggleSelection: (Boolean) -> Unit,
     modifier: Modifier
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    val headerLayer = rememberGraphicsLayer()
+    val elevationLayer = rememberGraphicsLayer()
+
+    var isSharing by remember { mutableStateOf(false) }
+
     // Shared state for the "seeker" position on both Map and Profile
     var selectedDistance by remember { mutableStateOf<Double?>(null) }
     val noLocation = remember { MutableStateFlow<LatLng?>(null) }
@@ -52,45 +68,91 @@ fun RouteOnMapScreen(
         routeSummary?.let {
             Surface(
                 color = MaterialTheme.colorScheme.primaryContainer,
-                // tonalElevation = 3.dp,
-                shape = RectangleShape
+                shape = RectangleShape,
+                modifier = Modifier.statusBarsPadding()
             ) {
-                Column(modifier = modifier) {
-                    RouteSummaryHeader(
-                        summary = it,
-                        modifier = Modifier.fillMaxWidth(),
-                        onToggleSelection = onToggleSelection
-                    )
+                Box(modifier = Modifier.drawWithContent {
+                    headerLayer.record {
+                        this@drawWithContent.drawContent()
+                    }
+                    drawLayer(headerLayer)
+                }) {
+                    Column(modifier = modifier) {
+                        RouteSummaryHeader(
+                            summary = it,
+                            modifier = Modifier.fillMaxWidth(),
+                            onToggleSelection = onToggleSelection
+                        )
+                    }
                 }
             }
         }
 
         // 2. MAP (Main content)
-        // We use weight(1f) to take up all available middle space
-        ATrainingTrackerMap(
-            mapState = mapState,
-            currentLocationFlow = noLocation,
-            selectedDistance = selectedDistance,
-            modifier = Modifier.weight(1f),
-            onSegmentClick = { /* nothing to do here. */ }
-        )
+        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            ATrainingTrackerMap(
+                mapState = mapState,
+                currentLocationFlow = noLocation,
+                selectedDistance = selectedDistance,
+                modifier = Modifier.fillMaxSize(),
+                onSegmentClick = { },
+                shouldTakeSnapshot = isSharing,
+                onSnapshotReady = { mapBitmap ->
+                    scope.launch {
+                        val hBmp = headerLayer.toImageBitmap().asAndroidBitmap()
+                        val eBmp = elevationLayer.toImageBitmap().asAndroidBitmap()
+                        combineWorkoutAndShare(context, hBmp, mapBitmap, eBmp)
+                        isSharing = false
+                    }
+                }
+            )
 
-        // 3. ELEVATION PROFILE with Navigation Bar Padding
+            // SHARE BUTTON positioned on top-right of the MAP
+            Surface(
+                onClick = { isSharing = true },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(16.dp)
+                    .size(44.dp),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                shadowElevation = 6.dp,
+                tonalElevation = 2.dp
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.Share,
+                        contentDescription = "Share",
+                        modifier = Modifier.size(22.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
+
+        // 3. ELEVATION PROFILE
         mapState.routes.firstOrNull()?.let { segment ->
             Surface(
-                color = MaterialTheme.colorScheme.surface
+                color = MaterialTheme.colorScheme.surface,
+                modifier = Modifier.navigationBarsPadding()
             ) {
-                ElevationProfile(
-                    pathPoints = segment.path,
-                    currentDistance = selectedDistance,
-                    onDistanceSelected = { dist ->
-                        selectedDistance = dist
-                    },
-                    modifier = Modifier
-                        .navigationBarsPadding()
-                        .fillMaxWidth()
-                        .height(150.dp)
-                )
+                Box(modifier = Modifier.drawWithContent {
+                    elevationLayer.record {
+                        this@drawWithContent.drawContent()
+                    }
+                    drawLayer(elevationLayer)
+                }) {
+                    ElevationProfile(
+                        pathPoints = segment.path,
+                        currentDistance = selectedDistance,
+                        onDistanceSelected = { dist ->
+                            selectedDistance = dist
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(150.dp)
+                    )
+                }
             }
         }
     }
