@@ -21,7 +21,6 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.asFlow
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
@@ -71,7 +70,7 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
     private val yearFormatter = DateTimeFormatter.ofPattern("yyyy")
 
     // 1. Observe raw workouts from Repository
-    private val _rawWorkouts = workoutRepo.allWorkouts.asFlow()
+    private val _rawWorkouts = workoutRepo.allWorkouts
 
     // 2. The Main StateFlow: A list containing 4 lists (one for each grouping level)
     val groupedPeriods: StateFlow<List<List<PeriodSummary>>> = _rawWorkouts
@@ -248,7 +247,7 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             // 1. Get the basic workout data from memory
             _peekedWorkoutDataWithTrack.value = WorkoutDataWithTrack(
-                workoutRepo.allWorkouts.value?.find { it.id == id },
+                workoutRepo.allWorkouts.value.find { it.id == id },
                  workoutRepo.getWorkoutTrackPoints(id, TrackType.BEST)
             )
         }

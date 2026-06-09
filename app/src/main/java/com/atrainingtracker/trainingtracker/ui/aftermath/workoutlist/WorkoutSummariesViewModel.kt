@@ -22,7 +22,6 @@ import android.app.Application
 import androidx.annotation.StringRes
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
-import androidx.lifecycle.asFlow
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
@@ -75,7 +74,7 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
     }
 
     val workouts: StateFlow<List<WorkoutData>> = combine(
-        workoutRepo.allWorkouts.asFlow(),
+        workoutRepo.allWorkouts,
         _sortOrder
     ) { workoutList, order ->
         workoutList to order

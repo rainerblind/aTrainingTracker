@@ -112,27 +112,29 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         }
 
         // Observe the single source of truth from the repository.
-        repository.allWorkouts.observeForever { list ->
-            val newWorkoutData = list.find { it.id == workoutId }
-            val currentWorkoutData = workoutData.value
+        viewModelScope.launch {
+            repository.allWorkouts.collect { list ->
+                val newWorkoutData = list.find { it.id == workoutId }
+                val currentWorkoutData = workoutData.value
 
-            if (newWorkoutData != null && currentWorkoutData != null) {
+                if (newWorkoutData != null && currentWorkoutData != null) {
 
-                // update the workout data
-                _workoutData.value = currentWorkoutData.copy(
-                    // only override the workoutName when it was not changed by the user
-                    workoutName = if (currentWorkoutData.workoutName == currentWorkoutData.fileBaseName) {
-                        // still the default name -> user dit not change the name -> use the (eventually) new one.
-                        newWorkoutData.workoutName
-                    } else {
-                        // user changed the name -> keep it
-                        currentWorkoutData.workoutName
-                    },
+                    // update the workout data
+                    _workoutData.value = currentWorkoutData.copy(
+                        // only override the workoutName when it was not changed by the user
+                        workoutName = if (currentWorkoutData.workoutName == currentWorkoutData.fileBaseName) {
+                            // still the default name -> user dit not change the name -> use the (eventually) new one.
+                            newWorkoutData.workoutName
+                        } else {
+                            // user changed the name -> keep it
+                            currentWorkoutData.workoutName
+                        },
 
-                    // copy extrema status and extrema values
-                    exportStatuses = newWorkoutData.exportStatuses,
-                    extremaRows = newWorkoutData.extremaRows
-                )
+                        // copy extrema status and extrema values
+                        exportStatuses = newWorkoutData.exportStatuses,
+                        extremaRows = newWorkoutData.extremaRows
+                    )
+                }
             }
         }
     }
