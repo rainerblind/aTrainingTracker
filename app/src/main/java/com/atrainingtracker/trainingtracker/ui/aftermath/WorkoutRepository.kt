@@ -177,9 +177,6 @@ class WorkoutRepository private constructor(private val application: Application
     }
 
     private fun reloadExportStatusesFor(fileName: String) {
-        val currentList = _allWorkouts.value
-        val workout = currentList.find { it.fileBaseName == fileName } ?: return
-
         launch(Dispatchers.IO) {
             val exportStatuses: MutableList<ExportStatusGroupData> = mutableListOf()
             for (type in orderedExportTypes) {
@@ -188,8 +185,10 @@ class WorkoutRepository private constructor(private val application: Application
                     exportStatuses.add(groupData)
                 }
             }
-            
-            updateWorkoutInList(workout.id, workout.copy(exportStatuses = exportStatuses))
+
+            val current = allWorkouts.value.find { it.fileBaseName == fileName } ?: return@launch
+            Log.i(TAG, "update from reloadExportStatusesFor")
+            updateWorkoutInList(current.id, current.copy(exportStatuses = exportStatuses))
         }
     }
 
@@ -368,58 +367,61 @@ class WorkoutRepository private constructor(private val application: Application
     val orderedExportTypes = listOf(ExportType.FILE, ExportType.DROPBOX, ExportType.COMMUNITY)
 
     suspend fun loadAllWorkouts() {
+        Log.i(TAG, "loadAllWorkouts")
         withContext(Dispatchers.IO) {
-            val currentList = mutableListOf<WorkoutData>()
             val cursor = summariesManager.getCursorForAllWorkouts()
-            // Safely iterate through the cursor and convert each row to a data object
             cursor.use { c ->
                 if (c.moveToFirst()) {
                     do {
-
-                        // Thread.sleep(50) // adding some delay for testing.
-
                         val workoutData = mapper.fromCursor(c)
 
-                        // check for any ongoing calculations and observe the extrema calculation if necessary.
                         if (workoutData.extremaData.isCalculating) {
                             observeExtremaCalculation(workoutData.id)
                         }
 
-                        // TODO: rewrite this part.
-                        // -> own repository for the export status; merged by the viewModel
-
                         val exportStatuses: MutableList<ExportStatusGroupData> = mutableListOf()
                         if (workoutData.fileBaseName != null) {
                             for (type in orderedExportTypes) {
-                                // Get the export statuses from our central provider
-                                val groupData =
-                                    exportStatusDataProvider.createGroupData(
-                                        workoutData.fileBaseName,
-                                        type
-                                    )
+                                val groupData = exportStatusDataProvider.createGroupData(workoutData.fileBaseName, type)
                                 if (groupData.hasContent) {
                                     exportStatuses.add(groupData)
                                 }
                             }
                         }
 
-                        val completedWorkout = workoutData.copy(
-                            exportStatuses = exportStatuses
-                        )
-
-                        currentList.add(
-                            completedWorkout
-                        )
-
+                        addOrUpdateWorkout(workoutData.copy(exportStatuses = exportStatuses))
                     } while (c.moveToNext())
                 }
-                _allWorkouts.value = currentList.toList()
             }
-            cursor.close()
+        }
+    }
+
+    private fun addOrUpdateWorkout(workout: WorkoutData) {
+        _allWorkouts.update { currentList ->
+            val index = currentList.indexOfFirst { it.id == workout.id }
+            if (index != -1) {
+                // UPDATE & MERGE: Preserve background-calculated fields from memory
+                currentList.map { existing ->
+                    if (existing.id == workout.id) {
+                        workout.copy(
+                            mapPolyline = if (workout.mapPolyline.isEmpty()) existing.mapPolyline else workout.mapPolyline,
+                            encodedAltitudes = if (workout.encodedAltitudes.isEmpty()) existing.encodedAltitudes else workout.encodedAltitudes,
+                            encodedDistances = if (workout.encodedDistances.isEmpty()) existing.encodedDistances else workout.encodedDistances,
+                            extremaRows = if (workout.extremaRows.isEmpty()) existing.extremaRows else workout.extremaRows,
+                            isCalculatingExtrema = workout.isCalculatingExtrema && existing.isCalculatingExtrema,
+                            exportStatuses = if (workout.exportStatuses.isEmpty()) existing.exportStatuses else workout.exportStatuses
+                        )
+                    } else existing
+                }
+            } else {
+                // ADD: Append and re-sort
+                (currentList + workout).sortedByDescending { it.headerData.startTimeS }
+            }
         }
     }
 
     private fun updateWorkoutInList(workoutId: Long, updatedWorkout: WorkoutData) {
+        Log.i(TAG, "updateWorkoutInList: workoutId=$workoutId (${updatedWorkout.fileBaseName}), mapPolyline: ${updatedWorkout.mapPolyline}, extremaRows: ${updatedWorkout.extremaRows}, exportStatuses: ${updatedWorkout.exportStatuses}")
         _allWorkouts.update { currentList ->
             currentList.map {
                 if (it.id == workoutId) updatedWorkout else it
@@ -427,7 +429,7 @@ class WorkoutRepository private constructor(private val application: Application
         }
     }
 
-    // Function to update the workout data from the database but keep the calculationMessage of the extrema data and the workout name if it has changed
+    // Function to update the workout data from the database but keep transient metadata
     private fun reloadWorkoutData(workoutId: Long) {
         if (DEBUG) Log.i(TAG, "reloadWorkoutData: workoutId=$workoutId")
 
@@ -436,19 +438,8 @@ class WorkoutRepository private constructor(private val application: Application
                 if (cursor?.moveToFirst() == true) {
                     // Get the fresh data from the database.
                     val freshWorkoutData = mapper.fromCursor(cursor)
-
-                    // Get the current in-memory version of the workout to check its state.
-                    val currentWorkoutInMemory = allWorkouts.value.find { it.id == workoutId }
-                    val currentMessage = currentWorkoutInMemory?.extremaData?.calculationMessage
-
-                    // Create the final workout object to be posted.
-                    val finalWorkoutData = freshWorkoutData.copy(
-                        // Always preserve the calculation message if it exists
-                        extremaCalculationMessage = currentMessage,
-                    )
-
-                    // Update the workout list
-                    updateWorkoutInList(workoutId, finalWorkoutData)
+                    
+                    addOrUpdateWorkout(freshWorkoutData)
                 }
             }
         }
