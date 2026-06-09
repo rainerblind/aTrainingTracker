@@ -22,7 +22,6 @@ import android.app.Application
 import androidx.annotation.StringRes
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
-import androidx.lifecycle.asFlow
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
@@ -54,7 +53,6 @@ enum class WorkoutSortOrder(@StringRes val labelResId: Int) {
 
 class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(application) {
     private val workoutRepo = WorkoutRepository.getInstance(application)
-    private val exportRepo = ExportStatusRepository.getInstance(application)
     private val prefManager = MyPreferenceManager(application)
 
     private val _sortOrder = MutableStateFlow(WorkoutSortOrder.DATE)
@@ -75,36 +73,22 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
     }
 
     val workouts: StateFlow<List<WorkoutData>> = combine(
-        workoutRepo.allWorkouts.asFlow(),
+        workoutRepo.allWorkouts,
         _sortOrder
     ) { workoutList, order ->
-        workoutList to order
-    }.flatMapLatest { (workoutList, order) ->
         if (workoutList.isEmpty()) {
-            flowOf(emptyList())
+            emptyList()
         } else {
-            combine(workoutList.map { workout ->
-                val fileName = workout.fileBaseName
-                if (fileName != null) {
-                    exportRepo.getExportStatusFlow(fileName)
-                        .map { liveStatuses ->
-                            workout.copy(exportStatuses = liveStatuses)
-                        }
-                } else {
-                    flowOf(workout)
-                }
-            }) { it.toList() }.map { list ->
-                // Apply sorting logic
-                when (order) {
-                    WorkoutSortOrder.DATE ->
-                        list.sortedByDescending { it.startTimeS }
-                    WorkoutSortOrder.TOTAL_ELEVATION_GAIN ->
-                        list.sortedByDescending { it.ascentMeters }
-                    WorkoutSortOrder.WORKOUT_DISTANCE ->
-                        list.sortedByDescending { it.totalDistance }
-                    WorkoutSortOrder.WORKOUT_DURATION ->
-                        list.sortedByDescending { it.activeTimeSec }
-                }
+            // Apply sorting logic
+            when (order) {
+                WorkoutSortOrder.DATE ->
+                    workoutList.sortedByDescending { it.startTimeS }
+                WorkoutSortOrder.TOTAL_ELEVATION_GAIN ->
+                    workoutList.sortedByDescending { it.ascentMeters }
+                WorkoutSortOrder.WORKOUT_DISTANCE ->
+                    workoutList.sortedByDescending { it.totalDistance }
+                WorkoutSortOrder.WORKOUT_DURATION ->
+                    workoutList.sortedByDescending { it.activeTimeSec }
             }
         }
     }.stateIn(
