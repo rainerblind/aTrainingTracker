@@ -24,6 +24,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.util.Log
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
@@ -48,6 +49,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutDeletionHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
 import com.atrainingtracker.trainingtracker.exporter.ExportManager
+import com.atrainingtracker.trainingtracker.exporter.ExportStatusChangedBroadcaster
 import com.atrainingtracker.trainingtracker.exporter.ExportType
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.helpers.CalcExtremaWorker
@@ -151,16 +153,43 @@ class WorkoutRepository private constructor(private val application: Application
 
     private val workoutUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            if (intent.action == TrackerService.WORKOUT_UPDATED_INTENT) {
-                // Get the specific workoutId from the broadcast. Default to -1 if not found.
-                val workoutId = intent.getLongExtra(TrackerService.WORKOUT_ID, -1L)
-
-                if (workoutId != -1L) {
-                    // We have a specific ID, so reload only that workout.
-                    if (DEBUG) Log.d(TAG, "Workout update broadcast received for specific workoutId=$workoutId. Reloading it.")
-                    reloadWorkoutData(workoutId)
-                } // TODO: we might want to reload all workouts here.
+            val workoutId = intent.getLongExtra(TrackerService.WORKOUT_ID, -1L)
+            
+            when (intent.action) {
+                TrackerService.WORKOUT_UPDATED_INTENT, TrackerService.TRACKING_FINISHED_INTENT -> {
+                    if (workoutId != -1L) {
+                        if (DEBUG) Log.d(TAG, "Workout update broadcast received for workoutId=$workoutId. Reloading.")
+                        reloadWorkoutData(workoutId)
+                    }
+                }
             }
+        }
+    }
+
+    private val exportStatusUpdateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val fileName = intent.getStringExtra(ExportStatusChangedBroadcaster.EXTRA_FILE_BASE_NAME)
+            if (fileName != null) {
+                if (DEBUG) Log.d(TAG, "Export status changed for $fileName. Reloading statuses in memory.")
+                reloadExportStatusesFor(fileName)
+            }
+        }
+    }
+
+    private fun reloadExportStatusesFor(fileName: String) {
+        val currentList = _allWorkouts.value
+        val workout = currentList.find { it.fileBaseName == fileName } ?: return
+
+        launch(Dispatchers.IO) {
+            val exportStatuses: MutableList<ExportStatusGroupData> = mutableListOf()
+            for (type in orderedExportTypes) {
+                val groupData = exportStatusDataProvider.createGroupData(fileName, type)
+                if (groupData.hasContent) {
+                    exportStatuses.add(groupData)
+                }
+            }
+            
+            updateWorkoutInList(workout.id, workout.copy(exportStatuses = exportStatuses))
         }
     }
 
@@ -290,9 +319,15 @@ class WorkoutRepository private constructor(private val application: Application
 
 
     init {
-        val filter = IntentFilter(TrackerService.WORKOUT_UPDATED_INTENT)
+        val filter = IntentFilter()
+        filter.addAction(TrackerService.WORKOUT_UPDATED_INTENT)
+        filter.addAction(TrackerService.TRACKING_FINISHED_INTENT)
         LocalBroadcastManager.getInstance(application).registerReceiver(workoutUpdateReceiver, filter)
-        if (DEBUG) Log.d(TAG, "WorkoutRepository initialized and workout update receiver registered.")
+
+        val exportFilter = IntentFilter(ExportStatusChangedBroadcaster.EXPORT_STATUS_CHANGED_INTENT)
+        ContextCompat.registerReceiver(application, exportStatusUpdateReceiver, exportFilter, ContextCompat.RECEIVER_NOT_EXPORTED)
+
+        if (DEBUG) Log.d(TAG, "WorkoutRepository initialized and receivers registered.")
     }
 
     // --- Public API for ViewModels ---
