@@ -222,8 +222,7 @@ fun PeriodMapScreen(
                         val isSelected = selectedSports.contains(sport)
                         // Logic: If nothing is selected, everything is 1f.
                         // If something is selected, dim everything except the selected ones.
-                        // val rowAlpha = if (selectedSports.isEmpty() || isSelected) 1f else 0.5f
-                        val rowAlpha = if (isSelected) 1f else 0.5f
+                        val rowAlpha = if (selectedSports.isEmpty() || isSelected) 1f else 0.5f
 
                         Box(modifier = Modifier.alpha(rowAlpha)) {
                             SportStatsRow(
