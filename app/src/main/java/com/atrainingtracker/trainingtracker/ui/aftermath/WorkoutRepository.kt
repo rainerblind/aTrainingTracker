@@ -366,33 +366,45 @@ class WorkoutRepository private constructor(private val application: Application
     val exportStatusDataProvider = ExportStatusDataProvider(application)
     val orderedExportTypes = listOf(ExportType.FILE, ExportType.DROPBOX, ExportType.COMMUNITY)
 
+    private var isListLoading = false
+
     suspend fun loadAllWorkouts() {
-        Log.i(TAG, "loadAllWorkouts")
-        withContext(Dispatchers.IO) {
-            val cursor = summariesManager.getCursorForAllWorkouts()
-            cursor.use { c ->
-                if (c.moveToFirst()) {
-                    do {
-                        val workoutData = mapper.fromCursor(c)
+        if (isListLoading) {
+            if (DEBUG) Log.d(TAG, "loadAllWorkouts: already in progress, skipping redundant call.")
+            return
+        }
 
-                        if (workoutData.extremaData.isCalculating) {
-                            observeExtremaCalculation(workoutData.id)
-                        }
+        Log.i(TAG, "loadAllWorkouts: starting full database scan.")
+        isListLoading = true
+        try {
+            withContext(Dispatchers.IO) {
+                val cursor = summariesManager.getCursorForAllWorkouts()
+                cursor.use { c ->
+                    if (c.moveToFirst()) {
+                        do {
+                            val workoutData = mapper.fromCursor(c)
 
-                        val exportStatuses: MutableList<ExportStatusGroupData> = mutableListOf()
-                        if (workoutData.fileBaseName != null) {
-                            for (type in orderedExportTypes) {
-                                val groupData = exportStatusDataProvider.createGroupData(workoutData.fileBaseName, type)
-                                if (groupData.hasContent) {
-                                    exportStatuses.add(groupData)
+                            if (workoutData.extremaData.isCalculating) {
+                                observeExtremaCalculation(workoutData.id)
+                            }
+
+                            val exportStatuses: MutableList<ExportStatusGroupData> = mutableListOf()
+                            if (workoutData.fileBaseName != null) {
+                                for (type in orderedExportTypes) {
+                                    val groupData = exportStatusDataProvider.createGroupData(workoutData.fileBaseName, type)
+                                    if (groupData.hasContent) {
+                                        exportStatuses.add(groupData)
+                                    }
                                 }
                             }
-                        }
 
-                        addOrUpdateWorkout(workoutData.copy(exportStatuses = exportStatuses))
-                    } while (c.moveToNext())
+                            addOrUpdateWorkout(workoutData.copy(exportStatuses = exportStatuses))
+                        } while (c.moveToNext())
+                    }
                 }
             }
+        } finally {
+            isListLoading = false
         }
     }
 

@@ -67,8 +67,8 @@ class WorkoutSummariesTabbedFragment : Fragment() {
 
         val isPlayAvailable = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(requireActivity()) == ConnectionResult.SUCCESS
 
-        // Tell the ViewModel to ensure all data is loaded from the DB
-        viewModel.loadWorkouts()
+        // Ensure data is loaded, but avoid redundant full DB scans
+        viewModel.loadWorkoutsIfNeeded()
 
         return ComposeView(requireContext()).apply {
             setContent {
