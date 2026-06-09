@@ -67,8 +67,8 @@ class WorkoutSummariesTabbedFragment : Fragment() {
 
         val isPlayAvailable = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(requireActivity()) == ConnectionResult.SUCCESS
 
-        // Tell the ViewModel to ensure all data is loaded from the DB
-        viewModel.loadWorkouts()
+        // Ensure data is loaded, but avoid redundant full DB scans
+        viewModel.loadWorkoutsIfNeeded()
 
         return ComposeView(requireContext()).apply {
             setContent {
@@ -98,9 +98,13 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                         }
                     }
 
-                    if (selectedWorkoutIdForDetails != null) {
+                    val selectedWorkoutForDetails = selectedWorkoutIdForDetails?.let { id ->
+                        workouts.find { it.id == id }
+                    }
+
+                    if (selectedWorkoutForDetails != null) {
                         TrackOnMapScreen(
-                            workoutData = workouts.find { it.id == selectedWorkoutIdForDetails }!!,
+                            workoutData = selectedWorkoutForDetails,
                             mapState = trackOnMapViewModel.aftermathState.collectAsStateWithLifecycle().value,
                             modifier = Modifier
                         )

@@ -121,20 +121,23 @@ class RoutesFragment : Fragment() {
                         }
                     }
                     else if (selectedRouteIdForEdit != null) {
-                        EditRouteScreen(
-                            routeSummary = routes.find { it.summary.id == selectedRouteIdForEdit }!!.summary,
-                            onSave = {
-                                viewModel.updateRoute(it)
-                                selectedRouteIdForEdit = null
-                            },
-                            onCancel = {
+                        val routeToEdit = routes.find { it.summary.id == selectedRouteIdForEdit }
+                        if (routeToEdit != null) {
+                            EditRouteScreen(
+                                routeSummary = routeToEdit.summary,
+                                onSave = {
+                                    viewModel.updateRoute(it)
+                                    selectedRouteIdForEdit = null
+                                },
+                                onCancel = {
+                                    selectedRouteIdForEdit = null
+                                }
+                            )
+
+                            // Handle Back Press to return to list
+                            BackHandler {
                                 selectedRouteIdForEdit = null
                             }
-                        )
-
-                        // Handle Back Press to return to list
-                        BackHandler {
-                            selectedRouteIdForEdit = null
                         }
                     }
                     else {

@@ -231,6 +231,15 @@ public class TrackerService extends Service {
 
         mTrainingApplication = (TrainingApplication) getApplication();
 
+        // Background initialization of database to avoid ANR during upgrade
+        new Thread(() -> {
+            try {
+                WorkoutSummariesDatabaseManager.getInstance(TrackerService.this).getDatabase();
+            } catch (Exception e) {
+                Log.e(TAG, "Error initializing WorkoutSummaries database", e);
+            }
+        }).start();
+
         // request bind to the BANAL Service
         bindService(new Intent(this, BANALService.class), mBanalConnection, Context.BIND_AUTO_CREATE);
 

@@ -20,7 +20,10 @@ package com.atrainingtracker.trainingtracker.ui.map
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -43,14 +46,15 @@ fun TrackOrSegmentOnMap(
     onMapClick: () -> Unit = {}
 ) {
     val cameraPositionState = rememberCameraPositionState()
-    var latLngs = latLngs
+    var isMapLoaded by remember { mutableStateOf(false) }
+    var safeLatLngs = latLngs
 
-    if (latLngs == null) {
+    if (safeLatLngs == null) {
         if (polyline != null) {
 
             // Decode the polyline into LatLngs.
             // We 'remember' it so it doesn't re-decode on every recomposition.
-            latLngs = remember(polyline) {
+            safeLatLngs = remember(polyline) {
                 val decoded = PolyUtil.decode(polyline)
                 // If the path is huge, simplify it for the preview map to save GPU memory
                 if (decoded.size > 100) {
@@ -61,7 +65,7 @@ fun TrackOrSegmentOnMap(
             }
         }
         else {
-            latLngs = emptyList()
+            safeLatLngs = emptyList()
         }
     }
 
@@ -81,26 +85,33 @@ fun TrackOrSegmentOnMap(
             zoomGesturesEnabled = false
         ),
         properties = MapProperties(mapType = MapType.TERRAIN),
+        onMapLoaded = { isMapLoaded = true },
         onMapClick = { onMapClick() }
     ) {
-        if (latLngs.isNotEmpty()) {
+        if (safeLatLngs.isNotEmpty()) {
 
             Polyline(
-                points = latLngs,
+                points = safeLatLngs,
                 color = color,
                 width = 8f
             )
 
             // Auto-zoom to fit the segment whenever pathPoints change
-            LaunchedEffect(latLngs) {
-                val boundsBuilder = LatLngBounds.Builder()
-                latLngs.forEach { boundsBuilder.include(it) }
-                cameraPositionState.move(
-                    CameraUpdateFactory.newLatLngBounds(
-                        boundsBuilder.build(),
-                        20 // padding in px
-                    )
-                )
+            LaunchedEffect(safeLatLngs, isMapLoaded) {
+                if (isMapLoaded && safeLatLngs.isNotEmpty()) {
+                    val boundsBuilder = LatLngBounds.Builder()
+                    safeLatLngs.forEach { boundsBuilder.include(it) }
+                    try {
+                        cameraPositionState.move(
+                            CameraUpdateFactory.newLatLngBounds(
+                                boundsBuilder.build(),
+                                20 // padding in px
+                            )
+                        )
+                    } catch (e: Exception) {
+                        // Map not laid out yet or size is 0
+                    }
+                }
             }
         }
     }

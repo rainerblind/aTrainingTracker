@@ -153,7 +153,8 @@ abstract public class BTLEBikeDevice extends MyBTLEDevice {
                 Log.i(TAG, "revolutions: " + cumulativeCrankRevolutions + ", time: " + crankEventTime);
 
             // calc cadence
-            if (mLastCrankRevolutionsValid) {
+            if (mLastCrankRevolutionsValid
+                    && mCadenceSensor != null) {
                 if (crankEventTime > mLastCrankEventTime) { // avoiding negative values
                     mIdenticalCrankTime = 0;
 

@@ -23,14 +23,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
-import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.ViewHeadline
 import androidx.compose.material.icons.filled.ViewStream
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -41,9 +39,11 @@ import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -114,6 +114,33 @@ fun WorkoutTabsScreen(
         CollapsingAppBarNestedScrollConnection(appBarMaxHeightPx)
     }
 
+    var workoutIdToDelete by remember { mutableLongStateOf(-1L) }
+    val workoutToDelete = remember(workoutIdToDelete, workouts) {
+        workouts.find { it.id == workoutIdToDelete }
+    }
+
+    if (workoutToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { workoutIdToDelete = -1L },
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = { Text(stringResource(R.string.delete_workout)) },
+            text = { Text(stringResource(R.string.really_delete_format, workoutToDelete.workoutName)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    onDeleteConfirmed(workoutIdToDelete)
+                    workoutIdToDelete = -1L
+                }) {
+                    Text(stringResource(R.string.delete_workout))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { workoutIdToDelete = -1L }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
     // This is the root container
     Surface(
         modifier = Modifier.fillMaxSize()
@@ -146,7 +173,7 @@ fun WorkoutTabsScreen(
                     workouts = filteredWorkouts,
                     isPlayServiceAvailable = isPlayServiceAvailable,
                     onExportWorkout = onExportWorkoutTo,
-                    onDeleteConfirmed = onDeleteConfirmed,
+                    onDeleteRequest = { id -> workoutIdToDelete = id },
                     onEditWorkout = onEditWorkout,
                     onMapClick = onMapClick,
                     isCompactView = isCompactView,

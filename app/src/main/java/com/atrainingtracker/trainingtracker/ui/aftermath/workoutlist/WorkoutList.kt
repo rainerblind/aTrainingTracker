@@ -46,7 +46,7 @@ fun WorkoutList(
     workouts: List<WorkoutData>,
     isPlayServiceAvailable: Boolean,
     onExportWorkout: (Long, FileFormat) -> Unit,
-    onDeleteConfirmed: (Long) -> Unit,
+    onDeleteRequest: (Long) -> Unit,
     onEditWorkout: (Long) -> Unit,
     onMapClick: (WorkoutData) -> Unit,
     isCompactView: Boolean,
@@ -85,6 +85,7 @@ fun WorkoutList(
                     WorkoutSummaryCompact(
                         workoutData = workoutData,
                         onEditWorkout = { onMapClick(workoutData) },
+                        onDeleteRequest = { onDeleteRequest(workoutData.id) },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -93,7 +94,7 @@ fun WorkoutList(
                         workoutData = workoutData,
                         isPlayServiceAvailable = isPlayServiceAvailable,
                         onExport = { fileFormat -> onExportWorkout(workoutData.id, fileFormat) },
-                        onDeleteConfirmed = { onDeleteConfirmed(workoutData.id) },
+                        onDeleteRequest = { onDeleteRequest(workoutData.id) },
                         onEditWorkout = { onEditWorkout(workoutData.id) },
                         onMapClick = { onMapClick(workoutData) }
                     )

@@ -22,7 +22,10 @@ import android.graphics.Bitmap
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -54,6 +57,8 @@ fun InteractivePeriodMap(
         workouts.mapValues { PolyUtil.decode(it.value) }
     }
 
+    var isMapLoaded by remember { mutableStateOf(false) }
+
     // 2. Calculate the Bounds for all points in all paths
     val bounds = remember(allPaths) {
         val builder = LatLngBounds.Builder()
@@ -68,17 +73,24 @@ fun InteractivePeriodMap(
     }
 
     // Apply the zoom as soon as the map is loaded or bounds change
-    LaunchedEffect(bounds) {
-        bounds?.let {
-            cameraPositionState.move(
-                CameraUpdateFactory.newLatLngBounds(it, 50) // 50dp padding
-            )
+    LaunchedEffect(bounds, isMapLoaded) {
+        if (isMapLoaded) {
+            bounds?.let {
+                try {
+                    cameraPositionState.move(
+                        CameraUpdateFactory.newLatLngBounds(it, 50) // 50dp padding
+                    )
+                } catch (e: Exception) {
+                    // Map size might still be 0
+                }
+            }
         }
     }
     GoogleMap(
         modifier = modifier,
         cameraPositionState = cameraPositionState,
         properties = MapProperties(mapType = MapType.TERRAIN),
+        onMapLoaded = { isMapLoaded = true },
         // Ensure UI stays clean during snapshot if needed
         uiSettings = com.google.maps.android.compose.MapUiSettings(
             zoomControlsEnabled = false,

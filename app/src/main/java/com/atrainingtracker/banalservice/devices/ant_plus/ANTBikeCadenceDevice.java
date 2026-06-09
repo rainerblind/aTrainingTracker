@@ -45,7 +45,7 @@ public class ANTBikeCadenceDevice extends MyANTDevice {
 
     // everything is stored as int, so we do not have to take care about all the castings
     protected AntPlusBikeCadencePcc cadencePcc = null;
-    protected MySensor<BigDecimal> mCadenceSensor;
+    protected MySensor<Double> mCadenceSensor;
 
     /**
      * constructor with context channelNumber, and deviceID,
@@ -58,7 +58,7 @@ public class ANTBikeCadenceDevice extends MyANTDevice {
 
     @Override
     protected void addSensors() {
-        mCadenceSensor = new ThresholdSensor<BigDecimal>(this, SensorType.CADENCE, CADENCE_THRESHOLD);
+        mCadenceSensor = new ThresholdSensor<>(this, SensorType.CADENCE, CADENCE_THRESHOLD);
 
         addSensor(mCadenceSensor);
     }
@@ -84,7 +84,7 @@ public class ANTBikeCadenceDevice extends MyANTDevice {
             cadencePcc.subscribeCalculatedCadenceEvent(new ICalculatedCadenceReceiver() {
                 @Override
                 public void onNewCalculatedCadence(long estTimestamp, EnumSet<EventFlag> eventFlags, BigDecimal calculatedCadence) {
-                    mCadenceSensor.newValue(calculatedCadence);
+                    mCadenceSensor.newValue(calculatedCadence.doubleValue());
                 }
             });
         }

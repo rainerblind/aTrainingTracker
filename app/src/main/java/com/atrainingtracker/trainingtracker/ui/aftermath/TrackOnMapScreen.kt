@@ -80,25 +80,25 @@ fun TrackOnMapScreen(
         Surface(
             color = MaterialTheme.colorScheme.primaryContainer,
             shape = RectangleShape,
-            modifier = Modifier
-                .statusBarsPadding()
-                .drawWithContent {
+            modifier = Modifier.statusBarsPadding()
+        ) {
+            Box(modifier = Modifier.drawWithContent {
                 headerLayer.record {
                     this@drawWithContent.drawContent()
                 }
                 drawLayer(headerLayer)
+            }) {
+                WorkoutHeader(
+                    modifier = modifier,
+                    data = workoutData.headerData,
+                    backgroundColor = MaterialTheme.colorScheme.surface,
+                    textColor = MaterialTheme.colorScheme.onSurface,
+                    menuEnabled = false,
+                    onClicked = { },
+                    onExport = { },
+                    onDeleteRequest = { }
+                )
             }
-        ) {
-            WorkoutHeader(
-                modifier = modifier,
-                data = workoutData.headerData,
-                backgroundColor = MaterialTheme.colorScheme.surface,
-                textColor = MaterialTheme.colorScheme.onSurface,
-                menuEnabled = false,
-                onClicked = { },
-                onExport = { },
-                onDeleteConfirmed = { }
-            )
         }
 
         // 2. MAP AREA with OVERLAYED SHARE BUTTON
@@ -146,22 +146,23 @@ fun TrackOnMapScreen(
         // 3. ELEVATION
         Surface(
             color = MaterialTheme.colorScheme.surface,
-            modifier = Modifier.drawWithContent {
+            modifier = Modifier.navigationBarsPadding()
+        ) {
+            Box(modifier = Modifier.drawWithContent {
                 elevationLayer.record {
                     this@drawWithContent.drawContent()
                 }
                 drawLayer(elevationLayer)
+            }) {
+                ElevationProfile(
+                    pathPoints = mapState.tracks.firstOrNull()?.path ?: emptyList(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(150.dp),
+                    currentDistance = selectedDistance,
+                    onDistanceSelected = { selectedDistance = it }
+                )
             }
-        ) {
-            ElevationProfile(
-                pathPoints = mapState.tracks.firstOrNull()?.path ?: emptyList(),
-                modifier = Modifier
-                    .navigationBarsPadding()
-                    .fillMaxWidth()
-                    .height(150.dp),
-                currentDistance = selectedDistance,
-                onDistanceSelected = { selectedDistance = it }
-            )
         }
     }
 }

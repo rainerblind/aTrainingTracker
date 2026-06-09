@@ -405,13 +405,14 @@ public class WorkoutSummariesDatabaseManager {
 
     @NonNull
     public List<String> getFancyNameList() {
-        List result = new LinkedList();
+        List<String> result = new LinkedList<>();
 
-        Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS, // table
-                null, null, null, null, null, null);
+        try (Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE_WORKOUT_NAME_PATTERNS, // table
+                null, null, null, null, null, null)) {
 
-        while (cursor.moveToNext()) {
-            result.add(cursor.getString(cursor.getColumnIndex(WorkoutSummaries.FANCY_NAME)));
+            while (cursor.moveToNext()) {
+                result.add(cursor.getString(cursor.getColumnIndex(WorkoutSummaries.FANCY_NAME)));
+            }
         }
 
         return result;
@@ -1004,75 +1005,54 @@ public class WorkoutSummariesDatabaseManager {
             }
 
             if (oldVersion < 13) {
-
-                // first, add the new column
-                addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.MAP_POLYLINE, "text", "''");
-
-                // 2. Perform the migration
-                migrateExistingWorkouts13(db);
+                addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.MAP_POLYLINE, "text", "''");
             }
 
             if (oldVersion < 14) {
-                // first, add the new columns
-                addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.DISTANCE_STREAM, "text", "''");
-                addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.ALTITUDE_STREAM, "text", "''");
-
-                // 2. Perform the migration
-                migrateExistingWorkouts14(db);
-            }
-
-            if (oldVersion < 15) {
-                // recalc the encoded strings with the unique step size.
-                migrateExistingWorkouts13(db);
-                migrateExistingWorkouts14(db);
+                addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.DISTANCE_STREAM, "text", "''");
+                addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.ALTITUDE_STREAM, "text", "''");
             }
 
             if (oldVersion < 16) {
-                // add the new column
-                addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.UPLOAD_TO_STRAVA, "int", "-1");
+                addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.UPLOAD_TO_STRAVA, "int", "-1");
             }
 
             if (oldVersion < 17) {
-                // while upgrading to Version 14, we continued ot create the table for versin 13 :(
-                // Thus, we add the forgotten columns
+                // Bugfix for version 14 error: ensure columns exist
                 addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.DISTANCE_STREAM, "text", "''");
                 addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.ALTITUDE_STREAM, "text", "''");
 
-                migrateExistingWorkouts13(db);
-                migrateExistingWorkouts14(db);
+                // Combined migration to avoid multiple passes and ANRs.
+                // If oldVersion < 15, we must recalculate everything due to step size change.
+                migrateExistingWorkouts(db, oldVersion < 15);
             }
         }
 
         /**
-         * Iterates through all existing workouts, fetches their points from the
-         * samples database, encodes them into a polyline string, and saves it.
+         * Combined migration for polylines and numerical streams.
+         * Only one pass through the summaries table is performed.
          */
-        private void migrateExistingWorkouts13(SQLiteDatabase db) {
-            Log.i(TAG, "Starting Migration: Encoding tracks to polylines...");
+        private void migrateExistingWorkouts(SQLiteDatabase db, boolean forceRecalc) {
+            Log.i(TAG, "Starting combined migration (forceRecalc=" + forceRecalc + ")...");
 
-            // 1. Get IDs and BaseFileNames from the Summaries table (the one being upgraded)
+            String selection = null;
+            if (!forceRecalc) {
+                selection = "(" + WorkoutSummaries.MAP_POLYLINE + " = '' OR " +
+                        WorkoutSummaries.DISTANCE_STREAM + " = '' OR " +
+                        WorkoutSummaries.ALTITUDE_STREAM + " = '')";
+            }
+
             String[] projection = {WorkoutSummaries.C_ID, WorkoutSummaries.FILE_BASE_NAME};
 
-            try (Cursor summaryCursor = db.query(WorkoutSummaries.TABLE, projection, null, null, null, null, null)) {
-                if (summaryCursor != null) {
-                    int idIdx = summaryCursor.getColumnIndex(WorkoutSummaries.C_ID);
-                    int fileIdx = summaryCursor.getColumnIndex(WorkoutSummaries.FILE_BASE_NAME);
+            try (Cursor summaryCursor = db.query(WorkoutSummaries.TABLE, projection, selection, null, null, null, null)) {
+                int idIdx = summaryCursor.getColumnIndex(WorkoutSummaries.C_ID);
+                int fileIdx = summaryCursor.getColumnIndex(WorkoutSummaries.FILE_BASE_NAME);
 
-                    while (summaryCursor.moveToNext()) {
-                        long workoutId = summaryCursor.getLong(idIdx);
-                        String baseFileName = summaryCursor.getString(fileIdx);
-
-                        if (baseFileName != null) {
-                            // 2. Derive the points
-                            String polyline = getEncodedStringForWorkout(baseFileName);
-
-                            if (polyline != null) {
-                                // 3. Update the summary table
-                                ContentValues values = new ContentValues();
-                                values.put(WorkoutSummaries.MAP_POLYLINE, polyline);
-                                db.update(WorkoutSummaries.TABLE, values, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(workoutId)});
-                            }
-                        }
+                while (summaryCursor.moveToNext()) {
+                    long workoutId = summaryCursor.getLong(idIdx);
+                    String baseFileName = summaryCursor.getString(fileIdx);
+                    if (baseFileName != null) {
+                        migrateOneWorkout(db, workoutId, baseFileName);
                     }
                 }
             } catch (Exception e) {
@@ -1080,109 +1060,48 @@ public class WorkoutSummariesDatabaseManager {
             }
         }
 
-        /**
-         * Ported logic from WorkoutRepository.kt to fetch and encode points in Java
-         */
-        private String getEncodedStringForWorkout(String baseFileName) {
+        private void migrateOneWorkout(SQLiteDatabase db, long workoutId, String baseFileName) {
             List<LatLng> latLngs = new ArrayList<>();
-
-            // Access the Samples database via its manager
-            // Note: Ensure WorkoutSamplesDatabaseManager.getInstance(mContext) is available
-            SQLiteDatabase samplesDb = WorkoutSamplesDatabaseManager.getInstance(mContext).getDatabase();
-            String tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName);
-
-            String latName = "LATITUDE";
-            String lonName = "LONGITUDE";
-
-            try (Cursor cursor = samplesDb.query(tableName, null, null, null, null, null, null)) {
-                if (cursor != null) {
-                    int latIdx = cursor.getColumnIndex(latName);
-                    int lonIdx = cursor.getColumnIndex(lonName);
-
-                    while (cursor.move(WorkoutSummaries.ENCODING_STEP_SIZE)) {
-                        if (latIdx != -1 && lonIdx != -1 && !cursor.isNull(latIdx) && !cursor.isNull(lonIdx)) {
-                            latLngs.add(new LatLng(cursor.getDouble(latIdx), cursor.getDouble(lonIdx)));
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                Log.e(TAG, "Error reading samples for " + baseFileName, e);
-                return null;
-            }
-
-            if (latLngs.isEmpty()) return null;
-
-            // Use Google Maps Utility to encode
-            return PolyUtil.encode(latLngs);
-        }
-
-        /**
-         * Iterates through all existing workouts, fetches their points from the
-         * samples database, encodes them into a polyline string, and saves it.
-         */
-        private void migrateExistingWorkouts14(SQLiteDatabase db) {
-            Log.i(TAG, "Starting Migration 14: Encoding altitude and distance streams...");
-
-            String[] projection = {WorkoutSummaries.C_ID, WorkoutSummaries.FILE_BASE_NAME};
-
-            try (Cursor summaryCursor = db.query(WorkoutSummaries.TABLE, projection, null, null, null, null, null)) {
-                if (summaryCursor != null) {
-                    int idIdx = summaryCursor.getColumnIndex(WorkoutSummaries.C_ID);
-                    int fileIdx = summaryCursor.getColumnIndex(WorkoutSummaries.FILE_BASE_NAME);
-
-                    while (summaryCursor.moveToNext()) {
-                        long workoutId = summaryCursor.getLong(idIdx);
-                        String baseFileName = summaryCursor.getString(fileIdx);
-
-                        if (baseFileName != null) {
-                            // Fetch and encode numerical streams
-                            saveEncodedStreamsForWorkout(db, workoutId, baseFileName);
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                Log.e(TAG, "Migration 14 failed", e);
-            }
-        }
-
-        private void saveEncodedStreamsForWorkout(SQLiteDatabase db, long workoutId, String baseFileName) {
             List<Double> altitudes = new ArrayList<>();
             List<Double> distances = new ArrayList<>();
 
             SQLiteDatabase samplesDb = WorkoutSamplesDatabaseManager.getInstance(mContext).getDatabase();
             String tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName);
 
-            // Using standard column names from your database schema
-            String altName = "ALTITUDE";
-            String distName = "DISTANCE_m";
-
-            try (Cursor cursor = samplesDb.query(tableName, new String[]{altName, distName}, null, null, null, null, null)) {
+            try (Cursor cursor = samplesDb.query(tableName, null, null, null, null, null, null)) {
                 if (cursor != null) {
-                    int altIdx = cursor.getColumnIndex(altName);
-                    int distIdx = cursor.getColumnIndex(distName);
+                    int latIdx = cursor.getColumnIndex("LATITUDE");
+                    int lonIdx = cursor.getColumnIndex("LONGITUDE");
+                    int altIdx = cursor.getColumnIndex("ALTITUDE");
+                    int distIdx = cursor.getColumnIndex("DISTANCE_m");
 
-                    // Step 5 for summaries creates a smooth profile and keeps the string short
                     while (cursor.move(WorkoutSummaries.ENCODING_STEP_SIZE)) {
-                        if (altIdx != -1 && distIdx != -1) {
+                        if (latIdx != -1 && lonIdx != -1 && !cursor.isNull(latIdx) && !cursor.isNull(lonIdx)) {
+                            latLngs.add(new LatLng(cursor.getDouble(latIdx), cursor.getDouble(lonIdx)));
+                        }
+                        if (altIdx != -1 && !cursor.isNull(altIdx)) {
                             altitudes.add(cursor.getDouble(altIdx));
+                        }
+                        if (distIdx != -1 && !cursor.isNull(distIdx)) {
                             distances.add(cursor.getDouble(distIdx));
                         }
                     }
                 }
             } catch (Exception e) {
-                Log.e(TAG, "Error reading samples for stream encoding: " + baseFileName);
+                // Table might not exist or columns missing, skip
                 return;
             }
 
+            ContentValues values = new ContentValues();
+            if (!latLngs.isEmpty()) {
+                values.put(WorkoutSummaries.MAP_POLYLINE, PolyUtil.encode(latLngs));
+            }
             if (!altitudes.isEmpty()) {
-                // Use the NumericalEncodingUtils (Kotlin object)
-                String encAlt = NumericalEncodingUtils.INSTANCE.encodeDoubles(altitudes);
-                String encDist = NumericalEncodingUtils.INSTANCE.encodeDoubles(distances);
+                values.put(WorkoutSummaries.ALTITUDE_STREAM, NumericalEncodingUtils.INSTANCE.encodeDoubles(altitudes));
+                values.put(WorkoutSummaries.DISTANCE_STREAM, NumericalEncodingUtils.INSTANCE.encodeDoubles(distances));
+            }
 
-                ContentValues values = new ContentValues();
-                values.put(WorkoutSummaries.ALTITUDE_STREAM, encAlt);
-                values.put(WorkoutSummaries.DISTANCE_STREAM, encDist);
-
+            if (values.size() > 0) {
                 db.update(WorkoutSummaries.TABLE, values, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(workoutId)});
             }
         }
