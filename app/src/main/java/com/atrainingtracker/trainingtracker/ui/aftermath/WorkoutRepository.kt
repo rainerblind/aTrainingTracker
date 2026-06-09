@@ -456,22 +456,46 @@ class WorkoutRepository private constructor(private val application: Application
 
 
     /**
-     * Saves the current state of the WorkoutData object to the databases.
+     * Saves the user-editable state of the WorkoutData object to the databases.
+     * This method is surgical: it only updates fields the user can actually edit,
+     * ensuring that background-calculated data (like map polylines) is preserved.
      */
-    fun saveWorkout(workoutDataToSave: WorkoutData?) {
-        if (workoutDataToSave == null) return
-        val workoutId = workoutDataToSave.id
+    fun saveWorkout(userEditedWorkout: WorkoutData?) {
+        if (userEditedWorkout == null) return
+        val workoutId = userEditedWorkout.id
 
         // Launch a coroutine in the IO dispatcher to perform database operations off the main thread.
         launch(Dispatchers.IO) {
 
-            // -- update the Database
-            summariesManager.updateWorkoutData(workoutDataToSave)
+            // 1. Update the Database (this method already only touches editable columns)
+            summariesManager.updateWorkoutData(userEditedWorkout)
 
-            // -- trigger export
-            exportManager.exportWorkout(workoutDataToSave)
+            // 2. Trigger export with the new data
+            exportManager.exportWorkout(userEditedWorkout)
 
-            updateWorkoutInList(workoutId, workoutDataToSave)
+            // 3. Update memory surgically - perform the merge ATOMICALLY inside update
+            Log.i(TAG, "update from saveWorkout")
+            _allWorkouts.update { currentList ->
+                currentList.map { current ->
+                    if (current.id == workoutId) {
+                        current.copy(
+                            workoutName = userEditedWorkout.workoutName,
+                            sportId = userEditedWorkout.sportId,
+                            sportName = userEditedWorkout.sportName,
+                            bSportType = userEditedWorkout.bSportType,
+                            equipmentId = userEditedWorkout.equipmentId,
+                            equipmentName = userEditedWorkout.equipmentName,
+                            description = userEditedWorkout.description,
+                            goal = userEditedWorkout.goal,
+                            method = userEditedWorkout.method,
+                            commute = userEditedWorkout.commute,
+                            trainer = userEditedWorkout.trainer,
+                            uploadToStrava = userEditedWorkout.uploadToStrava
+                        )
+                    } else current
+                }
+            }
+
             saveFinishedEvent.postValue(Pair(workoutId, true))
         }
     }
