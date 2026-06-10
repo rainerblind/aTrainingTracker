@@ -28,8 +28,6 @@ import com.google.android.gms.maps.model.LatLng
  */
 data class ExtremaData(
     val workoutId: Long,
-    val isCalculating: Boolean,
-    val calculationMessage: String? = null,
     val dataRows: List<ExtremaDataRow>
 )
 

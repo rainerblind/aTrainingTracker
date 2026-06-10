@@ -789,7 +789,6 @@ public class TrackerService extends Service {
 
         // Update the summary data
         if (DEBUG) Log.d(TAG, "writing to Summaries db");
-        summaryValues.put(WorkoutSummaries.EXTREMA_VALUES_CALCULATED, 0);    // force recalculation of the extrema values in the case that they have been calculated
         if (averageSpeedCalculateable()) {
             summaryValues.put(WorkoutSummaries.SPEED_AVERAGE_mps, getAverageSpeed());
         }
@@ -888,12 +887,6 @@ public class TrackerService extends Service {
         summariesManager.updateMapAndStreams(mWorkoutID, polyline, altStream, distStream);
         repository.setMapPolyline(mWorkoutID, polyline);
         repository.setElevationStreams(mWorkoutID, altStream, distStream);
-
-        // 6. Mark as calculated
-        ContentValues values = new ContentValues();
-        values.put(WorkoutSummaries.EXTREMA_VALUES_CALCULATED, 1);
-        summariesManager.getDatabase().update(WorkoutSummaries.TABLE, values, WorkoutSummaries.C_ID + "=?", new String[]{Long.toString(mWorkoutID)});
-        repository.setExtremaCalculated(mWorkoutID, true);
     }
 
     private void guessCommuteAndTrainer() {

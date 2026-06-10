@@ -807,6 +807,7 @@ public class WorkoutSummariesDatabaseManager {
         public static final String DISTANCE_STREAM = "distanceStream"; // added in Version 14
         public static final String ALTITUDE_STREAM = "altitudeStream"; // added in Version 14
         // new entries in version 5 of the DB
+        @Deprecated
         public static final String EXTREMA_VALUES_CALCULATED = "extremumValuesCalculated";
         // new entries in version 6 of the DB
         public static final String SAMPLES_COLUMN_ID = "samplesColumnId";

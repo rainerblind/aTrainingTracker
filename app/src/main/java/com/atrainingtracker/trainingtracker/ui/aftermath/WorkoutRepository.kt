@@ -233,16 +233,6 @@ class WorkoutRepository private constructor(private val application: Application
     }
 
 
-    /*
-    Observer stuff for the extrema calculation (DEPRECATED: Calculations are now performed live in TrackerService)
-     */
-
-    private fun observeExtremaCalculation(workoutId: Long) {
-        // No longer needed for new workouts. Left for potential legacy compatibility if needed.
-        if (DEBUG) Log.i(TAG, "observeExtremaCalculation (legacy): workoutId=$workoutId")
-    }
-
-
     init {
         val filter = IntentFilter()
         filter.addAction(TrackerService.WORKOUT_UPDATED_INTENT)
@@ -279,10 +269,6 @@ class WorkoutRepository private constructor(private val application: Application
                         }
                         newList
                     }
-
-                    if (workout.extremaData.isCalculating) {
-                        observeExtremaCalculation(id)
-                    }
                 }
             }
         }
@@ -309,10 +295,6 @@ class WorkoutRepository private constructor(private val application: Application
                     if (c.moveToFirst()) {
                         do {
                             val workoutData = mapper.fromCursor(c)
-
-                            if (workoutData.extremaData.isCalculating) {
-                                observeExtremaCalculation(workoutData.id)
-                            }
 
                             val exportStatuses: MutableList<ExportStatusGroupData> = mutableListOf()
                             if (workoutData.fileBaseName != null) {
@@ -363,10 +345,6 @@ class WorkoutRepository private constructor(private val application: Application
 
     fun setWorkoutName(workoutId: Long, name: String) {
         updateWorkoutInMemory(workoutId) { it.copy(workoutName = name) }
-    }
-
-    fun setExtremaCalculated(workoutId: Long, calculated: Boolean) {
-        updateWorkoutInMemory(workoutId) { it.copy(isCalculatingExtrema = !calculated) }
     }
 
     fun updateExtremaValue(workoutId: Long, sensorType: SensorType, extremaType: com.atrainingtracker.trainingtracker.database.ExtremaType, value: Double, position: LatLng? = null) {
@@ -453,7 +431,6 @@ class WorkoutRepository private constructor(private val application: Application
                             encodedAltitudes = if (workout.encodedAltitudes.isEmpty()) existing.encodedAltitudes else workout.encodedAltitudes,
                             encodedDistances = if (workout.encodedDistances.isEmpty()) existing.encodedDistances else workout.encodedDistances,
                             extremaRows = if (mergedExtremaRows.isEmpty()) existing.extremaRows else mergedExtremaRows,
-                            isCalculatingExtrema = workout.isCalculatingExtrema && existing.isCalculatingExtrema,
                             exportStatuses = if (workout.exportStatuses.isEmpty()) existing.exportStatuses else workout.exportStatuses
                         )
                     } else existing
@@ -600,6 +577,4 @@ class WorkoutRepository private constructor(private val application: Application
             }
         }
     }
-
-
 }
