@@ -212,17 +212,15 @@ private fun AltitudeRow(
             Spacer(modifier = Modifier.width(20.dp))
             Column() {
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    if (ascentMeters > 0) {
-                        AltitudeItem(
-                            modifier = Modifier.weight(1f),
-                            label = stringResource(R.string.ascent_short),
-                            value = "${ascentMeters} m",
-                            iconRes = R.drawable.ic_ascent,
-                            iconColor = iconColor,
-                            textColorMain = textColorMain,
-                            textColorSecondary = textColorSecondary
-                        )
-                    }
+                    AltitudeItem(
+                        modifier = Modifier.weight(1f),
+                        label = stringResource(R.string.ascent_short),
+                        value = "${ascentMeters} m",
+                        iconRes = R.drawable.ic_ascent,
+                        iconColor = iconColor,
+                        textColorMain = textColorMain,
+                        textColorSecondary = textColorSecondary
+                    )
                     maxAltitude?.let {
                         AltitudeItem(
                             modifier = Modifier.weight(1f),
@@ -236,17 +234,15 @@ private fun AltitudeRow(
                     }
                 }
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    if (descentMeters > 0) {
-                        AltitudeItem(
-                            modifier = Modifier.weight(1f),
-                            label = stringResource(R.string.descent_short),
-                            value = "${descentMeters} m",
-                            iconRes = R.drawable.ic_descent,
-                            iconColor = iconColor,
-                            textColorMain = textColorMain,
-                            textColorSecondary = textColorSecondary
-                        )
-                    }
+                    AltitudeItem(
+                        modifier = Modifier.weight(1f),
+                        label = stringResource(R.string.descent_short),
+                        value = "${descentMeters} m",
+                        iconRes = R.drawable.ic_descent,
+                        iconColor = iconColor,
+                        textColorMain = textColorMain,
+                        textColorSecondary = textColorSecondary
+                    )
                     minAltitude?.let {
                         AltitudeItem(
                             modifier = Modifier.weight(1f),
