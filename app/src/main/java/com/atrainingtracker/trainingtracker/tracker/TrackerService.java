@@ -131,7 +131,11 @@ public class TrackerService extends Service {
     @Nullable
     BANALServiceComm mBanalService;
     private TrainingApplication mTrainingApplication;
+    private WorkoutRepository mWorkoutRepository;
     private ScheduledFuture mTrackerHandle;
+
+    private int mExtremaDbUpdateCounter = 0;
+    private static final int EXTREMA_DB_UPDATE_INTERVAL = 10; // Update Avg in DB every 10 seconds
     // int            mCalories        = 0;
     // double         mSpeedAverage_mps = 0.0;
 
@@ -262,6 +266,7 @@ public class TrackerService extends Service {
         }
 
         mTrainingApplication = (TrainingApplication) getApplication();
+        mWorkoutRepository = WorkoutRepository.Companion.getInstance((Application) getApplicationContext());
 
         // Background initialization of database to avoid ANR during upgrade
         new Thread(() -> {
@@ -629,6 +634,7 @@ public class TrackerService extends Service {
 
         ContentValues samplingValues = new ContentValues();
         ContentValues summaryValues = new ContentValues();
+        WorkoutSummariesDatabaseManager summariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(this);
 
         Map<String, SensorValueType> sensorName2Type = new HashMap<>();
 
@@ -658,7 +664,27 @@ public class TrackerService extends Service {
             
             // Feed Live Session
             if (mLiveSession != null && SENSORS_TO_TRACK.contains(sensorType)) {
-                mLiveSession.addSample(sensorType, sensorData.getValue().doubleValue(), currentPos);
+                int changed = mLiveSession.addSample(sensorType, sensorData.getValue().doubleValue(), currentPos);
+
+                if (changed != 0) {
+                    LiveWorkoutSession.RunningStats stats = mLiveSession.getSensorStats().get(sensorType);
+                    boolean updateAvgInDb = (mExtremaDbUpdateCounter >= EXTREMA_DB_UPDATE_INTERVAL);
+
+                    if ((changed & LiveWorkoutSession.RunningStats.CHANGED_MIN) != 0) {
+                        mWorkoutRepository.updateExtremaValue(mWorkoutID, sensorType, ExtremaType.MIN, stats.min, stats.minPos);
+                        summariesDatabaseManager.updateExtremaValue(mWorkoutID, sensorType, ExtremaType.MIN, stats.min, stats.minPos);
+                    }
+                    if ((changed & LiveWorkoutSession.RunningStats.CHANGED_MAX) != 0) {
+                        mWorkoutRepository.updateExtremaValue(mWorkoutID, sensorType, ExtremaType.MAX, stats.max, stats.maxPos);
+                        summariesDatabaseManager.updateExtremaValue(mWorkoutID, sensorType, ExtremaType.MAX, stats.max, stats.maxPos);
+                    }
+                    if ((changed & LiveWorkoutSession.RunningStats.CHANGED_AVG) != 0) {
+                        mWorkoutRepository.updateExtremaValue(mWorkoutID, sensorType, ExtremaType.AVG, stats.getAverage(), null);
+                        if (updateAvgInDb) {
+                            summariesDatabaseManager.updateExtremaValue(mWorkoutID, sensorType, ExtremaType.AVG, stats.getAverage(), null);
+                        }
+                    }
+                }
             }
 
             String sensorName = sensorType.name();
@@ -793,12 +819,18 @@ public class TrackerService extends Service {
             summaryValues.put(WorkoutSummaries.SPEED_AVERAGE_mps, getAverageSpeed());
         }
 
-        WorkoutSummariesDatabaseManager summariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(this);
         SQLiteDatabase summariesDb = summariesDatabaseManager.getDatabase();
         summariesDb.update(WorkoutSummaries.TABLE,
                 summaryValues,
                 WorkoutSummaries.C_ID + "=" + mWorkoutID,
                 null);
+
+        // Manage DB throttle for Average updates
+        if (mExtremaDbUpdateCounter >= EXTREMA_DB_UPDATE_INTERVAL) {
+            mExtremaDbUpdateCounter = 0;
+        } else {
+            mExtremaDbUpdateCounter++;
+        }
 
         // Handle Streams (every 20s)
         if (mLiveSession != null) {

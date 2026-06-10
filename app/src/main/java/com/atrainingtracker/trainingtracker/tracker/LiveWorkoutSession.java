@@ -59,7 +59,7 @@ public class LiveWorkoutSession {
         this.sensorsForAverage = sensorsForAverage;
     }
 
-    public void addSample(SensorType type, double value, LatLng position) {
+    public int addSample(SensorType type, double value, LatLng position) {
 
         if (position != null) {
             if (startLatLng == null) startLatLng = position;
@@ -71,7 +71,7 @@ public class LiveWorkoutSession {
             stats = new RunningStats();
             sensorStats.put(type, stats);
         }
-        stats.addValue(value, position, sensorsForAverage != null && sensorsForAverage.contains(type));
+        return stats.addValue(value, position, sensorsForAverage != null && sensorsForAverage.contains(type));
     }
 
     public LatLng getStartLatLng() {
@@ -153,6 +153,10 @@ public class LiveWorkoutSession {
      * Inner class to track running stats for a single sensor.
      */
     public static class RunningStats {
+        public static final int CHANGED_MIN = 1;
+        public static final int CHANGED_MAX = 2;
+        public static final int CHANGED_AVG = 4;
+
         public double min = Double.MAX_VALUE;
         public LatLng minPos = null;
         public double max = -Double.MAX_VALUE;
@@ -160,19 +164,24 @@ public class LiveWorkoutSession {
         public double sum = 0;
         public int count = 0;
 
-        public void addValue(double value, LatLng position, boolean calcAverage) {
+        public int addValue(double value, LatLng position, boolean calcAverage) {
+            int changed = 0;
             if (value < min) {
                 min = value;
                 minPos = position;
+                changed |= CHANGED_MIN;
             }
             if (value > max) {
                 max = value;
                 maxPos = position;
+                changed |= CHANGED_MAX;
             }
             if (calcAverage) {
                 sum += value;
                 count++;
+                changed |= CHANGED_AVG;
             }
+            return changed;
         }
 
         public double getAverage() {
