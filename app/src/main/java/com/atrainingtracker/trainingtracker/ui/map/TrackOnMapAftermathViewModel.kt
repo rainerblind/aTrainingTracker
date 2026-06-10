@@ -175,25 +175,34 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
         }
     }
 
-    /**
-     * Helper to fetch extrema from DB and create a LocationMarker
-     */
     private fun addExtremaMarkerIfPresent(
         workoutId: Long,
         sensor: SensorType,
         type: ExtremaType,
         markerList: MutableList<LocationMarker>
     ) {
-        val extrema = samplesDb.getExtremaPosition(summariesDb, workoutId, sensor, type)
-        extrema?.let {
+        // Try to get both from the summary record first (efficient, new way)
+        var value: Double? = summariesDb.getExtremaValue(workoutId, sensor, type)
+        var pos: LatLng? = summariesDb.getExtremaPosition(workoutId, sensor, type)
+
+        // Fallback for legacy data if position is missing in the summary table
+        if (pos == null) {
+            val legacyExtrema = samplesDb.getExtremaPosition(summariesDb, workoutId, sensor, type)
+            if (legacyExtrema != null) {
+                pos = legacyExtrema.latLng
+                value = legacyExtrema.value
+            }
+        }
+
+        if (value != null && pos != null) {
             val title = application.getString(
                 R.string.location_extrema_format,
-                type.name, // Will be "MAX" or "MIN"
+                type.toString(), // Use localized name ("Max", "Min")
                 sensor.getFullName(application),
-                sensor.myFormatter.format(it.value),
+                sensor.myFormatter.format(value),
                 application.getString(MyHelper.getShortUnitsId(sensor))
             )
-            markerList.add(LocationMarker(it.latLng, getExtremaIcon(sensor, type), title))
+            markerList.add(LocationMarker(pos, getExtremaIcon(sensor, type), title))
         }
     }
 
@@ -210,11 +219,16 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
     }
 
     private fun getExtremaPos(id: Long, file: String, type: ExtremaType): LatLng? {
-        val lat = summariesDb.getExtremaValue(id, SensorType.LATITUDE, type)
-            ?: samplesDb.calcExtremaValue(summariesDb, file, type, SensorType.LATITUDE)
-        val lon = summariesDb.getExtremaValue(id, SensorType.LONGITUDE, type)
-            ?: samplesDb.calcExtremaValue(summariesDb, file, type, SensorType.LONGITUDE)
-
-        return if (lat != null && lon != null) LatLng(lat, lon) else null
+        // Try the optimized summary record first
+        return summariesDb.getExtremaPosition(id, SensorType.LATITUDE, type)
+            ?: summariesDb.getExtremaValue(id, SensorType.LATITUDE, type)?.let { lat ->
+                summariesDb.getExtremaValue(id, SensorType.LONGITUDE, type)?.let { lon ->
+                    LatLng(lat, lon)
+                }
+            } ?: samplesDb.calcExtremaValue(summariesDb, file, type, SensorType.LATITUDE)?.let { lat ->
+                samplesDb.calcExtremaValue(summariesDb, file, type, SensorType.LONGITUDE)?.let { lon ->
+                    LatLng(lat, lon)
+                }
+            }
     }
 }

@@ -133,15 +133,21 @@ class WorkoutDataMapper(
                 }
 
                 val min = getFormattedExtremaValue(workoutId, sensorType, ExtremaType.MIN)
+                val minPos = workoutSummariesDatabaseManager.getExtremaPosition(workoutId, sensorType, ExtremaType.MIN)
+
                 val avg = getFormattedExtremaValue(workoutId, sensorType, ExtremaType.AVG)
+
                 val max = getFormattedExtremaValue(workoutId, sensorType, ExtremaType.MAX)
+                val maxPos = workoutSummariesDatabaseManager.getExtremaPosition(workoutId, sensorType, ExtremaType.MAX)
 
                 val data = ExtremaDataRow(
                     sensorLabel = context.getString(sensorType.shortNameId),
                     unitLabel = context.getString(MyHelper.getUnitsId(sensorType)),
                     minValue = min,
+                    minLatLng = minPos,
                     avgValue = avg,
-                    maxValue = max
+                    maxValue = max,
+                    maxLatLng = maxPos
                 )
 
                 // Only return the data object if it's not empty, otherwise return null

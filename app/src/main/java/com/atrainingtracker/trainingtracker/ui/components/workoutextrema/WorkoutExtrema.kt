@@ -169,9 +169,9 @@ fun PreviewWorkoutExtrema() {
                 workoutId = 123L,
                 isCalculating = false,
                 dataRows = listOf(
-                    ExtremaDataRow("Heart Rate", "bpm", "65", "142", "185"),
-                    ExtremaDataRow("Cadence", "rpm", "0", "85", "112"),
-                    ExtremaDataRow("Power", "W", "0", "215", "640")
+                    ExtremaDataRow(sensorLabel = "Heart Rate", unitLabel = "bpm", minValue = "65", avgValue = "142", maxValue = "185"),
+                    ExtremaDataRow(sensorLabel = "Cadence", unitLabel = "rpm", minValue = "0", avgValue = "85", maxValue = "112"),
+                    ExtremaDataRow(sensorLabel = "Power", unitLabel = "W", minValue = "0", avgValue = "215", maxValue = "640")
                 )
             )
         )
@@ -203,8 +203,8 @@ fun PreviewWorkoutExtremaCalculatingHR() {
                 isCalculating = true,
                 calculationMessage = "Calculating HR ...",
                 dataRows = listOf(
-                    ExtremaDataRow("Cadence", "rpm", "0", "85", "112"),
-                    ExtremaDataRow("Power", "W", "0", "215", "640")
+                    ExtremaDataRow(sensorLabel = "Cadence", unitLabel = "rpm", minValue = "0", avgValue = "85", maxValue = "112"),
+                    ExtremaDataRow(sensorLabel = "Power", unitLabel = "W", minValue = "0", avgValue = "215", maxValue = "640")
                 )
             )
         )

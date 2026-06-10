@@ -415,11 +415,23 @@ class WorkoutRepository private constructor(private val application: Application
                 // UPDATE & MERGE: Preserve background-calculated fields from memory
                 currentList.map { existing ->
                     if (existing.id == workout.id) {
+                        val mergedExtremaRows = workout.extremaRows.map { rowFromDb ->
+                            val existingRow = existing.extremaRows.find { it.sensorLabel == rowFromDb.sensorLabel }
+                            if (existingRow != null) {
+                                rowFromDb.copy(
+                                    minLatLng = if (rowFromDb.minLatLng == null) existingRow.minLatLng else rowFromDb.minLatLng,
+                                    maxLatLng = if (rowFromDb.maxLatLng == null) existingRow.maxLatLng else rowFromDb.maxLatLng
+                                )
+                            } else {
+                                rowFromDb
+                            }
+                        }
+
                         workout.copy(
                             mapPolyline = if (workout.mapPolyline.isEmpty()) existing.mapPolyline else workout.mapPolyline,
                             encodedAltitudes = if (workout.encodedAltitudes.isEmpty()) existing.encodedAltitudes else workout.encodedAltitudes,
                             encodedDistances = if (workout.encodedDistances.isEmpty()) existing.encodedDistances else workout.encodedDistances,
-                            extremaRows = if (workout.extremaRows.isEmpty()) existing.extremaRows else workout.extremaRows,
+                            extremaRows = if (mergedExtremaRows.isEmpty()) existing.extremaRows else mergedExtremaRows,
                             isCalculatingExtrema = workout.isCalculatingExtrema && existing.isCalculatingExtrema,
                             exportStatuses = if (workout.exportStatuses.isEmpty()) existing.exportStatuses else workout.exportStatuses
                         )
