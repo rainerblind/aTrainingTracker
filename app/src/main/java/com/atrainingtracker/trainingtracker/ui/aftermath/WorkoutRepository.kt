@@ -29,8 +29,6 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import androidx.work.WorkInfo
-import androidx.work.WorkManager
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.TrainingApplication
@@ -52,7 +50,6 @@ import com.atrainingtracker.trainingtracker.exporter.ExportManager
 import com.atrainingtracker.trainingtracker.exporter.ExportStatusChangedBroadcaster
 import com.atrainingtracker.trainingtracker.exporter.ExportType
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
-import com.atrainingtracker.trainingtracker.helpers.CalcExtremaWorker
 import com.atrainingtracker.trainingtracker.tracker.TrackerService
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusGroupData
@@ -236,87 +233,6 @@ class WorkoutRepository private constructor(private val application: Application
     }
 
 
-    /*
-    Observer stuff for the extrema calculation
-     */
-
-    // Keep track of the observers we create so we can remove them later if needed.
-    private val activeObservers = mutableMapOf<Long, Observer<List<WorkInfo>>>()
-
-    private fun observeExtremaCalculation(workoutId: Long) {
-        if (DEBUG) Log.i(TAG, "observeExtremaCalculation: workoutId=$workoutId")
-
-        // Create a new, dedicated observer for this specific workoutId.
-        val newObserver = object : Observer<List<WorkInfo>> {
-            private var lastProgressSequence = -1
-            override fun onChanged(workInfos: List<WorkInfo>) {
-                // This observer now uses its own 'workoutId', which is captured
-                // from the function's scope and will never change.
-                Log.d(TAG, "Observer called for its specific workoutId=$workoutId")
-
-                val workInfo = workInfos.firstOrNull() ?: return
-
-                if (workInfo.state.isFinished) {
-                    Log.d(TAG, "Finished calculation for workout $workoutId")
-                    // --- When finished, clear the calculation message, reload the data, and remove the observer.
-
-                    // Find the current workout in the list.
-                    val workout = _allWorkouts.value.find { it.id == workoutId }
-                    // If it has a calculation message, clear it.
-                    if (workout != null && workout.extremaCalculationMessage != null) {
-                        updateWorkoutInList(workoutId, workout.copy(extremaCalculationMessage = null))
-                    }
-                    // TODO: Currently, we update the workout list twice.  This should be avoided.
-
-                    reloadWorkoutData(workoutId)
-
-                    // Once finished, we can clean up this specific observer.
-                    WorkManager.getInstance(application).getWorkInfosByTagLiveData("extrema_calc_$workoutId").removeObserver(this)
-                    activeObservers.remove(workoutId)
-                } else {
-                    val currentProgress =
-                        workInfo.progress.getInt(CalcExtremaWorker.KEY_PROGRESS_SEQUENCE, -1)
-                    if (currentProgress > lastProgressSequence) {
-                        lastProgressSequence = currentProgress
-                        val message = workInfo.progress.getString(CalcExtremaWorker.KEY_STARTING_MESSAGE)
-                        if (message != null) {
-                            // update the message in the list
-                            val workoutToUpdate = _allWorkouts.value.find { it.id == workoutId }
-                            if (workoutToUpdate != null) {
-                                // Create a new WorkoutData with the updated message.
-                                val updatedWorkout = workoutToUpdate.copy(extremaCalculationMessage = message)
-                                // Post the update. DiffUtil will see that extremaData has changed.
-                                updateWorkoutInList(workoutId, updatedWorkout)
-                            }
-
-                        } else {
-                            val updateType = workInfo.progress.getString(CalcExtremaWorker.KEY_FINISHED_MESSAGE)
-                            if (updateType != null) {
-                                reloadWorkoutData(workoutId)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Attach the new, dedicated observer.
-        launch(Dispatchers.Main) {
-            val workTag = "extrema_calc_${workoutId}"
-            val workManager = WorkManager.getInstance(application)
-
-            // Remove any old observer for this ID before adding a new one.
-            activeObservers[workoutId]?.let { oldObserver ->
-                workManager.getWorkInfosByTagLiveData(workTag).removeObserver(oldObserver)
-            }
-
-            // Store and observe with the new one.
-            activeObservers[workoutId] = newObserver
-            workManager.getWorkInfosByTagLiveData(workTag).observeForever(newObserver)
-        }
-    }
-
-
     init {
         val filter = IntentFilter()
         filter.addAction(TrackerService.WORKOUT_UPDATED_INTENT)
@@ -353,10 +269,6 @@ class WorkoutRepository private constructor(private val application: Application
                         }
                         newList
                     }
-
-                    if (workout.extremaData.isCalculating) {
-                        observeExtremaCalculation(id)
-                    }
                 }
             }
         }
@@ -384,10 +296,6 @@ class WorkoutRepository private constructor(private val application: Application
                         do {
                             val workoutData = mapper.fromCursor(c)
 
-                            if (workoutData.extremaData.isCalculating) {
-                                observeExtremaCalculation(workoutData.id)
-                            }
-
                             val exportStatuses: MutableList<ExportStatusGroupData> = mutableListOf()
                             if (workoutData.fileBaseName != null) {
                                 for (type in orderedExportTypes) {
@@ -408,6 +316,97 @@ class WorkoutRepository private constructor(private val application: Application
         }
     }
 
+    // --- Public API for Direct Memory Updates (Avoids DB Read) ---
+
+    fun setMapPolyline(workoutId: Long, polyline: String) {
+        updateWorkoutInMemory(workoutId) { it.copy(mapPolyline = polyline) }
+    }
+
+    fun appendMapPolyline(workoutId: Long, polylineSuffix: String) {
+        updateWorkoutInMemory(workoutId) { it.copy(mapPolyline = it.mapPolyline + polylineSuffix) }
+    }
+
+    fun setElevationStreams(workoutId: Long, altitudes: String, distances: String) {
+        updateWorkoutInMemory(workoutId) { it.copy(encodedAltitudes = altitudes, encodedDistances = distances) }
+    }
+
+    fun appendElevationStreams(workoutId: Long, altitudeSuffix: String, distanceSuffix: String) {
+        updateWorkoutInMemory(workoutId) {
+            it.copy(
+                encodedAltitudes = it.encodedAltitudes + altitudeSuffix,
+                encodedDistances = it.encodedDistances + distanceSuffix
+            )
+        }
+    }
+
+    fun setCommuteAndTrainer(workoutId: Long, commute: Boolean, trainer: Boolean) {
+        updateWorkoutInMemory(workoutId) { it.copy(commute = commute, trainer = trainer) }
+    }
+
+    fun setWorkoutName(workoutId: Long, name: String) {
+        updateWorkoutInMemory(workoutId) { it.copy(workoutName = name) }
+    }
+
+    fun updateExtremaValue(workoutId: Long, sensorType: SensorType, extremaType: com.atrainingtracker.trainingtracker.database.ExtremaType, value: Double, position: LatLng? = null) {
+        val formattedValue = sensorType.myFormatter.format(value)
+        updateWorkoutInMemory(workoutId) { workout ->
+            var updated = workout
+
+            // 1. Update specific raw fields
+            when (sensorType) {
+                SensorType.LINE_DISTANCE_m -> if (extremaType == com.atrainingtracker.trainingtracker.database.ExtremaType.MAX) updated = updated.copy(maxDisplacement = value)
+                SensorType.ALTITUDE -> {
+                    if (extremaType == com.atrainingtracker.trainingtracker.database.ExtremaType.MIN) updated = updated.copy(minAltitude = value)
+                    if (extremaType == com.atrainingtracker.trainingtracker.database.ExtremaType.MAX) updated = updated.copy(maxAltitude = value)
+                }
+                else -> {}
+            }
+
+            // 2. Update the ExtremaDataRow in the list
+            val sensorLabel = application.getString(sensorType.shortNameId)
+            val updatedRows = updated.extremaRows.map { row ->
+                if (row.sensorLabel == sensorLabel) {
+                    when (extremaType) {
+                        com.atrainingtracker.trainingtracker.database.ExtremaType.MIN -> row.copy(minValue = formattedValue, minLatLng = position)
+                        com.atrainingtracker.trainingtracker.database.ExtremaType.AVG -> row.copy(avgValue = formattedValue)
+                        com.atrainingtracker.trainingtracker.database.ExtremaType.MAX -> row.copy(maxValue = formattedValue, maxLatLng = position)
+                        else -> row
+                    }
+                } else row
+            }
+            updated.copy(extremaRows = updatedRows)
+        }
+    }
+
+    private fun updateWorkoutInMemory(workoutId: Long, block: (WorkoutData) -> WorkoutData) {
+        _allWorkouts.update { currentList ->
+            val index = currentList.indexOfFirst { it.id == workoutId }
+            if (index != -1) {
+                // Workout is already in the list, update it in place
+                currentList.map { if (it.id == workoutId) block(it) else it }
+            } else {
+                // Workout is NOT in the list yet (e.g. background worker finished before UI load)
+                launch(Dispatchers.IO) {
+                    summariesManager.getWorkoutCursor(workoutId).use { cursor ->
+                        if (cursor?.moveToFirst() == true) {
+                            val freshWorkout = mapper.fromCursor(cursor)
+                            val updatedWorkout = block(freshWorkout)
+
+                            _allWorkouts.update { list ->
+                                if (list.any { it.id == workoutId }) {
+                                    list.map { if (it.id == workoutId) updatedWorkout else it }
+                                } else {
+                                    (list + updatedWorkout).sortedByDescending { it.headerData.startTimeS }
+                                }
+                            }
+                        }
+                    }
+                }
+                currentList
+            }
+        }
+    }
+
     private fun addOrUpdateWorkout(workout: WorkoutData) {
         _allWorkouts.update { currentList ->
             val index = currentList.indexOfFirst { it.id == workout.id }
@@ -415,12 +414,23 @@ class WorkoutRepository private constructor(private val application: Application
                 // UPDATE & MERGE: Preserve background-calculated fields from memory
                 currentList.map { existing ->
                     if (existing.id == workout.id) {
+                        val mergedExtremaRows = workout.extremaRows.map { rowFromDb ->
+                            val existingRow = existing.extremaRows.find { it.sensorLabel == rowFromDb.sensorLabel }
+                            if (existingRow != null) {
+                                rowFromDb.copy(
+                                    minLatLng = if (rowFromDb.minLatLng == null) existingRow.minLatLng else rowFromDb.minLatLng,
+                                    maxLatLng = if (rowFromDb.maxLatLng == null) existingRow.maxLatLng else rowFromDb.maxLatLng
+                                )
+                            } else {
+                                rowFromDb
+                            }
+                        }
+
                         workout.copy(
                             mapPolyline = if (workout.mapPolyline.isEmpty()) existing.mapPolyline else workout.mapPolyline,
                             encodedAltitudes = if (workout.encodedAltitudes.isEmpty()) existing.encodedAltitudes else workout.encodedAltitudes,
                             encodedDistances = if (workout.encodedDistances.isEmpty()) existing.encodedDistances else workout.encodedDistances,
-                            extremaRows = if (workout.extremaRows.isEmpty()) existing.extremaRows else workout.extremaRows,
-                            isCalculatingExtrema = workout.isCalculatingExtrema && existing.isCalculatingExtrema,
+                            extremaRows = if (mergedExtremaRows.isEmpty()) existing.extremaRows else mergedExtremaRows,
                             exportStatuses = if (workout.exportStatuses.isEmpty()) existing.exportStatuses else workout.exportStatuses
                         )
                     } else existing
@@ -567,6 +577,4 @@ class WorkoutRepository private constructor(private val application: Application
             }
         }
     }
-
-
 }

@@ -30,18 +30,38 @@ object NumericalEncodingUtils {
         for (num in numbers) {
             // Convert to fixed-point (e.g., 2 decimal places precision)
             val current = Math.round(num * 100)
-            var delta = current - lastValue
+            encodeSingle(current - lastValue, result)
             lastValue = current
-
-            // Standard Google Polyline-style variable length encoding
-            delta = if (delta < 0) (delta shl 1).inv() else delta shl 1
-            var b = delta
-            while (b >= 0x20) {
-                result.append(((0x20 or (b.toInt() and 0x1f)) + 63).toChar())
-                b = b shr 5
-            }
-            result.append((b + 63).toChar())
         }
+        return result.toString()
+    }
+
+    /**
+     * Helper to encode a single delta value.
+     */
+    fun encodeSingle(delta: Long, result: StringBuilder) {
+        var b = if (delta < 0) (delta shl 1).inv() else delta shl 1
+        while (b >= 0x20) {
+            result.append(((0x20 or (b.toInt() and 0x1f)) + 63).toChar())
+            b = b shr 5
+        }
+        result.append((b + 63).toChar())
+    }
+
+    /**
+     * Encodes a single LatLng point incrementally.
+     * @param lastLatE5 The last latitude multiplied by 1e5
+     * @param lastLngE5 The last longitude multiplied by 1e5
+     * @return The encoded string for this point alone.
+     */
+    fun encodeLatLng(lat: Double, lng: Double, lastLatE5: Long, lastLngE5: Long): String {
+        val result = StringBuilder()
+        val latE5 = Math.round(lat * 1e5)
+        val lngE5 = Math.round(lng * 1e5)
+        
+        encodeSingle(latE5 - lastLatE5, result)
+        encodeSingle(lngE5 - lastLngE5, result)
+
         return result.toString()
     }
 

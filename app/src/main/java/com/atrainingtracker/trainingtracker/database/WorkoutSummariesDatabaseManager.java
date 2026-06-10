@@ -140,11 +140,16 @@ public class WorkoutSummariesDatabaseManager {
 
     @Nullable
     public String getBaseFileName(long workoutId) {
+        return getBaseFileName(getDatabase(), workoutId);
+    }
+
+    @Nullable
+    public String getBaseFileName(SQLiteDatabase db, long workoutId) {
         if (DEBUG) Log.i(TAG, "getBaseFileName for workoutId: " + workoutId);
 
         String baseFileName = null;
 
-        try (Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE,
+        try (Cursor cursor = db.query(WorkoutSummaries.TABLE,
                 new String[]{WorkoutSummaries.FILE_BASE_NAME},
                 WorkoutSummaries.C_ID + "=?",
                 new String[]{Long.toString(workoutId)},
@@ -288,9 +293,14 @@ public class WorkoutSummariesDatabaseManager {
 
     @Nullable
     public Double getExtremaValue(long workoutId, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType) {
+        return getExtremaValue(getDatabase(), workoutId, sensorType, extremaType);
+    }
+
+    @Nullable
+    public Double getExtremaValue(SQLiteDatabase db, long workoutId, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType) {
         Double extremaValue = null;
 
-        try(Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE_EXTREMA_VALUES,
+        try(Cursor cursor = db.query(WorkoutSummaries.TABLE_EXTREMA_VALUES,
                 new String[]{WorkoutSummaries.VALUE},
                 WorkoutSummaries.WORKOUT_ID + "=? AND " + WorkoutSummaries.SENSOR_TYPE + "=? AND " + WorkoutSummaries.EXTREMA_TYPE + "=?",
                 new String[]{Long.toString(workoutId), sensorType.name(), extremaType.name()},
@@ -306,6 +316,68 @@ public class WorkoutSummariesDatabaseManager {
             }
         }
         return extremaValue;
+    }
+
+    @Nullable
+    public LatLng getExtremaPosition(long workoutId, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType) {
+        LatLng position = null;
+
+        try(Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE_EXTREMA_VALUES,
+                new String[]{WorkoutSummaries.LATITUDE, WorkoutSummaries.LONGITUDE},
+                WorkoutSummaries.WORKOUT_ID + "=? AND " + WorkoutSummaries.SENSOR_TYPE + "=? AND " + WorkoutSummaries.EXTREMA_TYPE + "=?",
+                new String[]{Long.toString(workoutId), sensorType.name(), extremaType.name()},
+                null, null, null)) {
+
+            if (cursor.moveToFirst()) {
+                int latIdx = cursor.getColumnIndex(WorkoutSummaries.LATITUDE);
+                int lonIdx = cursor.getColumnIndex(WorkoutSummaries.LONGITUDE);
+                if (!cursor.isNull(latIdx) && !cursor.isNull(lonIdx)) {
+                    position = new LatLng(cursor.getDouble(latIdx), cursor.getDouble(lonIdx));
+                }
+            }
+        }
+        return position;
+    }
+
+    public void updateExtremaValue(long workoutId, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType, double value, @Nullable LatLng position) {
+        updateExtremaValue(getDatabase(), workoutId, sensorType, extremaType, value, position);
+    }
+
+    public void updateExtremaValue(SQLiteDatabase db, long workoutId, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType, double value, @Nullable LatLng position) {
+        ContentValues values = new ContentValues();
+        values.put(WorkoutSummaries.WORKOUT_ID, workoutId);
+        values.put(WorkoutSummaries.SENSOR_TYPE, sensorType.name());
+        values.put(WorkoutSummaries.EXTREMA_TYPE, extremaType.name());
+        values.put(WorkoutSummaries.VALUE, value);
+        if (position != null) {
+            values.put(WorkoutSummaries.LATITUDE, position.latitude);
+            values.put(WorkoutSummaries.LONGITUDE, position.longitude);
+        }
+
+        String where = WorkoutSummaries.WORKOUT_ID + "=? AND " + WorkoutSummaries.SENSOR_TYPE + "=? AND " + WorkoutSummaries.EXTREMA_TYPE + "=?";
+        String[] args = {String.valueOf(workoutId), sensorType.name(), extremaType.name()};
+
+        if (db.update(WorkoutSummaries.TABLE_EXTREMA_VALUES, values, where, args) == 0) {
+            db.insert(WorkoutSummaries.TABLE_EXTREMA_VALUES, null, values);
+        }
+    }
+
+    public void updateMapAndStreams(long workoutId, String polyline, String altitudeStream, String distanceStream) {
+        ContentValues values = new ContentValues();
+        values.put(WorkoutSummaries.MAP_POLYLINE, polyline);
+        values.put(WorkoutSummaries.ALTITUDE_STREAM, altitudeStream);
+        values.put(WorkoutSummaries.DISTANCE_STREAM, distanceStream);
+
+        getDatabase().update(WorkoutSummaries.TABLE, values, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(workoutId)});
+    }
+
+    public void appendToMapAndStreams(long workoutId, String polylineSuffix, String altitudeSuffix, String distanceSuffix) {
+        String sql = "UPDATE " + WorkoutSummaries.TABLE + " SET "
+                + WorkoutSummaries.MAP_POLYLINE + " = IFNULL(" + WorkoutSummaries.MAP_POLYLINE + ", '') || ?, "
+                + WorkoutSummaries.DISTANCE_STREAM + " = IFNULL(" + WorkoutSummaries.DISTANCE_STREAM + ", '') || ?, "
+                + WorkoutSummaries.ALTITUDE_STREAM + " = IFNULL(" + WorkoutSummaries.ALTITUDE_STREAM + ", '') || ? "
+                + " WHERE " + WorkoutSummaries.C_ID + " = ?";
+        getDatabase().execSQL(sql, new Object[]{polylineSuffix, distanceSuffix, altitudeSuffix, workoutId});
     }
 
 
@@ -735,6 +807,7 @@ public class WorkoutSummariesDatabaseManager {
         public static final String DISTANCE_STREAM = "distanceStream"; // added in Version 14
         public static final String ALTITUDE_STREAM = "altitudeStream"; // added in Version 14
         // new entries in version 5 of the DB
+        @Deprecated
         public static final String EXTREMA_VALUES_CALCULATED = "extremumValuesCalculated";
         // new entries in version 6 of the DB
         public static final String SAMPLES_COLUMN_ID = "samplesColumnId";
@@ -756,6 +829,8 @@ public class WorkoutSummariesDatabaseManager {
         public static final String EXTREMA_TYPE = "extremumType";
         public static final String SENSOR_TYPE = "sensorType";
         public static final String VALUE = "value";
+        public static final String LATITUDE = "latitude";
+        public static final String LONGITUDE = "longitude";
         // columns of the WorkoutNamePattern table
         // public static final String SPORT // already defined
         public static final String START_LOCATION_NAME = "startLocationName";
@@ -795,7 +870,9 @@ public class WorkoutSummariesDatabaseManager {
         // public static final int DB_VERSION = 14; // upgrade to Version 14 at 05.05.2026
         // public static final int DB_VERSION = 15; // upgrade to Version 15 at 06.05.2026: Unique step size for encoding map polyline, distance, and elevation: ENCODIN_STEP_SIZE
         // public static final int DB_VERSION = 16; // upgrade to Version 16 at 08.05.2026: Added uploadToStrava
-        public static final int DB_VERSION = 17; // 08.05.2026: Bugfix: add eventually missing columns (altitude and distance stream)
+        // public static final int DB_VERSION = 17; // 08.05.2026: Bugfix: add eventually missing columns (altitude and distance stream)
+        public static final int DB_VERSION = 19; // 18; // 10.06.2026 Added lat/long to the extrema values
+        
 
 
         protected static final String CREATE_TABLE = "create table " + WorkoutSummaries.TABLE + " ("
@@ -837,6 +914,8 @@ public class WorkoutSummariesDatabaseManager {
                 + WorkoutSummaries.EXTREMA_TYPE + " text,"
                 + WorkoutSummaries.SENSOR_TYPE + " text,"
                 + WorkoutSummaries.VALUE + " real," // end of version 5
+                + WorkoutSummaries.LATITUDE + " real,"
+                + WorkoutSummaries.LONGITUDE + " real,"
                 + WorkoutSummaries.SAMPLES_COLUMN_ID + " int)";
 
         protected static final String CREATE_TABLE_ACCUMULATED_SENSORS = "create table " + WorkoutSummaries.TABLE_ACCUMULATED_SENSORS + " ("
@@ -1025,6 +1104,57 @@ public class WorkoutSummariesDatabaseManager {
                 // Combined migration to avoid multiple passes and ANRs.
                 // If oldVersion < 15, we must recalculate everything due to step size change.
                 migrateExistingWorkouts(db, oldVersion < 15);
+            }
+
+            // 18 failed due ot a bug
+            if (oldVersion < 19) {
+                Log.i(TAG, "upgrading to DB version 19");
+                addColumnIfNotExists(db, WorkoutSummaries.TABLE_EXTREMA_VALUES, WorkoutSummaries.LATITUDE, "real", null);
+                addColumnIfNotExists(db, WorkoutSummaries.TABLE_EXTREMA_VALUES, WorkoutSummaries.LONGITUDE, "real", null);
+
+                // Populate new columns for existing data
+                migrateExtremaPositions(db);
+            }
+        }
+
+        private void migrateExtremaPositions(SQLiteDatabase summariesDb) {
+            Log.i(TAG, "Starting migration of extrema positions...");
+
+            WorkoutSummariesDatabaseManager summariesManager = WorkoutSummariesDatabaseManager.getInstance(mContext);
+            WorkoutSamplesDatabaseManager samplesManager = WorkoutSamplesDatabaseManager.getInstance(mContext);
+
+            String selection = WorkoutSummaries.LATITUDE + " IS NULL AND " + WorkoutSummaries.EXTREMA_TYPE + " != ?";
+            String[] selectionArgs = {ExtremaType.AVG.name()};
+            String[] columns = {WorkoutSummaries.WORKOUT_ID, WorkoutSummaries.SENSOR_TYPE, WorkoutSummaries.EXTREMA_TYPE, WorkoutSummaries.VALUE};
+
+            try (Cursor extremaCursor = summariesDb.query(WorkoutSummaries.TABLE_EXTREMA_VALUES, columns, selection, selectionArgs, null, null, null)) {
+                int workoutIdIdx = extremaCursor.getColumnIndex(WorkoutSummaries.WORKOUT_ID);
+                int sensorTypeIdx = extremaCursor.getColumnIndex(WorkoutSummaries.SENSOR_TYPE);
+                int extremaTypeIdx = extremaCursor.getColumnIndex(WorkoutSummaries.EXTREMA_TYPE);
+                int valueIdx = extremaCursor.getColumnIndex(WorkoutSummaries.VALUE);
+
+                while (extremaCursor.moveToNext()) {
+                    long workoutId = extremaCursor.getLong(workoutIdIdx);
+                    String sensorTypeName = extremaCursor.getString(sensorTypeIdx);
+                    String extremaTypeName = extremaCursor.getString(extremaTypeIdx);
+                    double value = extremaCursor.getDouble(valueIdx);
+
+                    try {
+                        SensorType sensorType = SensorType.valueOf(sensorTypeName);
+                        ExtremaType extremaType = ExtremaType.valueOf(extremaTypeName);
+
+                        // Use the shared logic in WorkoutSamplesDatabaseManager to find the location
+                        // Pass the database currently being upgraded to avoid recursion
+                        WorkoutSamplesDatabaseManager.LatLngValue legacyPos = samplesManager.getExtremaPosition(summariesDb, summariesManager, workoutId, sensorType, extremaType);
+
+                        if (legacyPos != null && legacyPos.latLng != null) {
+                            // Use the new surgical update method to populate the coordinates
+                            summariesManager.updateExtremaValue(summariesDb, workoutId, sensorType, extremaType, value, legacyPos.latLng);
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "Could not migrate position for " + sensorTypeName + " " + extremaTypeName, e);
+                    }
+                }
             }
         }
 
