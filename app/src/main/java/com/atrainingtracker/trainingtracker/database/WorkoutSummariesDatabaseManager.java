@@ -371,6 +371,15 @@ public class WorkoutSummariesDatabaseManager {
         getDatabase().update(WorkoutSummaries.TABLE, values, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(workoutId)});
     }
 
+    public void appendToMapAndStreams(long workoutId, String polylineSuffix, String altitudeSuffix, String distanceSuffix) {
+        String sql = "UPDATE " + WorkoutSummaries.TABLE + " SET "
+                + WorkoutSummaries.MAP_POLYLINE + " = IFNULL(" + WorkoutSummaries.MAP_POLYLINE + ", '') || ?, "
+                + WorkoutSummaries.DISTANCE_STREAM + " = IFNULL(" + WorkoutSummaries.DISTANCE_STREAM + ", '') || ?, "
+                + WorkoutSummaries.ALTITUDE_STREAM + " = IFNULL(" + WorkoutSummaries.ALTITUDE_STREAM + ", '') || ? "
+                + " WHERE " + WorkoutSummaries.C_ID + " = ?";
+        getDatabase().execSQL(sql, new Object[]{polylineSuffix, distanceSuffix, altitudeSuffix, workoutId});
+    }
+
 
     public void saveAccumulatedSensorTypes(long workoutId, @NonNull Iterable<SensorType> sensorTypes) {
         if (DEBUG) Log.i(TAG, "saveAccumulatedSensors for workoutId: " + workoutId);
