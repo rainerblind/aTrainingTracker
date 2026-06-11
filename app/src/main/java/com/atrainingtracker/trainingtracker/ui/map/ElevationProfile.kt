@@ -253,6 +253,15 @@ fun ElevationProfile(
         }
     }
 
+    val highlightPaint = remember(colorScheme) {
+        Paint().apply {
+            color = colorScheme.onSurface.toArgb()
+            textSize = 32f
+            isAntiAlias = true
+            isFakeBoldText = true
+        }
+    }
+
     Canvas(
         modifier = modifier
             .pointerInput(pathPoints) {
@@ -294,16 +303,16 @@ fun ElevationProfile(
             // 2a. Altitude labels
             val minAltLabel = altitudeFormatter.format_with_units(cachedData.minAlt)
             val maxAltLabel = altitudeFormatter.format_with_units(cachedData.maxAlt)
-            val minAltWidth = textPaint.measureText(minAltLabel)
-            val maxAltWidth = textPaint.measureText(maxAltLabel)
+            val minAltWidth = highlightPaint.measureText(minAltLabel)
+            val maxAltWidth = highlightPaint.measureText(maxAltLabel)
 
-            canvas.nativeCanvas.drawText(minAltLabel, -minAltWidth - 10f, height, textPaint)
-            canvas.nativeCanvas.drawText(maxAltLabel, -maxAltWidth - 10f, textPaint.textSize, textPaint)
+            canvas.nativeCanvas.drawText(minAltLabel, -minAltWidth - 10f, height, highlightPaint)
+            canvas.nativeCanvas.drawText(maxAltLabel, -maxAltWidth - 10f, highlightPaint.textSize, highlightPaint)
 
             // 2b. Distance label (End point)
             val endLabel = distanceFormatter.format_with_units(cachedData.totalDist)
-            val endLabelWidth = textPaint.measureText(endLabel)
-            canvas.nativeCanvas.drawText(endLabel, width - endLabelWidth, height + 45f, textPaint)
+            val endLabelWidth = highlightPaint.measureText(endLabel)
+            canvas.nativeCanvas.drawText(endLabel, width - endLabelWidth, height + 45f, highlightPaint)
 
             // 2c. Adaptive Distance Ticks
             var currentDist = cachedData.distStep.toDouble()
