@@ -150,6 +150,12 @@ class BANALServiceRepository private constructor(private val context: Context) {
     private val lapSummaryReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             intent?.let {
+                // If this lap was triggered by a "Pause", do not notify the UI
+                if (it.getBooleanExtra(BANALService.IS_PAUSE, false)) {
+                    if (DEBUG) Log.i(TAG, "Suppressing lap summary dialog due to pause")
+                    return
+                }
+
                 val lapEvent = LapEvent(
                     lapNumber = it.getIntExtra(BANALService.PREV_LAP_NR, 0),
                     lapTime = it.getStringExtra(BANALService.PREV_LAP_TIME_STRING),

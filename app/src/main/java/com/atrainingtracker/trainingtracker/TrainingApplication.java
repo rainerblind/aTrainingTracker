@@ -986,6 +986,7 @@ public class TrainingApplication extends Application {
         if (DEBUG) Log.d(TAG, "pause tracking");
 
         sendBroadcast(new Intent(REQUEST_NEW_LAP)
+                .putExtra(BANALService.IS_PAUSE, true)
                 .setPackage(getPackageName()));
 
         cTrackingMode = TrackingMode.PAUSED;
@@ -1001,6 +1002,7 @@ public class TrainingApplication extends Application {
         }
 
         sendBroadcast(new Intent(REQUEST_NEW_LAP)
+                .putExtra(BANALService.IS_PAUSE, true)
                 .setPackage(getPackageName()));
 
         cTrackingMode = TrackingMode.TRACKING;
