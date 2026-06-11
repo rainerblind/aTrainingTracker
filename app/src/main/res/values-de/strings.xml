@@ -1007,6 +1007,8 @@
     <string name="route_sport_type">Sportart</string>
     <string name="route_description">Beschreibung</string>
     <string name="route_import">Import</string>
+    <string name="route_saved_success">Route erfolgreich gespeichert.</string>
+    <string name="route_saved_failed">Speichern der Route fehlgeschlagen.</string>
     <string name="route_source_workout">Einheit</string>
     <string name="sort">Sortierung</string>
 

@@ -55,6 +55,14 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
     private val workoutRepo = WorkoutRepository.getInstance(application)
     private val prefManager = MyPreferenceManager(application)
 
+    // Status for saving a route to provide feedback to the UI
+    private val _saveRouteStatus = MutableStateFlow<Boolean?>(null)
+    val saveRouteStatus = _saveRouteStatus.asStateFlow()
+
+    fun resetSaveRouteStatus() {
+        _saveRouteStatus.value = null
+    }
+
     private val _sortOrder = MutableStateFlow(WorkoutSortOrder.DATE)
     val sortOrder = _sortOrder.asStateFlow()
 
@@ -207,7 +215,12 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
 
     fun saveAsRoute(workout: WorkoutData) {
         viewModelScope.launch {
-            workoutRepo.saveAsRoute(workout)
+            try {
+                val result = workoutRepo.saveAsRoute(workout)
+                _saveRouteStatus.value = result != null
+            } catch (e: Exception) {
+                _saveRouteStatus.value = false
+            }
         }
     }
 

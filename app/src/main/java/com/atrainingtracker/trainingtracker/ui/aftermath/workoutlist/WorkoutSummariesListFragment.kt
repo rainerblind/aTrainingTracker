@@ -37,6 +37,11 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,6 +52,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
@@ -129,95 +135,125 @@ class WorkoutSummariesListFragment : Fragment() {
 
                     val scrollState = rememberLazyListState()
 
+                    // --- SNACKBAR FEEDBACK ---
+                    val snackbarHostState = remember { SnackbarHostState() }
+                    val saveRouteStatus by viewModel.saveRouteStatus.collectAsStateWithLifecycle()
+                    val successMsg = stringResource(R.string.route_saved_success)
+                    val errorMsg = stringResource(R.string.route_saved_failed)
+
+                    LaunchedEffect(saveRouteStatus) {
+                        saveRouteStatus?.let { success ->
+                            val message = if (success) successMsg else errorMsg
+                            snackbarHostState.showSnackbar(message)
+                            viewModel.resetSaveRouteStatus()
+                        }
+                    }
+
                     val selectedWorkoutForDetailsData = selectedWorkoutForDetails?.let { id ->
                         workouts.find { it.id == id }
                     }
 
-                    if (selectedWorkoutForDetailsData != null) {
-                        // 3. Render the Detail Map Screen
-                        TrackOnMapScreen(
-                            workoutData = selectedWorkoutForDetailsData,
-                            mapState = trackOnMapViewModel.aftermathState.collectAsStateWithLifecycle().value,
-                            modifier = Modifier
-                        )
-
-                        // 4. Handle System Back Button
-                        BackHandler {
-                            selectedWorkoutForDetails = null
-                        }
-                    } else if (selectedWorkoutIdForEdit != null) {
-                        val editViewModel: EditWorkoutViewModel = viewModel(
-                            factory = EditWorkoutViewModelFactory(
-                                requireActivity().application,
-                                selectedWorkoutIdForEdit!!
-                            )
-                        )
-
-                        ATrainingTrackerTheme {
-                            EditWorkoutScreen(
-                                viewModel = editViewModel,
-                                onBack = { selectedWorkoutIdForEdit = null }
-                            )
-                        }
-
-                        // 4. Handle System Back Button
-                        BackHandler {
-                            selectedWorkoutIdForEdit = null
-                        }
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .nestedScroll(connection)
-                        ) {
-                            // THE LIST (Content)
-                            WorkoutList(
-                                scrollState = scrollState,
-                                workouts = workouts,
-                                isPlayServiceAvailable = isPlayAvailable,
-                                onExportWorkout = { id, fileFormat ->
-                                    viewModel.onExportWorkoutTo(id, fileFormat)
-                                },
-                                onSaveAsRoute = { workoutData ->
-                                    viewModel.saveAsRoute(workoutData)
-                                },
-                                onDeleteRequest = { id -> viewModel.deleteWorkout(id) },
-                                onEditWorkout = { id ->
-                                    selectedWorkoutIdForEdit = id
-                                },
-                                onMapClick = { workoutData ->
-                                    selectedWorkoutForDetails = workoutData.id
-                                    trackOnMapViewModel.loadAftermathData(workoutData)
-                                },
-                                isCompactView = viewModel.isCompactView.collectAsStateWithLifecycle().value,
-                                appBarOffsetPx = connection.appBarOffset,
-                                headerHeightPx = headerHeightPx.toFloat()
-                            )
-
-                            // THE HEADER (Titles)
-                            Surface(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .offset { IntOffset(0, connection.appBarOffset) },
-                                color = MaterialTheme.colorScheme.primaryContainer,
-                                tonalElevation = 3.dp
-                            ) {
-                                Column(
+                    Scaffold(
+                        snackbarHost = {
+                            SnackbarHost(snackbarHostState) { data ->
+                                Snackbar(
+                                    snackbarData = data,
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    actionColor = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        },
+                        containerColor = MaterialTheme.colorScheme.background
+                    ) { paddingValues ->
+                        Box(modifier = Modifier.padding(paddingValues)) {
+                            if (selectedWorkoutForDetailsData != null) {
+                                // 3. Render the Detail Map Screen
+                                TrackOnMapScreen(
+                                    workoutData = selectedWorkoutForDetailsData,
+                                    mapState = trackOnMapViewModel.aftermathState.collectAsStateWithLifecycle().value,
                                     modifier = Modifier
-                                        .fillMaxWidth()
-                                        .statusBarsPadding()
-                                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                                )
+
+                                // 4. Handle System Back Button
+                                BackHandler {
+                                    selectedWorkoutForDetails = null
+                                }
+                            } else if (selectedWorkoutIdForEdit != null) {
+                                val editViewModel: EditWorkoutViewModel = viewModel(
+                                    factory = EditWorkoutViewModelFactory(
+                                        requireActivity().application,
+                                        selectedWorkoutIdForEdit!!
+                                    )
+                                )
+
+                                ATrainingTrackerTheme {
+                                    EditWorkoutScreen(
+                                        viewModel = editViewModel,
+                                        onBack = { selectedWorkoutIdForEdit = null }
+                                    )
+                                }
+
+                                // 4. Handle System Back Button
+                                BackHandler {
+                                    selectedWorkoutIdForEdit = null
+                                }
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .nestedScroll(connection)
                                 ) {
-                                    Text(
-                                        text = primaryTitle ?: "",
-                                        style = MaterialTheme.typography.titleLarge,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    // THE LIST (Content)
+                                    WorkoutList(
+                                        scrollState = scrollState,
+                                        workouts = workouts,
+                                        isPlayServiceAvailable = isPlayAvailable,
+                                        onExportWorkout = { id, fileFormat ->
+                                            viewModel.onExportWorkoutTo(id, fileFormat)
+                                        },
+                                        onSaveAsRoute = { workoutData ->
+                                            viewModel.saveAsRoute(workoutData)
+                                        },
+                                        onDeleteRequest = { id -> viewModel.deleteWorkout(id) },
+                                        onEditWorkout = { id ->
+                                            selectedWorkoutIdForEdit = id
+                                        },
+                                        onMapClick = { workoutData ->
+                                            selectedWorkoutForDetails = workoutData.id
+                                            trackOnMapViewModel.loadAftermathData(workoutData)
+                                        },
+                                        isCompactView = viewModel.isCompactView.collectAsStateWithLifecycle().value,
+                                        appBarOffsetPx = connection.appBarOffset,
+                                        headerHeightPx = headerHeightPx.toFloat()
                                     )
-                                    Text(
-                                        text = secondaryTitle ?: "",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
+
+                                    // THE HEADER (Titles)
+                                    Surface(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .offset { IntOffset(0, connection.appBarOffset) },
+                                        color = MaterialTheme.colorScheme.primaryContainer,
+                                        tonalElevation = 3.dp
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .statusBarsPadding()
+                                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                                        ) {
+                                            Text(
+                                                text = primaryTitle ?: "",
+                                                style = MaterialTheme.typography.titleLarge,
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                                            )
+                                            Text(
+                                                text = secondaryTitle ?: "",
+                                                style = MaterialTheme.typography.titleMedium,
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }

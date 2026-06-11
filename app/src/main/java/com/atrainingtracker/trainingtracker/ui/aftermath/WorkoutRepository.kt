@@ -581,10 +581,11 @@ class WorkoutRepository private constructor(private val application: Application
 
     /**
      * Saves a workout's path as a new Route in the system.
+     * @return The ID of the newly created route, or null if it failed.
      */
-    suspend fun saveAsRoute(workout: WorkoutData) = withContext(Dispatchers.IO) {
+    suspend fun saveAsRoute(workout: WorkoutData): Long? = withContext(Dispatchers.IO) {
         val points = getWorkoutTrackPoints(workout.id, TrackType.BEST)
-        if (points.isEmpty()) return@withContext
+        if (points.isEmpty()) return@withContext null
 
         val routeSummary = com.atrainingtracker.trainingtracker.database.RouteSummary(
             id = 0, // Auto-increment
