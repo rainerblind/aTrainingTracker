@@ -47,6 +47,7 @@
     <string name="edit_location">edit location</string>
     <string name="Edit_Location">Edit Location</string>
     <string name="edit_workout">edit workout</string>
+    <string name="save_as_route">save as route</string>
     <string name="Edit_Location_Message">Edit the name and altitude of this location</string>
     <string name="edit_wheel_circumference">edit wheel circumference</string>
     <string name="edit_calibration_factor">edit calibration factor</string>
@@ -1113,6 +1114,9 @@
     <string name="route_sport_type">Sport Type</string>
     <string name="route_description">Description</string>
     <string name="route_import">Import</string>
+    <string name="route_saved_success">Route saved successfully.</string>
+    <string name="route_saved_failed">Failed to save route.</string>
+    <string name="route_source_workout">Workout</string>
     <string name="sort">Sort</string>
 
     <!-- workout periods -->

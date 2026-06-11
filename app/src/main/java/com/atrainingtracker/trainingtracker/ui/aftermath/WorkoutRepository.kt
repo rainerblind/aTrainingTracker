@@ -50,6 +50,7 @@ import com.atrainingtracker.trainingtracker.exporter.ExportManager
 import com.atrainingtracker.trainingtracker.exporter.ExportStatusChangedBroadcaster
 import com.atrainingtracker.trainingtracker.exporter.ExportType
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
+import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.tracker.TrackerService
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusGroupData
@@ -576,5 +577,29 @@ class WorkoutRepository private constructor(private val application: Application
                 _deletionProgress.postValue(DeletionProgress.Idle)
             }
         }
+    }
+
+    /**
+     * Saves a workout's path as a new Route in the system.
+     * @return The ID of the newly created route, or null if it failed.
+     */
+    suspend fun saveAsRoute(workout: WorkoutData): Long? = withContext(Dispatchers.IO) {
+        val points = getWorkoutTrackPoints(workout.id, TrackType.BEST)
+        if (points.isEmpty()) return@withContext null
+
+        val routeSummary = com.atrainingtracker.trainingtracker.database.RouteSummary(
+            id = 0, // Auto-increment
+            externalId = workout.fileBaseName ?: "",
+            name = workout.workoutName,
+            description = workout.description ?: "",
+            isSelected = false,
+            distance = workout.totalDistance,
+            elevationGain = workout.ascentMeters.toDouble(),
+            bSportType = workout.bSportType,
+            source = com.atrainingtracker.trainingtracker.database.RouteSource.WORKOUT
+        )
+
+        val routesRepo = RoutesRepository.getInstance(application)
+        routesRepo.insertRoute(routeSummary, points)
     }
 }

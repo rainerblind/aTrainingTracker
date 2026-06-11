@@ -24,22 +24,32 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.res.stringResource
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents
 import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreen
@@ -86,6 +96,20 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                     val sortOrder by viewModel.sortOrder.collectAsState()
                     val isCompactView by viewModel.isCompactView.collectAsState()
 
+                    // --- SNACKBAR FEEDBACK ---
+                    val snackbarHostState = remember { SnackbarHostState() }
+                    val saveRouteStatus by viewModel.saveRouteStatus.collectAsStateWithLifecycle()
+                    val successMsg = stringResource(R.string.route_saved_success)
+                    val errorMsg = stringResource(R.string.route_saved_failed)
+
+                    LaunchedEffect(saveRouteStatus) {
+                        saveRouteStatus?.let { success ->
+                            val message = if (success) successMsg else errorMsg
+                            snackbarHostState.showSnackbar(message)
+                            viewModel.resetSaveRouteStatus()
+                        }
+                    }
+
                     var selectedWorkoutIdForDetails by rememberSaveable { mutableStateOf<Long?>(null) }
                     var selectedWorkoutIdForEdit by rememberSaveable { mutableStateOf<Long?>(null) }
 
@@ -102,68 +126,87 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                         workouts.find { it.id == id }
                     }
 
-                    if (selectedWorkoutForDetails != null) {
-                        TrackOnMapScreen(
-                            workoutData = selectedWorkoutForDetails,
-                            mapState = trackOnMapViewModel.aftermathState.collectAsStateWithLifecycle().value,
-                            modifier = Modifier
-                        )
-
-                        // 4. Handle System Back Button
-                        BackHandler {
-                            selectedWorkoutIdForDetails = null
-                        }
-                    }
-                    else if (selectedWorkoutIdForEdit != null) {
-                        val editViewModel: EditWorkoutViewModel = viewModel(
-                            key = "edit_workout_$selectedWorkoutIdForEdit",
-                            factory = EditWorkoutViewModelFactory(requireActivity().application, selectedWorkoutIdForEdit!!)
-                        )
-
-                        EditWorkoutScreen(
-                            viewModel = editViewModel,
-                            onBack = {
-                                selectedWorkoutIdForEdit = null
-                                WorkoutNavigationEvents.reset()
+                    Scaffold(
+                        snackbarHost = {
+                            SnackbarHost(snackbarHostState) { data ->
+                                Snackbar(
+                                    snackbarData = data,
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    actionColor = MaterialTheme.colorScheme.primary
+                                )
                             }
-                        )
+                        },
+                    ) { paddingValues ->
+                        Box(modifier = Modifier.padding(paddingValues)) {
+                            if (selectedWorkoutForDetails != null) {
+                                TrackOnMapScreen(
+                                    workoutData = selectedWorkoutForDetails,
+                                    mapState = trackOnMapViewModel.aftermathState.collectAsStateWithLifecycle().value,
+                                    modifier = Modifier
+                                )
 
-                        // 4. Handle System Back Button
-                        BackHandler {
-                            selectedWorkoutIdForEdit = null
-                            WorkoutNavigationEvents.reset()
+                                // 4. Handle System Back Button
+                                BackHandler {
+                                    selectedWorkoutIdForDetails = null
+                                }
+                            } else if (selectedWorkoutIdForEdit != null) {
+                                val editViewModel: EditWorkoutViewModel = viewModel(
+                                    key = "edit_workout_$selectedWorkoutIdForEdit",
+                                    factory = EditWorkoutViewModelFactory(
+                                        requireActivity().application,
+                                        selectedWorkoutIdForEdit!!
+                                    )
+                                )
+
+                                EditWorkoutScreen(
+                                    viewModel = editViewModel,
+                                    onBack = {
+                                        selectedWorkoutIdForEdit = null
+                                        WorkoutNavigationEvents.reset()
+                                    }
+                                )
+
+                                // 4. Handle System Back Button
+                                BackHandler {
+                                    selectedWorkoutIdForEdit = null
+                                    WorkoutNavigationEvents.reset()
+                                }
+
+                            } else {
+                                // 3. Render the Tabbed UI
+                                WorkoutTabsScreen(
+                                    workouts = workouts,
+                                    pagerState = pagerState,
+                                    allListState = allListState,
+                                    bikeListState = bikeListState,
+                                    runListState = runListState,
+                                    otherListState = otherListState,
+                                    onExportWorkoutTo = { workoutId, fileFormat ->
+                                        viewModel.onExportWorkoutTo(workoutId, fileFormat)
+                                    },
+                                    onSaveAsRoute = { workoutData ->
+                                        viewModel.saveAsRoute(workoutData)
+                                    },
+                                    onDeleteConfirmed = { workoutId ->
+                                        viewModel.deleteWorkout(workoutId)
+                                    },
+                                    onEditWorkout = { workoutId ->
+                                        selectedWorkoutIdForEdit = workoutId
+                                    },
+                                    onMapClick = { workoutData ->
+                                        selectedWorkoutIdForDetails = workoutData.id
+                                        trackOnMapViewModel.loadAftermathData(workoutData)
+                                    },
+                                    isPlayServiceAvailable = isPlayAvailable,
+                                    sortOrder = sortOrder,
+                                    onSortOrderChange = { viewModel.setSortOrder(it) },
+                                    scrollToTop = viewModel.shouldScrollToTop(sortOrder),
+                                    isCompactView = isCompactView,
+                                    onToggleCompactView = { viewModel.toggleCompactView() },
+                                )
+                            }
                         }
-
-                    }
-                    else {
-                        // 3. Render the Tabbed UI
-                        WorkoutTabsScreen(
-                            workouts = workouts,
-                            pagerState = pagerState,
-                            allListState = allListState,
-                            bikeListState = bikeListState,
-                            runListState = runListState,
-                            otherListState = otherListState,
-                            onExportWorkoutTo = { workoutId, fileFormat ->
-                                viewModel.onExportWorkoutTo(workoutId, fileFormat)
-                            },
-                            onDeleteConfirmed = { workoutId ->
-                                viewModel.deleteWorkout(workoutId)
-                            },
-                            onEditWorkout = { workoutId ->
-                                selectedWorkoutIdForEdit = workoutId
-                            },
-                            onMapClick = { workoutData ->
-                                selectedWorkoutIdForDetails = workoutData.id
-                                trackOnMapViewModel.loadAftermathData(workoutData)
-                            },
-                            isPlayServiceAvailable = isPlayAvailable,
-                            sortOrder = sortOrder,
-                            onSortOrderChange = { viewModel.setSortOrder(it) },
-                            scrollToTop = viewModel.shouldScrollToTop(sortOrder),
-                            isCompactView = isCompactView,
-                            onToggleCompactView = { viewModel.toggleCompactView() },
-                        )
                     }
                 }
             }

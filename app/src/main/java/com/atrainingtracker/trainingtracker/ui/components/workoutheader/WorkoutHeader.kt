@@ -53,6 +53,7 @@ fun WorkoutHeader(
     data: WorkoutHeaderData,
     onClicked: () -> Unit,
     onExport: (FileFormat) -> Unit,
+    onSaveAsRoute: () -> Unit,
     onDeleteRequest: () -> Unit,
     modifier: Modifier = Modifier,
     backgroundColor: Color = MaterialTheme.colorScheme.surfaceContainerHighest,
@@ -195,6 +196,17 @@ fun WorkoutHeader(
                             )
                         }
 
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.save_as_route)) },
+                            onClick = {
+                                showMenu = false
+                                onSaveAsRoute()
+                            },
+                            leadingIcon = { Icon(painterResource(R.drawable.ic_route), contentDescription = null) }
+                        )
+
                         // 3. Conditional Strava Logic
                         // Check if Strava is globally enabled AND if this workout specifically allows it
                         val stravaGloballyEnabled = TrainingApplication.uploadToCommunity(FileFormat.STRAVA)
@@ -310,6 +322,7 @@ fun PreviewWorkoutHeader(
                 data = data,
                 onClicked = {},
                 onExport = {},
+                onSaveAsRoute = {},
                 onDeleteRequest = {}
             )
         }
@@ -336,6 +349,7 @@ fun PreviewCommuteHeader() {
             ),
             onClicked = {},
             onExport = {},
+            onSaveAsRoute = {},
             onDeleteRequest = {}
         )
     }

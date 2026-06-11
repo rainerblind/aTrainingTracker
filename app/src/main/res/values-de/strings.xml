@@ -47,6 +47,7 @@
     <string name="edit_location">Standort bearbeiten</string>
     <string name="Edit_Location">Standort bearbeiten</string>
     <string name="edit_workout">Trainingseinheit überarbeiten</string>
+    <string name="save_as_route">als Route speichern</string>
     <string name="Edit_Location_Message">Bearbeite den Namen und die Höhe dieses Standortes</string>
     <string name="edit_wheel_circumference">Radumfang eingeben</string>
     <string name="edit_calibration_factor">Kalibrierungsfaktor eingeben</string>
@@ -1006,6 +1007,9 @@
     <string name="route_sport_type">Sportart</string>
     <string name="route_description">Beschreibung</string>
     <string name="route_import">Import</string>
+    <string name="route_saved_success">Route erfolgreich gespeichert.</string>
+    <string name="route_saved_failed">Speichern der Route fehlgeschlagen.</string>
+    <string name="route_source_workout">Einheit</string>
     <string name="sort">Sortierung</string>
 
     <!-- workout periods -->
