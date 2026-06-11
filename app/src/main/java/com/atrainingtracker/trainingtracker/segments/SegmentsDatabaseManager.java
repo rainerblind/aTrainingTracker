@@ -31,6 +31,7 @@ import androidx.annotation.NonNull;
 
 import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
+import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
@@ -150,6 +151,7 @@ public class SegmentsDatabaseManager {
             // 3. Format strings
             DistanceFormatter df = new DistanceFormatter();
             TimeFormatter tf = new TimeFormatter();
+            AltitudeFormatter af = new AltitudeFormatter();
 
             summary = new SegmentSummary(
                     segmentId,
@@ -166,9 +168,9 @@ public class SegmentsDatabaseManager {
                     String.format(Locale.getDefault(), "Ø %.1f%%", avgGrade),
                     String.format(Locale.getDefault(), "%.1f%% Max", maxGrade),
                     elevationGain,
-                    String.format(Locale.getDefault(), "%d m", Math.round(elevationGain)),
-                    String.format(Locale.getDefault(), "%d m", Math.round(elevLow)),
-                    String.format(Locale.getDefault(), "%d m", Math.round(elevHigh)),
+                    af.format_with_units(elevationGain),
+                    af.format_with_units(elevLow),
+                    af.format_with_units(elevHigh),
                     polyline
             );
         }
@@ -185,6 +187,7 @@ public class SegmentsDatabaseManager {
         SportTypeDatabaseManager sportTypeMgr = SportTypeDatabaseManager.getInstance(mContext);
         DistanceFormatter df = new DistanceFormatter();
         TimeFormatter tf = new TimeFormatter();
+        AltitudeFormatter af = new AltitudeFormatter();
 
         int strava_id_index = cursor.getColumnIndexOrThrow(Segments.STRAVA_SEGMENT_ID);
         int activity_type_index = cursor.getColumnIndexOrThrow(Segments.ACTIVITY_TYPE);
@@ -236,9 +239,9 @@ public class SegmentsDatabaseManager {
                             String.format(Locale.getDefault(), "Ø %.1f%%", avgGrade),
                             String.format(Locale.getDefault(), "%.1f%% Max", maxGrade),
                             elevation_gain,
-                            String.format(Locale.getDefault(), "%d m", Math.round(elevation_gain)),
-                            String.format(Locale.getDefault(), "%d m", Math.round(elevLow)),
-                            String.format(Locale.getDefault(), "%d m", Math.round(elevHigh)),
+                            af.format_with_units(elevation_gain),
+                            af.format_with_units(elevLow),
+                            af.format_with_units(elevHigh),
                             polyline
                     )
             );
