@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.pager.HorizontalPager
@@ -35,6 +36,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -128,7 +130,6 @@ fun SegmentsTabsScreen(
                     scrollState = listState,
                     isStravaConnected = isStravaConnected,
                     onConnectToStrava = onConnectToStrava,
-                    isRefreshing = isRefreshing(currentSport),
                     onSegmentClick = onSegmentClick,
                     appBarOffsetPx = connection.appBarOffset,
                     headerHeightPx = appBarMaxHeightPx.toFloat()
@@ -156,19 +157,26 @@ fun SegmentsTabsScreen(
                         )
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            // --- REFRESH BUTTON ---
+                            // --- REFRESH BUTTON / PROGRESS INDICATOR ---
                             if (isStravaConnected) {
-                                IconButton(
-                                    onClick = { onRefresh(activeSport) },
-                                    enabled = !activeRefreshing // Prevent multiple clicks during update
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Refresh,
-                                        contentDescription = stringResource(R.string.starred_segments__refresh),
-                                        tint = if (activeRefreshing)
-                                            MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.38f)
-                                        else MaterialTheme.colorScheme.onPrimaryContainer
+                                if (activeRefreshing) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier
+                                            .padding(horizontal = 12.dp)
+                                            .size(24.dp),
+                                        strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
                                     )
+                                } else {
+                                    IconButton(
+                                        onClick = { onRefresh(activeSport) }
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Refresh,
+                                            contentDescription = stringResource(R.string.starred_segments__refresh),
+                                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                    }
                                 }
                             }
 
