@@ -430,7 +430,7 @@ fun ElevationProfile(
                 val combinedLabel = "$distLabel | $altLabel"
 
                 // Calculate text width to center it or keep it on screen
-                val labelWidth = textPaint.measureText(combinedLabel)
+                val labelWidth = highlightPaint.measureText(combinedLabel)
                 var labelX = markerX.toFloat() - (labelWidth / 2)
 
                 // Keep label within chart bounds
@@ -440,10 +440,7 @@ fun ElevationProfile(
                     combinedLabel,
                     labelX,
                     -15f, // Draw slightly above the top of the chart
-                    textPaint.apply {
-                        // Optional: Make the active label bold or a different color
-                        isFakeBoldText = true
-                    }
+                    highlightPaint
                 )
             }
 
