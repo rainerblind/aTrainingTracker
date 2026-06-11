@@ -96,6 +96,7 @@ fun TrackOnMapScreen(
                     menuEnabled = false,
                     onClicked = { },
                     onExport = { },
+                    onSaveAsRoute = { },
                     onDeleteRequest = { }
                 )
             }

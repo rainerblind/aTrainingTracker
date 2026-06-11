@@ -178,6 +178,9 @@ class WorkoutSummariesListFragment : Fragment() {
                                 onExportWorkout = { id, fileFormat ->
                                     viewModel.onExportWorkoutTo(id, fileFormat)
                                 },
+                                onSaveAsRoute = { workoutData ->
+                                    viewModel.saveAsRoute(workoutData)
+                                },
                                 onDeleteRequest = { id -> viewModel.deleteWorkout(id) },
                                 onEditWorkout = { id ->
                                     selectedWorkoutIdForEdit = id

@@ -205,6 +205,12 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
         }
     }
 
+    fun saveAsRoute(workout: WorkoutData) {
+        viewModelScope.launch {
+            workoutRepo.saveAsRoute(workout)
+        }
+    }
+
     companion object {
         const val DEBUG = false
         const val TAG = "WorkoutSummariesViewModel"

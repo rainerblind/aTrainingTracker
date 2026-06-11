@@ -147,6 +147,9 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                             onExportWorkoutTo = { workoutId, fileFormat ->
                                 viewModel.onExportWorkoutTo(workoutId, fileFormat)
                             },
+                            onSaveAsRoute = { workoutData ->
+                                viewModel.saveAsRoute(workoutData)
+                            },
                             onDeleteConfirmed = { workoutId ->
                                 viewModel.deleteWorkout(workoutId)
                             },

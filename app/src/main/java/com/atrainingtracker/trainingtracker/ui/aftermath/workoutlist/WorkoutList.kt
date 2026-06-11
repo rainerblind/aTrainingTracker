@@ -46,6 +46,7 @@ fun WorkoutList(
     workouts: List<WorkoutData>,
     isPlayServiceAvailable: Boolean,
     onExportWorkout: (Long, FileFormat) -> Unit,
+    onSaveAsRoute: (WorkoutData) -> Unit,
     onDeleteRequest: (Long) -> Unit,
     onEditWorkout: (Long) -> Unit,
     onMapClick: (WorkoutData) -> Unit,
@@ -94,6 +95,7 @@ fun WorkoutList(
                         workoutData = workoutData,
                         isPlayServiceAvailable = isPlayServiceAvailable,
                         onExport = { fileFormat -> onExportWorkout(workoutData.id, fileFormat) },
+                        onSaveAsRoute = { onSaveAsRoute(workoutData) },
                         onDeleteRequest = { onDeleteRequest(workoutData.id) },
                         onEditWorkout = { onEditWorkout(workoutData.id) },
                         onMapClick = { onMapClick(workoutData) }
