@@ -28,6 +28,7 @@ import com.atrainingtracker.trainingtracker.database.RouteWithPath
 import com.atrainingtracker.trainingtracker.database.RoutesDatabaseManager
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaRoute
+import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaStream
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
@@ -40,6 +41,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.double
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.OkHttpClient
 import okhttp3.Request
 
@@ -185,25 +189,29 @@ class RoutesRepository private constructor(context: Context) {
                 else -> BSportType.UNKNOWN
             }
 
-            val polyline = stravaRoute.map.polyline ?: stravaRoute.map.summaryPolyline ?: continue
-            val decodedPoints = PolyUtil.decode(polyline)
-            
-            // Map to PathPoints
-            // Strava routes don't typically include altitude in the polyline itself, 
-            // but we can at least store the lat/lng.
-            var accumulatedDistance = 0.0
-            val pathPoints = decodedPoints.mapIndexed { index, latLng ->
-                if (index > 0) {
-                    val results = FloatArray(1)
-                    android.location.Location.distanceBetween(
-                        decodedPoints[index - 1].latitude, decodedPoints[index - 1].longitude,
-                        latLng.latitude, latLng.longitude,
-                        results
-                    )
-                    accumulatedDistance += results[0]
+            // TRY TO GET DETAILED STREAM FIRST
+            val pathPoints = fetchRouteStreams(stravaRoute.id) ?: run {
+                // Fallback to polyline if stream fails
+                val polyline = stravaRoute.map.polyline ?: stravaRoute.map.summaryPolyline
+                if (polyline == null) return@run emptyList<PathPoint>()
+                
+                val decodedPoints = PolyUtil.decode(polyline)
+                var accumulatedDistance = 0.0
+                decodedPoints.mapIndexed { index, latLng ->
+                    if (index > 0) {
+                        val results = FloatArray(1)
+                        android.location.Location.distanceBetween(
+                            decodedPoints[index - 1].latitude, decodedPoints[index - 1].longitude,
+                            latLng.latitude, latLng.longitude,
+                            results
+                        )
+                        accumulatedDistance += results[0]
+                    }
+                    PathPoint(accumulatedDistance, latLng, 0.0)
                 }
-                PathPoint(accumulatedDistance, latLng, 0.0)
             }
+
+            if (pathPoints.isEmpty()) continue
 
             val summary = RouteSummary(
                 id = 0,
@@ -223,6 +231,62 @@ class RoutesRepository private constructor(context: Context) {
 
         // 5. Refresh the list
         refreshRoutes()
+    }
+
+    /**
+     * Fetches the detailed stream for a Strava route (latlng, altitude, distance).
+     */
+    private suspend fun fetchRouteStreams(routeId: Long): List<PathPoint>? = withContext(Dispatchers.IO) {
+        val accessToken = StravaHelper.getRefreshedAccessToken() ?: return@withContext null
+        val url = "https://www.strava.com/api/v3/routes/$routeId/streams?keys=latlng,distance,altitude"
+
+        val client = OkHttpClient()
+        val request = Request.Builder()
+            .url(url)
+            .addHeader("Authorization", "Bearer $accessToken")
+            .build()
+
+        val responseBody = try {
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    Log.e(TAG, "Error fetching route streams: ${response.code}")
+                    return@withContext null
+                }
+                response.body?.string()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception fetching route streams", e)
+            null
+        } ?: return@withContext null
+
+        val streams = try {
+            json.decodeFromString<List<StravaStream>>(responseBody)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error decoding route stream JSON", e)
+            return@withContext null
+        }
+
+        if (streams.isEmpty()) return@withContext null
+
+        val latLngStream = streams.find { it.type == "latlng" } ?: return@withContext null
+        val distanceStream = streams.find { it.type == "distance" }
+        val altitudeStream = streams.find { it.type == "altitude" }
+
+        val size = latLngStream.data.size
+        val pathPoints = mutableListOf<PathPoint>()
+
+        for (i in 0 until size) {
+            val coords = latLngStream.data[i].jsonArray
+            val lat = coords[0].jsonPrimitive.double
+            val lng = coords[1].jsonPrimitive.double
+            
+            val dist = distanceStream?.data?.getOrNull(i)?.jsonPrimitive?.double ?: 0.0
+            val alt = altitudeStream?.data?.getOrNull(i)?.jsonPrimitive?.double ?: 0.0
+            
+            pathPoints.add(PathPoint(dist, LatLng(lat, lng), alt))
+        }
+
+        return@withContext pathPoints
     }
 
 

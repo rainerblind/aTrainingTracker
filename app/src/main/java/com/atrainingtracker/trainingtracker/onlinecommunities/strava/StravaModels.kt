@@ -67,8 +67,5 @@ data class StravaSegment(
 @Serializable
 data class StravaStream(
     val type: String,
-    val data: List<JsonElement>,
-    @SerialName("series_type") val seriesType: String,
-    val resolution: String,
-    @SerialName("original_size") val originalSize: Int
+    val data: List<JsonElement>
 )
