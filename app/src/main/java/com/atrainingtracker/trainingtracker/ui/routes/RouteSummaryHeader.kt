@@ -35,6 +35,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter
+import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.trainingtracker.database.RouteSource
 import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
@@ -96,7 +98,7 @@ fun RouteSummaryHeader(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = String.format("%.2f km", summary.distance / 1000.0),
+                            text = DistanceFormatter().format_with_units(summary.distance),
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -112,7 +114,7 @@ fun RouteSummaryHeader(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "${summary.elevationGain.toInt()} m",
+                            text = AltitudeFormatter().format_with_units(summary.elevationGain),
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.SemiBold
                         )
