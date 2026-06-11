@@ -1116,6 +1116,8 @@
     <string name="route_import">Import</string>
     <string name="route_saved_success">Route saved successfully.</string>
     <string name="route_saved_failed">Failed to save route.</string>
+    <string name="strava_sync_success">Routes synced from Strava.</string>
+    <string name="strava_sync_failed">Failed to sync routes from Strava.</string>
     <string name="route_source_workout">Workout</string>
     <string name="sort">Sort</string>
 

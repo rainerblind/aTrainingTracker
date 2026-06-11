@@ -24,9 +24,17 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,9 +43,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.res.stringResource
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.activities.GpxImportActivity
 import com.atrainingtracker.trainingtracker.ui.map.MapState
 import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
@@ -77,6 +87,21 @@ class RoutesFragment : Fragment() {
                     val routes by viewModel.routes.collectAsStateWithLifecycle()
                     val sortOrder by viewModel.sortOrder.collectAsState()
                     val isLocationAvailable by viewModel.isLocationAvailable.collectAsStateWithLifecycle()
+                    val isSyncingStrava by viewModel.isSyncingStrava.collectAsStateWithLifecycle()
+                    val syncStravaStatus by viewModel.syncStravaStatus.collectAsStateWithLifecycle()
+
+                    // --- SNACKBAR FEEDBACK ---
+                    val snackbarHostState = remember { SnackbarHostState() }
+                    val successMsg = stringResource(R.string.strava_sync_success)
+                    val errorMsg = stringResource(R.string.strava_sync_failed)
+
+                    LaunchedEffect(syncStravaStatus) {
+                        syncStravaStatus?.let { success ->
+                            val message = if (success) successMsg else errorMsg
+                            snackbarHostState.showSnackbar(message)
+                            viewModel.resetSyncStravaStatus()
+                        }
+                    }
 
                     val pagerState = rememberPagerState(pageCount = { 4 })
                     val allSportsListState = rememberLazyListState()
@@ -89,84 +114,102 @@ class RoutesFragment : Fragment() {
                     var selectedRouteIdForEdit by rememberSaveable { mutableStateOf<Long?>(null) }
 
 
-                    if (selectedRouteIdForDetails != null) {
-                        // SHOW DETAIL
-                        // Deriving the specific route from the list we already have
-                        val selectedRoute = routes.find { it.summary.id == selectedRouteIdForDetails }
-
-                        if (selectedRoute != null) {
-
-                            // Create MapState on the fly
-                            val mapState = remember(selectedRoute) {
-                                MapState(
-                                    zoomFocus = MapZoomFocus.LOCAL_ROUTES,
-                                    routes = listOf( selectedRoute.toMapRoute() ),
-                                    bSportType = selectedRoute.summary.bSportType
+                    Scaffold(
+                        snackbarHost = {
+                            SnackbarHost(snackbarHostState) { data ->
+                                Snackbar(
+                                    snackbarData = data,
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    actionColor = MaterialTheme.colorScheme.primary
                                 )
                             }
+                        }
+                    ) { paddingValues ->
+                        Box(modifier = Modifier.padding(paddingValues)) {
+                            if (selectedRouteIdForDetails != null) {
+                                // SHOW DETAIL
+                                // Deriving the specific route from the list we already have
+                                val selectedRoute = routes.find { it.summary.id == selectedRouteIdForDetails }
 
-                            RouteOnMapScreen(
-                                routeSummary = selectedRoute.summary,
-                                mapState = mapState,
-                                modifier = Modifier.statusBarsPadding(),
-                                onToggleSelection = { isSelected ->
-                                    viewModel.toggleRouteSelection(selectedRoute.summary.id, isSelected)
+                                if (selectedRoute != null) {
+
+                                    // Create MapState on the fly
+                                    val mapState = remember(selectedRoute) {
+                                        MapState(
+                                            zoomFocus = MapZoomFocus.LOCAL_ROUTES,
+                                            routes = listOf(selectedRoute.toMapRoute()),
+                                            bSportType = selectedRoute.summary.bSportType
+                                        )
+                                    }
+
+                                    RouteOnMapScreen(
+                                        routeSummary = selectedRoute.summary,
+                                        mapState = mapState,
+                                        modifier = Modifier.statusBarsPadding(),
+                                        onToggleSelection = { isSelected ->
+                                            viewModel.toggleRouteSelection(
+                                                selectedRoute.summary.id,
+                                                isSelected
+                                            )
+                                        }
+                                    )
+
+                                    // Handle Back Press to return to list
+                                    BackHandler {
+                                        selectedRouteIdForDetails = null
+                                    }
                                 }
-                            )
+                            } else if (selectedRouteIdForEdit != null) {
+                                val routeToEdit = routes.find { it.summary.id == selectedRouteIdForEdit }
+                                if (routeToEdit != null) {
+                                    EditRouteScreen(
+                                        routeSummary = routeToEdit.summary,
+                                        onSave = {
+                                            viewModel.updateRoute(it)
+                                            selectedRouteIdForEdit = null
+                                        },
+                                        onCancel = {
+                                            selectedRouteIdForEdit = null
+                                        }
+                                    )
 
-                            // Handle Back Press to return to list
-                            BackHandler {
-                                selectedRouteIdForDetails = null
+                                    // Handle Back Press to return to list
+                                    BackHandler {
+                                        selectedRouteIdForEdit = null
+                                    }
+                                }
+                            } else {
+                                // SHOW LIST
+                                RouteTabbedScreen(
+                                    routesWithPath = routes,
+                                    pagerState = pagerState,
+                                    allSportsListState = allSportsListState,
+                                    bikeListState = bikeListState,
+                                    runListState = runListState,
+                                    otherListState = otherListState,
+                                    onMapClick = { id ->
+                                        selectedRouteIdForDetails = id
+                                    },
+                                    onHeaderClick = { id ->
+                                        selectedRouteIdForEdit = id
+                                    },
+                                    onToggleSelection = { id, isSelected ->
+                                        viewModel.toggleRouteSelection(id, isSelected)
+                                    },
+                                    onDeleteConfirmed = { id ->
+                                        viewModel.deleteRoute(id)
+                                    },
+                                    onImportClick = { gpxPickerLauncher.launch("*/*") },
+                                    onSyncStravaClick = { viewModel.syncStravaRoutes() },
+                                    isSyncing = isSyncingStrava,
+                                    sortOrder = sortOrder,
+                                    onSortOrderChange = { viewModel.setSortOrder(it) },
+                                    scrollToTop = viewModel.shouldScrollToTop(sortOrder),
+                                    isLocationAvailable = isLocationAvailable
+                                )
                             }
                         }
-                    }
-                    else if (selectedRouteIdForEdit != null) {
-                        val routeToEdit = routes.find { it.summary.id == selectedRouteIdForEdit }
-                        if (routeToEdit != null) {
-                            EditRouteScreen(
-                                routeSummary = routeToEdit.summary,
-                                onSave = {
-                                    viewModel.updateRoute(it)
-                                    selectedRouteIdForEdit = null
-                                },
-                                onCancel = {
-                                    selectedRouteIdForEdit = null
-                                }
-                            )
-
-                            // Handle Back Press to return to list
-                            BackHandler {
-                                selectedRouteIdForEdit = null
-                            }
-                        }
-                    }
-                    else {
-                        // SHOW LIST
-                        RouteTabbedScreen(
-                            routesWithPath = routes,
-                            pagerState = pagerState,
-                            allSportsListState = allSportsListState,
-                            bikeListState = bikeListState,
-                            runListState = runListState,
-                            otherListState = otherListState,
-                            onMapClick = { id ->
-                                selectedRouteIdForDetails = id
-                            },
-                            onHeaderClick = { id ->
-                                selectedRouteIdForEdit = id
-                            },
-                            onToggleSelection = { id, isSelected ->
-                                viewModel.toggleRouteSelection(id, isSelected)
-                            },
-                            onDeleteConfirmed = { id ->
-                                viewModel.deleteRoute(id)
-                            },
-                            onImportClick = { gpxPickerLauncher.launch("*/*") },
-                            sortOrder = sortOrder,
-                            onSortOrderChange = { viewModel.setSortOrder(it) },
-                            scrollToTop = viewModel.shouldScrollToTop(sortOrder),
-                            isLocationAvailable = isLocationAvailable
-                        )
                     }
                 }
             }

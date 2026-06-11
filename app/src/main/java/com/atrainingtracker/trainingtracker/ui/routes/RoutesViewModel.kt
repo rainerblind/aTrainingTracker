@@ -51,6 +51,16 @@ class RoutesViewModel(application: Application) : AndroidViewModel(application) 
     private val routesRepository = RoutesRepository.getInstance(application)
     private val banalServiceRepository = BANALServiceRepository.getInstance(application)
 
+    private val _isSyncingStrava = MutableStateFlow(false)
+    val isSyncingStrava = _isSyncingStrava.asStateFlow()
+
+    // Sync status: null = idle, true = success, false = failure
+    private val _syncStravaStatus = MutableStateFlow<Boolean?>(null)
+    val syncStravaStatus = _syncStravaStatus.asStateFlow()
+
+    fun resetSyncStravaStatus() {
+        _syncStravaStatus.value = null
+    }
 
     private val _sortOrder = MutableStateFlow(RouteSortOrder.DISTANCE_TO_USER)
     val sortOrder = _sortOrder.asStateFlow()
@@ -176,5 +186,19 @@ class RoutesViewModel(application: Application) : AndroidViewModel(application) 
 
     fun refresh() {
         routesRepository.refreshRoutes()
+    }
+
+    fun syncStravaRoutes() {
+        viewModelScope.launch {
+            _isSyncingStrava.value = true
+            try {
+                routesRepository.syncRoutesFromStrava()
+                _syncStravaStatus.value = true
+            } catch (e: Exception) {
+                _syncStravaStatus.value = false
+            } finally {
+                _isSyncingStrava.value = false
+            }
+        }
     }
 }

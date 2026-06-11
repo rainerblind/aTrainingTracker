@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.pager.HorizontalPager
@@ -34,6 +35,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -54,8 +56,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -79,6 +83,8 @@ fun RouteTabbedScreen(
     onToggleSelection: (Long, Boolean) -> Unit,
     onDeleteConfirmed: (Long) -> Unit,
     onImportClick: () -> Unit,
+    onSyncStravaClick: () -> Unit,
+    isSyncing: Boolean,
     sortOrder: RouteSortOrder,
     onSortOrderChange: (RouteSortOrder) -> Unit,
     scrollToTop: Boolean,
@@ -201,6 +207,26 @@ fun RouteTabbedScreen(
                                             }
                                         } else null
                                     )
+                                }
+
+                                // --- SYNC STRAVA BUTTON ---
+                                if (isSyncing) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier
+                                            .padding(end = 8.dp)
+                                            .size(24.dp),
+                                        strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                } else {
+                                    IconButton(onClick = onSyncStravaClick) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.logo_square_strava),
+                                            contentDescription = "Sync with Strava",
+                                            modifier = Modifier.size(24.dp),
+                                            tint = Color.Unspecified
+                                        )
+                                    }
                                 }
 
                                 // --- IMPORT BUTTON ---

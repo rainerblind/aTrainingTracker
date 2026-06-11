@@ -1009,6 +1009,8 @@
     <string name="route_import">Import</string>
     <string name="route_saved_success">Route erfolgreich gespeichert.</string>
     <string name="route_saved_failed">Speichern der Route fehlgeschlagen.</string>
+    <string name="strava_sync_success">Routen von Strava synchronisiert.</string>
+    <string name="strava_sync_failed">Synchronisierung der Routen von Strava fehlgeschlagen.</string>
     <string name="route_source_workout">Einheit</string>
     <string name="sort">Sortierung</string>
 

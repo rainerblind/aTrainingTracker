@@ -19,10 +19,18 @@
 package com.atrainingtracker.trainingtracker.repositories
 
 import android.content.Context
+import android.util.Log
+import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.database.RouteSource
 import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
 import com.atrainingtracker.trainingtracker.database.RoutesDatabaseManager
+import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
+import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaRoute
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.PolyUtil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -31,6 +39,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import okhttp3.OkHttpClient
+import okhttp3.Request
 
 /**
  * Repository responsible for managing Route data.
@@ -106,9 +117,119 @@ class RoutesRepository private constructor(context: Context) {
         refreshRoutes()
     }
 
+    private val json = Json {
+        ignoreUnknownKeys = true
+        coerceInputValues = true
+    }
+
+    /**
+     * Synchronizes starred routes from Strava.
+     */
+    suspend fun syncRoutesFromStrava() = withContext(Dispatchers.IO) {
+        val accessToken = StravaHelper.getRefreshedAccessToken()
+        if (accessToken.isNullOrEmpty()) {
+            Log.e(TAG, "Strava Access Token is null or empty")
+            return@withContext
+        }
+
+        val athleteId = TrainingApplication.getStravaAthleteId()
+        if (athleteId == 0) {
+            Log.e(TAG, "Strava Athlete ID is not set")
+            return@withContext
+        }
+
+        // 1. Fetch all routes from Strava
+        // Strava API: GET /athletes/{id}/routes
+        val url = "https://www.strava.com/api/v3/athletes/$athleteId/routes?per_page=100"
+
+        val client = OkHttpClient()
+        val request = Request.Builder()
+            .url(url)
+            .addHeader("Authorization", "Bearer $accessToken")
+            .build()
+
+        val routesResponse = try {
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    Log.e(TAG, "Failed to fetch Strava routes: ${response.code}")
+                    return@withContext
+                }
+                response.body?.string() ?: "[]"
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception fetching Strava routes", e)
+            return@withContext
+        }
+
+        val stravaRoutes = try {
+            json.decodeFromString<List<StravaRoute>>(routesResponse)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error decoding Strava routes JSON", e)
+            return@withContext
+        }
+
+        // 2. Identify which routes are already in the DB
+        val existingRoutes = routesDb.getAllRoutes()
+        val existingExtIds = existingRoutes.map { it.summary.externalId }.toSet()
+
+        for (stravaRoute in stravaRoutes) {
+            if (existingExtIds.contains(stravaRoute.idStr)) {
+                // TODO: Update existing route if needed? For now we skip.
+                continue
+            }
+
+            // 3. Transform StravaRoute to RouteSummary & Path
+            val sportType = when (stravaRoute.type) {
+                1 -> BSportType.BIKE
+                2 -> BSportType.RUN
+                else -> BSportType.UNKNOWN
+            }
+
+            val polyline = stravaRoute.map.polyline ?: stravaRoute.map.summaryPolyline ?: continue
+            val decodedPoints = PolyUtil.decode(polyline)
+            
+            // Map to PathPoints
+            // Strava routes don't typically include altitude in the polyline itself, 
+            // but we can at least store the lat/lng.
+            var accumulatedDistance = 0.0
+            val pathPoints = decodedPoints.mapIndexed { index, latLng ->
+                if (index > 0) {
+                    val results = FloatArray(1)
+                    android.location.Location.distanceBetween(
+                        decodedPoints[index - 1].latitude, decodedPoints[index - 1].longitude,
+                        latLng.latitude, latLng.longitude,
+                        results
+                    )
+                    accumulatedDistance += results[0]
+                }
+                PathPoint(accumulatedDistance, latLng, 0.0)
+            }
+
+            val summary = RouteSummary(
+                id = 0,
+                externalId = stravaRoute.idStr,
+                name = stravaRoute.name,
+                description = stravaRoute.description ?: "",
+                isSelected = false,
+                distance = stravaRoute.distance,
+                elevationGain = stravaRoute.elevationGain,
+                bSportType = sportType,
+                source = RouteSource.STRAVA
+            )
+
+            // 4. Insert into DB
+            routesDb.insertRoute(summary, pathPoints)
+        }
+
+        // 5. Refresh the list
+        refreshRoutes()
+    }
+
 
 
     companion object {
+        private val TAG = RoutesRepository::class.java.simpleName
+
         @Volatile
         private var instance: RoutesRepository? = null
 
