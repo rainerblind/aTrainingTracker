@@ -197,11 +197,12 @@ fun ElevationProfile(
         } else {
             val rangeFeet = range / MyHelper.METER_PER_FOOT
             val feetStep = when {
-                rangeFeet > 5000 -> 1000f
-                rangeFeet > 2000 -> 500f
-                rangeFeet > 1000 -> 200f
-                rangeFeet > 500 -> 100f
-                else -> 50f
+                rangeFeet > 10000 -> 5000f
+                rangeFeet > 5000 -> 2000f
+                rangeFeet > 2000 -> 1000f
+                rangeFeet > 1000 -> 500f
+                rangeFeet > 500 -> 200f
+                else -> 100f
             }
             (feetStep * MyHelper.METER_PER_FOOT).toFloat()
         }
@@ -337,21 +338,25 @@ fun ElevationProfile(
 
             // 2d. Adaptive Altitude Ticks...
             var currentAlt = (ceil(cachedData.minAlt / cachedData.altStep) * cachedData.altStep).toFloat()
+            var lastY = -1000f // Track the last drawn label Y to avoid overlaps
+
             while (currentAlt < cachedData.maxAlt) {
-                val y = height - ((currentAlt - cachedData.minAlt) / cachedData.altRange) * height
+                val y = height - ((currentAlt - cachedData.minAlt) / cachedData.altRange).toFloat() * height
 
-                val isTooCloseToBottom = (height - y) < textHeightBuffer
-                val isTooCloseToTop = y < textHeightBuffer
+                val isTooCloseToBottom = (height - y) < (textHeightBuffer * 1.2f)
+                val isTooCloseToTop = Math.abs(y - textPaint.textSize) < (textHeightBuffer * 1.2f)
+                val isOverlappingLast = Math.abs(y - lastY) < (textHeightBuffer * 1.2f)
 
-                if (!isTooCloseToBottom && !isTooCloseToTop) {
-                    canvas.nativeCanvas.drawLine(-10f, y.toFloat(), 0f, y.toFloat(), textPaint)
+                if (!isTooCloseToBottom && !isTooCloseToTop && !isOverlappingLast) {
+                    canvas.nativeCanvas.drawLine(-10f, y, 0f, y, textPaint)
                     drawLine(
                         color = colorScheme.onSurfaceVariant.copy(alpha = 0.1f),
-                        start = Offset(0f, y.toFloat()),
-                        end = Offset(width, y.toFloat()),
+                        start = Offset(0f, y),
+                        end = Offset(width, y),
                         strokeWidth = 1.dp.toPx()
                     )
-                    canvas.nativeCanvas.drawText(altitudeFormatter.format(currentAlt.toDouble()), -110f, y.toFloat() + 10f, textPaint)
+                    canvas.nativeCanvas.drawText(altitudeFormatter.format(currentAlt.toDouble()), -110f, y + 10f, textPaint)
+                    lastY = y
                 }
                 currentAlt += cachedData.altStep
             }
