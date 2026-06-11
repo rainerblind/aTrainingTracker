@@ -175,7 +175,8 @@ fun ATrainingTrackerMap(
             if (mapState.zoomFocus == MapZoomFocus.LOCAL_SEGMENTS) {
                 // 2. Include only local segments
                 mapState.segments.forEach { segment ->
-                    if (isLocal(segment.path.first().latLng)) {  // The segment is 'local' iff the first point is local
+                    val firstPoint = segment.path.firstOrNull()
+                    if (firstPoint != null && isLocal(firstPoint.latLng)) {  // The segment is 'local' iff the first point is local
                         hasPoints = true
                         segment.path.forEach {
                             builder.include(it.latLng);
@@ -187,7 +188,8 @@ fun ATrainingTrackerMap(
             if (mapState.zoomFocus == MapZoomFocus.LOCAL_ROUTES) {
                 // 3. Include only local routes
                 mapState.routes.forEach { route ->
-                    if (isLocal(route.path.first().latLng)) {  // The route is 'local' iff the first point is local
+                    val firstPoint = route.path.firstOrNull()
+                    if (firstPoint != null && isLocal(firstPoint.latLng)) {  // The route is 'local' iff the first point is local
                         hasPoints = true
                         route.path.forEach {
                             builder.include(it.latLng);
