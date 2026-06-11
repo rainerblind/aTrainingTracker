@@ -74,6 +74,7 @@ public class StravaHelper {
     protected static final String ACTIVITY_READ_ALL = "activity:read_all";
     protected static final String PROFILE_READ_ALL = "profile:read_all";
     protected static final String READ = "read";
+    protected static final String READ_ALL = "read_all";
     protected static final String APPROVAL_PROMPT = "approval_prompt";
     protected static final String FORCE = "force";
     protected static final String AUTO = "auto";
@@ -135,7 +136,7 @@ public class StravaHelper {
                 .appendQueryParameter(REDIRECT_URI, getRedirectUri())
                 .appendQueryParameter(RESPONSE_TYPE, CODE)
                 .appendQueryParameter(APPROVAL_PROMPT, AUTO)
-                .appendQueryParameter(SCOPE, READ + ',' + ACTIVITY_WRITE + ',' + ACTIVITY_READ_ALL + ',' + PROFILE_READ_ALL);
+                .appendQueryParameter(SCOPE, READ + ',' + READ_ALL  + ',' + ACTIVITY_WRITE);
         return builder.build().toString();
     }
 

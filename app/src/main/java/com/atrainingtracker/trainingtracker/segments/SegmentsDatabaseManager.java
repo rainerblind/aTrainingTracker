@@ -36,6 +36,7 @@ import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
+import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaSegment;
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment;
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint;
 import com.google.android.gms.maps.model.LatLng;
@@ -264,18 +265,18 @@ public class SegmentsDatabaseManager {
         // Mapping Kotlin fields to Database Columns
         cv.put(Segments.STRAVA_SEGMENT_ID, segment.getId());
         cv.put(Segments.SEGMENT_NAME, segment.getName());
-        cv.put(Segments.ACTIVITY_TYPE, segment.getActivity_type());
+        cv.put(Segments.ACTIVITY_TYPE, segment.getActivityType());
         cv.put(Segments.DISTANCE, segment.getDistance());
-        cv.put(Segments.AVERAGE_GRADE, segment.getAverage_grade());
-        cv.put(Segments.MAXIMUM_GRADE, segment.getMaximum_grade());
-        cv.put(Segments.ELEVATION_HIGH, segment.getElevation_high());
-        cv.put(Segments.ELEVATION_LOW, segment.getElevation_low());
-        cv.put(Segments.TOTAL_ELEVATION_GAIN, segment.getTotal_elevation_gain());
-        cv.put(Segments.CLIMB_CATEGORY, segment.getClimb_category());
+        cv.put(Segments.AVERAGE_GRADE, segment.getAverageGrade());
+        cv.put(Segments.MAXIMUM_GRADE, segment.getMaximumGrade());
+        cv.put(Segments.ELEVATION_HIGH, segment.getElevationHigh());
+        cv.put(Segments.ELEVATION_LOW, segment.getElevationLow());
+        cv.put(Segments.TOTAL_ELEVATION_GAIN, segment.getTotalElevationGain());
+        cv.put(Segments.CLIMB_CATEGORY, segment.getClimbCategory());
         cv.put(Segments.CITY, segment.getCity());
         cv.put(Segments.STATE, segment.getState());
         cv.put(Segments.COUNTRY, segment.getCountry());
-        cv.put(Segments.PR_TIME, segment.getPr_time());
+        cv.put(Segments.PR_TIME, segment.getPrTime());
 
         // Extract the polyline from the nested Map object
         if (segment.getMap() != null) {
@@ -283,13 +284,13 @@ public class SegmentsDatabaseManager {
         }
 
         // Handle LatLng arrays (Strava returns [lat, lng])
-        if (segment.getStart_latlng().size() >= 2) {
-            cv.put(Segments.START_LATITUDE, segment.getStart_latlng().get(0));
-            cv.put(Segments.START_LONGITUDE, segment.getStart_latlng().get(1));
+        if (segment.getStartLatLng().size() >= 2) {
+            cv.put(Segments.START_LATITUDE, segment.getStartLatLng().get(0));
+            cv.put(Segments.START_LONGITUDE, segment.getStartLatLng().get(1));
         }
-        if (segment.getEnd_latlng().size() >= 2) {
-            cv.put(Segments.END_LATITUDE, segment.getEnd_latlng().get(0));
-            cv.put(Segments.END_LONGITUDE, segment.getEnd_latlng().get(1));
+        if (segment.getEndLatLng().size() >= 2) {
+            cv.put(Segments.END_LATITUDE, segment.getEndLatLng().get(0));
+            cv.put(Segments.END_LONGITUDE, segment.getEndLatLng().get(1));
         }
 
 
