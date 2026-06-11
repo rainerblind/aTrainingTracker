@@ -31,6 +31,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.PaceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter
@@ -182,6 +183,8 @@ private fun AltitudeRow(
     textColorSecondary: Color,
     modifier: Modifier,
 ){
+    val altitudeFormatter = AltitudeFormatter()
+
     if (ascentMeters > 0 || descentMeters > 0 || minAltitude != null || maxAltitude != null) {
         HorizontalDivider(
             // modifier = Modifier.padding(8.dp),
@@ -215,7 +218,7 @@ private fun AltitudeRow(
                     AltitudeItem(
                         modifier = Modifier.weight(1f),
                         label = stringResource(R.string.ascent_short),
-                        value = "${ascentMeters} m",
+                        value = altitudeFormatter.format_with_units(ascentMeters),
                         iconRes = R.drawable.ic_ascent,
                         iconColor = iconColor,
                         textColorMain = textColorMain,
@@ -225,7 +228,7 @@ private fun AltitudeRow(
                         AltitudeItem(
                             modifier = Modifier.weight(1f),
                             label = stringResource(R.string.max),
-                            value = "%.0f m".format(it),
+                            value = altitudeFormatter.format_with_units(it),
                             iconRes = R.drawable.ic_altitude_max,
                             iconColor = iconColor,
                             textColorMain = textColorMain,
@@ -237,7 +240,7 @@ private fun AltitudeRow(
                     AltitudeItem(
                         modifier = Modifier.weight(1f),
                         label = stringResource(R.string.descent_short),
-                        value = "${descentMeters} m",
+                        value = altitudeFormatter.format_with_units(descentMeters),
                         iconRes = R.drawable.ic_descent,
                         iconColor = iconColor,
                         textColorMain = textColorMain,
@@ -247,7 +250,7 @@ private fun AltitudeRow(
                         AltitudeItem(
                             modifier = Modifier.weight(1f),
                             label = stringResource(R.string.min),
-                            value = "%.0f m".format(it),
+                            value = altitudeFormatter.format_with_units(it),
                             iconRes = R.drawable.ic_altitude_min,
                             iconColor = iconColor,
                             textColorMain = textColorMain,

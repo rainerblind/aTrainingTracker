@@ -44,7 +44,6 @@ import java.text.NumberFormat;
 import java.util.Locale;
 
 public class MyHelper {
-    public static final double METER_PER_MILE = 1609.344;
     private static final String TAG = "MyHelper";
     private static final boolean DEBUG = false;
 
@@ -211,6 +210,20 @@ public class MyHelper {
         };
     }
 
+    public static int getAltitudeUnitNameId() {
+        return switch (TrainingApplication.getUnit()) {
+            case METRIC -> R.string.units_altitude_metric;
+            case IMPERIAL -> R.string.units_altitude_imperial;
+        };
+    }
+
+    public static int getShortAltitudeUnitNameId() {
+        return switch (TrainingApplication.getUnit()) {
+            case METRIC -> R.string.units_altitude_short_metric;
+            case IMPERIAL -> R.string.units_altitude_short_imperial;
+        };
+    }
+
     public static String getDistanceUnitName(Context context) {
         return context.getString(getDistanceUnitNameId());
     }
@@ -220,6 +233,7 @@ public class MyHelper {
             case SPEED_mps -> getSpeedUnitNameId();
             case PACE_spm -> getPaceUnitNameId();
             case DISTANCE_m, DISTANCE_m_LAP, LINE_DISTANCE_m -> getDistanceUnitNameId();
+            case ALTITUDE, ASCENT, DESCENT -> getAltitudeUnitNameId();
             default -> sensorType.getUnitId();
         };
     }
@@ -230,7 +244,7 @@ public class MyHelper {
             case PACE_spm -> getShortPaceUnitNameId();
             case DISTANCE_m, DISTANCE_m_LAP, LINE_DISTANCE_m ->
                     getDistanceUnitNameId();  // TODO: also short version?
-
+            case ALTITUDE, ASCENT, DESCENT -> getShortAltitudeUnitNameId();
             default -> sensorType.getUnitId();  // TODO: also short version?
         };
     }

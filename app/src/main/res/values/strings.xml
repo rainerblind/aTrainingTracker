@@ -160,6 +160,12 @@
     <string name="units_distance_metric" translatable="false">km</string>
     <string name="units_distance_imperial" translatable="false">mile</string>
     <string name="units_distance_unknown" translatable="false">na</string>
+
+    <string name="units_altitude_metric" translatable="false">m</string>
+    <string name="units_altitude_imperial" translatable="false">ft</string>
+    <string name="units_altitude_short_metric" translatable="false">m</string>
+    <string name="units_altitude_short_imperial" translatable="false">ft</string>
+
     <string name="units_distance_mm" translatable="false">mm</string>
     <string name="units_cadence" translatable="false">1/min</string>
     <string name="units_calories" translatable="false">kcal</string>
@@ -627,7 +633,6 @@
     <string name="editLocationName">Name:</string>
     <string name="LocationAltitude">Altitude:</string>
     <string name="LocationRadius">Radius:</string>
-    <string name="units_altitude_metric" translatable="false">m</string>
     <string name="edit_my_location">Edit Location</string>
     <string name="radius_format" translatable="false">%1$s %2$d %3$s</string>
     <string name="units_radius" translatable="false">m</string>

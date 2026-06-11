@@ -66,6 +66,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
 import com.atrainingtracker.trainingtracker.helpers.combineAndShare
@@ -88,6 +89,7 @@ fun PeriodMapScreen(
 ) {
     val df = DistanceFormatter()
     val tf = TimeFormatter()
+    val af = AltitudeFormatter()
 
     // Track multiple selected sports
     var selectedSports by rememberSaveable { mutableStateOf(setOf<BSportType>()) }
@@ -228,7 +230,7 @@ fun PeriodMapScreen(
                             SportStatsRow(
                                 bSportType = sport,
                                 stats = stats,
-                                df = df, tf = tf,
+                                df = df, tf = tf, af = af,
                                 onClick = {
                                     // Multi-select toggle logic
                                     selectedSports = if (isSelected) {

@@ -68,6 +68,7 @@ public class BANALService
      */
     public static final String TAG = "BANALService";
     public static final double METER_PER_MILE = 1609.344;
+    public static final double METER_PER_FOOT = 0.3048;
 
     public static final double DEFAULT_BIKE_CALIBRATION_FACTOR = 2.1;
     public static final double MIN_SPEED = 0.001;

@@ -23,6 +23,7 @@ import android.os.Parcel;
 import android.os.Parcelable;
 
 import com.atrainingtracker.R;
+import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.CadenceFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.DefaultNumberFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.DefaultStringFormatter;
@@ -41,18 +42,18 @@ public enum SensorType
     // ACCURACY_gps           (R.string.accuracy,               R.string.accuracy_short,               R.string.units_distance_basic,  SensorValueType.DOUBLE,  new DefaultNumberFormatter()),  // TODO: special formatter?
     // ACCURACY_network       (R.string.accuracy,               R.string.accuracy_short,               R.string.units_distance_basic,  SensorValueType.DOUBLE,  new DefaultNumberFormatter()),  // TODO: special formatter?
     // ACCURACY_google_fused  (R.string.accuracy,               R.string.accuracy_short,               R.string.units_distance_basic,  SensorValueType.DOUBLE,  new DefaultNumberFormatter()),  // TODO: special formatter?
-    ALTITUDE(R.string.altitude, R.string.altitude_short, R.string.units_distance_basic, SensorValueType.DOUBLE, new DefaultNumberFormatter(), true),
+    ALTITUDE(R.string.altitude, R.string.altitude_short, R.string.units_distance_basic, SensorValueType.DOUBLE, new AltitudeFormatter(), true),
     // ALTITUDE_gps           (R.string.altitude,               R.string.altitude_short,               R.string.units_distance_basic,  SensorValueType.DOUBLE,  new DefaultNumberFormatter()),
     // ALTITUDE_network       (R.string.altitude,               R.string.altitude_short,               R.string.units_distance_basic,  SensorValueType.DOUBLE,  new DefaultNumberFormatter()),
     // ALTITUDE_google_fused  (R.string.altitude,               R.string.altitude_short,               R.string.units_distance_basic,  SensorValueType.DOUBLE,  new DefaultNumberFormatter()),
-    ASCENT(R.string.ascent, R.string.ascent_short, R.string.units_distance_basic, SensorValueType.DOUBLE, new DefaultNumberFormatter(), false),
+    ASCENT(R.string.ascent, R.string.ascent_short, R.string.units_distance_basic, SensorValueType.DOUBLE, new AltitudeFormatter(), false),
     BEARING(R.string.bearing, R.string.bearing_short, R.string.units_degree, SensorValueType.DOUBLE, new DefaultNumberFormatter(), true),
     // BEARING_gps            (R.string.bearing,                R.string.bearing_short,                R.string.units_degree,          SensorValueType.DOUBLE,  new DefaultNumberFormatter()),
     // BEARING_network        (R.string.bearing,                R.string.bearing_short,                R.string.units_degree,          SensorValueType.DOUBLE,  new DefaultNumberFormatter()),
     // BEARING_google_fused   (R.string.bearing,                R.string.bearing_short,                R.string.units_degree,          SensorValueType.DOUBLE,  new DefaultNumberFormatter()),
     CADENCE(R.string.cadence, R.string.cadence_short, R.string.units_rpm, SensorValueType.DOUBLE, new CadenceFormatter(), true),
     CALORIES(R.string.calories, R.string.calories_short, R.string.units_calories, SensorValueType.INTEGER, new IntegerFormatter(), false),
-    DESCENT(R.string.descent, R.string.descent_short, R.string.units_distance_basic, SensorValueType.DOUBLE, new DefaultNumberFormatter(), false),
+    DESCENT(R.string.descent, R.string.descent_short, R.string.units_distance_basic, SensorValueType.DOUBLE, new AltitudeFormatter(), false),
     DISTANCE_m(R.string.distance, R.string.distance_short, R.string.units_distance_basic, SensorValueType.DOUBLE, new DistanceFormatter(), false),
     // DISTANCE_m_gps         (R.string.distance,               R.string.distance_short,               R.string.units_distance_basic,  SensorValueType.DOUBLE,  new DistanceFormatter()),
     // DISTANCE_m_network     (R.string.distance,               R.string.distance_short,               R.string.units_distance_basic,  SensorValueType.DOUBLE,  new DistanceFormatter()),

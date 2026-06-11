@@ -42,6 +42,7 @@ import com.google.android.gms.maps.model.RoundCap
 import com.google.maps.android.PolyUtil
 import com.google.maps.android.compose.*
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
@@ -59,6 +60,7 @@ fun PeriodSummaryCard(
 ) {
     val df = DistanceFormatter()
     val tf = TimeFormatter()
+    val af = AltitudeFormatter()
 
     ElevatedCard(
         modifier = modifier
@@ -118,8 +120,7 @@ fun PeriodSummaryCard(
                     SportStatsRow(
                         bSportType = bSportType,
                         stats = stats,
-                        tf = tf,
-                        df = df,
+                        tf = tf, df = df, af = af,
                         onClick = { onSportClick(summary, bSportType) }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
@@ -149,6 +150,7 @@ fun SportStatsRow(
     stats: SportStats,
     tf: TimeFormatter,
     df: DistanceFormatter,
+    af: AltitudeFormatter,
     onClick: () -> Unit
 ) {
     Surface(
@@ -198,7 +200,7 @@ fun SportStatsRow(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "${stats.totalAscentMeters.toInt()} m ↑",
+                    text = af.format_with_units(stats.totalAscentMeters) + " ↑",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary
                 )
