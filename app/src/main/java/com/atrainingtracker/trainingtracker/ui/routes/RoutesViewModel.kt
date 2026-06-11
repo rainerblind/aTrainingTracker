@@ -130,10 +130,15 @@ class RoutesViewModel(application: Application) : AndroidViewModel(application) 
                     routes.sortedBy { it.summary.name.lowercase() }
                 } else {
                     routes.sortedBy { route ->
-                        calculateDistance(
-                            location.latitude, location.longitude,
-                            route.path[0].latLng.latitude, route.path[0].latLng.longitude
-                        )
+                        val startPoint = route.path.firstOrNull()
+                        if (startPoint != null) {
+                            calculateDistance(
+                                location.latitude, location.longitude,
+                                startPoint.latLng.latitude, startPoint.latLng.longitude
+                            )
+                        } else {
+                            Float.MAX_VALUE
+                        }
                     }
                 }
             }
