@@ -22,6 +22,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.util.Log
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
 import com.atrainingtracker.trainingtracker.TrainingApplication
@@ -59,7 +60,7 @@ data class SegmentSummary(
     val averageGrade_raw: Double,
     val averageGrade: String,
     val maxGrade: String,
-    val elevationGain_raw: Double,
+    val elevationGain_raw: Double,  // necessary for sorting
     val elevationGain: String,
     val elevationMin: String,
     val elevationMax: String,
@@ -106,6 +107,7 @@ private fun StravaSegment.toSummary(): SegmentSummary {
     }
     val tf = TimeFormatter()
     val df = DistanceFormatter()
+    val af = AltitudeFormatter()
     val locale = java.util.Locale.getDefault()
     val elevationGain = this.total_elevation_gain ?: (this.elevation_high - this.elevation_low)
 
@@ -124,9 +126,9 @@ private fun StravaSegment.toSummary(): SegmentSummary {
         averageGrade = String.format(locale, "Ø %.1f%%", this.average_grade),
         maxGrade = String.format(locale, "%.1f%% Max", this.maximum_grade),
         elevationGain_raw = elevationGain,
-        elevationGain = String.format(locale, "%d m", Math.round(elevationGain)),
-        elevationMin = String.format(locale, "%d m", Math.round(this.elevation_low)),
-        elevationMax = String.format(locale, "%d m", Math.round(this.elevation_high)),
+        elevationGain = af.format_with_units(elevationGain),
+        elevationMin = af.format_with_units(this.elevation_low),
+        elevationMax = af.format_with_units(this.elevation_high),
         map_polyline = this.map?.polyline ?: ""
     )
 }
