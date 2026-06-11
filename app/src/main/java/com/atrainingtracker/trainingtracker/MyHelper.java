@@ -44,8 +44,6 @@ import java.text.NumberFormat;
 import java.util.Locale;
 
 public class MyHelper {
-    public static final double METER_PER_MILE = 1609.344;
-    public static final double METER_PER_FOOT = 0.3048;
     private static final String TAG = "MyHelper";
     private static final boolean DEBUG = false;
 

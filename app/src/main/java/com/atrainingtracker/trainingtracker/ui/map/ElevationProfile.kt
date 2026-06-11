@@ -195,7 +195,7 @@ fun ElevationProfile(
                 else -> 50f
             }
         } else {
-            val rangeFeet = range / MyHelper.METER_PER_FOOT
+            val rangeFeet = range / BANALService.METER_PER_FOOT
             val feetStep = when {
                 rangeFeet > 10000 -> 5000f
                 rangeFeet > 5000 -> 2000f
@@ -204,7 +204,7 @@ fun ElevationProfile(
                 rangeFeet > 500 -> 200f
                 else -> 100f
             }
-            (feetStep * MyHelper.METER_PER_FOOT).toFloat()
+            (feetStep * BANALService.METER_PER_FOOT).toFloat()
         }
 
         val segments = mutableListOf<ElevationSegment>()
