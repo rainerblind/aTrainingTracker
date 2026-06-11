@@ -32,6 +32,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.Check
@@ -209,32 +210,66 @@ fun RouteTabbedScreen(
                                     )
                                 }
 
-                                // --- SYNC STRAVA BUTTON ---
-                                if (isSyncing) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier
-                                            .padding(end = 8.dp)
-                                            .size(24.dp),
-                                        strokeWidth = 2.dp,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                } else {
-                                    IconButton(onClick = onSyncStravaClick) {
+                                // --- IMPORT DROPDOWN ---
+                                var showImportMenu by remember { mutableStateOf(false) }
+
+                                Box {
+                                    IconButton(onClick = { showImportMenu = true }) {
                                         Icon(
-                                            painter = painterResource(R.drawable.logo_square_strava),
-                                            contentDescription = "Sync with Strava",
-                                            modifier = Modifier.size(24.dp),
-                                            tint = Color.Unspecified
+                                            imageVector = Icons.Default.Add,
+                                            contentDescription = stringResource(R.string.route_import),
+                                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                    }
+                                    DropdownMenu(
+                                        expanded = showImportMenu,
+                                        onDismissRequest = { showImportMenu = false },
+                                        containerColor = MaterialTheme.colorScheme.surface
+                                    ) {
+                                        // GPX Import
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(R.string.GPX)) },
+                                            leadingIcon = {
+                                                Icon(
+                                                    imageVector = Icons.AutoMirrored.Filled.InsertDriveFile,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(24.dp)
+                                                )
+                                            },
+                                            onClick = {
+                                                showImportMenu = false
+                                                onImportClick()
+                                            }
+                                        )
+
+                                        // Strava Sync
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(R.string.Strava)) },
+                                            leadingIcon = {
+                                                Icon(
+                                                    painter = painterResource(R.drawable.logo_square_strava),
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(24.dp),
+                                                    tint = Color.Unspecified
+                                                )
+                                            },
+                                            enabled = !isSyncing,
+                                            onClick = {
+                                                showImportMenu = false
+                                                onSyncStravaClick()
+                                            }
                                         )
                                     }
                                 }
 
-                                // --- IMPORT BUTTON ---
-                                IconButton(onClick = onImportClick) {
-                                    Icon(
-                                        imageVector = Icons.Default.Add, // Or Icons.Default.FileUpload
-                                        contentDescription = stringResource(R.string.route_import),
-                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                // --- SYNC PROGRESS (shown separately if active) ---
+                                if (isSyncing) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier
+                                            .padding(horizontal = 8.dp)
+                                            .size(24.dp),
+                                        strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                 }
 
