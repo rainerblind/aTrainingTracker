@@ -25,6 +25,7 @@ import android.view.ViewGroup
 import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -44,6 +45,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -124,7 +126,8 @@ class RoutesFragment : Fragment() {
                                     actionColor = MaterialTheme.colorScheme.primary
                                 )
                             }
-                        }
+                        },
+                        contentWindowInsets = WindowInsets(0.dp)
                     ) { paddingValues ->
                         Box(modifier = Modifier.padding(paddingValues)) {
                             if (selectedRouteIdForDetails != null) {

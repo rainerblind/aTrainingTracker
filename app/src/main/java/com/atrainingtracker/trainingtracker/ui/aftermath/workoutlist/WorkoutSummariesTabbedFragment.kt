@@ -25,6 +25,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -44,6 +45,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.ViewModelProvider
@@ -137,6 +139,7 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                                 )
                             }
                         },
+                        contentWindowInsets = WindowInsets(0.dp)
                     ) { paddingValues ->
                         Box(modifier = Modifier.padding(paddingValues)) {
                             if (selectedWorkoutForDetails != null) {

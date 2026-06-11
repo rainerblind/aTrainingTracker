@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -164,7 +165,8 @@ class WorkoutSummariesListFragment : Fragment() {
                                 )
                             }
                         },
-                        containerColor = MaterialTheme.colorScheme.background
+                        containerColor = MaterialTheme.colorScheme.background,
+                        contentWindowInsets = WindowInsets(0.dp)
                     ) { paddingValues ->
                         Box(modifier = Modifier.padding(paddingValues)) {
                             if (selectedWorkoutForDetailsData != null) {
