@@ -289,15 +289,20 @@ fun ElevationProfile(
         // --- 2. Static Background: Axes, Ticks, and Grid ---
         drawIntoCanvas { canvas ->
             val textHeightBuffer = textPaint.textSize
-            val textWidthBuffer = 90f
 
             // 2a. Altitude labels
-            canvas.nativeCanvas.drawText(altitudeFormatter.format_with_units(cachedData.minAlt), -110f, height, textPaint)
-            canvas.nativeCanvas.drawText(altitudeFormatter.format_with_units(cachedData.maxAlt), -110f, 10f, textPaint)
+            val minAltLabel = altitudeFormatter.format_with_units(cachedData.minAlt)
+            val maxAltLabel = altitudeFormatter.format_with_units(cachedData.maxAlt)
+            val minAltWidth = textPaint.measureText(minAltLabel)
+            val maxAltWidth = textPaint.measureText(maxAltLabel)
+
+            canvas.nativeCanvas.drawText(minAltLabel, -minAltWidth - 10f, height, textPaint)
+            canvas.nativeCanvas.drawText(maxAltLabel, -maxAltWidth - 10f, textPaint.textSize, textPaint)
 
             // 2b. Distance label (End point)
             val endLabel = distanceFormatter.format_with_units(cachedData.totalDist)
-            canvas.nativeCanvas.drawText(endLabel, width - 40f, height + 45f, textPaint)
+            val endLabelWidth = textPaint.measureText(endLabel)
+            canvas.nativeCanvas.drawText(endLabel, width - endLabelWidth, height + 45f, textPaint)
 
             // 2c. Adaptive Distance Ticks
             var currentDist = cachedData.distStep.toDouble()
@@ -305,7 +310,7 @@ fun ElevationProfile(
                 val x = (currentDist / cachedData.totalDist) * width
 
                 val isTooCloseToStart = x < 60f
-                val isTooCloseToEnd = (width - x) < textWidthBuffer
+                val isTooCloseToEnd = (width - x) < (endLabelWidth + 50f) // Dynamic buffer to avoid overlapping with endLabel
 
                 if (!isTooCloseToStart && !isTooCloseToEnd) {
                     canvas.nativeCanvas.drawLine(x.toFloat(), height, x.toFloat(), height - 10f, textPaint)
@@ -324,7 +329,8 @@ fun ElevationProfile(
                         else "${miles.toInt()}"
                     }
 
-                    canvas.nativeCanvas.drawText(label, x.toFloat() - 15f, height + 45f, textPaint)
+                    val labelWidth = textPaint.measureText(label)
+                    canvas.nativeCanvas.drawText(label, x.toFloat() - (labelWidth / 2), height + 45f, textPaint)
                 }
                 currentDist += cachedData.distStep
             }
