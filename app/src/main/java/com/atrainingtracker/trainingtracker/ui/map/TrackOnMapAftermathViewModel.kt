@@ -28,6 +28,7 @@ import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
@@ -53,6 +54,7 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
 
     private val workoutRepository = WorkoutRepository.getInstance(application)
     private val segmentsRepository = SegmentsRepository.getInstance(application)
+    private val routesRepository = RoutesRepository.getInstance(application)
 
     private val extremaSensorTypes = arrayOf(
         SensorType.ALTITUDE, SensorType.TEMPERATURE,
@@ -172,6 +174,16 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
                 )
             }
 
+            // --- PHASE 6: Routes ---
+            val allRoutes = routesRepository.allRoutes.value
+            val mapRoutes = allRoutes
+                .map { it.toMapRoute() }
+
+            withContext(Dispatchers.Main) {
+                _aftermathState.value = _aftermathState.value.copy(
+                    routes = mapRoutes
+                )
+            }
         }
     }
 
