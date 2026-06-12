@@ -25,10 +25,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -58,76 +60,86 @@ fun SegmentSummaryHeader(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(if (compact) 2.dp else 8.dp)
+                .padding(if (compact) 2.dp else 4.dp),
+            verticalArrangement = Arrangement.spacedBy(1.dp)
         ) {
-            // --- TOP ROW: Name and City on Left, Category and PR on Right ---
+            // --- TOP ROW: Sport Icon and Name ---
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.Top // Align to top so metadata stays pinned if title wraps
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // 1. Left Column: Name and City of Live or state of LiveSegment
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = summary.name,
-                        style = if (compact) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 2
-                    )
-                    if (liveSegmentData == null) {
+                // 1. Sport Icon
+                Icon(
+                    painter = painterResource(id = summary.bSportType.iconResId),
+                    contentDescription = null,
+                    modifier = Modifier.size(if (compact) 28.dp else 32.dp),
+                    tint = Color.Unspecified // Original color
+                )
+
+                // 2. Name
+                Text(
+                    text = summary.name,
+                    style = if (compact) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+
+                // 3. Category Chip (Right-aligned in top row)
+                if (summary.climbCategory.isNotBlank()) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        shape = RoundedCornerShape(4.dp)
+                    ) {
                         Text(
-                            text = summary.city,
-                            style = if (compact) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    } else {
-                        Text(
-                            text = liveSegmentData.segmentStatus.label(),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary
+                            text = summary.climbCategory,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            style = if (compact) MaterialTheme.typography.labelSmall else MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
                         )
                     }
                 }
+            }
 
-                // 2. Right Column: Category (Top) and PR (Bottom)
-                if (summary.climbCategory.isNotBlank() || (summary.prTime.isNotBlank() && summary.prTime != "--:--")) {
-                    Column(
-                        horizontalAlignment = Alignment.End,
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        // Climb Category Chip
-                        if (summary.climbCategory.isNotBlank()) {
-                            Surface(
-                                color = MaterialTheme.colorScheme.secondaryContainer,
-                                shape = RoundedCornerShape(4.dp)
-                            ) {
-                                Text(
-                                    text = summary.climbCategory,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                    style = if (compact) MaterialTheme.typography.labelSmall else MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                            }
-                        }
+            // --- SECOND ROW: City / PR ---
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // City
+                if (liveSegmentData == null) {
+                    Text(
+                        text = summary.city,
+                        style = if (compact) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    Text(
+                        text = liveSegmentData.segmentStatus.label(),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
 
-                        // PR Time Row
-                        if (summary.prTime.isNotBlank() && summary.prTime != "--:--") {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_pr_time),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(if (compact) 14.dp else 18.dp),
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = summary.prTime,
-                                    style = if (compact) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodyLarge,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
+                // PR Time Row
+                if (summary.prTime.isNotBlank() && summary.prTime != "--:--") {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_pr_time),
+                            contentDescription = null,
+                            modifier = Modifier.size(if (compact) 14.dp else 18.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = summary.prTime,
+                            style = if (compact) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
