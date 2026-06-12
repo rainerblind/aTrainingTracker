@@ -59,8 +59,7 @@ fun RouteItem(
 
     ElevatedCard(
         modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 4.dp, vertical = 4.dp),
+            .fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surface
@@ -76,7 +75,7 @@ fun RouteItem(
                     onClick = { onHeaderClick(summary.id) },
                     onLongClick = { showContextMenu = true }
                 )
-                .padding(8.dp)
+                .padding(4.dp)
             ) {
                 RouteSummaryHeader(
                     summary = summary,
@@ -100,19 +99,14 @@ fun RouteItem(
             }
 
             // 3. BOTTOM: Elevation Profile
-            Box(
+            ElevationProfile(
+                pathPoints = pathPoints,
+                currentDistance = null, // No seeker in list view
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { onMapClick(summary.id) }
-                    .height(100.dp)
                     .padding(horizontal = 8.dp, vertical = 4.dp)
-            ) {
-                ElevationProfile(
-                    pathPoints = pathPoints,
-                    currentDistance = null, // No seeker in list view
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
+            )
         }
 
         // Context Menu for deletion

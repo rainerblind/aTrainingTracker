@@ -37,6 +37,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import kotlin.math.ceil
+import kotlin.math.pow
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
@@ -59,8 +60,28 @@ private data class CachedProfileData(
     val totalDist: Double,
     val altRange: Double,
     val distStep: Float,
-    val altStep: Float
+    val altStep: Float,
+    val adaptiveHeight: androidx.compose.ui.unit.Dp
 )
+
+/**
+ * Calculates height based on altitude range.
+ * Min: 80dp, Max: 200dp (at 1000m range)
+ * Uses a non-linear scale (pow 0.6) to increase gain for small ranges.
+ */
+fun calculateElevationProfileHeight(range: Double): androidx.compose.ui.unit.Dp {
+    val minH = 70f
+    val maxH = 200f
+    val threshold = 1000.0
+    
+    // Normalize range 0..1
+    val normalizedRange = (range.coerceIn(0.0, threshold) / threshold).toFloat()
+    // Apply power function to "lift" small values
+    val curvedRange = normalizedRange.toDouble().pow(0.6).toFloat()
+    
+    val height = minH + curvedRange * (maxH - minH)
+    return height.toInt().dp
+}
 
 private data class ElevationSegment(
     val p1: Offset, // Normalized 0..1
@@ -239,7 +260,10 @@ fun ElevationProfile(
 
             segments.add(ElevationSegment(Offset(d1.toFloat(), a1.toFloat()), Offset(d2.toFloat(), a2.toFloat()), color))
         }
-        CachedProfileData(segments, min, max, totalDist, range, distStep, altStep)
+
+        val adaptiveHeight = calculateElevationProfileHeight(range)
+
+        CachedProfileData(segments, min, max, totalDist, range, distStep, altStep, adaptiveHeight)
     }
 
     val altitudeFormatter = remember(unit) { AltitudeFormatter() }
@@ -264,6 +288,8 @@ fun ElevationProfile(
 
     Canvas(
         modifier = modifier
+            .fillMaxWidth()
+            .height(cachedData.adaptiveHeight)
             .pointerInput(pathPoints) {
                 // Convert DP padding to PX
                 val startPaddingPx = 50.dp.toPx()

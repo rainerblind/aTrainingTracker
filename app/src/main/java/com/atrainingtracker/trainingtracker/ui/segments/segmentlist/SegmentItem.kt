@@ -20,17 +20,15 @@ package com.atrainingtracker.trainingtracker.ui.segments.segmentlist
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.segments.SegmentSummary
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
-import com.atrainingtracker.trainingtracker.ui.map.TrackOrSegmentOnMap
-import com.atrainingtracker.trainingtracker.ui.segments.SegmentSummaryHeader
+import com.atrainingtracker.trainingtracker.ui.segments.SegmentHeader
+import com.atrainingtracker.trainingtracker.ui.segments.SegmentDetails
 import com.atrainingtracker.trainingtracker.ui.theme.StravaOrange
 
 @Composable
@@ -42,8 +40,7 @@ fun SegmentItem(
 ) {
     ElevatedCard(
         modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 4.dp, vertical = 4.dp),
+            .fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surface
@@ -52,43 +49,38 @@ fun SegmentItem(
         onClick = { onSegmentClick(summary.stravaId) }
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            // TOP PART: Row with Map and Summary Header
-            Row(
+            // 1. TOP: Segment Identity (Full Width)
+            SegmentHeader(
+                summary = summary,
+                compact = false,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(IntrinsicSize.Min) // Balance Map and Header height
-            ) {
-                // 1. Static Segment Map (120dp square)
-                TrackOrSegmentOnMap(
-                    polyline = summary.map_polyline,
-                    color = StravaOrange,
-                    modifier = Modifier.size(120.dp),
-                    onMapClick = { onSegmentClick(summary.stravaId) }
-                )
+                    .padding(4.dp)
+            )
 
-                // 2. Summary Header
-                SegmentSummaryHeader(
-                    summary = summary,
-                    compact = true,
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(end = 8.dp)
-                )
-            }
+            HorizontalDivider(
+                modifier = Modifier.fillMaxWidth(),
+                thickness = 0.5.dp,
+                color = MaterialTheme.colorScheme.outlineVariant
+            )
 
-            // BOTTOM PART: Elevation Profile
-            Box(
+            // 2. Performance Metrics (Full Width)
+            SegmentDetails(
+                summary = summary,
+                compact = false,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(125.dp)
+                    .padding(4.dp)
+            )
+
+            // 3. BOTTOM: Elevation Profile (Full Width)
+            ElevationProfile(
+                pathPoints = pathPoints,
+                currentDistance = null, // No seeker in list view
+                modifier = Modifier
+                    .fillMaxWidth()
                     .padding(vertical = 4.dp)
-            ) {
-                ElevationProfile(
-                    pathPoints = pathPoints,
-                    currentDistance = null, // No seeker in list view
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
+            )
         }
     }
 }
