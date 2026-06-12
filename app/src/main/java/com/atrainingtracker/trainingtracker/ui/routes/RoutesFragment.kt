@@ -53,6 +53,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.activities.GpxImportActivity
 import com.atrainingtracker.trainingtracker.ui.map.MapState
 import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
+import com.atrainingtracker.trainingtracker.ui.map.MapSegment
 import com.atrainingtracker.trainingtracker.ui.map.toMapRoute
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
@@ -87,6 +88,7 @@ class RoutesFragment : Fragment() {
                 ATrainingTrackerTheme {
 
                     val routes by viewModel.routes.collectAsStateWithLifecycle()
+                    val allSegments by viewModel.segments.collectAsStateWithLifecycle()
                     val sortOrder by viewModel.sortOrder.collectAsState()
                     val isLocationAvailable by viewModel.isLocationAvailable.collectAsStateWithLifecycle()
                     val isSyncingStrava by viewModel.isSyncingStrava.collectAsStateWithLifecycle()
@@ -138,10 +140,23 @@ class RoutesFragment : Fragment() {
                                 if (selectedRoute != null) {
 
                                     // Create MapState on the fly
-                                    val mapState = remember(selectedRoute) {
+                                    val mapState = remember(selectedRoute, allSegments) {
+                                        val sportSegments = allSegments
+                                            .filter { it.summary.bSportType == selectedRoute.summary.bSportType }
+                                            .map { segment ->
+                                                MapSegment(
+                                                    stravaId = segment.summary.stravaId,
+                                                    name = segment.summary.name,
+                                                    path = segment.path,
+                                                    bSportType = segment.summary.bSportType,
+                                                    showStartAndFinishText = false
+                                                )
+                                            }
+
                                         MapState(
                                             zoomFocus = MapZoomFocus.LOCAL_ROUTES,
                                             routes = listOf(selectedRoute.toMapRoute()),
+                                            segments = sportSegments,
                                             bSportType = selectedRoute.summary.bSportType
                                         )
                                     }

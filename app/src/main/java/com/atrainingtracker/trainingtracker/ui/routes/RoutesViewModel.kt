@@ -30,6 +30,7 @@ import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -50,6 +51,7 @@ enum class RouteSortOrder(@StringRes val labelResId: Int) {
 class RoutesViewModel(application: Application) : AndroidViewModel(application) {
     private val routesRepository = RoutesRepository.getInstance(application)
     private val banalServiceRepository = BANALServiceRepository.getInstance(application)
+    private val segmentsRepository = SegmentsRepository.getInstance(application)
 
     private val _isSyncingStrava = MutableStateFlow(false)
     val isSyncingStrava = _isSyncingStrava.asStateFlow()
@@ -101,6 +103,13 @@ class RoutesViewModel(application: Application) : AndroidViewModel(application) 
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = false
+        )
+
+    val segments = segmentsRepository.allSegmentsWithPath
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
         )
 
     // The list of routes to display; properly sorted
