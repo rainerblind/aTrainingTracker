@@ -55,7 +55,7 @@ fun PeriodList(
         contentPadding = PaddingValues(
             // Calculation: The initial header height (px) + the current offset (px)
             // convert the final result to Dp.
-            top = with(density) { (headerHeightPx + appBarOffsetPx).toDp() },
+            top = with(density) { (headerHeightPx + appBarOffsetPx).toDp() + 8.dp },
             bottom = bottomPadding + 16.dp,
             start = 8.dp,
             end = 8.dp
