@@ -59,6 +59,39 @@ enum class TrackType(
 }
 
 
+/**
+ * Central point for tuning the 5-Layer "X-Ray" visual hierarchy.
+ * We use dual-rendering: a solid base at the bottom and a patterned overlay at the top.
+ * Overlay and Base now share the same width and color for a seamless look.
+ */
+object MapVisualization {
+    // User Location  (always on top)
+    const val USER_LOCATION_Z_INDEX = 100.0f
+
+    // --- TOP LAYERS (Patterned Overlays for "X-Ray" visibility) ---
+    const val TRACK_OVERLAY_Z_INDEX = 50.0f
+    const val TRACK_DOT_GAP = 15f
+
+    const val ROUTE_OVERLAY_Z_INDEX = 40.0f
+    const val ROUTE_DASH_LENGTH = 15f
+    const val ROUTE_GAP_LENGTH = 15f
+
+    const val SEGMENT_Z_INDEX = 30.0f
+    const val SEGMENT_WIDTH = 10f
+
+    // --- BOTTOM LAYERS (Solid Bases for color depth) ---
+    const val ROUTE_BASE_Z_INDEX = 20.0f
+    const val ROUTE_WIDTH = 10f
+
+    const val TRACK_BASE_Z_INDEX = 10.0f
+    const val TRACK_WIDTH = 10f
+
+    const val ROUTE_UNSELECTED_Z_INDEX = 5.0f
+    const val ROUTE_UNSELECTED_WIDTH = 6f
+    const val ROUTE_UNSELECTED_ALPHA = 0.3f
+}
+
+
 data class MapState(
     val zoomFocus: MapZoomFocus,
     val bearing: Float = 0f,

@@ -59,6 +59,9 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.Dash
+import com.google.android.gms.maps.model.Dot
+import com.google.android.gms.maps.model.Gap
 import com.google.android.gms.maps.model.JointType
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
@@ -320,29 +323,53 @@ fun ATrainingTrackerMap(
         }
 
         // Tracks
+        val trackOverlayPattern = listOf(Dot(), Gap(MapVisualization.TRACK_DOT_GAP))
         mapState.tracks.forEach { track ->
             if (track.isVisible) {
+                // 1. Solid Base (Bottom)
                 Polyline(
                     points = track.path.map { it.latLng },
                     color = track.color,
-                    width = 8f
+                    width = MapVisualization.TRACK_WIDTH,
+                    zIndex = MapVisualization.TRACK_BASE_Z_INDEX
+                )
+                // 2. Dotted Overlay (Top)
+                Polyline(
+                    points = track.path.map { it.latLng },
+                    color = track.color,
+                    width = MapVisualization.TRACK_WIDTH,
+                    zIndex = MapVisualization.TRACK_OVERLAY_Z_INDEX,
+                    pattern = trackOverlayPattern
                 )
             }
         }
 
         // Routes
+        val routeOverlayPattern = listOf(Dash(MapVisualization.ROUTE_DASH_LENGTH), Gap(MapVisualization.ROUTE_GAP_LENGTH))
         mapState.routes.forEach { route ->
-            val alpha = if (route.bSportType == mapState.bSportType) 1.0f else 0.3f  // TODO: This does not work as it should.
-            val width = if (route.bSportType == mapState.bSportType && route.isSelected) 12f else 8f  // TODO: dependency on bSportType does not work as expected
+            val alpha = if (route.isSelected || route.bSportType == mapState.bSportType) 1.0f else MapVisualization.ROUTE_UNSELECTED_ALPHA
             val routeColor = if (route.isSelected) RouteColorSelected else RouteColorUnselected
 
+            // 1. Solid Base
             Polyline(
                 points = route.path.map { it.latLng },
                 color = routeColor.copy(alpha = alpha),
-                width = width,
+                width = if (route.isSelected) MapVisualization.ROUTE_WIDTH else MapVisualization.ROUTE_UNSELECTED_WIDTH,
+                zIndex = if (route.isSelected) MapVisualization.ROUTE_BASE_Z_INDEX else MapVisualization.ROUTE_UNSELECTED_Z_INDEX,
                 clickable = true,
                 onClick = { onRouteClick(route.id) }
             )
+            
+            // 2. Dashed Overlay (Only for Selected Route)
+            if (route.isSelected) {
+                Polyline(
+                    points = route.path.map { it.latLng },
+                    color = routeColor,
+                    width = MapVisualization.ROUTE_WIDTH,
+                    zIndex = MapVisualization.ROUTE_OVERLAY_Z_INDEX,
+                    pattern = routeOverlayPattern
+                )
+            }
         }
 
         // show a marker for the selected distance
@@ -415,10 +442,21 @@ fun ATrainingTrackerMap(
 
         // --- Layer 3: Live Session Track ---
         if (mapState.currentTrack.isNotEmpty()) {
+            // Solid Base
             Polyline(
                 points = mapState.currentTrack,
                 color = Color.Blue,
-                width = 10f,
+                width = MapVisualization.TRACK_WIDTH,
+                zIndex = MapVisualization.TRACK_BASE_Z_INDEX,
+                jointType = JointType.ROUND
+            )
+            // Dotted Overlay
+            Polyline(
+                points = mapState.currentTrack,
+                color = Color.Blue,
+                width = MapVisualization.TRACK_WIDTH,
+                zIndex = MapVisualization.TRACK_OVERLAY_Z_INDEX,
+                pattern = trackOverlayPattern,
                 jointType = JointType.ROUND
             )
         }
@@ -430,7 +468,7 @@ fun ATrainingTrackerMap(
                 rotation = mapState.bearing,
                 flat = true,
                 anchor = Offset(0.5f, 0.5f),
-                zIndex = 2.0f
+                zIndex = MapVisualization.USER_LOCATION_Z_INDEX
             )
         }
     }
@@ -483,8 +521,8 @@ private fun SegmentLayer(
     onSegmentClick: (Long) -> Unit
 ) {
     val alpha = if (!isFollowMeEnabled || isLive) 1.0f else 0.3f
-    val strokeWidth = if (isLive && isFollowMeEnabled) 12f else 8f
-    val zIndex = if (isLive && isFollowMeEnabled) 1.0f else 0.0f
+    val strokeWidth = MapVisualization.SEGMENT_WIDTH
+    val zIndex = MapVisualization.SEGMENT_Z_INDEX
     val segmentColor = StravaOrange.copy(alpha = alpha)
 
     // 1. Main Segment Path
@@ -531,8 +569,8 @@ private fun SegmentLayer(
         val endPrev = segment.path[segment.path.size - 6].latLng
 
         // Orthogonal Lines
-        Polyline(points = calculateOrthogonalLine(startPt, startNext), color = segmentColor, width = strokeWidth)
-        Polyline(points = calculateOrthogonalLine(endPt, endPrev), color = segmentColor, width = strokeWidth)
+        Polyline(points = calculateOrthogonalLine(startPt, startNext), color = segmentColor, width = strokeWidth, zIndex = zIndex)
+        Polyline(points = calculateOrthogonalLine(endPt, endPrev), color = segmentColor, width = strokeWidth, zIndex = zIndex)
 
         // Text Labels (Only at high zoom)
         if (currentZoom > 14f && segment.showStartAndFinishText) {
