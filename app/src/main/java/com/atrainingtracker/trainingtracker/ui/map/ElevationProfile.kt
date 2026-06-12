@@ -37,6 +37,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import kotlin.math.ceil
+import kotlin.math.pow
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
@@ -66,13 +67,19 @@ private data class CachedProfileData(
 /**
  * Calculates height based on altitude range.
  * Min: 80dp, Max: 200dp (at 1000m range)
+ * Uses a non-linear scale (pow 0.6) to increase gain for small ranges.
  */
 fun calculateElevationProfileHeight(range: Double): androidx.compose.ui.unit.Dp {
-    val minH = 80f
+    val minH = 70f
     val maxH = 200f
     val threshold = 1000.0
     
-    val height = minH + (range.coerceIn(0.0, threshold) / threshold) * (maxH - minH)
+    // Normalize range 0..1
+    val normalizedRange = (range.coerceIn(0.0, threshold) / threshold).toFloat()
+    // Apply power function to "lift" small values
+    val curvedRange = normalizedRange.toDouble().pow(0.6).toFloat()
+    
+    val height = minH + curvedRange * (maxH - minH)
     return height.toInt().dp
 }
 
