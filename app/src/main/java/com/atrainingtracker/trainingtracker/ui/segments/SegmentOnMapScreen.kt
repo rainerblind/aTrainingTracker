@@ -40,6 +40,8 @@ import com.atrainingtracker.trainingtracker.segments.SegmentSummary
 import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.map.MapState
+import com.atrainingtracker.trainingtracker.ui.segments.SegmentHeader
+import com.atrainingtracker.trainingtracker.ui.segments.SegmentDetails
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -77,9 +79,18 @@ fun SegmentOnMapScreen(
                     drawLayer(headerLayer)
                 }) {
                     Column(modifier = modifier) {
-                        SegmentSummaryHeader(
+                        SegmentHeader(
                             summary = it,
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth().padding(8.dp)
+                        )
+                        HorizontalDivider(
+                            modifier = Modifier.fillMaxWidth(),
+                            thickness = 0.5.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant
+                        )
+                        SegmentDetails(
+                            summary = it,
+                            modifier = Modifier.fillMaxWidth().padding(8.dp)
                         )
                     }
                 }
