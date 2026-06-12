@@ -1120,6 +1120,7 @@
     <string name="strava_sync_failed">Failed to sync routes from Strava.</string>
     <string name="route_source_workout">Workout</string>
     <string name="sort">Sort</string>
+    <string name="routes_source_label">Source: %1$s</string>
 
     <!-- workout periods -->
     <string name="workout_periods__periods">Periods</string>
@@ -1134,5 +1135,4 @@
 
     <!-- share screenshots -->
     <string name="share">Share</string>
-
 </resources>

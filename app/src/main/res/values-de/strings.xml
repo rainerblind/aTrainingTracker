@@ -1013,6 +1013,7 @@
     <string name="strava_sync_failed">Synchronisierung der Routen von Strava fehlgeschlagen.</string>
     <string name="route_source_workout">Einheit</string>
     <string name="sort">Sortierung</string>
+    <string name="routes_source_label">Quelle: %1$s</string>
 
     <!-- workout periods -->
     <string name="workout_periods__periods">Zeiträume</string>
@@ -1027,6 +1028,4 @@
 
     <!-- share screenshots -->
     <string name="share">Teilen</string>
-
-
 </resources>
