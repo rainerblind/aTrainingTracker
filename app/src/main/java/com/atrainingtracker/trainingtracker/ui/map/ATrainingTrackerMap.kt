@@ -520,7 +520,7 @@ private fun SegmentLayer(
     icons: Triple<BitmapDescriptor?, BitmapDescriptor?, BitmapDescriptor?>,
     onSegmentClick: (Long) -> Unit
 ) {
-    val alpha = if (!isFollowMeEnabled || isLive) 1.0f else 0.3f
+    val alpha = if (!isFollowMeEnabled || isLive) 1.0f else MapVisualization.SEGMENT_UNSELECTED_ALPHA
     val strokeWidth = MapVisualization.SEGMENT_WIDTH
     val zIndex = MapVisualization.SEGMENT_Z_INDEX
     val segmentColor = StravaOrange.copy(alpha = alpha)

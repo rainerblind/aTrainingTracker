@@ -79,6 +79,8 @@ object MapVisualization {
     const val SEGMENT_Z_INDEX = 30.0f
     const val SEGMENT_WIDTH = 10f
 
+    const val SEGMENT_UNSELECTED_ALPHA = 0.3f
+
     // --- BOTTOM LAYERS (Solid Bases for color depth) ---
     const val ROUTE_BASE_Z_INDEX = 20.0f
     const val ROUTE_WIDTH = 10f
