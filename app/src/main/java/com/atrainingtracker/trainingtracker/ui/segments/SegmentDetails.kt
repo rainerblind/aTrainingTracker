@@ -55,7 +55,7 @@ fun SegmentDetails(
             VerticalDivider(compact)
             Text(
                 text = summary.maxGrade,
-                style = if (compact) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyMedium
+                style = if (compact) MaterialTheme.typography.bodySmall else MaterialTheme.typography.titleMedium
             )
         }
 
@@ -65,7 +65,7 @@ fun SegmentDetails(
                 Icon(
                     painter = painterResource(id = R.drawable.ic_altitude),
                     contentDescription = null,
-                    modifier = Modifier.size(16.dp),
+                    modifier = Modifier.size(20.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.width(4.dp))
@@ -86,11 +86,11 @@ private fun StatItem(iconRes: Int, value: String, compact: Boolean) {
         Icon(
             painter = painterResource(id = iconRes),
             contentDescription = null,
-            modifier = Modifier.size(if (compact) 14.dp else 16.dp),
+            modifier = Modifier.size(if (compact) 14.dp else 20.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.width(4.dp))
-        Text(text = value, style = if (compact) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyMedium)
+        Text(text = value, style = if (compact) MaterialTheme.typography.bodySmall else MaterialTheme.typography.titleMedium)
     }
 }
 
@@ -100,7 +100,7 @@ private fun VerticalDivider(compact: Boolean) {
         modifier = Modifier
             .padding(horizontal = 8.dp)
             .width(1.dp)
-            .height(if (compact) 10.dp else 12.dp)
+            .height(if (compact) 10.dp else 16.dp)
             .background(MaterialTheme.colorScheme.outlineVariant)
     )
 }

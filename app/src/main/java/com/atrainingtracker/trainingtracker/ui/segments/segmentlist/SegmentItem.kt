@@ -27,7 +27,6 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.segments.SegmentSummary
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
-import com.atrainingtracker.trainingtracker.ui.map.TrackOrSegmentOnMap
 import com.atrainingtracker.trainingtracker.ui.segments.SegmentHeader
 import com.atrainingtracker.trainingtracker.ui.segments.SegmentDetails
 import com.atrainingtracker.trainingtracker.ui.theme.StravaOrange
@@ -51,7 +50,7 @@ fun SegmentItem(
         onClick = { onSegmentClick(summary.stravaId) }
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            // 1. TOP: Segment Identity (Title, City, Sport Icon, PR)
+            // 1. TOP: Segment Identity (Full Width)
             SegmentHeader(
                 summary = summary,
                 compact = false,
@@ -66,7 +65,7 @@ fun SegmentItem(
                 color = MaterialTheme.colorScheme.outlineVariant
             )
 
-            // 2. Performance Metrics
+            // 2. Performance Metrics (Full Width)
             SegmentDetails(
                 summary = summary,
                 compact = false,
@@ -75,25 +74,11 @@ fun SegmentItem(
                     .padding(8.dp)
             )
 
-            // 3. MIDDLE: Map Preview
+            // 3. BOTTOM: Elevation Profile (Full Width)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(180.dp) // Consistent with RouteItem
-            ) {
-                TrackOrSegmentOnMap(
-                    polyline = summary.map_polyline,
-                    color = StravaOrange,
-                    modifier = Modifier.fillMaxSize(),
-                    onMapClick = { onSegmentClick(summary.stravaId) }
-                )
-            }
-
-            // 3. BOTTOM: Elevation Profile
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(100.dp)
+                    .height(125.dp)
                     .padding(vertical = 4.dp)
             ) {
                 ElevationProfile(
