@@ -347,7 +347,7 @@ fun ATrainingTrackerMap(
         // Routes
         val routeOverlayPattern = listOf(Dash(MapVisualization.ROUTE_DASH_LENGTH), Gap(MapVisualization.ROUTE_GAP_LENGTH))
         mapState.routes.forEach { route ->
-            val alpha = if (route.isSelected || route.bSportType == mapState.bSportType) 1.0f else MapVisualization.ROUTE_UNSELECTED_ALPHA
+            val alpha = if (route.isSelected && (mapState.zoomFocus != MapZoomFocus.FOLLOW_ME || route.bSportType == mapState.bSportType)) 1.0f else MapVisualization.ROUTE_UNSELECTED_ALPHA
             val routeColor = if (route.isSelected) RouteColorSelected else RouteColorUnselected
 
             // 1. Solid Base
@@ -361,7 +361,7 @@ fun ATrainingTrackerMap(
             )
             
             // 2. Dashed Overlay (Only for Selected Route)
-            if (route.isSelected) {
+            if (route.isSelected && (mapState.zoomFocus != MapZoomFocus.FOLLOW_ME || route.bSportType == mapState.bSportType)) {
                 Polyline(
                     points = route.path.map { it.latLng },
                     color = routeColor,
