@@ -168,19 +168,14 @@ private fun WorkoutMediaSection(
         )
 
         // 2. The Elevation Profile
-        Box(
+        ElevationProfile(
+            // pathPoints = points,
+            encodedAltitudes = workoutData.encodedAltitudes,
+            encodedDistances = workoutData.encodedDistances,
+            currentDistance = null,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(100.dp)
                 .clickable { onMapClick() }
-        ) {
-            ElevationProfile(
-                // pathPoints = points,
-                encodedAltitudes = workoutData.encodedAltitudes,
-                encodedDistances = workoutData.encodedDistances,
-                currentDistance = null,
-                modifier = Modifier.fillMaxSize()
-            )
-        }
+        )
     }
 }

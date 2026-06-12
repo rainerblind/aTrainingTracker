@@ -75,18 +75,13 @@ fun SegmentItem(
             )
 
             // 3. BOTTOM: Elevation Profile (Full Width)
-            Box(
+            ElevationProfile(
+                pathPoints = pathPoints,
+                currentDistance = null, // No seeker in list view
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(125.dp)
                     .padding(vertical = 4.dp)
-            ) {
-                ElevationProfile(
-                    pathPoints = pathPoints,
-                    currentDistance = null, // No seeker in list view
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
+            )
         }
     }
 }

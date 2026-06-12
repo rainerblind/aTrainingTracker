@@ -80,9 +80,7 @@ fun LiveSegmentSheet(
             pathPoints = liveSegment.staticData.path,
             // Pass the raw distance double to the profile for the progress marker
             currentDistance = liveSegment.liveData.distanceOnSegment_raw,
-            modifier = Modifier
-                .height(150.dp)
-                .fillMaxWidth()
+            modifier = Modifier.fillMaxWidth()
         )
     }
 }
