@@ -93,6 +93,12 @@ fun WorkoutSummary(
             menuEnabled = workoutData.headerData.finished
         )
 
+        HorizontalDivider(
+            modifier = Modifier.fillMaxWidth(),
+            thickness = 0.5.dp,
+            color = MaterialTheme.colorScheme.outlineVariant
+        )
+
         // 2. Description Section (Notes, Goals, Method)
         // Hidden automatically if all fields are null/blank
         WorkoutDescription(
