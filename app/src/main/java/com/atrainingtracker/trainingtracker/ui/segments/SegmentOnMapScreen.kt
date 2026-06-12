@@ -68,7 +68,7 @@ fun SegmentOnMapScreen(
 
         segmentSummary?.let {
             Surface(
-                color = MaterialTheme.colorScheme.primaryContainer,
+                color = MaterialTheme.colorScheme.surface,
                 shape = RectangleShape,
                 modifier = Modifier.statusBarsPadding()
             ) {
