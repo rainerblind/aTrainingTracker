@@ -76,7 +76,7 @@ fun RouteItem(
                     onClick = { onHeaderClick(summary.id) },
                     onLongClick = { showContextMenu = true }
                 )
-                .padding(8.dp)
+                .padding(4.dp)
             ) {
                 RouteSummaryHeader(
                     summary = summary,

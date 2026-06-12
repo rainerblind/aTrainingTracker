@@ -56,7 +56,7 @@ fun SegmentItem(
                 compact = false,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(8.dp)
+                    .padding(4.dp)
             )
 
             HorizontalDivider(
@@ -71,7 +71,7 @@ fun SegmentItem(
                 compact = false,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(8.dp)
+                    .padding(4.dp)
             )
 
             // 3. BOTTOM: Elevation Profile (Full Width)
