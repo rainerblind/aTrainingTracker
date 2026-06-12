@@ -25,6 +25,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.res.painterResource
@@ -55,33 +56,63 @@ fun RouteSummaryHeader(
         shape = RectangleShape, //RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
-        Row(
-            modifier = modifier
+        Column(
+            modifier = Modifier
                 .fillMaxWidth()
                 .padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // --- LEFT COLUMN: Name, Source, and Icon-based Metrics ---
-            Column(modifier = Modifier.weight(1f)) {
-                // Route Name
+            // --- TOP ROW: Sport Icon and Route Name ---
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    painter = painterResource(id = summary.bSportType.iconResId),
+                    contentDescription = null,
+                    modifier = Modifier.size(32.dp),
+                    tint = Color.Unspecified // Original color
+                )
                 Text(
                     text = summary.name,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
                 )
 
+                // Visibility Switch (Right-aligned in top row)
+                if (showSwitch) {
+                    Switch(
+                        modifier = Modifier.scale(0.8f),
+                        checked = summary.isSelected,
+                        onCheckedChange = onToggleSelection,
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = RouteColorSelected,
+                            checkedTrackColor = RouteColorSelected.copy(alpha = 0.5f),
+                            checkedBorderColor = RouteColorSelected,
+                            uncheckedThumbColor = RouteColorUnselected,
+                            uncheckedTrackColor = RouteColorUnselected.copy(alpha = 0.5f),
+                            uncheckedBorderColor = RouteColorUnselected
+                        )
+                    )
+                }
+            }
+
+            // --- BOTTOM CONTENT: Source and Metrics ---
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
                 // Source
                 Text(
                     text = stringResource(summary.source.displayNameResId),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-
-                Spacer(modifier = Modifier.height(8.dp))
 
                 // Metrics Row: Distance and Elevation Gain with Icons
                 Row(
@@ -119,38 +150,6 @@ fun RouteSummaryHeader(
                             fontWeight = FontWeight.SemiBold
                         )
                     }
-                }
-            }
-
-            // --- RIGHT COLUMN: Sport Icon and Visibility Toggle ---
-            Column(
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // Sport Category Icon
-                Icon(
-                    painter = painterResource(id = summary.bSportType.iconResId),
-                    contentDescription = null,
-                    modifier = Modifier.size(32.dp),
-                    tint = Color.Unspecified
-                )
-
-                // Visibility Switch
-                if (showSwitch) {
-                    Switch(
-                        checked = summary.isSelected,
-                        onCheckedChange = onToggleSelection,
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = RouteColorSelected,
-                            checkedTrackColor = RouteColorSelected.copy(alpha = 0.5f),
-                            checkedBorderColor = RouteColorSelected,
-
-                            // Unselected androidx.compose.runtime.State (Gray/Muted)
-                            uncheckedThumbColor = RouteColorUnselected,
-                            uncheckedTrackColor = RouteColorUnselected.copy(alpha = 0.5f),
-                            uncheckedBorderColor = RouteColorUnselected
-                        )
-                    )
                 }
             }
         }
