@@ -44,7 +44,7 @@ class StravaUploader(context: Context) : BaseExporter(context) {
 
     companion object {
         private const val TAG = "StravaUploader"
-        private val DEBUG = TrainingApplication.getDebug(false)
+        private val DEBUG = TrainingApplication.getDebug(true)
 
         private const val URL_STRAVA_UPLOAD = "https://www.strava.com/api/v3/uploads"
         private const val URL_STRAVA_ACTIVITY = "https://www.strava.com/api/v3/activities/"
@@ -202,7 +202,7 @@ class StravaUploader(context: Context) : BaseExporter(context) {
     }
 
     private fun checkAndUpdateDuplicate(exportInfo: ExportInfo, stravaJson: JSONObject): ExportResult? {
-        if (DEBUG) Log.d(TAG, "checkAndHandleDuplicate")
+        if (DEBUG) Log.d(TAG, "checkAndUpdateDuplicate")
 
         // Handles both:
         // 1. "duplicate of <a href='\/activities\/16877339482"
@@ -288,7 +288,7 @@ class StravaUploader(context: Context) : BaseExporter(context) {
             Thread.sleep(waitingTime)
             activityJSON = getStravaActivity(activityId)
         }
-        if (DEBUG) Log.i(TAG, "activityJSON=$activityJSON")
+        if (DEBUG) Log.i(TAG, "doUpdate: activityJSON=$activityJSON")
 
         // SAVE STRAVA ACTIVITY DATA
         StravaUploadDbHelper(mContext).updateStravaActivityData(exportInfo.fileBaseName, activityJSON.toString())
