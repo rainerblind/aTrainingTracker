@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.ui.aftermath
 import org.json.JSONObject
 
 data class StravaActivity(
+    val id: Long? = null,
     val segmentEfforts: List<StravaSegmentEffort> = emptyList(),
     val bestEfforts: List<StravaBestEffort> = emptyList()
 )
@@ -43,6 +44,7 @@ object StravaActivityParser {
         if (jsonString.isNullOrBlank()) return null
         return try {
             val json = JSONObject(jsonString)
+            val id = if (json.has("id")) json.getLong("id") else null
             
             val segmentEfforts = mutableListOf<StravaSegmentEffort>()
             json.optJSONArray("segment_efforts")?.let { array ->
@@ -73,7 +75,7 @@ object StravaActivityParser {
                 }
             }
 
-            StravaActivity(segmentEfforts, bestEfforts)
+            StravaActivity(id, segmentEfforts, bestEfforts)
         } catch (e: Exception) {
             null
         }

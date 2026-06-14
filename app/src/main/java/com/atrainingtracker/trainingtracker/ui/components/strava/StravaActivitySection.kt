@@ -15,6 +15,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.components.strava
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.WorkspacePremium
@@ -24,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -31,6 +33,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
+import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
 import com.atrainingtracker.trainingtracker.ui.aftermath.StravaActivity
 import com.atrainingtracker.trainingtracker.ui.aftermath.StravaActivityParser
 import com.atrainingtracker.trainingtracker.ui.aftermath.StravaBestEffort
@@ -41,6 +44,7 @@ fun StravaActivitySection(
     rawActivityJson: String?,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val activity = remember(rawActivityJson) {
         StravaActivityParser.parse(rawActivityJson)
     } ?: return
@@ -50,6 +54,9 @@ fun StravaActivitySection(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .clickable(enabled = activity.id != null) {
+                activity.id?.let { StravaHelper.openActivity(context, it) }
+            }
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -252,6 +259,7 @@ private fun RankBadge(rank: Int) {
 fun PreviewStravaActivitySection() {
     val dummyJson = """
         {
+          "id": 123456789,
           "segment_efforts": [
             { "name": "Alpe d'Huez", "elapsed_time": 3600, "pr_rank": 1, "kom_rank": 1 },
             { "name": "Col du Galibier", "elapsed_time": 4800, "pr_rank": 2 },
@@ -274,6 +282,7 @@ fun PreviewStravaActivitySection() {
 fun PreviewStravaActivitySection2() {
     val dummyJson = """
         {
+          "id": 987654321,
           "segment_efforts": [
             { "name": "Alpe d'Huez", "elapsed_time": 3600, "pr_rank": 1, "kom_rank": 7 },
             { "name": "Col du Galibier", "elapsed_time": 4800, "pr_rank": 2 },

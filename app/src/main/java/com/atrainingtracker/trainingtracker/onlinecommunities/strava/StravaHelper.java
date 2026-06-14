@@ -153,6 +153,24 @@ public class StravaHelper {
         context.startActivity(browserIntent);
     }
 
+    public static void openActivity(@NonNull Context context, long activityId) {
+        if (DEBUG) Log.i(TAG, "openActivity: " + activityId);
+
+        // Try to open in the Strava app first
+        Uri intentUri = Uri.parse("strava://activities/" + activityId);
+        Intent intent = new Intent(Intent.ACTION_VIEW, intentUri);
+
+        // Check if there's an app to handle this intent
+        if (intent.resolveActivity(context.getPackageManager()) != null) {
+            context.startActivity(intent);
+        } else {
+            // Fallback: Open in browser
+            intentUri = Uri.parse("https://www.strava.com/activities/" + activityId);
+            intent = new Intent(Intent.ACTION_VIEW, intentUri);
+            context.startActivity(intent);
+        }
+    }
+
     @NonNull
     protected static String getRefreshUrl() {
         Uri.Builder builder = new Uri.Builder();
