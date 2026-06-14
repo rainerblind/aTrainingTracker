@@ -112,6 +112,19 @@ fun ATrainingTrackerMap(
     var scrubIconRight by remember { mutableStateOf<BitmapDescriptor?>(null) }
     var scrubIconLeft by remember { mutableStateOf<BitmapDescriptor?>(null) }
 
+    // --- Identify the active path for the Scrubber based on current focus ---
+    val activePath = remember(mapState) {
+        when (mapState.zoomFocus) {
+            MapZoomFocus.TRACK_AND_MARKERS -> mapState.tracks.firstOrNull()?.path
+            MapZoomFocus.LOCAL_ROUTES -> mapState.routes.find { it.isSelected }?.path ?: mapState.routes.firstOrNull()?.path
+            MapZoomFocus.LOCAL_SEGMENTS -> mapState.segments.firstOrNull()?.path
+            MapZoomFocus.FOLLOW_ME -> null
+        } ?: mapState.tracks.firstOrNull()?.path
+        ?: mapState.routes.firstOrNull()?.path
+        ?: mapState.segments.firstOrNull()?.path
+        ?: emptyList()
+    }
+
     // Initialize icons inside LaunchedEffect
     LaunchedEffect(primaryColor, isMapLoaded) {
         // This runs after the composition has started, ensuring Maps SDK is likely ready
@@ -243,20 +256,9 @@ fun ATrainingTrackerMap(
 
     // TODO: add marker here.
     // --- Auto-center Map on Scrubber Icon ---
-    LaunchedEffect(selectedDistance) {
+    LaunchedEffect(selectedDistance, activePath) {
         selectedDistance?.let { targetDist ->
-            // Find the point associated with the distance
-            val activePath = if (mapState.tracks.isNotEmpty()) {
-                mapState.tracks.firstOrNull()?.path
-            }
-            else if (mapState.segments.isNotEmpty()) {
-                mapState.segments.firstOrNull()?.path
-            }
-            else {
-                mapState.routes.firstOrNull()?.path
-            } ?: emptyList()
-
-            val scrubPoint = activePath!!.find { it.distance >= targetDist }
+            val scrubPoint = activePath.find { it.distance >= targetDist }
 
             scrubPoint?.let { point ->
                 /*
@@ -375,18 +377,7 @@ fun ATrainingTrackerMap(
 
         // show a marker for the selected distance
         selectedDistance?.let { targetDist ->
-            // 1. Identify the active path (either from tracks or segments)
-            val activePath = if (mapState.tracks.isNotEmpty()) {
-                mapState.tracks.firstOrNull()?.path
-            }
-            else if (mapState.segments.isNotEmpty()) {
-                mapState.segments.firstOrNull()?.path
-            }
-            else {
-                mapState.routes.firstOrNull()?.path
-            } ?: emptyList()
-
-            val index = activePath!!.indexOfFirst { it.distance >= targetDist }
+            val index = activePath.indexOfFirst { it.distance >= targetDist }
 
             if (index != -1) {
                 val point = activePath[index]

@@ -40,8 +40,9 @@ public class StravaUploadDbHelper extends SQLiteOpenHelper {
     public static final String UPLOAD_ID = "UploadId";
     public static final String ACTIVITY_ID = "ActivityId";
     public static final String STATUS = "Status";
+    public static final String STRAVA_ACTIVITY_DATA = "StravaActivity";
     static final String DB_NAME = "StravaUpload.db";
-    static final int DB_VERSION = 3;
+    static final int DB_VERSION = 5;
     private static final String TAG = "StravaUploadDbHelper";
     private static final boolean DEBUG = false;
     private static final String CREATE_TABLE = "create table " + TABLE + " ("
@@ -49,7 +50,8 @@ public class StravaUploadDbHelper extends SQLiteOpenHelper {
             + WorkoutSummaries.FILE_BASE_NAME + " text,"    // forms as a key
             + UPLOAD_ID + " text,"
             + ACTIVITY_ID + " text,"
-            + STATUS + " text)";
+            + STATUS + " text,"
+            + STRAVA_ACTIVITY_DATA + " text)";
 
     // Constructor
     // TODO: do we really need this??
@@ -67,12 +69,28 @@ public class StravaUploadDbHelper extends SQLiteOpenHelper {
 
     @Override
     public void onUpgrade(@NonNull SQLiteDatabase db, int oldVersion, int newVersion) {
-        // TODO: alter table instead of deleting!
-
-        db.execSQL("drop table if exists " + TABLE);  // drops the old database
-
-        onCreate(db);  // run onCreate to get new database
-
+        if (oldVersion < 4) {
+            // Migrating from 3 to 4 added the original 'Feedback' column (now renamed)
+            // But since we are at 5 now, we skip directly to the latest schema logic.
+            db.execSQL("drop table if exists " + TABLE);
+            onCreate(db);
+        } else if (oldVersion == 4) {
+            // Version 4 had 'Feedback', Version 5 uses 'StravaActivity'
+            // We safely migrate the data by renaming the column
+            try {
+                db.beginTransaction();
+                // 1. Rename existing column from Feedback to StravaActivity
+                db.execSQL("ALTER TABLE " + TABLE + " RENAME COLUMN Feedback TO " + STRAVA_ACTIVITY_DATA);
+                db.setTransactionSuccessful();
+            } catch (SQLException e) {
+                Log.e(TAG, "Failed to migrate Feedback column: " + e.getMessage());
+                // Fallback: recreate if migration fails
+                db.execSQL("drop table if exists " + TABLE);
+                onCreate(db);
+            } finally {
+                db.endTransaction();
+            }
+        }
     }
 
     public void updateOrInsert(String fileBaseName, ContentValues values) {
@@ -93,8 +111,6 @@ public class StravaUploadDbHelper extends SQLiteOpenHelper {
             db.insert(TABLE, null, values);
             if (DEBUG) Log.d(TAG, "added " + fileBaseName);
         }
-
-        db.close();
 
     }
 
@@ -125,15 +141,25 @@ public class StravaUploadDbHelper extends SQLiteOpenHelper {
         updateOrInsert(fileBaseName, values);
     }
 
-    public void updateAll(String fileBaseName, String upload_id, String activity_id, String status) {
+    public void updateStravaActivityData(String fileBaseName, String activityData) {
+        if (DEBUG) Log.d(TAG, "updateStravaActivityData: " + fileBaseName);
+
+        ContentValues values = new ContentValues();
+        values.put(WorkoutSummaries.FILE_BASE_NAME, fileBaseName);
+        values.put(STRAVA_ACTIVITY_DATA, activityData);
+        updateOrInsert(fileBaseName, values);
+    }
+
+    public void updateAll(String fileBaseName, String upload_id, String activity_id, String status, String activityData) {
         if (DEBUG)
-            Log.d(TAG, "updateStatus: " + fileBaseName + " upload_id: " + upload_id + " activity_id: " + activity_id + " status: " + status);
+            Log.d(TAG, "updateAll: " + fileBaseName + " upload_id: " + upload_id + " activity_id: " + activity_id + " status: " + status);
 
         ContentValues values = new ContentValues();
         values.put(WorkoutSummaries.FILE_BASE_NAME, fileBaseName);
         values.put(UPLOAD_ID, upload_id);
         values.put(ACTIVITY_ID, activity_id);
         values.put(STATUS, status);
+        values.put(STRAVA_ACTIVITY_DATA, activityData);
         updateOrInsert(fileBaseName, values);
     }
 
@@ -147,17 +173,38 @@ public class StravaUploadDbHelper extends SQLiteOpenHelper {
         Cursor cursor = db.query(TABLE, null, WorkoutSummaries.FILE_BASE_NAME + "=?", new String[]{fileBaseName}, null, null, null);
 
         if (cursor.moveToFirst()) {
-            if (!cursor.isNull(cursor.getColumnIndex(ACTIVITY_ID))) {
-                activityId = cursor.getString(cursor.getColumnIndex(ACTIVITY_ID));
+            int idx = cursor.getColumnIndex(ACTIVITY_ID);
+            if (idx != -1 && !cursor.isNull(idx)) {
+                activityId = cursor.getString(idx);
             }
         } else {
             Log.e(TAG, "in getActivityId: no entry or invalid entry for " + fileBaseName);
         }
 
         cursor.close();
-        db.close();
 
         if (DEBUG) Log.d(TAG, "ActivityId: " + activityId);
         return activityId;
+    }
+
+    @Nullable
+    public String getStravaActivityData(String fileBaseName) {
+        if (DEBUG) Log.d(TAG, "getStravaActivityData: " + fileBaseName);
+
+        String activityData = null;
+
+        SQLiteDatabase db = getReadableDatabase();
+        Cursor cursor = db.query(TABLE, null, WorkoutSummaries.FILE_BASE_NAME + "=?", new String[]{fileBaseName}, null, null, null);
+
+        if (cursor.moveToFirst()) {
+            int idx = cursor.getColumnIndex(STRAVA_ACTIVITY_DATA);
+            if (idx != -1 && !cursor.isNull(idx)) {
+                activityData = cursor.getString(idx);
+            }
+        }
+
+        cursor.close();
+
+        return activityData;
     }
 }

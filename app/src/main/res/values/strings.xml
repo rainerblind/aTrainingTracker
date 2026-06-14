@@ -1135,4 +1135,22 @@
 
     <!-- share screenshots -->
     <string name="share">Share</string>
+
+    <string name="avg_speed_label">Avg Speed</string>
+    <string name="ascent_label">Ascent</string>
+    <string name="unit_meters_short">m</string>
+    <string name="strava_results_title">Strava Results</string>
+    <string name="strava_best_efforts">Best Efforts</string>
+    <plurals name="strava_best_efforts_with_prs_format">
+        <item quantity="one">Best Efforts (%1$d PR)</item>
+        <item quantity="other">Best Efforts (%1$d PRs)</item>
+    </plurals>
+    <string name="strava_segments_title">Segments</string>
+    <plurals name="strava_segments_with_prs_format">
+        <item quantity="one">Segments (%1$d PR)</item>
+        <item quantity="other">Segments (%1$d PRs)</item>
+    </plurals>
+    <string name="strava_kom_description">KOM / Course Record</string>
+    <string name="strava_pr_description">Personal Record #%1$d</string>
+    <string name="strava_overall_rank_description">Overall Rank #%1$d</string>
 </resources>

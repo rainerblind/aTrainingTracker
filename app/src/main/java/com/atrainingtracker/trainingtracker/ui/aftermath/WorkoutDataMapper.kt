@@ -30,6 +30,7 @@ import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
+import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaDataRow
 import java.text.ParseException
 import java.text.SimpleDateFormat
@@ -47,7 +48,8 @@ class WorkoutDataMapper(
     private val context: Context,
     private val workoutSummariesDatabaseManager: WorkoutSummariesDatabaseManager,
     private val sportTypeDatabaseManager: SportTypeDatabaseManager,
-    private val equipmentDbHelper: EquipmentDbHelper
+    private val equipmentDbHelper: EquipmentDbHelper,
+    private val stravaUploadDbHelper: StravaUploadDbHelper
 ) {
     // Define all sensors to check
     val sensorsToCheck = arrayOf(
@@ -84,12 +86,15 @@ class WorkoutDataMapper(
 
         val dateTimeResult = formatDateTime(cursor)
 
+        val fileBaseName = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.FILE_BASE_NAME))
+        val stravaActivityData = if (fileBaseName != null) stravaUploadDbHelper.getStravaActivityData(fileBaseName) else null
+
 
         // The mapper is responsible for assembling the final object from its constituent parts.
         return WorkoutData(
             id = workoutId,
             finished = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.FINISHED)) == 1,
-            fileBaseName = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.FILE_BASE_NAME)),
+            fileBaseName = fileBaseName,
             workoutName = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.WORKOUT_NAME)),
             sportId = sportId,
             sportName = sportName,
@@ -120,6 +125,8 @@ class WorkoutDataMapper(
             description = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.DESCRIPTION)),
             goal = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.GOAL)),
             method = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.METHOD)),
+
+            stravaActivityData = stravaActivityData,
 
             extremaRows = sensorsToCheck.mapNotNull { sensorType ->
                 // Business logic: do not show speed for running activities

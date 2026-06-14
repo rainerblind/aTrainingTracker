@@ -44,7 +44,7 @@ class StravaUploader(context: Context) : BaseExporter(context) {
 
     companion object {
         private const val TAG = "StravaUploader"
-        private val DEBUG = TrainingApplication.getDebug(false)
+        private val DEBUG = TrainingApplication.getDebug(true)
 
         private const val URL_STRAVA_UPLOAD = "https://www.strava.com/api/v3/uploads"
         private const val URL_STRAVA_ACTIVITY = "https://www.strava.com/api/v3/activities/"
@@ -85,6 +85,10 @@ class StravaUploader(context: Context) : BaseExporter(context) {
 
         val file = File(getBaseDirFile(mContext), exportInfo.shortPath)
         val accessToken = StravaHelper.getRefreshedAccessToken()
+
+        if (accessToken.isNullOrEmpty()) {
+            return ExportResult(false, false, "Could not refresh Strava Access Token. Please log in again.")
+        }
 
         if (DEBUG) Log.d(TAG, "starting to upload to strava")
 
@@ -198,7 +202,7 @@ class StravaUploader(context: Context) : BaseExporter(context) {
     }
 
     private fun checkAndUpdateDuplicate(exportInfo: ExportInfo, stravaJson: JSONObject): ExportResult? {
-        if (DEBUG) Log.d(TAG, "checkAndHandleDuplicate")
+        if (DEBUG) Log.d(TAG, "checkAndUpdateDuplicate")
 
         // Handles both:
         // 1. "duplicate of <a href='\/activities\/16877339482"
@@ -221,7 +225,8 @@ class StravaUploader(context: Context) : BaseExporter(context) {
                     exportInfo.fileBaseName,
                     id,
                     activityId,
-                    error
+                    error,
+                    stravaJson.toString()
                 )
 
                 return doUpdate(exportInfo)
@@ -283,10 +288,12 @@ class StravaUploader(context: Context) : BaseExporter(context) {
             Thread.sleep(waitingTime)
             activityJSON = getStravaActivity(activityId)
         }
+        if (DEBUG) Log.i(TAG, "doUpdate: activityJSON=$activityJSON")
+
+        // SAVE STRAVA ACTIVITY DATA
+        StravaUploadDbHelper(mContext).updateStravaActivityData(exportInfo.fileBaseName, activityJSON.toString())
 
         // Now, that we are pretty sure that the sport type is correct, we can continue to update all other fields.
-
-
         // Prepare Form Body for metadata update
         val formBuilder = FormBody.Builder()
 
