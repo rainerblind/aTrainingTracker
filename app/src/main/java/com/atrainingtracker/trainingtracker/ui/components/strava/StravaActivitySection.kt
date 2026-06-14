@@ -193,7 +193,7 @@ private fun OverallRankBadge(rank: Int) {
         state = rememberTooltipState()
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            if (rank == 1) {
+            if (rank <= 3) {
                 Icon(
                     painter = painterResource(R.drawable.ic_crown),
                     contentDescription = null,
@@ -201,20 +201,14 @@ private fun OverallRankBadge(rank: Int) {
                     tint = color
                 )
                 Spacer(Modifier.width(2.dp))
-                Text(
-                    text = "KOM",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = color
-                )
-            } else {
-                Text(
-                    text = "Rank #$rank",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = color
-                )
             }
+            
+            Text(
+                text = if (rank == 1) "KOM" else "Rank #$rank",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.ExtraBold,
+                color = color
+            )
         }
     }
 }
@@ -222,12 +216,20 @@ private fun OverallRankBadge(rank: Int) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RankBadge(rank: Int) {
+    val emoji = when (rank) {
+        1 -> "🥇"
+        2 -> "🥈"
+        3 -> "🥉"
+        else -> null
+    }
+
     val color = when (rank) {
         1 -> Color(0xFFFFD700) // Gold
         2 -> Color(0xFFC0C0C0) // Silver
         3 -> Color(0xFFCD7F32) // Bronze
         else -> MaterialTheme.colorScheme.primary
     }
+
     TooltipBox(
         positionProvider = TooltipDefaults.rememberTooltipPositionProvider(),
         tooltip = {
@@ -238,18 +240,21 @@ private fun RankBadge(rank: Int) {
         state = rememberTooltipState()
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = Icons.Default.WorkspacePremium,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint = color
-            )
             Text(
-                text = "PR #$rank",
+                text = if (emoji != null) "PR $emoji" else "PR #$rank",
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.ExtraBold,
                 color = color
             )
+            if (emoji == null) {
+                Spacer(Modifier.width(2.dp))
+                Icon(
+                    imageVector = Icons.Default.WorkspacePremium,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = color
+                )
+            }
         }
     }
 }
@@ -262,7 +267,7 @@ fun PreviewStravaActivitySection() {
           "id": 123456789,
           "segment_efforts": [
             { "name": "Alpe d'Huez", "elapsed_time": 3600, "pr_rank": 1, "kom_rank": 1 },
-            { "name": "Col du Galibier", "elapsed_time": 4800, "pr_rank": 2 },
+            { "name": "Col du Galibier", "elapsed_time": 4800, "pr_rank": 2, "kom_rank": 3},
             { "name": "Flat Sprint", "elapsed_time": 120 }
           ],
           "best_efforts": [
