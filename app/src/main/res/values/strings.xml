@@ -1141,6 +1141,7 @@
     <string name="unit_meters_short">m</string>
     <string name="strava_results_title">Strava Results</string>
     <string name="strava_best_efforts">Best Efforts</string>
+    <string name="strava_best_efforts_with_prs_format">Best Efforts (%1$d PRs)</string>
     <string name="strava_segments_title">Segments</string>
     <string name="strava_segments_with_prs_format">Segments (%1$d PRs)</string>
     <string name="strava_kom_description">KOM / Course Record</string>

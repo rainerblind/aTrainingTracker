@@ -78,8 +78,14 @@ fun StravaActivitySection(
 
         // --- Best Efforts (e.g. for runs) ---
         if (activity.bestEfforts.isNotEmpty()) {
+            val prCount = activity.bestEfforts.count { it.prRank != null }
+            val bestEffortsTitle = if (prCount > 0) {
+                stringResource(R.string.strava_best_efforts_with_prs_format, prCount)
+            } else {
+                stringResource(R.string.strava_best_efforts)
+            }
             Text(
-                text = stringResource(R.string.strava_best_efforts),
+                text = bestEffortsTitle,
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.secondary
             )
