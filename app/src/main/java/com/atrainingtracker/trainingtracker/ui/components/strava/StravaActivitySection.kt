@@ -125,6 +125,7 @@ private fun BestEffortRow(effort: StravaBestEffort) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SegmentEffortRow(effort: StravaSegmentEffort) {
     val tf = TimeFormatter()
@@ -141,19 +142,18 @@ private fun SegmentEffortRow(effort: StravaSegmentEffort) {
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
-            if (effort.prRank != null) {
-                RankBadge(effort.prRank)
+            // Overall Rank (KOM / Top 10)
+            effort.komRank?.let { rank ->
+                OverallRankBadge(rank)
                 Spacer(Modifier.width(8.dp))
             }
-            if (effort.komRank == 1) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_pr_time),
-                    contentDescription = "KOM",
-                    modifier = Modifier.size(16.dp),
-                    tint = Color(0xFFFFD700) // Gold
-                )
+            
+            // Personal Record Rank
+            effort.prRank?.let { rank ->
+                RankBadge(rank)
                 Spacer(Modifier.width(8.dp))
             }
+
             Text(
                 text = tf.format(effort.elapsedTimeSec.toLong()),
                 style = MaterialTheme.typography.bodyMedium,
@@ -163,6 +163,56 @@ private fun SegmentEffortRow(effort: StravaSegmentEffort) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun OverallRankBadge(rank: Int) {
+    val color = when (rank) {
+        1 -> Color(0xFFFFD700) // Gold
+        2 -> Color(0xFFC0C0C0) // Silver
+        3 -> Color(0xFFCD7F32) // Bronze
+        else -> MaterialTheme.colorScheme.tertiary
+    }
+    
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(),
+        tooltip = {
+            PlainTooltip {
+                Text(
+                    if (rank == 1) stringResource(R.string.strava_kom_description)
+                    else stringResource(R.string.strava_overall_rank_description, rank)
+                )
+            }
+        },
+        state = rememberTooltipState()
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (rank == 1) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_crown),
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = color
+                )
+                Spacer(Modifier.width(2.dp))
+                Text(
+                    text = "KOM",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = color
+                )
+            } else {
+                Text(
+                    text = "Rank #$rank",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = color
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RankBadge(rank: Int) {
     val color = when (rank) {
@@ -171,19 +221,29 @@ private fun RankBadge(rank: Int) {
         3 -> Color(0xFFCD7F32) // Bronze
         else -> MaterialTheme.colorScheme.primary
     }
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-            imageVector = Icons.Default.WorkspacePremium,
-            contentDescription = null,
-            modifier = Modifier.size(16.dp),
-            tint = color
-        )
-        Text(
-            text = "#$rank",
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.ExtraBold,
-            color = color
-        )
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(),
+        tooltip = {
+            PlainTooltip {
+                Text(stringResource(R.string.strava_pr_description, rank))
+            }
+        },
+        state = rememberTooltipState()
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Default.WorkspacePremium,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = color
+            )
+            Text(
+                text = "PR #$rank",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.ExtraBold,
+                color = color
+            )
+        }
     }
 }
 
@@ -200,6 +260,28 @@ fun PreviewStravaActivitySection() {
           "best_efforts": [
             { "name": "5k", "elapsed_time": 1200, "pr_rank": 1 },
             { "name": "10k", "elapsed_time": 2500 }
+          ]
+        }
+    """.trimIndent()
+
+    MaterialTheme {
+        StravaActivitySection(rawActivityJson = dummyJson)
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewStravaActivitySection2() {
+    val dummyJson = """
+        {
+          "segment_efforts": [
+            { "name": "Alpe d'Huez", "elapsed_time": 3600, "pr_rank": 1, "kom_rank": 7 },
+            { "name": "Col du Galibier", "elapsed_time": 4800, "pr_rank": 2 },
+            { "name": "Flat Sprint", "elapsed_time": 120 }
+          ],
+          "best_efforts": [
+            { "name": "5k", "elapsed_time": 1200, "pr_rank": 1 },
+            { "name": "10k", "elapsed_time": 2500, "pr_rank": 3 }
           ]
         }
     """.trimIndent()
