@@ -126,14 +126,6 @@ fun WorkoutSummary(
             )
         }
 
-        if (isPlayServiceAvailable && workoutData.mapPolyline != "") {
-            WorkoutMediaSection(
-                // workoutId = workoutData.id,
-                workoutData = workoutData,
-                onMapClick = onMapClick
-            )
-        }
-
         // 5. Strava Activity Data Section
         if (!workoutData.stravaActivityData.isNullOrBlank()) {
             HorizontalDivider(
@@ -143,6 +135,14 @@ fun WorkoutSummary(
             )
             StravaActivitySection(
                 rawActivityJson = workoutData.stravaActivityData
+            )
+        }
+
+        if (isPlayServiceAvailable && workoutData.mapPolyline != "") {
+            WorkoutMediaSection(
+                // workoutId = workoutData.id,
+                workoutData = workoutData,
+                onMapClick = onMapClick
             )
         }
 
