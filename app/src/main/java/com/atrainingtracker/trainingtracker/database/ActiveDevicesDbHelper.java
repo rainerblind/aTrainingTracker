@@ -88,7 +88,6 @@ public class ActiveDevicesDbHelper extends SQLiteOpenHelper {
         }
 
         cursor.close();
-        db.close();
 
         return result;
     }

@@ -587,7 +587,6 @@ public class TrackerService extends Service {
             values.put(ActiveDevices.DEVICE_DB_ID, deviceDbId);
             activeDevicesDb.insert(ActiveDevices.TABLE, null, values);
         }
-        activeDevicesDb.close();
 
         WorkoutSummariesDatabaseManager summariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(this);
         // save the accumulated SensorTypes

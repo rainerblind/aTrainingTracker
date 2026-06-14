@@ -112,8 +112,6 @@ public class StravaUploadDbHelper extends SQLiteOpenHelper {
             if (DEBUG) Log.d(TAG, "added " + fileBaseName);
         }
 
-        db.close();
-
     }
 
     public void updateStatus(String fileBaseName, String status) {
@@ -175,15 +173,15 @@ public class StravaUploadDbHelper extends SQLiteOpenHelper {
         Cursor cursor = db.query(TABLE, null, WorkoutSummaries.FILE_BASE_NAME + "=?", new String[]{fileBaseName}, null, null, null);
 
         if (cursor.moveToFirst()) {
-            if (!cursor.isNull(cursor.getColumnIndex(ACTIVITY_ID))) {
-                activityId = cursor.getString(cursor.getColumnIndex(ACTIVITY_ID));
+            int idx = cursor.getColumnIndex(ACTIVITY_ID);
+            if (idx != -1 && !cursor.isNull(idx)) {
+                activityId = cursor.getString(idx);
             }
         } else {
             Log.e(TAG, "in getActivityId: no entry or invalid entry for " + fileBaseName);
         }
 
         cursor.close();
-        db.close();
 
         if (DEBUG) Log.d(TAG, "ActivityId: " + activityId);
         return activityId;
