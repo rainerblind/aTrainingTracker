@@ -1028,4 +1028,12 @@
 
     <!-- share screenshots -->
     <string name="share">Teilen</string>
+
+    <string name="avg_speed_label">Schnitt</string>
+    <string name="ascent_label">Anstieg</string>
+    <string name="unit_meters_short">m</string>
+    <string name="strava_results_title">Strava Ergebnisse</string>
+    <string name="strava_best_efforts">Bestzeiten</string>
+    <string name="strava_segments_title">Segmente</string>
+    <string name="strava_segments_with_prs_format">Segmente (%1$d PRs)</string>
 </resources>

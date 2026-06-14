@@ -41,6 +41,7 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.Wor
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.*
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.WorkoutExtrema
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeader
+import com.atrainingtracker.trainingtracker.ui.components.strava.StravaActivitySection
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.map.TrackOrSegmentOnMap
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
@@ -133,7 +134,19 @@ fun WorkoutSummary(
             )
         }
 
-        // 5. Export Status Section
+        // 5. Strava Activity Data Section
+        if (!workoutData.stravaActivityData.isNullOrBlank()) {
+            HorizontalDivider(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                thickness = 0.5.dp,
+                color = MaterialTheme.colorScheme.outlineVariant
+            )
+            StravaActivitySection(
+                rawActivityJson = workoutData.stravaActivityData
+            )
+        }
+
+        // 6. Export Status Section
         ExportStatus(
             exportStatuses = workoutData.exportStatuses
         )

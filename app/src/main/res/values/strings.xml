@@ -1135,4 +1135,12 @@
 
     <!-- share screenshots -->
     <string name="share">Share</string>
+
+    <string name="avg_speed_label">Avg Speed</string>
+    <string name="ascent_label">Ascent</string>
+    <string name="unit_meters_short">m</string>
+    <string name="strava_results_title">Strava Results</string>
+    <string name="strava_best_efforts">Best Efforts</string>
+    <string name="strava_segments_title">Segments</string>
+    <string name="strava_segments_with_prs_format">Segments (%1$d PRs)</string>
 </resources>

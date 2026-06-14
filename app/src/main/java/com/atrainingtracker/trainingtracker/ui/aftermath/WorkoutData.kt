@@ -95,6 +95,8 @@ data class WorkoutData(
     val goal: String?,
     val method: String?,
 
+    val stravaActivityData: String? = null,
+
     // --- 2. Heavy/Live Data ---
     val exportStatuses: List<ExportStatusGroupData> = emptyList(),
     val extremaRows: List<ExtremaDataRow> = emptyList()

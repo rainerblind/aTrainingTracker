@@ -46,6 +46,7 @@ import kotlinx.coroutines.withContext
 import com.atrainingtracker.trainingtracker.database.WorkoutDeletionHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
+import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
 import com.atrainingtracker.trainingtracker.exporter.ExportManager
 import com.atrainingtracker.trainingtracker.exporter.ExportStatusChangedBroadcaster
 import com.atrainingtracker.trainingtracker.exporter.ExportType
@@ -109,13 +110,15 @@ class WorkoutRepository private constructor(private val application: Application
     private val equipmentDbHelper by lazy { EquipmentDbHelper(application) }
     private val sportTypeDatabaseManager by lazy { SportTypeDatabaseManager.getInstance(application) }
     private val exportManager by lazy { ExportManager(application) }
+    private val stravaUploadDbHelper by lazy { StravaUploadDbHelper(application) }
 
     private val mapper by lazy {
         WorkoutDataMapper(
             context = application,
             workoutSummariesDatabaseManager = summariesManager,
             sportTypeDatabaseManager = sportTypeDatabaseManager,
-            equipmentDbHelper = equipmentDbHelper
+            equipmentDbHelper = equipmentDbHelper,
+            stravaUploadDbHelper = stravaUploadDbHelper
         )
     }
 
@@ -184,9 +187,14 @@ class WorkoutRepository private constructor(private val application: Application
                 }
             }
 
+            val stravaActivityData = stravaUploadDbHelper.getStravaActivityData(fileName)
+
             val current = allWorkouts.value.find { it.fileBaseName == fileName } ?: return@launch
             Log.i(TAG, "update from reloadExportStatusesFor")
-            updateWorkoutInList(current.id, current.copy(exportStatuses = exportStatuses))
+            updateWorkoutInList(current.id, current.copy(
+                exportStatuses = exportStatuses,
+                stravaActivityData = stravaActivityData
+            ))
         }
     }
 

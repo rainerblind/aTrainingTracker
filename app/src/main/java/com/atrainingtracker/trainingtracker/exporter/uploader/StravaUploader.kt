@@ -86,6 +86,10 @@ class StravaUploader(context: Context) : BaseExporter(context) {
         val file = File(getBaseDirFile(mContext), exportInfo.shortPath)
         val accessToken = StravaHelper.getRefreshedAccessToken()
 
+        if (accessToken.isNullOrEmpty()) {
+            return ExportResult(false, false, "Could not refresh Strava Access Token. Please log in again.")
+        }
+
         if (DEBUG) Log.d(TAG, "starting to upload to strava")
 
         // 1. Build Multipart Request
@@ -221,7 +225,8 @@ class StravaUploader(context: Context) : BaseExporter(context) {
                     exportInfo.fileBaseName,
                     id,
                     activityId,
-                    error
+                    error,
+                    stravaJson.toString()
                 )
 
                 return doUpdate(exportInfo)
@@ -283,10 +288,12 @@ class StravaUploader(context: Context) : BaseExporter(context) {
             Thread.sleep(waitingTime)
             activityJSON = getStravaActivity(activityId)
         }
+        if (DEBUG) Log.i(TAG, "activityJSON=$activityJSON")
+
+        // SAVE STRAVA ACTIVITY DATA
+        StravaUploadDbHelper(mContext).updateStravaActivityData(exportInfo.fileBaseName, activityJSON.toString())
 
         // Now, that we are pretty sure that the sport type is correct, we can continue to update all other fields.
-
-
         // Prepare Form Body for metadata update
         val formBuilder = FormBody.Builder()
 
