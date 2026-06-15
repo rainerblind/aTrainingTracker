@@ -130,6 +130,7 @@ public class TrackerService extends Service {
     protected boolean mResumeTrackingWhenConnectedToBanalService = false;
     @Nullable
     BANALServiceComm mBanalService;
+    private android.os.PowerManager.WakeLock wakeLock;
     private TrainingApplication mTrainingApplication;
     private WorkoutRepository mWorkoutRepository;
     private ScheduledFuture mTrackerHandle;
@@ -284,6 +285,25 @@ public class TrackerService extends Service {
         ContextCompat.registerReceiver(this, mAltitudeCorrectionReceiver, mAltitudeCorrectionFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mLapSummaryReceiver, mLapSummaryFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mUserSelectedSportTypeChangedReceiver, new IntentFilter(BANALService.SPORT_TYPE_CHANGED_BY_USER_INTENT), ContextCompat.RECEIVER_NOT_EXPORTED);
+
+        acquireWakeLock();
+    }
+
+    private void acquireWakeLock() {
+        if (wakeLock == null) {
+            android.os.PowerManager powerManager = (android.os.PowerManager) getSystemService(Context.POWER_SERVICE);
+            wakeLock = powerManager.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "aTrainingTracker:TrackingLock");
+            wakeLock.acquire();
+            if (DEBUG) Log.d(TAG, "WakeLock acquired");
+        }
+    }
+
+    private void releaseWakeLock() {
+        if (wakeLock != null && wakeLock.isHeld()) {
+            wakeLock.release();
+            wakeLock = null;
+            if (DEBUG) Log.d(TAG, "WakeLock released");
+        }
     }
 
     private boolean hasLocationPermission() {
@@ -418,6 +438,8 @@ public class TrackerService extends Service {
         unregisterReceiver(mAltitudeCorrectionReceiver);
         unregisterReceiver(mLapSummaryReceiver);
         unregisterReceiver(mUserSelectedSportTypeChangedReceiver);
+
+        releaseWakeLock();
     }
 
     private void recreateValuesWhenResuming() {

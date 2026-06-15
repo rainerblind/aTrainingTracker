@@ -795,6 +795,9 @@
     <string name="location_permission_text_Android12">The main purpose of this app is to track your training sessions, even when the app is not directly visible.  Please give the app the permission to get your location (precise).\n\nFurthermore, in oder to use Bluetooth LE devices, the permission \" Nearby devices\" is required.</string>
     <string name="Request_permission_text">Allow permission by clicking \"OK\".</string>
 
+    <string name="battery_optimization_title">Battery Optimization</string>
+    <string name="battery_optimization_text">To ensure reliable tracking and prevent the app from being killed in the background, please disable battery optimization for this app in the next screen.</string>
+
     <!-- Zone Settings Screen -->
     <string name="prefs_training_zones">Training Zones</string>
     <string name="prefs_training_zones_summary">Configure your training zones</string>

@@ -349,7 +349,7 @@ public class MainActivityWithNavigation
             showInstallANTShitDialog();
         }
 
-        // No need to check for Bluetooth active since Bluetooth LE will work even if Bluetooth is deactivated.
+        checkBatteryOptimizations();
 
         if (savedInstanceState != null) {
             mSelectedFragmentId = savedInstanceState.getInt(SELECTED_FRAGMENT_ID, DEFAULT_SELECTED_FRAGMENT_ID);
@@ -430,6 +430,25 @@ public class MainActivityWithNavigation
         );
 
         observeNavigationEvents();
+    }
+
+    private void checkBatteryOptimizations() {
+        android.os.PowerManager pm = (android.os.PowerManager) getSystemService(Context.POWER_SERVICE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (!pm.isIgnoringBatteryOptimizations(getPackageName())) {
+                new AlertDialog.Builder(this)
+                        .setTitle(R.string.battery_optimization_title)
+                        .setMessage(R.string.battery_optimization_text)
+                        .setPositiveButton(R.string.OK, (dialog, which) -> {
+                            Intent intent = new Intent();
+                            intent.setAction(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                            intent.setData(Uri.parse("package:" + getPackageName()));
+                            startActivity(intent);
+                        })
+                        .setNegativeButton(R.string.Cancel, (dialog, which) -> dialog.dismiss())
+                        .show();
+            }
+        }
     }
 
     private void observeNavigationEvents() {

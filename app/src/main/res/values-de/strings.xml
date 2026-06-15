@@ -704,6 +704,9 @@
     <string name="location_permission_text_Android12">Diese App ist dazu da, deine Trainingseinheiten aufzuzeichen, auch wenn die App nicht direkt sichtbar ist.  Bitte gib der App die Berechtigung den genauen Standort zu lesen.\n\nDarüber hinaus wird die Berechtigung \"Geräte in der Nähe\" benötigt um Bluetooth LE Sensoren zu finden.</string>
     <string name="Request_permission_text">Durch klickern auf \"OK\" kommst du direkt zu den Berechtigungseinstellungen.</string>
 
+    <string name="battery_optimization_title">Akku-Optimierung</string>
+    <string name="battery_optimization_text">Um eine zuverlässige Aufzeichnung zu gewährleisten und zu verhindern, dass die App im Hintergrund beendet wird, deaktiviere bitte im nächsten Fenster die Akku-Optimierung für diese App.</string>
+
     <!-- Zone Settings Screen -->
     <string name="prefs_training_zones">Trainings Zonen</string>
     <string name="prefs_training_zones_summary">Passe deine Trainingszonen an</string>
