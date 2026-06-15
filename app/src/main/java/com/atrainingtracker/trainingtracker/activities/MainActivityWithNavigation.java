@@ -466,9 +466,9 @@ public class MainActivityWithNavigation
         requiredPerms.add(Manifest.permission.ACCESS_FINE_LOCATION);
         requiredPerms.add(Manifest.permission.ACCESS_COARSE_LOCATION);
 
-        // if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-        //    requiredPerms.add(Manifest.permission.ACCESS_BACKGROUND_LOCATION);
-        //}
+        if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q) {
+            requiredPerms.add(Manifest.permission.ACCESS_BACKGROUND_LOCATION);
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S /* Android12, sdk31*/
                 && (getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)
@@ -482,6 +482,39 @@ public class MainActivityWithNavigation
         }
 
         return requiredPerms;
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION) {
+            boolean foregroundLocationGranted = false;
+            for (int i = 0; i < permissions.length; i++) {
+                if ((permissions[i].equals(Manifest.permission.ACCESS_FINE_LOCATION) || permissions[i].equals(Manifest.permission.ACCESS_COARSE_LOCATION))
+                        && grantResults[i] == PackageManager.PERMISSION_GRANTED) {
+                    foregroundLocationGranted = true;
+                    break;
+                }
+            }
+
+            if (foregroundLocationGranted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                // Now request background location separately for Android 11+
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                    showBackgroundLocationDialog();
+                }
+            }
+        }
+    }
+
+    private void showBackgroundLocationDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.background_location_permission_title)
+                .setMessage(R.string.background_location_permission_text)
+                .setPositiveButton(R.string.OK, (dialog, which) -> {
+                    ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_BACKGROUND_LOCATION}, 0);
+                })
+                .setNegativeButton(R.string.Cancel, (dialog, which) -> dialog.dismiss())
+                .show();
     }
 
     /**
@@ -537,6 +570,15 @@ public class MainActivityWithNavigation
                             .setMessage(baseMessage + "\n\n" + getString(R.string.Request_permission_text));
                 }
                 builder.show();
+            }
+        } else {
+            // All regular permissions granted. Now check background location on Android 11+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                    if (popup) {
+                        showBackgroundLocationDialog();
+                    }
+                }
             }
         }
     }

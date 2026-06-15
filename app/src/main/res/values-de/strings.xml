@@ -697,6 +697,8 @@
     <string name="config_tracking__day_or_night">Tag oder Nacht</string>
 
     <string name="location_permission_required">Berechtigungen</string>
+    <string name="background_location_permission_title">Hintergrund-Standort</string>
+    <string name="background_location_permission_text">Um dein Training auch bei ausgeschaltetem Bildschirm oder während der Nutzung anderer Apps weiter aufzuzeichnen, wähle bitte im nächsten Fenster \"Immer zulassen\" für den Standortzugriff aus.</string>
     <string name="location_permission_text">Diese App ist dazu da, deine Trainingseinheiten aufzuzeichen, auch wenn die App nicht direkt sichtbar ist.  Bitte gib der App die Berechtigung den genauen Standort zu lesen.</string>
     <string name="location_permission_text_pre_Android10">Bitte gib der App die Berechtigung den genauen Standort zu lesen.</string>
     <string name="location_permission_text_Android12">Diese App ist dazu da, deine Trainingseinheiten aufzuzeichen, auch wenn die App nicht direkt sichtbar ist.  Bitte gib der App die Berechtigung den genauen Standort zu lesen.\n\nDarüber hinaus wird die Berechtigung \"Geräte in der Nähe\" benötigt um Bluetooth LE Sensoren zu finden.</string>
@@ -1034,6 +1036,16 @@
     <string name="unit_meters_short">m</string>
     <string name="strava_results_title">Strava Ergebnisse</string>
     <string name="strava_best_efforts">Bestzeiten</string>
+    <plurals name="strava_best_efforts_with_prs_format">
+        <item quantity="one">Bestzeiten (%1$d PR)</item>
+        <item quantity="other">Bestzeiten (%1$d PRs)</item>
+    </plurals>
     <string name="strava_segments_title">Segmente</string>
-    <string name="strava_segments_with_prs_format">Segmente (%1$d PRs)</string>
+    <plurals name="strava_segments_with_prs_format">
+        <item quantity="one">Segmente (%1$d PR)</item>
+        <item quantity="other">Segmente (%1$d PRs)</item>
+    </plurals>
+    <string name="strava_kom_description">KOM / Streckenrekord</string>
+    <string name="strava_pr_description">Persönliche Bestleistung #%1$d</string>
+    <string name="strava_overall_rank_description">Gesamtrang #%1$d</string>
 </resources>
