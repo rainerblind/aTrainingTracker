@@ -788,10 +788,15 @@
     <string name="EditTrackingView">edit</string>
 
     <string name="location_permission_required">Permissions</string>
+    <string name="background_location_permission_title">Background Location</string>
+    <string name="background_location_permission_text">To continue tracking your workout when the screen is off or when using other apps, please select \"Allow all the time\" for location access in the next screen.</string>
     <string name="location_permission_text">The main purpose of this app is to track your training sessions, even when the app is not directly visible.  Please give the app the permission to get your location (precise).</string>
     <string name="location_permission_text_pre_Android10">Location permission required in system settings</string>
     <string name="location_permission_text_Android12">The main purpose of this app is to track your training sessions, even when the app is not directly visible.  Please give the app the permission to get your location (precise).\n\nFurthermore, in oder to use Bluetooth LE devices, the permission \" Nearby devices\" is required.</string>
     <string name="Request_permission_text">Allow permission by clicking \"OK\".</string>
+
+    <string name="battery_optimization_title">Battery Optimization</string>
+    <string name="battery_optimization_text">To ensure reliable tracking and prevent the app from being killed in the background, please disable battery optimization for this app in the next screen.</string>
 
     <!-- Zone Settings Screen -->
     <string name="prefs_training_zones">Training Zones</string>

@@ -130,6 +130,7 @@ public class TrackerService extends Service {
     protected boolean mResumeTrackingWhenConnectedToBanalService = false;
     @Nullable
     BANALServiceComm mBanalService;
+    private android.os.PowerManager.WakeLock wakeLock;
     private TrainingApplication mTrainingApplication;
     private WorkoutRepository mWorkoutRepository;
     private ScheduledFuture mTrackerHandle;
@@ -284,6 +285,37 @@ public class TrackerService extends Service {
         ContextCompat.registerReceiver(this, mAltitudeCorrectionReceiver, mAltitudeCorrectionFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mLapSummaryReceiver, mLapSummaryFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mUserSelectedSportTypeChangedReceiver, new IntentFilter(BANALService.SPORT_TYPE_CHANGED_BY_USER_INTENT), ContextCompat.RECEIVER_NOT_EXPORTED);
+
+        acquireWakeLock();
+    }
+
+    private void acquireWakeLock() {
+        if (wakeLock == null) {
+            android.os.PowerManager powerManager = (android.os.PowerManager) getSystemService(Context.POWER_SERVICE);
+            wakeLock = powerManager.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "aTrainingTracker:TrackingLock");
+            wakeLock.acquire();
+            if (DEBUG) Log.d(TAG, "WakeLock acquired");
+        }
+    }
+
+    private void releaseWakeLock() {
+        if (wakeLock != null && wakeLock.isHeld()) {
+            wakeLock.release();
+            wakeLock = null;
+            if (DEBUG) Log.d(TAG, "WakeLock released");
+        }
+    }
+
+    private boolean hasLocationPermission() {
+        return ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                || ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED;
+    }
+
+    private boolean hasBackgroundLocationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            return ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_BACKGROUND_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED;
+        }
+        return true;
     }
 
     @Override
@@ -349,8 +381,24 @@ public class TrackerService extends Service {
         this.sendBroadcast(trackingStartedIntent);
 
         Notification notification = mTrainingApplication.getSearchingAndTrackingNotification();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) { // API 29+
-            // Use this overload on newer Android versions, mandatory for API 34+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) { // API 34+
+            // On API 34+, we MUST specify the type if it's in the manifest.
+            // If permissions are missing or if we are in background without background permission,
+            // it will throw SecurityException.
+            int fgsType = ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION;
+            
+            // If we are resuming after being killed, we are likely in the background.
+            // We should check if we have the necessary background permission if we want to use location type.
+            if (intent == null && !hasBackgroundLocationPermission()) {
+                Log.w(TAG, "Resuming TrackerService in background without background location permission. FGS might fail.");
+            }
+            
+            if (!hasLocationPermission()) {
+                Log.w(TAG, "Starting TrackerService without foreground location permission granted.");
+            }
+
+            startForeground(TrainingApplication.TRACKING_NOTIFICATION_ID, notification, fgsType);
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) { // API 29-33
             startForeground(TrainingApplication.TRACKING_NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
         } else {
             startForeground(TrainingApplication.TRACKING_NOTIFICATION_ID, notification);
@@ -390,6 +438,8 @@ public class TrackerService extends Service {
         unregisterReceiver(mAltitudeCorrectionReceiver);
         unregisterReceiver(mLapSummaryReceiver);
         unregisterReceiver(mUserSelectedSportTypeChangedReceiver);
+
+        releaseWakeLock();
     }
 
     private void recreateValuesWhenResuming() {
