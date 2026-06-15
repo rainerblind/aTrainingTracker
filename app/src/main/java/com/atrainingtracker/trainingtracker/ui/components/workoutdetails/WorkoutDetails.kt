@@ -31,9 +31,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
-import com.atrainingtracker.banalservice.sensor.formater.PaceFormatter
-import com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
 
 
@@ -44,8 +43,6 @@ fun WorkoutDetails(
 ) {
     val distanceFormatter = DistanceFormatter()
     val timeFormatter = TimeFormatter()
-    val speedFormatter = SpeedFormatter()
-    val paceFormatter = PaceFormatter()
 
     val iconColor = MaterialTheme.colorScheme.onSurfaceVariant
     val textColorMain = MaterialTheme.colorScheme.onSurface
@@ -57,58 +54,40 @@ fun WorkoutDetails(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // --- Section 1: Distance and Time (Replicates the first Card/Group) ---
-            Row(modifier = Modifier.fillMaxWidth()) {
+        // --- Metrics Row: Distance and Time ---
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // 1. Distance
+            val maxDispString = if (data.maxDisplacement != null) {
+                val maxDispFormatted = distanceFormatter.format_with_units(data.maxDisplacement)
+                stringResource(R.string.format_max_displacement, maxDispFormatted)
+            } else null
 
-                // Distance
-                // TODO: move this logic to the viewModel?
-                val maxDispString = if (data.maxDisplacement != null) {
-                    val maxDispFormatted = distanceFormatter.format_with_units(data.maxDisplacement)
-                    stringResource(R.string.format_max_displacement, maxDispFormatted)
-                }
-                else {
-                    null
-                }
-                MainItem(
-                    iconColor = iconColor,
-                    textColorMain = textColorMain,
-                    textColorSecondary = textColorSecondary,
-                    iconRes = R.drawable.ic_distance,
-                    label = stringResource(R.string.distance),
-                    mainValueString = distanceFormatter.format_with_units(data.totalDistance),
-                    secondaryValueString = maxDispString,
-                    modifier = Modifier.weight(1f)
-                )
+            MainItem(
+                iconColor = iconColor,
+                textColorMain = textColorMain,
+                textColorSecondary = textColorSecondary,
+                iconRes = R.drawable.ic_distance,
+                label = stringResource(R.string.distance),
+                mainValueString = distanceFormatter.format_with_units(data.totalDistance),
+                secondaryValueString = maxDispString,
+                modifier = Modifier.weight(1f)
+            )
 
-                // Active Time
-                MainItem(
-                    iconColor = iconColor,
-                    textColorMain = textColorMain,
-                    textColorSecondary = textColorSecondary,
-                    iconRes = R.drawable.ic_time_active,
-                    label = stringResource(R.string.time_active),
-                    mainValueString = timeFormatter.format(data.activeTimeSec),
-                    secondaryValueString = stringResource(R.string.total_time_format, timeFormatter.format(data.totalTimeSec)),
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        // Speed (or pace)
-        val mainSpeedString = if (data.bSportType == BSportType.RUN) {
-            paceFormatter.format_with_units(1/data.avgSpeedMps)
+            // 2. Active Time
+            MainItem(
+                iconColor = iconColor,
+                textColorMain = textColorMain,
+                textColorSecondary = textColorSecondary,
+                iconRes = R.drawable.ic_time_active,
+                label = stringResource(R.string.time_active),
+                mainValueString = timeFormatter.format(data.activeTimeSec),
+                secondaryValueString = stringResource(R.string.total_time_format, timeFormatter.format(data.totalTimeSec)),
+                modifier = Modifier.weight(1f)
+            )
         }
-        else {
-            speedFormatter.format_with_units(data.avgSpeedMps)
-        }
-        MainItem(
-            iconColor = iconColor,
-            textColorMain = textColorMain,
-            textColorSecondary = textColorSecondary,
-            iconRes = R.drawable.ic_speed,
-            label = if (BSportType.RUN == data.bSportType) stringResource(R.string.pace) else stringResource(R.string.speed),
-            mainValueString = mainSpeedString,
-            secondaryValueString = if (BSportType.RUN == data.bSportType) "          " + speedFormatter.format_with_units(data.avgSpeedMps) else null,
-            modifier = Modifier
-        )
 
         // --- Section 3: Altitude (Identical to bindAltitude in ViewHolder) ---
         AltitudeRow(
@@ -182,6 +161,8 @@ private fun AltitudeRow(
     textColorSecondary: Color,
     modifier: Modifier,
 ){
+    val altitudeFormatter = AltitudeFormatter()
+
     if (ascentMeters > 0 || descentMeters > 0 || minAltitude != null || maxAltitude != null) {
         HorizontalDivider(
             // modifier = Modifier.padding(8.dp),
@@ -212,22 +193,20 @@ private fun AltitudeRow(
             Spacer(modifier = Modifier.width(20.dp))
             Column() {
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    if (ascentMeters > 0) {
-                        AltitudeItem(
-                            modifier = Modifier.weight(1f),
-                            label = stringResource(R.string.ascent_short),
-                            value = "${ascentMeters} m",
-                            iconRes = R.drawable.ic_ascent,
-                            iconColor = iconColor,
-                            textColorMain = textColorMain,
-                            textColorSecondary = textColorSecondary
-                        )
-                    }
+                    AltitudeItem(
+                        modifier = Modifier.weight(1f),
+                        label = stringResource(R.string.ascent_short),
+                        value = altitudeFormatter.format_with_units(ascentMeters),
+                        iconRes = R.drawable.ic_ascent,
+                        iconColor = iconColor,
+                        textColorMain = textColorMain,
+                        textColorSecondary = textColorSecondary
+                    )
                     maxAltitude?.let {
                         AltitudeItem(
                             modifier = Modifier.weight(1f),
                             label = stringResource(R.string.max),
-                            value = "%.0f m".format(it),
+                            value = altitudeFormatter.format_with_units(it),
                             iconRes = R.drawable.ic_altitude_max,
                             iconColor = iconColor,
                             textColorMain = textColorMain,
@@ -236,22 +215,20 @@ private fun AltitudeRow(
                     }
                 }
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    if (descentMeters > 0) {
-                        AltitudeItem(
-                            modifier = Modifier.weight(1f),
-                            label = stringResource(R.string.descent_short),
-                            value = "${descentMeters} m",
-                            iconRes = R.drawable.ic_descent,
-                            iconColor = iconColor,
-                            textColorMain = textColorMain,
-                            textColorSecondary = textColorSecondary
-                        )
-                    }
+                    AltitudeItem(
+                        modifier = Modifier.weight(1f),
+                        label = stringResource(R.string.descent_short),
+                        value = altitudeFormatter.format_with_units(descentMeters),
+                        iconRes = R.drawable.ic_descent,
+                        iconColor = iconColor,
+                        textColorMain = textColorMain,
+                        textColorSecondary = textColorSecondary
+                    )
                     minAltitude?.let {
                         AltitudeItem(
                             modifier = Modifier.weight(1f),
                             label = stringResource(R.string.min),
-                            value = "%.0f m".format(it),
+                            value = altitudeFormatter.format_with_units(it),
                             iconRes = R.drawable.ic_altitude_min,
                             iconColor = iconColor,
                             textColorMain = textColorMain,

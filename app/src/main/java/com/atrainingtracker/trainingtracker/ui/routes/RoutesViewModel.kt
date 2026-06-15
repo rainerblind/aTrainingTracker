@@ -30,6 +30,7 @@ import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -50,7 +51,18 @@ enum class RouteSortOrder(@StringRes val labelResId: Int) {
 class RoutesViewModel(application: Application) : AndroidViewModel(application) {
     private val routesRepository = RoutesRepository.getInstance(application)
     private val banalServiceRepository = BANALServiceRepository.getInstance(application)
+    private val segmentsRepository = SegmentsRepository.getInstance(application)
 
+    private val _isSyncingStrava = MutableStateFlow(false)
+    val isSyncingStrava = _isSyncingStrava.asStateFlow()
+
+    // Sync status: null = idle, true = success, false = failure
+    private val _syncStravaStatus = MutableStateFlow<Boolean?>(null)
+    val syncStravaStatus = _syncStravaStatus.asStateFlow()
+
+    fun resetSyncStravaStatus() {
+        _syncStravaStatus.value = null
+    }
 
     private val _sortOrder = MutableStateFlow(RouteSortOrder.DISTANCE_TO_USER)
     val sortOrder = _sortOrder.asStateFlow()
@@ -93,6 +105,13 @@ class RoutesViewModel(application: Application) : AndroidViewModel(application) 
             initialValue = false
         )
 
+    val segments = segmentsRepository.allSegmentsWithPath
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
     // The list of routes to display; properly sorted
     val routes: StateFlow<List<RouteWithPath>> = combine(
         routesRepository.allRoutes,
@@ -120,10 +139,15 @@ class RoutesViewModel(application: Application) : AndroidViewModel(application) 
                     routes.sortedBy { it.summary.name.lowercase() }
                 } else {
                     routes.sortedBy { route ->
-                        calculateDistance(
-                            location.latitude, location.longitude,
-                            route.path[0].latLng.latitude, route.path[0].latLng.longitude
-                        )
+                        val startPoint = route.path.firstOrNull()
+                        if (startPoint != null) {
+                            calculateDistance(
+                                location.latitude, location.longitude,
+                                startPoint.latLng.latitude, startPoint.latLng.longitude
+                            )
+                        } else {
+                            Float.MAX_VALUE
+                        }
                     }
                 }
             }
@@ -176,5 +200,19 @@ class RoutesViewModel(application: Application) : AndroidViewModel(application) 
 
     fun refresh() {
         routesRepository.refreshRoutes()
+    }
+
+    fun syncStravaRoutes() {
+        viewModelScope.launch {
+            _isSyncingStrava.value = true
+            try {
+                routesRepository.syncRoutesFromStrava()
+                _syncStravaStatus.value = true
+            } catch (e: Exception) {
+                _syncStravaStatus.value = false
+            } finally {
+                _isSyncingStrava.value = false
+            }
+        }
     }
 }

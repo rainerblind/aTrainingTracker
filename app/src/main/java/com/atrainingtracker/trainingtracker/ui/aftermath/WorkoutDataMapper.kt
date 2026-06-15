@@ -30,6 +30,7 @@ import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
+import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaDataRow
 import java.text.ParseException
 import java.text.SimpleDateFormat
@@ -47,7 +48,8 @@ class WorkoutDataMapper(
     private val context: Context,
     private val workoutSummariesDatabaseManager: WorkoutSummariesDatabaseManager,
     private val sportTypeDatabaseManager: SportTypeDatabaseManager,
-    private val equipmentDbHelper: EquipmentDbHelper
+    private val equipmentDbHelper: EquipmentDbHelper,
+    private val stravaUploadDbHelper: StravaUploadDbHelper
 ) {
     // Define all sensors to check
     val sensorsToCheck = arrayOf(
@@ -84,12 +86,15 @@ class WorkoutDataMapper(
 
         val dateTimeResult = formatDateTime(cursor)
 
+        val fileBaseName = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.FILE_BASE_NAME))
+        val stravaActivityData = if (fileBaseName != null) stravaUploadDbHelper.getStravaActivityData(fileBaseName) else null
+
 
         // The mapper is responsible for assembling the final object from its constituent parts.
         return WorkoutData(
             id = workoutId,
             finished = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.FINISHED)) == 1,
-            fileBaseName = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.FILE_BASE_NAME)),
+            fileBaseName = fileBaseName,
             workoutName = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.WORKOUT_NAME)),
             sportId = sportId,
             sportName = sportName,
@@ -121,7 +126,8 @@ class WorkoutDataMapper(
             goal = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.GOAL)),
             method = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.METHOD)),
 
-            isCalculatingExtrema = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.EXTREMA_VALUES_CALCULATED)) == 0,
+            stravaActivityData = stravaActivityData,
+
             extremaRows = sensorsToCheck.mapNotNull { sensorType ->
                 // Business logic: do not show speed for running activities
                 if (bSportType == BSportType.RUN && sensorType == SensorType.SPEED_mps) {
@@ -133,15 +139,21 @@ class WorkoutDataMapper(
                 }
 
                 val min = getFormattedExtremaValue(workoutId, sensorType, ExtremaType.MIN)
+                val minPos = workoutSummariesDatabaseManager.getExtremaPosition(workoutId, sensorType, ExtremaType.MIN)
+
                 val avg = getFormattedExtremaValue(workoutId, sensorType, ExtremaType.AVG)
+
                 val max = getFormattedExtremaValue(workoutId, sensorType, ExtremaType.MAX)
+                val maxPos = workoutSummariesDatabaseManager.getExtremaPosition(workoutId, sensorType, ExtremaType.MAX)
 
                 val data = ExtremaDataRow(
                     sensorLabel = context.getString(sensorType.shortNameId),
                     unitLabel = context.getString(MyHelper.getUnitsId(sensorType)),
                     minValue = min,
+                    minLatLng = minPos,
                     avgValue = avg,
-                    maxValue = max
+                    maxValue = max,
+                    maxLatLng = maxPos
                 )
 
                 // Only return the data object if it's not empty, otherwise return null

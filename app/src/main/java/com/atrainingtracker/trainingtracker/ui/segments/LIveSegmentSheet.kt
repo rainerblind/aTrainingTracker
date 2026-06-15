@@ -27,6 +27,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.segments.LiveSegment
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
+import com.atrainingtracker.trainingtracker.ui.segments.SegmentHeader
+import com.atrainingtracker.trainingtracker.ui.segments.SegmentLiveDetails
 
 
 @Composable
@@ -54,9 +56,23 @@ fun LiveSegmentSheet(
         }
 
         // --- Header with live data ---
-        SegmentSummaryHeader(
+        SegmentHeader(
             summary = liveSegment.staticData.summary,
-            liveSegmentData = liveSegment.liveData
+            liveSegmentStatus = liveSegment.liveData.segmentStatus,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        )
+
+        HorizontalDivider(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            thickness = 0.5.dp,
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+        )
+
+        SegmentLiveDetails(
+            liveSegmentData = liveSegment.liveData,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
 
         // --- Elevation Profile ---
@@ -64,9 +80,7 @@ fun LiveSegmentSheet(
             pathPoints = liveSegment.staticData.path,
             // Pass the raw distance double to the profile for the progress marker
             currentDistance = liveSegment.liveData.distanceOnSegment_raw,
-            modifier = Modifier
-                .height(150.dp)
-                .fillMaxWidth()
+            modifier = Modifier.fillMaxWidth()
         )
     }
 }

@@ -47,6 +47,7 @@
     <string name="edit_location">edit location</string>
     <string name="Edit_Location">Edit Location</string>
     <string name="edit_workout">edit workout</string>
+    <string name="save_as_route">save as route</string>
     <string name="Edit_Location_Message">Edit the name and altitude of this location</string>
     <string name="edit_wheel_circumference">edit wheel circumference</string>
     <string name="edit_calibration_factor">edit calibration factor</string>
@@ -160,6 +161,12 @@
     <string name="units_distance_metric" translatable="false">km</string>
     <string name="units_distance_imperial" translatable="false">mile</string>
     <string name="units_distance_unknown" translatable="false">na</string>
+
+    <string name="units_altitude_metric" translatable="false">m</string>
+    <string name="units_altitude_imperial" translatable="false">ft</string>
+    <string name="units_altitude_short_metric" translatable="false">m</string>
+    <string name="units_altitude_short_imperial" translatable="false">ft</string>
+
     <string name="units_distance_mm" translatable="false">mm</string>
     <string name="units_cadence" translatable="false">1/min</string>
     <string name="units_calories" translatable="false">kcal</string>
@@ -627,7 +634,6 @@
     <string name="editLocationName">Name:</string>
     <string name="LocationAltitude">Altitude:</string>
     <string name="LocationRadius">Radius:</string>
-    <string name="units_altitude_metric" translatable="false">m</string>
     <string name="edit_my_location">Edit Location</string>
     <string name="radius_format" translatable="false">%1$s %2$d %3$s</string>
     <string name="units_radius" translatable="false">m</string>
@@ -782,10 +788,15 @@
     <string name="EditTrackingView">edit</string>
 
     <string name="location_permission_required">Permissions</string>
+    <string name="background_location_permission_title">Background Location</string>
+    <string name="background_location_permission_text">To continue tracking your workout when the screen is off or when using other apps, please select \"Allow all the time\" for location access in the next screen.</string>
     <string name="location_permission_text">The main purpose of this app is to track your training sessions, even when the app is not directly visible.  Please give the app the permission to get your location (precise).</string>
     <string name="location_permission_text_pre_Android10">Location permission required in system settings</string>
     <string name="location_permission_text_Android12">The main purpose of this app is to track your training sessions, even when the app is not directly visible.  Please give the app the permission to get your location (precise).\n\nFurthermore, in oder to use Bluetooth LE devices, the permission \" Nearby devices\" is required.</string>
     <string name="Request_permission_text">Allow permission by clicking \"OK\".</string>
+
+    <string name="battery_optimization_title">Battery Optimization</string>
+    <string name="battery_optimization_text">To ensure reliable tracking and prevent the app from being killed in the background, please disable battery optimization for this app in the next screen.</string>
 
     <!-- Zone Settings Screen -->
     <string name="prefs_training_zones">Training Zones</string>
@@ -1108,7 +1119,13 @@
     <string name="route_sport_type">Sport Type</string>
     <string name="route_description">Description</string>
     <string name="route_import">Import</string>
+    <string name="route_saved_success">Route saved successfully.</string>
+    <string name="route_saved_failed">Failed to save route.</string>
+    <string name="strava_sync_success">Routes synced from Strava.</string>
+    <string name="strava_sync_failed">Failed to sync routes from Strava.</string>
+    <string name="route_source_workout">Workout</string>
     <string name="sort">Sort</string>
+    <string name="routes_source_label">Source: %1$s</string>
 
     <!-- workout periods -->
     <string name="workout_periods__periods">Periods</string>
@@ -1124,4 +1141,21 @@
     <!-- share screenshots -->
     <string name="share">Share</string>
 
+    <string name="avg_speed_label">Avg Speed</string>
+    <string name="ascent_label">Ascent</string>
+    <string name="unit_meters_short">m</string>
+    <string name="strava_results_title">Strava Results</string>
+    <string name="strava_best_efforts">Best Efforts</string>
+    <plurals name="strava_best_efforts_with_prs_format">
+        <item quantity="one">Best Efforts (%1$d PR)</item>
+        <item quantity="other">Best Efforts (%1$d PRs)</item>
+    </plurals>
+    <string name="strava_segments_title">Segments</string>
+    <plurals name="strava_segments_with_prs_format">
+        <item quantity="one">Segments (%1$d PR)</item>
+        <item quantity="other">Segments (%1$d PRs)</item>
+    </plurals>
+    <string name="strava_kom_description">KOM / Course Record</string>
+    <string name="strava_pr_description">Personal Record #%1$d</string>
+    <string name="strava_overall_rank_description">Overall Rank #%1$d</string>
 </resources>

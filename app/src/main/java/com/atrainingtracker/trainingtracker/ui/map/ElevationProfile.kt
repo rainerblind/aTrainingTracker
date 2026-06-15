@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.map
 
 import android.graphics.Paint
+import java.util.Locale
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
@@ -36,6 +37,13 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import kotlin.math.ceil
+import kotlin.math.pow
+import com.atrainingtracker.banalservice.BANALService
+import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter
+import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
+import com.atrainingtracker.trainingtracker.MyHelper
+import com.atrainingtracker.trainingtracker.MyUnits
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.theme.Zone1
 import com.atrainingtracker.trainingtracker.ui.theme.Zone2
 import com.atrainingtracker.trainingtracker.ui.theme.Zone3
@@ -51,9 +59,29 @@ private data class CachedProfileData(
     val maxAlt: Double,
     val totalDist: Double,
     val altRange: Double,
-    val kmStep: Float,
-    val altStep: Float
+    val distStep: Float,
+    val altStep: Float,
+    val adaptiveHeight: androidx.compose.ui.unit.Dp
 )
+
+/**
+ * Calculates height based on altitude range.
+ * Min: 80dp, Max: 200dp (at 1000m range)
+ * Uses a non-linear scale (pow 0.6) to increase gain for small ranges.
+ */
+fun calculateElevationProfileHeight(range: Double): androidx.compose.ui.unit.Dp {
+    val minH = 70f
+    val maxH = 200f
+    val threshold = 1000.0
+    
+    // Normalize range 0..1
+    val normalizedRange = (range.coerceIn(0.0, threshold) / threshold).toFloat()
+    // Apply power function to "lift" small values
+    val curvedRange = normalizedRange.toDouble().pow(0.6).toFloat()
+    
+    val height = minH + curvedRange * (maxH - minH)
+    return height.toInt().dp
+}
 
 private data class ElevationSegment(
     val p1: Offset, // Normalized 0..1
@@ -107,9 +135,10 @@ fun ElevationProfile(
     if (pathPoints.isEmpty()) return
 
     val colorScheme = MaterialTheme.colorScheme
+    val unit = TrainingApplication.getUnit()
 
     // --- 1. Cache Static Geometry & Adaptive Labels ---
-    val cachedData = remember(pathPoints) {
+    val cachedData = remember(pathPoints, unit) {
 
         // --- 1. DOWNSAMPLING LOGIC ---
         // Max points to draw for performance.
@@ -154,22 +183,49 @@ fun ElevationProfile(
         val range = (max - min).coerceAtLeast(1.0)
 
         // Adaptive Distance Ticks
-        val kmStep = when {
-            totalDist > 100_000 -> 20_000f
-            totalDist > 50_000 -> 10_000f
-            totalDist > 20_000 -> 5_000f
-            totalDist > 5_000 -> 1_000f
-            totalDist > 1_500 -> 500f
-            else -> 200f              // For segments < 1.5km, use 200m steps
+        val distStep = if (unit == MyUnits.METRIC) {
+            when {
+                totalDist > 100_000 -> 20_000f
+                totalDist > 50_000 -> 10_000f
+                totalDist > 20_000 -> 5_000f
+                totalDist > 5_000 -> 1_000f
+                totalDist > 1_500 -> 500f
+                else -> 200f              // For segments < 1.5km, use 200m steps
+            }
+        } else {
+            // Imperial logic: 1 mile = 1609.344m
+            val totalDistMiles = totalDist / BANALService.METER_PER_MILE
+            val mileStep = when {
+                totalDistMiles > 60 -> 10f
+                totalDistMiles > 30 -> 5f
+                totalDistMiles > 10 -> 2f
+                totalDistMiles > 3 -> 1f
+                totalDistMiles > 1 -> 0.5f
+                else -> 0.2f
+            }
+            (mileStep * BANALService.METER_PER_MILE).toFloat()
         }
 
         // Adaptive Altitude Ticks
-        val altStep = when {
-            range > 2000 -> 1000f
-            range > 1000 -> 500f
-            range > 500 -> 200f
-            range > 100 -> 100f
-            else -> 50f
+        val altStep = if (unit == MyUnits.METRIC) {
+            when {
+                range > 2000 -> 1000f
+                range > 1000 -> 500f
+                range > 500 -> 200f
+                range > 100 -> 100f
+                else -> 50f
+            }
+        } else {
+            val rangeFeet = range / BANALService.METER_PER_FOOT
+            val feetStep = when {
+                rangeFeet > 10000 -> 5000f
+                rangeFeet > 5000 -> 2000f
+                rangeFeet > 2000 -> 1000f
+                rangeFeet > 1000 -> 500f
+                rangeFeet > 500 -> 200f
+                else -> 100f
+            }
+            (feetStep * BANALService.METER_PER_FOOT).toFloat()
         }
 
         val segments = mutableListOf<ElevationSegment>()
@@ -204,8 +260,14 @@ fun ElevationProfile(
 
             segments.add(ElevationSegment(Offset(d1.toFloat(), a1.toFloat()), Offset(d2.toFloat(), a2.toFloat()), color))
         }
-        CachedProfileData(segments, min, max, totalDist, range, kmStep, altStep)
+
+        val adaptiveHeight = calculateElevationProfileHeight(range)
+
+        CachedProfileData(segments, min, max, totalDist, range, distStep, altStep, adaptiveHeight)
     }
+
+    val altitudeFormatter = remember(unit) { AltitudeFormatter() }
+    val distanceFormatter = remember(unit) { DistanceFormatter() }
 
     val textPaint = remember(colorScheme) {
         Paint().apply {
@@ -215,8 +277,19 @@ fun ElevationProfile(
         }
     }
 
+    val highlightPaint = remember(colorScheme) {
+        Paint().apply {
+            color = colorScheme.onSurface.toArgb()
+            textSize = 32f
+            isAntiAlias = true
+            isFakeBoldText = true
+        }
+    }
+
     Canvas(
         modifier = modifier
+            .fillMaxWidth()
+            .height(cachedData.adaptiveHeight)
             .pointerInput(pathPoints) {
                 // Convert DP padding to PX
                 val startPaddingPx = 50.dp.toPx()
@@ -252,66 +325,73 @@ fun ElevationProfile(
         // --- 2. Static Background: Axes, Ticks, and Grid ---
         drawIntoCanvas { canvas ->
             val textHeightBuffer = textPaint.textSize
-            val textWidthBuffer = 90f
 
             // 2a. Altitude labels
-            canvas.nativeCanvas.drawText("${cachedData.minAlt.toInt()} m", -110f, height, textPaint)
-            canvas.nativeCanvas.drawText("${cachedData.maxAlt.toInt()} m", -110f, 10f, textPaint)
+            val minAltLabel = altitudeFormatter.format_with_units(cachedData.minAlt)
+            val maxAltLabel = altitudeFormatter.format_with_units(cachedData.maxAlt)
+            val minAltWidth = highlightPaint.measureText(minAltLabel)
+            val maxAltWidth = highlightPaint.measureText(maxAltLabel)
 
-            // 2b. Distance label (End point) - Handles meters vs km
-            val endLabel = if (cachedData.totalDist < 1000) {
-                "${cachedData.totalDist.toInt()} m"
-            } else {
-                "${String.format("%.1f", cachedData.totalDist / 1000f)} km"
-            }
-            canvas.nativeCanvas.drawText(endLabel, width - 40f, height + 45f, textPaint)
+            canvas.nativeCanvas.drawText(minAltLabel, -minAltWidth - 10f, height, highlightPaint)
+            canvas.nativeCanvas.drawText(maxAltLabel, -maxAltWidth - 10f, highlightPaint.textSize, highlightPaint)
+
+            // 2b. Distance label (End point)
+            val endLabel = distanceFormatter.format_with_units(cachedData.totalDist)
+            val endLabelWidth = highlightPaint.measureText(endLabel)
+            canvas.nativeCanvas.drawText(endLabel, width - endLabelWidth, height + 45f, highlightPaint)
 
             // 2c. Adaptive Distance Ticks
-            var currentKm = cachedData.kmStep
-            while (currentKm < cachedData.totalDist) {
-                val x = (currentKm / cachedData.totalDist) * width
+            var currentDist = cachedData.distStep.toDouble()
+            while (currentDist < cachedData.totalDist) {
+                val x = (currentDist / cachedData.totalDist) * width
 
                 val isTooCloseToStart = x < 60f
-                val isTooCloseToEnd = (width - x) < textWidthBuffer
+                val isTooCloseToEnd = (width - x) < (endLabelWidth + 50f) // Dynamic buffer to avoid overlapping with endLabel
 
                 if (!isTooCloseToStart && !isTooCloseToEnd) {
                     canvas.nativeCanvas.drawLine(x.toFloat(), height, x.toFloat(), height - 10f, textPaint)
 
                     // IMPROVED LABEL LOGIC:
-                    val label = when {
-                        // Short segments (< 1.5km): "200m", "400m", etc.
-                        cachedData.totalDist < 1500 -> "${currentKm.toInt()}m"
-
-                        // Mid-length segments with sub-km steps (like your 4.4km / 500m case):
-                        // If currentKm is not a multiple of 1000, show "1.5"
-                        currentKm % 1000f != 0f -> String.format("%.1f", currentKm / 1000f)
-
-                        // Whole kilometer steps: "1", "2", "3"
-                        else -> "${(currentKm / 1000).toInt()}"
+                    val label = if (unit == MyUnits.METRIC) {
+                        when {
+                            cachedData.totalDist < 1500 -> "${currentDist.toInt()}m"
+                            currentDist % 1000.0 != 0.0 -> String.format(Locale.getDefault(), "%.1f", currentDist / 1000.0)
+                            else -> "${(currentDist / 1000.0).toInt()}"
+                        }
+                    } else {
+                        // Imperial: miles
+                        val miles = currentDist / BANALService.METER_PER_MILE
+                        if (miles % 1.0 != 0.0) String.format(Locale.getDefault(), "%.1f", miles)
+                        else "${miles.toInt()}"
                     }
 
-                    canvas.nativeCanvas.drawText(label, x.toFloat() - 15f, height + 45f, textPaint)
+                    val labelWidth = textPaint.measureText(label)
+                    canvas.nativeCanvas.drawText(label, x.toFloat() - (labelWidth / 2), height + 45f, textPaint)
                 }
-                currentKm += cachedData.kmStep
+                currentDist += cachedData.distStep
             }
 
             // 2d. Adaptive Altitude Ticks...
             var currentAlt = (ceil(cachedData.minAlt / cachedData.altStep) * cachedData.altStep).toFloat()
+            var lastY = -1000f // Track the last drawn label Y to avoid overlaps
+
             while (currentAlt < cachedData.maxAlt) {
-                val y = height - ((currentAlt - cachedData.minAlt) / cachedData.altRange) * height
+                val y = height - ((currentAlt - cachedData.minAlt) / cachedData.altRange).toFloat() * height
 
-                val isTooCloseToBottom = (height - y) < textHeightBuffer
-                val isTooCloseToTop = y < textHeightBuffer
+                val isTooCloseToBottom = (height - y) < (textHeightBuffer * 1.2f)
+                val isTooCloseToTop = Math.abs(y - textPaint.textSize) < (textHeightBuffer * 1.2f)
+                val isOverlappingLast = Math.abs(y - lastY) < (textHeightBuffer * 1.2f)
 
-                if (!isTooCloseToBottom && !isTooCloseToTop) {
-                    canvas.nativeCanvas.drawLine(-10f, y.toFloat(), 0f, y.toFloat(), textPaint)
+                if (!isTooCloseToBottom && !isTooCloseToTop && !isOverlappingLast) {
+                    canvas.nativeCanvas.drawLine(-10f, y, 0f, y, textPaint)
                     drawLine(
                         color = colorScheme.onSurfaceVariant.copy(alpha = 0.1f),
-                        start = Offset(0f, y.toFloat()),
-                        end = Offset(width, y.toFloat()),
+                        start = Offset(0f, y),
+                        end = Offset(width, y),
                         strokeWidth = 1.dp.toPx()
                     )
-                    canvas.nativeCanvas.drawText("${currentAlt.toInt()}", -110f, y.toFloat() + 10f, textPaint)
+                    canvas.nativeCanvas.drawText(altitudeFormatter.format(currentAlt.toDouble()), -110f, y + 10f, textPaint)
+                    lastY = y
                 }
                 currentAlt += cachedData.altStep
             }
@@ -371,16 +451,12 @@ fun ElevationProfile(
 
             // Draw Labels at the top of the line
             drawIntoCanvas { canvas ->
-                val distLabel = if (clampedDist < 1000) {
-                    "${clampedDist.toInt()} m"
-                } else {
-                    "${String.format("%.2f", clampedDist / 1000f)} km"
-                }
-                val altLabel = "${interAlt.toInt()} m"
+                val distLabel = distanceFormatter.format_with_units(clampedDist)
+                val altLabel = altitudeFormatter.format_with_units(interAlt)
                 val combinedLabel = "$distLabel | $altLabel"
 
                 // Calculate text width to center it or keep it on screen
-                val labelWidth = textPaint.measureText(combinedLabel)
+                val labelWidth = highlightPaint.measureText(combinedLabel)
                 var labelX = markerX.toFloat() - (labelWidth / 2)
 
                 // Keep label within chart bounds
@@ -390,10 +466,7 @@ fun ElevationProfile(
                     combinedLabel,
                     labelX,
                     -15f, // Draw slightly above the top of the chart
-                    textPaint.apply {
-                        // Optional: Make the active label bold or a different color
-                        isFakeBoldText = true
-                    }
+                    highlightPaint
                 )
             }
 

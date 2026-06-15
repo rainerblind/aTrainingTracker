@@ -34,6 +34,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.banalservice.BSportType
@@ -42,6 +43,7 @@ import com.google.android.gms.maps.model.RoundCap
 import com.google.maps.android.PolyUtil
 import com.google.maps.android.compose.*
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
@@ -59,11 +61,11 @@ fun PeriodSummaryCard(
 ) {
     val df = DistanceFormatter()
     val tf = TimeFormatter()
+    val af = AltitudeFormatter()
 
     ElevatedCard(
         modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp, horizontal = 12.dp),
+            .fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
@@ -76,24 +78,30 @@ fun PeriodSummaryCard(
                     color = Color.Transparent,
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        Column {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        // --- ROW 1: Icon and Title (Standardized Top Row) ---
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_calendar_month),
+                                contentDescription = null,
+                                modifier = Modifier.size(32.dp),
+                                tint = Color.Unspecified
+                            )
+
                             Text(
                                 text = summary.periodLabel,
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
                             )
-                            Text(
-                                text = summary.periodDateRange,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Column(horizontalAlignment = Alignment.End) {
+
+                            // Important Metric: Total Workouts
                             Text(
                                 text = pluralStringResource(
                                     R.plurals.workout_periods__workouts,
@@ -101,11 +109,31 @@ fun PeriodSummaryCard(
                                     summary.totalWorkouts
                                 ),
                                 style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
                             )
+                        }
+
+                        // --- ROW 2: Date Range and Duration ---
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            // Indent secondary info to align with the title text
+                            Spacer(modifier = Modifier.width(32.dp + 12.dp))
+
+                            Text(
+                                text = summary.periodDateRange,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f)
+                            )
+
                             Text(
                                 text = tf.format_with_units(summary.totalDurationSec),
-                                style = MaterialTheme.typography.bodyMedium
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -118,8 +146,7 @@ fun PeriodSummaryCard(
                     SportStatsRow(
                         bSportType = bSportType,
                         stats = stats,
-                        tf = tf,
-                        df = df,
+                        tf = tf, df = df, af = af,
                         onClick = { onSportClick(summary, bSportType) }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
@@ -149,6 +176,7 @@ fun SportStatsRow(
     stats: SportStats,
     tf: TimeFormatter,
     df: DistanceFormatter,
+    af: AltitudeFormatter,
     onClick: () -> Unit
 ) {
     Surface(
@@ -162,12 +190,12 @@ fun SportStatsRow(
                 .padding(vertical = 4.dp), // Add slight padding for touch target
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Sport Icon
+            // Sport Icon (Standardized 32dp for sport rows)
             Icon(
                 painter = painterResource(id = bSportType.iconResId),
                 contentDescription = null,
-                modifier = Modifier.size(24.dp),
-                tint = Color.Unspecified
+                modifier = Modifier.size(32.dp),
+                tint = Color.Unspecified // Original color
             )
 
             Spacer(modifier = Modifier.width(12.dp))
@@ -176,8 +204,8 @@ fun SportStatsRow(
             Column(modifier = Modifier.weight(1.2f)) {
                 Text(
                     text = stringResource(bSportType.stringResId),
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = pluralStringResource(
@@ -190,22 +218,33 @@ fun SportStatsRow(
                 )
             }
 
-            // Distance & Ascent
-            Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+            // Distance & Ascent (Standardized titleMedium)
+            Column(modifier = Modifier.weight(1.5f), horizontalAlignment = Alignment.End) {
                 Text(
                     text = df.format_with_units(stats.totalDistanceMeters),
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
-                Text(
-                    text = "${stats.totalAscentMeters.toInt()} m ↑",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_ascent),
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = af.format_with_units(stats.totalAscentMeters),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
 
+            Spacer(modifier = Modifier.width(16.dp)) // GUARANTEED GAP between metrics and time
+
             // Time for this sport
-            Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+            Column(horizontalAlignment = Alignment.End) {
                 Text(
                     text = tf.format_with_units(stats.totalDurationSec),
                     style = MaterialTheme.typography.bodyMedium

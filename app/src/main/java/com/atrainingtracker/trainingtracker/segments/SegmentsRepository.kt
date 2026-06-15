@@ -22,10 +22,14 @@ import android.content.ContentValues
 import android.content.Context
 import android.util.Log
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
+import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaMap
+import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaSegment
+import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaStream
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.google.android.gms.maps.model.LatLng
@@ -59,7 +63,7 @@ data class SegmentSummary(
     val averageGrade_raw: Double,
     val averageGrade: String,
     val maxGrade: String,
-    val elevationGain_raw: Double,
+    val elevationGain_raw: Double,  // necessary for sorting
     val elevationGain: String,
     val elevationMin: String,
     val elevationMax: String,
@@ -72,80 +76,45 @@ data class SegmentWithPath(
 )
 
 
-// data class for the segment (Strava API)
-@Serializable
-data class StravaSegment(
-    val id: Long,
-    val name: String,
-    val activity_type: String,
-    val distance: Double,
-    val average_grade: Double,
-    val maximum_grade: Double,
-    val elevation_high: Double,
-    val elevation_low: Double,
-    val total_elevation_gain: Double? = null,
-    val start_latlng: List<Double>,
-    val end_latlng: List<Double>,
-    val climb_category: Int,
-    val city: String? = null, // Strava sometimes returns null for city
-    val state: String? = null,
-    val country: String? = null,
-    val map: StravaMap? = null,
-    var pr_time: Int? = null    // must be updated because the detailed segment does not have this property directly.
-)
 /**
  * Extension function to convert a StravaSegment (API Model)
  * to a SegmentSummary (Internal App Model).
  */
 private fun StravaSegment.toSummary(): SegmentSummary {
     // Map Strava's activity_type string to our BSportType enum
-    val sportType = when (this.activity_type) {
+    val sportType = when (this.activityType) {
         "Ride" -> BSportType.BIKE
         "Run" -> BSportType.RUN
         else -> BSportType.UNKNOWN
     }
     val tf = TimeFormatter()
     val df = DistanceFormatter()
+    val af = AltitudeFormatter()
     val locale = java.util.Locale.getDefault()
-    val elevationGain = this.total_elevation_gain ?: (this.elevation_high - this.elevation_low)
+    val elevationGain = this.totalElevationGain ?: (this.elevationHigh - this.elevationLow)
 
     return SegmentSummary(
         stravaId = this.id,
         name = this.name,
         bSportType = sportType,
-        climbCategory_raw = this.climb_category,
-        climbCategory = StravaHelper.translateClimbCategory(this.climb_category),
-        prTime_raw = this.pr_time ?: 0,
-        prTime = if (this.pr_time != null) tf.format(this.pr_time) else "",
+        climbCategory_raw = this.climbCategory,
+        climbCategory = StravaHelper.translateClimbCategory(this.climbCategory),
+        prTime_raw = this.prTime ?: 0,
+        prTime = if (this.prTime != null) tf.format(this.prTime) else "",
         city = this.city ?: "",
         distance = df.format_with_units(this.distance),
         distance_raw = this.distance,
-        averageGrade_raw = this.average_grade,
-        averageGrade = String.format(locale, "Ø %.1f%%", this.average_grade),
-        maxGrade = String.format(locale, "%.1f%% Max", this.maximum_grade),
+        averageGrade_raw = this.averageGrade,
+        averageGrade = String.format(locale, "Ø %.1f%%", this.averageGrade),
+        maxGrade = String.format(locale, "%.1f%% Max", this.maximumGrade),
         elevationGain_raw = elevationGain,
-        elevationGain = String.format(locale, "%d m", Math.round(elevationGain)),
-        elevationMin = String.format(locale, "%d m", Math.round(this.elevation_low)),
-        elevationMax = String.format(locale, "%d m", Math.round(this.elevation_high)),
+        elevationGain = af.format_with_units(elevationGain),
+        elevationMin = af.format_with_units(this.elevationLow),
+        elevationMax = af.format_with_units(this.elevationHigh),
         map_polyline = this.map?.polyline ?: ""
     )
 }
 
-
-@Serializable
-data class StravaMap(
-    val id: String,
-    val polyline: String? = null
-)
-
-@Serializable
-data class StravaStream(
-    val type: String,
-    val data: List<JsonElement>, // Flexible type to handle both numbers and arrays
-    @SerialName("series_type") val seriesType: String,
-    val resolution: String,
-    @SerialName("original_size") val originalSize: Int
-)
 
 private val json = Json {
     ignoreUnknownKeys = true // CRITICAL: Strava sends many fields we don't need
@@ -252,13 +221,13 @@ class SegmentsRepository private constructor(context: Context) {
             }
 
             for (segment in segments) {
-                if (ignoreSport.equals(segment.activity_type, ignoreCase = true)) continue
+                if (ignoreSport.equals(segment.activityType, ignoreCase = true)) continue
 
                 // get the detailed segment
                 val detailedSegment = fetchDetailedSegment(segment.id) ?: segment
 
                 // unfortunately, the detailedSegment does not contain the pr_time directly, so we have to copy it from the original segment.
-                detailedSegment.pr_time = segment.pr_time
+                detailedSegment.prTime = segment.prTime
 
                 // store or update the database
                 addOrUpdateSegmentOnDb(detailedSegment)

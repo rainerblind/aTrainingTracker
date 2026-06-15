@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.tracker;
 
+import android.app.Application;
 import android.app.Notification;
 import android.app.Service;
 import android.content.BroadcastReceiver;
@@ -54,9 +55,14 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.ActiveDevicesDbHelper;
 import com.atrainingtracker.trainingtracker.database.ActiveDevicesDbHelper.ActiveDevices;
 import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager;
+import com.atrainingtracker.trainingtracker.database.ExtremaType;
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository;
+import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.maps.android.PolyUtil;
 
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
@@ -81,6 +87,31 @@ public class TrackerService extends Service {
     public static final String WORKOUT_ID               = "WORKOUT_ID";
     public static final String WORKOUT_UPDATED_INTENT   = "com.atrainingtracker.trainingtracker.WOKRKOUT_UPDATED_INTENT";
 
+    // Same sensor types from the old thread. Used for Averages.
+    private static final HashSet<SensorType> IMPORTANT_SENSOR_TYPES = new HashSet<>(Arrays.asList(
+            SensorType.ALTITUDE,
+            SensorType.CADENCE,
+            SensorType.HR,
+            SensorType.PACE_spm,
+            SensorType.PEDAL_POWER_BALANCE,
+            SensorType.PEDAL_SMOOTHNESS_L,
+            SensorType.PEDAL_SMOOTHNESS_R,
+            SensorType.POWER,
+            SensorType.SPEED_mps,
+            SensorType.TEMPERATURE,
+            SensorType.TORQUE,
+            SensorType.TORQUE_EFFECTIVENESS_L,
+            SensorType.TORQUE_EFFECTIVENESS_R
+    ));
+
+    // Sensors to track for Min/Max and used for average if in IMPORTANT_SENSOR_TYPES
+    private static final HashSet<SensorType> SENSORS_TO_TRACK = new HashSet<>(IMPORTANT_SENSOR_TYPES);
+    static {
+        SENSORS_TO_TRACK.add(SensorType.LATITUDE);
+        SENSORS_TO_TRACK.add(SensorType.LONGITUDE);
+        SENSORS_TO_TRACK.add(SensorType.LINE_DISTANCE_m);
+    }
+    
     public static final String START_TYPE = "START_TYPE";
     private static final String TAG = "TrackerService";
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
@@ -99,8 +130,13 @@ public class TrackerService extends Service {
     protected boolean mResumeTrackingWhenConnectedToBanalService = false;
     @Nullable
     BANALServiceComm mBanalService;
+    private android.os.PowerManager.WakeLock wakeLock;
     private TrainingApplication mTrainingApplication;
+    private WorkoutRepository mWorkoutRepository;
     private ScheduledFuture mTrackerHandle;
+
+    private int mExtremaDbUpdateCounter = 0;
+    private static final int EXTREMA_DB_UPDATE_INTERVAL = 10; // Update Avg in DB every 10 seconds
     // int            mCalories        = 0;
     // double         mSpeedAverage_mps = 0.0;
 
@@ -111,6 +147,7 @@ public class TrackerService extends Service {
 
     // private long mSportTypeId = SportTypeDatabaseManager.getDefaultSportTypeId();
     private long mWorkoutID;
+    private LiveWorkoutSession mLiveSession;
     private final BroadcastReceiver mLapSummaryReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, @NonNull Intent intent) {
             if (DEBUG) Log.i(TAG, "received lap summary intent");
@@ -230,6 +267,7 @@ public class TrackerService extends Service {
         }
 
         mTrainingApplication = (TrainingApplication) getApplication();
+        mWorkoutRepository = WorkoutRepository.Companion.getInstance((Application) getApplicationContext());
 
         // Background initialization of database to avoid ANR during upgrade
         new Thread(() -> {
@@ -247,6 +285,37 @@ public class TrackerService extends Service {
         ContextCompat.registerReceiver(this, mAltitudeCorrectionReceiver, mAltitudeCorrectionFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mLapSummaryReceiver, mLapSummaryFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mUserSelectedSportTypeChangedReceiver, new IntentFilter(BANALService.SPORT_TYPE_CHANGED_BY_USER_INTENT), ContextCompat.RECEIVER_NOT_EXPORTED);
+
+        acquireWakeLock();
+    }
+
+    private void acquireWakeLock() {
+        if (wakeLock == null) {
+            android.os.PowerManager powerManager = (android.os.PowerManager) getSystemService(Context.POWER_SERVICE);
+            wakeLock = powerManager.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "aTrainingTracker:TrackingLock");
+            wakeLock.acquire();
+            if (DEBUG) Log.d(TAG, "WakeLock acquired");
+        }
+    }
+
+    private void releaseWakeLock() {
+        if (wakeLock != null && wakeLock.isHeld()) {
+            wakeLock.release();
+            wakeLock = null;
+            if (DEBUG) Log.d(TAG, "WakeLock released");
+        }
+    }
+
+    private boolean hasLocationPermission() {
+        return ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                || ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED;
+    }
+
+    private boolean hasBackgroundLocationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            return ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_BACKGROUND_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED;
+        }
+        return true;
     }
 
     @Override
@@ -268,6 +337,7 @@ public class TrackerService extends Service {
                 // The workout name is just the date+time
                 mBaseFileName = (new SimpleDateFormat("yyyy-MM-dd_HHmmss", Locale.US)).format(new Date());
                 mWorkoutID = createNewWorkout();
+                mLiveSession = new LiveWorkoutSession(mWorkoutID, IMPORTANT_SENSOR_TYPES);
                 WorkoutSamplesDatabaseManager.getInstance(this).createNewTable(mBaseFileName, Arrays.asList(SensorType.values()));       // create a new table with a column for each possible sensor
                 break;
 
@@ -311,8 +381,24 @@ public class TrackerService extends Service {
         this.sendBroadcast(trackingStartedIntent);
 
         Notification notification = mTrainingApplication.getSearchingAndTrackingNotification();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) { // API 29+
-            // Use this overload on newer Android versions, mandatory for API 34+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) { // API 34+
+            // On API 34+, we MUST specify the type if it's in the manifest.
+            // If permissions are missing or if we are in background without background permission,
+            // it will throw SecurityException.
+            int fgsType = ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION;
+            
+            // If we are resuming after being killed, we are likely in the background.
+            // We should check if we have the necessary background permission if we want to use location type.
+            if (intent == null && !hasBackgroundLocationPermission()) {
+                Log.w(TAG, "Resuming TrackerService in background without background location permission. FGS might fail.");
+            }
+            
+            if (!hasLocationPermission()) {
+                Log.w(TAG, "Starting TrackerService without foreground location permission granted.");
+            }
+
+            startForeground(TrainingApplication.TRACKING_NOTIFICATION_ID, notification, fgsType);
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) { // API 29-33
             startForeground(TrainingApplication.TRACKING_NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
         } else {
             startForeground(TrainingApplication.TRACKING_NOTIFICATION_ID, notification);
@@ -352,6 +438,8 @@ public class TrackerService extends Service {
         unregisterReceiver(mAltitudeCorrectionReceiver);
         unregisterReceiver(mLapSummaryReceiver);
         unregisterReceiver(mUserSelectedSportTypeChangedReceiver);
+
+        releaseWakeLock();
     }
 
     private void recreateValuesWhenResuming() {
@@ -549,7 +637,6 @@ public class TrackerService extends Service {
             values.put(ActiveDevices.DEVICE_DB_ID, deviceDbId);
             activeDevicesDb.insert(ActiveDevices.TABLE, null, values);
         }
-        activeDevicesDb.close();
 
         WorkoutSummariesDatabaseManager summariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(this);
         // save the accumulated SensorTypes
@@ -575,6 +662,11 @@ public class TrackerService extends Service {
                 WorkoutSummaries.C_ID + "=" + mWorkoutID,
                 null);
 
+        // Finalize Live Session (Auto Name, Commute, Trainer)
+        if (mLiveSession != null) {
+            finalizeLiveSession();
+        }
+
         ExportManager exportManager = new ExportManager(this);
         exportManager.workoutFinished(mBaseFileName);
 
@@ -591,8 +683,19 @@ public class TrackerService extends Service {
 
         ContentValues samplingValues = new ContentValues();
         ContentValues summaryValues = new ContentValues();
+        WorkoutSummariesDatabaseManager summariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(this);
 
         Map<String, SensorValueType> sensorName2Type = new HashMap<>();
+
+        LatLng currentPos = null;
+        SensorData<Number> latData = mBanalService.getBestSensorData(SensorType.LATITUDE);
+        SensorData<Number> lonData = mBanalService.getBestSensorData(SensorType.LONGITUDE);
+        if (latData != null && lonData != null && latData.getValue() != null && lonData.getValue() != null) {
+            // Check if GPS sensors are in the trackable list before calling doubleValue()
+            if (SENSORS_TO_TRACK.contains(SensorType.LATITUDE) && SENSORS_TO_TRACK.contains(SensorType.LONGITUDE)) {
+                currentPos = new LatLng(latData.getValue().doubleValue(), lonData.getValue().doubleValue());
+            }
+        }
 
         // sample
         for (SensorData<Number> sensorData : mBanalService.getAllSensorData()) {
@@ -606,8 +709,33 @@ public class TrackerService extends Service {
                 continue;
             }
 
-
             SensorType sensorType = sensorData.getSensorType();
+            
+            // Feed Live Session
+            if (mLiveSession != null && SENSORS_TO_TRACK.contains(sensorType)) {
+                int changed = mLiveSession.addSample(sensorType, sensorData.getValue().doubleValue(), currentPos);
+
+                if (changed != 0) {
+                    LiveWorkoutSession.RunningStats stats = mLiveSession.getSensorStats().get(sensorType);
+                    boolean updateAvgInDb = (mExtremaDbUpdateCounter >= EXTREMA_DB_UPDATE_INTERVAL);
+
+                    if ((changed & LiveWorkoutSession.RunningStats.CHANGED_MIN) != 0) {
+                        mWorkoutRepository.updateExtremaValue(mWorkoutID, sensorType, ExtremaType.MIN, stats.min, stats.minPos);
+                        summariesDatabaseManager.updateExtremaValue(mWorkoutID, sensorType, ExtremaType.MIN, stats.min, stats.minPos);
+                    }
+                    if ((changed & LiveWorkoutSession.RunningStats.CHANGED_MAX) != 0) {
+                        mWorkoutRepository.updateExtremaValue(mWorkoutID, sensorType, ExtremaType.MAX, stats.max, stats.maxPos);
+                        summariesDatabaseManager.updateExtremaValue(mWorkoutID, sensorType, ExtremaType.MAX, stats.max, stats.maxPos);
+                    }
+                    if ((changed & LiveWorkoutSession.RunningStats.CHANGED_AVG) != 0) {
+                        mWorkoutRepository.updateExtremaValue(mWorkoutID, sensorType, ExtremaType.AVG, stats.getAverage(), null);
+                        if (updateAvgInDb) {
+                            summariesDatabaseManager.updateExtremaValue(mWorkoutID, sensorType, ExtremaType.AVG, stats.getAverage(), null);
+                        }
+                    }
+                }
+            }
+
             String sensorName = sensorType.name();
             String deviceName = sensorData.getDeviceName();
             if (deviceName != null) {                                       // when it is not the best sensor (or the clock, or...), we add the the name of the source device
@@ -736,17 +864,45 @@ public class TrackerService extends Service {
 
         // Update the summary data
         if (DEBUG) Log.d(TAG, "writing to Summaries db");
-        summaryValues.put(WorkoutSummaries.EXTREMA_VALUES_CALCULATED, 0);    // force recalculation of the extrema values in the case that they have been calculated
         if (averageSpeedCalculateable()) {
             summaryValues.put(WorkoutSummaries.SPEED_AVERAGE_mps, getAverageSpeed());
         }
 
-        WorkoutSummariesDatabaseManager summariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(this);
         SQLiteDatabase summariesDb = summariesDatabaseManager.getDatabase();
         summariesDb.update(WorkoutSummaries.TABLE,
                 summaryValues,
                 WorkoutSummaries.C_ID + "=" + mWorkoutID,
                 null);
+
+        // Manage DB throttle for Average updates
+        if (mExtremaDbUpdateCounter >= EXTREMA_DB_UPDATE_INTERVAL) {
+            mExtremaDbUpdateCounter = 0;
+        } else {
+            mExtremaDbUpdateCounter++;
+        }
+
+        // Handle Streams (every 20s)
+        if (mLiveSession != null) {
+            SensorData<Number> altData = mBanalService.getBestSensorData(SensorType.ALTITUDE);
+            SensorData<Number> distData = mBanalService.getBestSensorData(SensorType.DISTANCE_m);
+            Double alt = (altData != null && altData.getValue() != null) ? altData.getValue().doubleValue() : null;
+            Double dist = (distData != null && distData.getValue() != null) ? distData.getValue().doubleValue() : null;
+
+            LiveWorkoutSession.StreamIncrement increment = mLiveSession.recordStreamPoint(currentPos, alt, dist);
+            if (increment != null) {
+
+                // 1. Database Update (Incremental)
+                summariesDatabaseManager.appendToMapAndStreams(mWorkoutID,
+                        increment.polylineIncrement,
+                        increment.altitudeIncrement,
+                        increment.distanceIncrement);
+
+                // 2. Repository Update (Push directly to UI)
+                WorkoutRepository repo = WorkoutRepository.Companion.getInstance((Application) getApplicationContext());
+                repo.appendMapPolyline(mWorkoutID, increment.polylineIncrement);
+                repo.appendElevationStreams(mWorkoutID, increment.altitudeIncrement, increment.distanceIncrement);
+            }
+        }
 
         // After successfully saving to the DB, we send a broadcast to notify the UI.
         Log.d(TAG, "Database updated. Sending WORKOUT_UPDATED_INTENT broadcast.");
@@ -762,6 +918,88 @@ public class TrackerService extends Service {
     protected double getAverageSpeed() {
         return mDistanceTotal_m / mTimeActive_s;
     }
+
+
+
+    private void finalizeLiveSession() {
+        if (mLiveSession == null) return;
+        if (DEBUG) Log.i(TAG, "finalizeLiveSession");
+
+        WorkoutSummariesDatabaseManager summariesManager = WorkoutSummariesDatabaseManager.getInstance(this);
+        WorkoutRepository repository = WorkoutRepository.Companion.getInstance((Application) getApplicationContext());
+
+        // 1. Save START and END locations
+        LatLng startPos = mLiveSession.getStartLatLng();
+        LatLng endPos = mLiveSession.getLastLatLng();
+        if (startPos != null) {
+            summariesManager.updateExtremaValue(mWorkoutID, SensorType.LATITUDE, ExtremaType.START, startPos.latitude, startPos);
+            summariesManager.updateExtremaValue(mWorkoutID, SensorType.LONGITUDE, ExtremaType.START, startPos.longitude, startPos);
+        }
+        if (endPos != null) {
+            summariesManager.updateExtremaValue(mWorkoutID, SensorType.LATITUDE, ExtremaType.END, endPos.latitude, endPos);
+            summariesManager.updateExtremaValue(mWorkoutID, SensorType.LONGITUDE, ExtremaType.END, endPos.longitude, endPos);
+        }
+
+        // 2. Save and Push Extrema Values
+        for (Map.Entry<SensorType, LiveWorkoutSession.RunningStats> entry : mLiveSession.getSensorStats().entrySet()) {
+            SensorType sensor = entry.getKey();
+            LiveWorkoutSession.RunningStats stats = entry.getValue();
+
+            // Min
+            summariesManager.updateExtremaValue(mWorkoutID, sensor, ExtremaType.MIN, stats.min, stats.minPos);
+            repository.updateExtremaValue(mWorkoutID, sensor, ExtremaType.MIN, stats.min, stats.minPos);
+            // Max
+            summariesManager.updateExtremaValue(mWorkoutID, sensor, ExtremaType.MAX, stats.max, stats.maxPos);
+            repository.updateExtremaValue(mWorkoutID, sensor, ExtremaType.MAX, stats.max, stats.maxPos);
+            // Avg
+            if (IMPORTANT_SENSOR_TYPES.contains(sensor)) {
+                summariesManager.updateExtremaValue(mWorkoutID, sensor, ExtremaType.AVG, stats.getAverage(), null);
+                repository.updateExtremaValue(mWorkoutID, sensor, ExtremaType.AVG, stats.getAverage(), null);
+            }
+        }
+
+        // 3. Guess Commute and Trainer
+        guessCommuteAndTrainer();
+
+        // 5. Finalize Map and Streams (one last check)
+        String polyline = PolyUtil.encode(mLiveSession.getSampledLatLngs());
+        String altStream = NumericalEncodingUtils.INSTANCE.encodeDoubles(mLiveSession.getSampledAltitudes());
+        String distStream = NumericalEncodingUtils.INSTANCE.encodeDoubles(mLiveSession.getSampledDistances());
+        summariesManager.updateMapAndStreams(mWorkoutID, polyline, altStream, distStream);
+        repository.setMapPolyline(mWorkoutID, polyline);
+        repository.setElevationStreams(mWorkoutID, altStream, distStream);
+    }
+
+    private void guessCommuteAndTrainer() {
+        if (DEBUG) Log.i(TAG, "guessCommuteAndTrainer");
+        WorkoutSummariesDatabaseManager summariesManager = WorkoutSummariesDatabaseManager.getInstance(this);
+
+        Double distance = summariesManager.getDouble(mWorkoutID, WorkoutSummaries.DISTANCE_TOTAL_m);
+        Double maxLineDistance = summariesManager.getExtremaValue(mWorkoutID, SensorType.LINE_DISTANCE_m, ExtremaType.MAX);
+        Double endLineDistance = summariesManager.getExtremaValue(mWorkoutID, SensorType.LINE_DISTANCE_m, ExtremaType.END);
+
+        boolean commute = false, trainer = false;
+        if (maxLineDistance != null) {
+            if (distance != null && maxLineDistance < TrainingApplication.DISTANCE_TO_MAX_THRESHOLD_FOR_TRAINER) {
+                trainer = true;
+            }
+            if (endLineDistance != null && maxLineDistance < endLineDistance * TrainingApplication.DISTANCE_TO_MAX_RATIO_FOR_COMMUTE) {
+                commute = true;
+            }
+        } else {
+            trainer = true;
+        }
+
+        if (commute ^ trainer) {
+            ContentValues values = new ContentValues();
+            values.put(WorkoutSummaries.COMMUTE, commute);
+            values.put(WorkoutSummaries.TRAINER, trainer);
+            summariesManager.getDatabase().update(WorkoutSummaries.TABLE, values, WorkoutSummaries.C_ID + "=?", new String[]{Long.toString(mWorkoutID)});
+            
+            WorkoutRepository.Companion.getInstance((Application) getApplicationContext()).setCommuteAndTrainer(mWorkoutID, commute, trainer);
+        }
+    }
+
 
     public enum StartType {START_NORMAL, RESUME_BY_USER, RESUME_SERVICE_RECREATION}
 

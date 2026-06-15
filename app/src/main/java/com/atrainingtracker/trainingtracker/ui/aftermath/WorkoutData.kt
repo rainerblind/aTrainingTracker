@@ -95,8 +95,7 @@ data class WorkoutData(
     val goal: String?,
     val method: String?,
 
-    val isCalculatingExtrema: Boolean = false,
-    val extremaCalculationMessage: String? = null,
+    val stravaActivityData: String? = null,
 
     // --- 2. Heavy/Live Data ---
     val exportStatuses: List<ExportStatusGroupData> = emptyList(),
@@ -146,8 +145,6 @@ data class WorkoutData(
     val extremaData: ExtremaData
         get() = ExtremaData(
             dataRows = extremaRows,
-            isCalculating = isCalculatingExtrema,
-            workoutId = id,
-            calculationMessage = extremaCalculationMessage
+            workoutId = id
         )
 }

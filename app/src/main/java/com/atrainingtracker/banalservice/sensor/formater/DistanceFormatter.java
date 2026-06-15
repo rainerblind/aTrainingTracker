@@ -69,7 +69,10 @@ public class DistanceFormatter implements MyFormatter<Number> {
                 }
                 // return NumberFormat.getInstance().format(distance_m.doubleValue()/1000);
             case IMPERIAL:
-                if (distance_m.intValue() < 1609344) {
+                if (distance_m.doubleValue() < 1000) { // roughly 0.62 miles -> use feet
+                    return String.format(Locale.getDefault(), "%.0f ft", distance_m.doubleValue() / BANALService.METER_PER_FOOT);
+                }
+                else if (distance_m.doubleValue() < 1609344) {
                     return String.format(Locale.getDefault(), "%.2f mile", distance_m.doubleValue() / BANALService.METER_PER_MILE);
                 }
                 else {

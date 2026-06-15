@@ -96,6 +96,7 @@ fun TrackOnMapScreen(
                     menuEnabled = false,
                     onClicked = { },
                     onExport = { },
+                    onSaveAsRoute = { },
                     onDeleteRequest = { }
                 )
             }
@@ -156,9 +157,7 @@ fun TrackOnMapScreen(
             }) {
                 ElevationProfile(
                     pathPoints = mapState.tracks.firstOrNull()?.path ?: emptyList(),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(150.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     currentDistance = selectedDistance,
                     onDistanceSelected = { selectedDistance = it }
                 )

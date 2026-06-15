@@ -26,14 +26,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -54,8 +57,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -79,6 +84,8 @@ fun RouteTabbedScreen(
     onToggleSelection: (Long, Boolean) -> Unit,
     onDeleteConfirmed: (Long) -> Unit,
     onImportClick: () -> Unit,
+    onSyncStravaClick: () -> Unit,
+    isSyncing: Boolean,
     sortOrder: RouteSortOrder,
     onSortOrderChange: (RouteSortOrder) -> Unit,
     scrollToTop: Boolean,
@@ -203,12 +210,66 @@ fun RouteTabbedScreen(
                                     )
                                 }
 
-                                // --- IMPORT BUTTON ---
-                                IconButton(onClick = onImportClick) {
-                                    Icon(
-                                        imageVector = Icons.Default.Add, // Or Icons.Default.FileUpload
-                                        contentDescription = stringResource(R.string.route_import),
-                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                // --- IMPORT DROPDOWN ---
+                                var showImportMenu by remember { mutableStateOf(false) }
+
+                                Box {
+                                    IconButton(onClick = { showImportMenu = true }) {
+                                        Icon(
+                                            imageVector = Icons.Default.Add,
+                                            contentDescription = stringResource(R.string.route_import),
+                                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                    }
+                                    DropdownMenu(
+                                        expanded = showImportMenu,
+                                        onDismissRequest = { showImportMenu = false },
+                                        containerColor = MaterialTheme.colorScheme.surface
+                                    ) {
+                                        // GPX Import
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(R.string.GPX)) },
+                                            leadingIcon = {
+                                                Icon(
+                                                    imageVector = Icons.AutoMirrored.Filled.InsertDriveFile,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(24.dp)
+                                                )
+                                            },
+                                            onClick = {
+                                                showImportMenu = false
+                                                onImportClick()
+                                            }
+                                        )
+
+                                        // Strava Sync
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(R.string.Strava)) },
+                                            leadingIcon = {
+                                                Icon(
+                                                    painter = painterResource(R.drawable.logo_square_strava),
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(24.dp),
+                                                    tint = Color.Unspecified
+                                                )
+                                            },
+                                            enabled = !isSyncing,
+                                            onClick = {
+                                                showImportMenu = false
+                                                onSyncStravaClick()
+                                            }
+                                        )
+                                    }
+                                }
+
+                                // --- SYNC PROGRESS (shown separately if active) ---
+                                if (isSyncing) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier
+                                            .padding(horizontal = 8.dp)
+                                            .size(24.dp),
+                                        strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                 }
 

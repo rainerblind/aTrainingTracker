@@ -33,7 +33,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -53,10 +52,11 @@ fun WorkoutHeader(
     data: WorkoutHeaderData,
     onClicked: () -> Unit,
     onExport: (FileFormat) -> Unit,
+    onSaveAsRoute: () -> Unit,
     onDeleteRequest: () -> Unit,
     modifier: Modifier = Modifier,
-    backgroundColor: Color = MaterialTheme.colorScheme.surfaceContainerHighest,
-    textColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    backgroundColor: Color = Color.Transparent,
+    textColor: Color = MaterialTheme.colorScheme.onSurface,
     menuEnabled: Boolean = true
 ) {
     // State to control menu visibility
@@ -80,77 +80,85 @@ fun WorkoutHeader(
         // Box allows us to place the Menu Button at the absolute top-right
         Box(modifier = Modifier.fillMaxWidth()) {
 
-            // Main Content Row (Replaces the ConstraintLayout logic)
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, top = 16.dp, bottom = 16.dp, end = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(start = 16.dp, top = 8.dp, bottom = 8.dp, end = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                // 1. Left Column (Workout Name and Date/Time)
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = data.workoutName,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        IconTextRow(
-                            iconRes = R.drawable.ic_date_start,
-                            text = data.formattedDate
-                        )
-                        IconTextRow(
-                            iconRes = R.drawable.ic_time_start,
-                            text = data.formattedTime
-                        )
-
-                        // Trainer / Commute Logic
-                        if (data.trainer || data.commute) {
-                            val label = when {
-                                data.commute -> stringResource(R.string.commute)
-                                else -> stringResource(data.bSportType.indoorEquipmentResId)
-                            }
-                            Text(
-                                text = label,
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                    }
-                }
-
-                // 2. Center-Right Column (Sport Icon and Name)
-                // Matches ll_workout_summaries__sport_container
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(horizontal = 4.dp)
+                // 1. TOP ROW: Sport Icon and Workout Name
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Image(
                         painter = painterResource(id = data.bSportType.iconResId),
                         contentDescription = null,
-                        modifier = Modifier.size(48.dp),
-                        colorFilter = ColorFilter.tint(textColor)
+                        modifier = Modifier.size(32.dp),
+                        colorFilter = null // Original color
                     )
                     Text(
+                        text = data.workoutName,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    // Spacer for the Menu Button area
+                    Spacer(modifier = Modifier.width(32.dp))
+                }
+
+                // 2. BOTTOM CONTENT: Organized in horizontal rows
+                // Row A: Sport Specific Info (Sport Name, Equipment, Commute/Trainer)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
                         text = data.sportName,
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold
                     )
                     data.equipmentName?.let { equipmentName ->
                         Text(
                             text = equipmentName,
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    // Trainer / Commute Logic
+                    if (data.trainer || data.commute) {
+                        val label = when {
+                            data.commute -> stringResource(R.string.commute)
+                            else -> stringResource(data.bSportType.indoorEquipmentResId)
+                        }
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
 
-                // 3. Invisible Spacer for the Menu Button area
-                // This ensures the sport icon doesn't overlap the dots
-                Spacer(modifier = Modifier.width(8.dp))
+                // Row B: Date and Time
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    IconTextRow(
+                        iconRes = R.drawable.ic_date_start,
+                        text = data.formattedDate
+                    )
+                    IconTextRow(
+                        iconRes = R.drawable.ic_time_start,
+                        text = data.formattedTime
+                    )
+                }
             }
 
             // 4. Menu Button (Pinned to Top-End)
@@ -194,6 +202,17 @@ fun WorkoutHeader(
                                 }
                             )
                         }
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.save_as_route)) },
+                            onClick = {
+                                showMenu = false
+                                onSaveAsRoute()
+                            },
+                            leadingIcon = { Icon(painterResource(R.drawable.ic_route), contentDescription = null) }
+                        )
 
                         // 3. Conditional Strava Logic
                         // Check if Strava is globally enabled AND if this workout specifically allows it
@@ -310,6 +329,7 @@ fun PreviewWorkoutHeader(
                 data = data,
                 onClicked = {},
                 onExport = {},
+                onSaveAsRoute = {},
                 onDeleteRequest = {}
             )
         }
@@ -336,6 +356,7 @@ fun PreviewCommuteHeader() {
             ),
             onClicked = {},
             onExport = {},
+            onSaveAsRoute = {},
             onDeleteRequest = {}
         )
     }

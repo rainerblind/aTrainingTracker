@@ -289,6 +289,11 @@ public class WorkoutSamplesDatabaseManager {
 
     @Nullable
     public LatLngValue getExtremaPosition(WorkoutSummariesDatabaseManager workoutSummariesDatabaseManager, long workoutId, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType) {
+        return getExtremaPosition(workoutSummariesDatabaseManager.getDatabase(), workoutSummariesDatabaseManager, workoutId, sensorType, extremaType);
+    }
+
+    @Nullable
+    public LatLngValue getExtremaPosition(SQLiteDatabase summariesDb, WorkoutSummariesDatabaseManager workoutSummariesDatabaseManager, long workoutId, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType) {
         if (DEBUG)
             Log.i(TAG, "getExtremaPosition for " + extremaType.name() + " " + sensorType.name());
 
@@ -297,10 +302,10 @@ public class WorkoutSamplesDatabaseManager {
         LatLngValue result = null;
 
         // WorkoutSummariesDbHelper summariesDbHelper = new WorkoutSummariesDbHelper(mContext);
-        String baseFileName = workoutSummariesDatabaseManager.getBaseFileName(workoutId);
+        String baseFileName = workoutSummariesDatabaseManager.getBaseFileName(summariesDb, workoutId);
 
         // first, get the extrema value
-        Double extremaValue = workoutSummariesDatabaseManager.getExtremaValue(workoutId, sensorType, extremaType);
+        Double extremaValue = workoutSummariesDatabaseManager.getExtremaValue(summariesDb, workoutId, sensorType, extremaType);
         if (DEBUG) Log.i(TAG, "got " + extremaValue);
 
         // if there is an extrema value, we look for its location

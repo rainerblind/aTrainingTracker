@@ -144,21 +144,15 @@ fun TrackingTabsScreen(
     // -- Show Lap Summary Dialog
     val lapEvent by trackingTabsViewModel.lapEvent.observeAsState()
     lapEvent?.let { event ->
-        if (pagerState.currentPage != 0) {
-            LapSummaryDialog(
-                lapNr = event.lapNumber,
-                lapTime = event.lapTime,
-                lapDistance = event.lapDistance,
-                lapSpeed = event.lapSpeed,
-                onDismissRequest = {
-                    trackingTabsViewModel.clearLapEvent()
-                }
-            )
-        }
-        else {
-            // When the control tracking screen is shown, clear the lap event immediately.
-            trackingTabsViewModel.clearLapEvent()
-        }
+        LapSummaryDialog(
+            lapNr = event.lapNumber,
+            lapTime = event.lapTime,
+            lapDistance = event.lapDistance,
+            lapSpeed = event.lapSpeed,
+            onDismissRequest = {
+                trackingTabsViewModel.clearLapEvent()
+            }
+        )
     }
 
 

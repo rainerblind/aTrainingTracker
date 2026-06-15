@@ -74,6 +74,7 @@ public class StravaHelper {
     protected static final String ACTIVITY_READ_ALL = "activity:read_all";
     protected static final String PROFILE_READ_ALL = "profile:read_all";
     protected static final String READ = "read";
+    protected static final String READ_ALL = "read_all";
     protected static final String APPROVAL_PROMPT = "approval_prompt";
     protected static final String FORCE = "force";
     protected static final String AUTO = "auto";
@@ -135,7 +136,7 @@ public class StravaHelper {
                 .appendQueryParameter(REDIRECT_URI, getRedirectUri())
                 .appendQueryParameter(RESPONSE_TYPE, CODE)
                 .appendQueryParameter(APPROVAL_PROMPT, AUTO)
-                .appendQueryParameter(SCOPE, READ + ',' + ACTIVITY_WRITE + ',' + ACTIVITY_READ_ALL + ',' + PROFILE_READ_ALL);
+                .appendQueryParameter(SCOPE, READ + ',' + READ_ALL  + ',' + ACTIVITY_WRITE);
         return builder.build().toString();
     }
 
@@ -150,6 +151,24 @@ public class StravaHelper {
         // No history for the browser step keeps the stack clean
         browserIntent.setFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
         context.startActivity(browserIntent);
+    }
+
+    public static void openActivity(@NonNull Context context, long activityId) {
+        if (DEBUG) Log.i(TAG, "openActivity: " + activityId);
+
+        // Try to open in the Strava app first
+        Uri intentUri = Uri.parse("strava://activities/" + activityId);
+        Intent intent = new Intent(Intent.ACTION_VIEW, intentUri);
+
+        // Check if there's an app to handle this intent
+        if (intent.resolveActivity(context.getPackageManager()) != null) {
+            context.startActivity(intent);
+        } else {
+            // Fallback: Open in browser
+            intentUri = Uri.parse("https://www.strava.com/activities/" + activityId);
+            intent = new Intent(Intent.ACTION_VIEW, intentUri);
+            context.startActivity(intent);
+        }
     }
 
     @NonNull

@@ -149,9 +149,7 @@ fun RouteOnMapScreen(
                         onDistanceSelected = { dist ->
                             selectedDistance = dist
                         },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(150.dp)
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             }

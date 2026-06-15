@@ -38,7 +38,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
-import com.atrainingtracker.banalservice.sensor.formater.DefaultNumberFormatter
+import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
@@ -59,7 +60,7 @@ fun WorkoutSummaryCompact(
     val df = DistanceFormatter()
     val tf = TimeFormatter()
     val sf = SpeedFormatter()
-    val dnf = DefaultNumberFormatter()
+    val af = AltitudeFormatter()
 
     Box {
         ElevatedCard(
@@ -147,26 +148,26 @@ fun WorkoutSummaryCompact(
                 ) {
                     // Distance
                     CompactMetricItem(
-                        label = "Distance",
+                        label = stringResource(SensorType.DISTANCE_m.fullNameId),
                         value = df.format_with_units(workoutData.detailsData.totalDistance)
                     )
 
                     // Active Time
                     CompactMetricItem(
-                        label = "Time",
+                        label = stringResource(SensorType.TIME_TOTAL.fullNameId),
                         value = tf.format_with_units(workoutData.detailsData.activeTimeSec)
                     )
 
                     // Speed/Pace
                     CompactMetricItem(
-                        label = "Avg Speed",
+                        label = "Ø " + stringResource(SensorType.SPEED_mps.fullNameId),
                         value = sf.format_with_units(workoutData.detailsData.avgSpeedMps)
                     )
 
                     // Ascent
                     CompactMetricItem(
-                        label = "Ascent",
-                        value = dnf.format(workoutData.ascentMeters) + " m"
+                        label = stringResource(SensorType.ASCENT.fullNameId),
+                        value = af.format_with_units(workoutData.ascentMeters)
                     )
                 }
             }

@@ -56,7 +56,6 @@ import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation;
 import com.atrainingtracker.trainingtracker.exporter.FileFormat;
-import com.atrainingtracker.trainingtracker.helpers.CalcExtremaWorker;
 import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleService;
 import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleServiceBuildIn;
 import com.atrainingtracker.trainingtracker.smartwatch.pebble.Watchapp;
@@ -987,6 +986,7 @@ public class TrainingApplication extends Application {
         if (DEBUG) Log.d(TAG, "pause tracking");
 
         sendBroadcast(new Intent(REQUEST_NEW_LAP)
+                .putExtra(BANALService.IS_PAUSE, true)
                 .setPackage(getPackageName()));
 
         cTrackingMode = TrackingMode.PAUSED;
@@ -1002,6 +1002,7 @@ public class TrainingApplication extends Application {
         }
 
         sendBroadcast(new Intent(REQUEST_NEW_LAP)
+                .putExtra(BANALService.IS_PAUSE, true)
                 .setPackage(getPackageName()));
 
         cTrackingMode = TrackingMode.TRACKING;
@@ -1018,35 +1019,12 @@ public class TrainingApplication extends Application {
     }
 
     protected void trackingStopped() {
-        // send boadcast to reset the accumulators
+        // send broadcast to reset the accumulators
         sendBroadcast(new Intent(BANALService.RESET_ACCUMULATORS_INTENT).setPackage(getPackageName()));
-
-        // -- trigger the calculation of the extrema values here.
-        // Define a unique name for this work
-        final String uniqueWorkName = "extrema_calc_" + mWorkoutID;
-
-        // Create input data for the worker
-        Data inputData = new Data.Builder()
-                .putLong(CalcExtremaWorker.KEY_WORKOUT_ID, mWorkoutID)
-                .build();
-
-        // Create the Work Request
-        OneTimeWorkRequest calcWorkRequest = new OneTimeWorkRequest.Builder(CalcExtremaWorker.class)
-                .setInputData(inputData)
-                .addTag(uniqueWorkName) // Also add a tag for easier observation
-                .build();
-
-        // Enqueue the work as UNIQUE work. This prevents it from being started twice.
-        // If it's already running (e.g. due to a quick app restart), it will KEEP the existing one.
-        WorkManager.getInstance(getApplicationContext()).enqueueUniqueWork(
-                uniqueWorkName,
-                ExistingWorkPolicy.KEEP,
-                calcWorkRequest
-        );
 
         // start EditWorkoutActivity
         // startEditWorkoutActivity(mWorkoutID, true); // here, the EditWorkoutActivity shall show the details, extrema values and the map.
-        // startEditWorkoutActivity(mWorkoutID, false); // although, the user might want to see the statistics as early as possible, showing them here leads to an inconsistency.  Thus, we daactivate this feature.
+        // startEditWorkoutActivity(mWorkoutID, false); // although, the user might want to see the statistics as early as possible, showing them here leads to an inconsistency.  Thus, we deactivate this feature.
         WorkoutNavigationEvents.triggerEdit(mWorkoutID);
         mNotificationManager.cancel(TRACKING_NOTIFICATION_ID);
     }

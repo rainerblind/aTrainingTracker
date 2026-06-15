@@ -31,10 +31,12 @@ import androidx.annotation.NonNull;
 
 import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
+import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
+import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaSegment;
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment;
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint;
 import com.google.android.gms.maps.model.LatLng;
@@ -150,6 +152,7 @@ public class SegmentsDatabaseManager {
             // 3. Format strings
             DistanceFormatter df = new DistanceFormatter();
             TimeFormatter tf = new TimeFormatter();
+            AltitudeFormatter af = new AltitudeFormatter();
 
             summary = new SegmentSummary(
                     segmentId,
@@ -166,9 +169,9 @@ public class SegmentsDatabaseManager {
                     String.format(Locale.getDefault(), "Ø %.1f%%", avgGrade),
                     String.format(Locale.getDefault(), "%.1f%% Max", maxGrade),
                     elevationGain,
-                    String.format(Locale.getDefault(), "%d m", Math.round(elevationGain)),
-                    String.format(Locale.getDefault(), "%d m", Math.round(elevLow)),
-                    String.format(Locale.getDefault(), "%d m", Math.round(elevHigh)),
+                    af.format_with_units(elevationGain),
+                    af.format_with_units(elevLow),
+                    af.format_with_units(elevHigh),
                     polyline
             );
         }
@@ -185,6 +188,7 @@ public class SegmentsDatabaseManager {
         SportTypeDatabaseManager sportTypeMgr = SportTypeDatabaseManager.getInstance(mContext);
         DistanceFormatter df = new DistanceFormatter();
         TimeFormatter tf = new TimeFormatter();
+        AltitudeFormatter af = new AltitudeFormatter();
 
         int strava_id_index = cursor.getColumnIndexOrThrow(Segments.STRAVA_SEGMENT_ID);
         int activity_type_index = cursor.getColumnIndexOrThrow(Segments.ACTIVITY_TYPE);
@@ -236,9 +240,9 @@ public class SegmentsDatabaseManager {
                             String.format(Locale.getDefault(), "Ø %.1f%%", avgGrade),
                             String.format(Locale.getDefault(), "%.1f%% Max", maxGrade),
                             elevation_gain,
-                            String.format(Locale.getDefault(), "%d m", Math.round(elevation_gain)),
-                            String.format(Locale.getDefault(), "%d m", Math.round(elevLow)),
-                            String.format(Locale.getDefault(), "%d m", Math.round(elevHigh)),
+                            af.format_with_units(elevation_gain),
+                            af.format_with_units(elevLow),
+                            af.format_with_units(elevHigh),
                             polyline
                     )
             );
@@ -261,18 +265,18 @@ public class SegmentsDatabaseManager {
         // Mapping Kotlin fields to Database Columns
         cv.put(Segments.STRAVA_SEGMENT_ID, segment.getId());
         cv.put(Segments.SEGMENT_NAME, segment.getName());
-        cv.put(Segments.ACTIVITY_TYPE, segment.getActivity_type());
+        cv.put(Segments.ACTIVITY_TYPE, segment.getActivityType());
         cv.put(Segments.DISTANCE, segment.getDistance());
-        cv.put(Segments.AVERAGE_GRADE, segment.getAverage_grade());
-        cv.put(Segments.MAXIMUM_GRADE, segment.getMaximum_grade());
-        cv.put(Segments.ELEVATION_HIGH, segment.getElevation_high());
-        cv.put(Segments.ELEVATION_LOW, segment.getElevation_low());
-        cv.put(Segments.TOTAL_ELEVATION_GAIN, segment.getTotal_elevation_gain());
-        cv.put(Segments.CLIMB_CATEGORY, segment.getClimb_category());
+        cv.put(Segments.AVERAGE_GRADE, segment.getAverageGrade());
+        cv.put(Segments.MAXIMUM_GRADE, segment.getMaximumGrade());
+        cv.put(Segments.ELEVATION_HIGH, segment.getElevationHigh());
+        cv.put(Segments.ELEVATION_LOW, segment.getElevationLow());
+        cv.put(Segments.TOTAL_ELEVATION_GAIN, segment.getTotalElevationGain());
+        cv.put(Segments.CLIMB_CATEGORY, segment.getClimbCategory());
         cv.put(Segments.CITY, segment.getCity());
         cv.put(Segments.STATE, segment.getState());
         cv.put(Segments.COUNTRY, segment.getCountry());
-        cv.put(Segments.PR_TIME, segment.getPr_time());
+        cv.put(Segments.PR_TIME, segment.getPrTime());
 
         // Extract the polyline from the nested Map object
         if (segment.getMap() != null) {
@@ -280,13 +284,13 @@ public class SegmentsDatabaseManager {
         }
 
         // Handle LatLng arrays (Strava returns [lat, lng])
-        if (segment.getStart_latlng().size() >= 2) {
-            cv.put(Segments.START_LATITUDE, segment.getStart_latlng().get(0));
-            cv.put(Segments.START_LONGITUDE, segment.getStart_latlng().get(1));
+        if (segment.getStartLatLng().size() >= 2) {
+            cv.put(Segments.START_LATITUDE, segment.getStartLatLng().get(0));
+            cv.put(Segments.START_LONGITUDE, segment.getStartLatLng().get(1));
         }
-        if (segment.getEnd_latlng().size() >= 2) {
-            cv.put(Segments.END_LATITUDE, segment.getEnd_latlng().get(0));
-            cv.put(Segments.END_LONGITUDE, segment.getEnd_latlng().get(1));
+        if (segment.getEndLatLng().size() >= 2) {
+            cv.put(Segments.END_LATITUDE, segment.getEndLatLng().get(0));
+            cv.put(Segments.END_LONGITUDE, segment.getEndLatLng().get(1));
         }
 
 

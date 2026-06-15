@@ -18,6 +18,8 @@
 
 package com.atrainingtracker.trainingtracker.ui.components.workoutextrema
 
+import com.google.android.gms.maps.model.LatLng
+
 /**
  * Represents the complete data model for the extrema values section.
  *
@@ -26,8 +28,6 @@ package com.atrainingtracker.trainingtracker.ui.components.workoutextrema
  */
 data class ExtremaData(
     val workoutId: Long,
-    val isCalculating: Boolean,
-    val calculationMessage: String? = null,
     val dataRows: List<ExtremaDataRow>
 )
 
@@ -44,8 +44,10 @@ data class ExtremaDataRow(
     val sensorLabel: String,
     val unitLabel: String,
     val minValue: String?,
+    val minLatLng: LatLng? = null,
     val avgValue: String?,
-    val maxValue: String?
+    val maxValue: String?,
+    val maxLatLng: LatLng? = null
 ) {
     /**
      * Helper to check if any value is present for this sensor.

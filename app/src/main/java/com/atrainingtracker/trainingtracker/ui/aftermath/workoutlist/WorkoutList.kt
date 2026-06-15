@@ -46,6 +46,7 @@ fun WorkoutList(
     workouts: List<WorkoutData>,
     isPlayServiceAvailable: Boolean,
     onExportWorkout: (Long, FileFormat) -> Unit,
+    onSaveAsRoute: (WorkoutData) -> Unit,
     onDeleteRequest: (Long) -> Unit,
     onEditWorkout: (Long) -> Unit,
     onMapClick: (WorkoutData) -> Unit,
@@ -62,7 +63,7 @@ fun WorkoutList(
         contentPadding = PaddingValues(
             // Calculation: The initial header height (px) + the current offset (px)
             // convert the final result to Dp.
-            top = with(density) { (headerHeightPx + appBarOffsetPx).toDp() },
+            top = with(density) { (headerHeightPx + appBarOffsetPx).toDp() + 8.dp },
             bottom = bottomPadding + 16.dp,
             start = 8.dp,
             end = 8.dp
@@ -94,6 +95,7 @@ fun WorkoutList(
                         workoutData = workoutData,
                         isPlayServiceAvailable = isPlayServiceAvailable,
                         onExport = { fileFormat -> onExportWorkout(workoutData.id, fileFormat) },
+                        onSaveAsRoute = { onSaveAsRoute(workoutData) },
                         onDeleteRequest = { onDeleteRequest(workoutData.id) },
                         onEditWorkout = { onEditWorkout(workoutData.id) },
                         onMapClick = { onMapClick(workoutData) }

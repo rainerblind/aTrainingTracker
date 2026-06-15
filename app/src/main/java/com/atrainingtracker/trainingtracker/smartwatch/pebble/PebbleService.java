@@ -324,7 +324,6 @@ public class PebbleService extends Service {
         }
 
         cursor.close();
-        db.close();
 
         mSensorTypeList = result;
     }

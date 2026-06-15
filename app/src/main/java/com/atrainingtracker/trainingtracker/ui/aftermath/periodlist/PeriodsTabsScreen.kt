@@ -61,7 +61,7 @@ fun PeriodsTabsScreen(
     val density = LocalDensity.current
 
     // 1. Calculate the total height of the Header (Status Bar + Heading + Trab Row)
-    val appBarMaxHeightPx = with(density) { 135.dp.roundToPx() }
+    val appBarMaxHeightPx = with(density) { 120.dp.roundToPx() }
 
     // 2. Initialize the Connection from the article
     val connection = remember(appBarMaxHeightPx) {
@@ -100,7 +100,9 @@ fun PeriodsTabsScreen(
 
             // THE HEADER (Layered on top)
             Surface(
-                modifier = Modifier.offset { IntOffset(0, connection.appBarOffset) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .offset { IntOffset(0, connection.appBarOffset) },
                 color = MaterialTheme.colorScheme.primaryContainer,
             ) {
                 Column(modifier = Modifier.statusBarsPadding()) {

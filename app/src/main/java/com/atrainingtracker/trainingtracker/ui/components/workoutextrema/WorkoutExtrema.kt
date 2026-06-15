@@ -41,19 +41,6 @@ fun WorkoutExtrema(
             .fillMaxWidth()
             // .padding(vertical = 8.dp)
     ) {
-        if (data.calculationMessage != null) {
-            // Displays the message (e.g., "Calculating max spd...")
-            Text(
-                text = data.calculationMessage,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
         if (data.dataRows.isNotEmpty()) {
             Column(
                 modifier = Modifier
@@ -167,11 +154,10 @@ fun PreviewWorkoutExtrema() {
         WorkoutExtrema(
             data = ExtremaData(
                 workoutId = 123L,
-                isCalculating = false,
                 dataRows = listOf(
-                    ExtremaDataRow("Heart Rate", "bpm", "65", "142", "185"),
-                    ExtremaDataRow("Cadence", "rpm", "0", "85", "112"),
-                    ExtremaDataRow("Power", "W", "0", "215", "640")
+                    ExtremaDataRow(sensorLabel = "Heart Rate", unitLabel = "bpm", minValue = "65", avgValue = "142", maxValue = "185"),
+                    ExtremaDataRow(sensorLabel = "Cadence", unitLabel = "rpm", minValue = "0", avgValue = "85", maxValue = "112"),
+                    ExtremaDataRow(sensorLabel = "Power", unitLabel = "W", minValue = "0", avgValue = "215", maxValue = "640")
                 )
             )
         )
@@ -185,8 +171,6 @@ fun PreviewWorkoutExtremaCalculating() {
         WorkoutExtrema(
             data = ExtremaData(
                 workoutId = 123L,
-                isCalculating = true,
-                calculationMessage = "Recalculating sensor extrema...",
                 dataRows = emptyList()
             )
         )
@@ -200,11 +184,9 @@ fun PreviewWorkoutExtremaCalculatingHR() {
         WorkoutExtrema(
             data = ExtremaData(
                 workoutId = 123L,
-                isCalculating = true,
-                calculationMessage = "Calculating HR ...",
                 dataRows = listOf(
-                    ExtremaDataRow("Cadence", "rpm", "0", "85", "112"),
-                    ExtremaDataRow("Power", "W", "0", "215", "640")
+                    ExtremaDataRow(sensorLabel = "Cadence", unitLabel = "rpm", minValue = "0", avgValue = "85", maxValue = "112"),
+                    ExtremaDataRow(sensorLabel = "Power", unitLabel = "W", minValue = "0", avgValue = "215", maxValue = "640")
                 )
             )
         )
@@ -218,8 +200,6 @@ fun PreviewWorkoutExtremaNothing() {
         WorkoutExtrema(
             data = ExtremaData(
                 workoutId = 123L,
-                isCalculating = false,
-                calculationMessage = null,
                 dataRows = emptyList()
             )
         )

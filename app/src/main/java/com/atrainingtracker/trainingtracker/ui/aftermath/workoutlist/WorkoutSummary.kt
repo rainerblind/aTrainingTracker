@@ -41,6 +41,7 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.Wor
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.*
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.WorkoutExtrema
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeader
+import com.atrainingtracker.trainingtracker.ui.components.strava.StravaActivitySection
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.map.TrackOrSegmentOnMap
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
@@ -55,6 +56,7 @@ fun WorkoutSummary(
     workoutData: WorkoutData,
     isPlayServiceAvailable: Boolean,
     onExport: (FileFormat) -> Unit,
+    onSaveAsRoute: () -> Unit,
     onDeleteRequest: () -> Unit,
     onEditWorkout: () -> Unit,
     onMapClick: () -> Unit,
@@ -87,8 +89,15 @@ fun WorkoutSummary(
             data = workoutData.headerData,
             onClicked = onEditWorkout,
             onExport = onExport,
+            onSaveAsRoute = onSaveAsRoute,
             onDeleteRequest = onDeleteRequest,
             menuEnabled = workoutData.headerData.finished
+        )
+
+        HorizontalDivider(
+            modifier = Modifier.fillMaxWidth(),
+            thickness = 0.5.dp,
+            color = MaterialTheme.colorScheme.outlineVariant
         )
 
         // 2. Description Section (Notes, Goals, Method)
@@ -106,7 +115,7 @@ fun WorkoutSummary(
 
         // 4. Extrema Values Section
         // Show a subtle divider if extrema data exists
-        if (workoutData.extremaData.dataRows.isNotEmpty() || workoutData.extremaData.isCalculating) {
+        if (workoutData.extremaData.dataRows.isNotEmpty()) {
             HorizontalDivider(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 thickness = 0.5.dp,
@@ -114,6 +123,18 @@ fun WorkoutSummary(
             )
             WorkoutExtrema(data = workoutData.extremaData,
                 modifier = editWorkoutModifier
+            )
+        }
+
+        // 5. Strava Activity Data Section
+        if (!workoutData.stravaActivityData.isNullOrBlank()) {
+            HorizontalDivider(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                thickness = 0.5.dp,
+                color = MaterialTheme.colorScheme.outlineVariant
+            )
+            StravaActivitySection(
+                rawActivityJson = workoutData.stravaActivityData
             )
         }
 
@@ -125,7 +146,7 @@ fun WorkoutSummary(
             )
         }
 
-        // 5. Export Status Section
+        // 6. Export Status Section
         ExportStatus(
             exportStatuses = workoutData.exportStatuses
         )
@@ -160,19 +181,14 @@ private fun WorkoutMediaSection(
         )
 
         // 2. The Elevation Profile
-        Box(
+        ElevationProfile(
+            // pathPoints = points,
+            encodedAltitudes = workoutData.encodedAltitudes,
+            encodedDistances = workoutData.encodedDistances,
+            currentDistance = null,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(100.dp)
                 .clickable { onMapClick() }
-        ) {
-            ElevationProfile(
-                // pathPoints = points,
-                encodedAltitudes = workoutData.encodedAltitudes,
-                encodedDistances = workoutData.encodedDistances,
-                currentDistance = null,
-                modifier = Modifier.fillMaxSize()
-            )
-        }
+        )
     }
 }

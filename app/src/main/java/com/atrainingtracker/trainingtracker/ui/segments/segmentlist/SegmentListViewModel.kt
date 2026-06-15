@@ -130,10 +130,15 @@ class SegmentListViewModel(
                     segments.sortedBy { it.summary.name.lowercase() }
                 } else {
                     segments.sortedBy { segment ->
-                        calculateDistance(
-                            location.latitude, location.longitude,
-                            segment.path[0].latLng.latitude, segment.path[0].latLng.longitude
-                        )
+                        val startPoint = segment.path.firstOrNull()
+                        if (startPoint != null) {
+                            calculateDistance(
+                                location.latitude, location.longitude,
+                                startPoint.latLng.latitude, startPoint.latLng.longitude
+                            )
+                        } else {
+                            Float.MAX_VALUE
+                        }
                     }
                 }
             }

@@ -48,7 +48,8 @@ enum class RouteSource(
     val displayNameResId: Int
 ) {
     STRAVA(R.string.Strava),
-    LOCAL_GPX(R.string.GPX);
+    LOCAL_GPX(R.string.GPX),
+    WORKOUT(R.string.route_source_workout);
 
     companion object {
         /**

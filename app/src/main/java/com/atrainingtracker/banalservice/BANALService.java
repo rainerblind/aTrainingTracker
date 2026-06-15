@@ -68,6 +68,7 @@ public class BANALService
      */
     public static final String TAG = "BANALService";
     public static final double METER_PER_MILE = 1609.344;
+    public static final double METER_PER_FOOT = 0.3048;
 
     public static final double DEFAULT_BIKE_CALIBRATION_FACTOR = 2.1;
     public static final double MIN_SPEED = 0.001;
@@ -96,6 +97,7 @@ public class BANALService
     public static final String PREV_LAP_DISTANCE_STRING = "com.atrainingtracker.banalservice.PREV_LAP_DISTANCE_STRING";
     public static final String PREV_LAP_SPEED_mps = "com.atrainingtracker.banalservice.PREV_LAP_SPEED_mps";
     public static final String PREV_LAP_SPEED_STRING = "com.atrainingtracker.banalservice.PREV_LAP_SPEED_STRING";
+    public static final String IS_PAUSE = "com.atrainingtracker.banalservice.IS_PAUSE";
 
     public static final String NEW_TIME_EVENT_INTENT = "com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT";
     // public static final String START_TIMER_INTENT    = "de.rainerblind.banalservice.START_TIMER_INTENT";
@@ -161,7 +163,7 @@ public class BANALService
     protected BroadcastReceiver mNewLapReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            newLap();
+            newLap(intent.getBooleanExtra(IS_PAUSE, false));
         }
     };
     private long mUserSelectedSportTypeId = -1;
@@ -335,7 +337,11 @@ public class BANALService
     }
 
     protected void newLap() {
-        if (DEBUG) Log.i(TAG, "newLap");
+        newLap(false);
+    }
+
+    protected void newLap(boolean isPause) {
+        if (DEBUG) Log.i(TAG, "newLap, isPause=" + isPause);
 
         // if (cPaused == true) { return; }
 
@@ -382,6 +388,7 @@ public class BANALService
                 .putExtra(PREV_LAP_DISTANCE_STRING, lapDistance_String)
                 .putExtra(PREV_LAP_SPEED_mps, lapSpeed)
                 .putExtra(PREV_LAP_SPEED_STRING, lapSpeedString)
+                .putExtra(IS_PAUSE, isPause)
                 .setPackage(getPackageName());
         sendBroadcast(intent);
     }

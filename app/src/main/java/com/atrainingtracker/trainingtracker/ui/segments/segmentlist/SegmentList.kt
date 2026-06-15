@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.lazy.LazyColumn
@@ -34,7 +33,6 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -53,7 +51,6 @@ fun SegmentList(
     scrollState: LazyListState,
     isStravaConnected: Boolean,
     onConnectToStrava: () -> Unit,
-    isRefreshing: Boolean,
     onSegmentClick: (Long) -> Unit,
     appBarOffsetPx: Int,
     headerHeightPx: Float
@@ -63,18 +60,6 @@ fun SegmentList(
 
     Box(modifier = Modifier.fillMaxSize()) {
         val bottomPadding = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
-
-        // Visual feedback: A thin progress bar just below the header when updating
-        if (isRefreshing) {
-            LinearProgressIndicator(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .fillMaxWidth()
-                    .padding(top = topPadding),
-                color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.primaryContainer
-            )
-        }
 
         if (!isStravaConnected && segmentsWithPath.isEmpty()) {
             Box(
@@ -100,12 +85,12 @@ fun SegmentList(
                 contentPadding = PaddingValues(
                     // Calculation: The initial header height (px) + the current offset (px)
                     // convert the final result to Dp.
-                    top = with(density) { (headerHeightPx + appBarOffsetPx).toDp() + 16.dp },
+                    top = with(density) { (headerHeightPx + appBarOffsetPx).toDp() + 8.dp },
                     bottom = bottomPadding + 16.dp,
-                    start = 4.dp,
-                    end = 4.dp
+                    start = 8.dp,
+                    end = 8.dp
                 ),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(
                     items = segmentsWithPath,
