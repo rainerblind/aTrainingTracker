@@ -349,7 +349,9 @@ fun ATrainingTrackerMap(
         // Routes
         val routeOverlayPattern = listOf(Dash(MapVisualization.ROUTE_DASH_LENGTH), Gap(MapVisualization.ROUTE_GAP_LENGTH))
         mapState.routes.forEach { route ->
-            val highlightRoute = route.isSelected && (mapState.zoomFocus != MapZoomFocus.FOLLOW_ME || route.bSportType == mapState.bSportType)
+            val highlightRoute = mapState.zoomFocus != MapZoomFocus.FOLLOW_ME     // not FOLLOW_ME mode
+                    || (route.isSelected && route.bSportType == mapState.bSportType)  // When in FOLLOW_ME mode, the route must be selected and the sport type must be the same.
+
             val alpha = if (highlightRoute) 1.0f else MapVisualization.ROUTE_UNSELECTED_ALPHA
             val routeColor = if (route.isSelected) RouteColorSelected else RouteColorUnselected
 
@@ -357,7 +359,7 @@ fun ATrainingTrackerMap(
             Polyline(
                 points = route.path.map { it.latLng },
                 color = routeColor.copy(alpha = alpha),
-                width = if (route.isSelected) MapVisualization.ROUTE_WIDTH else MapVisualization.ROUTE_UNSELECTED_WIDTH,
+                width = if (highlightRoute) MapVisualization.ROUTE_WIDTH else MapVisualization.ROUTE_UNSELECTED_WIDTH,
                 zIndex = if (route.isSelected) MapVisualization.ROUTE_BASE_Z_INDEX else MapVisualization.ROUTE_UNSELECTED_Z_INDEX,
                 clickable = true,
                 onClick = { onRouteClick(route.id) }
