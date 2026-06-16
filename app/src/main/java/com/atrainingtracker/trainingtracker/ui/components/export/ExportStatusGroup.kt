@@ -111,6 +111,8 @@ fun ExportDetailsDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 0.dp,
         title = {
             Text(text = data.groupTitle)
         },
