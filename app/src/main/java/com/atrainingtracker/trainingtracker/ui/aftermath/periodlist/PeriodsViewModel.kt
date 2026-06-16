@@ -172,9 +172,6 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
         val workoutIdToPolylineMap = items.associate { it.id to it.mapPolyline }
         val workoutIdToSportMap = items.associate { it.id to it.bSportType }
 
-        // Calculate Active Days
-        val activeDays = items.map { it.localDateTime.toLocalDate() }.distinct().size
-
         // Aggregate Sport Stats
         val sportStatsMap = items.groupBy { it.bSportType }.mapValues { (_, sportWorkouts) ->
             // Group by detailed sport name
@@ -257,7 +254,6 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
             endTimestampS = endS,
             totalWorkouts = items.size,
             totalDurationSec = items.sumOf { it.detailsData.activeTimeSec.toLong() },
-            activeDays = activeDays,
             sportStats = sportStatsMap,
             polylines = items.mapNotNull { it.mapPolyline }.filter { it.isNotEmpty() },
             workoutIdToPolylineMap = workoutIdToPolylineMap,

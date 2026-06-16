@@ -32,7 +32,6 @@ data class PeriodSummary(
     val endTimestampS: Long,         // End of the period in seconds
     val totalWorkouts: Int,
     val totalDurationSec: Long,
-    val activeDays: Int,             // Number of days with at least one workout
     val sportStats: Map<BSportType, SportStats>,
     val polylines: List<String>, // List of encoded polylines for the map
     val workoutIdToPolylineMap: Map<Long, String>, // ID -> Encoded Polyline

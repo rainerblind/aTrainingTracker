@@ -113,7 +113,7 @@ fun PeriodSummaryCard(
                                 modifier = Modifier.weight(1f)
                             )
 
-                            // Important Metric: Total Workouts & Active Days
+                            // Important Metric: Total Workouts
                             Column(horizontalAlignment = Alignment.End) {
                                 Text(
                                     text = pluralStringResource(
@@ -125,17 +125,6 @@ fun PeriodSummaryCard(
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
                                 )
-                                if (summary.periodType != PeriodType.DAY && summary.activeDays > 0) {
-                                    Text(
-                                        text = pluralStringResource(
-                                            R.plurals.workout_periods__active_days,
-                                            summary.activeDays,
-                                            summary.activeDays
-                                        ),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.secondary
-                                    )
-                                }
                             }
                         }
 
@@ -479,7 +468,6 @@ fun PreviewPeriodSummary() {
         endTimestampS = 15000,
         totalWorkouts = 5,
         totalDurationSec = 15400,
-        activeDays = 4,
         polylines = listOf("_p~iF~ps|U_ulLnnqC", "a~lF|ym|U_geC~izE"), // Mock short polylines
         sportStats = mapOf(
             BSportType.BIKE to SportStats(
@@ -532,7 +520,6 @@ fun PreviewEmptyPeriod() {
         endTimestampS = 0,
         totalWorkouts = 0,
         totalDurationSec = 0,
-        activeDays = 0,
         polylines = emptyList(),
         sportStats = emptyMap(),
         sortKey = "",
