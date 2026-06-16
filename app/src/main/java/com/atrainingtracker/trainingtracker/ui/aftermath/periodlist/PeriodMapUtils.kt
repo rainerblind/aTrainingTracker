@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.SphericalUtil
+import com.google.maps.android.heatmaps.Gradient
 import com.google.maps.android.heatmaps.HeatmapTileProvider
 import com.google.maps.android.heatmaps.WeightedLatLng
 
@@ -50,7 +51,7 @@ fun getPeriodMapVisuals(
             // We use WeightedLatLng to give every point a base "intensity" boost so single
             // workouts are clearly visible even in long periods.
             val allPoints = allPaths.flatMap { path ->
-                densifyPath(path, 10.0).map { WeightedLatLng(it, 2.0) }
+                densifyPath(path, 5.0).map { WeightedLatLng(it, 2.0) }
             }
 
             if (allPoints.isEmpty()) null
@@ -61,10 +62,22 @@ fun getPeriodMapVisuals(
                     PeriodType.YEAR -> 1.0
                     else -> 0.0
                 }
+
+                // High-contrast gradient to avoid "Green" which blends into terrain maps.
+                // Transitioning from a visible Blue -> Orange -> Red
+                val colors = intArrayOf(
+                    android.graphics.Color.BLUE,   // Low density
+                    android.graphics.Color.YELLOW, // Medium density
+                    android.graphics.Color.RED     // High density
+                )
+                val startPoints = floatArrayOf(0.2f, 0.7f, 1.0f)
+                val gradient = Gradient(colors, startPoints)
+
                 HeatmapTileProvider.Builder()
                     .weightedData(allPoints)
                     .opacity(opacity)
-                    .radius(20) // Balanced radius
+                    .radius(10) // Balanced radius
+                    .gradient(gradient)
                     .build()
             }
         }
