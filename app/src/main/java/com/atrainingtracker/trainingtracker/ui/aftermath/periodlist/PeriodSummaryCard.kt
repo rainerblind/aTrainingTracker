@@ -58,6 +58,7 @@ import com.google.android.gms.maps.model.LatLngBounds
 fun PeriodSummaryCard(
     summary: PeriodSummary,
     isPlayServiceAvailable: Boolean,
+    isHeatmapEnabled: Boolean,
     onHeaderClick: (PeriodSummary) -> Unit,
     onMapClick: (PeriodSummary) -> Unit,
     onSportClick: (PeriodSummary, BSportType) -> Unit,
@@ -173,6 +174,8 @@ fun PeriodSummaryCard(
                 ) {
                     PeriodMultiWorkoutMap(
                         polylines = summary.polylines,
+                        periodType = summary.periodType,
+                        isHeatmapEnabled = isHeatmapEnabled,
                         onMapClick = { onMapClick(summary) }
                     )
                 }
@@ -268,10 +271,16 @@ fun SportStatsRow(
 @Composable
 private fun PeriodMultiWorkoutMap(
     polylines: List<String>,
+    periodType: PeriodType,
+    isHeatmapEnabled: Boolean,
     onMapClick: () -> Unit) {
     // Decode all polylines once
     val allPaths = remember(polylines) {
         polylines.mapNotNull { if (it.isNotEmpty()) PolyUtil.decode(it) else null }
+    }
+
+    val visuals = remember(allPaths, periodType, isHeatmapEnabled) {
+        getPeriodMapVisuals(periodType, allPaths, isHeatmapEnabled)
     }
 
     if (allPaths.isEmpty()) {
@@ -328,12 +337,17 @@ private fun PeriodMultiWorkoutMap(
         allPaths.forEach { path ->
             Polyline(
                 points = path,
-                color = TrackType.BEST.color,
-                width = 8f,
+                color = TrackType.BEST.color.copy(alpha = visuals.polylineAlpha),
+                width = visuals.polylineWidth,
                 startCap = RoundCap(),
                 endCap = RoundCap(),
                 jointType = JointType.ROUND
             )
+        }
+
+        // Heatmap Layer (Drawn on top)
+        visuals.heatmapProvider?.let {
+            TileOverlay(tileProvider = it)
         }
     }
 }
@@ -375,6 +389,7 @@ fun PreviewPeriodSummary() {
         PeriodSummaryCard(
             summary = mockSummary,
             isPlayServiceAvailable = true,
+            isHeatmapEnabled = true,
             onHeaderClick = {},
             onMapClick = {},
             onSportClick = { _, _ ->}
@@ -404,6 +419,7 @@ fun PreviewEmptyPeriod() {
         PeriodSummaryCard(
             summary = emptySummary,
             isPlayServiceAvailable = false,
+            isHeatmapEnabled = true,
             onHeaderClick = {},
             onMapClick = {},
             onSportClick = { _, _ ->}

@@ -41,6 +41,7 @@ import kotlin.collections.emptyList
 class PeriodsViewModel(application: Application) : AndroidViewModel(application) {
 
     private val workoutRepo = WorkoutRepository.getInstance(application)
+    private val prefManager = com.atrainingtracker.trainingtracker.MyPreferenceManager(application)
 
     val groups = listOf(
         application.getString(R.string.workout_periods__days),
@@ -51,6 +52,19 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
 
     private val _selectedPeriod = MutableStateFlow<PeriodSummary?>(null)
     val selectedPeriod = _selectedPeriod.asStateFlow()
+
+    val isHeatmapEnabled: StateFlow<Boolean> = prefManager.isHeatmapEnabledFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = true
+        )
+
+    fun toggleHeatmapEnabled() {
+        viewModelScope.launch {
+            prefManager.setHeatmapEnabled(!isHeatmapEnabled.value)
+        }
+    }
 
     fun showPeriodMap(summary: PeriodSummary) {
         _selectedPeriod.value = summary

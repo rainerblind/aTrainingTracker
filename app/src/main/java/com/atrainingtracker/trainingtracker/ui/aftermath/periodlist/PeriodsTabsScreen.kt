@@ -22,7 +22,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Surface
@@ -52,6 +56,8 @@ fun PeriodsTabsScreen(
     pagerState: PagerState,
     listStates: List<LazyListState>,
     isPlayServiceAvailable: Boolean,
+    isHeatmapEnabled: Boolean,
+    onToggleHeatmapEnabled: () -> Unit,
     onHeaderClick: (PeriodSummary) -> Unit,
     onMapClick: (PeriodSummary) -> Unit,
     onSportClick: (PeriodSummary, BSportType) -> Unit
@@ -89,6 +95,7 @@ fun PeriodsTabsScreen(
                     periods = periods,
                     scrollState = scrollState,
                     isPlayServiceAvailable = isPlayServiceAvailable,
+                    isHeatmapEnabled = isHeatmapEnabled,
                     onHeaderClick = onHeaderClick,
                     onMapClick = onMapClick,
                     onSportClick = onSportClick,
@@ -121,7 +128,13 @@ fun PeriodsTabsScreen(
                         )
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            // TODO: add sort button and other features here
+                            IconButton(onClick = onToggleHeatmapEnabled) {
+                                Icon(
+                                    imageVector = Icons.Default.Whatshot,
+                                    contentDescription = if (isHeatmapEnabled) "Disable Heatmap" else "Enable Heatmap",
+                                    tint = if (isHeatmapEnabled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.38f)
+                                )
+                            }
                         }
                     }
                     PrimaryScrollableTabRow(
