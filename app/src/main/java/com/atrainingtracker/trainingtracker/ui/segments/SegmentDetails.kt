@@ -37,70 +37,67 @@ import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 @Composable
 fun SegmentDetails(
     summary: SegmentSummary,
-    compact: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(if (compact) 2.dp else 4.dp)
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         // --- ROW 1: Distance ---
         Row(verticalAlignment = Alignment.CenterVertically) {
-            StatItem(R.drawable.ic_distance, summary.distance, compact)
+            StatItem(R.drawable.ic_distance, summary.distance)
         }
 
         // --- ROW 2: Grades (Avg and Max) ---
         Row(verticalAlignment = Alignment.CenterVertically) {
-            StatItem(R.drawable.ic_grade, summary.averageGrade, compact)
-            VerticalDivider(compact)
+            StatItem(R.drawable.ic_grade, summary.averageGrade)
+            VerticalDivider()
             Text(
                 text = summary.maxGrade,
-                style = if (compact) MaterialTheme.typography.bodySmall else MaterialTheme.typography.titleMedium
+                style = MaterialTheme.typography.titleMedium
             )
         }
 
         // --- ROW 3: Elevations (Gain, Min, Max) ---
         Row(verticalAlignment = Alignment.CenterVertically) {
-            if (!compact) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_altitude),
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-            }
+            Icon(
+                painter = painterResource(id = R.drawable.ic_altitude),
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.width(4.dp))
 
-            StatItem(R.drawable.ic_ascent, summary.elevationGain, compact)
-            VerticalDivider(compact)
-            StatItem(R.drawable.ic_altitude_min, summary.elevationMin, compact)
-            VerticalDivider(compact)
-            StatItem(R.drawable.ic_altitude_max, summary.elevationMax, compact)
+            StatItem(R.drawable.ic_ascent, summary.elevationGain)
+            VerticalDivider()
+            StatItem(R.drawable.ic_altitude_min, summary.elevationMin)
+            VerticalDivider()
+            StatItem(R.drawable.ic_altitude_max, summary.elevationMax)
         }
     }
 }
 
 @Composable
-private fun StatItem(iconRes: Int, value: String, compact: Boolean) {
+private fun StatItem(iconRes: Int, value: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
             painter = painterResource(id = iconRes),
             contentDescription = null,
-            modifier = Modifier.size(if (compact) 14.dp else 20.dp),
+            modifier = Modifier.size(20.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.width(4.dp))
-        Text(text = value, style = if (compact) MaterialTheme.typography.bodySmall else MaterialTheme.typography.titleMedium)
+        Text(text = value, style = MaterialTheme.typography.titleMedium)
     }
 }
 
 @Composable
-private fun VerticalDivider(compact: Boolean) {
+private fun VerticalDivider() {
     Box(
         modifier = Modifier
             .padding(horizontal = 8.dp)
             .width(1.dp)
-            .height(if (compact) 10.dp else 16.dp)
+            .height(16.dp)
             .background(MaterialTheme.colorScheme.outlineVariant)
     )
 }
