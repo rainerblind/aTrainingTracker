@@ -174,9 +174,10 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
                 )
             }
 
-            // --- PHASE 6: Routes ---
+            // --- PHASE 6: Routes (Matches the Sport Type) ---
             val allRoutes = routesRepository.allRoutes.value
             val mapRoutes = allRoutes
+                .filter { it.summary.bSportType == bSportType }
                 .map { it.toMapRoute() }
 
             withContext(Dispatchers.Main) {
