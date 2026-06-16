@@ -334,11 +334,6 @@ private fun PeriodMultiWorkoutMap(
         ),
         onMapClick = { onMapClick() }
     ) {
-        // Heatmap Layer
-        visuals.heatmapProvider?.let {
-            TileOverlay(tileProvider = it)
-        }
-
         allPaths.forEach { path ->
             Polyline(
                 points = path,
@@ -348,6 +343,11 @@ private fun PeriodMultiWorkoutMap(
                 endCap = RoundCap(),
                 jointType = JointType.ROUND
             )
+        }
+
+        // Heatmap Layer (Drawn on top)
+        visuals.heatmapProvider?.let {
+            TileOverlay(tileProvider = it)
         }
     }
 }

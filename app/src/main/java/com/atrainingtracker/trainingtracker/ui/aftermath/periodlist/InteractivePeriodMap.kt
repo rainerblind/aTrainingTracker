@@ -105,10 +105,6 @@ fun InteractivePeriodMap(
             myLocationButtonEnabled = false
         )
     ) {
-        // Heatmap Layer
-        visuals.heatmapProvider?.let {
-            TileOverlay(tileProvider = it)
-        }
 
         // Snapshot Logic
         MapEffect(shouldTakeSnapshot) { map ->
@@ -132,6 +128,11 @@ fun InteractivePeriodMap(
                 jointType = JointType.ROUND,
                 onClick = { onWorkoutClick(workoutId) }
             )
+        }
+
+        // Heatmap Layer
+        visuals.heatmapProvider?.let {
+            TileOverlay(tileProvider = it)
         }
     }
 }
