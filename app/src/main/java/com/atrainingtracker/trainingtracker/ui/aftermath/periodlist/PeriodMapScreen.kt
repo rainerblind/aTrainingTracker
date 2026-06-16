@@ -214,7 +214,7 @@ fun PeriodMapScreen(
                                 ),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = MaterialTheme.colorScheme.primary
                             )
                             Text(
                                 text = tf.format_with_units(summary.totalDurationSec),

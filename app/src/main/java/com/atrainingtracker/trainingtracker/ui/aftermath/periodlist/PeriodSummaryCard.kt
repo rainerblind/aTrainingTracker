@@ -130,7 +130,7 @@ fun PeriodSummaryCard(
                                     ),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                                 Text(
                                     text = tf.format_with_units(summary.totalDurationSec),
@@ -235,7 +235,8 @@ fun SportStatsRow(
                             stats.count
                         ),
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
                     )
                 }
 
@@ -291,7 +292,7 @@ fun SportStatsRow(
                                     text = stringResource(R.string.workout_periods__longest_workout),
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                    color = MaterialTheme.colorScheme.primary,
                                     letterSpacing = 0.5.sp
                                 )
                                 Text(
@@ -346,7 +347,8 @@ fun CompactMetricRow(label: String, count: Int, distance: String, duration: Stri
         Text(
             text = "$label ($count)",
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Bold,
             modifier = Modifier.weight(1.2f),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
