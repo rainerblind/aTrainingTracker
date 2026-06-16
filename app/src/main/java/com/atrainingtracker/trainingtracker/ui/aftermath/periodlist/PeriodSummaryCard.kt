@@ -58,7 +58,7 @@ import com.google.android.gms.maps.model.LatLngBounds
 fun PeriodSummaryCard(
     summary: PeriodSummary,
     isPlayServiceAvailable: Boolean,
-    heatmapMode: HeatmapMode,
+    isHeatmapEnabled: Boolean,
     onHeaderClick: (PeriodSummary) -> Unit,
     onMapClick: (PeriodSummary) -> Unit,
     onSportClick: (PeriodSummary, BSportType) -> Unit,
@@ -175,7 +175,7 @@ fun PeriodSummaryCard(
                     PeriodMultiWorkoutMap(
                         polylines = summary.polylines,
                         periodType = summary.periodType,
-                        heatmapMode = heatmapMode,
+                        isHeatmapEnabled = isHeatmapEnabled,
                         onMapClick = { onMapClick(summary) }
                     )
                 }
@@ -272,15 +272,15 @@ fun SportStatsRow(
 private fun PeriodMultiWorkoutMap(
     polylines: List<String>,
     periodType: PeriodType,
-    heatmapMode: HeatmapMode,
+    isHeatmapEnabled: Boolean,
     onMapClick: () -> Unit) {
     // Decode all polylines once
     val allPaths = remember(polylines) {
         polylines.mapNotNull { if (it.isNotEmpty()) PolyUtil.decode(it) else null }
     }
 
-    val visuals = remember(allPaths, periodType, heatmapMode) {
-        getPeriodMapVisuals(periodType, allPaths, heatmapMode)
+    val visuals = remember(allPaths, periodType, isHeatmapEnabled) {
+        getPeriodMapVisuals(periodType, allPaths, isHeatmapEnabled)
     }
 
     if (allPaths.isEmpty()) {
@@ -389,7 +389,7 @@ fun PreviewPeriodSummary() {
         PeriodSummaryCard(
             summary = mockSummary,
             isPlayServiceAvailable = true,
-            heatmapMode = HeatmapMode.DENSITY,
+            isHeatmapEnabled = true,
             onHeaderClick = {},
             onMapClick = {},
             onSportClick = { _, _ ->}
@@ -419,7 +419,7 @@ fun PreviewEmptyPeriod() {
         PeriodSummaryCard(
             summary = emptySummary,
             isPlayServiceAvailable = false,
-            heatmapMode = HeatmapMode.DENSITY,
+            isHeatmapEnabled = true,
             onHeaderClick = {},
             onMapClick = {},
             onSportClick = { _, _ ->}

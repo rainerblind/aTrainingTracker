@@ -50,7 +50,7 @@ fun InteractivePeriodMap(
     // Map of WorkoutID to its Polyline String
     workouts: Map<Long, String>,
     periodType: PeriodType,
-    heatmapMode: HeatmapMode = HeatmapMode.DENSITY,
+    isHeatmapEnabled: Boolean = true,
     onWorkoutClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
     cameraPositionState: CameraPositionState = rememberCameraPositionState(),
@@ -61,8 +61,8 @@ fun InteractivePeriodMap(
         workouts.mapValues { PolyUtil.decode(it.value) }
     }
 
-    val visuals = remember(allPaths, periodType, heatmapMode) {
-        getPeriodMapVisuals(periodType, allPaths.values.toList(), heatmapMode)
+    val visuals = remember(allPaths, periodType, isHeatmapEnabled) {
+        getPeriodMapVisuals(periodType, allPaths.values.toList(), isHeatmapEnabled)
     }
 
     var isMapLoaded by remember { mutableStateOf(false) }

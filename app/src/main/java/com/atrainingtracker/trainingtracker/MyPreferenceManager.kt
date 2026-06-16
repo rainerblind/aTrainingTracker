@@ -20,10 +20,8 @@ package com.atrainingtracker.trainingtracker
 
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.preferencesDataStore
-import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.HeatmapMode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -34,7 +32,7 @@ class MyPreferenceManager(context: Context) {
 
     companion object {
         val IS_COMPACT_VIEW = booleanPreferencesKey("is_compact_view")
-        val HEATMAP_MODE = stringPreferencesKey("heatmap_mode")
+        val IS_HEATMAP_ENABLED = booleanPreferencesKey("is_heatmap_enabled")
     }
 
     val isCompactViewFlow: Flow<Boolean> = dataStore.data.map { preferences ->
@@ -47,18 +45,13 @@ class MyPreferenceManager(context: Context) {
         }
     }
 
-    val heatmapModeFlow: Flow<HeatmapMode> = dataStore.data.map { preferences ->
-        val modeName = preferences[HEATMAP_MODE] ?: HeatmapMode.DENSITY.name
-        try {
-            HeatmapMode.valueOf(modeName)
-        } catch (e: Exception) {
-            HeatmapMode.DENSITY
-        }
+    val isHeatmapEnabledFlow: Flow<Boolean> = dataStore.data.map { preferences ->
+        preferences[IS_HEATMAP_ENABLED] ?: true // Default to enabled
     }
 
-    suspend fun setHeatmapMode(mode: HeatmapMode) {
+    suspend fun setHeatmapEnabled(enabled: Boolean) {
         dataStore.edit { preferences ->
-            preferences[HEATMAP_MODE] = mode.name
+            preferences[IS_HEATMAP_ENABLED] = enabled
         }
     }
 }

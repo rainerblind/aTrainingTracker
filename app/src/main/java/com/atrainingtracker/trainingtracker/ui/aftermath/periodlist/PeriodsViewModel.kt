@@ -53,21 +53,16 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
     private val _selectedPeriod = MutableStateFlow<PeriodSummary?>(null)
     val selectedPeriod = _selectedPeriod.asStateFlow()
 
-    val heatmapMode: StateFlow<HeatmapMode> = prefManager.heatmapModeFlow
+    val isHeatmapEnabled: StateFlow<Boolean> = prefManager.isHeatmapEnabledFlow
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
-            initialValue = HeatmapMode.DENSITY
+            initialValue = true
         )
 
-    fun toggleHeatmapMode() {
+    fun toggleHeatmapEnabled() {
         viewModelScope.launch {
-            val nextMode = if (heatmapMode.value == HeatmapMode.DENSITY) {
-                HeatmapMode.DISCOVERY
-            } else {
-                HeatmapMode.DENSITY
-            }
-            prefManager.setHeatmapMode(nextMode)
+            prefManager.setHeatmapEnabled(!isHeatmapEnabled.value)
         }
     }
 

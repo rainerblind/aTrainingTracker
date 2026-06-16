@@ -19,7 +19,6 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
 import androidx.activity.compose.BackHandler
-import androidx.activity.result.launch
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,7 +32,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.material3.BottomSheetScaffold
@@ -85,8 +83,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun PeriodMapScreen(
     summary: PeriodSummary,
-    heatmapMode: HeatmapMode,
-    onToggleHeatmapMode: () -> Unit,
+    isHeatmapEnabled: Boolean,
+    onToggleHeatmapEnabled: () -> Unit,
     onWorkoutClick: (Long) -> Unit,
     peekedWorkoutDataWithTrack: WorkoutDataWithTrack?,
     clearPeekSelection: () -> Unit,
@@ -268,7 +266,7 @@ fun PeriodMapScreen(
                 InteractivePeriodMap(
                     workouts = filteredWorkouts,
                     periodType = summary.periodType,
-                    heatmapMode = heatmapMode,
+                    isHeatmapEnabled = isHeatmapEnabled,
                     onWorkoutClick = onWorkoutClick,
                     modifier = Modifier.fillMaxSize(),
                     shouldTakeSnapshot = mapSnapshotTrigger,
@@ -290,7 +288,7 @@ fun PeriodMapScreen(
                 ) {
                     // MODE TOGGLE BUTTON
                     Surface(
-                        onClick = onToggleHeatmapMode,
+                        onClick = onToggleHeatmapEnabled,
                         modifier = Modifier.size(44.dp),
                         shape = CircleShape,
                         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
@@ -299,10 +297,10 @@ fun PeriodMapScreen(
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
-                                imageVector = if (heatmapMode == HeatmapMode.DENSITY) Icons.Default.Whatshot else Icons.Default.Explore,
-                                contentDescription = "Toggle Heatmap Mode",
+                                imageVector = Icons.Default.Whatshot,
+                                contentDescription = if (isHeatmapEnabled) "Disable Heatmap" else "Enable Heatmap",
                                 modifier = Modifier.size(22.dp),
-                                tint = if (heatmapMode == HeatmapMode.DISCOVERY) Color(0xFF00E5FF) else MaterialTheme.colorScheme.primary
+                                tint = if (isHeatmapEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                             )
                         }
                     }

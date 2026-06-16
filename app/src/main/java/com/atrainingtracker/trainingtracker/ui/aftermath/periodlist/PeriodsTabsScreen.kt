@@ -23,7 +23,6 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -57,8 +56,8 @@ fun PeriodsTabsScreen(
     pagerState: PagerState,
     listStates: List<LazyListState>,
     isPlayServiceAvailable: Boolean,
-    heatmapMode: HeatmapMode,
-    onToggleHeatmapMode: () -> Unit,
+    isHeatmapEnabled: Boolean,
+    onToggleHeatmapEnabled: () -> Unit,
     onHeaderClick: (PeriodSummary) -> Unit,
     onMapClick: (PeriodSummary) -> Unit,
     onSportClick: (PeriodSummary, BSportType) -> Unit
@@ -96,7 +95,7 @@ fun PeriodsTabsScreen(
                     periods = periods,
                     scrollState = scrollState,
                     isPlayServiceAvailable = isPlayServiceAvailable,
-                    heatmapMode = heatmapMode,
+                    isHeatmapEnabled = isHeatmapEnabled,
                     onHeaderClick = onHeaderClick,
                     onMapClick = onMapClick,
                     onSportClick = onSportClick,
@@ -129,11 +128,11 @@ fun PeriodsTabsScreen(
                         )
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = onToggleHeatmapMode) {
+                            IconButton(onClick = onToggleHeatmapEnabled) {
                                 Icon(
-                                    imageVector = if (heatmapMode == HeatmapMode.DENSITY) Icons.Default.Whatshot else Icons.Default.Explore,
-                                    contentDescription = "Toggle Heatmap Mode",
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                    imageVector = Icons.Default.Whatshot,
+                                    contentDescription = if (isHeatmapEnabled) "Disable Heatmap" else "Enable Heatmap",
+                                    tint = if (isHeatmapEnabled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.38f)
                                 )
                             }
                         }
