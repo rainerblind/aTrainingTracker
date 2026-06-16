@@ -60,10 +60,6 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
         _selectedPeriod.value = null
     }
 
-    enum class PeriodGroupLevel {
-        DAY, WEEK, MONTH, YEAR
-    }
-
     // Formatters for labels
     private val dayFormatter = DateTimeFormatter.ofLocalizedDate(java.time.format.FormatStyle.LONG)
     private val monthFormatter = DateTimeFormatter.ofPattern("MMMM yyyy")
@@ -81,21 +77,21 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
             } else {
                 listOf<List<PeriodSummary>>(
                     // Tab 0: Daily
-                    groupWorkouts(workouts, PeriodGroupLevel.DAY) {
+                    groupWorkouts(workouts, PeriodType.DAY) {
                         it.localDateTime.format(
                             DateTimeFormatter.ISO_LOCAL_DATE
                         )
                     },
 
                     // Tab 1: Weekly (ISO Week based)
-                    groupWorkouts(workouts, PeriodGroupLevel.WEEK) {
+                    groupWorkouts(workouts, PeriodType.WEEK) {
                         val week = it.localDateTime.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
                         val year = it.localDateTime.get(IsoFields.WEEK_BASED_YEAR)
                         "$year-${week.toString().padStart(2, '0')}"
                     },
 
                     // Tab 2: Monthly
-                    groupWorkouts(workouts, PeriodGroupLevel.MONTH) {
+                    groupWorkouts(workouts, PeriodType.MONTH) {
                         it.localDateTime.format(
                             DateTimeFormatter.ofPattern("yyyy-MM")
                         )
@@ -104,7 +100,7 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
                     // Tab 3: Yearly
                     groupWorkouts(
                         workouts,
-                        PeriodGroupLevel.YEAR
+                        PeriodType.YEAR
                     ) { it.localDateTime.year.toString() }
                 )
             }
@@ -120,7 +116,7 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
      */
     private fun groupWorkouts(
         workouts: List<WorkoutData>,
-        level: PeriodGroupLevel,
+        level: PeriodType,
         keySelector: (WorkoutData) -> String
     ): List<PeriodSummary> {
         return workouts.groupBy(keySelector)
@@ -134,25 +130,25 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
     private fun aggregateToPeriod(
         key: String,
         items: List<WorkoutData>,
-        level: PeriodGroupLevel
+        level: PeriodType
     ): PeriodSummary {
         val firstItem = items.first()
 
         // Generate nice labels based on the key type
         val (label, range) = when (level) {
-            PeriodGroupLevel.DAY -> { // Daily
+            PeriodType.DAY -> { // Daily
                 Pair(firstItem.localDateTime.format(dayFormatter), "")
             }
 
-            PeriodGroupLevel.WEEK -> { // Weekly
+            PeriodType.WEEK -> { // Weekly
                 Pair(key, "${items.last().formattedDate} - ${items.first().formattedDate}")
             }
 
-            PeriodGroupLevel.MONTH -> { // Monthly
+            PeriodType.MONTH -> { // Monthly
                 Pair(firstItem.localDateTime.format(monthFormatter), "")
             }
 
-            PeriodGroupLevel.YEAR -> { // Yearly
+            PeriodType.YEAR -> { // Yearly
                 Pair(firstItem.localDateTime.format(yearFormatter), "")
             }
         }
@@ -187,24 +183,24 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
         val zoneOffset = java.time.OffsetDateTime.now().offset
 
         val (startS, endS) = when (level) {
-            PeriodGroupLevel.DAY -> {
+            PeriodType.DAY -> {
                 val s = ldt.toLocalDate().atStartOfDay().toEpochSecond(zoneOffset)
                 Pair(s, s + 86399) // + 23:59:59
             }
-            PeriodGroupLevel.WEEK -> {
+            PeriodType.WEEK -> {
                 // Find Monday of this week
                 val s = ldt.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
                     .toLocalDate().atStartOfDay().toEpochSecond(zoneOffset)
                 Pair(s, s + (7 * 86400) - 1)
             }
-            PeriodGroupLevel.MONTH -> {
+            PeriodType.MONTH -> {
                 val s = ldt.with(java.time.temporal.TemporalAdjusters.firstDayOfMonth())
                     .toLocalDate().atStartOfDay().toEpochSecond(zoneOffset)
                 val e = ldt.with(java.time.temporal.TemporalAdjusters.lastDayOfMonth())
                     .toLocalDate().atTime(23, 59, 59).toEpochSecond(zoneOffset)
                 Pair(s, e)
             }
-            PeriodGroupLevel.YEAR -> {
+            PeriodType.YEAR -> {
                 val s = ldt.with(java.time.temporal.TemporalAdjusters.firstDayOfYear())
                     .toLocalDate().atStartOfDay().toEpochSecond(zoneOffset)
                 val e = ldt.with(java.time.temporal.TemporalAdjusters.lastDayOfYear())
@@ -216,6 +212,7 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
         return PeriodSummary(
             periodLabel = label,
             periodDateRange = range,
+            periodType = level,
             startTimestampS = startS,
             endTimestampS = endS,
             totalWorkouts = items.size,

@@ -20,6 +20,10 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -85,11 +89,18 @@ fun PeriodSummaryCard(
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            val icon = when (summary.periodType) {
+                                PeriodType.DAY -> Icons.Default.CalendarToday
+                                PeriodType.WEEK -> Icons.Default.DateRange
+                                PeriodType.MONTH -> Icons.Default.CalendarMonth
+                                PeriodType.YEAR -> Icons.Default.CalendarMonth
+                            }
+
                             Icon(
-                                painter = painterResource(id = R.drawable.ic_calendar_month),
+                                imageVector = icon,
                                 contentDescription = null,
                                 modifier = Modifier.size(32.dp),
-                                tint = Color.Unspecified
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
 
                             Text(
@@ -335,6 +346,7 @@ fun PreviewPeriodSummary() {
     val mockSummary = PeriodSummary(
         periodLabel = "Week 20",
         periodDateRange = "May 11 - May 17, 2026",
+        periodType = PeriodType.WEEK,
         startTimestampS = 1000,
         endTimestampS = 15000,
         totalWorkouts = 5,
@@ -376,6 +388,7 @@ fun PreviewEmptyPeriod() {
     val emptySummary = PeriodSummary(
         periodLabel = "June 2026",
         periodDateRange = "No workouts recorded",
+        periodType = PeriodType.MONTH,
         startTimestampS = 0,
         endTimestampS = 0,
         totalWorkouts = 0,
