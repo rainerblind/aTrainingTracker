@@ -1042,6 +1042,7 @@
         <item quantity="one">%1$d aktiver Tag</item>
         <item quantity="other">%1$d aktive Tage</item>
     </plurals>
+    <string name="workout_periods__longest_workout">Längste Einheit</string>
 
     <!-- share screenshots -->
     <string name="share">Teilen</string>

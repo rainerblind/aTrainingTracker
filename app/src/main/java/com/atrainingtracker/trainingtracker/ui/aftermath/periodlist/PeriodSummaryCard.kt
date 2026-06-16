@@ -320,6 +320,64 @@ fun SportStatsRow(
                     }
                 }
             }
+
+            // LONGEST WORKOUT HIGHLIGHT (Only show if there's more than one workout to highlight the 'best')
+            if (stats.count > 1) {
+                stats.longestWorkout?.let { longest ->
+                    Column(
+                        modifier = Modifier
+                            .padding(start = 32.dp + 12.dp, top = 8.dp, bottom = 4.dp)
+                            .fillMaxWidth()
+                    ) {
+                        Text(
+                            text = stringResource(R.string.workout_periods__longest_workout) + ": ${longest.name}",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.secondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = df.format_with_units(longest.distanceMeters),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            Text(
+                                text = tf.format_with_units(longest.durationSec),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_ascent),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(10.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                )
+                                Spacer(modifier = Modifier.width(2.dp))
+                                Text(
+                                    text = af.format_with_units(longest.ascentMeters),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -432,7 +490,8 @@ fun PreviewPeriodSummary() {
                 detailedSportStats = mapOf(
                     "Road Bike" to DetailedStats(2, 7200, 60000.0, 800),
                     "Mountain Bike" to DetailedStats(1, 3600, 25400.0, 450)
-                )
+                ),
+                longestWorkout = LongestWorkout(1, "Sunday Ride", 7200, 60000.0, 800)
             ),
             BSportType.RUN to SportStats(
                 count = 2,
@@ -441,7 +500,8 @@ fun PreviewPeriodSummary() {
                 totalAscentMeters = 120,
                 detailedSportStats = mapOf(
                     "Running" to DetailedStats(2, 4600, 18200.0, 120)
-                )
+                ),
+                longestWorkout = LongestWorkout(2, "Morning Run", 2800, 10000.0, 70)
             )
         ),
         sortKey = "",

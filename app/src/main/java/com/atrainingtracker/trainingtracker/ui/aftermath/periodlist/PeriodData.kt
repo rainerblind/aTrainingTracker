@@ -45,7 +45,8 @@ data class SportStats(
     val totalDurationSec: Long,
     val totalDistanceMeters: Double,
     val totalAscentMeters: Long,
-    val detailedSportStats: Map<String, DetailedStats> // Key is sportName
+    val detailedSportStats: Map<String, DetailedStats>, // Key is sportName
+    val longestWorkout: LongestWorkout?
 )
 
 data class DetailedStats(
@@ -53,4 +54,12 @@ data class DetailedStats(
     val totalDurationSec: Long,
     val totalDistanceMeters: Double,
     val totalAscentMeters: Long
+)
+
+data class LongestWorkout(
+    val id: Long,
+    val name: String,
+    val durationSec: Long,
+    val distanceMeters: Double,
+    val ascentMeters: Long
 )

@@ -187,12 +187,24 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
                 )
             }
 
+            // Find Longest Workout by Time
+            val longestWorkout = sportWorkouts.maxByOrNull { it.detailsData.activeTimeSec }?.let {
+                LongestWorkout(
+                    id = it.id,
+                    name = it.workoutName,
+                    durationSec = it.detailsData.activeTimeSec.toLong(),
+                    distanceMeters = it.detailsData.totalDistance,
+                    ascentMeters = it.ascentMeters
+                )
+            }
+
             SportStats(
                 count = sportWorkouts.size,
                 totalDurationSec = sportWorkouts.sumOf { it.detailsData.activeTimeSec.toLong() },
                 totalDistanceMeters = sportWorkouts.sumOf { it.detailsData.totalDistance },
                 totalAscentMeters = sportWorkouts.sumOf { it.ascentMeters },
-                detailedSportStats = detailedStats
+                detailedSportStats = detailedStats,
+                longestWorkout = longestWorkout
             )
         }
             // Convert to list to sort by specific sport priority
