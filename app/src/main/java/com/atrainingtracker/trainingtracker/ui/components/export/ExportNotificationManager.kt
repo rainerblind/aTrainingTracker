@@ -43,7 +43,6 @@ class ExportNotificationManager private constructor(private val context: Context
 
     private val notificationManager = NotificationManagerCompat.from(context)
     private val dataProvider = ExportStatusDataProvider(context)
-    private val pendingIntentStartWorkoutListActivity = createPendingIntentStartWorkoutListActivity()
 
     // workoutName -> ExportType -> FileFormat
     private val activeExports: MutableMap<String, MutableMap<ExportType, MutableSet<FileFormat>>> =
@@ -116,7 +115,7 @@ class ExportNotificationManager private constructor(private val context: Context
             .setCustomBigContentView(expandedView)
             .setOngoing(isStillRunning)
             .setAutoCancel(!isStillRunning)
-            .setContentIntent(pendingIntentStartWorkoutListActivity)
+            .setContentIntent(createPendingIntentStartWorkoutListActivity(fileBaseName))
             .build()
 
         notificationManager.notify(generateNotificationId(exportInfo), notification)
@@ -176,12 +175,16 @@ class ExportNotificationManager private constructor(private val context: Context
      * some simple helpers
      **********************************************************************************************/
 
-    private fun createPendingIntentStartWorkoutListActivity(): PendingIntent {
+    private fun createPendingIntentStartWorkoutListActivity(fileBaseName: String? = null): PendingIntent {
         val intent = Intent(context, MainActivityWithNavigation::class.java).apply {
             putExtra(MainActivityWithNavigation.SELECTED_FRAGMENT, MainActivityWithNavigation.SelectedFragment.WORKOUT_LIST.name)
+            fileBaseName?.let {
+                putExtra(com.atrainingtracker.trainingtracker.exporter.ExportStatusChangedBroadcaster.EXTRA_FILE_BASE_NAME, it)
+            }
             flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
         }
-        return PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+        val requestCode = fileBaseName?.hashCode() ?: 0
+        return PendingIntent.getActivity(context, requestCode, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
     }
 
     private fun isMissingPermission(): Boolean {
