@@ -173,6 +173,7 @@ fun PeriodSummaryCard(
                 ) {
                     PeriodMultiWorkoutMap(
                         polylines = summary.polylines,
+                        periodType = summary.periodType,
                         onMapClick = { onMapClick(summary) }
                     )
                 }
@@ -268,10 +269,15 @@ fun SportStatsRow(
 @Composable
 private fun PeriodMultiWorkoutMap(
     polylines: List<String>,
+    periodType: PeriodType,
     onMapClick: () -> Unit) {
     // Decode all polylines once
     val allPaths = remember(polylines) {
         polylines.mapNotNull { if (it.isNotEmpty()) PolyUtil.decode(it) else null }
+    }
+
+    val visuals = remember(allPaths, periodType) {
+        getPeriodMapVisuals(periodType, allPaths)
     }
 
     if (allPaths.isEmpty()) {
@@ -325,11 +331,16 @@ private fun PeriodMultiWorkoutMap(
         ),
         onMapClick = { onMapClick() }
     ) {
+        // Heatmap Layer
+        visuals.heatmapProvider?.let {
+            TileOverlay(tileProvider = it)
+        }
+
         allPaths.forEach { path ->
             Polyline(
                 points = path,
-                color = TrackType.BEST.color,
-                width = 8f,
+                color = TrackType.BEST.color.copy(alpha = visuals.polylineAlpha),
+                width = visuals.polylineWidth,
                 startCap = RoundCap(),
                 endCap = RoundCap(),
                 jointType = JointType.ROUND

@@ -262,6 +262,7 @@ fun PeriodMapScreen(
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 InteractivePeriodMap(
                     workouts = filteredWorkouts,
+                    periodType = summary.periodType,
                     onWorkoutClick = onWorkoutClick,
                     modifier = Modifier.fillMaxSize(),
                     shouldTakeSnapshot = mapSnapshotTrigger,
