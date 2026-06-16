@@ -20,7 +20,6 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
@@ -100,22 +99,12 @@ fun PeriodSummaryCard(
                                 PeriodType.YEAR -> Icons.Default.CalendarMonth
                             }
 
-                            Box(
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .background(
-                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
-                                        CircleShape
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = icon,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(24.dp),
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = null,
+                                modifier = Modifier.size(32.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
 
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
@@ -141,7 +130,7 @@ fun PeriodSummaryCard(
                                     ),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
                                     text = tf.format_with_units(summary.totalDurationSec),
@@ -246,7 +235,7 @@ fun SportStatsRow(
                             stats.count
                         ),
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
@@ -302,7 +291,7 @@ fun SportStatsRow(
                                     text = stringResource(R.string.workout_periods__longest_workout),
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                                     letterSpacing = 0.5.sp
                                 )
                                 Text(
