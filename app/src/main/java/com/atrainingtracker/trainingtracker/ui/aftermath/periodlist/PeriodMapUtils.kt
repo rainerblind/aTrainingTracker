@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.SphericalUtil
 import com.google.maps.android.heatmaps.HeatmapTileProvider
+import com.google.maps.android.heatmaps.WeightedLatLng
 
 /**
  * Encapsulates the visual styling for period-based maps.
@@ -45,8 +46,10 @@ fun getPeriodMapVisuals(
         } else {
             // Densify points for cycle/fast activities so the heatmap looks like a continuous trail
             // instead of disconnected blobs due to downsampling.
+            // We use WeightedLatLng to give every point a base "intensity" boost so single
+            // workouts are clearly visible even in long periods.
             val allPoints = allPaths.flatMap { path ->
-                densifyPath(path, 10.0)
+                densifyPath(path, 10.0).map { WeightedLatLng(it, 2.0) }
             }
 
             if (allPoints.isEmpty()) null
@@ -58,9 +61,9 @@ fun getPeriodMapVisuals(
                     else -> 0.0
                 }
                 HeatmapTileProvider.Builder()
-                    .data(allPoints)
+                    .weightedData(allPoints)
                     .opacity(opacity)
-                    .radius(20) // Increased radius for more "glow"
+                    .radius(20) // Balanced radius
                     .build()
             }
         }
