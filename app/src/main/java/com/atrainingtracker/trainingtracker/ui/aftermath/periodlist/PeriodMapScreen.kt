@@ -148,6 +148,7 @@ fun PeriodMapScreen(
 
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
+        containerColor = MaterialTheme.colorScheme.surface,
         sheetPeekHeight = if (peekedWorkoutDataWithTrack != null) 200.dp else 0.dp,
         sheetDragHandle = {
             Surface(
@@ -172,6 +173,7 @@ fun PeriodMapScreen(
         Column(modifier = Modifier.fillMaxSize()) {
             // 1. HEADER (Stats) - Wrapped in GraphicsLayer for sharing
             Surface(
+                color = MaterialTheme.colorScheme.surface,
                 modifier = Modifier
                     .statusBarsPadding()
                     .drawWithContent {
