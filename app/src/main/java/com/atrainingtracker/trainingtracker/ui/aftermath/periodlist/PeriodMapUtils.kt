@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
 import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.SphericalUtil
 import com.google.maps.android.heatmaps.HeatmapTileProvider
 
 /**
@@ -39,21 +40,29 @@ fun getPeriodMapVisuals(
     allPaths: List<List<LatLng>>
 ): PeriodMapVisuals {
     val heatmapProvider = run {
-        val allPoints = allPaths.flatten()
-        if (allPoints.isEmpty() || periodType == PeriodType.DAY) {
+        if (allPaths.isEmpty() || periodType == PeriodType.DAY) {
             null
         } else {
-            val opacity = when (periodType) {
-                PeriodType.WEEK -> 0.6
-                PeriodType.MONTH -> 0.8
-                PeriodType.YEAR -> 1.0
-                else -> 0.0
+            // Densify points for cycle/fast activities so the heatmap looks like a continuous trail
+            // instead of disconnected blobs due to downsampling.
+            val allPoints = allPaths.flatMap { path ->
+                densifyPath(path, 10.0)
             }
-            HeatmapTileProvider.Builder()
-                .data(allPoints)
-                .opacity(opacity)
-                .radius(30) // Increased radius for more "glow"
-                .build()
+
+            if (allPoints.isEmpty()) null
+            else {
+                val opacity = when (periodType) {
+                    PeriodType.WEEK -> 0.6
+                    PeriodType.MONTH -> 0.8
+                    PeriodType.YEAR -> 1.0
+                    else -> 0.0
+                }
+                HeatmapTileProvider.Builder()
+                    .data(allPoints)
+                    .opacity(opacity)
+                    .radius(20) // Increased radius for more "glow"
+                    .build()
+            }
         }
     }
 
@@ -72,4 +81,30 @@ fun getPeriodMapVisuals(
     }
 
     return PeriodMapVisuals(heatmapProvider, polylineAlpha, polylineWidth)
+}
+
+/**
+ * Adds intermediate points to a path if the distance between consecutive points
+ * exceeds [maxDistanceMeters]. This improves heatmap quality for sparse data.
+ */
+private fun densifyPath(path: List<LatLng>, maxDistanceMeters: Double): List<LatLng> {
+    if (path.isEmpty()) return emptyList()
+    val result = mutableListOf<LatLng>()
+
+    for (i in 0 until path.size - 1) {
+        val start = path[i]
+        val end = path[i + 1]
+        result.add(start)
+
+        val distance = SphericalUtil.computeDistanceBetween(start, end)
+        if (distance > maxDistanceMeters) {
+            val numSegments = (distance / maxDistanceMeters).toInt()
+            for (j in 1..numSegments) {
+                val fraction = j.toDouble() / (numSegments + 1)
+                result.add(SphericalUtil.interpolate(start, end, fraction))
+            }
+        }
+    }
+    result.add(path.last())
+    return result
 }
