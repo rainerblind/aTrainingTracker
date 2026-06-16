@@ -853,6 +853,14 @@
 
     <string name="export_status__header_title">Export Status</string>
 
+    <string name="export_status__waiting">Wartend</string>
+    <string name="export_status__processing">In Arbeit</string>
+    <string name="export_status__success">Erfolgreich</string>
+    <string name="export_status__failed">Fehlgeschlagen</string>
+    <string name="export_status__tracking">Aufzeichnung</string>
+    <string name="export_status__tracking_finished">Aufzeichnung beendet</string>
+    <string name="export_status__unwanted">Nicht erwünscht</string>
+
     <!-- change Sport Dialog -->
     <string name="change_sport">Sportart ändern</string>
     <string name="save">Speichern</string>

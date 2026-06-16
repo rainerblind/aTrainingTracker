@@ -948,6 +948,14 @@
 
     <string name="export_status__header_title">Export Status</string>
 
+    <string name="export_status__waiting">Waiting</string>
+    <string name="export_status__processing">Ongoing</string>
+    <string name="export_status__success">Succeeded</string>
+    <string name="export_status__failed">Failed</string>
+    <string name="export_status__tracking">Tracking</string>
+    <string name="export_status__tracking_finished">Tracking finished</string>
+    <string name="export_status__unwanted">Unwanted</string>
+
     <!-- change Sport Dialog -->
     <string name="change_sport">Change Sport</string>
     <string name="save">Save</string>

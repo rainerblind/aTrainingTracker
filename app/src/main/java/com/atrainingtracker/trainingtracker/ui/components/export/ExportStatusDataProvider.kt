@@ -59,7 +59,7 @@ class ExportStatusDataProvider(private val context: Context) {
         val details = rows.map { row ->
             ExportDetail(
                 formatName = context.getString(row.format.uiNameId),
-                status = row.status.name,
+                status = context.getString(row.status.uiNameId),
                 answer = row.answer
             )
         }
