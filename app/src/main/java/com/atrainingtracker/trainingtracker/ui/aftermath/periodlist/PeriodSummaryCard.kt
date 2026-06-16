@@ -255,7 +255,9 @@ fun SportStatsRow(
             }
 
             // NESTED DETAILS
-            if (stats.detailedSportStats.size > 1 || stats.longestWorkout != null) {
+            val longestWorkout = stats.longestWorkout
+            val showLongestWorkout = stats.count > 1 && longestWorkout != null
+            if (stats.detailedSportStats.size > 1 || showLongestWorkout) {
                 HorizontalDivider(
                     modifier = Modifier.padding(vertical = 10.dp),
                     thickness = 0.5.dp,
@@ -276,40 +278,39 @@ fun SportStatsRow(
                 }
 
                 // Longest Workout Highlight
-                if (stats.count > 1) {
-                    stats.longestWorkout?.let { longest ->
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Surface(
-                            color = MaterialTheme.colorScheme.surface,
-                            shape = RoundedCornerShape(8.dp),
-                            border = androidx.compose.foundation.BorderStroke(
-                                0.5.dp,
-                                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                if (showLongestWorkout) {
+                    val longest = longestWorkout!!
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Surface(
+                        color = MaterialTheme.colorScheme.surface,
+                        shape = RoundedCornerShape(8.dp),
+                        border = androidx.compose.foundation.BorderStroke(
+                            0.5.dp,
+                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                        )
+                    ) {
+                        Column(modifier = Modifier.padding(8.dp)) {
+                            Text(
+                                text = stringResource(R.string.workout_periods__longest_workout),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                                letterSpacing = 0.5.sp
                             )
-                        ) {
-                            Column(modifier = Modifier.padding(8.dp)) {
-                                Text(
-                                    text = stringResource(R.string.workout_periods__longest_workout),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    letterSpacing = 0.5.sp
-                                )
-                                Text(
-                                    text = longest.name,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    MetricIconValue(R.drawable.ic_distance, df.format_with_units(longest.distanceMeters))
-                                    MetricIconValue(R.drawable.ic_time_active, tf.format_with_units(longest.durationSec), isBold = true)
-                                    MetricIconValue(R.drawable.ic_ascent, af.format_with_units(longest.ascentMeters))
-                                }
+                            Text(
+                                text = longest.name,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                MetricIconValue(R.drawable.ic_distance, df.format_with_units(longest.distanceMeters))
+                                MetricIconValue(R.drawable.ic_time_active, tf.format_with_units(longest.durationSec), isBold = true)
+                                MetricIconValue(R.drawable.ic_ascent, af.format_with_units(longest.ascentMeters))
                             }
                         }
                     }

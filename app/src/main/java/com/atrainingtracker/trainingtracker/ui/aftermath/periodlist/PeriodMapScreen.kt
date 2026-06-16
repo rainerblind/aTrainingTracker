@@ -224,7 +224,9 @@ fun PeriodMapScreen(
                         }
                     }
 
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                    if (summary.sportStats.isNotEmpty()) {
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                    }
 
                     // SPORT SPECIFIC BREAKDOWN
                     summary.sportStats.forEach { (sport, stats) ->
