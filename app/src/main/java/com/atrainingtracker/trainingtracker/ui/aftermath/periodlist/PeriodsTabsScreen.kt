@@ -22,7 +22,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Surface
@@ -52,6 +57,8 @@ fun PeriodsTabsScreen(
     pagerState: PagerState,
     listStates: List<LazyListState>,
     isPlayServiceAvailable: Boolean,
+    heatmapMode: HeatmapMode,
+    onToggleHeatmapMode: () -> Unit,
     onHeaderClick: (PeriodSummary) -> Unit,
     onMapClick: (PeriodSummary) -> Unit,
     onSportClick: (PeriodSummary, BSportType) -> Unit
@@ -89,6 +96,7 @@ fun PeriodsTabsScreen(
                     periods = periods,
                     scrollState = scrollState,
                     isPlayServiceAvailable = isPlayServiceAvailable,
+                    heatmapMode = heatmapMode,
                     onHeaderClick = onHeaderClick,
                     onMapClick = onMapClick,
                     onSportClick = onSportClick,
@@ -121,7 +129,13 @@ fun PeriodsTabsScreen(
                         )
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            // TODO: add sort button and other features here
+                            IconButton(onClick = onToggleHeatmapMode) {
+                                Icon(
+                                    imageVector = if (heatmapMode == HeatmapMode.DENSITY) Icons.Default.Whatshot else Icons.Default.Explore,
+                                    contentDescription = "Toggle Heatmap Mode",
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
                         }
                     }
                     PrimaryScrollableTabRow(

@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.SphericalUtil
+import com.google.maps.android.heatmaps.Gradient
 import com.google.maps.android.heatmaps.HeatmapTileProvider
 import com.google.maps.android.heatmaps.WeightedLatLng
 
@@ -38,10 +39,11 @@ data class PeriodMapVisuals(
  */
 fun getPeriodMapVisuals(
     periodType: PeriodType,
-    allPaths: List<List<LatLng>>
+    allPaths: List<List<LatLng>>,
+    heatmapMode: HeatmapMode = HeatmapMode.DENSITY
 ): PeriodMapVisuals {
     val heatmapProvider = run {
-        if (allPaths.isEmpty() || periodType == PeriodType.DAY) {
+        if (allPaths.isEmpty() || periodType == PeriodType.DAY || heatmapMode == HeatmapMode.DISCOVERY) {
             null
         } else {
             // Densify points for cycle/fast activities so the heatmap looks like a continuous trail
@@ -69,18 +71,22 @@ fun getPeriodMapVisuals(
         }
     }
 
-    val polylineAlpha = when (periodType) {
-        PeriodType.DAY -> 1.0f
-        PeriodType.WEEK -> 0.9f
-        PeriodType.MONTH -> 0.8f
-        PeriodType.YEAR -> 0.6f
+    val polylineAlpha = when {
+        heatmapMode == HeatmapMode.DISCOVERY -> 1.0f
+        periodType == PeriodType.DAY -> 1.0f
+        periodType == PeriodType.WEEK -> 0.9f
+        periodType == PeriodType.MONTH -> 0.8f
+        periodType == PeriodType.YEAR -> 0.6f
+        else -> 1.0f
     }
 
-    val polylineWidth = when (periodType) {
-        PeriodType.DAY -> 8f
-        PeriodType.WEEK -> 8f
-        PeriodType.MONTH -> 7f
-        PeriodType.YEAR -> 5f
+    val polylineWidth = when {
+        heatmapMode == HeatmapMode.DISCOVERY -> 8f
+        periodType == PeriodType.DAY -> 8f
+        periodType == PeriodType.WEEK -> 8f
+        periodType == PeriodType.MONTH -> 7f
+        periodType == PeriodType.YEAR -> 5f
+        else -> 8f
     }
 
     return PeriodMapVisuals(heatmapProvider, polylineAlpha, polylineWidth)

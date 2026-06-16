@@ -24,6 +24,10 @@ enum class PeriodType {
     DAY, WEEK, MONTH, YEAR
 }
 
+enum class HeatmapMode {
+    DENSITY, DISCOVERY
+}
+
 data class PeriodSummary(
     val periodLabel: String,         // e.g., "Week20, 2026" or "May 2026"
     val periodDateRange: String,     // e.g., "May 11 - May 17"

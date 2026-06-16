@@ -61,6 +61,7 @@ class PeriodsFragment : Fragment() {
                     // 1. Observe the periods list from ViewModel
                     val groupedPeriods by viewModel.groupedPeriods.collectAsStateWithLifecycle()
                     val selectedPeriod by viewModel.selectedPeriod.collectAsStateWithLifecycle()
+                    val heatmapMode by viewModel.heatmapMode.collectAsStateWithLifecycle()
                     val groups = viewModel.groups
 
                     val peekedWorkoutDataWithTrack by viewModel.peekedWorkoutDataWithTrack.collectAsStateWithLifecycle()
@@ -75,6 +76,8 @@ class PeriodsFragment : Fragment() {
                     if (selectedPeriod != null) {
                         PeriodMapScreen(
                             summary = selectedPeriod!!,
+                            heatmapMode = heatmapMode,
+                            onToggleHeatmapMode = { viewModel.toggleHeatmapMode() },
                             onWorkoutClick = { id -> viewModel.selectWorkoutForPeek(id) },
                             peekedWorkoutDataWithTrack = peekedWorkoutDataWithTrack,
                             clearPeekSelection = { viewModel.clearPeekSelection() },
@@ -90,7 +93,9 @@ class PeriodsFragment : Fragment() {
                             onMapClick = { summary -> viewModel.showPeriodMap(summary) },
                             onSportClick = { summary, bSportType -> startWorkoutSummaryList(summary, bSportType) },
                             isPlayServiceAvailable = isPlayAvailable,
-                            tabs = groups
+                            tabs = groups,
+                            heatmapMode = heatmapMode,
+                            onToggleHeatmapMode = { viewModel.toggleHeatmapMode() }
                         )
                     }
                 }
