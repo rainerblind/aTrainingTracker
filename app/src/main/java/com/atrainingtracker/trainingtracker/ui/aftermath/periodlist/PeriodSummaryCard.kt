@@ -145,8 +145,8 @@ fun PeriodSummaryCard(
                                 )
                                 Text(
                                     text = tf.format_with_units(summary.totalDurationSec),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Medium,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
@@ -257,7 +257,7 @@ fun SportStatsRow(
                         fontWeight = FontWeight.Bold
                     )
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        MetricIconValue(R.drawable.ic_time_active, tf.format_with_units(stats.totalDurationSec))
+                        MetricIconValue(R.drawable.ic_time_active, tf.format_with_units(stats.totalDurationSec), isBold = true)
                         Spacer(modifier = Modifier.width(8.dp))
                         MetricIconValue(R.drawable.ic_ascent, af.format_with_units(stats.totalAscentMeters))
                     }
@@ -299,10 +299,10 @@ fun SportStatsRow(
                         ) {
                             Column(modifier = Modifier.padding(8.dp)) {
                                 Text(
-                                    text = stringResource(R.string.workout_periods__longest_workout).uppercase(),
+                                    text = stringResource(R.string.workout_periods__longest_workout),
                                     style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Black,
-                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
                                     letterSpacing = 0.5.sp
                                 )
                                 Text(
@@ -317,7 +317,7 @@ fun SportStatsRow(
                                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
                                     MetricIconValue(R.drawable.ic_distance, df.format_with_units(longest.distanceMeters))
-                                    MetricIconValue(R.drawable.ic_time_active, tf.format_with_units(longest.durationSec))
+                                    MetricIconValue(R.drawable.ic_time_active, tf.format_with_units(longest.durationSec), isBold = true)
                                     MetricIconValue(R.drawable.ic_ascent, af.format_with_units(longest.ascentMeters))
                                 }
                             }
@@ -330,7 +330,7 @@ fun SportStatsRow(
 }
 
 @Composable
-fun MetricIconValue(iconRes: Int, value: String) {
+fun MetricIconValue(iconRes: Int, value: String, isBold: Boolean = false) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
             painter = painterResource(id = iconRes),
@@ -342,6 +342,7 @@ fun MetricIconValue(iconRes: Int, value: String) {
         Text(
             text = value,
             style = MaterialTheme.typography.labelSmall,
+            fontWeight = if (isBold) FontWeight.Bold else FontWeight.Normal,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }

@@ -213,11 +213,13 @@ fun PeriodMapScreen(
                                     summary.totalWorkouts
                                 ),
                                 style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Text(
                                 text = tf.format_with_units(summary.totalDurationSec),
-                                style = MaterialTheme.typography.bodyMedium
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
