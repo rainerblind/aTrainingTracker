@@ -32,7 +32,10 @@ class ExportStatusDataProvider(private val context: Context) {
      * The central class to collect all data for an ExportType and create the corresponding string for the UI.
      */
     fun createGroupData(fileBaseName: String, exportType: ExportType): ExportStatusGroupData {
-        val jobs = getJobs(fileBaseName, exportType)
+        val allRows = ExportStatusDatabaseManager.getInstance(context).getExportRows(fileBaseName)
+        val rows = allRows.filter { it.type == exportType }
+        
+        val jobs = rows.associate { it.format to it.status }
 
         val waitingJobsList = getWaitingJobsList(jobs)
         val runningJobsList = getRunningJobsList(jobs)
@@ -53,13 +56,22 @@ class ExportStatusDataProvider(private val context: Context) {
         val succeededLine = succeededJobsList.takeIf { it.isNotEmpty() }?.let { getResultLine(it, pluralsSuccessID) }
         val failedLine = failedJobsList.takeIf { it.isNotEmpty() }?.let { getResultLine(it, pluralsFailedID) }
 
+        val details = rows.map { row ->
+            ExportDetail(
+                formatName = context.getString(row.format.uiNameId),
+                status = context.getString(row.status.uiNameId),
+                answer = row.answer
+            )
+        }
+
         return ExportStatusGroupData(
             hasContent = true,
             groupTitle = context.getString(exportType.uiId),
             waitingLine = waitingLine,
             runningLine = runningLine,
             succeededLine = succeededLine,
-            failedLine = failedLine
+            failedLine = failedLine,
+            details = details
         )
     }
 
@@ -67,10 +79,6 @@ class ExportStatusDataProvider(private val context: Context) {
      * private helpers
      **********************************************************************************************/
 
-
-    private fun getJobs(fileBaseName: String, exportType: ExportType): Map<FileFormat, ExportStatus> {
-        return ExportStatusDatabaseManager.getInstance(context).getExportStatusMap(fileBaseName, exportType)
-    }
 
     private fun getWaitingJobsList(finishedJobs: Map<FileFormat, ExportStatus>): List<String> {
         return finishedJobs.filterValues { it == ExportStatus.WAITING }

@@ -18,14 +18,26 @@
 
 package com.atrainingtracker.trainingtracker.exporter;
 
+import com.atrainingtracker.R;
+
 public enum ExportStatus {
-    UNWANTED,
-    TRACKING,
-    TRACKING_FINISHED,
-    WAITING,
-    PROCESSING,
+    UNWANTED(R.string.export_status__unwanted),
+    TRACKING(R.string.export_status__tracking),
+    TRACKING_FINISHED(R.string.export_status__tracking_finished),
+    WAITING(R.string.export_status__waiting),
+    PROCESSING(R.string.export_status__processing),
     @Deprecated  // No longer used but might be still in some database.
-    FINISHED_RETRY,
-    FINISHED_SUCCESS,
-    FINISHED_FAILED
+    FINISHED_RETRY(R.string.export_status__waiting),
+    FINISHED_SUCCESS(R.string.export_status__success),
+    FINISHED_FAILED(R.string.export_status__failed);
+
+    private final int mUiNameId;
+
+    ExportStatus(int uiNameId) {
+        mUiNameId = uiNameId;
+    }
+
+    public int getUiNameId() {
+        return mUiNameId;
+    }
 }
