@@ -156,6 +156,43 @@ public class ExportStatusDatabaseManager {
         return result;
     }
 
+    public static class ExportRow {
+        public final ExportType type;
+        public final FileFormat format;
+        public final ExportStatus status;
+        public final String answer;
+
+        public ExportRow(ExportType type, FileFormat format, ExportStatus status, String answer) {
+            this.type = type;
+            this.format = format;
+            this.status = status;
+            this.answer = answer;
+        }
+    }
+
+    public synchronized java.util.List<ExportRow> getExportRows(String fileBaseName) {
+        java.util.List<ExportRow> result = new java.util.ArrayList<>();
+        SQLiteDatabase db = mDbHelper.getReadableDatabase();
+        try (Cursor cursor = db.query(ExportStatusDbHelper.TABLE,
+                new String[]{TYPE, FORMAT, EXPORT_STATUS, ANSWER},
+                WorkoutSummaries.FILE_BASE_NAME + "=?",
+                new String[]{fileBaseName},
+                null, null, null)) {
+            while (cursor.moveToNext()) {
+                try {
+                    ExportType type = ExportType.valueOf(cursor.getString(0));
+                    FileFormat format = FileFormat.valueOf(cursor.getString(1));
+                    ExportStatus status = ExportStatus.valueOf(cursor.getString(2));
+                    String answer = cursor.getString(3);
+                    result.add(new ExportRow(type, format, status, answer));
+                } catch (IllegalArgumentException e) {
+                    Log.w(TAG, "Invalid enum value in DB", e);
+                }
+            }
+        }
+        return result;
+    }
+
     public synchronized EnumMap<FileFormat, ExportStatus> getExportStatusMap(String fileBaseName, ExportType exportType) {
         if (DEBUG) Log.d(TAG, "getExportStatus " + fileBaseName + " " + exportType);
 

@@ -76,10 +76,12 @@ class ExportStatusRepository private constructor(context: Context) {
         return callbackFlow {
             // 1. Logic to fetch data from DB and map to UI model
             val refresh = {
-                val rawMap = dbManager.getExportStatusMap(fileBaseName)
-                val uiData = rawMap?.map { (type, jobs) ->
-                    createGroupData(exportType = type, jobs = jobs)
-                }?.filter { it.hasContent } ?: emptyList()
+                val allRows = dbManager.getExportRows(fileBaseName)
+                val groupedRows = allRows.groupBy { it.type }
+
+                val uiData = groupedRows.map { (type, rows) ->
+                    createGroupData(exportType = type, rows = rows)
+                }.filter { it.hasContent }
 
                 trySend(uiData)
             }
@@ -118,7 +120,8 @@ class ExportStatusRepository private constructor(context: Context) {
             )
     }
 
-    fun createGroupData(exportType: ExportType, jobs: Map<FileFormat, ExportStatus>): ExportStatusGroupData {
+    fun createGroupData(exportType: ExportType, rows: List<ExportStatusDatabaseManager.ExportRow>): ExportStatusGroupData {
+        val jobs = rows.associate { it.format to it.status }
 
         val waitingJobsList = getWaitingJobsList(jobs)
         val runningJobsList = getRunningJobsList(jobs)
@@ -139,13 +142,22 @@ class ExportStatusRepository private constructor(context: Context) {
         val succeededLine = succeededJobsList.takeIf { it.isNotEmpty() }?.let { getResultLine(it, pluralsSuccessID) }
         val failedLine = failedJobsList.takeIf { it.isNotEmpty() }?.let { getResultLine(it, pluralsFailedID) }
 
+        val details = rows.map { row ->
+            ExportDetail(
+                formatName = appContext.getString(row.format.uiNameId),
+                status = row.status.name,
+                answer = row.answer
+            )
+        }
+
         return ExportStatusGroupData(
             hasContent = true,
             groupTitle = appContext.getString(exportType.uiId),
             waitingLine = waitingLine,
             runningLine = runningLine,
             succeededLine = succeededLine,
-            failedLine = failedLine
+            failedLine = failedLine,
+            details = details
         )
     }
 

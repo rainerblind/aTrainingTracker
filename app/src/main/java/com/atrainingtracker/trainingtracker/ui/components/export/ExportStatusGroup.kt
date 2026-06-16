@@ -18,9 +18,10 @@
 
 package com.atrainingtracker.trainingtracker.ui.components.export
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -71,9 +72,19 @@ fun ExportStatusGroup(
     data: ExportStatusGroupData,
     modifier: Modifier = Modifier
 ) {
+    var showDialog by remember { mutableStateOf(false) }
+
+    if (showDialog) {
+        ExportDetailsDialog(
+            data = data,
+            onDismiss = { showDialog = false }
+        )
+    }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .clickable { showDialog = true }
             .padding(vertical = 2.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
@@ -91,6 +102,44 @@ fun ExportStatusGroup(
         StatusLine(text = data.succeededLine)
         StatusLine(text = data.failedLine)
     }
+}
+
+@Composable
+fun ExportDetailsDialog(
+    data: ExportStatusGroupData,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(text = data.groupTitle)
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                data.details.forEach { detail ->
+                    Column {
+                        Text(
+                            text = "${detail.formatName}: ${detail.status}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        if (!detail.answer.isNullOrBlank()) {
+                            Text(
+                                text = detail.answer,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(text = stringResource(R.string.OK))
+            }
+        }
+    )
 }
 
 @Composable
@@ -119,7 +168,14 @@ fun PreviewExportStatusGroup() {
                     runningLine = "📤 Uploading: FIT",
                     succeededLine = "✅ Succeeded: CSV",
                     failedLine = "❌ Failed: KML",
-                    hasContent = true
+                    hasContent = true,
+                    details = listOf(
+                        ExportDetail("TCX", "WAITING", null),
+                        ExportDetail("GPX", "WAITING", null),
+                        ExportDetail("FIT", "PROCESSING", "Uploading to Dropbox..."),
+                        ExportDetail("CSV", "FINISHED_SUCCESS", "Successfully uploaded"),
+                        ExportDetail("KML", "FINISHED_FAILED", "Network error: 404")
+                    )
                 )
             )
 
@@ -127,7 +183,10 @@ fun PreviewExportStatusGroup() {
                 data = ExportStatusGroupData(
                     groupTitle = "Local File",
                     succeededLine = "✅ Succeeded: GPX",
-                    hasContent = true
+                    hasContent = true,
+                    details = listOf(
+                        ExportDetail("GPX", "FINISHED_SUCCESS", "Stored in /Documents/aTrainingTracker")
+                    )
                 )
             )
         }
