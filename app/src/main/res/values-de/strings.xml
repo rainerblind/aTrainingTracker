@@ -1038,6 +1038,10 @@
         <item quantity="one">%1$d Einheit</item>
         <item quantity="other">%1$d Einheiten</item>
     </plurals>
+    <plurals name="workout_periods__active_days">
+        <item quantity="one">%1$d aktiver Tag</item>
+        <item quantity="other">%1$d aktive Tage</item>
+    </plurals>
 
     <!-- share screenshots -->
     <string name="share">Teilen</string>

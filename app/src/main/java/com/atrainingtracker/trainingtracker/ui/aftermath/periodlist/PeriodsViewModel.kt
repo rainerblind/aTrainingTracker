@@ -172,13 +172,27 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
         val workoutIdToPolylineMap = items.associate { it.id to it.mapPolyline }
         val workoutIdToSportMap = items.associate { it.id to it.bSportType }
 
+        // Calculate Active Days
+        val activeDays = items.map { it.localDateTime.toLocalDate() }.distinct().size
+
         // Aggregate Sport Stats
         val sportStatsMap = items.groupBy { it.bSportType }.mapValues { (_, sportWorkouts) ->
+            // Group by detailed sport name
+            val detailedStats = sportWorkouts.groupBy { it.sportName }.mapValues { (_, detailedWorkouts) ->
+                DetailedStats(
+                    count = detailedWorkouts.size,
+                    totalDurationSec = detailedWorkouts.sumOf { it.detailsData.activeTimeSec.toLong() },
+                    totalDistanceMeters = detailedWorkouts.sumOf { it.detailsData.totalDistance },
+                    totalAscentMeters = detailedWorkouts.sumOf { it.ascentMeters }
+                )
+            }
+
             SportStats(
                 count = sportWorkouts.size,
                 totalDurationSec = sportWorkouts.sumOf { it.detailsData.activeTimeSec.toLong() },
                 totalDistanceMeters = sportWorkouts.sumOf { it.detailsData.totalDistance },
-                totalAscentMeters = sportWorkouts.sumOf { it.ascentMeters }
+                totalAscentMeters = sportWorkouts.sumOf { it.ascentMeters },
+                detailedSportStats = detailedStats
             )
         }
             // Convert to list to sort by specific sport priority
@@ -231,6 +245,7 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
             endTimestampS = endS,
             totalWorkouts = items.size,
             totalDurationSec = items.sumOf { it.detailsData.activeTimeSec.toLong() },
+            activeDays = activeDays,
             sportStats = sportStatsMap,
             polylines = items.mapNotNull { it.mapPolyline }.filter { it.isNotEmpty() },
             workoutIdToPolylineMap = workoutIdToPolylineMap,

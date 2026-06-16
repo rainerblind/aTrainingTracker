@@ -113,17 +113,30 @@ fun PeriodSummaryCard(
                                 modifier = Modifier.weight(1f)
                             )
 
-                            // Important Metric: Total Workouts
-                            Text(
-                                text = pluralStringResource(
-                                    R.plurals.workout_periods__workouts,
-                                    summary.totalWorkouts,
-                                    summary.totalWorkouts
-                                ),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
+                            // Important Metric: Total Workouts & Active Days
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text(
+                                    text = pluralStringResource(
+                                        R.plurals.workout_periods__workouts,
+                                        summary.totalWorkouts,
+                                        summary.totalWorkouts
+                                    ),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                if (summary.periodType != PeriodType.DAY && summary.activeDays > 0) {
+                                    Text(
+                                        text = pluralStringResource(
+                                            R.plurals.workout_periods__active_days,
+                                            summary.activeDays,
+                                            summary.activeDays
+                                        ),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.secondary
+                                    )
+                                }
+                            }
                         }
 
                         // --- ROW 2: Date Range and Duration ---
@@ -198,71 +211,114 @@ fun SportStatsRow(
         color = Color.Transparent,
         shape = RoundedCornerShape(8.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp), // Add slight padding for touch target
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Sport Icon (Standardized 32dp for sport rows)
-            Icon(
-                painter = painterResource(id = bSportType.iconResId),
-                contentDescription = null,
-                modifier = Modifier.size(32.dp),
-                tint = Color.Unspecified // Original color
-            )
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // Sport Name & Count
-            Column(modifier = Modifier.weight(1.2f)) {
-                Text(
-                    text = stringResource(bSportType.stringResId),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp), // Add slight padding for touch target
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Sport Icon (Standardized 32dp for sport rows)
+                Icon(
+                    painter = painterResource(id = bSportType.iconResId),
+                    contentDescription = null,
+                    modifier = Modifier.size(32.dp),
+                    tint = Color.Unspecified // Original color
                 )
-                Text(
-                    text = pluralStringResource(
-                        R.plurals.workout_periods__workouts,
-                        stats.count,
-                        stats.count
-                    ),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-            }
 
-            // Distance & Ascent (Standardized titleMedium)
-            Column(modifier = Modifier.weight(1.5f), horizontalAlignment = Alignment.End) {
-                Text(
-                    text = df.format_with_units(stats.totalDistanceMeters),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_ascent),
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
+                Spacer(modifier = Modifier.width(12.dp))
+
+                // Sport Name & Count
+                Column(modifier = Modifier.weight(1.2f)) {
                     Text(
-                        text = af.format_with_units(stats.totalAscentMeters),
+                        text = stringResource(bSportType.stringResId),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = pluralStringResource(
+                            R.plurals.workout_periods__workouts,
+                            stats.count,
+                            stats.count
+                        ),
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
+
+                // Distance & Ascent (Standardized titleMedium)
+                Column(modifier = Modifier.weight(1.5f), horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = df.format_with_units(stats.totalDistanceMeters),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_ascent),
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = af.format_with_units(stats.totalAscentMeters),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(16.dp)) // GUARANTEED GAP between metrics and time
+
+                // Time for this sport
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = tf.format_with_units(stats.totalDurationSec),
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.width(16.dp)) // GUARANTEED GAP between metrics and time
-
-            // Time for this sport
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = tf.format_with_units(stats.totalDurationSec),
-                    style = MaterialTheme.typography.bodyMedium
-                )
+            // DETAILED SPORT TYPES (Full stats for each sub-type)
+            if (stats.detailedSportStats.size > 1) {
+                Column(
+                    modifier = Modifier
+                        .padding(start = 32.dp + 12.dp, top = 4.dp, bottom = 8.dp)
+                        .fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    stats.detailedSportStats.forEach { (name, detailed) ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "$name (${detailed.count})",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1.2f)
+                            )
+                            
+                            // Sub-metrics
+                            Text(
+                                text = df.format_with_units(detailed.totalDistanceMeters),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f)
+                            )
+                            
+                            Text(
+                                text = tf.format_with_units(detailed.totalDurationSec),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -365,19 +421,27 @@ fun PreviewPeriodSummary() {
         endTimestampS = 15000,
         totalWorkouts = 5,
         totalDurationSec = 15400,
+        activeDays = 4,
         polylines = listOf("_p~iF~ps|U_ulLnnqC", "a~lF|ym|U_geC~izE"), // Mock short polylines
         sportStats = mapOf(
             BSportType.BIKE to SportStats(
                 count = 3,
                 totalDurationSec = 10800,
                 totalDistanceMeters = 85400.0,
-                totalAscentMeters = 1250
+                totalAscentMeters = 1250,
+                detailedSportStats = mapOf(
+                    "Road Bike" to DetailedStats(2, 7200, 60000.0, 800),
+                    "Mountain Bike" to DetailedStats(1, 3600, 25400.0, 450)
+                )
             ),
             BSportType.RUN to SportStats(
                 count = 2,
                 totalDurationSec = 4600,
                 totalDistanceMeters = 18200.0,
-                totalAscentMeters = 120
+                totalAscentMeters = 120,
+                detailedSportStats = mapOf(
+                    "Running" to DetailedStats(2, 4600, 18200.0, 120)
+                )
             )
         ),
         sortKey = "",
@@ -408,6 +472,7 @@ fun PreviewEmptyPeriod() {
         endTimestampS = 0,
         totalWorkouts = 0,
         totalDurationSec = 0,
+        activeDays = 0,
         polylines = emptyList(),
         sportStats = emptyMap(),
         sortKey = "",
