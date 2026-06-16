@@ -1153,6 +1153,7 @@
     <string name="ascent_label">Ascent</string>
     <string name="unit_meters_short">m</string>
     <string name="strava_results_title">Strava Results</string>
+    <string name="strava_uploaded_no_records">Uploaded to Strava. No new records found.</string>
     <string name="strava_best_efforts">Best Efforts</string>
     <plurals name="strava_best_efforts_with_prs_format">
         <item quantity="one">Best Efforts (%1$d PR)</item>

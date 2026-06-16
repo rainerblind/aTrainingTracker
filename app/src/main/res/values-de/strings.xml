@@ -1046,6 +1046,7 @@
     <string name="ascent_label">Anstieg</string>
     <string name="unit_meters_short">m</string>
     <string name="strava_results_title">Strava Ergebnisse</string>
+    <string name="strava_uploaded_no_records">Bei Strava hochgeladen. Keine neuen Rekorde gefunden.</string>
     <string name="strava_best_efforts">Bestzeiten</string>
     <plurals name="strava_best_efforts_with_prs_format">
         <item quantity="one">Bestzeiten (%1$d PR)</item>
