@@ -186,7 +186,7 @@ fun PeriodMapScreen(
                 }
             ) {
                 Column(
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 16.dp)
+                    modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 16.dp, bottom = 8.dp)
                 ) {
                     // PERIOD HEADER
                     Row(
@@ -240,7 +240,8 @@ fun PeriodMapScreen(
                     }
 
                     // SPORT SPECIFIC BREAKDOWN
-                    summary.sportStats.forEach { (sport, stats) ->
+                    summary.sportStats.entries.forEachIndexed { index, entry ->
+                        val (sport, stats) = entry
                         val isSelected = selectedSports.contains(sport)
                         // Logic: If nothing is selected, everything is 1f.
                         // If something is selected, dim everything except the selected ones.
@@ -272,6 +273,9 @@ fun PeriodMapScreen(
                                     }
                                 }
                             )
+                        }
+                        if (index < summary.sportStats.size - 1) {
+                            Spacer(modifier = Modifier.height(8.dp))
                         }
                     }
                 }
