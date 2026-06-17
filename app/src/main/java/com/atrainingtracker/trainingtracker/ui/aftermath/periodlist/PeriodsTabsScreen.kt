@@ -22,6 +22,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,6 +39,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -128,7 +132,10 @@ fun PeriodsTabsScreen(
                         onSportClick = onSportClick,
                         // PeriodList now only needs to handle the rest of the offset
                         appBarOffsetPx = 0,
-                        headerHeightPx = 0f
+                        headerHeightPx = 0f,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
                     )
                 }
             }
@@ -198,29 +205,48 @@ fun PeriodBarGraph(
         max(1L, periods.maxOfOrNull { it.totalDurationSec } ?: 1L)
     }
 
+    val graphPeriods = remember(periods) { periods.reversed() }
+    val graphScrollState = rememberLazyListState()
+    
+    // Determine bar width based on PeriodType (using the first period as reference)
+    val barWidth = remember(periods) {
+        when (periods.firstOrNull()?.periodType) {
+            PeriodType.DAY -> 16.dp
+            PeriodType.WEEK -> 24.dp
+            PeriodType.MONTH -> 48.dp
+            PeriodType.YEAR -> 80.dp
+            else -> 16.dp
+        }
+    }
+
     // Identify which period is currently most visible in the list to highlight its bar
     val firstVisibleIndex by remember {
         derivedStateOf { currentScrollState.firstVisibleItemIndex }
     }
 
-    Row(
+    // Synchronize graph scroll with list scroll
+    LaunchedEffect(firstVisibleIndex) {
+        val graphIndex = graphPeriods.size - 1 - firstVisibleIndex
+        if (graphIndex in graphPeriods.indices) {
+            graphScrollState.animateScrollToItem(graphIndex)
+        }
+    }
+
+    LazyRow(
+        state = graphScrollState,
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.Bottom
+        verticalAlignment = Alignment.Bottom,
+        contentPadding = PaddingValues(horizontal = 16.dp)
     ) {
-        // We iterate in reverse if periods are sorted newest first, 
-        // but for a graph, left-to-right usually means chronological.
-        // Assuming 'periods' is sorted newest first, we reverse for the graph.
-        val graphPeriods = remember(periods) { periods.reversed() }
-        
-        graphPeriods.forEachIndexed { index, period ->
+        itemsIndexed(graphPeriods) { index, period ->
             val originalIndex = periods.size - 1 - index
             val heightFraction = period.totalDurationSec.toFloat() / maxDuration
             val isSelected = originalIndex == firstVisibleIndex
 
             Box(
                 modifier = Modifier
-                    .weight(1f)
+                    .width(barWidth)
                     .fillMaxHeight(heightFraction.coerceAtLeast(0.1f))
                     .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
                     .background(
