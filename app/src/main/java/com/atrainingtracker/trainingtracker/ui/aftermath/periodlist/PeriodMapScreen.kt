@@ -184,7 +184,7 @@ fun PeriodMapScreen(
                 }
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp)
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 16.dp)
                 ) {
                     // PERIOD HEADER
                     Row(

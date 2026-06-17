@@ -67,7 +67,7 @@ fun PeriodsTabsScreen(
     val density = LocalDensity.current
 
     // 1. Calculate the total height of the Header (Status Bar + Heading + Trab Row)
-    val appBarMaxHeightPx = with(density) { 120.dp.roundToPx() }
+    val appBarMaxHeightPx = with(density) { 130.dp.roundToPx() }
 
     // 2. Initialize the Connection from the article
     val connection = remember(appBarMaxHeightPx) {

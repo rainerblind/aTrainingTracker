@@ -79,7 +79,7 @@ fun PeriodSummaryCard(
     ) {
         Column {
             // --- 1. CONTENT SECTION ---
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 16.dp, bottom = 8.dp)) {
                 // PERIOD HEADER
                 Surface(
                     onClick = { onHeaderClick(summary) },
@@ -146,14 +146,17 @@ fun PeriodSummaryCard(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // SPORT SPECIFIC BREAKDOWN
-                summary.sportStats.forEach { (bSportType, stats) ->
+                summary.sportStats.entries.forEachIndexed { index, entry ->
+                    val (bSportType, stats) = entry
                     SportStatsRow(
                         bSportType = bSportType,
                         stats = stats,
                         tf = tf, df = df, af = af,
                         onClick = { onSportClick(summary, bSportType) }
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    if (index < summary.sportStats.size - 1) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
                 }
             }
 
@@ -162,7 +165,7 @@ fun PeriodSummaryCard(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(180.dp)
+                        .height(250.dp)
                 ) {
                     PeriodMultiWorkoutMap(
                         polylines = summary.polylines,
