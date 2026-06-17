@@ -276,9 +276,12 @@ fun PeriodBarGraph(
                     val hours = period.totalDurationSec / 3600
                     if (hours > 0) {
                         Text(
-                            text = hours.toString(),
+                            text = if (barWidth >= 48.dp) "$hours h" else if (barWidth >= 24.dp) "${hours}h" else hours.toString(),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            softWrap = false,
+                            modifier = Modifier.wrapContentWidth(unbounded = true),
                             color = if (isSelected) MaterialTheme.colorScheme.onSurface 
                                     else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                         )
