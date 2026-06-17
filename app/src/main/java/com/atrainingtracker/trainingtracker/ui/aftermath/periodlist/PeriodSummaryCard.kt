@@ -161,6 +161,7 @@ fun PeriodSummaryCard(
                         bSportType = bSportType,
                         stats = stats,
                         tf = tf, df = df, af = af,
+                        showDetails = true,
                         onClick = { onSportClick(summary, bSportType) }
                     )
                     if (index < summary.sportStats.size - 1) {
@@ -208,6 +209,7 @@ fun SportStatsRow(
     tf: TimeFormatter,
     df: DistanceFormatter,
     af: AltitudeFormatter,
+    showDetails: Boolean = false,
     onClick: () -> Unit
 ) {
     Surface(
@@ -270,7 +272,7 @@ fun SportStatsRow(
             // NESTED DETAILS
             val longestWorkout = stats.longestWorkout
             val showLongestWorkout = stats.count > 1 && longestWorkout != null
-            if (stats.detailedSportStats.size > 1 || showLongestWorkout) {
+            if (showDetails && (stats.detailedSportStats.size > 1 || showLongestWorkout)) {
                 HorizontalDivider(
                     modifier = Modifier.padding(vertical = 10.dp),
                     thickness = 0.5.dp,
