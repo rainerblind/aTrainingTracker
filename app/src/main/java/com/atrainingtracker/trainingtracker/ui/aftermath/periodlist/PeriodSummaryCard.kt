@@ -280,38 +280,29 @@ fun SportStatsRow(
                 // Longest Workout Highlight
                 if (showLongestWorkout) {
                     // longestWorkout is smart-cast to non-null because it's a local val and showLongestWorkout checks for null
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Surface(
-                        color = MaterialTheme.colorScheme.surface,
-                        shape = RoundedCornerShape(8.dp),
-                        border = androidx.compose.foundation.BorderStroke(
-                            0.5.dp,
-                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Column {
+                        Text(
+                            text = stringResource(R.string.workout_periods__longest_workout),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            letterSpacing = 0.5.sp
                         )
-                    ) {
-                        Column(modifier = Modifier.padding(8.dp)) {
-                            Text(
-                                text = stringResource(R.string.workout_periods__longest_workout),
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
-                                letterSpacing = 0.5.sp
-                            )
-                            Text(
-                                text = longestWorkout.name,
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                MetricIconValue(R.drawable.ic_distance, df.format_with_units(longestWorkout.distanceMeters))
-                                MetricIconValue(R.drawable.ic_time_active, tf.format_with_units(longestWorkout.durationSec), isBold = true)
-                                MetricIconValue(R.drawable.ic_ascent, af.format_with_units(longestWorkout.ascentMeters))
-                            }
+                        Text(
+                            text = longestWorkout.name,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            MetricIconValue(R.drawable.ic_distance, df.format_with_units(longestWorkout.distanceMeters))
+                            MetricIconValue(R.drawable.ic_time_active, tf.format_with_units(longestWorkout.durationSec), isBold = true)
+                            MetricIconValue(R.drawable.ic_ascent, af.format_with_units(longestWorkout.ascentMeters))
                         }
                     }
                 }
