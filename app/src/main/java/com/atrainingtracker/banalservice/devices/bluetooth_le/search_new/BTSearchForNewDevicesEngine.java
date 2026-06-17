@@ -148,7 +148,7 @@ public class BTSearchForNewDevicesEngine
         @Override
         public void onCharacteristicRead(final BluetoothGatt gatt,
                                          final BluetoothGattCharacteristic characteristic,
-                                         int status) {
+                                         final int status) {
             if (DEBUG) Log.i(TAG, "onCharacteristicRead: " + characteristic.getUuid());
 
             mHandler.post(new Runnable() {
@@ -158,51 +158,62 @@ public class BTSearchForNewDevicesEngine
                 public void run() {
                     String address = gatt.getDevice().getAddress();
 
-                    if (BluetoothConstants.UUID_CHARACTERISTIC_BATTERY_LEVEL.equals(characteristic.getUuid())) {
-                        int batteryPercentage = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0);
-                        if (DEBUG) Log.d(TAG, "got battery percentage: " + batteryPercentage);
-                        mBatteryPercentage.put(address, batteryPercentage);
-                    } else if (BluetoothConstants.UUID_CHARACTERISTIC_MANUFACTURER_NAME.equals(characteristic.getUuid())) {
-                        String manufacturerName = characteristic.getStringValue(0);
-                        if (DEBUG) Log.d(TAG, "got manufacturer: " + manufacturerName);
-                        mManufacturerMap.put(address, manufacturerName);
-                    } else if (BluetoothConstants.UUID_CHARACTERISTIC_CYCLING_SPEED_AND_CADENCE_FEATURE.equals(characteristic.getUuid())) {
-                        if (DEBUG) Log.i(TAG, "Received cycling speed and cadence feature");
+                    if (status == BluetoothGatt.GATT_SUCCESS && characteristic.getValue() != null) {
+                        if (BluetoothConstants.UUID_CHARACTERISTIC_BATTERY_LEVEL.equals(characteristic.getUuid())) {
+                            Integer batteryPercentage = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0);
+                            if (batteryPercentage != null) {
+                                if (DEBUG) Log.d(TAG, "got battery percentage: " + batteryPercentage);
+                                mBatteryPercentage.put(address, batteryPercentage);
+                            }
+                        } else if (BluetoothConstants.UUID_CHARACTERISTIC_MANUFACTURER_NAME.equals(characteristic.getUuid())) {
+                            String manufacturerName = characteristic.getStringValue(0);
+                            if (DEBUG) Log.d(TAG, "got manufacturer: " + manufacturerName);
+                            mManufacturerMap.put(address, manufacturerName);
+                        } else if (BluetoothConstants.UUID_CHARACTERISTIC_CYCLING_SPEED_AND_CADENCE_FEATURE.equals(characteristic.getUuid())) {
+                            if (DEBUG) Log.i(TAG, "Received cycling speed and cadence feature");
 
-                        final int MASK_BIKE_SPEED_AND_CADENCE = 0x03;
-                        final int BIKE_SPEED = 0x01;
-                        final int BIKE_CADENCE = 0x02;
-                        final int BIKE_SPEED_AND_CADENCE = 0x03;
+                            final int MASK_BIKE_SPEED_AND_CADENCE = 0x03;
+                            final int BIKE_SPEED = 0x01;
+                            final int BIKE_CADENCE = 0x02;
+                            final int BIKE_SPEED_AND_CADENCE = 0x03;
 
-                        int flag = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0);
+                            Integer flag = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0);
 
-                        DeviceType deviceType = null;
-                        switch (flag & MASK_BIKE_SPEED_AND_CADENCE) {
-                            case BIKE_SPEED:
-                                deviceType = DeviceType.BIKE_SPEED;
-                                break;
-                            case BIKE_CADENCE:
-                                deviceType = DeviceType.BIKE_CADENCE;
-                                break;
-                            case BIKE_SPEED_AND_CADENCE:
-                                deviceType = DeviceType.BIKE_SPEED_AND_CADENCE;
-                                break;
-                        }
+                            if (flag != null) {
+                                DeviceType deviceType = null;
+                                switch (flag & MASK_BIKE_SPEED_AND_CADENCE) {
+                                    case BIKE_SPEED:
+                                        deviceType = DeviceType.BIKE_SPEED;
+                                        break;
+                                    case BIKE_CADENCE:
+                                        deviceType = DeviceType.BIKE_CADENCE;
+                                        break;
+                                    case BIKE_SPEED_AND_CADENCE:
+                                        deviceType = DeviceType.BIKE_SPEED_AND_CADENCE;
+                                        break;
+                                }
 
-                        if (deviceType == getDeviceType()) { // are we searching for this device type?
-                            if (DEBUG)
-                                Log.i(TAG, "FTW: we found a device with the correct device type");
-                            newDeviceFound(gatt.getDevice().getAddress());
+                                if (deviceType == getDeviceType()) { // are we searching for this device type?
+                                    if (DEBUG)
+                                        Log.i(TAG, "FTW: we found a device with the correct device type");
+                                    newDeviceFound(gatt.getDevice().getAddress());
+                                } else {
+                                    if (DEBUG) Log.i(TAG, "hm, the device type is not correct");
+                                }
+                            }
+                        } else if (BluetoothConstants.UUID_CHARACTERISTIC_CYCLING_POWER_FEATURE.equals(characteristic.getUuid())
+                                && getDeviceType() == DeviceType.BIKE_POWER) {
+                            newDeviceFound(gatt.getDevice().getAddress());  // first, we have to put this device into the database, then we can add its features...
+                            long deviceId = mDevicesDatabaseManager.getDeviceId(DeviceType.BIKE_POWER, gatt.getDevice().getAddress());
+                            Integer feature = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT32, 0);
+                            if (feature != null) {
+                                mDevicesDatabaseManager.putBikePowerSensorFlags(deviceId, BTLEBikePowerDevice.btFeature2BikePowerSensorFlags(feature));
+                            }
                         } else {
-                            if (DEBUG) Log.i(TAG, "hm, the device type is not correct");
+                            Log.d(TAG, "unknown characteristic: " + characteristic.getUuid());
                         }
-                    } else if (BluetoothConstants.UUID_CHARACTERISTIC_CYCLING_POWER_FEATURE.equals(characteristic.getUuid())
-                            && getDeviceType() == DeviceType.BIKE_POWER) {
-                        newDeviceFound(gatt.getDevice().getAddress());  // first, we have to put this device into the database, then we can add its features...
-                        long deviceId = mDevicesDatabaseManager.getDeviceId(DeviceType.BIKE_POWER, gatt.getDevice().getAddress());
-                        mDevicesDatabaseManager.putBikePowerSensorFlags(deviceId, BTLEBikePowerDevice.btFeature2BikePowerSensorFlags(characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT32, 0)));
                     } else {
-                        Log.d(TAG, "unknown characteristic: " + characteristic.getUuid());
+                        if (DEBUG) Log.w(TAG, "onCharacteristicRead failed for " + characteristic.getUuid() + " status: " + status);
                     }
 
                     readNextCharacteristic(address);

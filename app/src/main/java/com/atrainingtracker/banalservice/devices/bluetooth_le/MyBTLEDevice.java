@@ -225,6 +225,11 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
     private void characteristicUpdate(final BluetoothGatt gatt, final BluetoothGattCharacteristic characteristic) {
         if (DEBUG) Log.i(TAG, "characteristicUpdate");
 
+        if (characteristic.getValue() == null) {
+            if (DEBUG) Log.w(TAG, "characteristic value is null for " + characteristic.getUuid());
+            return;
+        }
+
         if (BluetoothConstants.getCharacteristicUUID(getDeviceType()).equals(characteristic.getUuid())) {
 
             mHandler.post(new Runnable() {
@@ -235,10 +240,12 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
             });
         }
         if (BluetoothConstants.UUID_CHARACTERISTIC_BATTERY_LEVEL.equals(characteristic.getUuid())) {
-            int batteryPercentage = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0);
-            if (DEBUG) Log.i(TAG, "got battery percentage: " + batteryPercentage);
-            setBatteryPercentage(batteryPercentage);
-            // DevicesDatabaseManager.getInstance(mContext).setBatteryPercentage(getDeviceId(), batteryPercentage);
+            Integer batteryPercentage = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0);
+            if (batteryPercentage != null) {
+                if (DEBUG) Log.i(TAG, "got battery percentage: " + batteryPercentage);
+                setBatteryPercentage(batteryPercentage);
+                // DevicesDatabaseManager.getInstance(mContext).setBatteryPercentage(getDeviceId(), batteryPercentage);
+            }
 
             //reread after some time
             mHandler.postDelayed(new Runnable() {
