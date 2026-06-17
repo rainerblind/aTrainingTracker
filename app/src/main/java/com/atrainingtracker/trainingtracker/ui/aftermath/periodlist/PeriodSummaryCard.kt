@@ -279,7 +279,7 @@ fun SportStatsRow(
 
                 // Longest Workout Highlight
                 if (showLongestWorkout) {
-                    val longest = longestWorkout!!
+                    // longestWorkout is smart-cast to non-null because it's a local val and showLongestWorkout checks for null
                     Spacer(modifier = Modifier.height(6.dp))
                     Surface(
                         color = MaterialTheme.colorScheme.surface,
@@ -298,7 +298,7 @@ fun SportStatsRow(
                                 letterSpacing = 0.5.sp
                             )
                             Text(
-                                text = longest.name,
+                                text = longestWorkout.name,
                                 style = MaterialTheme.typography.bodySmall,
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1,
@@ -308,9 +308,9 @@ fun SportStatsRow(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                MetricIconValue(R.drawable.ic_distance, df.format_with_units(longest.distanceMeters))
-                                MetricIconValue(R.drawable.ic_time_active, tf.format_with_units(longest.durationSec), isBold = true)
-                                MetricIconValue(R.drawable.ic_ascent, af.format_with_units(longest.ascentMeters))
+                                MetricIconValue(R.drawable.ic_distance, df.format_with_units(longestWorkout.distanceMeters))
+                                MetricIconValue(R.drawable.ic_time_active, tf.format_with_units(longestWorkout.durationSec), isBold = true)
+                                MetricIconValue(R.drawable.ic_ascent, af.format_with_units(longestWorkout.ascentMeters))
                             }
                         }
                     }
