@@ -208,16 +208,6 @@ fun PeriodMapScreen(
                         }
 
                         Column(horizontalAlignment = Alignment.End) {
-                            Text(
-                                text = pluralStringResource(
-                                    R.plurals.workout_periods__workouts,
-                                    summary.totalWorkouts,
-                                    summary.totalWorkouts
-                                ),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
                                     painter = painterResource(id = R.drawable.ic_time_active),
@@ -228,10 +218,20 @@ fun PeriodMapScreen(
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
                                     text = tf.format_with_units(summary.totalDurationSec),
-                                    style = MaterialTheme.typography.bodyMedium,
+                                    style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
+                            Text(
+                                text = pluralStringResource(
+                                    R.plurals.workout_periods__workouts,
+                                    summary.totalWorkouts,
+                                    summary.totalWorkouts
+                                ),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
                         }
                     }
 

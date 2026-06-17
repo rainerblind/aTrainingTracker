@@ -122,16 +122,6 @@ fun PeriodSummaryCard(
                             }
 
                             Column(horizontalAlignment = Alignment.End) {
-                                Text(
-                                    text = pluralStringResource(
-                                        R.plurals.workout_periods__workouts,
-                                        summary.totalWorkouts,
-                                        summary.totalWorkouts
-                                    ),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(
                                         painter = painterResource(id = R.drawable.ic_time_active),
@@ -142,11 +132,21 @@ fun PeriodSummaryCard(
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
                                         text = tf.format_with_units(summary.totalDurationSec),
-                                        style = MaterialTheme.typography.labelLarge,
+                                        style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
+                                Text(
+                                    text = pluralStringResource(
+                                        R.plurals.workout_periods__workouts,
+                                        summary.totalWorkouts,
+                                        summary.totalWorkouts
+                                    ),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
                             }
                         }
                     }
@@ -297,27 +297,44 @@ fun SportStatsRow(
                     // longestWorkout is smart-cast to non-null because it's a local val and showLongestWorkout checks for null
                     Spacer(modifier = Modifier.height(12.dp))
                     Column {
-                        Text(
-                            text = stringResource(R.string.workout_periods__longest_workout),
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                            letterSpacing = 0.5.sp
-                        )
-                        Text(
-                            text = longestWorkout.name,
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            MetricIconValue(R.drawable.ic_distance, df.format_with_units(longestWorkout.distanceMeters), isBold = true)
-                            MetricIconValue(R.drawable.ic_time_active, tf.format_with_units(longestWorkout.durationSec), isBold = true)
-                            MetricIconValue(R.drawable.ic_ascent, af.format_with_units(longestWorkout.ascentMeters))
+                            Text(
+                                text = stringResource(R.string.workout_periods__longest_workout),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                                letterSpacing = 0.5.sp
+                            )
+                            MetricIconValue(
+                                iconRes = R.drawable.ic_time_active,
+                                value = tf.format_with_units(longestWorkout.durationSec),
+                                isBold = true
+                            )
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = longestWorkout.name,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                MetricIconValue(R.drawable.ic_distance, df.format_with_units(longestWorkout.distanceMeters), isBold = true)
+                                MetricIconValue(R.drawable.ic_ascent, af.format_with_units(longestWorkout.ascentMeters))
+                            }
                         }
                     }
                 }
