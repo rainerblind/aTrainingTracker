@@ -313,7 +313,7 @@ fun SportStatsRow(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            MetricIconValue(R.drawable.ic_distance, df.format_with_units(longestWorkout.distanceMeters))
+                            MetricIconValue(R.drawable.ic_distance, df.format_with_units(longestWorkout.distanceMeters), isBold = true)
                             MetricIconValue(R.drawable.ic_time_active, tf.format_with_units(longestWorkout.durationSec), isBold = true)
                             MetricIconValue(R.drawable.ic_ascent, af.format_with_units(longestWorkout.ascentMeters))
                         }
