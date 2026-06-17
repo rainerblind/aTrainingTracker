@@ -119,7 +119,7 @@ fun PeriodsTabsScreen(
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(64.dp)
+                            .height(72.dp)
                             .padding(horizontal = 16.dp, vertical = 8.dp)
                     )
 
