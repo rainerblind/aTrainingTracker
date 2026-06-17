@@ -50,6 +50,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
@@ -244,17 +245,46 @@ fun PeriodBarGraph(
             val heightFraction = period.totalDurationSec.toFloat() / maxDuration
             val isSelected = originalIndex == firstVisibleIndex
 
-            Box(
+            Column(
                 modifier = Modifier
                     .width(barWidth)
-                    .fillMaxHeight(heightFraction.coerceAtLeast(0.1f))
-                    .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
-                    .background(
-                        if (isSelected) MaterialTheme.colorScheme.primary 
-                        else MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-                    )
-                    .clickable { onBarClick(originalIndex) }
-            )
+                    .fillMaxHeight(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Bottom
+            ) {
+                // The Bar
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f, fill = false)
+                        .fillMaxHeight(heightFraction.coerceAtLeast(0.1f))
+                        .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
+                        .background(
+                            if (isSelected) MaterialTheme.colorScheme.primary 
+                            else MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                        )
+                        .clickable { onBarClick(originalIndex) }
+                )
+
+                // The Number below the bar container
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(16.dp),
+                    contentAlignment = Alignment.BottomCenter
+                ) {
+                    val hours = period.totalDurationSec / 3600
+                    if (hours > 0) {
+                        Text(
+                            text = hours.toString(),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isSelected) MaterialTheme.colorScheme.onSurface 
+                                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
+                    }
+                }
+            }
         }
     }
 }
