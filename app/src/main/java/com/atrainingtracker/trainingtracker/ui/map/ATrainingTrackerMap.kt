@@ -232,16 +232,37 @@ fun ATrainingTrackerMap(
         }
     }
 
+    // Store the filtered bearing for smooth "Follow Me" transitions
+    var filteredBearing by remember { mutableFloatStateOf(mapState.bearing) }
+
+    // Reset filtered bearing when entering Follow Me mode to avoid large jumps
+    LaunchedEffect(mapState.zoomFocus) {
+        if (mapState.zoomFocus == MapZoomFocus.FOLLOW_ME) {
+            filteredBearing = mapState.bearing
+        }
+    }
+
     // Follow Me Logic
     LaunchedEffect(currentLocation, mapState.bearing, mapState.speed) {
         if (mapState.zoomFocus == MapZoomFocus.FOLLOW_ME && currentLocation != null) {
+            // Apply a low-pass filter to the bearing to reduce jitter
+            val alpha = 0.15f // Smoothing factor
+
+            // Calculate the shortest angular difference (handling 360-degree wrap-around)
+            var diff = mapState.bearing - filteredBearing
+            while (diff < -180f) diff += 360f
+            while (diff > 180f) diff -= 360f
+
+            filteredBearing += alpha * diff
+            filteredBearing = (filteredBearing + 360f) % 360f
+
             val targetZoom = (20f - 0.1f * mapState.speed).coerceIn(14f, 20f)
             try {
                 cameraPositionState.animate(
                     CameraUpdateFactory.newCameraPosition(
                         CameraPosition.builder()
                             .target(currentLocation!!)
-                            .bearing(mapState.bearing)
+                            .bearing(filteredBearing)
                             .zoom(targetZoom)
                             .tilt(70f)
                             .build()
@@ -459,7 +480,7 @@ fun ATrainingTrackerMap(
             Marker(
                 state = MarkerState(position = loc),
                 icon = locationIcon,
-                rotation = mapState.bearing,
+                rotation = if (mapState.zoomFocus == MapZoomFocus.FOLLOW_ME) filteredBearing else mapState.bearing,
                 flat = true,
                 anchor = Offset(0.5f, 0.5f),
                 zIndex = MapVisualization.USER_LOCATION_Z_INDEX
