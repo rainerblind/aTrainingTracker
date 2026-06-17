@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Share
@@ -61,6 +62,7 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -148,6 +150,7 @@ fun PeriodMapScreen(
 
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
+        containerColor = MaterialTheme.colorScheme.surface,
         sheetPeekHeight = if (peekedWorkoutDataWithTrack != null) 200.dp else 0.dp,
         sheetDragHandle = {
             Surface(
@@ -172,6 +175,7 @@ fun PeriodMapScreen(
         Column(modifier = Modifier.fillMaxSize()) {
             // 1. HEADER (Stats) - Wrapped in GraphicsLayer for sharing
             Surface(
+                color = MaterialTheme.colorScheme.surface,
                 modifier = Modifier
                     .statusBarsPadding()
                     .drawWithContent {
@@ -182,7 +186,7 @@ fun PeriodMapScreen(
                 }
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp)
+                    modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 16.dp, bottom = 8.dp)
                 ) {
                     // PERIOD HEADER
                     Row(
@@ -211,19 +215,33 @@ fun PeriodMapScreen(
                                     summary.totalWorkouts
                                 ),
                                 style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
                             )
-                            Text(
-                                text = tf.format_with_units(summary.totalDurationSec),
-                                style = MaterialTheme.typography.bodyMedium
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_time_active),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = tf.format_with_units(summary.totalDurationSec),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
 
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                    if (summary.sportStats.isNotEmpty()) {
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                    }
 
                     // SPORT SPECIFIC BREAKDOWN
-                    summary.sportStats.forEach { (sport, stats) ->
+                    summary.sportStats.entries.forEachIndexed { index, entry ->
+                        val (sport, stats) = entry
                         val isSelected = selectedSports.contains(sport)
                         // Logic: If nothing is selected, everything is 1f.
                         // If something is selected, dim everything except the selected ones.
@@ -255,6 +273,9 @@ fun PeriodMapScreen(
                                     }
                                 }
                             )
+                        }
+                        if (index < summary.sportStats.size - 1) {
+                            Spacer(modifier = Modifier.height(8.dp))
                         }
                     }
                 }

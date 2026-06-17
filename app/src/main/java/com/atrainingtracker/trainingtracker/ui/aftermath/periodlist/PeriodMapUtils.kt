@@ -63,20 +63,21 @@ fun getPeriodMapVisuals(
                     else -> 0.0
                 }
 
-                // High-contrast gradient to avoid "Green" which blends into terrain maps.
-                // Transitioning from a visible Blue -> Orange -> Red
+                // Modern sequential Blue gradient that respects the workout "Identity Blue".
+                // Transitions from a fresh Cyan -> Workout Blue -> Deep Indigo.
+                // This feels more modern and less "technical" than the old rainbow scale.
                 val colors = intArrayOf(
-                    android.graphics.Color.BLUE,   // Low density
-                    android.graphics.Color.YELLOW, // Medium density
-                    android.graphics.Color.RED     // High density
+                    0xFF00E5FF.toInt(), // Low density: Vibrant Cyan
+                    0xFF0000FF.toInt(), // Medium: The "Identity" Blue
+                    0xFF311B92.toInt()  // High density: Deep Indigo
                 )
-                val startPoints = floatArrayOf(0.2f, 0.7f, 1.0f)
+                val startPoints = floatArrayOf(0.2f, 0.6f, 1.0f)
                 val gradient = Gradient(colors, startPoints)
 
                 HeatmapTileProvider.Builder()
                     .weightedData(allPoints)
                     .opacity(opacity)
-                    .radius(10) // Balanced radius
+                    .radius(10)
                     .gradient(gradient)
                     .build()
             }

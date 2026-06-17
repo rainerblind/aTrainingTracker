@@ -1145,6 +1145,7 @@
         <item quantity="one">%1$d Workout</item>
         <item quantity="other">%1$d Workouts</item>
     </plurals>
+    <string name="workout_periods__longest_workout">Longest Workout</string>
 
     <!-- share screenshots -->
     <string name="share">Share</string>

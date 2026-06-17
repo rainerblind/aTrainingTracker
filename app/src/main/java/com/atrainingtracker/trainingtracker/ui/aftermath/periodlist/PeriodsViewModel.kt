@@ -174,11 +174,34 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
 
         // Aggregate Sport Stats
         val sportStatsMap = items.groupBy { it.bSportType }.mapValues { (_, sportWorkouts) ->
+            // Group by detailed sport name
+            val detailedStats = sportWorkouts.groupBy { it.sportName }.mapValues { (_, detailedWorkouts) ->
+                DetailedStats(
+                    count = detailedWorkouts.size,
+                    totalDurationSec = detailedWorkouts.sumOf { it.detailsData.activeTimeSec.toLong() },
+                    totalDistanceMeters = detailedWorkouts.sumOf { it.detailsData.totalDistance },
+                    totalAscentMeters = detailedWorkouts.sumOf { it.ascentMeters }
+                )
+            }
+
+            // Find Longest Workout by Time
+            val longestWorkout = sportWorkouts.maxByOrNull { it.detailsData.activeTimeSec }?.let {
+                LongestWorkout(
+                    id = it.id,
+                    name = it.workoutName,
+                    durationSec = it.detailsData.activeTimeSec.toLong(),
+                    distanceMeters = it.detailsData.totalDistance,
+                    ascentMeters = it.ascentMeters
+                )
+            }
+
             SportStats(
                 count = sportWorkouts.size,
                 totalDurationSec = sportWorkouts.sumOf { it.detailsData.activeTimeSec.toLong() },
                 totalDistanceMeters = sportWorkouts.sumOf { it.detailsData.totalDistance },
-                totalAscentMeters = sportWorkouts.sumOf { it.ascentMeters }
+                totalAscentMeters = sportWorkouts.sumOf { it.ascentMeters },
+                detailedSportStats = detailedStats,
+                longestWorkout = longestWorkout
             )
         }
             // Convert to list to sort by specific sport priority
