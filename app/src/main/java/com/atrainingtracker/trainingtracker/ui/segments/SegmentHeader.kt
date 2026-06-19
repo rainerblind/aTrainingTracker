@@ -118,7 +118,7 @@ fun SegmentHeader(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = summary.prTime,
+                        text = "PR ${summary.prTime}",
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Bold
                     )
