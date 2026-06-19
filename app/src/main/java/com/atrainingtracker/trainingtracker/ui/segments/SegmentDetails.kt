@@ -32,20 +32,29 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.segments.SegmentSummary
+import com.atrainingtracker.trainingtracker.ui.components.strava.PoweredByStrava
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 @Composable
 fun SegmentDetails(
     summary: SegmentSummary,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    showStravaLogo: Boolean = true
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        // --- ROW 1: Distance ---
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        // --- ROW 1: Distance and Optional Branding ---
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
             StatItem(R.drawable.ic_distance, summary.distance)
+            if (showStravaLogo) {
+                PoweredByStrava()
+            }
         }
 
         // --- ROW 2: Grades (Avg and Max) ---
