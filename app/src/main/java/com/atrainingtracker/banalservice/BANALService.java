@@ -504,6 +504,9 @@ public class BANALService
         super.onDestroy();
         if (DEBUG) Log.d(TAG, "onDestroy");
 
+        // stop any ongoing searches for new devices
+        cDeviceManager.stopSearchForNewRemoteDevices();
+
         // cANTPlusPlusInterface.shutDown();
         cDeviceManager.shutDown();
         cSensorManager.shutDown();
