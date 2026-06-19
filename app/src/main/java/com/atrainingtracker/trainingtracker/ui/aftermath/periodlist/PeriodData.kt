@@ -20,9 +20,14 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
 import com.atrainingtracker.banalservice.BSportType
 
+enum class PeriodType {
+    DAY, WEEK, MONTH, YEAR
+}
+
 data class PeriodSummary(
     val periodLabel: String,         // e.g., "Week20, 2026" or "May 2026"
     val periodDateRange: String,     // e.g., "May 11 - May 17"
+    val periodType: PeriodType,
     val startTimestampS: Long,       // Start of the period in seconds
     val endTimestampS: Long,         // End of the period in seconds
     val totalWorkouts: Int,
@@ -38,5 +43,22 @@ data class SportStats(
     val count: Int,
     val totalDurationSec: Long,
     val totalDistanceMeters: Double,
+    val totalAscentMeters: Long,
+    val detailedSportStats: Map<String, DetailedStats>, // Key is sportName
+    val longestWorkout: LongestWorkout?
+)
+
+data class DetailedStats(
+    val count: Int,
+    val totalDurationSec: Long,
+    val totalDistanceMeters: Double,
     val totalAscentMeters: Long
+)
+
+data class LongestWorkout(
+    val id: Long,
+    val name: String,
+    val durationSec: Long,
+    val distanceMeters: Double,
+    val ascentMeters: Long
 )

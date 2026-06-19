@@ -50,8 +50,6 @@ fun StravaActivitySection(
         StravaActivityParser.parse(rawActivityJson)
     } ?: return
 
-    if (activity.segmentEfforts.isEmpty() && activity.bestEfforts.isEmpty()) return
-
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -74,6 +72,15 @@ fun StravaActivitySection(
                 text = stringResource(R.string.strava_results_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
+            )
+        }
+
+        // --- Status message if no efforts/segments are available ---
+        if (activity.segmentEfforts.isEmpty() && activity.bestEfforts.isEmpty()) {
+            Text(
+                text = stringResource(R.string.strava_uploaded_no_records),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
@@ -317,9 +324,26 @@ fun PreviewStravaActivitySection2() {
 fun PreviewStravaActivitySectionNoPRs() {
     val dummyJson = """
         {
+          "id": 123456789,
           "segment_efforts": [
             { "name": "Local Hill", "elapsed_time": 300 }
           ],
+          "best_efforts": []
+        }
+    """.trimIndent()
+
+    MaterialTheme {
+        StravaActivitySection(rawActivityJson = dummyJson)
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewStravaActivitySectionNoSegments() {
+    val dummyJson = """
+        {
+          "id": 123456789,
+          "segment_efforts": [],
           "best_efforts": []
         }
     """.trimIndent()

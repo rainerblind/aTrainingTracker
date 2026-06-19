@@ -52,7 +52,6 @@ fun SegmentItem(
             // 1. TOP: Segment Identity (Full Width)
             SegmentHeader(
                 summary = summary,
-                compact = false,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(4.dp)
@@ -67,7 +66,6 @@ fun SegmentItem(
             // 2. Performance Metrics (Full Width)
             SegmentDetails(
                 summary = summary,
-                compact = false,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(4.dp)

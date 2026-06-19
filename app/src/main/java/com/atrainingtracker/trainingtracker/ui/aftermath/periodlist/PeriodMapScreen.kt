@@ -19,7 +19,6 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
 import androidx.activity.compose.BackHandler
-import androidx.activity.result.launch
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,9 +30,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -56,10 +57,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -82,6 +85,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun PeriodMapScreen(
     summary: PeriodSummary,
+    isHeatmapEnabled: Boolean,
+    onToggleHeatmapEnabled: () -> Unit,
     onWorkoutClick: (Long) -> Unit,
     peekedWorkoutDataWithTrack: WorkoutDataWithTrack?,
     clearPeekSelection: () -> Unit,
@@ -145,6 +150,7 @@ fun PeriodMapScreen(
 
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
+        containerColor = MaterialTheme.colorScheme.surface,
         sheetPeekHeight = if (peekedWorkoutDataWithTrack != null) 200.dp else 0.dp,
         sheetDragHandle = {
             Surface(
@@ -169,6 +175,7 @@ fun PeriodMapScreen(
         Column(modifier = Modifier.fillMaxSize()) {
             // 1. HEADER (Stats) - Wrapped in GraphicsLayer for sharing
             Surface(
+                color = MaterialTheme.colorScheme.surface,
                 modifier = Modifier
                     .statusBarsPadding()
                     .drawWithContent {
@@ -179,7 +186,7 @@ fun PeriodMapScreen(
                 }
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp)
+                    modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 16.dp, bottom = 8.dp)
                 ) {
                     // PERIOD HEADER
                     Row(
@@ -201,26 +208,40 @@ fun PeriodMapScreen(
                         }
 
                         Column(horizontalAlignment = Alignment.End) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_time_active),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = tf.format_with_units(summary.totalDurationSec),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                             Text(
                                 text = pluralStringResource(
                                     R.plurals.workout_periods__workouts,
                                     summary.totalWorkouts,
                                     summary.totalWorkouts
                                 ),
-                                style = MaterialTheme.typography.titleMedium,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
-                            )
-                            Text(
-                                text = tf.format_with_units(summary.totalDurationSec),
-                                style = MaterialTheme.typography.bodyMedium
                             )
                         }
                     }
 
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                    if (summary.sportStats.isNotEmpty()) {
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                    }
 
                     // SPORT SPECIFIC BREAKDOWN
-                    summary.sportStats.forEach { (sport, stats) ->
+                    summary.sportStats.entries.forEachIndexed { index, entry ->
+                        val (sport, stats) = entry
                         val isSelected = selectedSports.contains(sport)
                         // Logic: If nothing is selected, everything is 1f.
                         // If something is selected, dim everything except the selected ones.
@@ -253,6 +274,9 @@ fun PeriodMapScreen(
                                 }
                             )
                         }
+                        if (index < summary.sportStats.size - 1) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
                     }
                 }
             }
@@ -262,6 +286,8 @@ fun PeriodMapScreen(
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 InteractivePeriodMap(
                     workouts = filteredWorkouts,
+                    periodType = summary.periodType,
+                    isHeatmapEnabled = isHeatmapEnabled,
                     onWorkoutClick = onWorkoutClick,
                     modifier = Modifier.fillMaxSize(),
                     shouldTakeSnapshot = mapSnapshotTrigger,
@@ -274,25 +300,49 @@ fun PeriodMapScreen(
                     },
                 )
 
-                // FLOATING SHARE BUTTON
-                Surface(
-                    onClick = { mapSnapshotTrigger = true },
+                // OVERLAY BUTTONS (Top End)
+                Column(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(16.dp)
-                        .size(44.dp),
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                    shadowElevation = 6.dp,
-                    tonalElevation = 2.dp
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = stringResource(R.string.share),
-                            modifier = Modifier.size(22.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                    // MODE TOGGLE BUTTON
+                    Surface(
+                        onClick = onToggleHeatmapEnabled,
+                        modifier = Modifier.size(44.dp),
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                        shadowElevation = 6.dp,
+                        tonalElevation = 2.dp
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.Whatshot,
+                                contentDescription = if (isHeatmapEnabled) "Disable Heatmap" else "Enable Heatmap",
+                                modifier = Modifier.size(22.dp),
+                                tint = if (isHeatmapEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                            )
+                        }
+                    }
+
+                    // FLOATING SHARE BUTTON
+                    Surface(
+                        onClick = { mapSnapshotTrigger = true },
+                        modifier = Modifier.size(44.dp),
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                        shadowElevation = 6.dp,
+                        tonalElevation = 2.dp
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = stringResource(R.string.share),
+                                modifier = Modifier.size(22.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                 }
             }

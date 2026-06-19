@@ -853,6 +853,14 @@
 
     <string name="export_status__header_title">Export Status</string>
 
+    <string name="export_status__waiting">Wartend</string>
+    <string name="export_status__processing">In Arbeit</string>
+    <string name="export_status__success">Erfolgreich</string>
+    <string name="export_status__failed">Fehlgeschlagen</string>
+    <string name="export_status__tracking">Aufzeichnung</string>
+    <string name="export_status__tracking_finished">Aufzeichnung beendet</string>
+    <string name="export_status__unwanted">Nicht erwünscht</string>
+
     <!-- change Sport Dialog -->
     <string name="change_sport">Sportart ändern</string>
     <string name="save">Speichern</string>
@@ -1030,6 +1038,7 @@
         <item quantity="one">%1$d Einheit</item>
         <item quantity="other">%1$d Einheiten</item>
     </plurals>
+    <string name="workout_periods__longest_workout">Längste Einheit</string>
 
     <!-- share screenshots -->
     <string name="share">Teilen</string>
@@ -1038,6 +1047,7 @@
     <string name="ascent_label">Anstieg</string>
     <string name="unit_meters_short">m</string>
     <string name="strava_results_title">Strava Ergebnisse</string>
+    <string name="strava_uploaded_no_records">Bei Strava hochgeladen. Keine neuen Rekorde gefunden.</string>
     <string name="strava_best_efforts">Bestzeiten</string>
     <plurals name="strava_best_efforts_with_prs_format">
         <item quantity="one">Bestzeiten (%1$d PR)</item>

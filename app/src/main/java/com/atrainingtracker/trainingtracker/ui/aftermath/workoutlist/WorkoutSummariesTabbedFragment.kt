@@ -40,6 +40,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -52,7 +53,9 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.exporter.ExportStatusChangedBroadcaster
 import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents
 import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreen
 import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutScreen
@@ -62,6 +65,7 @@ import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModel
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
+import kotlinx.coroutines.launch
 import kotlin.getValue
 
 class WorkoutSummariesTabbedFragment : Fragment() {
@@ -92,9 +96,53 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                     val bikeListState = rememberLazyListState()
                     val runListState = rememberLazyListState()
                     val otherListState = rememberLazyListState()
+                    val scope = rememberCoroutineScope()
 
+                    // Handle navigation to a specific workout (e.g. from notification)
+                    var targetFileNameProcessed by rememberSaveable { mutableStateOf<String?>(null) }
+                    
                     // 1. Observe the workouts list from ViewModel
                     val workouts by viewModel.workouts.collectAsStateWithLifecycle()
+
+                    LaunchedEffect(workouts) {
+                        val targetFileName = requireActivity().intent.getStringExtra(ExportStatusChangedBroadcaster.EXTRA_FILE_BASE_NAME)
+                        if (targetFileName != null && targetFileName != targetFileNameProcessed && workouts.isNotEmpty()) {
+                            val workout = workouts.find { it.fileBaseName == targetFileName }
+                            if (workout != null) {
+                                targetFileNameProcessed = targetFileName
+
+                                val pageIndex = when (workout.bSportType) {
+                                    BSportType.BIKE -> 1
+                                    BSportType.RUN -> 2
+                                    BSportType.UNKNOWN -> 3
+                                    else -> 0
+                                }
+
+                                val listState = when (pageIndex) {
+                                    1 -> bikeListState
+                                    2 -> runListState
+                                    3 -> otherListState
+                                    else -> allListState
+                                }
+
+                                // Find the index in the filtered list
+                                val filteredWorkouts = when (pageIndex) {
+                                    1 -> workouts.filter { it.bSportType == BSportType.BIKE }
+                                    2 -> workouts.filter { it.bSportType == BSportType.RUN }
+                                    3 -> workouts.filter { it.bSportType == BSportType.UNKNOWN }
+                                    else -> workouts
+                                }
+                                val itemIndex = filteredWorkouts.indexOfFirst { it.id == workout.id }
+
+                                if (itemIndex != -1) {
+                                    scope.launch {
+                                        pagerState.animateScrollToPage(pageIndex)
+                                        listState.animateScrollToItem(itemIndex)
+                                    }
+                                }
+                            }
+                        }
+                    }
                     val sortOrder by viewModel.sortOrder.collectAsState()
                     val isCompactView by viewModel.isCompactView.collectAsState()
 

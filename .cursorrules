@@ -1,0 +1,19 @@
+# Project Vision & AI Instructions: aTrainingTracker
+
+## The Goal
+The primary objective of this project is to build an **awesome, world-class, professional application** for tracking training activities. Every contribution must aim for the highest standards of performance, visual design, and user experience.
+
+## Quality Standards for AI
+As an AI agent working on this project, you must adhere to the following quality pillars:
+
+1.  **Requirement-Based Engineering**: You are strictly bound by the workflow in `docs/project_protocol.md`. No code change is allowed without a corresponding requirement in `docs/requirements.md`. Always prioritize reading these files and the main `README.md` to understand the current project state.
+2.  **Code Excellence**: Produce clean, idiomatic, and highly readable Kotlin/Java code. Avoid "quick fixes"; prefer robust, well-architected solutions that respect existing patterns.
+3.  **UI/UX Sophistication**: All UI contributions must be "very good looking," modern, and consistent. Follow the established clean, white-themed design language with minimalist, professional accents.
+4.  **Clarity & Precision**: If the user's instructions are ambiguous, incomplete, or unclear, you **must ask for clarification** before making any assumptions or changes.
+5.  **Robustness**: All hardware communication (ANT+, BLE, GPS) must be treated as potentially unstable. Always implement null-safety, error handling, and lifecycle-aware logic.
+
+## Mandatory Workflow
+Before performing any task, you must:
+1.  **Sync Requirements**: Read `docs/requirements.md` and `docs/project_protocol.md`. Update the requirements list with the current task before writing any code.
+2.  **Traceability**: Every item in your implementation plan must reference a Requirement ID.
+3.  **Verification**: Confirm requirements are met and update their status to "Verified" upon completion.

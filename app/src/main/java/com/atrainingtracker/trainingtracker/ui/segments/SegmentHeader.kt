@@ -40,7 +40,6 @@ import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 @Composable
 fun SegmentHeader(
     summary: SegmentSummary,
-    compact: Boolean = false,
     liveSegmentStatus: LiveSegmentStatus? = null,
     modifier: Modifier = Modifier
 ) {
@@ -58,14 +57,14 @@ fun SegmentHeader(
             Icon(
                 painter = painterResource(id = summary.bSportType.iconResId),
                 contentDescription = null,
-                modifier = Modifier.size(if (compact) 28.dp else 32.dp),
+                modifier = Modifier.size(32.dp),
                 tint = Color.Unspecified // Original color
             )
 
             // 2. Name
             Text(
                 text = summary.name,
-                style = if (compact) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -81,7 +80,7 @@ fun SegmentHeader(
                     Text(
                         text = summary.climbCategory,
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                        style = if (compact) MaterialTheme.typography.labelSmall else MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
@@ -98,7 +97,7 @@ fun SegmentHeader(
             if (liveSegmentStatus == null) {
                 Text(
                     text = summary.city,
-                    style = if (compact) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else {
@@ -114,13 +113,13 @@ fun SegmentHeader(
                     Icon(
                         painter = painterResource(id = R.drawable.ic_pr_time),
                         contentDescription = null,
-                        modifier = Modifier.size(if (compact) 14.dp else 18.dp),
+                        modifier = Modifier.size(18.dp),
                         tint = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = summary.prTime,
-                        style = if (compact) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodyLarge,
+                        text = "PR ${summary.prTime}",
+                        style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Bold
                     )
                 }

@@ -40,18 +40,20 @@ fun PeriodList(
     scrollState: LazyListState,
     periods: List<PeriodSummary>,
     isPlayServiceAvailable: Boolean,
+    isHeatmapEnabled: Boolean,
     onHeaderClick: (PeriodSummary) -> Unit,
     onMapClick: (PeriodSummary) -> Unit,
     onSportClick: (PeriodSummary, BSportType) -> Unit,
     appBarOffsetPx: Int,
-    headerHeightPx: Float
+    headerHeightPx: Float,
+    modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
     val bottomPadding = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
 
     LazyColumn(
         state = scrollState,
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier,
         contentPadding = PaddingValues(
             // Calculation: The initial header height (px) + the current offset (px)
             // convert the final result to Dp.
@@ -69,6 +71,7 @@ fun PeriodList(
             PeriodSummaryCard(
                 summary = periodSummary,
                 isPlayServiceAvailable = isPlayServiceAvailable,
+                isHeatmapEnabled = isHeatmapEnabled,
                 onHeaderClick = onHeaderClick,
                 onMapClick = { onMapClick(periodSummary) },
                 onSportClick = onSportClick

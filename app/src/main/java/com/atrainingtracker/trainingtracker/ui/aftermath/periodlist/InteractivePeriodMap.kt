@@ -40,13 +40,17 @@ import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapType
 import com.google.maps.android.compose.MapsComposeExperimentalApi
 import com.google.maps.android.compose.Polyline
+import com.google.maps.android.compose.TileOverlay
 import com.google.maps.android.compose.rememberCameraPositionState
+import com.google.maps.android.heatmaps.HeatmapTileProvider
 
 @OptIn(MapsComposeExperimentalApi::class)
 @Composable
 fun InteractivePeriodMap(
     // Map of WorkoutID to its Polyline String
     workouts: Map<Long, String>,
+    periodType: PeriodType,
+    isHeatmapEnabled: Boolean = true,
     onWorkoutClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
     cameraPositionState: CameraPositionState = rememberCameraPositionState(),
@@ -55,6 +59,10 @@ fun InteractivePeriodMap(
 ) {
     val allPaths = remember(workouts) {
         workouts.mapValues { PolyUtil.decode(it.value) }
+    }
+
+    val visuals = remember(allPaths, periodType, isHeatmapEnabled) {
+        getPeriodMapVisuals(periodType, allPaths.values.toList(), isHeatmapEnabled)
     }
 
     var isMapLoaded by remember { mutableStateOf(false) }
@@ -97,6 +105,7 @@ fun InteractivePeriodMap(
             myLocationButtonEnabled = false
         )
     ) {
+
         // Snapshot Logic
         MapEffect(shouldTakeSnapshot) { map ->
             if (shouldTakeSnapshot) {
@@ -112,13 +121,18 @@ fun InteractivePeriodMap(
             Polyline(
                 points = path,
                 clickable = true, // each workout can be clicked
-                color = TrackType.BEST.color,
-                width = 8f,
+                color = TrackType.BEST.color.copy(alpha = visuals.polylineAlpha),
+                width = visuals.polylineWidth,
                 startCap = RoundCap(),
                 endCap = RoundCap(),
                 jointType = JointType.ROUND,
                 onClick = { onWorkoutClick(workoutId) }
             )
+        }
+
+        // Heatmap Layer
+        visuals.heatmapProvider?.let {
+            TileOverlay(tileProvider = it)
         }
     }
 }

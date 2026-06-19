@@ -48,7 +48,8 @@ fun RouteSummaryHeader(
     summary: RouteSummary,
     onToggleSelection: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
-    showSwitch: Boolean = true
+    showSwitch: Boolean = true,
+    switchScale: Float = 0.7f
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -59,10 +60,11 @@ fun RouteSummaryHeader(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(4.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             // --- TOP ROW: Sport Icon and Route Name ---
             Row(
+                modifier = Modifier.height(32.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
@@ -81,35 +83,48 @@ fun RouteSummaryHeader(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
+            }
 
-                // Visibility Switch (Right-aligned in top row)
+            // --- SECOND ROW: Source and Visibility Switch ---
+            Row(
+                modifier = Modifier.fillMaxWidth().height(24.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = stringResource(R.string.routes_source_label, stringResource(summary.source.displayNameResId)),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f)
+                )
+
                 if (showSwitch) {
-                    Switch(
-                        modifier = Modifier.scale(0.8f),
-                        checked = summary.isSelected,
-                        onCheckedChange = onToggleSelection,
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = RouteColorSelected,
-                            checkedTrackColor = RouteColorSelected.copy(alpha = 0.5f),
-                            checkedBorderColor = RouteColorSelected,
-                            uncheckedThumbColor = RouteColorUnselected,
-                            uncheckedTrackColor = RouteColorUnselected.copy(alpha = 0.5f),
-                            uncheckedBorderColor = RouteColorUnselected
+                    // Wrap Switch in a Box with constrained height to prevent it from 
+                    // pushing the rows apart (M3 Switch defaults to 48dp touch target)
+                    Box(
+                        modifier = Modifier.height(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Switch(
+                            modifier = Modifier.scale(switchScale),
+                            checked = summary.isSelected,
+                            onCheckedChange = onToggleSelection,
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = RouteColorSelected,
+                                checkedTrackColor = RouteColorSelected.copy(alpha = 0.5f),
+                                checkedBorderColor = RouteColorSelected,
+                                uncheckedThumbColor = RouteColorUnselected,
+                                uncheckedTrackColor = RouteColorUnselected.copy(alpha = 0.5f),
+                                uncheckedBorderColor = RouteColorUnselected
+                            )
                         )
-                    )
+                    }
                 }
             }
 
-            // --- SECOND ROW: Source ---
-            Text(
-                text = stringResource(R.string.routes_source_label, stringResource(summary.source.displayNameResId)),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
             // --- THIRD ROW: Metrics ---
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().height(24.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {

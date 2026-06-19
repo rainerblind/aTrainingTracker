@@ -18,8 +18,13 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,9 +39,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.atrainingtracker.banalservice.BSportType
 import com.google.android.gms.maps.model.JointType
 import com.google.android.gms.maps.model.RoundCap
@@ -54,6 +61,7 @@ import com.google.android.gms.maps.model.LatLngBounds
 fun PeriodSummaryCard(
     summary: PeriodSummary,
     isPlayServiceAvailable: Boolean,
+    isHeatmapEnabled: Boolean,
     onHeaderClick: (PeriodSummary) -> Unit,
     onMapClick: (PeriodSummary) -> Unit,
     onSportClick: (PeriodSummary, BSportType) -> Unit,
@@ -64,105 +72,129 @@ fun PeriodSummaryCard(
     val af = AltitudeFormatter()
 
     ElevatedCard(
-        modifier = modifier
-            .fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
     ) {
         Column {
             // --- 1. CONTENT SECTION ---
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 16.dp, bottom = 8.dp)) {
                 // PERIOD HEADER
                 Surface(
                     onClick = { onHeaderClick(summary) },
                     color = Color.Transparent,
-                    shape = RoundedCornerShape(8.dp)
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        // --- ROW 1: Icon and Title (Standardized Top Row) ---
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            val icon = when (summary.periodType) {
+                                PeriodType.DAY -> Icons.Default.CalendarToday
+                                PeriodType.WEEK -> Icons.Default.DateRange
+                                PeriodType.MONTH -> Icons.Default.CalendarMonth
+                                PeriodType.YEAR -> Icons.Default.CalendarMonth
+                            }
+
                             Icon(
-                                painter = painterResource(id = R.drawable.ic_calendar_month),
+                                imageVector = icon,
                                 contentDescription = null,
                                 modifier = Modifier.size(32.dp),
-                                tint = Color.Unspecified
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
 
-                            Text(
-                                text = summary.periodLabel,
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f)
-                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = summary.periodLabel,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = summary.periodDateRange,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
 
-                            // Important Metric: Total Workouts
-                            Text(
-                                text = pluralStringResource(
-                                    R.plurals.workout_periods__workouts,
-                                    summary.totalWorkouts,
-                                    summary.totalWorkouts
-                                ),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-
-                        // --- ROW 2: Date Range and Duration ---
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            // Indent secondary info to align with the title text
-                            Spacer(modifier = Modifier.width(32.dp + 12.dp))
-
-                            Text(
-                                text = summary.periodDateRange,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.weight(1f)
-                            )
-
-                            Text(
-                                text = tf.format_with_units(summary.totalDurationSec),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Column(horizontalAlignment = Alignment.End) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_time_active),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(14.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = tf.format_with_units(summary.totalDurationSec),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Text(
+                                    text = pluralStringResource(
+                                        R.plurals.workout_periods__workouts,
+                                        summary.totalWorkouts,
+                                        summary.totalWorkouts
+                                    ),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
                     }
                 }
 
-                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 // SPORT SPECIFIC BREAKDOWN
-                summary.sportStats.forEach { (bSportType, stats) ->
+                summary.sportStats.entries.forEachIndexed { index, entry ->
+                    val (bSportType, stats) = entry
                     SportStatsRow(
                         bSportType = bSportType,
                         stats = stats,
                         tf = tf, df = df, af = af,
+                        showDetails = true,
                         onClick = { onSportClick(summary, bSportType) }
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    if (index < summary.sportStats.size - 1) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
                 }
             }
 
             // --- 2. THE MAP SECTION ---
-            if (isPlayServiceAvailable) {
+            if (isPlayServiceAvailable && summary.polylines.isNotEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(200.dp)
+                        .height(250.dp)
                 ) {
                     PeriodMultiWorkoutMap(
                         polylines = summary.polylines,
+                        periodType = summary.periodType,
+                        isHeatmapEnabled = isHeatmapEnabled,
                         onMapClick = { onMapClick(summary) }
+                    )
+                    
+                    // Bottom Scrim for visual transition
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(40.dp)
+                            .align(Alignment.BottomCenter)
+                            .background(
+                                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                    colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.1f))
+                                )
+                            )
                     )
                 }
             }
@@ -177,79 +209,185 @@ fun SportStatsRow(
     tf: TimeFormatter,
     df: DistanceFormatter,
     af: AltitudeFormatter,
+    showDetails: Boolean = false,
     onClick: () -> Unit
 ) {
     Surface(
         onClick = onClick,
-        color = Color.Transparent,
-        shape = RoundedCornerShape(8.dp)
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(12.dp),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+        )
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp), // Add slight padding for touch target
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Sport Icon (Standardized 32dp for sport rows)
-            Icon(
-                painter = painterResource(id = bSportType.iconResId),
-                contentDescription = null,
-                modifier = Modifier.size(32.dp),
-                tint = Color.Unspecified // Original color
-            )
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // Sport Name & Count
-            Column(modifier = Modifier.weight(1.2f)) {
-                Text(
-                    text = stringResource(bSportType.stringResId),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+        Column(modifier = Modifier.padding(12.dp)) {
+            // MAIN SPORT HEADER
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    painter = painterResource(id = bSportType.iconResId),
+                    contentDescription = null,
+                    modifier = Modifier.size(28.dp),
+                    tint = Color.Unspecified
                 )
-                Text(
-                    text = pluralStringResource(
-                        R.plurals.workout_periods__workouts,
-                        stats.count,
-                        stats.count
-                    ),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-            }
 
-            // Distance & Ascent (Standardized titleMedium)
-            Column(modifier = Modifier.weight(1.5f), horizontalAlignment = Alignment.End) {
-                Text(
-                    text = df.format_with_units(stats.totalDistanceMeters),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_ascent),
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = af.format_with_units(stats.totalAscentMeters),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary
+                        text = stringResource(bSportType.stringResId),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
                     )
+                    Text(
+                        text = pluralStringResource(
+                            R.plurals.workout_periods__workouts,
+                            stats.count,
+                            stats.count
+                        ),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Column(horizontalAlignment = Alignment.End) {
+                    MetricIconValue(
+                        iconRes = R.drawable.ic_time_active,
+                        value = tf.format_with_units(stats.totalDurationSec),
+                        isBold = true,
+                        textStyle = MaterialTheme.typography.titleMedium
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        MetricIconValue(R.drawable.ic_distance, df.format_with_units(stats.totalDistanceMeters), isBold = true)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        MetricIconValue(R.drawable.ic_ascent, af.format_with_units(stats.totalAscentMeters))
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.width(16.dp)) // GUARANTEED GAP between metrics and time
-
-            // Time for this sport
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = tf.format_with_units(stats.totalDurationSec),
-                    style = MaterialTheme.typography.bodyMedium
+            // NESTED DETAILS
+            val longestWorkout = stats.longestWorkout
+            val showLongestWorkout = stats.count > 1 && longestWorkout != null
+            if (showDetails && (stats.detailedSportStats.size > 1 || showLongestWorkout)) {
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 10.dp),
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
                 )
+
+                // Sub-Sport Types
+                if (stats.detailedSportStats.size > 1) {
+                    stats.detailedSportStats.forEach { (name, detailed) ->
+                        CompactMetricRow(
+                            label = name,
+                            count = detailed.count,
+                            distance = df.format_with_units(detailed.totalDistanceMeters),
+                            duration = tf.format_with_units(detailed.totalDurationSec)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
+                }
+
+                // Longest Workout Highlight
+                if (showLongestWorkout) {
+                    // longestWorkout is smart-cast to non-null because it's a local val and showLongestWorkout checks for null
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = stringResource(R.string.workout_periods__longest_workout),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                                letterSpacing = 0.5.sp
+                            )
+                            MetricIconValue(
+                                iconRes = R.drawable.ic_time_active,
+                                value = tf.format_with_units(longestWorkout.durationSec),
+                                isBold = true
+                            )
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = longestWorkout.name,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                MetricIconValue(R.drawable.ic_distance, df.format_with_units(longestWorkout.distanceMeters), isBold = true)
+                                MetricIconValue(R.drawable.ic_ascent, af.format_with_units(longestWorkout.ascentMeters))
+                            }
+                        }
+                    }
+                }
             }
+        }
+    }
+}
+
+@Composable
+fun MetricIconValue(
+    iconRes: Int,
+    value: String,
+    isBold: Boolean = false,
+    textStyle: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.labelSmall
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            painter = painterResource(id = iconRes),
+            contentDescription = null,
+            modifier = Modifier.size(if (textStyle == MaterialTheme.typography.titleMedium) 14.dp else 12.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(
+            text = value,
+            style = textStyle,
+            fontWeight = if (isBold) FontWeight.Bold else FontWeight.Normal,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+fun CompactMetricRow(label: String, count: Int, distance: String, duration: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "$label ($count)",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            MetricIconValue(iconRes = R.drawable.ic_distance, value = distance)
+            MetricIconValue(iconRes = R.drawable.ic_time_active, value = duration, isBold = true)
         }
     }
 }
@@ -257,10 +395,16 @@ fun SportStatsRow(
 @Composable
 private fun PeriodMultiWorkoutMap(
     polylines: List<String>,
+    periodType: PeriodType,
+    isHeatmapEnabled: Boolean,
     onMapClick: () -> Unit) {
     // Decode all polylines once
     val allPaths = remember(polylines) {
         polylines.mapNotNull { if (it.isNotEmpty()) PolyUtil.decode(it) else null }
+    }
+
+    val visuals = remember(allPaths, periodType, isHeatmapEnabled) {
+        getPeriodMapVisuals(periodType, allPaths, isHeatmapEnabled)
     }
 
     if (allPaths.isEmpty()) {
@@ -317,12 +461,17 @@ private fun PeriodMultiWorkoutMap(
         allPaths.forEach { path ->
             Polyline(
                 points = path,
-                color = TrackType.BEST.color,
-                width = 8f,
+                color = TrackType.BEST.color.copy(alpha = visuals.polylineAlpha),
+                width = visuals.polylineWidth,
                 startCap = RoundCap(),
                 endCap = RoundCap(),
                 jointType = JointType.ROUND
             )
+        }
+
+        // Heatmap Layer (Drawn on top)
+        visuals.heatmapProvider?.let {
+            TileOverlay(tileProvider = it)
         }
     }
 }
@@ -335,6 +484,7 @@ fun PreviewPeriodSummary() {
     val mockSummary = PeriodSummary(
         periodLabel = "Week 20",
         periodDateRange = "May 11 - May 17, 2026",
+        periodType = PeriodType.WEEK,
         startTimestampS = 1000,
         endTimestampS = 15000,
         totalWorkouts = 5,
@@ -345,13 +495,22 @@ fun PreviewPeriodSummary() {
                 count = 3,
                 totalDurationSec = 10800,
                 totalDistanceMeters = 85400.0,
-                totalAscentMeters = 1250
+                totalAscentMeters = 1250,
+                detailedSportStats = mapOf(
+                    "Road Bike" to DetailedStats(2, 7200, 60000.0, 800),
+                    "Mountain Bike" to DetailedStats(1, 3600, 25400.0, 450)
+                ),
+                longestWorkout = LongestWorkout(1, "Sunday Ride", 7200, 60000.0, 800)
             ),
             BSportType.RUN to SportStats(
                 count = 2,
                 totalDurationSec = 4600,
                 totalDistanceMeters = 18200.0,
-                totalAscentMeters = 120
+                totalAscentMeters = 120,
+                detailedSportStats = mapOf(
+                    "Running" to DetailedStats(2, 4600, 18200.0, 120)
+                ),
+                longestWorkout = LongestWorkout(2, "Morning Run", 2800, 10000.0, 70)
             )
         ),
         sortKey = "",
@@ -363,6 +522,7 @@ fun PreviewPeriodSummary() {
         PeriodSummaryCard(
             summary = mockSummary,
             isPlayServiceAvailable = true,
+            isHeatmapEnabled = true,
             onHeaderClick = {},
             onMapClick = {},
             onSportClick = { _, _ ->}
@@ -376,6 +536,7 @@ fun PreviewEmptyPeriod() {
     val emptySummary = PeriodSummary(
         periodLabel = "June 2026",
         periodDateRange = "No workouts recorded",
+        periodType = PeriodType.MONTH,
         startTimestampS = 0,
         endTimestampS = 0,
         totalWorkouts = 0,
@@ -391,6 +552,7 @@ fun PreviewEmptyPeriod() {
         PeriodSummaryCard(
             summary = emptySummary,
             isPlayServiceAvailable = false,
+            isHeatmapEnabled = true,
             onHeaderClick = {},
             onMapClick = {},
             onSportClick = { _, _ ->}

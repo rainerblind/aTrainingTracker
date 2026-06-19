@@ -60,6 +60,8 @@ import com.atrainingtracker.trainingtracker.ui.segments.segmentlist.StarredSegme
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository;
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsFragment;
 import com.dsi.ant.plugins.antplus.pccbase.AntPluginPcc;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.material.navigation.NavigationView;
 import androidx.core.app.ActivityCompat;
@@ -107,8 +109,6 @@ import com.atrainingtracker.trainingtracker.fragments.preferences.SearchFragment
 import com.atrainingtracker.trainingtracker.fragments.preferences.StravaUploadFragment;
 import com.atrainingtracker.trainingtracker.fragments.preferences.TrainingpeaksUploadFragment;
 import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface;
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.GooglePlayServicesUtil;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -262,7 +262,26 @@ public class MainActivityWithNavigation
         waitDialog.show();
     }
 
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        if (DEBUG) Log.d(TAG, "onNewIntent");
+        setIntent(intent);
+        handleIntent(intent);
+    }
 
+    private void handleIntent(Intent intent) {
+        if (intent.hasExtra(SELECTED_FRAGMENT)) {
+            try {
+                SelectedFragment selected = SelectedFragment.valueOf(intent.getStringExtra(SELECTED_FRAGMENT));
+                if (selected == SelectedFragment.WORKOUT_LIST) {
+                    mSelectedFragmentId = R.id.drawer_workouts;
+                    // Force navigation to workout list if not already there
+                    onNavigationItemSelected(mNavigationView.getMenu().findItem(mSelectedFragmentId));
+                }
+            } catch (IllegalArgumentException ignored) {}
+        }
+    }
 
 
     private IntentFilter mStartTrackingFilter;
@@ -355,20 +374,11 @@ public class MainActivityWithNavigation
             mSelectedFragmentId = savedInstanceState.getInt(SELECTED_FRAGMENT_ID, DEFAULT_SELECTED_FRAGMENT_ID);
             mFragment = getSupportFragmentManager().getFragment(savedInstanceState, "mFragment");
         } else {
-            if (getIntent().hasExtra(SELECTED_FRAGMENT)) {
-                switch (SelectedFragment.valueOf(getIntent().getStringExtra(SELECTED_FRAGMENT))) {
-                    case START_OR_TRACKING:
-                        mSelectedFragmentId = R.id.drawer_start_tracking;
-                        break;
-
-                    case WORKOUT_LIST:
-                        mSelectedFragmentId = R.id.drawer_workouts;
-                        break;
-                }
-            }
             // now, create and show the main fragment
             onNavigationItemSelected(mNavigationView.getMenu().findItem(mSelectedFragmentId));
         }
+
+        handleIntent(getIntent());
 
 
         if (TrainingApplication.trackLocation()) {
@@ -608,8 +618,12 @@ public class MainActivityWithNavigation
         super.onResume();
         if (DEBUG) Log.d(TAG, "onResume");
 
+        Intent banalServiceIntent = new Intent(this, BANALService.class);
+        // Explicitly start the service so it stays in the "started" state
+        startService(banalServiceIntent);
+
         if (mBanalServiceComm == null) {
-            bindService(new Intent(this, BANALService.class), mBanalConnection, Context.BIND_AUTO_CREATE);
+            bindService(banalServiceIntent, mBanalConnection, Context.BIND_AUTO_CREATE);
         }
 
         // also tell the repository to bind.
@@ -989,7 +1003,11 @@ public class MainActivityWithNavigation
         if (!TrainingApplication.isTracking()) {
             if (DEBUG) Log.i(TAG, "Stopping BANALService process (not tracking)");
 
+            // First, tell the repository to unbind to avoid leaks
             BANALServiceRepository.Companion.getInstance(this).unbindFromBANALService();
+
+            // Then explicitly stop the service to trigger its onDestroy() and shut down sensors
+            stopService(new Intent(this, BANALService.class));
         }
     }
 

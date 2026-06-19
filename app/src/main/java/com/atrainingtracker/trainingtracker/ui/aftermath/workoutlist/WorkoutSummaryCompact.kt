@@ -141,21 +141,21 @@ fun WorkoutSummaryCompact(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // --- ROW 3: Distance, Active Time, Speed/Pace, Ascent ---
+                // --- ROW 3: Active Time, Distance, Speed/Pace, Ascent ---
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
+                    // Active Time
+                    CompactMetricItem(
+                        label = stringResource(SensorType.TIME_ACTIVE.fullNameId),
+                        value = tf.format_with_units(workoutData.detailsData.activeTimeSec)
+                    )
+
                     // Distance
                     CompactMetricItem(
                         label = stringResource(SensorType.DISTANCE_m.fullNameId),
                         value = df.format_with_units(workoutData.detailsData.totalDistance)
-                    )
-
-                    // Active Time
-                    CompactMetricItem(
-                        label = stringResource(SensorType.TIME_TOTAL.fullNameId),
-                        value = tf.format_with_units(workoutData.detailsData.activeTimeSec)
                     )
 
                     // Speed/Pace
