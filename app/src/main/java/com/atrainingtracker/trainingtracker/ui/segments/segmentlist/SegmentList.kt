@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.lazy.LazyColumn
@@ -97,6 +98,14 @@ fun SegmentList(
                 ),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                if (segmentsWithPath.isNotEmpty()) {
+                    item {
+                        PoweredByStrava(
+                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+                        )
+                    }
+                }
+
                 items(
                     items = segmentsWithPath,
                     key = { it.summary.stravaId } // Improves performance and scroll position handling
