@@ -11,170 +11,184 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
-package com.atrainingtracker.trainingtracker.fragments.preferences;
+package com.atrainingtracker.trainingtracker.fragments.preferences
 
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.content.SharedPreferences;
-import android.os.Bundle;
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.content.SharedPreferences
+import android.os.Bundle
+import android.util.Log
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.LinearLayout
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import androidx.preference.Preference
+import androidx.preference.PreferenceFragmentCompat
+import androidx.preference.PreferenceManager
+import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaDeauthorizationThread
+import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSynchronizeThread
+import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
+import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaOAuthCallbackActivity
+import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-import androidx.preference.Preference;
-import androidx.preference.PreferenceManager;
-import android.util.Log;
+class StravaUploadFragment : PreferenceFragmentCompat(), SharedPreferences.OnSharedPreferenceChangeListener {
 
-import com.atrainingtracker.R;
-import com.atrainingtracker.banalservice.BSportType;
-import com.atrainingtracker.trainingtracker.TrainingApplication;
-import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaDeauthorizationThread;
-import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSynchronizeThread;
-import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper;
-import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaOAuthCallbackActivity;
-import com.atrainingtracker.trainingtracker.segments.SegmentsRepository;
+    private var mUpdateStravaEquipment: Preference? = null
+    private var mSharedPreferences: SharedPreferences? = null
+    private var mHeaderComposeView: ComposeView? = null
 
-/**
- * Created by rainer on 01.02.16.
- */
-public class StravaUploadFragment extends androidx.preference.PreferenceFragmentCompat
-        implements SharedPreferences.OnSharedPreferenceChangeListener {
-    public static final int GET_STRAVA_ACCESS_TOKEN = 3;
-    private static final boolean DEBUG = TrainingApplication.getDebug(true);
-    private static final String TAG = StravaUploadFragment.class.getName();
-    @Nullable
-    private Preference mUpdateStravaEquipment;
-
-    private SharedPreferences mSharedPreferences;
-
-    private enum RequestTokenState {
-        REQUESTING,
-        GOT
-    }
-
-    @Nullable
-    private RequestTokenState requestTokenState = null;
-
-    private final BroadcastReceiver tokenReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, @NonNull Intent intent) {
-            String token = intent.getStringExtra("access_token");
-            handleToken(token);
-        }
-    };
-
-
-    @Override
-    public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
-        if (DEBUG) Log.i(TAG, "onCreatePreferences(savedInstanceState, rootKey=" + rootKey + ")");
-
-        setPreferencesFromResource(R.xml.prefs, rootKey);
-
-        mUpdateStravaEquipment = this.getPreferenceScreen().findPreference(TrainingApplication.UPDATE_STRAVA_EQUIPMENT);
-
-        LocalBroadcastManager.getInstance(getActivity()).registerReceiver(tokenReceiver, new IntentFilter(StravaOAuthCallbackActivity.StravaOAuthSuccess));
-    }
-
-    @Override
-    public void onViewCreated(@NonNull android.view.View view, @Nullable Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
-
-        androidx.recyclerview.widget.RecyclerView listView = getListView();
-        if (listView != null) {
-            // Allow the list to scroll under the system bars
-            listView.setClipToPadding(false);
-
-            androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(listView, (v, insets) -> {
-                androidx.core.graphics.Insets systemBars = insets.getInsets(
-                        androidx.core.view.WindowInsetsCompat.Type.systemBars()
-                );
-
-                // Set padding so content doesn't get stuck under the nav bar/status bar
-                v.setPadding(0, systemBars.top, 0, systemBars.bottom);
-
-                return insets;
-            });
+    private val tokenReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val token = intent?.getStringExtra("access_token")
+            handleToken(token)
         }
     }
 
-    @Override
-    public void onResume() {
-        super.onResume();
-        if (DEBUG) Log.i(TAG, "onResume()");
+    override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
+        if (DEBUG) Log.i(TAG, "onCreatePreferences(savedInstanceState, rootKey=$rootKey)")
 
-        mUpdateStravaEquipment.setSummary(TrainingApplication.getLastUpdateTimeOfStravaEquipment());
-        mUpdateStravaEquipment.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
-            @Override
-            public boolean onPreferenceClick(Preference preference) {
-                if (DEBUG) Log.d(TAG, "updateStravaEquipment has been clicked");
-                new StravaEquipmentSynchronizeThread(getActivity()).start();
-                return false;
+        setPreferencesFromResource(R.xml.prefs, rootKey)
+
+        mUpdateStravaEquipment = findPreference(TrainingApplication.UPDATE_STRAVA_EQUIPMENT)
+
+        LocalBroadcastManager.getInstance(requireActivity()).registerReceiver(
+            tokenReceiver,
+            IntentFilter(StravaOAuthCallbackActivity.StravaOAuthSuccess)
+        )
+    }
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        val prefView = super.onCreateView(inflater, container, savedInstanceState)
+        
+        val root = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+        }
+
+        mHeaderComposeView = ComposeView(requireContext()).apply {
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            updateHeaderContent()
+        }
+
+        root.addView(mHeaderComposeView)
+        prefView?.let { root.addView(it) }
+
+        return root
+    }
+
+    private fun updateHeaderContent() {
+        mHeaderComposeView?.setContent {
+            ATrainingTrackerTheme {
+                val isConnected = TrainingApplication.getStravaAccessToken() != null
+                StravaConnectionHeader(
+                    modifier = Modifier.statusBarsPadding(),
+                    isConnected = isConnected,
+                    onConnectClick = {
+                        StravaHelper.requestAccessToken(requireContext())
+                    },
+                    onDisconnectClick = {
+                        TrainingApplication.deleteStravaToken()
+                        StravaDeauthorizationThread(requireActivity()).start()
+                        updateHeaderContent()
+                        updateSelectiveUploadVisibility()
+                    }
+                )
             }
-        });
-
-        mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(getActivity());
-        mSharedPreferences.registerOnSharedPreferenceChangeListener(this);
-
-    }
-
-    @Override
-    public void onPause() {
-        super.onPause();
-
-        // Unregister the listener whenever a key changes
-        mSharedPreferences.unregisterOnSharedPreferenceChangeListener(this);
-    }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        LocalBroadcastManager.getInstance(getActivity()).unregisterReceiver(tokenReceiver);
-    }
-
-
-    @Override
-    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
-        if (DEBUG) Log.i(TAG, "onSharedPreferenceChanged: key=" + key);
-
-        if (TrainingApplication.SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT.equals(key)) {
-            mUpdateStravaEquipment.setSummary(TrainingApplication.getLastUpdateTimeOfStravaEquipment());
         }
+    }
 
-        if (TrainingApplication.SP_UPLOAD_TO_STRAVA.equals(key)) {
-            if (!TrainingApplication.uploadToStrava()) {
-                if (DEBUG) Log.d(TAG, "deleting Strava token");
-                TrainingApplication.deleteStravaToken();
-                new StravaDeauthorizationThread(getActivity()).start();
-            } else {
-                requestTokenState = RequestTokenState.REQUESTING;
-                // startActivity(new Intent(getActivity(), StravaGetAccessTokenActivity.class));
-                StravaHelper.requestAccessToken(getContext());
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        listView?.let { listView ->
+            listView.clipToPadding = false
+            androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(listView) { v, insets ->
+                val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+                v.setPadding(0, systemBars.top, 0, systemBars.bottom)
+                insets
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (DEBUG) Log.i(TAG, "onResume()")
+
+        mUpdateStravaEquipment?.apply {
+            summary = TrainingApplication.getLastUpdateTimeOfStravaEquipment()
+            setOnPreferenceClickListener {
+                if (DEBUG) Log.d(TAG, "updateStravaEquipment has been clicked")
+                StravaEquipmentSynchronizeThread(requireActivity()).start()
+                false
             }
         }
 
+        mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(requireActivity())
+        mSharedPreferences?.registerOnSharedPreferenceChangeListener(this)
+        
+        updateSelectiveUploadVisibility()
+        updateHeaderContent()
     }
 
+    override fun onPause() {
+        super.onPause()
+        mSharedPreferences?.unregisterOnSharedPreferenceChangeListener(this)
+    }
 
-    protected void handleToken(@Nullable String token) {
+    override fun onDestroy() {
+        super.onDestroy()
+        LocalBroadcastManager.getInstance(requireActivity()).unregisterReceiver(tokenReceiver)
+    }
+
+    private fun updateSelectiveUploadVisibility() {
+        val isConnected = TrainingApplication.getStravaAccessToken() != null
+        
+        findPreference<Preference>(TrainingApplication.UPDATE_STRAVA_EQUIPMENT)?.isVisible = isConnected
+        findPreference<Preference>("strava_selective_upload_category")?.isVisible = isConnected
+    }
+
+    override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
+        if (DEBUG) Log.i(TAG, "onSharedPreferenceChanged: key=$key")
+
+        if (TrainingApplication.SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT == key) {
+            mUpdateStravaEquipment?.summary = TrainingApplication.getLastUpdateTimeOfStravaEquipment()
+        }
+
+        if (TrainingApplication.SP_STRAVA_TOKEN == key) {
+            updateSelectiveUploadVisibility()
+            updateHeaderContent()
+        }
+    }
+
+    protected fun handleToken(token: String?) {
         if (token != null) {
-            requestTokenState = RequestTokenState.GOT;
+            TrainingApplication.setStravaAccessToken(token)
 
-            TrainingApplication.setStravaAccessToken(token);
+            updateSelectiveUploadVisibility()
+            updateHeaderContent()
 
-            // synchronize equipment
-            new StravaEquipmentSynchronizeThread(getActivity()).start();
+            StravaEquipmentSynchronizeThread(requireActivity()).start()
 
-            // update Segments
-            SegmentsRepository repository = SegmentsRepository.Companion.getInstance(getContext());
-            repository.syncSegmentsAsync(BSportType.BIKE);
-            repository.syncSegmentsAsync(BSportType.RUN);
+            val repository = SegmentsRepository.getInstance(requireContext())
+            repository.syncSegmentsAsync(BSportType.BIKE)
+            repository.syncSegmentsAsync(BSportType.RUN)
         }
+    }
+
+    companion object {
+        private val TAG = StravaUploadFragment::class.java.name
+        private val DEBUG = TrainingApplication.getDebug(true)
     }
 }

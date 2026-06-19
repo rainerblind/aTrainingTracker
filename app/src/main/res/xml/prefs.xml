@@ -120,49 +120,36 @@
                     android:title="@string/prefsUploadToStravaTitle"
                     android:layout="@layout/preference_slim">
 
-                    <CheckBoxPreference
-                        android:defaultValue="false"
-                        android:icon="@drawable/logo_square_strava"
-                        android:key="uploadToStrava"
-                        android:summary="@string/prefsUploadToStravaSummary"
-                        android:title="@string/prefsUploadToStravaTitle"
-                        android:layout="@layout/preference_slim"/>
 
                     <Preference
-                        android:dependency="uploadToStrava"
                         android:key="updateStravaEquipment"
                         android:summary="@string/lastUpdateOfEquipmentNever"
                         android:title="@string/updateStravaEquipment"
                         android:layout="@layout/preference_slim"/>
 
-                    <PreferenceCategory android:title="@string/selectiveUpload">
+                    <PreferenceCategory android:key="strava_selective_upload_category" android:title="@string/selectiveUpload">
                         <CheckBoxPreference
                             android:defaultValue="true"
-                            android:dependency="uploadToStrava"
                             android:key="uploadStravaGPS"
                             android:title="@string/uploadGPS"
                             android:layout="@layout/preference_slim"/>
                         <CheckBoxPreference
                             android:defaultValue="true"
-                            android:dependency="uploadToStrava"
                             android:key="uploadStravaAltitude"
                             android:title="@string/uploadAltitude"
                             android:layout="@layout/preference_slim"/>
                         <CheckBoxPreference
                             android:defaultValue="true"
-                            android:dependency="uploadToStrava"
                             android:key="uploadStravaHR"
                             android:title="@string/uploadHR"
                             android:layout="@layout/preference_slim"/>
                         <CheckBoxPreference
                             android:defaultValue="true"
-                            android:dependency="uploadToStrava"
                             android:key="uploadStravaPower"
                             android:title="@string/uploadPower"
                             android:layout="@layout/preference_slim"/>
                         <CheckBoxPreference
                             android:defaultValue="true"
-                            android:dependency="uploadToStrava"
                             android:key="uploadStravaCadence"
                             android:title="@string/uploadCadence"
                             android:layout="@layout/preference_slim"/>

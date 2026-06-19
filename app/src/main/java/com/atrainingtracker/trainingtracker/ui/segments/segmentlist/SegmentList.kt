@@ -71,11 +71,15 @@ fun SegmentList(
                     .padding(top = topPadding),
                 contentAlignment = Alignment.Center
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     Text(
                         text = stringResource(R.string.starred_segments__no_strava_connection),
                         modifier = Modifier.padding(bottom = 12.dp),
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
                     ConnectWithStravaButton(onClick = {
                         Log.i("SegmentList", "ConnectWithStravaButton clicked")

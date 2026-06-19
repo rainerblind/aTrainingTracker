@@ -20,7 +20,8 @@ package com.atrainingtracker.trainingtracker.ui.components.strava
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.runtime.Composable
@@ -47,9 +48,9 @@ fun ConnectWithStravaButton(
         contentDescription = "Connect with Strava",
         contentScale = ContentScale.Fit,
         modifier = modifier
-            .height(48.dp) // Official recommended height
-            .wrapContentWidth()
+            .fillMaxWidth() // Allow it to fill the container width
+            .heightIn(max = 120.dp) // Set a high max height, but let it scale based on width
             .clickable { onClick() }
-            .padding(vertical = 4.dp)
+            .padding(vertical = 8.dp)
     )
 }

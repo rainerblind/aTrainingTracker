@@ -49,7 +49,7 @@ fun PoweredByStrava(
             painter = painterResource(id = resId),
             contentDescription = "Powered by Strava",
             contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-            modifier = Modifier.height(24.dp).wrapContentWidth()
+            modifier = Modifier.height(40.dp).wrapContentWidth() // Increased from 32dp for even better visibility
         )
     }
 }
