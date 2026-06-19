@@ -378,24 +378,17 @@ fun CompactMetricRow(label: String, count: Int, distance: String, duration: Stri
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.weight(1.2f),
+            modifier = Modifier.weight(1f),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
-        Text(
-            text = distance,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(1f),
-            textAlign = TextAlign.End
-        )
-        Text(
-            text = duration,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(1f),
-            textAlign = TextAlign.End
-        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            MetricIconValue(iconRes = R.drawable.ic_distance, value = distance)
+            MetricIconValue(iconRes = R.drawable.ic_time_active, value = duration, isBold = true)
+        }
     }
 }
 
