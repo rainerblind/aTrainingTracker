@@ -72,7 +72,15 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-EXP-002** | Automate workout uploads to external platforms (Strava, Dropbox, Runkeeper, TrainingPeaks). | Streamline the workflow from finishing a workout to community sharing. | Verified |
 | **REQ-EXP-003** | Handle export and community uploads in the background via WorkManager. | Ensure reliable completion of data tasks even if the app is closed. | Verified |
 
-## 9. User Interface & Quality Standards
+## 9. External Integrations & API Compliance
+
+| ID | Description | Rationale | Status |
+|:---|:---|:---|:---|
+| **REQ-EXT-001** | All screens and sections displaying data **sourced from Strava** must include the "Powered by Strava" attribution. | Comply with mandatory API guidelines only where applicable, maintaining a clean UI for local data. | Verified |
+| **REQ-EXT-002** | Use official "Connect with Strava" buttons for authentication flows in Preferences and Lists. | Adhere to Strava's brand integrity requirements. | Verified |
+| **REQ-EXT-003** | Display "Powered by Strava" logo at the top of the segments list and within the distance row of segment detail views. | Ensure high visibility and mandatory compliance in both navigation and detail contexts while avoiding per-item repetition in lists. | Verified |
+
+## 10. User Interface & Quality Standards
 
 | ID | Description | Rationale | Status |
 |:---|:---|:---|:---|
@@ -83,8 +91,9 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-UI-005** | Provide a scrollable, interactive bar graph for period training volume with dynamic bar widths and hourly labels. | Enhance historical navigation and trend analysis. | Verified |
 | **REQ-UI-006** | Allow the user to toggle between "Detailed" and "Compact" views in all workout lists. | Accommodate different user preferences for information density. | Verified |
 | **REQ-UI-007** | AI agents must stop and ask for clarification if instructions are ambiguous. | Protect project quality through precise implementation. | Verified |
+| **REQ-UI-008** | Ensure correct handling of system bar insets (status bar and navigation bar) across all screens to prevent UI overlap. | Provide a consistent, professional experience in edge-to-edge mode. | Verified |
 
-## 10. System, Lifecycle & Privacy
+## 11. System, Lifecycle & Privacy
 
 | ID | Description | Rationale | Status |
 |:---|:---|:---|:---|
