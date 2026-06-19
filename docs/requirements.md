@@ -69,8 +69,9 @@ This document tracks all functional and non-functional requirements of the proje
 | ID | Description | Rationale | Status |
 |:---|:---|:---|:---|
 | **REQ-EXP-001** | Export workout data to standard file formats (GPX, TCX, CSV, Golden Cheetah JSON). | Ensure interoperability with external analysis tools. | Verified |
-| **REQ-EXP-002** | Automate workout uploads to external platforms (Strava, Dropbox, Runkeeper, TrainingPeaks). | Streamline the workflow from finishing a workout to community sharing. | Verified |
-| **REQ-EXP-003** | Handle export and community uploads in the background via WorkManager. | Ensure reliable completion of data tasks even if the app is closed. | Verified |
+| **REQ-EXP-002** | Automate workout uploads to external platforms (Strava, Dropbox). | Streamline the workflow from finishing a workout to cloud storage and sharing. | Verified |
+| **REQ-EXP-003** | Support for Runkeeper and TrainingPeaks uploads is currently disabled. | Focus development on the most used and stable integrations. | **Deactivated** |
+| **REQ-EXP-004** | Handle export and community uploads in the background via WorkManager. | Ensure reliable completion of data tasks even if the app is closed. | Verified |
 
 ## 9. External Integrations & API Compliance
 
