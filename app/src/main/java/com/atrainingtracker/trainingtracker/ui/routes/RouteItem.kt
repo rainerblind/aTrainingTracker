@@ -79,7 +79,8 @@ fun RouteItem(
             ) {
                 RouteSummaryHeader(
                     summary = summary,
-                    onToggleSelection = { onToggleSelection(summary.id, it) }
+                    onToggleSelection = { onToggleSelection(summary.id, it) },
+                    switchScale = 0.6f
                 )
             }
 
