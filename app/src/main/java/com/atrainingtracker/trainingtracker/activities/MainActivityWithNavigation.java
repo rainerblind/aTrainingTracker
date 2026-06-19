@@ -618,8 +618,12 @@ public class MainActivityWithNavigation
         super.onResume();
         if (DEBUG) Log.d(TAG, "onResume");
 
+        Intent banalServiceIntent = new Intent(this, BANALService.class);
+        // Explicitly start the service so it stays in the "started" state
+        startService(banalServiceIntent);
+
         if (mBanalServiceComm == null) {
-            bindService(new Intent(this, BANALService.class), mBanalConnection, Context.BIND_AUTO_CREATE);
+            bindService(banalServiceIntent, mBanalConnection, Context.BIND_AUTO_CREATE);
         }
 
         // also tell the repository to bind.
@@ -999,7 +1003,11 @@ public class MainActivityWithNavigation
         if (!TrainingApplication.isTracking()) {
             if (DEBUG) Log.i(TAG, "Stopping BANALService process (not tracking)");
 
+            // First, tell the repository to unbind to avoid leaks
             BANALServiceRepository.Companion.getInstance(this).unbindFromBANALService();
+
+            // Then explicitly stop the service to trigger its onDestroy() and shut down sensors
+            stopService(new Intent(this, BANALService.class));
         }
     }
 

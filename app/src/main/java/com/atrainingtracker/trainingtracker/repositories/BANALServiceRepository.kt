@@ -48,9 +48,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
-
 
 
 /**
@@ -69,17 +69,20 @@ data class LapEvent(
  * A singleton repository that acts as the single source of truth for all tracking-related data from the sensors.
  * It connects to the BANALService to provide a clean data source for all ViewModels.
  */
+class BANALServiceRepository private constructor(context: Context) {
 
-class BANALServiceRepository private constructor(private val context: Context) {
-
+    private val appContext = context.applicationContext
     private val repositoryScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
-    // access to the BANALService
-    // private var banalServiceComm: BANALService.BANALServiceComm? = null
+    // --- Service Connection State ---
     private val _serviceBinder = MutableStateFlow<BANALService.BANALServiceComm?>(null)
     private var isBoundToBanalService = false
+    // Guard to prevent multiple simultaneous bind attempts during app startup
+    private var isBinding = false
 
 
+    // --- Reactive Data Streams (StateFlows for UI) ---
+    
     private val _activityType = MutableStateFlow<ActivityType>(ActivityType.getDefaultActivityType())
     val activityType: StateFlow<ActivityType> = _activityType
     // Note that we get the data by observing the BANALServiceComm.activityType
@@ -88,7 +91,7 @@ class BANALServiceRepository private constructor(private val context: Context) {
     val allFilteredSensorData: StateFlow<List<FilteredSensorData<*>>> = _allFilteredSensorData.asStateFlow()
     // Note that we get the filtered sensor data from the BANALServiceComm
 
-    // The name of the device the BANALService is currently searching for.
+    // The name of the device the BANALService is currently searching for (e.g., "Heart Rate Monitor")
     private val _searchingForDevice = MutableStateFlow<String?>(null)
     val searchingForDevice: StateFlow<String?> = _searchingForDevice.asStateFlow()
 
@@ -113,14 +116,15 @@ class BANALServiceRepository private constructor(private val context: Context) {
     private val _currentLocation = MutableStateFlow<LatLng?>(null)
     val currentLocation: StateFlow<LatLng?> = _currentLocation.asStateFlow()
 
-    // StateFlow for the current speed
+    // Current speed (mps)
     private val _currentSpeed = MutableStateFlow<Double?>(null)
     val currentSpeed: StateFlow<Double?> = _currentSpeed.asStateFlow()
 
+    // Total distance accumulated in current workout
     private val _currentDistance = MutableStateFlow<Double?>(null)
     val currentDistance: StateFlow<Double?> = _currentDistance.asStateFlow()
 
-    // StateFlow for the current bearing
+    // Current movement bearing
     private val _currentBearing = MutableStateFlow<Double?>(null)
     val currentBearing: StateFlow<Double?> = _currentBearing.asStateFlow()
 
@@ -128,11 +132,12 @@ class BANALServiceRepository private constructor(private val context: Context) {
     private val _currentTrack = MutableStateFlow<List<LatLng>>(emptyList())
     val currentTrack: StateFlow<List<LatLng>> = _currentTrack.asStateFlow()
 
-    // -- Tracking mode
+    // --- Tracking Mode and Lifecycle Events ---
+    
     private val _trackingMode = MutableLiveData<TrackingMode>()
     val trackingMode: LiveData<TrackingMode> = _trackingMode
 
-    // The receiver for the tracking mode
+    // Listens for tracking state changes (READY, TRACKING, PAUSED) from TrainingApplication
     private val trackingModeReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val newTrackingMode = TrainingApplication.getTrackingMode()
@@ -142,11 +147,10 @@ class BANALServiceRepository private constructor(private val context: Context) {
         }
     }
 
-    // -- Lap Event
     private val _lapEvent = SingleLiveEvent<LapEvent?>()
     val lapEvent: LiveData<LapEvent?> = _lapEvent
 
-    // the receiver for Lap Summary Event
+    // Listens for lap completions from BANALService to trigger the UI summary dialog
     private val lapSummaryReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             intent?.let {
@@ -162,7 +166,6 @@ class BANALServiceRepository private constructor(private val context: Context) {
                     lapDistance = it.getStringExtra(BANALService.PREV_LAP_DISTANCE_STRING),
                     lapSpeed = it.getStringExtra(BANALService.PREV_LAP_SPEED_STRING)
                 )
-                // Post the new event to the LiveData
                 _lapEvent.postValue(lapEvent)
             }
         }
@@ -174,153 +177,145 @@ class BANALServiceRepository private constructor(private val context: Context) {
 
 
     init {
-        // Set a default value when the repository is created
         _trackingMode.postValue(TrackingMode.READY)
 
-        // Register the receiver to listen for changes from the TrainingApplication
-        context.registerReceiver(
+        appContext.registerReceiver(
             trackingModeReceiver,
             IntentFilter(TrainingApplication.TRACKING_STATE_CHANGED),
-            Context.RECEIVER_NOT_EXPORTED // Specify that it only receives broadcasts from this app
+            Context.RECEIVER_NOT_EXPORTED
         )
 
-        // Register the receiver to listen for changes from the BANALService
-        context.registerReceiver(
+        appContext.registerReceiver(
             lapSummaryReceiver,
             IntentFilter(BANALService.LAP_SUMMARY),
             Context.RECEIVER_NOT_EXPORTED)
 
-
-        repositoryScope.launch {
-            // connect to the BANALService
-            bindToBANALService()
-        }
-
+        // Start the long-lived observation loop that reacts to the binder state.
+        // It will automatically start/stop based on whether we are connected to the service.
+        startObservingBANALService()
     }
 
-
-    // Connection to BANALService and then observe it regularly.
+    // Handles the low-level Android Service Connection
     private val banalServiceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
             if (DEBUG) Log.i(TAG, "onServiceConnected")
-
-            // This is called when the connection to the service has been established.
-            // We get the BANALServiceComm binder instance.
             val binder = service as? BANALService.BANALServiceComm
-            _serviceBinder.value = binder // This "wakes up" any listeners
+            _serviceBinder.value = binder // This "wakes up" the observation loop
             isBoundToBanalService = true
-            // Once connected, start observing the service for data
-            startObservingBANALService()
+            isBinding = false
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
             if (DEBUG) Log.i(TAG, "onServiceDisconnected")
-
-            // This is called when the service connection is lost unexpectedly
-            _serviceBinder.value = null
+            _serviceBinder.value = null // This suspends the observation loop
+            isBoundToBanalService = false
+            isBinding = false
         }
     }
 
-    // Methods to bind and unbind to the BANALService
+    /**
+     * Binds the repository to the BANALService. 
+     * Uses startService first to ensure the service remains alive even if the Activity unbinds.
+     */
     fun bindToBANALService() {
         if (DEBUG) Log.i(TAG, "bindToBANALService()")
-
-        if (! isBoundToBanalService) {
-            val intent = Intent(context, BANALService::class.java)
-            // BIND_AUTO_CREATE ensures the service is created if not already running
-            context.bindService(intent, banalServiceConnection, Context.BIND_AUTO_CREATE)
+        if (!isBoundToBanalService && !isBinding) {
+            isBinding = true
+            val intent = Intent(appContext, BANALService::class.java)
+            appContext.startService(intent)
+            appContext.bindService(intent, banalServiceConnection, Context.BIND_AUTO_CREATE)
         }
     }
 
+    /**
+     * Unbinds from the service. The observation loop will automatically stop.
+     */
     fun unbindFromBANALService() {
         if (DEBUG) Log.i(TAG, "unbindFromBANALService()")
-
         if (isBoundToBanalService) {
             try {
-                context.unbindService(banalServiceConnection)
+                _serviceBinder.value = null
+                appContext.unbindService(banalServiceConnection)
                 isBoundToBanalService = false
-                // _serviceBinder.value = null // Must not be set to null!!  When this is set to null, we don't get updates when the app is started for the second time.
             } catch (e: IllegalArgumentException) {
-                // This catches cases where the OS already unregistered the service
-                Log.e("BANALRepository", "Service not registered or already unbound: ${e.message}")
+                Log.e(TAG, "Service not registered or already unbound: ${e.message}")
             }
         }
     }
 
-    // Observing the BANALService: This function will be called once the service is connected.
+    /**
+     * The main observation loop. Using collectLatest on the binder flow ensures that:
+     * 1. A single continuous loop runs as long as we have a binder.
+     * 2. The loop is automatically cancelled if the binder becomes null (unbinding).
+     * 3. We avoid "zombie" loops logging in the background after app shutdown.
+     */
     private fun startObservingBANALService() {
         if (DEBUG) Log.i(TAG, "startObservingBANALService()")
 
         repositoryScope.launch {
-            flow {
-                while (true) {
-                    emit(Unit)
-                    delay(1000)
-                }
-            }.collect {
-                if (DEBUG) Log.i(TAG, "collecting (banalServiceComm = ${_serviceBinder.value})")
-                if (_serviceBinder.value == null) return@collect // Service not bound yet
-
-                // --- ACTIVITY TYPE ---
-                val newActivityType = _serviceBinder.value?.activityType
-                if (_activityType.value != newActivityType) {
-                    _activityType.value = newActivityType!!
-                }
-
-                // -- filtered sensor data --
-                val newSensorData = _serviceBinder.value?.allFilteredSensorData
-                if (newSensorData != null) {
-                    // Update the StateFlow using the .value property
-                    _allFilteredSensorData.value = newSensorData
-                }
-
-                Log.i(TAG, "getIdsOfFoundDevices: ${_serviceBinder.value?.getIdsOfNewlyFoundDevices()}")
-                Log.i(TAG, "databaseIdsOfActiveDevices: ${_serviceBinder.value?.databaseIdsOfActiveRemoteDevices}")
-
-                _searchingForDevice.value = _serviceBinder.value?.nameOfSearchingDevice
-                _bSportType.value = _serviceBinder.value?.bSportType!!
-                _activeRemoteDevicesIds.value = _serviceBinder.value?.databaseIdsOfActiveRemoteDevices!!
-                _newlyFoundDevicesIds.value = _serviceBinder.value?.getIdsOfNewlyFoundDevices()!!
-                _activeSensors.value = _serviceBinder.value?.availableSensorTypeSet?.toSet() ?: emptySet()
-
-                _allActiveDevices.postValue(_serviceBinder.value?.activeDevicesIncludingSpeedAndLocationDevices ?: emptyList())
-
-                // get the current location
-                val latData = _serviceBinder.value?.getBestSensorData(SensorType.LATITUDE)
-                val lonData = _serviceBinder.value?.getBestSensorData(SensorType.LONGITUDE)
-
-                if (latData?.value is Double && lonData?.value is Double) {
-                    Log.i(TAG, "got a location")
-
-                    val newLocation = LatLng(
-                        latData.value as Double,
-                        lonData.value as Double
-                    )
-                    // Only update if the location actually changed to save UI re-compositions
-                    if (_currentLocation.value != newLocation) {
-                        _currentLocation.value = newLocation
-                        if (TrainingApplication.isTracking()) {
-                            _currentTrack.value = currentTrack.value + newLocation
+            _serviceBinder.collectLatest { binder ->
+                if (binder != null) {
+                    if (DEBUG) Log.i(TAG, "Starting observation loop for binder: $binder")
+                    while (true) {
+                        // --- ACTIVITY TYPE ---
+                        val activityType = binder.activityType
+                        if (_activityType.value != activityType) {
+                            _activityType.value = activityType
                         }
+
+                        // --- FILTERED SENSOR DATA ---
+                        val newSensorData = binder.allFilteredSensorData
+                        if (newSensorData != null) {
+                            _allFilteredSensorData.value = newSensorData
+                        }
+
+                        // --- DEVICE AND SENSOR STATUS ---
+                        _searchingForDevice.value = binder.nameOfSearchingDevice
+                        _bSportType.value = binder.bSportType
+                        _activeRemoteDevicesIds.value = binder.databaseIdsOfActiveRemoteDevices
+                        _newlyFoundDevicesIds.value = binder.getIdsOfNewlyFoundDevices()
+                        _activeSensors.value = binder.availableSensorTypeSet?.toSet() ?: emptySet()
+
+                        _allActiveDevices.postValue(binder.activeDevicesIncludingSpeedAndLocationDevices ?: emptyList())
+
+                        // --- LOCATION AND NAVIGATION ---
+                        val latData = binder.getBestSensorData(SensorType.LATITUDE)
+                        val lonData = binder.getBestSensorData(SensorType.LONGITUDE)
+
+                        if (latData?.value is Double && lonData?.value is Double) {
+                            val newLocation = LatLng(latData.value as Double, lonData.value as Double)
+                            if (_currentLocation.value != newLocation) {
+                                _currentLocation.value = newLocation
+                                if (TrainingApplication.isTracking()) {
+                                    _currentTrack.value = currentTrack.value + newLocation
+                                }
+                            }
+                        }
+
+                        // --- PRIMARY METRICS ---
+                        _currentSpeed.value = binder.getBestSensorData(SensorType.SPEED_mps)?.value as Double?
+                        _currentBearing.value = binder.getBestSensorData(SensorType.BEARING)?.value as Double?
+                        _currentDistance.value = binder.getBestSensorData(SensorType.DISTANCE_m)?.value as Double?
+
+                        if (DEBUG) Log.i(TAG, "BANALService update:\n _searchingForDevice: ${_searchingForDevice.value},\n _bSportType: ${_bSportType.value},\n _foundDeviceIds: ${_activeRemoteDevicesIds.value},\n _activeSensors: ${_activeSensors.value}")
+
+                        delay(1000) // Pulse every second
                     }
+                } else {
+                    if (DEBUG) Log.i(TAG, "Binder is null, observation loop is suspended")
                 }
-
-                _currentSpeed.value = _serviceBinder.value?.getBestSensorData(SensorType.SPEED_mps)?.value as Double?
-                _currentBearing.value = _serviceBinder.value?.getBestSensorData(SensorType.BEARING)?.value as Double?
-                _currentDistance.value = _serviceBinder.value?.getBestSensorData(SensorType.DISTANCE_m)?.value as Double?
-
-                if (DEBUG) Log.i(TAG, "BANALService:\n _searchingForDevice.value: ${_searchingForDevice.value},\n _bSportType.value: ${_bSportType.value},\n _foundDeviceIds.value: ${_activeRemoteDevicesIds.value},\n _activeSensors.value: ${_activeSensors.value}")
-                if (DEBUG) Log.i(TAG, "trackingMode: ${_trackingMode.value}")
             }
         }
     }
 
+    // --- Helper methods to communicate with BANALService via Binder ---
+
     fun createFilter(filterData: FilterData) {
-        if (_serviceBinder.value != null) _serviceBinder.value?.createFilter(filterData)
+        _serviceBinder.value?.createFilter(filterData)
     }
 
     fun setUserSelectedSportType(bSportType: BSportType) {
-        if (_serviceBinder.value != null) _serviceBinder.value?.setUserSelectedSportType(bSportType)
+        _serviceBinder.value?.setUserSelectedSportType(bSportType)
     }
 
     fun startSearchingForPairedDevices() {
@@ -331,23 +326,23 @@ class BANALServiceRepository private constructor(private val context: Context) {
         val intent = Intent(BANALService.START_SEARCHING_FOR_NEW_DEVICES_INTENT).apply {
             putExtra(BANALService.PROTOCOL, protocol.name)
             putExtra(BANALService.DEVICE_TYPE, deviceType.name)
-            setPackage(context.packageName)
+            `package` = appContext.packageName
         }
-            context.sendBroadcast(intent)
+        appContext.sendBroadcast(intent)
     }
 
     fun stopSearchingForNewDevices() {
         sendBroadcast(BANALService.STOP_SEARCHING_FOR_NEW_DEVICES_INTENT)
     }
 
-    /***********************************************************************************************
-     * Simple helper to send a broadcast
+    /**
+     * Simple internal helper to send a broadcast within the application package
      */
     private fun sendBroadcast(action: String) {
         val intent = Intent(action).apply {
-            `package` = context.packageName
+            `package` = appContext.packageName
         }
-        context.sendBroadcast(intent)
+        appContext.sendBroadcast(intent)
     }
 
 
@@ -359,6 +354,9 @@ class BANALServiceRepository private constructor(private val context: Context) {
         @Volatile
         private var INSTANCE: BANALServiceRepository? = null
 
+        /**
+         * Returns the thread-safe singleton instance of the repository.
+         */
         fun getInstance(context: Context): BANALServiceRepository {
             return INSTANCE ?: synchronized(this) {
                 val instance = BANALServiceRepository(context)
@@ -367,6 +365,4 @@ class BANALServiceRepository private constructor(private val context: Context) {
             }
         }
     }
-
-
 }
