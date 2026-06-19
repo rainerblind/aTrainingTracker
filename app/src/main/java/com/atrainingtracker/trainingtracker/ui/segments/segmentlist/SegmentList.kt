@@ -43,6 +43,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.segments.SegmentWithPath
+import com.atrainingtracker.trainingtracker.ui.components.strava.ConnectWithStravaButton
+import com.atrainingtracker.trainingtracker.ui.components.strava.PoweredByStrava
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,12 +71,15 @@ fun SegmentList(
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(stringResource(R.string.starred_segments__no_strava_connection))
-                    Button(onClick = {
-                        Log.i("SegmentList", "onConnectToStrava clicked" )
-                        onConnectToStrava() }) {
-                        Text(stringResource(R.string.starred_segments__connect_to_strava))
-                    }
+                    Text(
+                        text = stringResource(R.string.starred_segments__no_strava_connection),
+                        modifier = Modifier.padding(bottom = 12.dp),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    ConnectWithStravaButton(onClick = {
+                        Log.i("SegmentList", "ConnectWithStravaButton clicked")
+                        onConnectToStrava()
+                    })
                 }
             }
         }
