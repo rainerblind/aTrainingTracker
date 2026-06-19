@@ -120,6 +120,11 @@ fun StravaActivitySection(
                 SegmentEffortRow(effort)
             }
         }
+
+        // --- Mandatory Branding ---
+        PoweredByStrava(
+            modifier = Modifier.align(Alignment.End).padding(top = 4.dp)
+        )
     }
 }
 

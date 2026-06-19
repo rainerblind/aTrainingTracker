@@ -1060,5 +1060,9 @@
     </plurals>
     <string name="strava_kom_description">KOM / Streckenrekord</string>
     <string name="strava_pr_description">Persönliche Bestleistung #%1$d</string>
+
+    <string name="strava_connected_status">Du bist mit Strava verbunden</string>
+    <string name="strava_disconnected_status">Du bist nicht mit Strava verbunden</string>
+    <string name="strava_disconnect">Von Strava trennen</string>
     <string name="strava_overall_rank_description">Gesamtrang #%1$d</string>
 </resources>

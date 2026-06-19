@@ -66,6 +66,7 @@ fun SegmentItem(
             // 2. Performance Metrics (Full Width)
             SegmentDetails(
                 summary = summary,
+                showStravaLogo = false,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(4.dp)

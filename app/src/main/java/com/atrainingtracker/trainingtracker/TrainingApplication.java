@@ -501,10 +501,12 @@ public class TrainingApplication extends Application {
      * Strava helpers
      */
     public static boolean uploadToStrava() {
-        return cSharedPreferences.getBoolean(SP_UPLOAD_TO_STRAVA, false);
+        return getStravaAccessToken() != null;
     }
 
     public static void setUploadToStrava(boolean value) {
+        // Since we now use the presence of the access token as the source of truth,
+        // we keep this for legacy compatibility but the logic is handled by token presence.
         cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_STRAVA, value).apply();
     }
 
