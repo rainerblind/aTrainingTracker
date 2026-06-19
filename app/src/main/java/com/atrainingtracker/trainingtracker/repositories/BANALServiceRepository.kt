@@ -69,9 +69,9 @@ data class LapEvent(
  * A singleton repository that acts as the single source of truth for all tracking-related data from the sensors.
  * It connects to the BANALService to provide a clean data source for all ViewModels.
  */
+class BANALServiceRepository private constructor(context: Context) {
 
-class BANALServiceRepository private constructor(private val context: Context) {
-
+    private val appContext = context.applicationContext
     private val repositoryScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     // --- Service Connection State ---
@@ -179,15 +179,13 @@ class BANALServiceRepository private constructor(private val context: Context) {
         // Set a default value when the repository is created
         _trackingMode.postValue(TrackingMode.READY)
 
-        // Register the receiver to listen for changes from the TrainingApplication
-        context.registerReceiver(
+        appContext.registerReceiver(
             trackingModeReceiver,
             IntentFilter(TrainingApplication.TRACKING_STATE_CHANGED),
             Context.RECEIVER_NOT_EXPORTED // Specify that it only receives broadcasts from this app
         )
 
-        // Register the receiver to listen for changes from the BANALService
-        context.registerReceiver(
+        appContext.registerReceiver(
             lapSummaryReceiver,
             IntentFilter(BANALService.LAP_SUMMARY),
             Context.RECEIVER_NOT_EXPORTED)
@@ -345,9 +343,9 @@ class BANALServiceRepository private constructor(private val context: Context) {
         val intent = Intent(BANALService.START_SEARCHING_FOR_NEW_DEVICES_INTENT).apply {
             putExtra(BANALService.PROTOCOL, protocol.name)
             putExtra(BANALService.DEVICE_TYPE, deviceType.name)
-            setPackage(context.packageName)
+            `package` = appContext.packageName
         }
-            context.sendBroadcast(intent)
+        appContext.sendBroadcast(intent)
     }
 
     fun stopSearchingForNewDevices() {
@@ -359,9 +357,9 @@ class BANALServiceRepository private constructor(private val context: Context) {
      */
     private fun sendBroadcast(action: String) {
         val intent = Intent(action).apply {
-            `package` = context.packageName
+            `package` = appContext.packageName
         }
-        context.sendBroadcast(intent)
+        appContext.sendBroadcast(intent)
     }
 
 
