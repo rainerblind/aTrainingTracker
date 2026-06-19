@@ -95,10 +95,7 @@ fun WorkoutTabsScreen(
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
 
-    Log.i("WorkoutTabsScreen", "Before LauncedEffect (scrollToTop: $scrollToTop)")
     LaunchedEffect(scrollToTop, sortOrder) {
-        Log.i("WorkoutTabsScreen", "scrollToTop: $scrollToTop")
-
         if (scrollToTop) {
             allListState.scrollToItem(0)
             bikeListState.scrollToItem(0)
@@ -121,24 +118,10 @@ fun WorkoutTabsScreen(
     }
 
     if (workoutToDelete != null) {
-        AlertDialog(
-            onDismissRequest = { workoutIdToDelete = -1L },
-            containerColor = MaterialTheme.colorScheme.surface,
-            title = { Text(stringResource(R.string.delete_workout)) },
-            text = { Text(stringResource(R.string.really_delete_format, workoutToDelete.workoutName)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    onDeleteConfirmed(workoutIdToDelete)
-                    workoutIdToDelete = -1L
-                }) {
-                    Text(stringResource(R.string.delete_workout))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { workoutIdToDelete = -1L }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            }
+        WorkoutDeleteDialog(
+            workout = workoutToDelete,
+            onConfirm = onDeleteConfirmed,
+            onDismiss = { workoutIdToDelete = -1L }
         )
     }
 
@@ -205,56 +188,13 @@ fun WorkoutTabsScreen(
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
 
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-
-                            // Toggle View Mode Button
-                            IconButton(onClick = onToggleCompactView ) {
-                                Icon(
-                                    imageVector = if (isCompactView) Icons.Default.ViewStream else Icons.Default.ViewHeadline,
-                                    contentDescription = "Switch View Mode",
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                            }
-
-                            // Sort Dropdown
-                            var showSortMenu by remember {
-                                mutableStateOf(false)
-                            }
-                            Box {
-                                IconButton(onClick = { showSortMenu = true }) {
-                                    Icon(
-                                        imageVector = androidx.compose.material.icons.Icons.Default.Sort,
-                                        contentDescription = stringResource(R.string.sort),
-                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                }
-                                DropdownMenu(
-                                    containerColor = MaterialTheme.colorScheme.surface,
-                                    expanded = showSortMenu,
-                                    onDismissRequest = { showSortMenu = false }
-                                ) {
-                                    WorkoutSortOrder.entries.forEach { order ->
-                                        DropdownMenuItem(
-                                            text = {
-                                                Text(stringResource(order.labelResId))
-                                            },
-                                            onClick = {
-                                                onSortOrderChange(order)
-                                                showSortMenu = false
-                                            },
-                                            leadingIcon = {
-                                                if (sortOrder == order) {
-                                                    Icon(
-                                                        Icons.Default.Check,
-                                                        contentDescription = null
-                                                    )
-                                                }
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                        WorkoutListActions(
+                            isCompactView = isCompactView,
+                            onToggleCompactView = onToggleCompactView,
+                            sortOrder = sortOrder,
+                            onSortOrderChange = onSortOrderChange,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
                     }
                     PrimaryScrollableTabRow(
                         selectedTabIndex = pagerState.currentPage,

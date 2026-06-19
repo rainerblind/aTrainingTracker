@@ -24,15 +24,17 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.compose.BackHandler
-import androidx.appcompat.app.AlertDialog
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -44,6 +46,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -56,6 +59,7 @@ import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
@@ -206,6 +210,28 @@ class WorkoutSummariesListFragment : Fragment() {
                                         .fillMaxSize()
                                         .nestedScroll(connection)
                                 ) {
+                                    val sortOrder by viewModel.sortOrder.collectAsStateWithLifecycle()
+
+                                    // 5. Scroll to Top when Sort Order changes
+                                    LaunchedEffect(sortOrder) {
+                                        if (viewModel.shouldScrollToTop(sortOrder)) {
+                                            scrollState.scrollToItem(0)
+                                        }
+                                    }
+
+                                    var workoutIdToDelete by remember { mutableLongStateOf(-1L) }
+                                    val workoutToDelete = remember(workoutIdToDelete, workouts) {
+                                        workouts.find { it.id == workoutIdToDelete }
+                                    }
+
+                                    if (workoutToDelete != null) {
+                                        WorkoutDeleteDialog(
+                                            workout = workoutToDelete,
+                                            onConfirm = { id -> viewModel.deleteWorkout(id) },
+                                            onDismiss = { workoutIdToDelete = -1L }
+                                        )
+                                    }
+
                                     // THE LIST (Content)
                                     WorkoutList(
                                         scrollState = scrollState,
@@ -217,7 +243,7 @@ class WorkoutSummariesListFragment : Fragment() {
                                         onSaveAsRoute = { workoutData ->
                                             viewModel.saveAsRoute(workoutData)
                                         },
-                                        onDeleteRequest = { id -> viewModel.deleteWorkout(id) },
+                                        onDeleteRequest = { id -> workoutIdToDelete = id },
                                         onEditWorkout = { id ->
                                             selectedWorkoutIdForEdit = id
                                         },
@@ -238,21 +264,36 @@ class WorkoutSummariesListFragment : Fragment() {
                                         color = MaterialTheme.colorScheme.primaryContainer,
                                         tonalElevation = 3.dp
                                     ) {
-                                        Column(
+                                        Row(
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .statusBarsPadding()
-                                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
                                         ) {
-                                            Text(
-                                                text = primaryTitle ?: "",
-                                                style = MaterialTheme.typography.titleLarge,
-                                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                                            )
-                                            Text(
-                                                text = secondaryTitle ?: "",
-                                                style = MaterialTheme.typography.titleMedium,
-                                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = primaryTitle ?: "",
+                                                    style = MaterialTheme.typography.titleLarge,
+                                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                                Text(
+                                                    text = secondaryTitle ?: "",
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
+
+                                            WorkoutListActions(
+                                                isCompactView = viewModel.isCompactView.collectAsStateWithLifecycle().value,
+                                                onToggleCompactView = { viewModel.toggleCompactView() },
+                                                sortOrder = sortOrder,
+                                                onSortOrderChange = { viewModel.setSortOrder(it) }
                                             )
                                         }
                                     }
@@ -269,23 +310,6 @@ class WorkoutSummariesListFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         // Ensure data loading starts
         viewModel.loadWorkoutsIfNeeded()
-
-        // Observe the delete event from VM (if triggered by a separate UI action)
-        viewModel.confirmDeleteWorkoutEvent.observe(viewLifecycleOwner) { workoutId ->
-            showDeleteConfirmationDialog(workoutId)
-        }
-    }
-
-    private fun showDeleteConfirmationDialog(workoutId: Long) {
-        AlertDialog.Builder(requireContext())
-            .setTitle(R.string.delete_workout)
-            .setMessage(R.string.really_delete_workout)
-            .setIcon(android.R.drawable.ic_menu_delete)
-            .setPositiveButton(R.string.delete_workout) { _, _ ->
-                viewModel.deleteWorkout(workoutId)
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
     }
 
     companion object {
