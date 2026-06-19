@@ -148,7 +148,7 @@ fun WorkoutSummaryCompact(
                 ) {
                     // Active Time
                     CompactMetricItem(
-                        label = stringResource(SensorType.TIME_TOTAL.fullNameId),
+                        label = stringResource(SensorType.TIME_ACTIVE.fullNameId),
                         value = tf.format_with_units(workoutData.detailsData.activeTimeSec)
                     )
 
