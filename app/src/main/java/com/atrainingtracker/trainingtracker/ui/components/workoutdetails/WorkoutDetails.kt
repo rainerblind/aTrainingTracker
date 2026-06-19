@@ -54,12 +54,24 @@ fun WorkoutDetails(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // --- Metrics Row: Distance and Time ---
+        // --- Metrics Row: Time and Distance ---
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // 1. Distance
+            // 1. Active Time
+            MainItem(
+                iconColor = iconColor,
+                textColorMain = textColorMain,
+                textColorSecondary = textColorSecondary,
+                iconRes = R.drawable.ic_time_active,
+                label = stringResource(R.string.time_active),
+                mainValueString = timeFormatter.format(data.activeTimeSec),
+                secondaryValueString = stringResource(R.string.total_time_format, timeFormatter.format(data.totalTimeSec)),
+                modifier = Modifier.weight(1f)
+            )
+
+            // 2. Distance
             val maxDispString = if (data.maxDisplacement != null) {
                 val maxDispFormatted = distanceFormatter.format_with_units(data.maxDisplacement)
                 stringResource(R.string.format_max_displacement, maxDispFormatted)
@@ -73,18 +85,6 @@ fun WorkoutDetails(
                 label = stringResource(R.string.distance),
                 mainValueString = distanceFormatter.format_with_units(data.totalDistance),
                 secondaryValueString = maxDispString,
-                modifier = Modifier.weight(1f)
-            )
-
-            // 2. Active Time
-            MainItem(
-                iconColor = iconColor,
-                textColorMain = textColorMain,
-                textColorSecondary = textColorSecondary,
-                iconRes = R.drawable.ic_time_active,
-                label = stringResource(R.string.time_active),
-                mainValueString = timeFormatter.format(data.activeTimeSec),
-                secondaryValueString = stringResource(R.string.total_time_format, timeFormatter.format(data.totalTimeSec)),
                 modifier = Modifier.weight(1f)
             )
         }
@@ -300,17 +300,6 @@ fun PreviewDetailItem() {
 fun PreviewDistanceAndTime() {
     MaterialTheme {
         Row(modifier = Modifier.fillMaxWidth()) {
-            MainItem(
-                iconRes = R.drawable.ic_distance,
-                iconColor = MaterialTheme.colorScheme.onSurface,
-                textColorMain = MaterialTheme.colorScheme.onSurface,
-                textColorSecondary = MaterialTheme.colorScheme.onSurfaceVariant,
-                label = "Distance",
-                mainValueString = "10,00 km",
-                secondaryValueString = "(Max. Luftlinie: 5,00 km)",
-                modifier = Modifier.weight(1f)
-            )
-
             // Active Time
             MainItem(
                 iconRes = R.drawable.ic_time_active,
@@ -320,6 +309,17 @@ fun PreviewDistanceAndTime() {
                 label = "Active Time",
                 mainValueString = "0:30:00",
                 secondaryValueString = "(Total: 0:45:00)",
+                modifier = Modifier.weight(1f)
+            )
+
+            MainItem(
+                iconRes = R.drawable.ic_distance,
+                iconColor = MaterialTheme.colorScheme.onSurface,
+                textColorMain = MaterialTheme.colorScheme.onSurface,
+                textColorSecondary = MaterialTheme.colorScheme.onSurfaceVariant,
+                label = "Distance",
+                mainValueString = "10,00 km",
+                secondaryValueString = "(Max. Luftlinie: 5,00 km)",
                 modifier = Modifier.weight(1f)
             )
         }
