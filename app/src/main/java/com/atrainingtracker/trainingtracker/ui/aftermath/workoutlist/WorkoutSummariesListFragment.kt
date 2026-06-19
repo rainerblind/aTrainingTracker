@@ -262,7 +262,6 @@ class WorkoutSummariesListFragment : Fragment() {
                                             .fillMaxWidth()
                                             .offset { IntOffset(0, connection.appBarOffset) },
                                         color = MaterialTheme.colorScheme.primaryContainer,
-                                        tonalElevation = 3.dp
                                     ) {
                                         Row(
                                             modifier = Modifier
