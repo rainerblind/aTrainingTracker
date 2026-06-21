@@ -1,0 +1,976 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+  -->
+
+<resources>
+
+    <!-- Standard stuff -->
+    <string name="OK">OK</string>
+    <string name="do_not_show_again">niet meer tonen</string>
+    <string name="Cancel">Annuleren</string>
+    <string name="searching_for">zoeken naar</string>
+    <string name="searching_for_device_format">zoeken naar %1$s</string>
+    <string name="default_device_name">een ANT+ apparaat</string>
+    <string name="waiting">wachten</string>
+    <string name="pairing_ANT">ANT+ Koppelen</string>
+    <string name="pairing_bluetooth">Bluetooth LE Koppelen</string>
+    <string name="searching">zoeken</string>
+    <string name="research">Zoeken</string>
+    <string name="Start">Start</string>
+    <string name="Stop">Stop</string>
+    <string name="Pause">Pauze</string>
+    <string name="Paused">Gepauzeerd</string>
+    <string name="Resume">Hervatten</string>
+    <string name="Tracking">Training</string>
+    <string name="StartPositionTitle">Start</string>
+    <string name="EndPositionTitle">Stop</string>
+    <string name="Lap">Ronde</string>
+    <string name="Equipment">Materiaal</string>
+    <string name="edit_device">apparaat bewerken</string>
+    <string name="edit_location">locatie bewerken</string>
+    <string name="Edit_Location">Locatie Bewerken</string>
+    <string name="edit_workout">training bewerken</string>
+    <string name="save_as_route">opslaan als route</string>
+    <string name="Edit_Location_Message">Naam en hoogte van deze locatie bewerken</string>
+    <string name="edit_wheel_circumference">wielomtrek bewerken</string>
+    <string name="edit_calibration_factor">kalibratiefactor bewerken</string>
+    <string name="delete">verwijderen</string>
+    <string name="delete_device">apparaat verwijderen</string>
+    <string name="delete_pebble_view">Pebble weergave verwijderen</string>
+    <string name="delete_tracking_view">trainingsweergave verwijderen</string>
+    <string name="delete_workout">training verwijderen</string>
+    <string name="deleteOldWorkouts">oude trainingen verwijderen</string>
+    <string name="deleteWorkoutsThatAreOlderThanDays">trainingen ouder dan … dagen verwijderen</string>
+    <string name="delete_sensor">verwijderen</string>
+    <string name="really_delete_workout">Wilt u deze training echt verwijderen?</string>
+    <string name="really_delete_location">Wilt u deze locatie echt verwijderen?</string>
+    <string name="really_delete_pebble_view_format">Pebble weergave "%1$s" verwijderen?</string>
+    <string name="really_delete_view_format">Trainingsweergave "%1$s" verwijderen?</string>
+    <string name="deleting_please_wait">Training verwijderen …\neven geduld</string>
+    <string name="deleting_workout">Verwijderen: %1$s…</string>
+    <string name="calculating_extrema_values">Extrema berekenen (min, gem, max)…</string>
+    <string name="calculating_extrema_value_for">berekenen %1$s van %2$s</string>
+    <string name="calculating_max_away_point">verste punt berekenen</string>
+    <string name="initializing">initialiseren</string>
+    <string name="delete_location">locatie verwijderen</string>
+    <string name="show_HW_details">HW details tonen</string>
+    <string name="show_google_maps_licence">Google Maps Juridische Info</string>
+    <string name="play_services_not_installed">Google Play services is niet geïnstalleerd.</string>
+    <string name="Preferences">Instellingen</string>
+    <string name="start_tracking">Training starten</string>
+    <string name="stop_tracking">Training stoppen</string>
+    <string name="pause_tracking">Training pauzeren</string>
+    <string name="resume_tracking">Training hervatten</string>
+    <string name="start_or_resume_dialog_message">De vorige training is niet correct afgesloten.\nWilt u een nieuwe training starten of de vorige hervatten?</string>
+    <string name="start_new_workout">Nieuw</string>
+    <string name="resume_workout">Hervatten</string>
+    <string name="SD_card">SD-kaart</string>
+    <string name="File">Bestand</string>
+    <string name="Community">Community</string>
+    <string name="TrainingPeaks_login_title">TrainingPeaks inloggen</string>
+    <string name="TrainingPeaks_login_message">Voor TrainingPeaks hebben we uw gebruikersnaam en wachtwoord nodig</string>
+    <string name="unknown_manufacturer">Onbekend</string>
+    <string name="unknown_last_seen_date">nog niet gezien</string>
+    <string name="next">volgende</string>
+    <string name="text_new">nieuw</string>
+    <string name="prev">vorige</string>
+    <string name="name">naam</string>
+    <string name="number_of_fields">Aantal velden:</string>
+    <string name="Lap_NR">Ronde %1$d</string>
+    <string name="build_in">ingebouwd</string>
+    <string name="no_user_name">geen gebruikersnaam</string>
+    <string name="no_password">geen wachtwoord</string>
+    <string name="add_sensor">sensor toevoegen</string>
+
+    <string name="commute">woon-werk</string>
+    <string name="trainer_general">indoor trainer</string>
+    <string name="trainer_bike">indoor trainer</string>
+    <string name="trainer_run">loopband</string>
+
+    <string name="guess_commute_and_trainer">woon-werk en trainer raden</string>
+
+    <string name="install_pebble_watchapp_title">Pebble App Installeren</string>
+    <string name="install_pebble_watchapp_text">Installeer de bijbehorende Pebble Watchapp om dit te gebruiken.</string>
+    <string name="install_pebble_watchapp_now">OK, nu installeren</string>
+    <string name="pebble_build_in">Standaard Pebble App</string>
+    <string name="pebble_a_training_tracker_watchapp">a Training Tracker App</string>
+
+    <string name="install_ant_plugin_message">Installeer de ANT+ Plugin Service voor ANT+.</string>
+    <string name="install_ant_plugin_ok">OK, nu installeren</string>
+
+    <string name="protocol_all">alle</string>
+    <string name="protocol_unknown">Onbekend</string>
+
+    <!-- Units -->
+    <string name="units_type_metric">metrisch (m)</string>
+    <string name="units_type_imperial">imperiaal (mijl)</string>
+
+    <string name="value_unit_float_string">%1$.2f %2$s</string>
+    <string name="value_unit_string_string">%1$s %2$s</string>
+    <string name="value_unit_int_string">%1$d %2$s</string>
+    <string name="distance_distanceUnit_sport_time_format">%1$s %2$s %3$s in %4$s</string>
+
+    <string name="location_extrema_format">%1$s %2$s: %3$s %4$s</string>
+
+    <string name="configure_pebble_view">Pebble weergave configureren: %1$s</string>
+
+    <!--  ActivityType -->
+    <string name="activity_type_bike_power">Fietsvermogen</string>
+    <string name="activity_type_bike_speed_and_cadence">Fietsen</string>
+    <string name="activity_type_multisport_with_hr">Algemeen</string>
+    <string name="activity_type_run_speed_and_cadence">Hardlopen</string>
+
+    <string name="text_default">standaard</string>
+    <string name="string_and_number_format">%1$s %2$d</string>
+
+    <!-- DeviceType -->
+    <string name="device_type_dummy">dummy</string>
+    <string name="device_type_short_dummy">dummy</string>
+    <string name="device_type_all">alle apparaten</string>
+    <string name="device_type_short_all">alle</string>
+    <string name="device_type_bike_cadence">fietscadans</string>
+    <string name="device_type_short_bike_cadence">cad</string>
+    <string name="device_type_bike_power">fietsvermogen</string>
+    <string name="device_type_short_bike_power">pwr</string>
+    <string name="device_type_bike_speed_and_cadence">snelheid &amp; cadans</string>
+    <string name="device_type_short_bike_speed_and_cadence">s&amp;c</string>
+    <string name="device_type_bike_speed">fietssnelheid</string>
+    <string name="device_type_short_bike_speed">snelh</string>
+    <string name="device_type_heart_rate">hartslag</string>
+    <string name="device_type_short_heart_rate">HS</string>
+    <string name="device_type_run_speed">loopsnelheid</string>
+    <string name="device_type_short_run_speed">loopsnelh</string>
+    <string name="device_type_environment">temperatuur</string>
+    <string name="device_type_short_environment">temp.</string>
+    <string name="device_type_altitude_from_pressure">hoogte via luchtdruk</string>
+    <string name="device_type_short_altitude_from_pressure">hoogte</string>
+    <string name="device_type_sensor_manager">sensorbeheer</string>
+    <string name="device_type_short_sensor_manager">sensbeheer</string>
+    <string name="device_type_clock">klok</string>
+    <string name="device_type_short_clock">klok</string>
+
+    <string name="gps_enabled_on_device">GPS is ingeschakeld</string>
+    <string name="gps_disabled_on_device">GPS is uitgeschakeld. Ga naar Instellingen</string>
+    <string name="gps_goto_settings">Instellingen</string>
+
+    <!-- sensor types -->
+    <string name="accumulated_sensors">geaccumuleerde sensoren</string>
+    <string name="accumulated_sensors_short">acc. sensoren</string>
+    <string name="accuracy">nauwkeurigheid</string>
+    <string name="accuracy_short">nauwkeur.</string>
+    <string name="ascent">stijging</string>
+    <string name="ascent_short">stijging</string>
+    <string name="bearing">richting</string>
+    <string name="bearing_short">richting</string>
+    <string name="altitude">hoogte</string>
+    <string name="altitude_short">hoogte</string>
+    <string name="cadence">cadans</string>
+    <string name="cadence_short">cad.</string>
+    <string name="cadence_run">loopcadans</string>
+    <string name="cadence_run_short">cad.</string>
+    <string name="cadence_bike">fietscadans</string>
+    <string name="cadence_bike_short">cad.</string>
+    <string name="calories">calorieën</string>
+    <string name="calories_short">cal.</string>
+    <string name="descent">daling</string>
+    <string name="descent_short">daling</string>
+    <string name="distance">afstand</string>
+    <string name="distance_short">afst.</string>
+    <string name="distance_lap">rondeafstand</string>
+    <string name="distance_lap_short">afst. ronde</string>
+    <string name="heart_rate">hartslag</string>
+    <string name="heart_rate_short">HS</string>
+    <string name="lap_number">rondenummer</string>
+    <string name="lap_number_short">ronde nr</string>
+    <string name="line_distance">hemelsbreed</string>
+    <string name="line_distance_short">hemelsbr.</string>
+    <string name="pace">tempo</string>
+    <string name="pace_short">tempo</string>
+    <string name="position">positie</string>
+    <string name="position_short">pos.</string>
+    <string name="power">vermogen</string>
+    <string name="power_short">pwr</string>
+    <string name="speed">snelheid</string>
+    <string name="speed_short">snelh</string>
+    <string name="current_sensors">huidige sensoren</string>
+    <string name="current_sensors_short">sens. act.</string>
+    <string name="strides">passen</string>
+    <string name="strides_short">passen</string>
+    <string name="temperature">temperatuur</string>
+    <string name="temperature_short">temp.</string>
+    <string name="temperature_max">max temperatuur</string>
+    <string name="temperature_max_short">max temp</string>
+    <string name="temperature_min">min temperatuur</string>
+    <string name="temperature_min_short">min temp</string>
+    <string name="time_active">actieve tijd</string>
+    <string name="time_active_short">actief</string>
+    <string name="time_lap">rondetijd</string>
+    <string name="time_lap_short">ronde</string>
+    <string name="time_of_day">tijdstip</string>
+    <string name="time_of_day_short">tijd</string>
+    <string name="time_total">totale tijd</string>
+    <string name="time_total_short">totaal</string>
+    <string name="torque">koppel</string>
+    <string name="torque_short">koppel</string>
+    <string name="pedal_power_balance">pedaalbalans</string>
+    <string name="pedal_power_balance_short">balans</string>
+    <string name="pedal_smoothness_l">pedaalvloeiendheid L</string>
+    <string name="pedal_smoothness_l_short">vloei L</string>
+    <string name="pedal_smoothness_r">pedaalvloeiendheid R</string>
+    <string name="pedal_smoothness_r_short">vloei R</string>
+    <string name="pedal_smoothness">pedaalvloeiendheid</string>
+    <string name="pedal_smoothness_short">vloei</string>
+    <string name="torque_effectiveness_l">koppel-effectiviteit L</string>
+    <string name="torque_effectiveness_l_short">eff. L</string>
+    <string name="torque_effectiveness_r">koppel-effectiviteit R</string>
+    <string name="torque_effectiveness_r_short">eff. R</string>
+    <string name="slope">helling</string>
+    <string name="slope_short">helling</string>
+    <string name="vertical_speed">stijgsnelheid (VAM)</string>
+    <string name="vertical_speed_short">VAM</string>
+
+    <string name="sport_type_walk">wandelen</string>
+    <string name="sport_type_run">hardlopen</string>
+    <string name="sport_type_MTB">MTB</string>
+    <string name="sport_type_bike">fietsen</string>
+    <string name="sport_type_other">overig</string>
+
+    <!-- Bike Power Features -->
+    <string name="bike_power__features">kenmerken</string>
+    <string name="bike_power__instantaneous_power">&#8226; Momenteel vermogen</string>
+    <string name="bike_power__pedal_power_balance">&#8226; Pedaalbalans</string>
+    <string name="bike_power__accumulated_torque">&#8226; Geaccumuleerd koppel</string>
+    <string name="bike_power__wheel_revolution_data">&#8226; Snelheid &amp; Afstand</string>
+    <string name="bike_power__crank_revolution_data">&#8226; Cadans</string>
+    <string name="bike_power__extreme_magnitudes">&#8226; Extreme waarden</string>
+    <string name="bike_power__extreme_angles">&#8226; Extreme hoeken</string>
+    <string name="bike_power__top_and_bottom_dead_sport_angles">&#8226; Dode punt hoeken</string>
+    <string name="bike_power__accumulated_energy">&#8226; Geaccumuleerde energie</string>
+    <string name="bike_power__wheel_speed_and_distance_data">&#8226; Wiel snelheid &amp; afstand</string>
+    <string name="bike_power__wheel_speed_data">&#8226; Snelheid</string>
+    <string name="bike_power__wheel_distance_data">&#8226; Afstand</string>
+    <string name="bike_power__pedal_smoothness">&#8226; Pedaalvloeiendheid</string>
+    <string name="bike_power__torque_effectiveness">&#8226; Koppel-effectiviteit</string>
+    <string name="bike_power__torque_data">&#8226; Koppel</string>
+
+    <string name="bike_power__pedal_power_balance_correction">Pedaalbalans correctie</string>
+    <string name="bike_power__double_power_balance_values">Meetwaarden verdubbelen</string>
+    <string name="bike_power__invert_power_balance_values">Meetwaarden omkeren (L/R)</string>
+
+    <!-- Labels -->
+    <string name="PrefsActivityLabel">Instellingen</string>
+    <string name="UpdateWorkoutActivityLabel">Training bijwerken</string>
+    <string name="TrackOnMapActivityLabel">Training</string>
+    <string name="ExportDetailsActivityLabel">Export details</string>
+    <string name="TrackingFragmentConfigListActivityLabel">Weergaven bewerken</string>
+    <string name="TrackingFragmentConfigActivityLabel">Weergave bewerken</string>
+    <string name="PebbleConfigListActivityLabel">Pebble weergaven bewerken</string>
+    <string name="PebbleConfigActivityLabel">Pebble weergave bewerken</string>
+    <string name="AltitudeCorrectionListActivityLabel">Hoogte-correctie</string>
+    <string name="DeviceChoiceActivityLabel">Koppelen</string>
+    <string name="PairingActivityLabel">Koppelen</string>
+    <string name="EditDeviceActivityLabel">Apparaat bewerken</string>
+    <string name="LegalInfoLabel">Google Maps Juridische Info</string>
+
+    <!--  For Preferences Activity -->
+    <string name="prefsUserTitle">Gebruiker</string>
+    <string name="prefsBasic">Basis</string>
+    <string name="prefs_Export">Export</string>
+    <string name="prefs_Display">Scherm</string>
+    <string name="prefsAdvanced">Geavanceerd</string>
+
+    <string name="prefsThresholdSpeedsTitle">Drempelsnelheden</string>
+    <string name="prefsThresholdSpeedsSummary">Drempelsnelheden voor sporten configureren</string>
+    <string name="prefsMinWalkSpeedTitle">min wandelsnelheid</string>
+    <string name="prefsMaxWalkSpeedTitle">max wandelsnelheid</string>
+    <string name="prefsMaxRunSpeedTitle">max loopsnelheid</string>
+    <string name="prefsMaxMTBSpeedTitle">max MTB snelheid</string>
+
+    <string name="prefsTrackingTitle">Training</string>
+
+    <string name="prefsDisplayTitle">Scherm</string>
+    <string name="prefsDisplaySummary">Scherm- en oriëntatie-instellingen</string>
+    <string name="prefsKeepScreenOnTitle">scherm aanhouden</string>
+    <string name="prefsNoUnlockingTitle">scherm ontgrendeld houden</string>
+    <string name="prefZoomDependingOnSpeedTitle">zoom op basis van snelheid</string>
+    <string name="prefsUnitsTitle">Eenheden</string>
+    <string name="prefsUnitsSummary">metrisch</string>
+    <string name="prefShowUnitsTitle">eenheden tonen</string>
+
+    <string name="prefsConfigureDisplaysTitle">Trainings-tabs</string>
+
+    <string name="prefsDoNotUsePebble">geen Pebble gebruiken</string>
+    <string name="prefsPebbleSupportTitle">Pebble ondersteuning</string>
+    <string name="prefsPebbleSupportSummary">Pebble gebruiken voor weergave</string>
+    <string name="prefsPebbleWatchappsTitle">Pebble App</string>
+    <string name="prefsPebbleWatchappsSummary">ingebouwd</string>
+    <string name="prefsConfigurePebbleDisplaysTitle">Pebble schermen configureren</string>
+
+    <string name="prefsExportTitle">Bestands-export</string>
+    <string name="prefsExportSummary">Export-formaten voor trainingen</string>
+
+    <string name="prefsUploadTitle">Uploaden</string>
+    <string name="prefsUploadSummary">Upload naar cloud en communities</string>
+    <string name="prefsOnlineStorage">Online opslag</string>
+    <string name="prefsOnlineCommunities">Online communities</string>
+    <string name="prefsUploadToDropboxSummary">Automatisch alles naar Dropbox uploaden</string>
+    <string name="prefsUploadToStravaSummary">Training naar Strava uploaden</string>
+    <string name="prefsUploadToRunkeeperSummary">Training naar Runkeeper uploaden</string>
+    <string name="prefsUploadToTrainingPeaksSummary">Training naar TrainingPeaks uploaden</string>
+
+    <string name="prefsAltitudeCorrectionTitle">Hoogte-correctie</string>
+    <string name="prefsUseAltitudeCorrectionTitle">Hoogte-correctie inschakelen</string>
+    <string name="prefsUseAltitudeCorrectionSummary">startlocatie gebruiken voor luchtdrukcorrectie</string>
+    <string name="prefsStartLocationsTitle">Startlocaties</string>
+    <string name="prefsStartLocationsSummary">Hoogte van bekende locaties configureren</string>
+    <string name="updateStravaEquipment">Strava materiaal bijwerken</string>
+    <string name="lastUpdateOfEquipmentNever">nooit bijgewerkt</string>
+
+    <string name="getting_equipment_from_strava">Strava materiaal ophalen…\neven geduld</string>
+    <string name="got_shoe">Strava schoenen opgehaald\nontvangen: %1$s</string>
+    <string name="got_bike">Strava fietsen opgehaald\nontvangen: %1$s</string>
+    <string name="strava_success_but_must_check">geüpload naar Strava, resultaat controleren …</string>
+    <string name="strava_success_waiting_for_result">geüpload naar Strava, even wachten …</string>
+
+    <string name="choose_view">weergave kiezen</string>
+    <string name="choose_activity_type">activiteitstype kiezen</string>
+
+    <!-- Main Activity -->
+    <string name="tab_start">Start</string>
+    <string name="tab_tracking">Training</string>
+    <string name="tab_map">Kaart</string>
+    <string name="tab_laps">Ronden</string>
+    <string name="tab_workouts">Geschiedenis</string>
+
+    <!-- layouts -->
+    <string name="pairedText">gekoppeld</string>
+
+    <string name="drawer__pairing">koppelen</string>
+    <string name="unpairing">ontkoppelen</string>
+
+    <!-- altitude_correction_dialog -->
+    <string name="LocationNameHint">locatienaam</string>
+    <string name="AltitudeHint">hoogte</string>
+
+    <string name="correct_altitude_title">Hoogte corrigeren</string>
+    <string name="correct_altitude_message">Voer de juiste hoogte en naam van de huidige locatie in</string>
+
+    <!-- update_workout -->
+    <string name="ExportName">Export naam:</string>
+    <string name="Sport">Sport:</string>
+    <string name="Goal">Doel:</string>
+    <string name="GoalHint">doel bewerken</string>
+    <string name="Method">Methode:</string>
+    <string name="MethodHint">methode bewerken</string>
+    <string name="Description">Beschrijving:</string>
+    <string name="DescriptionHint">beschrijving bewerken</string>
+    <string name="StartTime">Starttijd:</string>
+    <string name="TotalTime">Totale tijd:</string>
+    <string name="ActiveTime">Actieve tijd:</string>
+    <string name="Distance">Afstand:</string>
+    <string name="MaxLineDistance">Max. hemelsbreed:</string>
+    <string name="Calories">Calorieën:</string>
+    <string name="min">min</string>
+    <string name="mean">gem</string>
+    <string name="max">max</string>
+    <string name="SensorTypes">Sensoren:</string>
+    <string name="buttonSaveWorkoutText">Opslaan en exporteren</string>
+    <string name="buttonDeleteWorkoutText">Verwijderen</string>
+
+    <!-- export_details -->
+    <string name="csvWrite">naar CSV exporteren</string>
+    <string name="jsonWrite">naar Golden Cheetah JSON exporteren</string>
+    <string name="tcxWrite">naar TCX exporteren</string>
+    <string name="gpxWrite">naar GPX exporteren</string>
+    <string name="stravaUpload">naar Strava uploaden</string>
+    <string name="runkeeperUpload">naar Runkeeper uploaden</string>
+    <string name="trainingPeaksUpload">naar TrainingPeaks uploaden</string>
+
+    <string name="Is_not_an_integer">%1$s is geen geheel getal</string>
+
+    <!--  PairingActivity -->
+    <string name="PairingDevice">%1$s koppelen</string>
+    <string name="ValueAndUnitFormat">(%1$s %2$s)</string>
+
+    <!-- others -->
+    <string name="equipment_none">- geen -</string>
+    <string name="equipment_all">+ alle +</string>
+    <string name="equipment_all_bikes">+ alle fietsen +</string>
+    <string name="equipment_all_shoes">+ alle schoenen +</string>
+    <string name="equipment_type_bike">Fietsen</string>
+    <string name="equipment_type_shoe">Schoenen</string>
+    <string name="equipment_no_bikes">Geen fietsen</string>
+    <string name="equipment_no_shoes">Geen schoenen</string>
+
+    <string name="SD_card_not_available">SD-kaart niet beschikbaar.</string>
+
+    <!-- actions -->
+    <string name="uploading">Uploaden</string>
+    <string name="uploaded">Geüpload</string>
+    <string name="writing">Schrijven</string>
+    <string name="wrote">Geschreven</string>
+
+    <string name="something_strange_happened">Er is iets vreemds gebeurd.</string>
+    <string name="exporting_to_file_not_wanted">Bestandsexport niet gewenst.</string>
+    <string name="uploading_to_dropbox_not_wanted">Dropbox upload niet gewenst.</string>
+    <string name="uploading_to_community_not_wanted">Community upload niet gewenst.</string>
+
+    <string name="exporting_to_file">exporteren: %1$s (%2$d/%3$d)</string>
+    <string name="uploading_to_dropbox">naar Dropbox verzenden: %1$s (%2$d/%3$d)</string>
+    <string name="uploading_to_community">naar community verzenden: %1$s (%2$d/%3$d)</string>
+
+    <string name="exporting_to_file_failed_for_one">export mislukt 1/%1$d</string>
+    <string name="uploading_to_dropbox_failed_for_one">Dropbox upload mislukt 1/%1$d</string>
+    <string name="uploading_to_community_failed_for_one">upload naar 1/%1$d communities mislukt</string>
+    <string name="exporting_to_file_failed_for_several">export mislukt %1$d/%2$d</string>
+    <string name="uploading_to_dropbox_failed_for_several">Dropbox upload mislukt %1$d/%2$d</string>
+    <string name="uploading_to_community_failed_for_several">upload naar %1$d/%2$d communities mislukt</string>
+    <string name="successfully_exported_to_file">succesvol geëxporteerd %1$d/%2$d</string>
+    <string name="successfully_uploaded_to_dropbox">succesvol %1$d/%2$d naar Dropbox verzonden</string>
+    <string name="successfully_uploaded_to_community">succesvol naar %1$d/%2$d communities verzonden</string>
+
+    <string name="tracking">bezig</string>
+    <string name="tracking_finished">gestopt</string>
+    <string name="waiting_to_export_to_file">wachten op export %1$d/%2$d</string>
+    <string name="waiting_to_upload_to_dropbox">wachten op Dropbox upload %1$d/%2$d</string>
+    <string name="waiting_to_upload_to_community">wachten op community upload %1$d/%2$d</string>
+
+    <string name="please_wait">Even geduld …</string>
+    <string name="connecting_to_string">Verbinden met %1$s. \nEven geduld …</string>
+    <string name="deauthorization">Deautoriseren …</string>
+
+    <!-- notification -->
+    <string name="notification_title">%1$s naar %2$s</string>
+    <string name="notification_export_unknown">%1$s %2$s bestand naar ???\n%3$s</string>
+    <string name="notification_export_file">%1$s %2$s bestand naar lokaal\n%3$s</string>
+    <string name="notification_export_dropbox">%1$s %2$s bestand naar Dropbox\n%3$s</string>
+    <string name="notification_export_community">%1$s naar %2$s\n%3$s</string>
+    <string name="notification_finished_unknown">succes %1$s %2$s bestand naar ???\n%3$s</string>
+    <string name="notification_finished_file">succes %1$s %2$s bestand naar lokaal\n%3$s</string>
+    <string name="notification_finished_dropbox">succes %1$s %2$s bestand naar Dropbox\n%3$s</string>
+    <string name="notification_finished_community">succes %1$s naar %2$s\n%3$s</string>
+    <string name="notification_exporting_finished">export voltooid</string>
+    <string name="notification_tracking_a_workout">Training wordt opgenomen</string>
+    <string name="notification_searching_for_ant">zoeken naar ANT+ apparaten</string>
+    <string name="notification_searching_finished">zoeken voltooid</string>
+    <string name="notification_tracking">training</string>
+    <string name="notification_paused">gepauzeerd</string>
+    <string name="notification_tracking_and_searching_format">training en zoeken naar %1$s</string>
+    <string name="notification_pause_and_searching_format">pauze en zoeken naar %1$s</string>
+    <string name="copy_of">kopie van %1$s</string>
+    <string name="select_device_type">apparaattype kiezen</string>
+    <string name="Preview">voorbeeld</string>
+    <string name="preview_name_format">Voorbeeld: %1$s</string>
+    <string name="default_device_name_format">%1$s %2$s</string>
+    <string name="waiting_for">wachten op</string>
+    <string name="ready_to">klaar om</string>
+    <string name="paused">gepauzeerd</string>
+    <string name="some_remote_device">een extern apparaat</string>
+    <string name="ready_run">hardlopen</string>
+    <string name="ready_bike">fietsen</string>
+    <string name="ready_other">trainen</string>
+    <string name="tracking_run">hardlopen</string>
+    <string name="tracking_bike">fietsen</string>
+    <string name="tracking_other">trainen</string>
+    <string name="paused_run">hardlopen</string>
+    <string name="paused_bike"> fietsen</string>
+    <string name="paused_other">trainen</string>
+    <string name="export_status">Export-status</string>
+    <string name="LocationsActivityLabel">Locaties</string>
+    <string name="getting_start_locations">Zoeken naar startlocaties.</string>
+    <string name="average">gemiddelde</string>
+    <string name="start">start</string>
+    <string name="max_line_distance">verste punt</string>
+    <string name="end">stop</string>
+    <string name="my_locations">Mijn Locaties</string>
+    <string name="drawer__settings">Instellingen</string>
+    <string name="get_extremaType_of_sportType_format">Haal %1$s posities van uw %2$s trainingen.</string>
+    <string name="getting_my_locations">Zoeken naar bekende locaties.</string>
+    <string name="editLocationName">Naam:</string>
+    <string name="LocationAltitude">Hoogte:</string>
+    <string name="LocationRadius">Straal:</string>
+    <string name="edit_my_location">Locatie Bewerken</string>
+    <string name="create_new_my_location">Nieuwe bekende locatie maken.</string>
+    <string name="calc_workout_name">Trainingsnaam berekenen.</string>
+    <string name="calc_map_polyline">Route berekenen.</string>
+    <string name="edit_counter">bewerken</string>
+    <string name="edit_counter_format">Teller %1$s bewerken.</string>
+    <string name="editWorkoutNameCounters">Naamtellers bewerken.</string>
+    <string name="StartLocation">Startlocatie:</string>
+    <string name="EndLocation">Stoplocatie:</string>
+    <string name="NameScheme">Naamschema:</string>
+    <string name="addCounter">Teller toevoegen</string>
+    <string name="addVia">Locatienaam toevoegen bij omweg.</string>
+    <string name="configureWorkoutNameSchemes">Automatische naamgeving configureren.</string>
+    <string name="via_format">&#032;via %1$s</string>
+    <string name="loop_around_format">&#032;naar %1$s en terug</string>
+    <string name="really_delete_format">Wilt u \"%1$s\" verwijderen?</string>
+    <string name="workout_name_scheme">Naamschema</string>
+    <string name="workout_name_schemes">Naamschema\'s</string>
+    <string name="starred_run_segments">Hardlopen</string>
+    <string name="starred_bike_segments">Fietsen</string>
+    <string name="segments">Strava Segmenten</string>
+
+    <string name="TODO">bewijs het!</string>
+    <string name="tomorrow">morgen?</string>
+    <string name="updating_starred_segments_failed">segmenten bijwerken mislukt: </string>
+    <string name="edit_field">Veld bewerken</string>
+    <string name="ANT_Installation">ANT+ Installatie</string>
+    <string name="install">installeren</string>
+    <string name="do_not_check_again">niet meer controleren</string>
+    <string name="check_ANT_installation">ANT installatie controleren</string>
+    <string name="forcePortrait">Staande oriëntatie</string>
+    <string name="Display">Scherminstellingen</string>
+    <string name="smoothing">Smoothing waarden</string>
+    <string name="powerSmoothingTitle">Vermogen smoothing factor α</string>
+    <string name="powerSmoothingTitle_format">Vermogen smoothing: α=%1$f</string>
+    <string name="powerSmoothingSummary">Factor 0 &lt; α &#8804; 1 om vermogen te smooth\'en.</string>
+    <string name="alpha_must_be_between_0_and_1">α moet tussen 0 en 1 liggen.</string>
+
+    <string name="Search_Settings">Zoekinstellingen</string>
+    <string name="prefsNumberOfSearchTriesTitle">Aantal zoekrondes</string>
+    <string name="prefStartSearchTitle">Start zoeken wanneer …</string>
+    <string name="prefsStartSearchWhenAppStartsTitle">App start</string>
+    <string name="prefsStartSearchWhenTrackingStartsTitle">Training start</string>
+    <string name="prefsStartSearchWhenResumeFromPausedTitle">Hervatten na pauze</string>
+    <string name="prefsStartSearchWhenNewLapTitle">Nieuwe ronde</string>
+    <string name="prefsStartSearchWhenUserChangesSportTitle">Sport wijzigt</string>
+    <string name="prefs_search_behavior_title">Zoekgedrag</string>
+    <string name="prefsChangeSportWhenDeviceGetsLostTitle">Activiteit wijzigen</string>
+    <string name="prefsChangeSportWhenDeviceGetsLostSummary">Wijzigen als sensor wegvalt</string>
+
+    <string name="prefsSearchOnlyForSportSpecificDevicesTitle">Sport-specifiek zoeken</string>
+    <string name="prefsSearchOnlyForSportSpecificDevicesSummary">Alleen sensoren voor de sport</string>
+
+    <string name="startSearchWhenAppStarts_short">app start</string>
+    <string name="startSearchWhenTrackingStarts_short">training start</string>
+    <string name="startSearchWhenResumeFromPaused_short">hervat</string>
+    <string name="startSearchWhenNewLap_short">nieuwe ronde</string>
+    <string name="startSearchWhenUserChangesSport_short">sport wijzigt</string>
+    <string name="startSearchOnlyManually">alleen handmatig</string>
+
+
+    <string name="show_all_sport_types">+ alle sporten +</string>
+    <string name="sport_types">Sport-types</string>
+    <string name="configure_sport_types">Sporten configureren</string>
+    <string name="select_sport_type_format">%1$s sporten selecteren</string>
+    <string name="edit_auto_name">auto naam</string>
+    <string name="choose_auto_name">auto naam kiezen</string>
+
+    <string name="uploadAltitude">hoogte</string>
+    <string name="uploadHR">hartslag</string>
+    <string name="uploadPower">vermogen</string>
+    <string name="uploadCadence">cadans</string>
+    <string name="selectiveUpload">Selectieve upload</string>
+    <string name="summary">alleen samenvatting</string>
+    <string name="upload_to_strava_format">%1$s naar Strava</string>
+    <string name="upload_to_runkeeper_format">%1$s naar Runkeeper</string>
+    <string name="upload_to_training_peaks_format">%1$s naar TrainingPeaks</string>
+    <string name="concatenate_2_format">%1$s en %2$s</string>
+    <string name="concatenate_last_format">%1$s, en %2$s</string>
+    <string name="concatenate_2_format_or">%1$s of %2$s</string>
+    <string name="everything">gewoon alles</string>
+    <string name="battery_level_good">goed</string>
+    <string name="battery_level_ok">OK</string>
+    <string name="battery_level_new">nieuw</string>
+    <string name="battery_level_low">laag</string>
+    <string name="battery_level_critical">kritiek</string>
+    <string name="battery_level_unknown">onbekend</string>
+    <string name="check_battery_status_title_1">Vervang binnenkort de batterij van</string>
+    <string name="check_battery_status_title_many">Vervang binnenkort de batterijen van</string>
+    <string name="send_email">E-mail</string>
+    <string name="prefSendWorkoutEmailTitle">E-mail verzenden</string>
+    <string name="prefSendWorkoutEmailSummary">Bestanden mailen na elke training.</string>
+    <string name="prefSendEmailTo">E-mailadres</string>
+    <string name="prefEmailSubject">Onderwerp</string>
+    <string name="prefSendTCXEmailSummary">TCX bijvoegen</string>
+    <string name="prefSendGPXEmailSummary">GPX bijvoegen</string>
+    <string name="prefSendCSVEmailSummary">CSV bijvoegen</string>
+    <string name="prefSendGCEmailSummary">GC bijvoegen</string>
+    <string name="upload_via_email">Data via e-mail verzenden</string>
+    <string name="send_email_only_summary_format">Samenvatting mailen naar %1$s.</string>
+    <string name="send_email_format">Mail met %1$s naar %2$s.</string>
+    <string name="send_email_format_plural">Mail met %1$s bestanden naar %2$s.</string>
+    <string name="ready_to_send_email">Klaar om te mailen.</string>
+    <string name="title_request_dropbox_token">Dropbox toegang</string>
+    <string name="message_request_dropbox_token">Wilt u trainingen naar Dropbox uploaden?\n(Nieuwe API: opnieuw autoriseren nodig.)</string>
+
+    <string name="smartphone">Telefoon</string>
+    <string name="no_sensor_available">geen sensoren</string>
+    <string name="bestSensor">beste</string>
+
+    <string name="units_seconds_long">seconden</string>
+    <string name="units_minutes_long">minuten</string>
+    <string name="configSensor">Sensor:</string>
+    <string name="configSource">Bron:</string>
+    <string name="configSmoothing">Smoothing:</string>
+    <string name="configSize">Grootte:</string>
+    <string name="privacy_policy">Privacybeleid</string>
+    <string name="notification_channel_name__tracking">Training</string>
+    <string name="notification_channel_description__tracking">Meldingen tijdens training</string>
+    <string name="notification_channel_name__export">Export</string>
+    <string name="notification_channel_description__export">Meldingen tijdens export</string>
+    <string name="config_tracking__full_screen">Volledig scherm</string>
+    <string name="config_tracking_night_day__system_setting">Systeeminstelling</string>
+    <string name="config_tracking_night_day__day">Dag (licht)</string>
+    <string name="conffig_tracking_night_day__night">Nacht (donker)</string>
+    <string name="config_tracking__Display">Scherm</string>
+    <string name="config_tracking__Map">Kaart</string>
+    <string name="config_tracking__Lap">Ronde</string>
+    <string name="config_tracking__day_or_night">Dag of nacht</string>
+    <string name="config_tracking__show_map">Kaart</string>
+    <string name="config_tracking__showLiveSegments">Live Segmenten</string>
+    <string name="config_tracking__showLapButton">Ronde-knop</string>
+    <string name="add_view_before">weergave ervoor</string>
+    <string name="delete_view">weergave verwijderen</string>
+    <string name="add_view_after">weergave erna</string>
+    <string name="EditTrackingView">bewerken</string>
+
+    <string name="location_permission_required">Machtigingen</string>
+    <string name="background_location_permission_title">Locatie achtergrond</string>
+    <string name="background_location_permission_text">Om training op te nemen met scherm uit, kies \"Altijd toestaan\".</string>
+    <string name="location_permission_text">De app volgt je sessies ook als deze niet zichtbaar is. Sta locatie toe (precies).</string>
+    <string name="location_permission_text_Android12">De app volgt je sessies ook als deze niet zichtbaar is. Sta locatie toe (precies).\n\nVoor Bluetooth LE is de machtiging \"Apparaten in de buurt\" nodig.</string>
+    <string name="Request_permission_text">Toestaan via \"OK\".</string>
+
+    <string name="battery_optimization_title">Batterij-optimalisatie</string>
+    <string name="battery_optimization_text">Om te voorkomen dat de app gestopt wordt, schakel batterij-optimalisatie uit in het volgende scherm.</string>
+
+    <!-- Zone Settings Screen -->
+    <string name="prefs_training_zones">Trainingszones</string>
+    <string name="prefs_training_zones_summary">Zones configureren</string>
+    <string name="title_edit_zones">Trainingszones</string>
+    <string name="tab_hr_run">HS Lopen</string>
+    <string name="tab_hr_bike">HS Fietsen</string>
+    <string name="tab_pwr_bike">Pwr Fietsen</string>
+
+    <string name="zone_1_label">Zone 1 (Herstel)</string>
+    <string name="zone_2_label">Zone 2 (Aerobic)</string>
+    <string name="zone_3_label">Zone 3 (Tempo)</string>
+    <string name="zone_4_label">Zone 4 (Drempel)</string>
+    <string name="zone_5_label">Zone 5 (Anaerobic)</string>
+
+    <string name="label_min">Min</string>
+    <string name="label_max">Max</string>
+
+    <string name="prefEmailExport">e-Mail</string>
+
+<!-- 2026 -->
+    <!-- StringUtils -->
+    <string name="list_connector__and">\u0020;en\u0020</string>
+    <string name="list_connector__and_with_comma">, en\u0020</string>
+    <string name="list_connector__comma">, </string>
+
+
+<!-- notifications -->
+    <string name="export_notification__title">Exporteren %1$s</string>
+    <string name="export_notification__summary__started">Export gestart.</string>
+    <string name="export_notification__summary__in_progress_to">Exporteren naar %1$s.</string>
+    <string name="export_notification__summary__finished">Export voltooid.</string>
+
+    <!-- details -->
+
+    <!-- waiting  -->
+    <plurals name="export_notification__detail__File_waiting">
+        <item quantity="one">⏳ Wachten op schrijven bestand %1$s.</item>
+        <item quantity="other">⏳ Wachten op schrijven bestanden %1$s.</item>
+    </plurals>
+
+    <plurals name="export_notification__detail__Dropbox_waiting">
+        <item quantity="one">⏳ Wachten op Dropbox upload %1$s.</item>
+        <item quantity="other">⏳ Wachten op Dropbox upload %1$s.</item>
+    </plurals>
+
+    <plurals name="export_notification__detail__Community_waiting">
+        <item quantity="one">⏳ Wachten op upload naar %1$s.</item>
+        <item quantity="other">⏳ Wachten op upload naar %1$s.</item>
+    </plurals>
+
+    <!-- ongoing -->
+    <plurals name="export_notification__detail__File_ongoing">
+        <item quantity="one">💾 Schrijven bestand %1$s.</item>
+        <item quantity="other">💾 Schrijven bestanden %1$s.</item>
+    </plurals>
+
+    <plurals name="export_notification__detail__Dropbox_ongoing">
+        <item quantity="one">📤 Verzenden %1$s naar Dropbox.</item>
+        <item quantity="other">📤 Verzenden %1$s naar Dropbox.</item>
+    </plurals>
+
+    <plurals name="export_notification__detail__Community_ongoing">
+        <item quantity="one">📤 Verzenden naar %1$s.</item>
+        <item quantity="other">📤 Verzenden naar %1$s.</item>
+    </plurals>
+
+    <!-- success -->
+    <plurals name="export_notification__detail__File_success">
+        <item quantity="one">✅ Bestand %1$s succesvol geschreven.</item>
+        <item quantity="other">✅ Bestanden %1$s succesvol geschreven.</item>
+    </plurals>
+
+    <plurals name="export_notification__detail__Dropbox_success">
+        <item quantity="one">✅ %1$s geüpload naar Dropbox.</item>
+        <item quantity="other">✅ %1$s geüpload naar Dropbox.</item>
+    </plurals>
+
+    <plurals name="export_notification__detail__Community_success">
+        <item quantity="one">✅ Upload naar %1$s gelukt.</item>
+        <item quantity="other">✅ Upload naar %1$s gelukt.</item>
+    </plurals>
+
+    <!-- failed -->
+    <plurals name="export_notification__detail__File_failed">
+        <item quantity="one">❌ Fout bij schrijven bestand %1$s.</item>
+        <item quantity="other">❌ Fout bij schrijven bestanden %1$s.</item>
+    </plurals>
+
+    <plurals name="export_notification__detail__Dropbox_failed">
+        <item quantity="one">❌ Fout bij Dropbox upload %1$s.</item>
+        <item quantity="other">❌ Fout bij Dropbox upload %1$s.</item>
+    </plurals>
+
+    <plurals name="export_notification__detail__Community_failed">
+        <item quantity="one">❌ Fout bij upload naar %1$s.</item>
+        <item quantity="other">❌ Fout bij upload naar %1$s.</item>
+    </plurals>
+
+    <string name="export_notification__detail__no_results">❓ Geen resultaten gevonden.</string>
+
+    <string name="export_status__header_title">Export-status</string>
+
+    <string name="export_status__waiting">Wachten</string>
+    <string name="export_status__processing">Bezig</string>
+    <string name="export_status__success">Gelukt</string>
+    <string name="export_status__failed">Mislukt</string>
+    <string name="export_status__tracking">Training</string>
+    <string name="export_status__tracking_finished">Training voltooid</string>
+    <string name="export_status__unwanted">Niet gewenst</string>
+
+    <!-- change Sport Dialog -->
+    <string name="change_sport">Sport wijzigen</string>
+    <string name="save">Opslaan</string>
+    <string name="cancel">Annuleren</string>
+
+    <!-- Edit workout name -->
+    <string name="hint_workout_name">naam van\nde training</string>
+    <string name="edit_workout_name">trainingsnaam bewerken</string>
+
+    <!-- workout summary description-->
+    <string name="workout_summary__description_header">Beschrijving</string>
+
+    <!-- Edit workout description -->
+    <string name="hint_workout_description">beschrijving</string>
+    <string name="hint_workout_goal">doel</string>
+    <string name="hint_workout_method">methode</string>
+    <string name="title_edit_description">Beschrijving bewerken</string>
+
+    <!-- workout details -->
+    <string name="total_time_format">(totaal: %1$s)</string>
+    <string name="format_max_displacement">(Max. hemelsbreed: %1$s)</string>
+
+    <!-- workout summary with equipment -->
+    <string name="format_with_equipment_bike">op %1$s</string>
+    <string name="format_with_equipment_run">met %1$s</string>
+    <string name="format_with_equipment_other">met %1$s</string>
+
+    <string name="invalid_date">\???</string>
+
+    <!-- sport type list / edit sport type -->
+    <string name="you_can_not_delete_this_sport_type">U kunt deze sport niet verwijderen</string>
+    <string name="add_sport_type">sport toevoegen</string>
+    <string name="edit_sport_type">Sport Bewerken</string>
+    <string name="sport_type_name">Naam sport</string>
+    <string name="basic_sport_type">basis-sport</string>
+    <string name="OnlineCommunities">Online Communities</string>
+    <string name="ExportFiles">Bestandsexport</string>
+    <string name="min_avg_speed">min gem snelheid:</string>
+    <string name="max_avg_speed">max gem snelheid:</string>
+    <string name="mapping_format_strava">Strava: %1$s</string>
+    <string name="mapping_format_tcx">TCX: %1$s</string>
+    <string name="mapping_format_gc">GC: %1$s</string>
+    <string name="item_is_fixed_and_cannot_be_deleted">Deze sport kan niet worden bewerkt.</string>
+
+    <!-- drawer -->
+    <string name="drawer__training">Training</string>
+    <string name="drawer__maps">Kaarten</string>
+    <string name="drawer__my_stuff">Mijn Gegevens</string>
+
+    <!-- sensor view settings -->
+    <string name="source">Bron</string>
+    <string name="sensor">Sensor</string>
+    <string name="text_size">Grootte</string>
+    <string name="filter">Filter</string>
+
+    <string name="view_size_xsmall">Zeer klein</string>
+    <string name="view_size_small">Klein</string>
+    <string name="view_size_normal">Normaal</string>
+    <string name="view_size_large">Groot</string>
+    <string name="view_size_xlarge">Zeer groot</string>
+    <string name="view_size_huge">Enorm</string>
+    <string name="view_size_xhuge">Gigantisch</string>
+    <string name="configure">Configureren</string>
+    <string name="tab_name">Naam</string>
+
+    <!-- Equipment -->
+    <string name="equipment_management_title">Materiaal</string>
+    <string name="equipment_management_summary">Configureer je fietsen en schoenen</string>
+    <string name="prefs_manage_bikes_title">Fietsen</string>
+    <string name="prefs_manage_bikes_summary">Configureer al je fietsen</string>
+    <string name="prefs_manage_shoes_title">Schoenen</string>
+    <string name="prefs_manage_shoes_summary">Configureer je loopschoenen</string>
+
+    <string name="equipment_configure_equipment">Materiaal configureren</string>
+    <string name="equipment_bike_type">Type fiets</string>
+    <string name="equipment_select_bike_type">Type fiets selecteren</string>
+    <string name="equipment_linked_sensors">Gekoppelde sensoren</string>
+    <string name="equipment_no_sensors_linked">Geen sensoren gekoppeld</string>
+    <string name="equipment_sport_types">Sporten:</string>
+    <string name="equipment_linked_sport_types">Gekoppelde sporten</string>
+    <string name="equipment_no_sports_linked">Geen</string>
+
+    <!-- statistics -->
+    <string name="stats_total">Altijd</string>
+    <string name="stats_first_use">Eerste gebr.</string>
+    <string name="stats_last_use">Laatste gebr.</string>
+    <string name="stats_first_activity">Eerste activiteit</string>
+    <string name="stats_last_activity">Laatste activiteit</string>
+    <string name="stats_distance">Afstand</string>
+    <string name="stats_workouts">Trainingen</string>
+    <string name="stats_time">Actieve tijd</string>
+    <string name="stats_ascent">Stijging</string>
+    <string name="stats_this_week">Deze week</string>
+    <string name="stats_last_week">Vorige week</string>
+    <string name="stats_this_month">Deze maand</string>
+    <string name="stats_last_month">Vorige maand</string>
+    <string name="stats_this_year">Dit jaar</string>
+
+    <!-- sport type -->
+    <string name="sport_type_linked_equipment">Gekoppeld materiaal</string>
+    <string name="sport_type_no_equipment_linked">Geen materiaal gekoppeld</string>
+    <string name="sport_type_equipment">Materiaal</string>
+    <string name="sport_type_tab_all">Alle sporten</string>
+    <string name="sport_type_tab_bike">Fiets-types</string>
+    <string name="sport_type_tab_run">Loop-types</string>
+    <string name="sport_type_tab_unknown">Andere sporten</string>
+
+    <!-- workout summaries tabs -->
+    <string name="workout_summaries_tab_all">Alle</string>
+    <string name="workout_summaries_tab_bike">Fietsen</string>
+    <string name="workout_summaries_tab_run">Lopen</string>
+    <string name="workout_summaries_tab_other">Overig</string>
+    <string name="workout_summaries_loading">Geschiedenis laden…</string>
+
+    <!-- starred Strava segments -->
+    <string name="starred_segments__no_update_because_upload_to_strava_is_disabled">Niet verbonden met Strava. Geen update.</string>
+    <string name="starred_segments__no_strava_connection">Niet verbonden met Strava</string>
+    <string name="starred_segments__connect_to_strava">Verbinden met Strava</string>
+    <string name="starred_segments__refresh">Segmenten bijwerken</string>
+
+    <!-- Control tracking -->
+    <string name="control_tracking_connecting">Verbinden…</string>
+    <string name="control_tracking_ready_run">Klaar om te lopen</string>
+    <string name="control_tracking_ready_bike">Klaar om te fietsen</string>
+    <string name="control_tracking_ready_other">Klaar om te trainen</string>
+
+    <!-- live segments -->
+    <string name="segment_status_far_far_away">Ver weg</string>
+    <string name="segment_status_approaching">Nadert</string>
+    <string name="segment_status_on_segment">Op segment</string>
+    <string name="segment_status_near_finish">Nadert finish</string>
+    <string name="segment_status_finished">Gefinisht</string>
+    <string name="segment_status_start_in">Start in: %1$s</string>
+    <string name="segment_status_remaining">Nog: %1$s</string>
+    <string name="segment_status_offset">Verschil: %1$s</string>
+
+    <!-- ANT(+) Plugins -->
+    <string name="ant_general_explanation">Met de juiste hardware/software kun je ANT+ apparaten koppelen.</string>
+    <string name="ant_missing_adapter_title">ANT adapter ontbreekt</string>
+    <string name="ant_missing_adapter_message">Je telefoon lijkt geen ANT+ te ondersteunen. Gebruik een USB ANT Dongle.</string>
+    <string name="ant_missing_dependency_title">Afhankelijkheid ontbreekt</string>
+    <string name="ant_missing_dependency_message">App \"%1$s\" ontbreekt. Play Store openen?</string>
+    <string name="go_to_store">Play Store</string>
+
+    <!-- Tracking -->
+    <string name="Done">Klaar</string>
+    <string name="Edit">Bewerken</string>
+
+    <!-- Segment / Route Sorting -->
+    <string name="sort_closest">Dichtstbijzijnde</string>
+    <string name="sort_climb_category">Klim-categorie</string>
+    <string name="sort_elevation_gain">Hoogtemeters</string>
+    <string name="sort_average_grade">Gem. helling</string>
+    <string name="sort_length">Lengte</string>
+    <string name="sort_name">Naam</string>
+    <string name="sort_date">Datum</string>
+    <string name="sort_duration">Duur</string>
+
+    <!-- routes -->
+    <string name="routes">Routes</string>
+    <string name="no_routes_available">Geen %s routes.</string>
+    <string name="absolutely_no_routes_available">Geen routes beschikbaar.</string>
+    <string name="routes_import_hint">Importeer een GPX via \"+\" of je bestandsbeheer.</string>
+    <string name="route_edit">Route bewerken</string>
+    <string name="route_sport_type">Sport</string>
+    <string name="route_description">Beschrijving</string>
+    <string name="route_import">Importeren</string>
+    <string name="route_saved_success">Route opgeslagen.</string>
+    <string name="route_saved_failed">Fout bij opslaan.</string>
+    <string name="strava_sync_success">Strava routes bijgewerkt.</string>
+    <string name="strava_sync_failed">Strava synchro mislukt.</string>
+    <string name="route_source_workout">Training</string>
+    <string name="sort">Sorteren</string>
+    <string name="routes_source_label">Bron: %1$s</string>
+
+    <!-- workout periods -->
+    <string name="workout_periods__periods">Perioden</string>
+    <string name="workout_periods__days">Dagen</string>
+    <string name="workout_periods__weeks">Weken</string>
+    <string name="workout_periods__months">Maanden</string>
+    <string name="workout_periods__years">Jaren</string>
+    <plurals name="workout_periods__workouts">
+        <item quantity="one">%1$d Training</item>
+        <item quantity="other">%1$d Trainingen</item>
+    </plurals>
+    <string name="workout_periods__longest_workout">Langste training</string>
+
+    <!-- share screenshots -->
+    <string name="share">Delen</string>
+
+    <string name="avg_speed_label">Gem. snelh.</string>
+    <string name="ascent_label">D+</string>
+    <string name="unit_meters_short">m</string>
+    <string name="strava_results_title">Strava resultaten</string>
+    <string name="strava_uploaded_no_records">Geüpload. Geen records.</string>
+    <string name="strava_best_efforts">Beste prestaties</string>
+    <plurals name="strava_best_efforts_with_prs_format">
+        <item quantity="one">Records (%1$d PR)</item>
+        <item quantity="other">Records (%1$d PRs)</item>
+    </plurals>
+    <string name="strava_segments_title">Segmenten</string>
+    <plurals name="strava_segments_with_prs_format">
+        <item quantity="one">Segmenten (%1$d PR)</item>
+        <item quantity="other">Segmenten (%1$d PRs)</item>
+    </plurals>
+    <string name="strava_kom_description">KOM / Segmentrecord</string>
+    <string name="strava_pr_description">Persoonlijk record #%1$d</string>
+
+    <string name="strava_connected_status">Verbonden met Strava</string>
+    <string name="strava_disconnected_status">Niet verbonden met Strava</string>
+    <string name="strava_disconnect">Verbinding verbreken</string>
+    <string name="strava_overall_rank_description">Algemene rang #%1$d</string>
+</resources>

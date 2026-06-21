@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+  -->
+
+<resources>
+
+    <string name="filter_max">max</string>
+
+    <string-array name="Strava_Sport_Types_UI_Names">
+        <item>Training (Overig)</item>
+        <item>Rit</item>
+        <item>Hardloopsessie</item>
+        <item>Zwemmen</item>
+        <item>Hiken</item>
+        <item>Wandelen</item>
+        <item>Alpineskiën</item>
+        <item>Toerskiën</item>
+        <item>Kanoën</item>
+        <item>Crossfit</item>
+        <item>E-Bike rit</item>
+        <item>Crosstrainer</item>
+        <item>Schaatsen</item>
+        <item>Skeeleren</item>
+        <item>Kajakken</item>
+        <item>Kitesurfen</item>
+        <item>Langlaufen</item>
+        <item>Rotsklimmen</item>
+        <item>Rolskiën</item>
+        <item>Roeien</item>
+        <item>Snowboarden</item>
+        <item>Sneeuwschoenwandelen</item>
+        <item>Stair Stepper</item>
+        <item>Stand Up Paddling</item>
+        <item>Surfen</item>
+        <item>Virtuele rit</item>
+        <item>Krachttraining</item>
+        <item>Windsurfen</item>
+        <item>Yoga</item>
+    </string-array>
+
+    <string-array name="Runkeeper_Sport_Types">
+        <item>Overig</item>
+        <item>Hardlopen</item>
+        <item>Fietsen</item>
+        <item>Mountainbiken</item>
+        <item>Wandelen</item>
+        <item>Hiken</item>
+        <item>Alpineskiën</item>
+        <item>Langlaufen</item>
+        <item>Snowboarden</item>
+        <item>Schaatsen</item>
+        <item>Zwemmen</item>
+        <item>Rolstoel</item>
+        <item>Roeien</item>
+        <item>Crosstrainer</item>
+        <item>Yoga</item>
+        <item>Pilates</item>
+        <item>CrossFit</item>
+        <item>Spinning</item>
+        <item>Zumba</item>
+        <item>Barre</item>
+        <item>Groepstraining</item>
+        <item>Dansen</item>
+        <item>Bootcamp</item>
+        <item>Boksen / MMA</item>
+        <item>Meditatie</item>
+        <item>Krachttraining</item>
+        <item>Circuit</item>
+        <item>Core</item>
+        <item>Arc Trainer</item>
+        <item>Stairmaster</item>
+        <item>Sport</item>
+        <item>Nordic Walking</item>
+    </string-array>
+
+    <string-array name="Training_Peaks_Sport_Types">
+        <item>Overig</item>
+        <item>Fiets</item>
+        <item>Loop</item>
+        <item>Wandeling</item>
+        <item>Zwemmen</item>
+        <item>X-Train</item>
+        <item>MTB</item>
+        <item>Kracht</item>
+        <item>XC-Ski</item>
+        <item>Roeien</item>
+    </string-array>
+
+    <string-array name="TCX_Sport_Types">
+        <item>Overig</item>
+        <item>Wandelen</item>
+        <item>Hardlopen</item>
+        <item>Fietsen</item>
+    </string-array>
+
+    <string-array name="GC_Sport_Types">
+        <item>wandelen</item>
+        <item>hardlopen</item>
+        <item>mtb</item>
+        <item>fietsen</item>
+    </string-array>
+
+    <string-array name="wheel_size_names">
+        <item>Aangepast</item>
+        <item>700 x 28</item>
+        <item>700 x 25</item>
+        <item>700 x 23</item>
+        <item>700 x 20</item>
+        <item>26 x 2.125"</item>
+        <item>26 x 1.9"</item>
+        <item>26 x 1.5"</item>
+        <item>26 x 1.25"</item>
+        <item>26 x 1.0"</item>
+    </string-array>
+
+</resources>

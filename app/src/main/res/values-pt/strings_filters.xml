@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+  -->
+
+<resources>
+    <string name="filter_configure_smoothing">Configurar suavização</string>
+
+    <string name="filter_instantaneous">instantâneo</string>
+    <string name="filter_average">média (treino inteiro)</string>
+    <string name="filter_exponential_smoothing">suavização exponencial</string>
+    <string name="filter_moving_average">média móvel</string>
+    <string name="filter_exponential_smoothing_format">suavização exponencial com α=%1.2f</string>
+    <string name="filter_exponential_smoothing_short_format">exp α=%1.1f</string>
+
+    <string name="filter_details__instantaneous">Mostrar o valor atual.</string>
+    <string name="filter_details__average">Mostrar o valor médio de todo o treino.</string>
+    <string name="filter_details__max">Mostrar o valor máximo do treino.</string>
+    <string name="filter_details__moving_average_time">Mostrar a média dos últimos %1$d %2$s.</string>
+    <string name="filter_details__moving_average_number">Mostrar o valor médio dos últimos %1$d valores recebidos.</string>
+    <string name="filter_details__exponential_smoothing">Suavização exponencial com 0 &lt; α &#8804; 1.</string>
+
+    <string name="filter_unit">Unidade</string>
+    <string name="filter_type">Tipo de suavização</string>
+    <string name="filter_value">Valor</string>
+
+</resources>

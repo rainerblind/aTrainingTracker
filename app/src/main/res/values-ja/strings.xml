@@ -1,0 +1,959 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+  -->
+
+<resources>
+
+    <!-- Standard stuff -->
+    <string name="OK">OK</string>
+    <string name="do_not_show_again">再表示しない</string>
+    <string name="Cancel">キャンセル</string>
+    <string name="searching_for">検索中:</string>
+    <string name="searching_for_device_format">%1$s を検索中</string>
+    <string name="default_device_name">ANT+ デバイス</string>
+    <string name="waiting">待機中</string>
+    <string name="pairing_ANT">ANT+ ペアリング</string>
+    <string name="pairing_bluetooth">Bluetooth LE ペアリング</string>
+    <string name="searching">検索中</string>
+    <string name="research">再検索</string>
+    <string name="Start">開始</string>
+    <string name="Stop">停止</string>
+    <string name="Pause">一時停止</string>
+    <string name="Paused">一時停止中</string>
+    <string name="Resume">再開</string>
+    <string name="Tracking">トレーニング</string>
+    <string name="StartPositionTitle">スタート</string>
+    <string name="EndPositionTitle">ストップ</string>
+    <string name="Lap">ラップ</string>
+    <string name="Equipment">装備</string>
+    <string name="edit_device">デバイス編集</string>
+    <string name="edit_location">地点編集</string>
+    <string name="Edit_Location">地点を編集</string>
+    <string name="edit_workout">トレーニング編集</string>
+    <string name="save_as_route">ルートとして保存</string>
+    <string name="Edit_Location_Message">地点名と高度を編集します</string>
+    <string name="edit_wheel_circumference">タイヤ周長を編集</string>
+    <string name="edit_calibration_factor">補正係数を編集</string>
+    <string name="delete">削除</string>
+    <string name="delete_device">デバイス削除</string>
+    <string name="delete_pebble_view">Pebble表示を削除</string>
+    <string name="delete_tracking_view">トレーニング表示を削除</string>
+    <string name="delete_workout">トレーニングを削除</string>
+    <string name="deleteOldWorkouts">古いトレーニングを削除</string>
+    <string name="deleteWorkoutsThatAreOlderThanDays">指定日数より古いトレーニングを削除</string>
+    <string name="delete_sensor">削除</string>
+    <string name="really_delete_workout">このトレーニングを削除しますか？</string>
+    <string name="really_delete_location">この地点を削除しますか？</string>
+    <string name="really_delete_pebble_view_format">Pebble表示 "%1$s" を削除しますか？</string>
+    <string name="really_delete_view_format">表示 "%1$s" を削除しますか？</string>
+    <string name="deleting_please_wait">トレーニングを削除中 …\nお待ちください</string>
+    <string name="deleting_workout">削除中: %1$s…</string>
+    <string name="calculating_extrema_values">統計値（最小、平均、最大）を計算中…</string>
+    <string name="calculating_extrema_value_for">%2$s の %1$s を計算中</string>
+    <string name="calculating_max_away_point">最遠地点を計算中</string>
+    <string name="initializing">初期化中</string>
+    <string name="delete_location">地点を削除</string>
+    <string name="show_HW_details">ハードウェア詳細を表示</string>
+    <string name="show_google_maps_licence">Google Maps 法的事項</string>
+    <string name="play_services_not_installed">Google Play 開発者サービスがインストールされていません。</string>
+    <string name="Preferences">設定</string>
+    <string name="start_tracking">トレーニング開始</string>
+    <string name="stop_tracking">トレーニング停止</string>
+    <string name="pause_tracking">一時停止</string>
+    <string name="resume_tracking">再開</string>
+    <string name="start_or_resume_dialog_message">前回のトレーニングが正常に終了していません。\n新しく開始しますか、それとも再開しますか？</string>
+    <string name="start_new_workout">新しく開始</string>
+    <string name="resume_workout">再開</string>
+    <string name="SD_card">SDカード</string>
+    <string name="File">ファイル</string>
+    <string name="Community">コミュニティ</string>
+    <string name="TrainingPeaks_login_title">TrainingPeaks ログイン</string>
+    <string name="TrainingPeaks_login_message">TrainingPeaksへのアップロードには、ユーザー名とパスワードが必要です</string>
+    <string name="unknown_manufacturer">不明</string>
+    <string name="unknown_last_seen_date">未検出</string>
+    <string name="next">次へ</string>
+    <string name="text_new">新規</string>
+    <string name="prev">前へ</string>
+    <string name="name">名前</string>
+    <string name="number_of_fields">項目数:</string>
+    <string name="Lap_NR">ラップ %1$d</string>
+    <string name="build_in">内蔵</string>
+    <string name="no_user_name">ユーザー名なし</string>
+    <string name="no_password">パスワードなし</string>
+    <string name="add_sensor">センサー追加</string>
+
+    <string name="commute">通勤・通学</string>
+    <string name="trainer_general">屋内トレーナー</string>
+    <string name="trainer_bike">屋内トレーナー</string>
+    <string name="trainer_run">トレッドミル</string>
+
+    <string name="guess_commute_and_trainer">種類を自動判定</string>
+
+    <string name="install_pebble_watchapp_title">Pebble アプリをインストール</string>
+    <string name="install_pebble_watchapp_text">このオプションを使用するには、Pebble Watchapp をインストールする必要があります。</string>
+    <string name="install_pebble_watchapp_now">OK、今すぐインストール</string>
+    <string name="pebble_build_in">標準 Pebble アプリ</string>
+    <string name="pebble_a_training_tracker_watchapp">a Training Tracker アプリ</string>
+
+    <string name="install_ant_plugin_message">ANT+ を使用するには、ANT+ Plugin Service のインストールが必要です。</string>
+    <string name="install_ant_plugin_ok">OK、今すぐインストール</string>
+
+    <string name="protocol_all">すべて</string>
+    <string name="protocol_unknown">不明</string>
+
+    <!-- Units -->
+    <string name="units_type_metric">メートル法 (m)</string>
+    <string name="units_type_imperial">ヤードポンド法 (mile)</string>
+
+    <string name="value_unit_float_string">%1$.2f %2$s</string>
+    <string name="value_unit_string_string">%1$s %2$s</string>
+    <string name="value_unit_int_string">%1$d %2$s</string>
+    <string name="distance_distanceUnit_sport_time_format">%1$s %2$s %3$s (%4$s)</string>
+
+    <string name="location_extrema_format">%1$s %2$s: %3$s %4$s</string>
+
+    <string name="configure_pebble_view">Pebble 表示設定: %1$s</string>
+
+    <!--  ActivityType -->
+    <string name="activity_type_bike_power">バイクパワー</string>
+    <string name="activity_type_bike_speed_and_cadence">バイク</string>
+    <string name="activity_type_multisport_with_hr">汎用</string>
+    <string name="activity_type_run_speed_and_cadence">ラン</string>
+
+    <string name="text_default">デフォルト</string>
+    <string name="string_and_number_format">%1$s %2$d</string>
+
+    <!-- DeviceType -->
+    <string name="device_type_dummy">ダミー</string>
+    <string name="device_type_short_dummy">ダミー</string>
+    <string name="device_type_all">すべてのデバイス</string>
+    <string name="device_type_short_all">すべて</string>
+    <string name="device_type_bike_cadence">バイクケイデンス</string>
+    <string name="device_type_short_bike_cadence">cad</string>
+    <string name="device_type_bike_power">バイクパワー</string>
+    <string name="device_type_short_bike_power">pwr</string>
+    <string name="device_type_bike_speed_and_cadence">バイクスピード &amp; ケイデンス</string>
+    <string name="device_type_short_bike_speed_and_cadence">s&amp;c</string>
+    <string name="device_type_bike_speed">バイクスピード</string>
+    <string name="device_type_short_bike_speed">spd</string>
+    <string name="device_type_heart_rate">心拍計</string>
+    <string name="device_type_short_heart_rate">HR</string>
+    <string name="device_type_run_speed">ランスピード</string>
+    <string name="device_type_short_run_speed">ラン速度</string>
+    <string name="device_type_environment">温度</string>
+    <string name="device_type_short_environment">温度</string>
+    <string name="device_type_altitude_from_pressure">気圧高度計</string>
+    <string name="device_type_short_altitude_from_pressure">高度</string>
+    <string name="device_type_sensor_manager">センサー管理</string>
+    <string name="device_type_short_sensor_manager">センサー管理</string>
+    <string name="device_type_clock">時計</string>
+    <string name="device_type_short_clock">時計</string>
+
+    <string name="gps_enabled_on_device">GPS 有効</string>
+    <string name="gps_disabled_on_device">GPS 無効。設定から有効にしてください</string>
+    <string name="gps_goto_settings">設定へ</string>
+
+    <!-- sensor types -->
+    <string name="accumulated_sensors">累積センサー</string>
+    <string name="accumulated_sensors_short">累積</string>
+    <string name="accuracy">精度</string>
+    <string name="accuracy_short">精度</string>
+    <string name="ascent">上昇</string>
+    <string name="ascent_short">上昇</string>
+    <string name="bearing">方位</string>
+    <string name="bearing_short">方位</string>
+    <string name="altitude">高度</string>
+    <string name="altitude_short">高度</string>
+    <string name="cadence">ケイデンス</string>
+    <string name="cadence_short">cad.</string>
+    <string name="cadence_run">ランケイデンス</string>
+    <string name="cadence_run_short">cad.</string>
+    <string name="cadence_bike">バイクケイデンス</string>
+    <string name="cadence_bike_short">cad.</string>
+    <string name="calories">カロリー</string>
+    <string name="calories_short">cal.</string>
+    <string name="descent">下降</string>
+    <string name="descent_short">下降</string>
+    <string name="distance">距離</string>
+    <string name="distance_short">距離</string>
+    <string name="distance_lap">ラップ距離</string>
+    <string name="distance_lap_short">ラップ距離</string>
+    <string name="heart_rate">心拍数</string>
+    <string name="heart_rate_short">HR</string>
+    <string name="lap_number">ラップ数</string>
+    <string name="lap_number_short">ラップ</string>
+    <string name="line_distance">直線距離</string>
+    <string name="line_distance_short">直線距離</string>
+    <string name="pace">ペース</string>
+    <string name="pace_short">ペース</string>
+    <string name="position">位置</string>
+    <string name="position_short">位置</string>
+    <string name="power">パワー</string>
+    <string name="power_short">power</string>
+    <string name="speed">速度</string>
+    <string name="speed_short">速度</string>
+    <string name="current_sensors">現在のセンサー</string>
+    <string name="current_sensors_short">現在センサー</string>
+    <string name="strides">ストライド</string>
+    <string name="strides_short">ストライド</string>
+    <string name="temperature">温度</string>
+    <string name="temperature_short">温度</string>
+    <string name="temperature_max">最高温度</string>
+    <string name="temperature_max_short">最高温度</string>
+    <string name="temperature_min">最低温度</string>
+    <string name="temperature_min_short">最低温度</string>
+    <string name="time_active">走行時間</string>
+    <string name="time_active_short">時間</string>
+    <string name="time_lap">ラップ時間</string>
+    <string name="time_lap_short">ラップ</string>
+    <string name="time_of_day">時刻</string>
+    <string name="time_of_day_short">時刻</string>
+    <string name="time_total">合計時間</string>
+    <string name="time_total_short">合計</string>
+    <string name="torque">トルク</string>
+    <string name="torque_short">トルク</string>
+    <string name="pedal_power_balance">左右バランス</string>
+    <string name="pedal_power_balance_short">バランス</string>
+    <string name="pedal_smoothness_l">左スムーズネス</string>
+    <string name="pedal_smoothness_l_short">スムーズ左</string>
+    <string name="pedal_smoothness_r">右スムーズネス</string>
+    <string name="pedal_smoothness_r_short">スムーズ右</string>
+    <string name="pedal_smoothness">スムーズネス</string>
+    <string name="pedal_smoothness_short">スムーズ</string>
+    <string name="torque_effectiveness_l">左トルク効率</string>
+    <string name="torque_effectiveness_l_short">効率左</string>
+    <string name="torque_effectiveness_r">右トルク効率</string>
+    <string name="torque_effectiveness_r_short">効率右</string>
+    <string name="slope">勾配</string>
+    <string name="slope_short">勾配</string>
+    <string name="vertical_speed">昇降速度 (VAM)</string>
+    <string name="vertical_speed_short">VAM</string>
+
+    <string name="sport_type_walk">ウォーク</string>
+    <string name="sport_type_run">ラン</string>
+    <string name="sport_type_MTB">MTB</string>
+    <string name="sport_type_bike">バイク</string>
+    <string name="sport_type_other">その他</string>
+
+    <!-- Bike Power Features -->
+    <string name="bike_power__features">機能</string>
+    <string name="bike_power__instantaneous_power">&#8226; 瞬間パワー</string>
+    <string name="bike_power__pedal_power_balance">&#8226; 左右バランス</string>
+    <string name="bike_power__accumulated_torque">&#8226; 累積トルク</string>
+    <string name="bike_power__wheel_revolution_data">&#8226; 速度 &amp; 距離</string>
+    <string name="bike_power__crank_revolution_data">&#8226; ケイデンス</string>
+    <string name="bike_power__extreme_magnitudes">&#8226; 極値</string>
+    <string name="bike_power__extreme_angles">&#8226; 極角</string>
+    <string name="bike_power__top_and_bottom_dead_sport_angles">&#8226; 上下死点角</string>
+    <string name="bike_power__accumulated_energy">&#8226; 累積エネルギー</string>
+    <string name="bike_power__wheel_speed_and_distance_data">&#8226; スピード &amp; 距離</string>
+    <string name="bike_power__wheel_speed_data">&#8226; スピード</string>
+    <string name="bike_power__wheel_distance_data">&#8226; 距離</string>
+    <string name="bike_power__pedal_smoothness">&#8226; ペダルスムーズネス</string>
+    <string name="bike_power__torque_effectiveness">&#8226; トルク効率</string>
+    <string name="bike_power__torque_data">&#8226; トルク</string>
+
+    <string name="bike_power__pedal_power_balance_correction">バランス補正</string>
+    <string name="bike_power__double_power_balance_values">測定値を2倍にする</string>
+    <string name="bike_power__invert_power_balance_values">左右を反転させる</string>
+
+    <!-- Labels -->
+    <string name="PrefsActivityLabel">設定</string>
+    <string name="UpdateWorkoutActivityLabel">更新</string>
+    <string name="TrackOnMapActivityLabel">トレーニング</string>
+    <string name="ExportDetailsActivityLabel">エクスポート詳細</string>
+    <string name="TrackingFragmentConfigListActivityLabel">表示を編集</string>
+    <string name="TrackingFragmentConfigActivityLabel">表示設定を編集</string>
+    <string name="PebbleConfigListActivityLabel">Pebble表示を編集</string>
+    <string name="PebbleConfigActivityLabel">Pebble表示設定を編集</string>
+    <string name="AltitudeCorrectionListActivityLabel">高度補正</string>
+    <string name="DeviceChoiceActivityLabel">ペアリング</string>
+    <string name="PairingActivityLabel">ペアリング</string>
+    <string name="EditDeviceActivityLabel">デバイスを編集</string>
+    <string name="LegalInfoLabel">Google Maps 法的事項</string>
+
+    <!--  For Preferences Activity -->
+    <string name="prefsUserTitle">ユーザー</string>
+    <string name="prefsBasic">基本設定</string>
+    <string name="prefs_Export">エクスポート</string>
+    <string name="prefs_Display">画面表示</string>
+    <string name="prefsAdvanced">詳細設定</string>
+
+    <string name="prefsThresholdSpeedsTitle">速度しきい値</string>
+    <string name="prefsThresholdSpeedsSummary">各スポーツの速度しきい値を設定</string>
+    <string name="prefsMinWalkSpeedTitle">最小歩行速度</string>
+    <string name="prefsMaxWalkSpeedTitle">最大歩行速度</string>
+    <string name="prefsMaxRunSpeedTitle">最大走行速度</string>
+    <string name="prefsMaxMTBSpeedTitle">最大MTB速度</string>
+
+    <string name="prefsTrackingTitle">記録設定</string>
+
+    <string name="prefsDisplayTitle">表示</string>
+    <string name="prefsDisplaySummary">画面と向きの設定</string>
+    <string name="prefsKeepScreenOnTitle">画面を常時点灯</string>
+    <string name="prefsNoUnlockingTitle">ロック解除を維持</string>
+    <string name="prefZoomDependingOnSpeedTitle">速度に応じてズーム</string>
+    <string name="prefsUnitsTitle">単位</string>
+    <string name="prefsUnitsSummary">メートル法</string>
+    <string name="prefShowUnitsTitle">単位を表示</string>
+
+    <string name="prefsConfigureDisplaysTitle">トレーニングタブ</string>
+
+    <string name="prefsDoNotUsePebble">Pebbleを使用しない</string>
+    <string name="prefsPebbleSupportTitle">Pebbleサポート</string>
+    <string name="prefsPebbleSupportSummary">Pebbleに値を表示する</string>
+    <string name="prefsPebbleWatchappsTitle">Pebbleアプリ</string>
+    <string name="prefsPebbleWatchappsSummary">内蔵</string>
+    <string name="prefsConfigurePebbleDisplaysTitle">Pebble画面設定</string>
+
+    <string name="prefsExportTitle">ファイルエクスポート</string>
+    <string name="prefsExportSummary">エクスポート形式の設定</string>
+
+    <string name="prefsUploadTitle">アップロード</string>
+    <string name="prefsUploadSummary">クラウドへのアップロード</string>
+    <string name="prefsOnlineStorage">オンラインストレージ</string>
+    <string name="prefsOnlineCommunities">オンラインコミュニティ</string>
+    <string name="prefsUploadToDropboxSummary">Dropboxに自動アップロード</string>
+    <string name="prefsUploadToStravaSummary">Stravaに自動アップロード</string>
+    <string name="prefsUploadToRunkeeperSummary">Runkeeperに自動アップロード</string>
+    <string name="prefsUploadToTrainingPeaksSummary">TrainingPeaksに自動アップロード</string>
+
+    <string name="prefsAltitudeCorrectionTitle">高度補正</string>
+    <string name="prefsUseAltitudeCorrectionTitle">高度補正を有効化</string>
+    <string name="prefsUseAltitudeCorrectionSummary">スタート地点を利用して気圧高度を補正</string>
+    <string name="prefsStartLocationsTitle">スタート地点</string>
+    <string name="prefsStartLocationsSummary">地点の高度を設定</string>
+    <string name="updateStravaEquipment">Strava 装備を更新</string>
+    <string name="lastUpdateOfEquipmentNever">未更新</string>
+
+    <string name="getting_equipment_from_strava">Strava から装備を取得中…\nお待ちください</string>
+    <string name="got_shoe">シューズを取得完了\n取得: %1$s</string>
+    <string name="got_bike">バイクを取得完了\n取得: %1$s</string>
+    <string name="strava_success_but_must_check">Strava アップロード完了、結果を確認中 …</string>
+    <string name="strava_success_waiting_for_result">Strava アップロード完了、結果待ち …</string>
+
+    <string name="choose_view">表示を選択</string>
+    <string name="choose_activity_type">種目を選択</string>
+
+    <!-- Main Activity -->
+    <string name="tab_start">スタート</string>
+    <string name="tab_tracking">記録中</string>
+    <string name="tab_map">マップ</string>
+    <string name="tab_laps">ラップ</string>
+    <string name="tab_workouts">履歴</string>
+
+    <!-- layouts -->
+    <string name="pairedText">ペアリング済み</string>
+
+    <string name="drawer__pairing">ペアリング</string>
+    <string name="unpairing">解除中</string>
+
+    <!-- altitude_correction_dialog -->
+    <string name="LocationNameHint">地点名</string>
+    <string name="AltitudeHint">高度</string>
+
+    <string name="correct_altitude_title">高度を補正</string>
+    <string name="correct_altitude_message">現在の高度と地点名を入力してください</string>
+
+    <!-- update_workout -->
+    <string name="ExportName">エクスポート名:</string>
+    <string name="Sport">スポーツ:</string>
+    <string name="Goal">目標:</string>
+    <string name="GoalHint">目標を編集</string>
+    <string name="Method">方法:</string>
+    <string name="MethodHint">方法を編集</string>
+    <string name="Description">説明:</string>
+    <string name="DescriptionHint">説明を編集</string>
+    <string name="StartTime">開始時刻:</string>
+    <string name="TotalTime">合計時間:</string>
+    <string name="ActiveTime">走行時間:</string>
+    <string name="Distance">距離:</string>
+    <string name="MaxLineDistance">最長直線距離:</string>
+    <string name="Calories">カロリー:</string>
+    <string name="min">最小</string>
+    <string name="mean">平均</string>
+    <string name="max">最大</string>
+    <string name="SensorTypes">センサー:</string>
+    <string name="buttonSaveWorkoutText">保存してエクスポート</string>
+    <string name="buttonDeleteWorkoutText">削除</string>
+
+    <!-- export_details -->
+    <string name="csvWrite">CSV出力</string>
+    <string name="jsonWrite">Golden Cheetah JSON出力</string>
+    <string name="tcxWrite">TCX出力</string>
+    <string name="gpxWrite">GPX出力</string>
+    <string name="stravaUpload">Stravaへアップロード</string>
+    <string name="runkeeperUpload">Runkeeperへアップロード</string>
+    <string name="trainingPeaksUpload">TrainingPeaksへアップロード</string>
+
+    <string name="Is_not_an_integer">%1$s は整数ではありません</string>
+
+    <!--  PairingActivity -->
+    <string name="PairingDevice">%1$s をペアリング中</string>
+    <string name="ValueAndUnitFormat">(%1$s %2$s)</string>
+
+    <!-- others -->
+    <string name="equipment_none">- なし -</string>
+    <string name="equipment_all">+ すべて +</string>
+    <string name="equipment_all_bikes">+ すべてのバイク +</string>
+    <string name="equipment_all_shoes">+ すべてのシューズ +</string>
+    <string name="equipment_type_bike">バイク</string>
+    <string name="equipment_type_shoe">シューズ</string>
+    <string name="equipment_no_bikes">バイクなし</string>
+    <string name="equipment_no_shoes">シューズなし</string>
+
+    <string name="SD_card_not_available">SDカードが利用できません。</string>
+
+    <!-- actions -->
+    <string name="uploading">アップロード中</string>
+    <string name="uploaded">アップロード完了</string>
+    <string name="writing">書き込み中</string>
+    <string name="wrote">書き込み完了</string>
+
+    <string name="something_strange_happened">エラーが発生しました。</string>
+    <string name="exporting_to_file_not_wanted">エクスポートは設定されていません。</string>
+    <string name="uploading_to_dropbox_not_wanted">Dropboxへのアップロードは設定されていません。</string>
+    <string name="uploading_to_community_not_wanted">コミュニティへのアップロードは設定されていません。</string>
+
+    <string name="exporting_to_file">出力中: %1$s (%2$d/%3$d)</string>
+    <string name="uploading_to_dropbox">Dropboxへ送信中: %1$s (%2$d/%3$d)</string>
+    <string name="uploading_to_community">コミュニティへ送信中: %1$s (%2$d/%3$d)</string>
+
+    <string name="exporting_to_file_failed_for_one">出力失敗 1/%1$d</string>
+    <string name="uploading_to_dropbox_failed_for_one">Dropboxアップロード失敗 1/%1$d</string>
+    <string name="uploading_to_community_failed_for_one">コミュニティアップロード失敗 1/%1$d</string>
+    <string name="exporting_to_file_failed_for_several">出力失敗 %1$d/%2$d</string>
+    <string name="uploading_to_dropbox_failed_for_several">Dropboxアップロード失敗 %1$d/%2$d</string>
+    <string name="uploading_to_community_failed_for_several">コミュニティアップロード失敗 %1$d/%2$d</string>
+    <string name="successfully_exported_to_file">出力完了 %1$d/%2$d</string>
+    <string name="successfully_uploaded_to_dropbox">Dropbox送信完了 %1$d/%2$d</string>
+    <string name="successfully_uploaded_to_community">コミュニティ送信完了 %1$d/%2$d</string>
+
+    <string name="tracking">記録中</string>
+    <string name="tracking_finished">終了</string>
+    <string name="waiting_to_export_to_file">出力待ち %1$d/%2$d</string>
+    <string name="waiting_to_upload_to_dropbox">Dropboxアップロード待ち %1$d/%2$d</string>
+    <string name="waiting_to_upload_to_community">コミュニティアップロード待ち %1$d/%2$d</string>
+
+    <string name="please_wait">お待ちください …</string>
+    <string name="connecting_to_string">%1$s に接続中. \nお待ちください …</string>
+    <string name="deauthorization">認証解除中 …</string>
+
+    <!-- notification -->
+    <string name="notification_title">%1$s を %2$s へ</string>
+    <string name="notification_export_file">%1$s ファイルをローカルへ出力中\n%3$s</string>
+    <string name="notification_export_dropbox">%1$s ファイルを Dropbox へ送信中\n%3$s</string>
+    <string name="notification_export_community">%1$s を %2$s へ送信中\n%3$s</string>
+    <string name="notification_finished_file">%1$s をローカルへ出力完了\n%3$s</string>
+    <string name="notification_finished_dropbox">%1$s を Dropbox へ送信完了\n%3$s</string>
+    <string name="notification_finished_community">%1$s を %2$s へ送信完了\n%3$s</string>
+    <string name="notification_exporting_finished">エクスポート完了</string>
+    <string name="notification_tracking_a_workout">トレーニングを記録中</string>
+    <string name="notification_searching_for_ant">ANT+ デバイスを検索中</string>
+    <string name="notification_searching_finished">検索終了</string>
+    <string name="notification_tracking">記録中</string>
+    <string name="notification_paused">一時停止中</string>
+    <string name="notification_tracking_and_searching_format">記録中 &amp; %1$s を検索中</string>
+    <string name="notification_pause_and_searching_format">一時停止中 &amp; %1$s を検索中</string>
+    <string name="copy_of">%1$s のコピー</string>
+    <string name="select_device_type">デバイスの種類を選択</string>
+    <string name="Preview">プレビュー</string>
+    <string name="preview_name_format">プレビュー: %1$s</string>
+    <string name="default_device_name_format">%1$s %2$s</string>
+    <string name="waiting_for">待機中:</string>
+    <string name="ready_to">準備完了:</string>
+    <string name="paused">一時停止中</string>
+    <string name="some_remote_device">リモートデバイス</string>
+    <string name="ready_run">ラン</string>
+    <string name="ready_bike">バイク</string>
+    <string name="ready_other">トレーニング</string>
+    <string name="tracking_run">ラン中</string>
+    <string name="tracking_bike">バイク中</string>
+    <string name="tracking_other">トレーニング中</string>
+    <string name="paused_run">ラン（一時停止）</string>
+    <string name="paused_bike">バイク（一時停止）</string>
+    <string name="paused_other">トレーニング（一時停止）</string>
+    <string name="export_status">エクスポート状態</string>
+    <string name="LocationsActivityLabel">地点</string>
+    <string name="getting_start_locations">スタート地点を検索中</string>
+    <string name="average">平均</string>
+    <string name="start">スタート</string>
+    <string name="max_line_distance">最遠地点</string>
+    <string name="end">ゴール</string>
+    <string name="my_locations">マイプレイス</string>
+    <string name="drawer__settings">設定</string>
+    <string name="get_extremaType_of_sportType_format">%2$s トレーニングの %1$s 位置を取得</string>
+    <string name="getting_my_locations">登録地点を検索中</string>
+    <string name="editLocationName">名前:</string>
+    <string name="LocationAltitude">高度:</string>
+    <string name="LocationRadius">半径:</string>
+    <string name="edit_my_location">地点を編集</string>
+    <string name="create_new_my_location">新しい地点を登録</string>
+    <string name="calc_workout_name">トレーニング名を計算中</string>
+    <string name="calc_map_polyline">ルートを計算中</string>
+    <string name="edit_counter">編集</string>
+    <string name="edit_counter_format">%1$s のカウンターを編集</string>
+    <string name="editWorkoutNameCounters">カウンターを編集</string>
+    <string name="StartLocation">スタート地点:</string>
+    <string name="EndLocation">ゴール地点:</string>
+    <string name="NameScheme">命名規則:</string>
+    <string name="addCounter">カウンターを追加</string>
+    <string name="addVia">遠方を経由した場合に名前を追加</string>
+    <string name="configureWorkoutNameSchemes">自動命名の設定</string>
+    <string name="via_format">&#032;%1$s 経由</string>
+    <string name="loop_around_format">&#032;%1$s 往復</string>
+    <string name="really_delete_format">\"%1$s\" を削除しますか？</string>
+    <string name="workout_name_scheme">命名規則</string>
+    <string name="workout_name_schemes">命名規則一覧</string>
+    <string name="starred_run_segments">ラン</string>
+    <string name="starred_bike_segments">バイク</string>
+    <string name="segments">Strava セグメント</string>
+
+    <string name="TODO">証明してください！</string>
+    <string name="tomorrow">明日？</string>
+    <string name="updating_starred_segments_failed">セグメント更新失敗: </string>
+    <string name="edit_field">項目編集</string>
+    <string name="ANT_Installation">ANT+ インストール</string>
+    <string name="install">インストール</string>
+    <string name="do_not_check_again">再確認しない</string>
+    <string name="check_ANT_installation">ANTのインストール状況を確認</string>
+    <string name="forcePortrait">縦向き固定</string>
+    <string name="Display">画面設定</string>
+    <string name="smoothing">表示値の平滑化</string>
+    <string name="powerSmoothingTitle">パワー平滑化係数 α</string>
+    <string name="powerSmoothingTitle_format">パワー平滑化: α=%1$f</string>
+    <string name="powerSmoothingSummary">パワー値を平滑化するための係数 (0 &lt; α &#8804; 1)</string>
+    <string name="alpha_must_be_between_0_and_1">αは0から1の間である必要があります。</string>
+
+    <string name="Search_Settings">検索設定</string>
+    <string name="prefsNumberOfSearchTriesTitle">検索ラウンド数</string>
+    <string name="prefStartSearchTitle">検索を開始するタイミング …</string>
+    <string name="prefsStartSearchWhenAppStartsTitle">アプリ起動時</string>
+    <string name="prefsStartSearchWhenTrackingStartsTitle">記録開始時</string>
+    <string name="prefsStartSearchWhenResumeFromPausedTitle">一時停止解除時</string>
+    <string name="prefsStartSearchWhenNewLapTitle">新しいラップ時</string>
+    <string name="prefsStartSearchWhenUserChangesSportTitle">種目変更時</string>
+    <string name="prefs_search_behavior_title">検索動作</string>
+    <string name="prefsChangeSportWhenDeviceGetsLostTitle">アクティビティ変更</string>
+    <string name="prefsChangeSportWhenDeviceGetsLostSummary">センサー紛失時に種目を変更</string>
+
+    <string name="prefsSearchOnlyForSportSpecificDevicesTitle">種目別検索</string>
+    <string name="prefsSearchOnlyForSportSpecificDevicesSummary">現在の種目のセンサーのみ検索</string>
+
+    <string name="startSearchWhenAppStarts_short">アプリ起動</string>
+    <string name="startSearchWhenTrackingStarts_short">記録開始</string>
+    <string name="startSearchWhenResumeFromPaused_short">再開</string>
+    <string name="startSearchWhenNewLap_short">新ラップ</string>
+    <string name="startSearchWhenUserChangesSport_short">種目変更</string>
+    <string name="startSearchOnlyManually">手動のみ</string>
+
+
+    <string name="show_all_sport_types">+ すべての種目 +</string>
+    <string name="sport_types">種目一覧</string>
+    <string name="configure_sport_types">種目を設定</string>
+    <string name="select_sport_type_format">%1$s の種目を選択</string>
+    <string name="edit_auto_name">自動名編集</string>
+    <string name="choose_auto_name">自動名を選択</string>
+
+    <string name="uploadAltitude">高度</string>
+    <string name="uploadHR">心拍数</string>
+    <string name="uploadPower">パワー</string>
+    <string name="uploadCadence">ケイデンス</string>
+    <string name="selectiveUpload">選択的アップロード</string>
+    <string name="summary">サマリーのみ</string>
+    <string name="upload_to_strava_format">%1$s を Strava へ</string>
+    <string name="upload_to_runkeeper_format">%1$s を Runkeeper へ</string>
+    <string name="upload_to_training_peaks_format">%1$s を TrainingPeaks へ</string>
+    <string name="concatenate_2_format">%1$s と %2$s</string>
+    <string name="concatenate_last_format">%1$s、および %2$s</string>
+    <string name="concatenate_2_format_or">%1$s または %2$s</string>
+    <string name="everything">すべて</string>
+    <string name="battery_level_good">良好</string>
+    <string name="battery_level_ok">OK</string>
+    <string name="battery_level_new">新品</string>
+    <string name="battery_level_low">低下</string>
+    <string name="battery_level_critical">限界</string>
+    <string name="battery_level_unknown">不明</string>
+    <string name="check_battery_status_title_1">電池交換が必要です:</string>
+    <string name="check_battery_status_title_many">電池交換が必要です:</string>
+    <string name="send_email">メール</string>
+    <string name="prefSendWorkoutEmailTitle">メール送信</string>
+    <string name="prefSendWorkoutEmailSummary">各トレーニング終了後にファイルを送信</string>
+    <string name="prefSendEmailTo">宛先アドレス</string>
+    <string name="prefEmailSubject">件名</string>
+    <string name="prefSendTCXEmailSummary">TCX ファイルを添付</string>
+    <string name="prefSendGPXEmailSummary">GPX ファイルを添付</string>
+    <string name="prefSendCSVEmailSummary">CSV ファイルを添付</string>
+    <string name="prefSendGCEmailSummary">GC ファイルを添付</string>
+    <string name="upload_via_email">トレーニングデータをメールで送信</string>
+    <string name="send_email_only_summary_format">%1$s へサマリーのみ送信</string>
+    <string name="send_email_format">%2$s へ %1$s ファイルを送信</string>
+    <string name="send_email_format_plural">%2$s へ %1$s ファイルを送信</string>
+    <string name="ready_to_send_email">メール送信の準備ができました。</string>
+    <string name="title_request_dropbox_token">Dropbox アクセス</string>
+    <string name="message_request_dropbox_token">Dropbox にアップロードしますか？\n(API変更により再認証が必要です。)</string>
+
+    <string name="smartphone">スマートフォン</string>
+    <string name="no_sensor_available">センサーなし</string>
+    <string name="bestSensor">最適</string>
+
+    <string name="units_seconds_long">秒</string>
+    <string name="units_minutes_long">分</string>
+    <string name="configSensor">センサー:</string>
+    <string name="configSource">ソース:</string>
+    <string name="configSmoothing">平滑化:</string>
+    <string name="configSize">サイズ:</string>
+    <string name="privacy_policy">プライバシーポリシー</string>
+    <string name="notification_channel_name__tracking">記録中</string>
+    <string name="notification_channel_description__tracking">記録中の通知</string>
+    <string name="notification_channel_name__export">出力中</string>
+    <string name="notification_channel_description__export">出力中の通知</string>
+    <string name="config_tracking__full_screen">全画面</string>
+    <string name="config_tracking_night_day__system_setting">システム設定</string>
+    <string name="config_tracking_night_day__day">昼（明るい）</string>
+    <string name="conffig_tracking_night_day__night">夜（暗い）</string>
+    <string name="config_tracking__Display">表示</string>
+    <string name="config_tracking__Map">マップ</string>
+    <string name="config_tracking__Lap">ラップ</string>
+    <string name="config_tracking__day_or_night">昼夜モード</string>
+    <string name="config_tracking__show_map">マップ表示</string>
+    <string name="config_tracking__showLiveSegments">ライブセグメント</string>
+    <string name="config_tracking__showLapButton">ラップボタン</string>
+    <string name="add_view_before">前に表示を追加</string>
+    <string name="delete_view">表示を削除</string>
+    <string name="add_view_after">後に表示を追加</string>
+    <string name="EditTrackingView">編集</string>
+
+    <string name="location_permission_required">権限</string>
+    <string name="background_location_permission_title">バックグラウンド実行</string>
+    <string name="background_location_permission_text">画面オフでも記録を続けるには、次の画面で「常に許可」を選択してください。</string>
+    <string name="location_permission_text">このアプリは画面を閉じていても記録を継続します。位置情報の権限を（正確に）許可してください。</string>
+    <string name="location_permission_text_Android12">このアプリは画面を閉じていても記録を継続します。位置情報の権限を（正確に）許可してください。\n\nまたBluetooth LEセンサー使用のため「付近のデバイス」の権限も必要です。</string>
+    <string name="Request_permission_text">「OK」を押して許可してください。</string>
+
+    <string name="battery_optimization_title">電池の最適化</string>
+    <string name="battery_optimization_text">バックグラウンドでの強制終了を防ぐため、次の画面で電池の最適化を解除してください。</string>
+
+    <!-- Zone Settings Screen -->
+    <string name="prefs_training_zones">トレーニングゾーン</string>
+    <string name="prefs_training_zones_summary">心拍・パワーゾーンの設定</string>
+    <string name="title_edit_zones">トレーニングゾーン</string>
+    <string name="tab_hr_run">ラン心拍</string>
+    <string name="tab_hr_bike">バイク心拍</string>
+    <string name="tab_pwr_bike">バイクパワー</string>
+
+    <string name="zone_1_label">ゾーン 1 (回復)</string>
+    <string name="zone_2_label">ゾーン 2 (有酸素)</string>
+    <string name="zone_3_label">ゾーン 3 (テンポ)</string>
+    <string name="zone_4_label">ゾーン 4 (閾値)</string>
+    <string name="zone_5_label">ゾーン 5 (無酸素)</string>
+
+    <string name="label_min">最小</string>
+    <string name="label_max">最大</string>
+
+    <string name="prefEmailExport">eメール</string>
+
+<!-- 2026 -->
+    <!-- StringUtils -->
+    <string name="list_connector__and">、および\u0020</string>
+    <string name="list_connector__and_with_comma">、および\u0020</string>
+    <string name="list_connector__comma">、</string>
+
+
+<!-- notifications -->
+    <string name="export_notification__title">%1$s を出力中</string>
+    <string name="export_notification__summary__started">出力開始。</string>
+    <string name="export_notification__summary__in_progress_to">%1$s へ出力中。</string>
+    <string name="export_notification__summary__finished">出力完了。</string>
+
+    <!-- details -->
+
+    <!-- waiting  -->
+    <plurals name="export_notification__detail__File_waiting">
+        <item quantity="other">⏳ %1$s ファイルの書き込み待機中。</item>
+    </plurals>
+
+    <plurals name="export_notification__detail__Dropbox_waiting">
+        <item quantity="other">⏳ %1$s の Dropbox 送信待機中。</item>
+    </plurals>
+
+    <plurals name="export_notification__detail__Community_waiting">
+        <item quantity="other">⏳ %1$s への送信待機中。</item>
+    </plurals>
+
+    <!-- ongoing -->
+    <plurals name="export_notification__detail__File_ongoing">
+        <item quantity="other">💾 %1$s ファイルを書き込み中。</item>
+    </plurals>
+
+    <plurals name="export_notification__detail__Dropbox_ongoing">
+        <item quantity="other">📤 %1$s を Dropbox へ送信中。</item>
+    </plurals>
+
+    <plurals name="export_notification__detail__Community_ongoing">
+        <item quantity="other">📤 %1$s へ送信中。</item>
+    </plurals>
+
+    <!-- success -->
+    <plurals name="export_notification__detail__File_success">
+        <item quantity="other">✅ %1$s ファイルの書き込みに成功しました。</item>
+    </plurals>
+
+    <plurals name="export_notification__detail__Dropbox_success">
+        <item quantity="other">✅ %1$s を Dropbox へ送信しました。</item>
+    </plurals>
+
+    <plurals name="export_notification__detail__Community_success">
+        <item quantity="other">✅ %1$s への送信に成功しました。</item>
+    </plurals>
+
+    <!-- failed -->
+    <plurals name="export_notification__detail__File_failed">
+        <item quantity="other">❌ %1$s ファイルの書き込みに失敗しました。</item>
+    </plurals>
+
+    <plurals name="export_notification__detail__Dropbox_failed">
+        <item quantity="other">❌ %1$s の Dropbox 送信に失敗しました。</item>
+    </plurals>
+
+    <plurals name="export_notification__detail__Community_failed">
+        <item quantity="other">❌ %1$s への送信に失敗しました。</item>
+    </plurals>
+
+    <string name="export_notification__detail__no_results">❓ 結果が見つかりません。</string>
+
+    <string name="export_status__header_title">出力状態</string>
+
+    <string name="export_status__waiting">待機中</string>
+    <string name="export_status__processing">進行中</string>
+    <string name="export_status__success">成功</string>
+    <string name="export_status__failed">失敗</string>
+    <string name="export_status__tracking">記録中</string>
+    <string name="export_status__tracking_finished">記録終了</string>
+    <string name="export_status__unwanted">不要</string>
+
+    <!-- change Sport Dialog -->
+    <string name="change_sport">種目変更</string>
+    <string name="save">保存</string>
+    <string name="cancel">キャンセル</string>
+
+    <!-- Edit workout name -->
+    <string name="hint_workout_name">トレーニング名</string>
+    <string name="edit_workout_name">トレーニング名を編集</string>
+
+    <!-- workout summary description-->
+    <string name="workout_summary__description_header">説明</string>
+
+    <!-- Edit workout description -->
+    <string name="hint_workout_description">説明</string>
+    <string name="hint_workout_goal">目標</string>
+    <string name="hint_workout_method">方法</string>
+    <string name="title_edit_description">説明を編集</string>
+
+    <!-- workout details -->
+    <string name="total_time_format">(合計 : %1$s)</string>
+    <string name="format_max_displacement">(最長直線距離 : %1$s)</string>
+
+    <!-- workout summary with equipment -->
+    <string name="format_with_equipment_bike">%1$s を使用</string>
+    <string name="format_with_equipment_run">%1$s を使用</string>
+    <string name="format_with_equipment_other">%1$s を使用</string>
+
+    <string name="invalid_date">\???</string>
+
+    <!-- sport type list / edit sport type -->
+    <string name="you_can_not_delete_this_sport_type">この種目は削除できません</string>
+    <string name="add_sport_type">種目を追加</string>
+    <string name="edit_sport_type">種目を編集</string>
+    <string name="sport_type_name">種目名</string>
+    <string name="basic_sport_type">基本種目</string>
+    <string name="OnlineCommunities">オンラインコミュニティ</string>
+    <string name="ExportFiles">ファイル出力</string>
+    <string name="min_avg_speed">最小平均速度:</string>
+    <string name="max_avg_speed">最大平均速度:</string>
+    <string name="mapping_format_strava">Strava: %1$s</string>
+    <string name="mapping_format_tcx">TCX: %1$s</string>
+    <string name="mapping_format_gc">GC: %1$s</string>
+    <string name="item_is_fixed_and_cannot_be_deleted">固定種目のため編集・削除できません。</string>
+
+    <!-- drawer -->
+    <string name="drawer__training">トレーニング</string>
+    <string name="drawer__maps">マップ</string>
+    <string name="drawer__my_stuff">マイデータ</string>
+
+    <!-- sensor view settings -->
+    <string name="source">ソース</string>
+    <string name="sensor">センサー</string>
+    <string name="text_size">サイズ</string>
+    <string name="filter">フィルター</string>
+
+    <string name="view_size_xsmall">極小</string>
+    <string name="view_size_small">小</string>
+    <string name="view_size_normal">標準</string>
+    <string name="view_size_large">大</string>
+    <string name="view_size_xlarge">特大</string>
+    <string name="view_size_huge">巨大</string>
+    <string name="view_size_xhuge">最大</string>
+    <string name="configure">設定</string>
+    <string name="tab_name">名前</string>
+
+    <!-- Equipment -->
+    <string name="equipment_management_title">装備管理</string>
+    <string name="equipment_management_summary">バイクやシューズの設定</string>
+    <string name="prefs_manage_bikes_title">バイク</string>
+    <string name="prefs_manage_bikes_summary">バイクの一覧と設定</string>
+    <string name="prefs_manage_shoes_title">シューズ</string>
+    <string name="prefs_manage_shoes_summary">シューズの一覧と設定</string>
+
+    <string name="equipment_configure_equipment">装備を設定</string>
+    <string name="equipment_bike_type">バイクの種類</string>
+    <string name="equipment_select_bike_type">バイクの種類を選択</string>
+    <string name="equipment_linked_sensors">リンク済みセンサー</string>
+    <string name="equipment_no_sensors_linked">リンクなし</string>
+    <string name="equipment_sport_types">種目:</string>
+    <string name="equipment_linked_sport_types">リンク済み種目</string>
+    <string name="equipment_no_sports_linked">なし</string>
+
+    <!-- statistics -->
+    <string name="stats_total">通算</string>
+    <string name="stats_first_use">初回使用</string>
+    <string name="stats_last_use">最終使用</string>
+    <string name="stats_first_activity">初回種目</string>
+    <string name="stats_last_activity">最終種目</string>
+    <string name="stats_distance">距離</string>
+    <string name="stats_workouts">回数</string>
+    <string name="stats_time">時間</string>
+    <string name="stats_ascent">上昇</string>
+    <string name="stats_this_week">今週</string>
+    <string name="stats_last_week">先週</string>
+    <string name="stats_this_month">今月</string>
+    <string name="stats_last_month">先月</string>
+    <string name="stats_this_year">今年</string>
+
+    <!-- sport type -->
+    <string name="sport_type_linked_equipment">リンク済み装備</string>
+    <string name="sport_type_no_equipment_linked">リンクなし</string>
+    <string name="sport_type_equipment">装備</string>
+    <string name="sport_type_tab_all">すべての種目</string>
+    <string name="sport_type_tab_bike">バイク系</string>
+    <string name="sport_type_tab_run">ラン系</string>
+    <string name="sport_type_tab_unknown">その他</string>
+
+    <!-- workout summaries tabs -->
+    <string name="workout_summaries_tab_all">すべて</string>
+    <string name="workout_summaries_tab_bike">バイク</string>
+    <string name="workout_summaries_tab_run">ラン</string>
+    <string name="workout_summaries_tab_other">その他</string>
+    <string name="workout_summaries_loading">読み込み中…</string>
+
+    <!-- starred Strava segments -->
+    <string name="starred_segments__no_update_because_upload_to_strava_is_disabled">Strava 未接続。更新できません。</string>
+    <string name="starred_segments__no_strava_connection">Strava 未接続</string>
+    <string name="starred_segments__connect_to_strava">Strava と接続</string>
+    <string name="starred_segments__refresh">セグメントを更新</string>
+
+    <!-- Control tracking -->
+    <string name="control_tracking_connecting">接続中…</string>
+    <string name="control_tracking_ready_run">ラン準備完了</string>
+    <string name="control_tracking_ready_bike">バイク準備完了</string>
+    <string name="control_tracking_ready_other">トレーニング準備完了</string>
+
+    <!-- live segments -->
+    <string name="segment_status_far_far_away">遠方</string>
+    <string name="segment_status_approaching">接近中</string>
+    <string name="segment_status_on_segment">セグメント中</string>
+    <string name="segment_status_near_finish">まもなく終了</string>
+    <string name="segment_status_finished">終了</string>
+    <string name="segment_status_start_in">開始まで: %1$s</string>
+    <string name="segment_status_remaining">残り: %1$s</string>
+    <string name="segment_status_offset">タイム差: %1$s</string>
+
+    <!-- ANT(+) Plugins -->
+    <string name="ant_general_explanation">対応するハード・ソフトを揃えることで、ANT+ デバイスをペアリングできます。</string>
+    <string name="ant_missing_adapter_title">ANT アダプターなし</string>
+    <string name="ant_missing_adapter_message">この端末は ANT+ を内蔵していません。USB ANT ドングルを使用してください。</string>
+    <string name="ant_missing_dependency_title">依存アプリなし</string>
+    <string name="ant_missing_dependency_message">\"%1$s\" が見つかりません。Play ストアを開きますか？</string>
+    <string name="go_to_store">Play ストアへ</string>
+
+    <!-- Tracking -->
+    <string name="Done">完了</string>
+    <string name="Edit">編集</string>
+
+    <!-- Segment / Route Sorting -->
+    <string name="sort_closest">近い順</string>
+    <string name="sort_climb_category">山岳等級</string>
+    <string name="sort_elevation_gain">獲得標高</string>
+    <string name="sort_average_grade">平均勾配</string>
+    <string name="sort_length">長さ</string>
+    <string name="sort_name">名前</string>
+    <string name="sort_date">日付</string>
+    <string name="sort_duration">時間</string>
+
+    <!-- routes -->
+    <string name="routes">ルート</string>
+    <string name="no_routes_available">ルート (%s) なし</string>
+    <string name="absolutely_no_routes_available">ルートなし</string>
+    <string name="routes_import_hint">「+」またはファイルマネージャーから GPX を読み込んでください。</string>
+    <string name="route_edit">ルートを編集</string>
+    <string name="route_sport_type">種目</string>
+    <string name="route_description">説明</string>
+    <string name="route_import">インポート</string>
+    <string name="route_saved_success">ルートを保存しました。</string>
+    <string name="route_saved_failed">保存に失敗しました。</string>
+    <string name="strava_sync_success">Strava ルートを同期しました。</string>
+    <string name="strava_sync_failed">Strava 同期失敗。</string>
+    <string name="route_source_workout">トレーニング</string>
+    <string name="sort">並び替え</string>
+    <string name="routes_source_label">ソース: %1$s</string>
+
+    <!-- workout periods -->
+    <string name="workout_periods__periods">期間</string>
+    <string name="workout_periods__days">日</string>
+    <string name="workout_periods__weeks">週</string>
+    <string name="workout_periods__months">月</string>
+    <string name="workout_periods__years">年</string>
+    <plurals name="workout_periods__workouts">
+        <item quantity="other">%1$d 回のトレーニング</item>
+    </plurals>
+    <string name="workout_periods__longest_workout">最長セッション</string>
+
+    <!-- share screenshots -->
+    <string name="share">共有</string>
+
+    <string name="avg_speed_label">平均速度</string>
+    <string name="ascent_label">上昇</string>
+    <string name="unit_meters_short">m</string>
+    <string name="strava_results_title">Strava 結果</string>
+    <string name="strava_uploaded_no_records">Strava へ送信。新記録なし。</string>
+    <string name="strava_best_efforts">自己ベスト</string>
+    <plurals name="strava_best_efforts_with_prs_format">
+        <item quantity="other">自己ベスト (%1$d PR)</item>
+    </plurals>
+    <string name="strava_segments_title">セグメント</string>
+    <plurals name="strava_segments_with_prs_format">
+        <item quantity="other">セグメント (%1$d PR)</item>
+    </plurals>
+    <string name="strava_kom_description">KOM / コースレコード</string>
+    <string name="strava_pr_description">自己ベスト #%1$d</string>
+
+    <string name="strava_connected_status">Strava 接続中</string>
+    <string name="strava_disconnected_status">Strava 未接続</string>
+    <string name="strava_disconnect">Strava 切断</string>
+    <string name="strava_overall_rank_description">総合順位 #%1$d</string>
+</resources>

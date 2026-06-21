@@ -105,7 +105,7 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-UI-003** | Deeply customizable tracking cockpits. | Users build their perfect dashboard. | `ConfigTrackingTabsActivity.kt` | `TST-MAN-001` | Verified |
 | **REQ-UI-004** | Scrollable bar graph for period volume. | Enhance historical navigation and trends. | `PeriodsTabsScreen.kt` | `TST-MAN-001` | Verified |
 | **REQ-UI-005** | Handling of system bar insets (edge-to-edge). | Modern, immersive Android experience. | `StravaUploadFragment.kt` | `TST-MAN-001` | Verified |
-| **REQ-UI-006** | Support multiple languages (EN/DE). | Reach international audience of athletes. | `strings.xml` | `TST-MAN-001` | Verified |
+| **REQ-UI-006** | Support multiple languages (EN, DE, ES, FR, IT, PT, NL, PL, JA). | Reach international audience of athletes. | `strings.xml`, `values-xx/` | `TST-MAN-001` | Verified |
 | **REQ-UI-007** | Flexible sorting for lists (Date/Dist/Elev). | Allow users to organize and find data easily. | `WorkoutSummariesViewModel.kt` | `TST-MAN-001` | Verified |
 | **REQ-UI-008** | Agents ask for clarification if instructions unclear. | Protect project quality and precision. | `project_protocol.md` | `TST-STR-001` | Verified |
 

@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+  -->
+
+<resources>
+
+    <string name="filter_max">max</string>
+
+    <string-array name="Strava_Sport_Types_UI_Names">
+        <item>Entraînement (Autre)</item>
+        <item>Vélo</item>
+        <item>Course</item>
+        <item>Natation</item>
+        <item>Randonnée</item>
+        <item>Marche</item>
+        <item>Ski alpin</item>
+        <item>Ski de randonnée</item>
+        <item>Canoë</item>
+        <item>Crossfit</item>
+        <item>Vélo électrique</item>
+        <item>Elliptique</item>
+        <item>Patinage sur glace</item>
+        <item>Roller</item>
+        <item>Kayak</item>
+        <item>Kitesurf</item>
+        <item>Ski nordique</item>
+        <item>Escalade</item>
+        <item>Ski-roues</item>
+        <item>Aviron</item>
+        <item>Snowboard</item>
+        <item>Raquettes</item>
+        <item>Step</item>
+        <item>Paddle</item>
+        <item>Surf</item>
+        <item>Vélo virtuel</item>
+        <item>Musculation</item>
+        <item>Windsurf</item>
+        <item>Yoga</item>
+    </string-array>
+
+    <string-array name="Runkeeper_Sport_Types">
+        <item>Autre</item>
+        <item>Course</item>
+        <item>Cyclisme</item>
+        <item>VTT</item>
+        <item>Marche</item>
+        <item>Randonnée</item>
+        <item>Ski alpin</item>
+        <item>Ski de fond</item>
+        <item>Snowboard</item>
+        <item>Patinage</item>
+        <item>Natation</item>
+        <item>Fauteuil roulant</item>
+        <item>Aviron</item>
+        <item>Elliptique</item>
+        <item>Yoga</item>
+        <item>Pilates</item>
+        <item>CrossFit</item>
+        <item>Spinning</item>
+        <item>Zumba</item>
+        <item>Barre</item>
+        <item>Entraînement de groupe</item>
+        <item>Danse</item>
+        <item>Bootcamp</item>
+        <item>Boxe / MMA</item>
+        <item>Méditation</item>
+        <item>Musculation</item>
+        <item>Circuit</item>
+        <item>Core</item>
+        <item>Arc Trainer</item>
+        <item>Stairmaster</item>
+        <item>Sports</item>
+        <item>Marche nordique</item>
+    </string-array>
+
+    <string-array name="Training_Peaks_Sport_Types">
+        <item>Autre</item>
+        <item>Vélo</item>
+        <item>Course</item>
+        <item>Marche</item>
+        <item>Nager</item>
+        <item>X-Train</item>
+        <item>VTT</item>
+        <item>Musculation</item>
+        <item>Ski de fond</item>
+        <item>Remo</item>
+    </string-array>
+
+    <string-array name="TCX_Sport_Types">
+        <item>Autre</item>
+        <item>Marche</item>
+        <item>Course</item>
+        <item>Vélo</item>
+    </string-array>
+
+    <string-array name="GC_Sport_Types">
+        <item>marche</item>
+        <item>course</item>
+        <item>vtt</item>
+        <item>vélo</item>
+    </string-array>
+
+    <string-array name="wheel_size_names">
+        <item>Personnalisé</item>
+        <item>700 x 28</item>
+        <item>700 x 25</item>
+        <item>700 x 23</item>
+        <item>700 x 20</item>
+        <item>26 x 2.125"</item>
+        <item>26 x 1.9"</item>
+        <item>26 x 1.5"</item>
+        <item>26 x 1.25"</item>
+        <item>26 x 1.0"</item>
+    </string-array>
+
+</resources>

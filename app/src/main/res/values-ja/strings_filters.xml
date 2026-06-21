@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+  -->
+
+<resources>
+    <string name="filter_configure_smoothing">平滑化の設定</string>
+
+    <string name="filter_instantaneous">リアルタイム</string>
+    <string name="filter_average">平均 (トレーニング全体)</string>
+    <string name="filter_exponential_smoothing">指数平滑化</string>
+    <string name="filter_moving_average">移動平均</string>
+    <string name="filter_exponential_smoothing_format">指数平滑化 (α=%1.2f)</string>
+    <string name="filter_exponential_smoothing_short_format">exp α=%1.1f</string>
+
+    <string name="filter_details__instantaneous">現在の値を表示します。</string>
+    <string name="filter_details__average">トレーニング全体の平均値を表示します。</string>
+    <string name="filter_details__max">トレーニングの最大値を表示します。</string>
+    <string name="filter_details__moving_average_time">直近 %1$d %2$s の平均を表示します。</string>
+    <string name="filter_details__moving_average_number">直近 %1$d 個のデータの平均を表示します。</string>
+    <string name="filter_details__exponential_smoothing">指数平滑化 (0 &lt; α &#8804; 1)。値をより滑らかに表示します。</string>
+
+    <string name="filter_unit">単位</string>
+    <string name="filter_type">平滑化の種類</string>
+    <string name="filter_value">値</string>
+
+</resources>
