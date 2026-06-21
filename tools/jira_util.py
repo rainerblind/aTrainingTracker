@@ -46,7 +46,7 @@ def jira_request(url, method="GET", payload=None):
         req.add_header(k, v)
 
     try:
-            with urllib.request.urlopen(req) as response:
+        with urllib.request.urlopen(req) as response:
             body = response.read().decode("utf-8")
             return json.loads(body) if body else {}
     except Exception as e:

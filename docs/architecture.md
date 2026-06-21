@@ -51,6 +51,16 @@ This document defines the high-level design and component interfaces of the proj
 | UI Layer | --> | TrackerService | Control Intents |
 | BANALServiceRepo | --> | UI Layer | StateFlow Observation |
 
+### 1.3 Requirement Allocation (Traceability)
+| Component | Primary Requirements Satisfied |
+|:---|:---|
+| **Hardware Layer** | `REQ-CON-001`, `REQ-CON-002`, `REQ-CON-006` |
+| **BANALService** | `REQ-CON-003`, `REQ-CON-004`, `REQ-FIL-001`, `REQ-FIL-002`, `REQ-FIL-003` |
+| **TrackerService** | `REQ-TRK-001`, `REQ-TRK-003`, `REQ-TRK-005`, `REQ-TRK-007` |
+| **Data Layer (SQL)** | `REQ-FIL-004`, `REQ-TRK-002`, `REQ-SET-002`, `REQ-SET-004` |
+| **UI Layer** | `REQ-UI-001`, `REQ-UI-002`, `REQ-UI-006`, `REQ-SET-001` |
+| **Protocol/Process** | `REQ-PRO-001` |
+
 ---
 
 ## 2. Interface Definitions

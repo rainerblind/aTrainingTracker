@@ -19,7 +19,15 @@ Any AI assistant working on this project **must** follow these steps for every t
     *   If no suitable test exists, add a new one to `docs/tests.md` immediately.
     *   Implementation may only start once the test criteria are agreed upon.
 
-3.  **Jira Ticket Management (Agile Phase)**:
+3.  **Impact Analysis (SWE.1.BP.5 Phase)**:
+    *   Before implementation, perform a formal audit of existing code.
+    *   Identify potential side effects on:
+        *   **Android System**: Battery usage, WakeLock durations, Background execution rules.
+        *   **Component Interfaces**: Will a change in `BANALService` break the `MutableStateFlow` used by the UI?
+        *   **Data Integrity**: Will a schema change affect backward compatibility of existing workout files?
+    *   Document these risks in the `implementation_plan.artifact.md`.
+
+4.  **Jira Ticket Management (Agile Phase)**:
     *   **Automation**: Use the local utility `./tools/jira_util.py` for Jira interactions (list, comment).
     *   **Credentials**: Authentication details are stored in `.env.jira` (not tracked in Git).
     *   **State Control**: The agent **MUST NOT** transition tickets between states (e.g., move to "In Progress" or "Done") unless explicitly instructed by the user. The user maintains sole control over the workflow state.
@@ -28,21 +36,27 @@ Any AI assistant working on this project **must** follow these steps for every t
         *   Post the full text of the `implementation_plan.artifact.md` as a comment on the ticket.
         *   Post verification evidence (logs, summaries) as a comment once implementation is complete.
 
-4.  **Architectural Integrity (SWE.2 Phase)**:
+5.  **Architectural Integrity (SWE.2 Phase)**:
     *   Identify which core components are affected (e.g., `BANALService`, `TrackerService`, `Repository`).
-    *   Define or update the **Interfaces** and **Data Flow** between components.
+    *   Define or update the **Interfaces** and **Data Flow** between components in `docs/architecture.md`.
     *   Ensure that new code does not violate the established architecture (e.g., maintain clear separation between background services and UI layers).
 
-4.  **Implementation Planning (SWE.3 Phase)**:
+6.  **Implementation Planning (SWE.3 Phase)**:
     *   Create an `implementation_plan.artifact.md`.
     *   Every proposed change **must** explicitly reference the Requirement ID, the Component affected, and the corresponding Test ID it fulfills.
 
-4.  **Execution & Verification**:
-    *   Implement the changes as planned.
+7.  **Execution & Multi-Stage Verification**:
+    *   **SWE.4 (Unit Verification)**: Verify internal logic of the specific module (e.g., `NumericalEncodingUtilsTest`).
+    *   **SWE.5 (Integration Verification)**: Verify that the interface between two modules remains stable (e.g., `TrackerService` correctly consumes `BANALService` data).
     *   Perform a verification (build, static analysis, or logic check).
     *   Refer to `docs/tests.md` to execute the agreed-upon tests.
 
-5.  **Final Documentation & Release**:
+8.  **Final Documentation & Release (SWE.6)**:
+    *   **Pass/Fail Recording**: Document verification evidence in Jira using the following format:
+        > **Verification Result: PASS**
+        > - **Test ID**: TST-UNT-001
+        > - **Scope**: SWE.4 Unit Verification
+        > - **Artifact**: [Link to log/screenshot]
     *   Update the `Status` in `docs/requirements.md` to `Verified`.
     *   Update the `walkthrough.artifact.md` with a summary of the fulfilled requirements.
 
