@@ -113,7 +113,11 @@ This document tracks all functional and non-functional requirements of the proje
 
 | ID | Description | Rationale | Implementation File(s) | Verification ID | Status |
 |:---|:---|:---|:---|:---|:---|
-| **REQ-WEA-001** | Support Pebble smartwatches for live metrics. | Allow users to view data on their wrist. | `PebbleService.java` | `TST-MAN-001` | **Deactivated** |
+| **REQ-WEA-001** | Support Pebble smartwatches for live metrics. | Allow users to view data on their wrist. | `PebbleService.java` | `TST-MAN-001` | **Deactivated** |## 7. Process & Engineering Quality
+
+| ID | Description | Rationale | Implementation File(s) | Verification ID | Status |
+|:---|:---|:---|:---|:---|:---|
+| **REQ-PRO-001** | Integrate Agile Workflow with Jira Cloud. | Ensure bidirectional traceability between tasks and code. | `project_protocol.md`, `SCRUM-103` | `TST-MAN-001` | Verified |
 
 ## 12. Privacy & Permissions
 

@@ -19,7 +19,15 @@ Any AI assistant working on this project **must** follow these steps for every t
     *   If no suitable test exists, add a new one to `docs/tests.md` immediately.
     *   Implementation may only start once the test criteria are agreed upon.
 
-3.  **Architectural Integrity (SWE.2 Phase)**:
+3.  **Jira Ticket Management (Agile Phase)**:
+    *   **Automation**: Use the local utility `./tools/jira_util.py` for all Jira interactions.
+    *   **Credentials**: Authentication details are stored in `.env.jira` (not tracked in Git).
+    *   **Selection**: Identify the top-ranked ticket in the active Sprint from the "Zu erledigen" (To Do) status using `./tools/jira_util.py list`.
+    *   **In Progress**: Transition the ticket to "In Bearbeitung" (`move KEY in_progress`). **CRITICAL**: Post the full text of the `implementation_plan.artifact.md` as a comment on the ticket. This ensures the design decisions are permanently recorded in Jira even after the transient artifact is deleted.
+    *   **In Review**: Once implemented and verified (SWE.4/SWE.5), transition the ticket to "In Überprüfung" (`move KEY in_review`). Attach or comment with verification evidence.
+    *   **Done**: Transition to "Erledigt" (`move KEY done`) only after user approval and final requirement verification.
+
+4.  **Architectural Integrity (SWE.2 Phase)**:
     *   Identify which core components are affected (e.g., `BANALService`, `TrackerService`, `Repository`).
     *   Define or update the **Interfaces** and **Data Flow** between components.
     *   Ensure that new code does not violate the established architecture (e.g., maintain clear separation between background services and UI layers).
