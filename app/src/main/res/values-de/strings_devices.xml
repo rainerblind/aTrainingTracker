@@ -29,10 +29,10 @@
     <string name="devices_all">Alle</string>
 
     <!-- tab title -->
-    <string name="devices_available_devices_format">Sichtbare %1$s Sensoren</string>
+    <string name="devices_available_devices_format">Verfügbare %1$s Sensoren</string>
     <string name="devices_paired_devices_format">Gekoppelte %1$s Sensoren</string>
     <string name="devices_known_devices_format">Bekannte %1$s Sensoren</string>
-    <string name="devices_all_available_devices">Alle sichtbaren Sensoren</string>
+    <string name="devices_all_available_devices">Alle verfügbaren Sensoren</string>
     <string name="devices_all_paired_devices">Alle gekoppelten Sensoren</string>
     <string name="devices_all_known_devices">Alle bekannten Sensoren</string>
 
@@ -40,28 +40,28 @@
     <string name="devices_myRemoteDevices">Sensoren</string>
     <!-- <string name="knownDevices">known devices</string> -->
     <string name="devices_newDevices">Neue Sensoren</string>
-    <string name="devices_searchingForDevice">suche nach %1$s %2$s Sensoren</string>
-    <string name="devicessearchingForRemoteDevice">suche nach ANT+ Herzfrequenz Sensoren</string>
+    <string name="devices_searchingForDevice">Suche nach %1$s %2$s Sensoren</string>
+    <string name="devicessearchingForRemoteDevice">Suche nach ANT+ Herzfrequenz-Sensoren</string>
 
-    <string name="devices_lastSeenText">Zum letzten mal gesehen</string>
-    <string name="devices_now">jetzt</string>
+    <string name="devices_lastSeenText">Zuletzt gesehen</string>
+    <string name="devices_now">Jetzt</string>
 
     <!-- dialog_set_calibration_factor -->
     <string name="devices_correct_calibration_factor_title_bike">Radumfang anpassen</string>
     <string name="devices_correct_calibration_factor_title_run">Kalibrierungsfaktor anpassen</string>
     <string name="devices_correct_calibration_explanation_bike">Hier kann der Radumfang für diesen Sensors korrigiert werden.  Diese Korrektur basieret auf einer mit dem aktuellen Radumfang gemessenen Strecke und deren korrektem Wert (z.B. die Länge eines Rennens).</string>
     <string name="devices_correct_calibration_explanation_run">Hier kann der Kalibrierungsfaktor für diesen Sensors korrigiert werden.  Diese Korrektur basiert auf einer mit den aktuellen Einstellungen gemessenen Strecke und deren korrektem Wert (z.B. die Länge eines Rennens).</string>
-    <string name="devices_measuredDistanceText">gemessene Strecke:</string>
-    <string name="devices_correctDistanceText">korrekte Strecke:</string>
+    <string name="devices_measuredDistanceText">Gemessene Strecke:</string>
+    <string name="devices_correctDistanceText">Korrekte Strecke:</string>
     <!-- edit_device_* -->
     <string name="devices_settings_header">Einstellungen</string>
     <string name="devices_deviceNameText">Sensorname</string>
     <string name="devices_deviceTypeText">Sensortyp</string>
     <string name="devices_manufacturerText">Hersteller</string>
-    <string name="devices_on_equipment_text">an Ausrüstung</string>
-    <string name="devices_on_bikes_text">an Rädern</string>
-    <string name="devices_on_shoes_text">an Schuhen</string>
-    <string name="devices_on_short_format">on: %1$s</string>
+    <string name="devices_on_equipment_text">An Ausrüstung</string>
+    <string name="devices_on_bikes_text">An Rädern</string>
+    <string name="devices_on_shoes_text">An Schuhen</string>
+    <string name="devices_on_short_format">An: %1$s</string>
 
     <string name="devices_calibration_factor">Kalibrierungsfaktor</string>
     <string name="devices_wheel_circumference">Radumfang</string>
@@ -91,7 +91,7 @@
     <string name="devices_editDeviceGenericDeviceNameValue">Generischer Sensor</string>
     <string name="devices_editDeviceGenericDeviceTypeValue">Generisch</string>
     <string name="devices_select_wheel_size_prompt">Radgröße wählen…</string>
-    <string name="devices_last_seen_never">noch nicht</string>
+    <string name="devices_last_seen_never">Nie</string>
     <string name="devices_equipment_none" />
 
     <!-- smartphone devices -->

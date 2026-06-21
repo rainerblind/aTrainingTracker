@@ -24,8 +24,8 @@
     <string name="do_not_show_again">don\'t show again</string>
     <string name="Cancel">Cancel</string>
     <string name="searching_for">searching for</string>
-    <string name="searching_for_device_format">searching for %1$s</string>
-    <string name="default_device_name">some ANT+ device</string>
+    <string name="searching_for_device_format">searching for %1$s…</string>
+    <string name="default_device_name">an ANT+ device</string>
     <string name="waiting">waiting</string>
     <string name="pairing_ANT">ANT+ Pairing</string>
     <!-- <string name="ANTSettings">ANT+ Settings</string> -->
@@ -96,14 +96,14 @@
     <string name="TrainingPeaks_login_title">Login to TrainingPeaks</string>
     <string name="TrainingPeaks_login_message">For uploading to TrainingPeaks, we need your user name and password</string>
     <string name="unknown_manufacturer">Unknown</string>
-    <string name="unknown_last_seen_date">not yet seen</string>
+    <string name="unknown_last_seen_date">never seen</string>
     <string name="next">next</string>
     <string name="text_new">new</string>
     <string name="prev">prev</string>
     <string name="name">name</string>
     <string name="number_of_fields">Number of fields:</string>
     <string name="Lap_NR">Lap %1$d</string>
-    <string name="build_in">build in</string>
+    <string name="build_in">Built-in</string>
     <string name="TrainingTracker" translatable="false">a Training Tracker</string>
     <string name="application_name" translatable="false">a Training Tracker</string>
     <string name="no_user_name">no user name</string>
@@ -206,7 +206,7 @@
     <!-- DeviceType -->
     <string name="device_type_dummy">dummy</string>
     <string name="device_type_short_dummy">dummy</string>
-    <string name="device_type_all">all remote devices</string>
+    <string name="device_type_all">all devices</string>
     <string name="device_type_short_all">all</string>
     <string name="device_type_bike_cadence">bike cadence</string>
     <string name="device_type_short_bike_cadence">cad</string>
@@ -405,7 +405,7 @@
     <string name="prefsPebbleSupportTitle">Pebble Support</string>
     <string name="prefsPebbleSupportSummary">Use Pebble to display values</string>
     <string name="prefsPebbleWatchappsTitle">Pebble Watchapp</string>
-    <string name="prefsPebbleWatchappsSummary">build in</string>
+    <string name="prefsPebbleWatchappsSummary">Built-in</string>
     <string name="prefsConfigurePebbleDisplaysTitle">Configure Pebble Displays</string>
 
     <string name="prefsExportTitle">File Export</string>
@@ -430,7 +430,7 @@
     <string name="prefsStartLocationsTitle">Start Locations</string>
     <string name="prefsStartLocationsSummary">Configure altitude of start locations</string>
     <string name="updateStravaEquipment">Update Strava Equipment</string>
-    <string name="lastUpdateOfEquipmentNever">not yet updated</string>
+    <string name="lastUpdateOfEquipmentNever">never updated</string>
 
     <string name="getting_equipment_from_strava">getting equipment from Strava…\nplease wait</string>
     <string name="got_shoe">getting shoes from Strava\ngot shoe: %1$s</string>
@@ -877,7 +877,7 @@
         (0: #ongoing for quantity)
         1: string representing the ongoing file formats -->
     <plurals name="export_notification__detail__Dropbox_ongoing">
-        <item quantity="one">📤 Uplaoding the %1$s file to Dropbox.</item>     <!-- Uploading the TCX file to Dropbox. -->
+        <item quantity="one">📤 Uploading the %1$s file to Dropbox.</item>     <!-- Uploading the TCX file to Dropbox. -->
         <item quantity="other">📤 Uploading the %1$s files to Dropbox.</item>  <!-- Uploading the TCX and CSV files to Dropbox. -->
     </plurals>
 
@@ -949,7 +949,7 @@
     <string name="export_status__header_title">Export Status</string>
 
     <string name="export_status__waiting">Waiting</string>
-    <string name="export_status__processing">Ongoing</string>
+    <string name="export_status__processing">Processing</string>
     <string name="export_status__success">Succeeded</string>
     <string name="export_status__failed">Failed</string>
     <string name="export_status__tracking">Tracking</string>
@@ -1095,11 +1095,11 @@
     <string name="segment_status_offset">Offset: %1$s</string>
 
     <!-- ANT(+) Plugins -->
-    <string name="ant_general_explanation">When everything is properly installed, you can couple your ANT+ devices.  Therefore, you need the right hard- and software.
-        When you are one of the view, who has a phone with build in ANT+ support, you just have to install the remaining ANT Plugins.
-        When your phone does not support ANT+ directly, you need an USB ANT dongle and an USB OTG adapter (USB-C to USB adapter) and, obviously, also the ANT plugins.</string>
+    <string name="ant_general_explanation">When everything is properly installed, you can pair your ANT+ devices. For this, you need the compatible hardware and software.
+        If you have a phone with built-in ANT+ support, you just need to install the ANT Plugins.
+        If your phone does not support ANT+ directly, you need a USB ANT dongle and a USB OTG adapter (USB-C to USB) along with the ANT plugins.</string>
     <string name="ant_missing_adapter_title">Missing ANT Adapter</string>
-    <string name="ant_missing_adapter_message">The ANT interface is missing an ANT adapter.  Probably, you Smartphone does not have build in ANT support.  You can fix this with the help of an USB ANT Dongle that is connected via an OTG adapter and installing the ANT USB Service.</string>
+    <string name="ant_missing_adapter_message">The ANT adapter is missing. Your smartphone likely does not have built-in ANT support. You can add it using a USB ANT Dongle connected via an OTG adapter and installing the ANT USB Service.</string>
     <string name="ant_missing_dependency_title">Missing Dependency</string>
     <string name="ant_missing_dependency_message">The required application\n\"%1$s\"\n is not installed. Do you want to launch the Play Store to search for it?</string>
     <string name="go_to_store">Go to Play Store</string>
