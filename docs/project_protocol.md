@@ -33,6 +33,7 @@ Any AI assistant working on this project **must** follow these steps for every t
     *   **State Control**: The agent **MUST NOT** transition tickets between states (e.g., move to "In Progress" or "Done") unless explicitly instructed by the user. The user maintains sole control over the workflow state.
     *   **Selection & Focus**: Multiple tickets may be "In Bearbeitung" (In Progress). The agent works on one chosen ticket at a time. While working on a ticket, it becomes the exclusive focus of the development session.
     *   **Documentation**: For any ticket in progress, the agent must:
+        *   **Identity Disclaimer**: Every comment posted by the agent MUST start with a clear disclaimer: *"[Automated comment by AI Agent]"*.
         *   Post the full text of the `implementation_plan.artifact.md` as a comment on the ticket.
         *   Post verification evidence (logs, summaries) as a comment once implementation is complete.
 
