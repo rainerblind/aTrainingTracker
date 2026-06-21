@@ -1,0 +1,113 @@
+#!/usr/bin/env python3
+import urllib.request
+import base64
+import json
+import os
+import sys
+from urllib.parse import urlencode
+
+# Transitions for SCRUM project
+TRANSITIONS = {
+    "todo": "11",
+    "in_progress": "21",
+    "in_review": "31",
+    "done": "41"
+}
+
+def get_config():
+    env_file = os.path.join(os.path.dirname(__file__), "..", ".env.jira")
+    config = {}
+    if not os.path.exists(env_file):
+        print(f"Error: {env_file} not found.")
+        sys.exit(1)
+    with open(env_file, "r") as f:
+        for line in f:
+            if "=" in line and not line.startswith("#"):
+                k, v = line.strip().split("=", 1)
+                config[k] = v
+    return config
+
+def get_headers(config):
+    auth_str = f"{config['JIRA_USER']}:{config['JIRA_TOKEN']}"
+    encoded_auth = base64.b64encode(auth_str.encode("ascii")).decode("ascii")
+    return {
+        "Authorization": f"Basic {encoded_auth}",
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+    }
+
+def jira_request(url, method="GET", payload=None):
+    config = get_config()
+    headers = get_headers(config)
+    data = json.dumps(payload).encode("utf-8") if payload else None
+
+    req = urllib.request.Request(url, data=data, method=method)
+    for k, v in headers.items():
+        req.add_header(k, v)
+
+    try:
+        with urllib.request.urlopen(req) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except Exception as e:
+        if hasattr(e, "read"):
+            print(f"API Error: {e.read().decode('utf-8')}")
+        raise e
+
+def list_sprint_issues():
+    config = get_config()
+    # 1. Find the board
+    boards = jira_request(f"{config['JIRA_URL']}/rest/agile/1.0/board")["values"]
+    board_id = boards[0]["id"]
+
+    # 2. Find active sprint
+    sprints = jira_request(f"{config['JIRA_URL']}/rest/agile/1.0/board/{board_id}/sprint?state=active")["values"]
+    if not sprints:
+        print("No active sprint found.")
+        return
+    sprint_id = sprints[0]["id"]
+    print(f"Active Sprint: {sprints[0]['name']}")
+
+    # 3. Get issues
+    issues = jira_request(f"{config['JIRA_URL']}/rest/agile/1.0/sprint/{sprint_id}/issue?fields=summary,status")["issues"]
+    for i in issues:
+        print(f"{i['key']}: {i['fields']['summary']} [{i['fields']['status']['name']}]")
+
+def transition_issue(issue_key, status_name):
+    config = get_config()
+    trans_id = TRANSITIONS.get(status_name)
+    if not trans_id:
+        print(f"Error: Unknown transition '{status_name}'. Use: {list(TRANSITIONS.keys())}")
+        return
+
+    url = f"{config['JIRA_URL']}/rest/api/3/issue/{issue_key}/transitions"
+    jira_request(url, method="POST", payload={"transition": {"id": trans_id}})
+    print(f"Successfully moved {issue_key} to {status_name}.")
+
+def add_comment(issue_key, text):
+    config = get_config()
+    url = f"{config['JIRA_URL']}/rest/api/3/issue/{issue_key}/comment"
+    # Simple ADF wrapper
+    payload = {
+        "body": {
+            "version": 1,
+            "type": "doc",
+            "content": [{"type": "paragraph", "content": [{"type": "text", "text": text}]}]
+        }
+    }
+    jira_request(url, method="POST", payload=payload)
+    print(f"Comment added to {issue_key}.")
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Usage: jira_util.py [list | move KEY todo|in_progress|in_review|done | comment KEY TEXT]")
+        sys.exit(1)
+
+    cmd = sys.argv[1]
+    if cmd == "list":
+        list_sprint_issues()
+    elif cmd == "move" and len(sys.argv) == 4:
+        transition_issue(sys.argv[2], sys.argv[3])
+    elif cmd == "comment" and len(sys.argv) == 4:
+        add_comment(sys.argv[2], sys.argv[3])
+    else:
+        print("Invalid command or arguments.")
