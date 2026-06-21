@@ -33,6 +33,7 @@ Any AI assistant working on this project **must** follow these steps for every t
     *   **Credentials**: Authentication details are stored in `.env.jira` (not tracked in Git).
     *   **State Control**: The agent **MUST NOT** transition tickets between states (e.g., move to "In Progress" or "Done") unless explicitly instructed by the user. The user maintains sole control over the workflow state.
     *   **Selection & Focus**: Multiple tickets may be "In Bearbeitung" (In Progress). The agent works on one chosen ticket at a time. While working on a ticket, it becomes the exclusive focus of the development session.
+    *   **Clarification & Completeness**: If a ticket selected for work lacks a **Description**, specific failure logs, or clear technical context, the agent **MUST NOT** proceed with an implementation plan. Instead, the agent must ask the user for clarification and agreement on the problem statement first.
     *   **Documentation**: For any ticket in progress, the agent must:
         *   **Identity Disclaimer**: Every comment posted by the agent MUST start with a clear disclaimer: *"[Automated comment by AI Agent]"*.
         *   **Initial Analysis**: Immediately after moving to "In Progress", post a comment containing the **Root Cause Analysis (RCA)** (for bugs), the **Implementation Strategy**, and the **Impact Analysis**.
