@@ -35,7 +35,7 @@ Any AI assistant working on this project **must** follow these steps for every t
     *   **Documentation**: For any ticket in progress, the agent must:
         *   **Identity Disclaimer**: Every comment posted by the agent MUST start with a clear disclaimer: *"[Automated comment by AI Agent]"*.
         *   Post the full text of the `implementation_plan.artifact.md` as a comment on the ticket.
-        *   Post verification evidence (logs, summaries) as a comment once implementation is complete.
+        *   **Verification & Closure**: When moving to "In Überprüfung", post the full text of the `walkthrough.artifact.md` as a comment. This provides a permanent record of the implemented changes and verification evidence.
 
 5.  **Architectural Integrity (SWE.2 Phase)**:
     *   Identify which core components are affected (e.g., `BANALService`, `TrackerService`, `Repository`).
