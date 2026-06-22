@@ -181,6 +181,10 @@ public class TrackingViewsDatabaseManager {
         updateBoolean(viewId, TrackingViewsDbHelper.SHOW_LIVE_SEGMENTS, showLiveSegments);
     }
 
+    public void updateShowElevationProfile(long viewId, boolean showElevationProfile) {
+        updateBoolean(viewId, TrackingViewsDbHelper.SHOW_ELEVATION_PROFILE, showElevationProfile);
+    }
+
     public void deleteSensorField(long sensorFieldId) {
         if (DEBUG) Log.i(TAG, "deleteSensorField(" + sensorFieldId + ")");
 
@@ -274,6 +278,7 @@ public class TrackingViewsDatabaseManager {
         values.put(TrackingViewsDbHelper.NAME, newLayoutNr);
         values.put(TrackingViewsDbHelper.LAYOUT_NR, newLayoutNr);
         values.put(TrackingViewsDbHelper.SHOW_LAP_BUTTON, 1);
+        values.put(TrackingViewsDbHelper.SHOW_ELEVATION_PROFILE, 0);
 
         db.insert(TrackingViewsDbHelper.VIEWS_TABLE, null, values);
     }
@@ -317,8 +322,9 @@ public class TrackingViewsDatabaseManager {
         // public static final int DB_VERSION = 5;       // upgraded to version 5 at 14.03.2018
         // public static final int DB_VERSION = 6;       // upgraded to version 6 at 17.04.2018
         // public static final int DB_VERSION = 7;       // upgraded to version 7 at 15.10.2019
-        // public static final int DB_VERSION = 8;       // upgraded to version 8 at 25.02.2026
-        public static final int DB_VERSION = 9;  // upgraded to version 9 at 12.04.2026: Adding Live Segments
+        // public version 8 at 25.02.2026
+        // public static final int DB_VERSION = 9;  // upgraded to version 9 at 12.04.2026: Adding Live Segments
+        public static final int DB_VERSION = 10; // upgraded to version 10 at 08.06.2026: Adding Elevation Profile
         public static final String VIEWS_TABLE = "ViewsTable";                // the table for the different 'tabs'
         public static final String ROWS_TABLE = "LayoutRowsTable";            // the table for the sensor fields within each tab
         public static final String C_ID = BaseColumns._ID;
@@ -356,6 +362,8 @@ public class TrackingViewsDatabaseManager {
 
         // new in V9 -> Live Segments
         public static final String SHOW_LIVE_SEGMENTS = "ShowLiveSegments";
+        // new in V10 -> Elevation Profile
+        public static final String SHOW_ELEVATION_PROFILE = "ShowElevationProfile";
 
         @Deprecated
         protected static final String CREATE_VIEWS_TABLE_V1 = "create table " + VIEWS_TABLE + " ("
@@ -514,6 +522,7 @@ public class TrackingViewsDatabaseManager {
             values.put(NEXT_POSITION, -1);  // insert an invalid value to indicate that this field is invalid
             values.put(SHOW_LAP_BUTTON, showLapButton ? 1 : 0);
             values.put(SHOW_MAP, showMap ? 1 : 0);
+            values.put(SHOW_ELEVATION_PROFILE, showMap ? 1 : 0);
             values.put(FULL_SCREEN, 0);     // default will be to have no fullscreen mode
             values.put(SYSTEM_SETTING, 1);  // default will be to follow the systems settings
             values.put(DAY, 0);
@@ -636,10 +645,16 @@ public class TrackingViewsDatabaseManager {
                 // add the new SHOW_LIVE_SEGMENTS column
                 addColumn(db, VIEWS_TABLE, SHOW_LIVE_SEGMENTS, "int");
 
-                // set the SHOW_LIVE_SEGMENTS column to 1
                 ContentValues contentValues = new ContentValues();
                 contentValues.put(SHOW_LIVE_SEGMENTS, 1);
                 db.update(VIEWS_TABLE, contentValues, null, null);
+            }
+
+            if (oldVersion < 10) {
+                Log.i(TAG, "Upgrading database from version 9 to 10");
+                addColumn(db, VIEWS_TABLE, SHOW_ELEVATION_PROFILE, "int");
+                // Synchronize elevation profile default with map visibility
+                db.execSQL("UPDATE " + VIEWS_TABLE + " SET " + SHOW_ELEVATION_PROFILE + " = " + SHOW_MAP);
             }
         }
 

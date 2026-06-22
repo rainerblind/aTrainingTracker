@@ -62,8 +62,10 @@ import java.util.Objects
 data class TrackingScreenState(
     val showMap: Boolean = false,
     val showLiveSegments: Boolean = false,
+    val showElevationProfile: Boolean = false,
     val fields: List<SensorFieldState> = emptyList(),
-    val mapState: MapState = MapState(zoomFocus = MapZoomFocus.TRACK_AND_MARKERS)
+    val mapState: MapState = MapState(zoomFocus = MapZoomFocus.TRACK_AND_MARKERS),
+    val pathPoints: List<com.atrainingtracker.trainingtracker.ui.map.PathPoint> = emptyList()
 )
 
 /**
@@ -189,8 +191,9 @@ class TrackingViewModel(
                 trackingViewsRepository.getSensorFieldConfigsForView(viewId),
                 banalServiceRepository.allFilteredSensorData,
                 trackingViewsRepository.getTrackingViewInfoFlow(viewId),
-                mapDataFlow // This is our 4th flow
-            ) { configs, allSensorData, viewInfo, mapData ->
+                banalServiceRepository.currentPathPoints,
+                mapDataFlow
+            ) { configs, allSensorData, viewInfo, livePathPoints, mapData ->
                 val (allLiveSegments, activeLiveSegments, allRoutes) = mapData
 
                 // --- Step 1: Create the base state from the latest configurations ---
@@ -252,6 +255,8 @@ class TrackingViewModel(
                     fields = finalFields,
                     showMap = viewInfo?.showMap ?: false,
                     showLiveSegments =  viewInfo?.showLiveSegments ?: false,
+                    showElevationProfile = viewInfo?.showElevationProfile ?: false,
+                    pathPoints = livePathPoints,
                     mapState = MapState(
                         zoomFocus = MapZoomFocus.FOLLOW_ME,
                         speed = banalServiceRepository.currentSpeed.value?.toFloat() ?: 0f,

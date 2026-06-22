@@ -110,6 +110,8 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-UI-006** | Support multiple languages (EN, DE, ES, FR, IT, PT, NL, PL, JA). | Reach international audience of athletes. | `strings.xml`, `values-xx/` | `TST-MAN-001` | Verified |
 | **REQ-UI-007** | Flexible sorting for lists (Date/Dist/Elev). | Allow users to organize and find data easily. | `WorkoutSummariesViewModel.kt` | `TST-MAN-001` | Verified |
 | **REQ-UI-008** | Agents ask for clarification if instructions unclear. | Protect project quality and precision. | `project_protocol.md` | `TST-STR-001` | Verified |
+| **REQ-UI-009** | Elevation profile on tracking screen. | Provide real-time visualization of the workout's elevation trend. | `TrackingTabsScreen.kt`, `SensorGridScreen.kt`, `TrackingViewModel.kt` | `TST-INT-004` | Verified |
+| **REQ-UI-010** | Adaptive layout for tab configuration settings. | Ensure all configuration toggles remain accessible and legible across different screen sizes using FlowRow, in the prioritized order: Map, Elevation Profile, Live Segments, Lap Button. | `TrackingTabConfigHeader.kt` | `TST-INT-006` | Verified |
 
 ## 11. Wearable Integration
 
