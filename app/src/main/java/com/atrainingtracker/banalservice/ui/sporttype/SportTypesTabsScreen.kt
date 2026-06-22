@@ -439,7 +439,7 @@ fun SportTypeCard(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = stringResource(R.string.mapping_format_strava, item.stravaName),
+                            text = stringResource(R.string.mapping_format_strava, item.stravaName ?: stringResource(R.string.no_upload)),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

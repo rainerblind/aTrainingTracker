@@ -261,6 +261,12 @@ class StravaUploader(context: Context) : BaseExporter(context) {
 
         val sportId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.SPORT_ID))
         val sportName = SportTypeDatabaseManager.getInstance(mContext).getStravaName(sportId)
+        
+        if (sportName == null) {
+            cursor.close()
+            return ExportResult(true, false, "Update skipped: Sport mapping set to 'No upload'")
+        }
+
         val name = myGetStringFromCursor(cursor, WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_NAME)
         val description = myGetStringFromCursor(cursor, WorkoutSummariesDatabaseManager.WorkoutSummaries.DESCRIPTION)
         val trainer = myGetBooleanFromCursor(cursor, WorkoutSummariesDatabaseManager.WorkoutSummaries.TRAINER)

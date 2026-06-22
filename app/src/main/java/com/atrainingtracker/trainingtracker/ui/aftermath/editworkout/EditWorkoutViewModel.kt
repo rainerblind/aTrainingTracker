@@ -341,14 +341,21 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
 
         if (newSportName == workoutData.value?.sportName) return
         val simpleSportTypeInfo = sportTypesList.find { it.name == newSportName }
-        _workoutData.update { it?.copy(
-            sportName = newSportName,
-            bSportType = simpleSportTypeInfo?.bSportType ?: BSportType.UNKNOWN,
-            sportId = simpleSportTypeInfo?.id ?: -1
-        ) }
+        val newSportId = simpleSportTypeInfo?.id ?: -1
+        val newStravaSportName = sportTypeDatabaseManager.getStravaName(newSportId)
+
+        _workoutData.update { current ->
+            current?.copy(
+                sportName = newSportName,
+                bSportType = simpleSportTypeInfo?.bSportType ?: BSportType.UNKNOWN,
+                sportId = newSportId,
+                stravaSportName = newStravaSportName,
+                // Automatically disable upload if mapping is null (NONE)
+                uploadToStrava = if (newStravaSportName == null) 0 else current.uploadToStrava
+            )
+        }
 
         // first, get the new sportId and bSportType
-        val newSportId = sportTypeDatabaseManager.getSportTypeIdFromUIName(newSportName)
         val newBSportType = sportTypeDatabaseManager.getBSportType(newSportId)
 
         if (newSportName != suggestedSportTypeName) {

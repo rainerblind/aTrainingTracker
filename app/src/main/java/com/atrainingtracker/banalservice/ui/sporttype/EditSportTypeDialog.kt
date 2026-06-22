@@ -91,6 +91,7 @@ fun EditSportTypeDialog(
     val stravaMap = remember(stravaUiNames, stravaDbValues) {
         stravaDbValues.zip(stravaUiNames).toMap()
     }
+    val noUploadLabel = stringResource(R.string.no_upload)
     val tcxNames = stringArrayResource(R.array.TCX_Sport_Types)
     val gcNames = stringArrayResource(R.array.GC_Sport_Types)
 
@@ -269,12 +270,16 @@ fun EditSportTypeDialog(
                 SportTypeDropdown(
                     label = "Strava Sport Name",
                     // We display the UI Name corresponding to the stored Database value
-                    selectedOption = stravaMap[stravaName] ?: stravaName,
+                    // Fallback to "- No upload -" if the value is null
+                    selectedOption = if (stravaName == null) noUploadLabel else (stravaMap[stravaName] ?: stravaName!!),
                     options = stravaUiNames.toList(),
                     onOptionSelected = { selectedUiName ->
-                        // Find the database value (key) that matches the selected UI name (value)
-                        val dbValue = stravaMap.entries.find { it.value == selectedUiName }?.key
-                        if (dbValue != null) {
+                        // If selected name matches the "No upload" label, set it to null
+                        if (selectedUiName == noUploadLabel) {
+                            stravaName = null
+                        } else {
+                            // Find the database value (key) that matches the selected UI name (value)
+                            val dbValue = stravaMap.entries.find { it.value == selectedUiName }?.key
                             stravaName = dbValue
                         }
                     },

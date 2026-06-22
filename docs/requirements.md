@@ -85,6 +85,7 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-EXP-001** | Export to GPX, TCX, CSV, GC JSON. | Interoperability with professional analysis tools. | `writer/` | `TST-REG-003` | Verified |
 | **REQ-EXP-002** | Automated uploads to Strava and Dropbox. | Streamline cloud synchronization. | `ExportManager.java` | `TST-REG-003` | Verified |
 | **REQ-EXP-003** | Selective Upload (exclude specific data). | Provide users control over data privacy. | `StravaUploader.kt` | `TST-MAN-001` | Verified |
+| **REQ-EXP-006** | Explicit "No upload" option for Strava mapping. | Allow users to opt-out of Strava sync for specific custom sport types via a dedicated "- No upload -" mapping option. | `SportTypeDatabaseManager.java`, `EditWorkoutViewModel.kt` | `TST-UNT-006`, `TST-UNT-007`, `TST-INT-002` | Verified |
 | **REQ-EXP-004** | Automated email export with attachments. | Simple, reliable backup and sharing. | `ExportManager.java` | `TST-MAN-001` | Verified |
 | **REQ-EXP-005** | Exponential backoff for Strava uploads. | Robust sync even with API issues. | `StravaUploader.kt` | `TST-STR-001` | Verified |
 

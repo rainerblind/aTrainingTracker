@@ -95,6 +95,8 @@ data class WorkoutData(
     val goal: String?,
     val method: String?,
 
+    val stravaSportName: String?,
+
     val stravaActivityData: String? = null,
 
     // --- 2. Heavy/Live Data ---
@@ -118,7 +120,8 @@ data class WorkoutData(
             equipmentName = equipmentName,
             commute = commute,
             trainer = trainer,
-            uploadToStrava = uploadToStrava
+            uploadToStrava = uploadToStrava,
+            stravaSportName = stravaSportName
         )
 
     val detailsData: WorkoutDetailsData

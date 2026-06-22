@@ -22,6 +22,7 @@
     <string name="filter_max">max</string>
 
     <string-array name="Strava_Sport_Types_UI_Names">
+        <item>@string/no_upload</item>
         <item>Entraînement (Autre)</item>
         <item>Vélo</item>
         <item>Course</item>

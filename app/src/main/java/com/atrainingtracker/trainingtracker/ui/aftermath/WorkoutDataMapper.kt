@@ -126,6 +126,8 @@ class WorkoutDataMapper(
             goal = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.GOAL)),
             method = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.METHOD)),
 
+            stravaSportName = sportTypeDatabaseManager.getStravaName(sportId),
+
             stravaActivityData = stravaActivityData,
 
             extremaRows = sensorsToCheck.mapNotNull { sensorType ->

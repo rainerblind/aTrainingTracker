@@ -976,4 +976,5 @@
     <string name="strava_disconnected_status">No estás conectado a Strava</string>
     <string name="strava_disconnect">Desconectar de Strava</string>
     <string name="strava_overall_rank_description">Rango global #%1$d</string>
+    <string name="no_upload">- Sin subida -</string>
 </resources>

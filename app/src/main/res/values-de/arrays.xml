@@ -19,39 +19,8 @@
 
 <resources>
 
-    <string-array name="Strava_Sport_Types_Strava_Names">
-        <item>Workout</item>
-        <item>Ride</item>
-        <item>Run</item>
-        <item>Swim</item>
-        <item>Hike</item>
-        <item>Walk</item>
-        <item>Crossfit</item>
-        <item>Elliptical</item>
-        <item>EBikeRide</item>
-        <item>IceSkate</item>
-        <item>WeightTraining</item>
-        <item>InlineSkate</item>
-        <item>Kayaking</item>
-        <item>Canoeing</item>
-        <item>Kitesurf</item>
-        <item>RockClimbing</item>
-        <item>NordicSki</item>
-        <item>RollerSki</item>
-        <item>Rowing</item>
-        <item>Snowshoe</item>
-        <item>BackcountrySki</item>
-        <item>AlpineSki</item>
-        <item>Snowboard</item>
-        <item>StandUpPaddling</item>
-        <item>StairStepper</item>
-        <item>Surfing</item>
-        <item>VirtualRide</item>
-        <item>Windsurf</item>
-        <item>Yoga</item>
-    </string-array>
-
     <string-array name="Strava_Sport_Types_UI_Names">
+        <item>@string/no_upload</item>
         <item>Training (Andere)</item>
         <item>Radfahren</item>
         <item>Laufen</item>

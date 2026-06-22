@@ -51,6 +51,7 @@
 
 
     <string-array name="Strava_Sport_Types_Strava_Names">
+        <item/>
         <item>Workout</item>
         <item>Ride</item>
         <item>Run</item>
@@ -83,6 +84,7 @@
     </string-array>
 
     <string-array name="Strava_Sport_Types_UI_Names">
+        <item>@string/no_upload</item>
         <item>Workout (Other)</item>
         <item>Ride</item>
         <item>Run</item>
