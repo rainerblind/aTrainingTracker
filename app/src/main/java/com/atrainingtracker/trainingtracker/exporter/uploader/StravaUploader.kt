@@ -69,6 +69,7 @@ class StravaUploader(context: Context) : BaseExporter(context) {
         private const val DESCRIPTION = "description"
         private const val COMMUTE = "commute"
         private const val TRAINER = "trainer"
+        private const val SPORT_TYPE = "sport_type"
 
         // Strava Status messages
         private const val STATUS_PROCESSING = "Your activity is still being processed."
@@ -275,12 +276,20 @@ class StravaUploader(context: Context) : BaseExporter(context) {
 
         // First of all, we have to update the sport type.  Thereby, query Strava several times to make sure that the sport type is correct.
         // In the past, we had problems when updating the sport type and the gear in one step.
-        updateStravaActivity(activityId, FormBody.Builder().add(TYPE, sportName).build())
+        // Modern Strava API uses sport_type, though type still works for some legacy types. We send both for maximum compatibility.
+        updateStravaActivity(activityId, FormBody.Builder()
+            .add(TYPE, sportName)
+            .add(SPORT_TYPE, sportName)
+            .build())
         var activityJSON: JSONObject? = getStravaActivity(activityId) ?: return ExportResult(false, false,"updating Strava failed (get)")  // no retry
 
         var waitingTime = INITIAL_WAITING_TIME
         for (attempt in 1..MAX_REQUESTS) {
-            if (activityJSON != null && sportName.equals(activityJSON?.optString(TYPE), ignoreCase = true)) {
+            // Check both type and sport_type in the response
+            if (activityJSON != null && (
+                sportName.equals(activityJSON?.optString(TYPE), ignoreCase = true) ||
+                sportName.equals(activityJSON?.optString(SPORT_TYPE), ignoreCase = true)
+            )) {
                 break
             }
 
@@ -315,7 +324,15 @@ class StravaUploader(context: Context) : BaseExporter(context) {
 
         if (DEBUG) Log.i(TAG, "Update Result: $activityJSON")
 
-        return ExportResult(true, false, "successfully updated")  // success -> no retry necessary
+        // Final feedback check: Is the activity flagged?
+        val isFlagged = activityJSON?.optBoolean("flagged", false) ?: false
+        val message = if (isFlagged) {
+            "successfully updated (Note: Activity is FLAGGED on Strava)"
+        } else {
+            "successfully updated"
+        }
+
+        return ExportResult(true, false, message)  // success -> no retry necessary
 
         // TODO: Verify???
     }
