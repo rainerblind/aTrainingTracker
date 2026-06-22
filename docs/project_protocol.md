@@ -13,11 +13,11 @@ Any AI assistant working on this project **must** follow these steps for every t
     *   Define the **Rationale** (the "Why") clearly.
     *   Map the requirement to the relevant **Implementation File(s)**.
 
-2.  **Test Definition (The TDD Phase)**:
-    *   **CRITICAL**: Before planning implementation, discuss and define the verification criteria with the user.
+2.  **Test Definition (The TDD Hard Stop)**:
+    *   **MANDATORY HARD STOP**: After requirement synchronization, the agent MUST define the verification criteria with the user.
     *   Identify which manual or automated tests in `docs/tests.md` will prove the requirement is met.
     *   If no suitable test exists, add a new one to `docs/tests.md` immediately.
-    *   Implementation may only start once the test criteria are agreed upon.
+    *   **Enforcement**: The agent is strictly FORBIDDEN from proposing an implementation plan or writing any code until the user has formally agreed to the test cases in `docs/tests.md`. This phase is used to clarify and freeze the requirements.
 
 3.  **Impact Analysis (SWE.1.BP.5 Phase)**:
     *   Before implementation, perform a formal audit of existing code.
@@ -36,7 +36,7 @@ Any AI assistant working on this project **must** follow these steps for every t
     *   **Clarification & Completeness**: If a ticket selected for work lacks a **Description**, specific failure logs, or clear technical context, the agent **MUST NOT** proceed with an implementation plan. Instead, the agent must ask the user for clarification and agreement on the problem statement first.
     *   **Documentation**: For any ticket in progress, the agent must:
         *   **Identity Disclaimer**: Every comment posted by the agent MUST start with a clear disclaimer: *"[Automated comment by AI Agent]"*.
-        *   **Initial Analysis**: Immediately after moving to "In Progress", post a comment containing the **Root Cause Analysis (RCA)** (for bugs), the **Implementation Strategy**, and the **Impact Analysis**.
+        *   **Initial Analysis**: Immediately after moving to "In Progress", post a comment containing the **Root Cause Analysis (RCA)** (for bugs), the **Implementation Strategy**, the **Impact Analysis**, and the **Agreed Verification Criteria (Test IDs)**.
         *   **Design Documentation**: Post the full text of the `implementation_plan.artifact.md` as a comment on the ticket.
         *   **Verification & Closure**: When moving to "In Überprüfung", post the full text of the `walkthrough.artifact.md` as a comment. This provides a permanent record of the implemented changes and verification evidence.
 
