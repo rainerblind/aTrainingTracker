@@ -52,7 +52,22 @@
         <item>ウェイトトレーニング</item>
         <item>ウィンドサーフィン</item>
         <item>ヨガ</item>
-    </string-array>
+            <item>グラベルライド</item>
+        <item>マウンテンバイク</item>
+        <item>E-マウンテンバイク</item>
+        <item>ハンドサイクル</item>
+        <item>ベロモービル</item>
+        <item>トレイルラン</item>
+        <item>バーチャルラン</item>
+        <item>HIIT</item>
+        <item>理学療法</item>
+        <item>パデル</item>
+        <item>ピックルボール</item>
+        <item>ゴルフ</item>
+        <item>スケートボード</item>
+        <item>セーリング</item>
+        <item>車いす</item>
+</string-array>
 
     <string-array name="Runkeeper_Sport_Types">
         <item>その他</item>

@@ -26,6 +26,7 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-REG-002** | **Branding** | `REQ-EXT-001`, `REQ-EXT-002`, `REQ-MAP-005` | Navigate to Strava Segments list and Detail map. | Correct orange/white logos visible in headers and context rows. |
 | **TST-REG-003** | **Cloud** | `REQ-EXP-001`, `REQ-EXP-002` | Complete workout with Strava enabled. | File export success UI and successful upload to third-party API. |
 | **TST-INT-002** | **UI/Logic** | `REQ-EXP-006` | In Sport Type Editor, select "- No upload -". Then create/edit workout with this type. | Strava checkbox is unchecked and disabled in workout editor. |
+| **TST-INT-003** | **Mapping** | `REQ-EXP-007` | In Sport Type Editor, select a new Strava type (e.g., Gravel Ride). Save and reopen. | The new type is persisted and correctly displayed in the editor and summary views. |
 | **TST-MAN-001** | **General** | All other `REQ` | Ad-hoc functional testing on a physical device. | Feature performs according to the rationale defined in requirements. |
 
 ## 3. Structural & Compliance Checks

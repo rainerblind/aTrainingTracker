@@ -52,7 +52,22 @@
         <item>Pesi</item>
         <item>Windsurf</item>
         <item>Yoga</item>
-    </string-array>
+            <item>Gravel</item>
+        <item>Mountain bike</item>
+        <item>Mountain bike elettrica</item>
+        <item>Handbike</item>
+        <item>Velomobile</item>
+        <item>Trail running</item>
+        <item>Corsa virtuale</item>
+        <item>HIIT</item>
+        <item>Fisioterapia</item>
+        <item>Padel</item>
+        <item>Pickleball</item>
+        <item>Golf</item>
+        <item>Skateboard</item>
+        <item>Vela</item>
+        <item>Sedia a rotelle</item>
+</string-array>
 
     <string-array name="Runkeeper_Sport_Types">
         <item>Altro</item>

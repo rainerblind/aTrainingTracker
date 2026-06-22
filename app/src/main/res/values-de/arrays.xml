@@ -50,6 +50,21 @@
         <item>Virtuelle Radfahrt</item>
         <item>Windsurfen</item>
         <item>Yoga</item>
-    </string-array>
+            <item>Gravel-Bike-Fahrt</item>
+        <item>Mountainbike-Fahrt</item>
+        <item>E-Mountainbike-Fahrt</item>
+        <item>Handbike</item>
+        <item>Velomobil</item>
+        <item>Trailrun</item>
+        <item>Virtueller Lauf</item>
+        <item>HIIT</item>
+        <item>Physiotherapie</item>
+        <item>Padel</item>
+        <item>Pickleball</item>
+        <item>Golf</item>
+        <item>Skateboard</item>
+        <item>Segeln</item>
+        <item>Rollstuhl</item>
+</string-array>
 
 </resources>

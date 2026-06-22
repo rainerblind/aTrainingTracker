@@ -52,7 +52,22 @@
         <item>Krachttraining</item>
         <item>Windsurfen</item>
         <item>Yoga</item>
-    </string-array>
+            <item>Gravelrit</item>
+        <item>Mountainbikerit</item>
+        <item>E-mountainbikerit</item>
+        <item>Handbike</item>
+        <item>Velomobiel</item>
+        <item>Trailrun</item>
+        <item>Virtuele hardloopsessie</item>
+        <item>HIIT</item>
+        <item>Fysiotherapie</item>
+        <item>Padel</item>
+        <item>Pickleball</item>
+        <item>Golf</item>
+        <item>Skateboard</item>
+        <item>Zeilen</item>
+        <item>Rolstoel</item>
+</string-array>
 
     <string-array name="Runkeeper_Sport_Types">
         <item>Overig</item>
