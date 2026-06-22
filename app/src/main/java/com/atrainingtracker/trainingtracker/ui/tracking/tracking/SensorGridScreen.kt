@@ -38,6 +38,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SheetValue
+import androidx.compose.material3.Surface
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
@@ -50,6 +51,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.segments.LiveSegment
 import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
+import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.segments.LiveSegmentSheet
 import com.atrainingtracker.trainingtracker.ui.theme.Zone1
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
@@ -181,6 +183,20 @@ fun SensorGridScreen(
                         .weight(1f), // Fills remaining space
                     onSegmentClick = {  }  // TODO: show segment as BottomSheetScaffold?
                 )
+            }
+
+            // 3. The Elevation Profile (Below the Map)
+            if (state.showElevationProfile && state.pathPoints.isNotEmpty()) {
+                Surface(
+                    color = MaterialTheme.colorScheme.surface,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                ) {
+                    ElevationProfile(
+                        pathPoints = state.pathPoints,
+                        currentDistance = state.pathPoints.lastOrNull()?.distance,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
         }
     }

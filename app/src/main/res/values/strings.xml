@@ -782,6 +782,7 @@
     <string name="config_tracking__day_or_night">Day or night</string>
     <string name="config_tracking__show_map">Map</string>
     <string name="config_tracking__showLiveSegments">Live Segments</string>
+    <string name="config_tracking__showElevationProfile">Elevation Profile</string>
     <string name="config_tracking__showLapButton">Lap Button</string>
     <string name="add_view_before">add view</string>
     <string name="delete_view">delete view</string>

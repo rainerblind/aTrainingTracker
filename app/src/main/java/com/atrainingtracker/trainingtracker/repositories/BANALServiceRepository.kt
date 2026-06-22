@@ -132,6 +132,10 @@ class BANALServiceRepository private constructor(context: Context) {
     private val _currentTrack = MutableStateFlow<List<LatLng>>(emptyList())
     val currentTrack: StateFlow<List<LatLng>> = _currentTrack.asStateFlow()
 
+    // --- Current Path Points (Distance + LatLng + Altitude) for Elevation Profile ---
+    private val _currentPathPoints = MutableStateFlow<List<com.atrainingtracker.trainingtracker.ui.map.PathPoint>>(emptyList())
+    val currentPathPoints: StateFlow<List<com.atrainingtracker.trainingtracker.ui.map.PathPoint>> = _currentPathPoints.asStateFlow()
+
     // --- Tracking Mode and Lifecycle Events ---
     
     private val _trackingMode = MutableLiveData<TrackingMode>()
@@ -293,9 +297,22 @@ class BANALServiceRepository private constructor(context: Context) {
                         }
 
                         // --- PRIMARY METRICS ---
-                        _currentSpeed.value = binder.getBestSensorData(SensorType.SPEED_mps)?.value as Double?
+                        val currentSpeed = binder.getBestSensorData(SensorType.SPEED_mps)?.value as Double?
+                        val currentAltitude = binder.getBestSensorData(SensorType.ALTITUDE)?.value as Double?
+                        val currentDistance = binder.getBestSensorData(SensorType.DISTANCE_m)?.value as Double?
+
+                        _currentSpeed.value = currentSpeed
                         _currentBearing.value = binder.getBestSensorData(SensorType.BEARING)?.value as Double?
-                        _currentDistance.value = binder.getBestSensorData(SensorType.DISTANCE_m)?.value as Double?
+                        _currentDistance.value = currentDistance
+
+                        if (TrainingApplication.isTracking()) {
+                            val newPathPoint = com.atrainingtracker.trainingtracker.ui.map.PathPoint(
+                                distance = currentDistance ?: 0.0,
+                                latLng = _currentLocation.value ?: LatLng(0.0, 0.0),
+                                altitude = currentAltitude ?: 0.0
+                            )
+                            _currentPathPoints.value = _currentPathPoints.value + newPathPoint
+                        }
 
                         if (DEBUG) Log.i(TAG, "BANALService update:\n _searchingForDevice: ${_searchingForDevice.value},\n _bSportType: ${_bSportType.value},\n _foundDeviceIds: ${_activeRemoteDevicesIds.value},\n _activeSensors: ${_activeSensors.value}")
 
