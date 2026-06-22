@@ -15,6 +15,7 @@ This document defines the verification procedures for all project requirements. 
 | **TST-UNT-005** | `ExponentialSmoothing` | `REQ-FIL-002` | Verify the recursive smoothing formula: `y[k+1] = α m[k] + (1-α) y[k]`. | Proposed |
 | **TST-UNT-006** | `SportTypeMapping` | `REQ-EXP-006` | Verify that `SportTypeDatabaseManager` correctly handles a `null` Strava mapping as a persistent state. | Proposed |
 | **TST-UNT-007** | `EditWorkoutViewModel` | `REQ-EXP-006` | Verify that selecting a sport type with a `null` Strava mapping automatically sets `uploadToStrava` to `0`. | Proposed |
+| **TST-UNT-008** | `Accumulator` | `REQ-PRO-003` | Verify that hardware deltas received during a pause are discarded, while deltas received while active are accumulated correctly. | Verified |
 
 ## 2. Regression & Manual Verification (SWE.5 / SWE.6)
 

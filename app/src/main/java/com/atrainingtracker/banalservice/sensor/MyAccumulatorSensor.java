@@ -27,6 +27,7 @@ public abstract class MyAccumulatorSensor<N extends Number> extends MySensor<N> 
     Boolean mRespectPause;
     protected N mInitialValue;  // necessary to manipulate the output that we get via getValue()...
     protected N mZeroValue; // In almost all cases, this will be 0.  In some special cases, like a lap sensor, this will be 1.
+    protected N mLastAbsoluteValue;
 
     @Override
     @Deprecated
@@ -38,6 +39,15 @@ public abstract class MyAccumulatorSensor<N extends Number> extends MySensor<N> 
     protected abstract N add(N a, N b);
 
     protected abstract N sub(N a, N b);
+
+
+    public void accumulate(N absoluteValue) {
+        if (mLastAbsoluteValue != null) {
+            N incrementBy = sub(absoluteValue, mLastAbsoluteValue);
+            increment(incrementBy);
+        }
+        mLastAbsoluteValue = absoluteValue;
+    }
 
 
     public void increment(N incrementBy) {
