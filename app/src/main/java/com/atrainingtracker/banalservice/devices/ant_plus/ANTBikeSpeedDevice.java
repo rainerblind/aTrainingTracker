@@ -72,8 +72,8 @@ public class ANTBikeSpeedDevice extends MyANTDevice {
     protected void addSensors() {
         mSpeedSensor = new ThresholdSensor<Double>(this, SensorType.SPEED_mps, SPEED_THRESHOLD);
         mPaceSensor = new ThresholdSensor<Double>(this, SensorType.PACE_spm, SPEED_THRESHOLD);
-        mDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m, false);
-        mLapDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m_LAP, false);
+        mDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m, true);
+        mLapDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m_LAP, true);
 
         addSensor(mSpeedSensor);
         addSensor(mPaceSensor);
@@ -121,11 +121,11 @@ public class ANTBikeSpeedDevice extends MyANTDevice {
                 @Override
                 public void onNewCalculatedAccumulatedDistance(long estTimestamp, EnumSet<EventFlag> eventFlags, BigDecimal calculatedAccumulatedDistance) {
                     if (calculatedAccumulatedDistance != null) {
-                        mDistanceSensor.newValue(calculatedAccumulatedDistance.doubleValue());
-                        mLapDistanceSensor.newValue(calculatedAccumulatedDistance.doubleValue());
+                        mDistanceSensor.accumulate(calculatedAccumulatedDistance.doubleValue());
+                        mLapDistanceSensor.accumulate(calculatedAccumulatedDistance.doubleValue());
                     } else {
-                        mDistanceSensor.newValue(0.0);
-                        mLapDistanceSensor.newValue(0.0);
+                        mDistanceSensor.accumulate(0.0);
+                        mLapDistanceSensor.accumulate(0.0);
 
                     }
                 }

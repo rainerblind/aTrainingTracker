@@ -275,8 +275,8 @@ public class BTLEBikePowerDevice extends MyBTLEDevice {
 
         mSpeedSensor = new MySensor<>(this, SensorType.SPEED_mps);
         mPaceSensor = new MySensor<>(this, SensorType.PACE_spm);
-        mDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m, false);
-        mLapDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m_LAP, false);
+        mDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m, true);
+        mLapDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m_LAP, true);
 
         addSensor(mSpeedSensor);
         addSensor(mPaceSensor);
@@ -353,8 +353,8 @@ public class BTLEBikePowerDevice extends MyBTLEDevice {
 
                         double distance = mCalibrationFactor * (cumulativeWheelRevolutions - mInitWheelRevolutions);
                         if (DEBUG) Log.i(TAG, "got new distance: " + distance);
-                        mDistanceSensor.newValue(distance);
-                        mLapDistanceSensor.newValue(distance);
+                        mDistanceSensor.accumulate(distance);
+                        mLapDistanceSensor.accumulate(distance);
                     } else {
                         mIdenticalWheelTime++;
                         if (mIdenticalWheelTime >= MAX_IDENTICAL) {

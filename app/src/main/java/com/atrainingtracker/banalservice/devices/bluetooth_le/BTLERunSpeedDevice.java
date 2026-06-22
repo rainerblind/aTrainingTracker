@@ -54,8 +54,8 @@ public class BTLERunSpeedDevice extends MyBTLEDevice {
 
                 if (DEBUG) Log.d(TAG, "had to calc distance (in meters): " + mDistance);
 
-                mDistanceSensor.newValue(mDistance);
-                mLapDistanceSensor.newValue(mDistance);
+                mDistanceSensor.accumulate(mDistance);
+                mLapDistanceSensor.accumulate(mDistance);
             }
         }
     };
@@ -79,8 +79,8 @@ public class BTLERunSpeedDevice extends MyBTLEDevice {
         mCadenceSensor = new MySensor<Integer>(this, SensorType.CADENCE);
         mSpeedSensor = new MySensor<Double>(this, SensorType.SPEED_mps);
         mPaceSensor = new MySensor<Double>(this, SensorType.PACE_spm);
-        mDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m, false);
-        mLapDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m_LAP, false);
+        mDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m, true);
+        mLapDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m_LAP, true);
 
         addSensor(mCadenceSensor);
         addSensor(mSpeedSensor);
@@ -124,8 +124,8 @@ public class BTLERunSpeedDevice extends MyBTLEDevice {
         if (mDistancePresent) {
             mDistance = mCalibrationFactor * characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT32, distance_offset) / 10;
             if (DEBUG) Log.d(TAG, "got distance (in meters): " + mDistance);
-            mDistanceSensor.newValue(mDistance);
-            mLapDistanceSensor.newValue(mDistance);
+            mDistanceSensor.accumulate(mDistance);
+            mLapDistanceSensor.accumulate(mDistance);
         }
     }
 
