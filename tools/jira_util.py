@@ -86,19 +86,15 @@ def transition_issue(issue_key, status_name):
 
 def add_comment(issue_key, text):
     config = get_config()
-    url = f"{config['JIRA_URL']}/rest/api/3/issue/{issue_key}/comment"
+    # Use API v2 to support standard Jira Wiki Markup (e.g., h1., {code}, etc.)
+    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}/comment"
 
     # Prefix the comment to identify the AI Agent
     identity_prefix = "[Automated comment by AI Agent]\n\n"
     full_text = identity_prefix + text
 
-    # Simple ADF wrapper
     payload = {
-        "body": {
-            "version": 1,
-            "type": "doc",
-            "content": [{"type": "paragraph", "content": [{"type": "text", "text": full_text}]}]
-        }
+        "body": full_text
     }
     jira_request(url, method="POST", payload=payload)
     print(f"Comment added to {issue_key}.")

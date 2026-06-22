@@ -29,12 +29,15 @@ Any AI assistant working on this project **must** follow these steps for every t
 
 4.  **Jira Ticket Management (Agile Phase)**:
     *   **Automation**: Use the local utility `./tools/jira_util.py` for Jira interactions (list, comment).
+    *   **Syntax**: All Jira comments must use **Jira Wiki Markup** (e.g., `h1.`, `{code}`, `*bold*`).
     *   **Credentials**: Authentication details are stored in `.env.jira` (not tracked in Git).
     *   **State Control**: The agent **MUST NOT** transition tickets between states (e.g., move to "In Progress" or "Done") unless explicitly instructed by the user. The user maintains sole control over the workflow state.
     *   **Selection & Focus**: Multiple tickets may be "In Bearbeitung" (In Progress). The agent works on one chosen ticket at a time. While working on a ticket, it becomes the exclusive focus of the development session.
+    *   **Clarification & Completeness**: If a ticket selected for work lacks a **Description**, specific failure logs, or clear technical context, the agent **MUST NOT** proceed with an implementation plan. Instead, the agent must ask the user for clarification and agreement on the problem statement first.
     *   **Documentation**: For any ticket in progress, the agent must:
         *   **Identity Disclaimer**: Every comment posted by the agent MUST start with a clear disclaimer: *"[Automated comment by AI Agent]"*.
-        *   Post the full text of the `implementation_plan.artifact.md` as a comment on the ticket.
+        *   **Initial Analysis**: Immediately after moving to "In Progress", post a comment containing the **Root Cause Analysis (RCA)** (for bugs), the **Implementation Strategy**, and the **Impact Analysis**.
+        *   **Design Documentation**: Post the full text of the `implementation_plan.artifact.md` as a comment on the ticket.
         *   **Verification & Closure**: When moving to "In Überprüfung", post the full text of the `walkthrough.artifact.md` as a comment. This provides a permanent record of the implemented changes and verification evidence.
 
 5.  **Architectural Integrity (SWE.2 Phase)**:

@@ -112,7 +112,7 @@ public class ExportManager {
      *
      * @param fileBaseName The unique identifier for the new workout.
      */
-    public synchronized void newWorkout(String fileBaseName) {
+    public void newWorkout(String fileBaseName) {
         if (DEBUG) Log.d(TAG, "newWorkout: " + fileBaseName);
 
         // initialize all with UNWANTED
@@ -166,7 +166,7 @@ public class ExportManager {
      *
      * @param fileBaseName The unique identifier for the finished workout.
      */
-    public synchronized void workoutFinished(String fileBaseName) {
+    public void workoutFinished(String fileBaseName) {
         if (DEBUG) Log.d(TAG, "workoutFinished: " + fileBaseName);
 
         // simply delegate to the repository.
@@ -181,7 +181,7 @@ public class ExportManager {
      *
      * @param workoutData
      */
-    public synchronized void exportWorkout(WorkoutData workoutData) {
+    public void exportWorkout(WorkoutData workoutData) {
         if (DEBUG) Log.d(TAG, "exportWorkout: " + workoutData.getFileBaseName());
 
         for (FileFormat fileFormat : FileFormat.values()) {
@@ -201,7 +201,7 @@ public class ExportManager {
      * @param workoutId: The workout ID
      * @param fileFormat: The specific FileFormat
      */
-    public synchronized void exportWorkoutTo(long workoutId, @NonNull FileFormat fileFormat) {
+    public void exportWorkoutTo(long workoutId, @NonNull FileFormat fileFormat) {
         if (DEBUG) Log.d(TAG, "exportWorkoutTo " + workoutId + ", " + fileFormat.name());
 
         String fileBaseName = getFileBaseName(workoutId);
@@ -231,7 +231,7 @@ public class ExportManager {
      * non-public stuff
      **********************************************************************************************/
 
-    private synchronized void startFullExportProcess(String fileBaseName, FileFormat fileFormat) {
+    private void startFullExportProcess(String fileBaseName, FileFormat fileFormat) {
         if (DEBUG) Log.d(TAG, "startFullExportProcess for " + fileBaseName + ", format: " + fileFormat);
 
         try {

@@ -30,6 +30,7 @@ These procedures ensure high-level system integrity and UI consistency.
 | Test ID | Focus | Requirement ID(s) | Method |
 |:---|:---|:---|:---|
 | **TST-STR-001** | **Stability** | `REQ-CON-005`, `REQ-TRK-005`, `REQ-DAT-005`, `REQ-UI-008` | Static analysis and architectural audit. |
+| **TST-STR-002** | **Thread Safety** | `REQ-PRO-002` | Static analysis of `synchronized` blocks to ensure no nested locks or I/O within locks. |
 
 ## 4. Release Verification Workflow
 
