@@ -45,9 +45,11 @@ Any AI assistant working on this project **must** follow these steps for every t
     *   Define or update the **Interfaces** and **Data Flow** between components in `docs/architecture.md`.
     *   Ensure that new code does not violate the established architecture (e.g., maintain clear separation between background services and UI layers).
 
-6.  **Implementation Planning (SWE.3 Phase)**:
+6.  **Implementation Planning (SWE.3 Phase - The Implementation Hard Stop)**:
     *   Create an `implementation_plan.artifact.md`.
     *   Every proposed change **must** explicitly reference the Requirement ID, the Component affected, and the corresponding Test ID it fulfills.
+    *   **MANDATORY HARD STOP**: The agent MUST present the full implementation plan to the user and ask for formal approval.
+    *   **Enforcement**: The agent is strictly FORBIDDEN from performing any code modifications (writing files or replacing content) until the user has responded with "Implementation Plan approved" or similar confirmation.
 
 7.  **Execution & Multi-Stage Verification**:
     *   **SWE.4 (Unit Verification)**: Verify internal logic of the specific module (e.g., `NumericalEncodingUtilsTest`).
