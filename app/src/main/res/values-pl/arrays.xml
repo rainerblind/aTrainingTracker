@@ -22,6 +22,7 @@
     <string name="filter_max">max</string>
 
     <string-array name="Strava_Sport_Types_UI_Names">
+        <item>@string/no_upload</item>
         <item>Trening (Inne)</item>
         <item>Jazda</item>
         <item>Bieg</item>
@@ -51,7 +52,22 @@
         <item>Trening siłowy</item>
         <item>Windsurfing</item>
         <item>Joga</item>
-    </string-array>
+            <item>Gravel</item>
+        <item>Jazda na rowerze górskim</item>
+        <item>Jazda na e-bike\'u górskim</item>
+        <item>Handbike</item>
+        <item>Velomobil</item>
+        <item>Bieg przełajowy</item>
+        <item>Bieg wirtualny</item>
+        <item>HIIT</item>
+        <item>Fizjoterapia</item>
+        <item>Padel</item>
+        <item>Pickleball</item>
+        <item>Golf</item>
+        <item>Skateboard</item>
+        <item>Żeglarstwo</item>
+        <item>Wózek inwalidzki</item>
+</string-array>
 
     <string-array name="Runkeeper_Sport_Types">
         <item>Inne</item>

@@ -42,7 +42,7 @@ data class SportTypeItem(
     val bSportType: BSportType,
     val minSpeed: Double,
     val maxSpeed: Double,
-    val stravaName: String,
+    val stravaName: String?,
     val tcxName: String,
     val gcName: String,
     val linkedEquipmentIds: List<Long>,

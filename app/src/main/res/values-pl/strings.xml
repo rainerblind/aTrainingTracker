@@ -736,4 +736,5 @@
     <string name="strava_disconnected_status">Nie połączono ze Strava</string>
     <string name="strava_disconnect">Rozłącz ze Strava</string>
     <string name="strava_overall_rank_description">Ranking ogólny #%1$d</string>
+    <string name="no_upload">- Brak przesyłania -</string>
 </resources>

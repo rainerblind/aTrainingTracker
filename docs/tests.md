@@ -13,6 +13,8 @@ This document defines the verification procedures for all project requirements. 
 | **TST-UNT-003** | `EquipmentDiscovery` | `REQ-TRK-004`, `REQ-SET-003` | Verify sport-type resolution logic based on varied active sensor ID sets and speed. | Verified |
 | **TST-UNT-004** | `MovingAverageFilter` | `REQ-FIL-001` | Verify correct averaging of a sequence of numbers (Numbered and Timed variants). | Proposed |
 | **TST-UNT-005** | `ExponentialSmoothing` | `REQ-FIL-002` | Verify the recursive smoothing formula: `y[k+1] = α m[k] + (1-α) y[k]`. | Proposed |
+| **TST-UNT-006** | `SportTypeMapping` | `REQ-EXP-006` | Verify that `SportTypeDatabaseManager` correctly handles a `null` Strava mapping as a persistent state. | Proposed |
+| **TST-UNT-007** | `EditWorkoutViewModel` | `REQ-EXP-006` | Verify that selecting a sport type with a `null` Strava mapping automatically sets `uploadToStrava` to `0`. | Proposed |
 
 ## 2. Regression & Manual Verification (SWE.5 / SWE.6)
 
@@ -23,6 +25,8 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-REG-001** | **Tracking** | `REQ-TRK-001`, `REQ-TRK-003`, `REQ-TRK-007`, `REQ-MAP-003` | Start workout, background app for 10 min, check bearing jitter. | Persistent 1Hz sampling, active notification, filtered map camera. |
 | **TST-REG-002** | **Branding** | `REQ-EXT-001`, `REQ-EXT-002`, `REQ-MAP-005` | Navigate to Strava Segments list and Detail map. | Correct orange/white logos visible in headers and context rows. |
 | **TST-REG-003** | **Cloud** | `REQ-EXP-001`, `REQ-EXP-002` | Complete workout with Strava enabled. | File export success UI and successful upload to third-party API. |
+| **TST-INT-002** | **UI/Logic** | `REQ-EXP-006` | In Sport Type Editor, select "- No upload -". Then create/edit workout with this type. | Strava checkbox is unchecked and disabled in workout editor. |
+| **TST-INT-003** | **Mapping** | `REQ-EXP-007` | In Sport Type Editor, select a new Strava type (e.g., Gravel Ride). Save and reopen. | The new type is persisted and correctly displayed in the editor and summary views. |
 | **TST-MAN-001** | **General** | All other `REQ` | Ad-hoc functional testing on a physical device. | Feature performs according to the rationale defined in requirements. |
 
 ## 3. Structural & Compliance Checks

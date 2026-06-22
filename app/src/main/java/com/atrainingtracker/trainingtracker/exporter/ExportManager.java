@@ -187,11 +187,9 @@ public class ExportManager {
         for (FileFormat fileFormat : FileFormat.values()) {
             if (TrainingApplication.exportToFile(fileFormat)) {
                 if (fileFormat == FileFormat.STRAVA && workoutData.getUploadToStrava() == 0) {
-                    // skip strava upload
+                    continue;
                 }
-                else {
-                    startFullExportProcess(workoutData.getFileBaseName(), fileFormat);
-                }
+                startFullExportProcess(workoutData.getFileBaseName(), fileFormat);
             }
         }
     }

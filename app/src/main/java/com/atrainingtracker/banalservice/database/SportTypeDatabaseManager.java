@@ -542,9 +542,9 @@ public class SportTypeDatabaseManager {
         //                         UI Id    gc       strava   tcx         Runkeeper           TrainingPeaks
         WALK(BSportType.RUN, R.string.sport_type_walk, "walk", "Walk", "Walking", "Walking", "Walk"),
         RUN(BSportType.RUN, R.string.sport_type_run, "run", "Run", "Running", "Running", "Run"),
-        MTB(BSportType.BIKE, R.string.sport_type_MTB, "mtb", "Ride", "Biking", "Mountain Biking", "MTB"),
+        MTB(BSportType.BIKE, R.string.sport_type_MTB, "mtb", "MountainBikeRide", "Biking", "Mountain Biking", "MTB"),
         BIKE(BSportType.BIKE, R.string.sport_type_bike, "bike", "Ride", "Biking", "Cycling", "Bike"),
-        OTHER(BSportType.UNKNOWN, R.string.sport_type_other, "", "", "Other", "Other", "Other");
+        OTHER(BSportType.UNKNOWN, R.string.sport_type_other, "", null, "Other", "Other", "Other");
 
         // TODO: Runkeeper: Running, Cycling, Mountain Biking, Walking, Hiking, Downhill Skiing, Cross-Country Skiing, Snowboarding, Skating, Swimming, Wheelchair, Rowing, Elliptical, Other
         // TODO: TrainingPeaks: Bike, Run, Walk, Swim, Brick, Cross train, Race, Day Off, Mountain Bike, Strength, XC Ski, Rowing, Other

@@ -956,4 +956,5 @@
     <string name="strava_disconnected_status">Strava 未接続</string>
     <string name="strava_disconnect">Strava 切断</string>
     <string name="strava_overall_rank_description">総合順位 #%1$d</string>
+    <string name="no_upload">- アップロードなし -</string>
 </resources>
