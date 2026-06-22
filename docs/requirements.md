@@ -118,6 +118,7 @@ This document tracks all functional and non-functional requirements of the proje
 | ID | Description | Rationale | Implementation File(s) | Verification ID | Status |
 |:---|:---|:---|:---|:---|:---|
 | **REQ-PRO-001** | Integrate Agile Workflow with Jira Cloud. | Ensure bidirectional traceability between tasks and code. | `project_protocol.md`, `SCRUM-103` | `TST-MAN-001` | Verified |
+| **REQ-PRO-002** | Minimize lock contention and eliminate ANRs. | Ensure the app remains responsive during heavy I/O or sensor load. | `TrackerService.java`, `ExportManager.java` | `TST-STR-002` | Verified |
 
 ## 12. Privacy & Permissions
 
