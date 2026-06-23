@@ -84,7 +84,7 @@ fun WorkoutSummary(
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
     ) {
 
-        // 1. Header (Blue Scrim Section)
+        // 1. Header
         WorkoutHeader(
             data = workoutData.headerData,
             onClicked = onEditWorkout,
