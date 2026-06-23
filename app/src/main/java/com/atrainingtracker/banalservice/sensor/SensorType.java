@@ -35,6 +35,7 @@ import com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 
+
 public enum SensorType
         implements Parcelable {
     ACCUMULATED_SENSORS(R.string.accumulated_sensors, R.string.accumulated_sensors_short, R.string.units_none, SensorValueType.STRING, new DefaultStringFormatter(), false),
@@ -96,6 +97,10 @@ public enum SensorType
     VERTICAL_SPEED(R.string.vertical_speed, R.string.vertical_speed_short, R.string.units_vertical_speed_basic, SensorValueType.INTEGER, new IntegerFormatter(), true);
 
     // max bit = 118
+
+    public static final java.util.List<SensorType> CORE_METRICS = java.util.Arrays.asList(
+            POWER, HR, SPEED_mps, CADENCE, ALTITUDE, TEMPERATURE
+    );
 
     // RR_INTERVAL     (0x0011, "RR interval",            "RR",                 "",     SensorValueType.DOUBLE,  new DefaultNumberFormatter()),
     // POWER_DIFF      (0x0022, "power differentiation",  "power diff",         "",     SensorValueType.DOUBLE,  new DefaultNumberFormatter()),

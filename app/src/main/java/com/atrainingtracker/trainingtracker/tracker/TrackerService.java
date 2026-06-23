@@ -89,21 +89,7 @@ public class TrackerService extends Service {
     public static final String WORKOUT_UPDATED_INTENT   = "com.atrainingtracker.trainingtracker.WOKRKOUT_UPDATED_INTENT";
 
     // Same sensor types from the old thread. Used for Averages.
-    private static final HashSet<SensorType> IMPORTANT_SENSOR_TYPES = new HashSet<>(Arrays.asList(
-            SensorType.ALTITUDE,
-            SensorType.CADENCE,
-            SensorType.HR,
-            SensorType.PACE_spm,
-            SensorType.PEDAL_POWER_BALANCE,
-            SensorType.PEDAL_SMOOTHNESS_L,
-            SensorType.PEDAL_SMOOTHNESS_R,
-            SensorType.POWER,
-            SensorType.SPEED_mps,
-            SensorType.TEMPERATURE,
-            SensorType.TORQUE,
-            SensorType.TORQUE_EFFECTIVENESS_L,
-            SensorType.TORQUE_EFFECTIVENESS_R
-    ));
+    private static final HashSet<SensorType> IMPORTANT_SENSOR_TYPES = new HashSet<>(SensorType.CORE_METRICS);
 
     // Sensors to track for Min/Max and used for average if in IMPORTANT_SENSOR_TYPES
     private static final HashSet<SensorType> SENSORS_TO_TRACK = new HashSet<>(IMPORTANT_SENSOR_TYPES);

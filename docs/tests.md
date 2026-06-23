@@ -16,6 +16,7 @@ This document defines the verification procedures for all project requirements. 
 | **TST-UNT-006** | `SportTypeMapping` | `REQ-EXP-006` | Verify that `SportTypeDatabaseManager` correctly handles a `null` Strava mapping as a persistent state. | Proposed |
 | **TST-UNT-007** | `EditWorkoutViewModel` | `REQ-EXP-006` | Verify that selecting a sport type with a `null` Strava mapping automatically sets `uploadToStrava` to `0`. | Proposed |
 | **TST-UNT-008** | `Accumulator` | `REQ-PRO-003` | Verify that hardware deltas received during a pause are discarded, while deltas received while active are accumulated correctly. | Verified |
+| **TST-UNT-009** | `WorkoutDataMapper` | `REQ-UI-011` | Verify that the extrema rows only include the "Big 6" performance metrics: HR, Speed/Pace, Cadence, Power, Altitude, and Temperature. | Verified |
 
 ## 2. Regression & Manual Verification (SWE.5 / SWE.6)
 
@@ -32,6 +33,19 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-INT-004** | **UI/Logic** | `REQ-UI-009` | In Tracking Tab Configuration, toggle "Show Elevation Profile". | Elevation profile is displayed below the map on the tracking screen. |
 | **TST-INT-005** | **UI Layout** | `REQ-UI-010` | Open the Tab Configuration on a narrow device or split-screen. | Checkboxes wrap into multiple rows instead of overlapping. Labels remain fully visible. |
 | **TST-INT-006** | **UI Layout** | `REQ-UI-010` | Audit the checkbox sequence in the tab configuration header. | Checkboxes appear in the exact order: Map, Elevation Profile, Live Segments, Lap Button. |
+| **TST-UI-001** | **UI Design** | `REQ-UI-011` | Inspect the workout summary extrema table on various device themes. | The table has distinct headers, clear alignment, and high-quality typography matching the Material 3 standards. | Verified |
+| **TST-UI-011** | **Formatting** | `REQ-UI-011` | Verify that units in data rows are surrounded by square brackets (e.g., `[km/h]`). | Verified |
+| **TST-UI-012** | **Hierarchy** | `REQ-UI-011` | Verify that the Sensor Name and the Numeric Values share the same visual weight, while the unit is micro-scaled. | Verified |
+| **TST-UI-013** | **Alignment** | `REQ-UI-011` | Verify that in all data rows, the icon, sensor label, and numeric values are vertically aligned to their bottom edge. | Verified |
+| **TST-UI-014** | **Typography** | `REQ-UI-011` | Verify that units use a micro font size (e.g., 8-9.sp) and a lighter color (reduced alpha) than the sensor name. | Verified |
+| **TST-UI-015** | **Notation** | `REQ-UI-011` | Verify that the "Average" header column displays the mathematical symbol (Ø) instead of the word "average". | Verified |
+| **TST-UI-016** | **Proportion** | `REQ-UI-011` | Verify that the icon height visually matches the height of the sensor name (bodyLarge line height). | Verified |
+| **TST-UI-017** | **Alignment** | `REQ-UI-011` | Verify that the icon, sensor label, and bracketed unit are perfectly aligned to the same bottom baseline in the Compose Preview. | Verified |
+| **TST-UI-018** | **Baseline Precision** | `REQ-UI-011` | Verify that the bottom edge of the icon and the bottom of the text characters are visually perfectly aligned. | Verified |
+| **TST-UI-019** | **Hierarchy** | `REQ-UI-011` | Verify context-aware bolding: HR/Power (Avg+Max), Speed/Pace/Cadence (Avg), Alt/Temp (Min+Max). | Verified |
+| **TST-UI-020** | **Contrast** | `REQ-UI-011` | Verify that the "-" placeholder is visually lighter (alpha 0.3) than numeric values. | Verified |
+| **TST-LOG-001** | **Logic** | `REQ-UI-011` | Verify that all rows, including "Pace", follow strict mathematical ordering (numerical minimum in Min column, numerical maximum in Max column). | Verified |
+| **TST-LOG-002** | **Logic** | `REQ-UI-011` | Verify that for a running activity, both Speed and Pace rows are generated from the single Speed data source. | Verified |
 | **TST-MAN-001** | **General** | All other `REQ` | Ad-hoc functional testing on a physical device. | Feature performs according to the rationale defined in requirements. |
 
 ## 3. Structural & Compliance Checks
@@ -40,6 +54,8 @@ These procedures ensure high-level system integrity and UI consistency.
 |:---|:---|:---|:---|
 | **TST-STR-001** | **Stability** | `REQ-CON-005`, `REQ-TRK-005`, `REQ-DAT-005`, `REQ-UI-008` | Static analysis and architectural audit. |
 | **TST-STR-002** | **Thread Safety** | `REQ-PRO-002` | Static analysis of `synchronized` blocks to ensure no nested locks or I/O within locks. |
+| **TST-STR-003** | **Data Integrity** | `REQ-UI-009` | 1. Static analysis of `onUpgrade` (v9->v10).<br>2. Static analysis of `onCreate` and `addDefaultTab`. | 1. `onUpgrade` must set `SHOW_ELEVATION_PROFILE = SHOW_MAP`.<br>2. `addDefaultTab` must initialize `SHOW_ELEVATION_PROFILE` using the value provided for `showMap`. | Verified |
+| **TST-STR-004** | **Consistency** | `REQ-TRK-008` | Static analysis of `TrackerService.java`. | `IMPORTANT_SENSOR_TYPES` must strictly contain only the "Big 6" + Temperature metrics. | Verified |
 
 ## 4. Release Verification Workflow
 
