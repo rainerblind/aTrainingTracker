@@ -98,6 +98,8 @@ fun ElevationProfile(
     encodedAltitudes: String,
     encodedDistances: String,
     currentDistance: Double? = null,
+    minAltitudeOverride: Double? = null,
+    maxAltitudeOverride: Double? = null,
     onDistanceSelected: (Double?) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -120,6 +122,8 @@ fun ElevationProfile(
     ElevationProfile(
         pathPoints = decodedData,
         currentDistance = currentDistance,
+        minAltitudeOverride = minAltitudeOverride,
+        maxAltitudeOverride = maxAltitudeOverride,
         onDistanceSelected = onDistanceSelected,
         modifier = modifier
     )
@@ -129,6 +133,8 @@ fun ElevationProfile(
 fun ElevationProfile(
     pathPoints: List<PathPoint>,
     currentDistance: Double?,
+    minAltitudeOverride: Double? = null,
+    maxAltitudeOverride: Double? = null,
     onDistanceSelected: (Double?) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -138,7 +144,7 @@ fun ElevationProfile(
     val unit = TrainingApplication.getUnit()
 
     // --- 1. Cache Static Geometry & Adaptive Labels ---
-    val cachedData = remember(pathPoints, unit) {
+    val cachedData = remember(pathPoints, unit, minAltitudeOverride, maxAltitudeOverride) {
 
         // --- 1. DOWNSAMPLING LOGIC ---
         // Max points to draw for performance.
@@ -177,9 +183,10 @@ fun ElevationProfile(
             sum / count
         }
 
-        // Use smoothed altitudes for Min/Max to avoid "spikes" affecting the scale
-        val min = smoothedAltitudes.minOrNull() ?: 0.0
-        val max = smoothedAltitudes.maxOrNull() ?: 1.0
+        // Use RAW altitudes for Min/Max scale to match official extrema table, 
+        // while using smoothed altitudes for the visual line.
+        val min = minAltitudeOverride ?: (pathPointsDownsampled.minOfOrNull { it.altitude } ?: 0.0)
+        val max = maxAltitudeOverride ?: (pathPointsDownsampled.maxOfOrNull { it.altitude } ?: 1.0)
         val range = (max - min).coerceAtLeast(1.0)
 
         // Adaptive Distance Ticks

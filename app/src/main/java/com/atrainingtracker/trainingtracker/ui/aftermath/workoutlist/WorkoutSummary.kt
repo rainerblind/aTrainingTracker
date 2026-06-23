@@ -180,6 +180,8 @@ private fun WorkoutMediaSection(
             encodedAltitudes = workoutData.encodedAltitudes,
             encodedDistances = workoutData.encodedDistances,
             currentDistance = null,
+            minAltitudeOverride = workoutData.minAltitude,
+            maxAltitudeOverride = workoutData.maxAltitude,
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable { onMapClick() }

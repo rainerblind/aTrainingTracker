@@ -159,6 +159,8 @@ fun TrackOnMapScreen(
                     pathPoints = mapState.tracks.firstOrNull()?.path ?: emptyList(),
                     modifier = Modifier.fillMaxWidth(),
                     currentDistance = selectedDistance,
+                    minAltitudeOverride = workoutData.minAltitude,
+                    maxAltitudeOverride = workoutData.maxAltitude,
                     onDistanceSelected = { selectedDistance = it }
                 )
             }
