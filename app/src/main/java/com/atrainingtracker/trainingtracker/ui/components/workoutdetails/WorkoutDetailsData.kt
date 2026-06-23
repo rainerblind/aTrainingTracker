@@ -36,7 +36,5 @@ data class WorkoutDetailsData(
     val descentMeters: Long,
     val bSportType: BSportType,  // necessary for distinguishing to show speed or pace
 
-    val maxDisplacement: Double?,
-    val minAltitude: Double?,
-    val maxAltitude: Double?
+    val maxDisplacement: Double?
 )
