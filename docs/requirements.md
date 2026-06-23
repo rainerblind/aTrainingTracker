@@ -38,6 +38,7 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-TRK-005** | Implement session recovery ("Resume from Crash"). | Ensure data integrity against system pressure. | `TrackerService.java` | `TST-STR-001` | Verified |
 | **REQ-TRK-006** | Support sport-specific search triggers. | Sensors ready when user changes activity. | `TrainingApplication.java` | `TST-MAN-001` | Verified |
 | **REQ-TRK-007** | Deterministic 1Hz sampling rate during recording. | Consistent time-base for analysis and export. | `TrackerService.java` | `TST-REG-001` | Verified |
+| **REQ-TRK-008** | Align session averages with core summary metrics. | Ensure background tracking focus matches optimized UI summary for consistency and performance. | `TrackerService.java` | `TST-STR-004` | Verified |
 
 ## 4. Advanced Metrics & User Profiles
 
@@ -87,6 +88,7 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-EXP-003** | Selective Upload (exclude specific data). | Provide users control over data privacy. | `StravaUploader.kt` | `TST-MAN-001` | Verified |
 | **REQ-EXP-006** | Explicit "No upload" option for Strava mapping. | Allow users to opt-out of Strava sync for specific custom sport types via a dedicated "- No upload -" mapping option. | `SportTypeDatabaseManager.java`, `EditWorkoutViewModel.kt` | `TST-UNT-006`, `TST-UNT-007`, `TST-INT-002` | Verified |
 | **REQ-EXP-007** | Support latest Strava sport types. | Ensure compatibility with modern Strava activity classification (e.g., Trail Run, Gravel Ride) for better social integration. | `arrays.xml`, `SportTypeDatabaseManager.java` | `TST-INT-003` | Verified |
+| **REQ-UI-011** | Professional styling for workout extrema table. | Achieve a world-class aesthetic for the min/mean/max table. Features: optimized core metrics, dual Speed/Pace display for runs (Pace derived from Speed), bracketed micro-units, baseline bottom-alignment, mathematical average notation (Ø), context-aware bolding, and strict mathematical ordering. | `WorkoutExtrema.kt`, `WorkoutDataMapper.kt` | `TST-UI-001`, `TST-UI-011` to `TST-UI-020`, `TST-LOG-001`, `TST-LOG-002` | Verified |
 | **REQ-EXP-004** | Automated email export with attachments. | Simple, reliable backup and sharing. | `ExportManager.java` | `TST-MAN-001` | Verified |
 | **REQ-EXP-005** | Exponential backoff for Strava uploads. | Robust sync even with API issues. | `StravaUploader.kt` | `TST-STR-001` | Verified |
 

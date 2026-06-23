@@ -133,9 +133,7 @@ data class WorkoutData(
             bSportType = bSportType,
             ascentMeters = ascentMeters,
             descentMeters = descentMeters,
-            maxDisplacement = maxDisplacement,
-            minAltitude = minAltitude,
-            maxAltitude = maxAltitude
+            maxDisplacement = maxDisplacement
         )
 
     val descriptionData: DescriptionData
