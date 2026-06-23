@@ -133,7 +133,7 @@ private fun ExtremaRow(
     ) {
         // Column 0: Icon
         Box(
-            modifier = Modifier.width(32.dp),
+            modifier = Modifier.width(26.dp),
             contentAlignment = Alignment.BottomStart
         ) {
             if (iconResId != null && !isHeader) {
@@ -146,9 +146,9 @@ private fun ExtremaRow(
             }
         }
 
-        // Column 1: Sensor Label + Unit (Weight 3.5)
+        // Column 1: Sensor Label + Unit (Weight 4)
         Row(
-            modifier = Modifier.weight(3.5f),
+            modifier = Modifier.weight(4f),
             verticalAlignment = Alignment.Bottom
         ) {
             Text(
@@ -161,10 +161,7 @@ private fun ExtremaRow(
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = "[$unit]",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontSize = 9.sp,
-                        platformStyle = PlatformTextStyle(includeFontPadding = false)
-                    ),
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     maxLines = 1
                 )

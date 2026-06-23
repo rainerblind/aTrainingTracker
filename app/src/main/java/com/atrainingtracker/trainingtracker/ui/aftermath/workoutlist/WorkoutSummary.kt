@@ -114,13 +114,7 @@ fun WorkoutSummary(
         )
 
         // 4. Extrema Values Section
-        // Show a subtle divider if extrema data exists
         if (workoutData.extremaData.dataRows.isNotEmpty()) {
-            HorizontalDivider(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                thickness = 0.5.dp,
-                color = MaterialTheme.colorScheme.outlineVariant
-            )
             WorkoutExtrema(data = workoutData.extremaData,
                 modifier = editWorkoutModifier
             )
