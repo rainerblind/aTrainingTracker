@@ -42,7 +42,6 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.fragments.preferences.StravaUploadFragment
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
-import com.atrainingtracker.trainingtracker.ui.map.MapState
 import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
 import com.atrainingtracker.trainingtracker.ui.segments.SegmentOnMapScreen
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
@@ -104,26 +103,24 @@ class StarredSegmentsFragment : Fragment() {
 
                         if (selectedSegment != null) {
 
-                            // Create MapState on the fly
-                            val mapState = remember(selectedSegment) {
-                                MapState(
-                                    zoomFocus = MapZoomFocus.LOCAL_SEGMENTS,
-                                    segments = listOf(
-                                            MapSegment(
-                                                stravaId = selectedSegment.summary.stravaId,
-                                                name = selectedSegment.summary.name,
-                                                bSportType = selectedSegment.summary.bSportType,
-                                                path = selectedSegment.path,
-                                                showStartAndFinishText = false
-                                        )
-                                    ),
-                                    bSportType = selectedSegment.summary.bSportType
+                            // Create Map data on the fly
+                            val detailSegments = remember(selectedSegment) {
+                                listOf(
+                                    MapSegment(
+                                        stravaId = selectedSegment.summary.stravaId,
+                                        name = selectedSegment.summary.name,
+                                        bSportType = selectedSegment.summary.bSportType,
+                                        path = selectedSegment.path,
+                                        showStartAndFinishText = false
+                                    )
                                 )
                             }
 
                             SegmentOnMapScreen(
                                 segmentSummary = selectedSegment.summary,
-                                mapState = mapState,
+                                segments = detailSegments,
+                                zoomFocus = MapZoomFocus.LOCAL_SEGMENTS,
+                                bSportType = selectedSegment.summary.bSportType,
                                 modifier = Modifier.statusBarsPadding()
                             )
 

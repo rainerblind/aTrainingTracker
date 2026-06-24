@@ -37,10 +37,15 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeader
 import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
-import com.atrainingtracker.trainingtracker.ui.map.MapState
+import com.atrainingtracker.trainingtracker.ui.map.MapTrack
+import com.atrainingtracker.trainingtracker.ui.map.MapSegment
+import com.atrainingtracker.trainingtracker.ui.map.MapRoute
+import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
+import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.flow.MutableStateFlow
 import androidx.compose.ui.graphics.asAndroidBitmap
@@ -61,7 +66,16 @@ import kotlinx.coroutines.launch
 @Composable
 fun TrackOnMapScreen(
     workoutData: WorkoutData,
-    mapState: MapState,
+    tracks: List<MapTrack>,
+    segments: List<MapSegment> = emptyList(),
+    routes: List<MapRoute> = emptyList(),
+    markers: List<LocationMarker> = emptyList(),
+    currentTrack: List<LatLng> = emptyList(),
+    activeLiveSegmentIds: Set<Long> = emptySet(),
+    zoomFocus: MapZoomFocus,
+    userBearing: Float,
+    userSpeed: Float,
+    bSportType: BSportType,
     modifier: Modifier
 ) {
     val context = LocalContext.current
@@ -105,9 +119,19 @@ fun TrackOnMapScreen(
         // 2. MAP AREA with OVERLAYED SHARE BUTTON
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             ATrainingTrackerMap(
-                mapState = mapState,
+                tracks = tracks,
+                segments = segments,
+                routes = routes,
+                markers = markers,
+                currentTrack = currentTrack,
+                activeLiveSegmentIds = activeLiveSegmentIds,
+                zoomFocus = zoomFocus,
+                userBearing = userBearing,
+                userSpeed = userSpeed,
+                bSportType = bSportType,
                 currentLocationFlow = noLocation,
                 selectedDistance = selectedDistance,
+                activeScrubPath = tracks.firstOrNull()?.path,
                 modifier = Modifier.fillMaxSize(),
                 onSegmentClick = { },
                 shouldTakeSnapshot = isSharing,
@@ -156,7 +180,7 @@ fun TrackOnMapScreen(
                 drawLayer(elevationLayer)
             }) {
                 ElevationProfile(
-                    pathPoints = mapState.tracks.firstOrNull()?.path ?: emptyList(),
+                    pathPoints = tracks.firstOrNull()?.path ?: emptyList(),
                     modifier = Modifier.fillMaxWidth(),
                     currentDistance = selectedDistance,
                     minAltitudeOverride = workoutData.minAltitude,

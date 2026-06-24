@@ -39,7 +39,12 @@ import com.atrainingtracker.trainingtracker.helpers.combineWorkoutAndShare
 import com.atrainingtracker.trainingtracker.segments.SegmentSummary
 import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
-import com.atrainingtracker.trainingtracker.ui.map.MapState
+import com.atrainingtracker.trainingtracker.ui.map.MapTrack
+import com.atrainingtracker.trainingtracker.ui.map.MapSegment
+import com.atrainingtracker.trainingtracker.ui.map.MapRoute
+import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
+import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.segments.SegmentHeader
 import com.atrainingtracker.trainingtracker.ui.segments.SegmentDetails
 import com.google.android.gms.maps.model.LatLng
@@ -49,7 +54,16 @@ import kotlinx.coroutines.launch
 @Composable
 fun SegmentOnMapScreen(
     segmentSummary: SegmentSummary?,
-    mapState: MapState,
+    tracks: List<MapTrack> = emptyList(),
+    segments: List<MapSegment> = emptyList(),
+    routes: List<MapRoute> = emptyList(),
+    markers: List<LocationMarker> = emptyList(),
+    currentTrack: List<LatLng> = emptyList(),
+    activeLiveSegmentIds: Set<Long> = emptySet(),
+    zoomFocus: MapZoomFocus,
+    userBearing: Float = 0f,
+    userSpeed: Float = 0f,
+    bSportType: BSportType = BSportType.UNKNOWN,
     modifier: Modifier
 ) {
     val context = LocalContext.current
@@ -100,9 +114,19 @@ fun SegmentOnMapScreen(
         // 2. MAP (Main content)
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             ATrainingTrackerMap(
-                mapState = mapState,
+                tracks = tracks,
+                segments = segments,
+                routes = routes,
+                markers = markers,
+                currentTrack = currentTrack,
+                activeLiveSegmentIds = activeLiveSegmentIds,
+                zoomFocus = zoomFocus,
+                userBearing = userBearing,
+                userSpeed = userSpeed,
+                bSportType = bSportType,
                 currentLocationFlow = noLocation,
                 selectedDistance = selectedDistance,
+                activeScrubPath = segments.firstOrNull()?.path,
                 modifier = Modifier.fillMaxSize(),
                 onSegmentClick = { },
                 shouldTakeSnapshot = isSharing,
@@ -140,7 +164,7 @@ fun SegmentOnMapScreen(
         }
 
         // 3. ELEVATION PROFILE
-        mapState.segments.firstOrNull()?.let { segment ->
+        segments.firstOrNull()?.let { segment ->
             Surface(
                 color = MaterialTheme.colorScheme.surface,
                 modifier = Modifier.navigationBarsPadding()

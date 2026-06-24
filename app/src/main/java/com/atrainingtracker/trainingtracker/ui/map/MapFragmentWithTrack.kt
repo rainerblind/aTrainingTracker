@@ -105,7 +105,7 @@ class MapFragmentWithTrack : Fragment() {
             setContent {
                 ATrainingTrackerTheme {
 
-                    val mapState by viewModel.mapState.collectAsStateWithLifecycle()
+                    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
                     val currentLocation by viewModel.currentLocation.collectAsStateWithLifecycle()
                     val liveSegments by viewModel.liveSegments.collectAsStateWithLifecycle()
                     val allRoutes by viewModel.allRoutes.collectAsStateWithLifecycle()
@@ -149,44 +149,24 @@ class MapFragmentWithTrack : Fragment() {
                                 selectedSegmentId != null -> {
                                     // --- THE SHEET CONTENT: The Entire SimpleSegmentOnMapScreen ---
                                     val selectedSegment =
-                                        mapState.segments.find { it.stravaId == selectedSegmentId }
-
-                                    // Transform the single selected Segment into a MapState for the Detail Screen
-                                    val detailMapState = remember(selectedSegment) {
-                                        MapState(
-                                            zoomFocus = MapZoomFocus.LOCAL_SEGMENTS,
-                                            segments = if (selectedSegment != null) listOf(
-                                                selectedSegment
-                                            ) else emptyList(),
-                                            bSportType = selectedSegment?.bSportType
-                                                ?: BSportType.UNKNOWN
-                                        )
-                                    }
+                                        uiState.segments.find { it.stravaId == selectedSegmentId }
 
                                     SegmentOnMapScreen(
                                         segmentSummary = liveSegments.find { it.summary.stravaId == selectedSegmentId }?.summary,
-                                        mapState = detailMapState,
+                                        segments = if (selectedSegment != null) listOf(selectedSegment) else emptyList(),
+                                        zoomFocus = MapZoomFocus.LOCAL_SEGMENTS,
+                                        bSportType = selectedSegment?.bSportType ?: BSportType.UNKNOWN,
                                         modifier = Modifier
                                     )
                                 }
                                 selectedRouteId != null -> {
                                     val selectedRoute =
-                                        mapState.routes.find {it.id == selectedRouteId }
-
-                                    // Transform the single selected route into a MapState for the Detail Screen
-                                    val detailMapState = remember(selectedRoute) {
-                                        MapState(
-                                            zoomFocus = MapZoomFocus.LOCAL_ROUTES,
-                                            routes = if (selectedRoute != null) listOf(
-                                                selectedRoute
-                                            ) else emptyList(),
-                                            bSportType = selectedRoute?.bSportType
-                                                ?: BSportType.UNKNOWN
-                                        )
-                                    }
+                                        uiState.routes.find {it.id == selectedRouteId }
 
                                     RouteOnMapScreen(
-                                        mapState = detailMapState,
+                                        routes = if (selectedRoute != null) listOf(selectedRoute) else emptyList(),
+                                        zoomFocus = MapZoomFocus.LOCAL_ROUTES,
+                                        bSportType = selectedRoute?.bSportType ?: BSportType.UNKNOWN,
                                         routeSummary = allRoutes.find { it.summary.id == selectedRouteId}?.summary,
                                         onToggleSelection = { viewModel.onToggleRoute(
                                             id = selectedRouteId!!,
@@ -194,14 +174,18 @@ class MapFragmentWithTrack : Fragment() {
                                         ) },
                                         modifier = Modifier,
                                     )
-
                                 }
                             }
                         }
                     ) { innerPadding ->
                         // --- THE MAIN BODY: The Track Map ---
                         ATrainingTrackerMap(
-                            mapState = mapState,
+                            segments = uiState.segments,
+                            routes = uiState.routes,
+                            markers = uiState.markers,
+                            currentTrack = uiState.currentTrack,
+                            zoomFocus = MapZoomFocus.LOCAL_SEGMENTS,
+                            bSportType = uiState.bSportType,
                             currentLocationFlow = MutableStateFlow(currentLocation),
                             modifier = Modifier.fillMaxSize(),
                             onSegmentClick = { id ->

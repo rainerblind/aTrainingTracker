@@ -23,6 +23,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.application
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.database.ExtremaType
@@ -41,12 +42,19 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+data class AftermathMapUIState(
+    val tracks: List<MapTrack> = emptyList(),
+    val segments: List<MapSegment> = emptyList(),
+    val routes: List<MapRoute> = emptyList(),
+    val markers: List<LocationMarker> = emptyList(),
+    val bSportType: BSportType = BSportType.UNKNOWN,
+    val zoomFocus: MapZoomFocus = MapZoomFocus.TRACK_AND_MARKERS
+)
+
 class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val _aftermathState = MutableStateFlow(
-        MapState(zoomFocus = MapZoomFocus.TRACK_AND_MARKERS)
-    )
-    val aftermathState = _aftermathState.asStateFlow()
+    private val _uiState = MutableStateFlow(AftermathMapUIState())
+    val uiState = _uiState.asStateFlow()
 
     // TODO: Move to WorkoutRepository.
     private val summariesDb = WorkoutSummariesDatabaseManager.getInstance(application)
@@ -69,7 +77,7 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
             // --- PHASE 1: Immediate Reset ---
             // Clear previous state so the user doesn't see "ghost" data from another workout
             withContext(Dispatchers.Main) {
-                _aftermathState.value = MapState(
+                _uiState.value = AftermathMapUIState(
                     zoomFocus = MapZoomFocus.TRACK_AND_MARKERS,
                     bSportType = bSportType,
                     tracks = emptyList(),
@@ -107,7 +115,7 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
                 )
 
                 withContext(Dispatchers.Main) {
-                    _aftermathState.value = _aftermathState.value.copy(
+                    _uiState.value = _uiState.value.copy(
                         tracks = listOf(fastTrack)
                     )
                 }
@@ -136,7 +144,7 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
             }
 
             withContext(Dispatchers.Main) {
-                _aftermathState.value = _aftermathState.value.copy(markers = markerList)
+                _uiState.value = _uiState.value.copy(markers = markerList)
             }
 
             // --- PHASE 4: High-Resolution Track (From Samples DB) ---
@@ -150,7 +158,7 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
 
             if (fullTracks.isNotEmpty()) {
                 withContext(Dispatchers.Main) {
-                    _aftermathState.value = _aftermathState.value.copy(tracks = fullTracks)
+                    _uiState.value = _uiState.value.copy(tracks = fullTracks)
                 }
             }
 
@@ -169,7 +177,7 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
                 }
 
             withContext(Dispatchers.Main) {
-                _aftermathState.value = _aftermathState.value.copy(
+                _uiState.value = _uiState.value.copy(
                     segments = mapSegments
                 )
             }
@@ -181,7 +189,7 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
                 .map { it.toMapRoute() }
 
             withContext(Dispatchers.Main) {
-                _aftermathState.value = _aftermathState.value.copy(
+                _uiState.value = _uiState.value.copy(
                     routes = mapRoutes
                 )
             }

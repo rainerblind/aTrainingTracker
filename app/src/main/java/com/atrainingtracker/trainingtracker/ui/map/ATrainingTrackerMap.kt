@@ -45,7 +45,6 @@ import com.google.maps.android.compose.MapEffect
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapType
 import com.google.maps.android.compose.MapUiSettings
-import com.google.android.gms.maps.model.JointType
 import com.google.maps.android.compose.MapsComposeExperimentalApi
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
@@ -55,9 +54,26 @@ import kotlinx.coroutines.flow.StateFlow
 @OptIn(MapsComposeExperimentalApi::class)
 @Composable
 fun ATrainingTrackerMap(
-    mapState: MapState,
+    // Data Layers
+    tracks: List<MapTrack> = emptyList(),
+    segments: List<MapSegment> = emptyList(),
+    routes: List<MapRoute> = emptyList(),
+    markers: List<LocationMarker> = emptyList(),
+    currentTrack: List<LatLng> = emptyList(),
+    activeLiveSegmentIds: Set<Long> = emptySet(),
+
+    // Camera & Behavior
+    zoomFocus: MapZoomFocus = MapZoomFocus.TRACK_AND_MARKERS,
+    userBearing: Float = 0f,
+    userSpeed: Float = 0f,
+    bSportType: BSportType = BSportType.UNKNOWN,
     currentLocationFlow: StateFlow<LatLng?>,
+
+    // Interaction & Scrutiny
     selectedDistance: Double? = null,
+    activeScrubPath: List<PathPoint>? = null,
+
+    // UI & Callbacks
     modifier: Modifier = Modifier,
     onMapClick: (() -> Unit)? = null,
     onSegmentClick: (Long) -> Unit = {},
@@ -87,8 +103,8 @@ fun ATrainingTrackerMap(
         )
     }
 
-    LaunchedEffect(mapState.bSportType, isMapLoaded) {
-        val iconRes = when (mapState.bSportType) {
+    LaunchedEffect(bSportType, isMapLoaded) {
+        val iconRes = when (bSportType) {
             BSportType.RUN -> R.drawable.bsport_run
             BSportType.BIKE -> R.drawable.bsport_bike
             else -> R.drawable.ic_cross
@@ -98,18 +114,11 @@ fun ATrainingTrackerMap(
     }
 
     // 3. Behavioral Controllers
-    MapBoundsController(mapState, currentLocation, cameraPositionState, isMapLoaded, context)
-    val filteredBearing = followMeController(mapState, currentLocation, cameraPositionState)
+    MapBoundsController(tracks, markers, segments, routes, zoomFocus, currentLocation, cameraPositionState, isMapLoaded, context)
+    val filteredBearing = followMeController(zoomFocus, userBearing, userSpeed, currentLocation, cameraPositionState)
     
-    val activePath = remember(mapState) {
-        when (mapState.zoomFocus) {
-            MapZoomFocus.TRACK_AND_MARKERS -> mapState.tracks.firstOrNull()?.path
-            MapZoomFocus.LOCAL_ROUTES -> mapState.routes.find { it.isSelected }?.path ?: mapState.routes.firstOrNull()?.path
-            MapZoomFocus.LOCAL_SEGMENTS -> mapState.segments.firstOrNull()?.path
-            MapZoomFocus.FOLLOW_ME -> null
-        } ?: mapState.tracks.firstOrNull()?.path ?: mapState.routes.firstOrNull()?.path ?: mapState.segments.firstOrNull()?.path ?: emptyList()
-    }
-    ScrubberController(selectedDistance, activePath, cameraPositionState)
+    val scrubPath = activeScrubPath ?: emptyList()
+    ScrubberController(selectedDistance, scrubPath, cameraPositionState)
 
     // Render Preview Check
     if (LocalInspectionMode.current) {
@@ -136,31 +145,31 @@ fun ATrainingTrackerMap(
 
         // Layer 1: Data Layers
         SegmentLayer(
-            segments = mapState.segments,
-            activeLiveSegmentIds = mapState.activeLiveSegmentIds,
-            zoomFocus = mapState.zoomFocus,
+            segments = segments,
+            activeLiveSegmentIds = activeLiveSegmentIds,
+            zoomFocus = zoomFocus,
             currentZoom = cameraPositionState.position.zoom,
             context = context,
             directionIcons = directionIcons,
             onSegmentClick = onSegmentClick
         )
 
-        TrackLayer(tracks = mapState.tracks)
+        TrackLayer(tracks = tracks)
 
         RouteLayer(
-            routes = mapState.routes,
-            zoomFocus = mapState.zoomFocus,
-            activeSportType = mapState.bSportType,
+            routes = routes,
+            zoomFocus = zoomFocus,
+            activeSportType = bSportType,
             onRouteClick = onRouteClick
         )
 
-        MarkerLayer(markers = mapState.markers, primaryColor = primaryColor, context = context)
+        MarkerLayer(markers = markers, primaryColor = primaryColor, context = context)
 
-        LiveTrackLayer(path = mapState.currentTrack)
+        LiveTrackLayer(path = currentTrack)
 
         ScrubMarkerLayer(
             selectedDistance = selectedDistance,
-            activePath = activePath,
+            activePath = scrubPath,
             scrubIconLeft = scrubIcons.second,
             scrubIconRight = scrubIcons.first
         )
@@ -170,7 +179,7 @@ fun ATrainingTrackerMap(
             Marker(
                 state = remember(loc) { MarkerState(position = loc) },
                 icon = locationIcon,
-                rotation = if (mapState.zoomFocus == MapZoomFocus.FOLLOW_ME) filteredBearing else mapState.bearing,
+                rotation = if (zoomFocus == MapZoomFocus.FOLLOW_ME) filteredBearing else userBearing,
                 flat = true,
                 anchor = Offset(0.5f, 0.5f),
                 zIndex = MapVisualization.USER_LOCATION_Z_INDEX

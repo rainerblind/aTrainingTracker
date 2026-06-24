@@ -38,18 +38,22 @@ import com.google.maps.android.compose.CameraPositionState
  */
 @Composable
 fun MapBoundsController(
-    mapState: MapState,
+    tracks: List<MapTrack>,
+    markers: List<LocationMarker>,
+    segments: List<MapSegment>,
+    routes: List<MapRoute>,
+    zoomFocus: MapZoomFocus,
     currentLocation: LatLng?,
     cameraPositionState: CameraPositionState,
     isMapLoaded: Boolean,
     context: Context
 ) {
-    LaunchedEffect(mapState.tracks, mapState.markers, mapState.segments, isMapLoaded) {
+    LaunchedEffect(tracks, markers, segments, routes, isMapLoaded) {
         if (!isMapLoaded) return@LaunchedEffect
 
-        if (mapState.zoomFocus == MapZoomFocus.TRACK_AND_MARKERS || 
-            mapState.zoomFocus == MapZoomFocus.LOCAL_SEGMENTS || 
-            mapState.zoomFocus == MapZoomFocus.LOCAL_ROUTES) {
+        if (zoomFocus == MapZoomFocus.TRACK_AND_MARKERS || 
+            zoomFocus == MapZoomFocus.LOCAL_SEGMENTS || 
+            zoomFocus == MapZoomFocus.LOCAL_ROUTES) {
             
             val userPos = currentLocation
             val builder = LatLngBounds.Builder()
@@ -67,15 +71,15 @@ fun MapBoundsController(
                 return results[0] < maxDistanceMeters
             }
 
-            when (mapState.zoomFocus) {
+            when (zoomFocus) {
                 MapZoomFocus.TRACK_AND_MARKERS -> {
-                    mapState.tracks.forEach { track ->
+                    tracks.forEach { track ->
                         track.path.forEach { builder.include(it.latLng); hasPoints = true }
                     }
-                    mapState.markers.forEach { marker -> builder.include(marker.position); hasPoints = true }
+                    markers.forEach { marker -> builder.include(marker.position); hasPoints = true }
                 }
                 MapZoomFocus.LOCAL_SEGMENTS -> {
-                    mapState.segments.forEach { segment ->
+                    segments.forEach { segment ->
                         val firstPoint = segment.path.firstOrNull()
                         if (firstPoint != null && isLocal(firstPoint.latLng)) {
                             hasPoints = true
@@ -84,7 +88,7 @@ fun MapBoundsController(
                     }
                 }
                 MapZoomFocus.LOCAL_ROUTES -> {
-                    mapState.routes.forEach { route ->
+                    routes.forEach { route ->
                         val firstPoint = route.path.firstOrNull()
                         if (firstPoint != null && isLocal(firstPoint.latLng)) {
                             hasPoints = true
@@ -115,29 +119,31 @@ fun MapBoundsController(
  */
 @Composable
 fun followMeController(
-    mapState: MapState,
+    zoomFocus: MapZoomFocus,
+    bearing: Float,
+    speed: Float,
     currentLocation: LatLng?,
     cameraPositionState: CameraPositionState
 ): Float {
-    var filteredBearing by remember { mutableFloatStateOf(mapState.bearing) }
+    var filteredBearing by remember { mutableFloatStateOf(bearing) }
 
-    LaunchedEffect(mapState.zoomFocus) {
-        if (mapState.zoomFocus == MapZoomFocus.FOLLOW_ME) {
-            filteredBearing = mapState.bearing
+    LaunchedEffect(zoomFocus) {
+        if (zoomFocus == MapZoomFocus.FOLLOW_ME) {
+            filteredBearing = bearing
         }
     }
 
-    LaunchedEffect(currentLocation, mapState.bearing, mapState.speed) {
-        if (mapState.zoomFocus == MapZoomFocus.FOLLOW_ME && currentLocation != null) {
+    LaunchedEffect(currentLocation, bearing, speed) {
+        if (zoomFocus == MapZoomFocus.FOLLOW_ME && currentLocation != null) {
             val alpha = 0.15f
-            var diff = mapState.bearing - filteredBearing
+            var diff = bearing - filteredBearing
             while (diff < -180f) diff += 360f
             while (diff > 180f) diff -= 360f
 
             filteredBearing += alpha * diff
             filteredBearing = (filteredBearing + 360f) % 360f
 
-            val targetZoom = (20f - 0.1f * mapState.speed).coerceIn(14f, 20f)
+            val targetZoom = (20f - 0.1f * speed).coerceIn(14f, 20f)
             try {
                 cameraPositionState.animate(
                     CameraUpdateFactory.newCameraPosition(

@@ -51,7 +51,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.activities.GpxImportActivity
-import com.atrainingtracker.trainingtracker.ui.map.MapState
 import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
 import com.atrainingtracker.trainingtracker.ui.map.toMapRoute
@@ -139,9 +138,9 @@ class RoutesFragment : Fragment() {
 
                                 if (selectedRoute != null) {
 
-                                    // Create MapState on the fly
-                                    val mapState = remember(selectedRoute, allSegments) {
-                                        val sportSegments = allSegments
+                                    // Create Map data on the fly
+                                    val sportSegments = remember(selectedRoute, allSegments) {
+                                        allSegments
                                             .filter { it.summary.bSportType == selectedRoute.summary.bSportType }
                                             .map { segment ->
                                                 MapSegment(
@@ -152,18 +151,14 @@ class RoutesFragment : Fragment() {
                                                     showStartAndFinishText = false
                                                 )
                                             }
-
-                                        MapState(
-                                            zoomFocus = MapZoomFocus.LOCAL_ROUTES,
-                                            routes = listOf(selectedRoute.toMapRoute()),
-                                            segments = sportSegments,
-                                            bSportType = selectedRoute.summary.bSportType
-                                        )
                                     }
 
                                     RouteOnMapScreen(
                                         routeSummary = selectedRoute.summary,
-                                        mapState = mapState,
+                                        routes = listOf(selectedRoute.toMapRoute()),
+                                        segments = sportSegments,
+                                        zoomFocus = MapZoomFocus.LOCAL_ROUTES,
+                                        bSportType = selectedRoute.summary.bSportType,
                                         modifier = Modifier.statusBarsPadding(),
                                         onToggleSelection = { isSelected ->
                                             viewModel.toggleRouteSelection(

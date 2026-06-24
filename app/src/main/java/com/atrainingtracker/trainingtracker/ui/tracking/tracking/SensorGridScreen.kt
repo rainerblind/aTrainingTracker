@@ -176,7 +176,16 @@ fun SensorGridScreen(
             // the bottom of the sensors and the bottom of the screen.
             if (state.showMap) {
                 ATrainingTrackerMap(
-                    mapState = state.mapState,
+                    tracks = state.mapTracks,
+                    segments = state.mapSegments,
+                    routes = state.mapRoutes,
+                    markers = state.mapMarkers,
+                    currentTrack = state.currentTrack,
+                    activeLiveSegmentIds = state.activeLiveSegmentIds,
+                    zoomFocus = state.zoomFocus,
+                    userBearing = state.userBearing,
+                    userSpeed = state.userSpeed,
+                    bSportType = state.bSportType,
                     currentLocationFlow = currentLocationFlow,
                     modifier = Modifier
                         .fillMaxWidth()

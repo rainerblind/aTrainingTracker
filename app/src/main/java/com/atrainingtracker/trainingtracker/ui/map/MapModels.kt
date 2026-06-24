@@ -87,19 +87,6 @@ object MapVisualization {
 }
 
 
-data class MapState(
-    val zoomFocus: MapZoomFocus,
-    val bearing: Float = 0f,
-    val speed: Float = 0f,
-    val currentTrack: List<LatLng> = emptyList(),
-    val tracks: List<MapTrack> = emptyList(),
-    val segments: List<MapSegment> = emptyList(),
-    val activeLiveSegmentIds: Set<Long> = emptySet(),
-    val routes: List<MapRoute> = emptyList(),
-    val markers: List<LocationMarker> = emptyList(),
-    val bSportType: BSportType = BSportType.UNKNOWN
-)
-
 data class LocationMarker(
     val position: LatLng,
     @DrawableRes val iconResId: Int,
