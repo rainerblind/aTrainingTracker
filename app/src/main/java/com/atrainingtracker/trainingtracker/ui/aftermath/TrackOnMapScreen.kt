@@ -66,16 +66,17 @@ import kotlinx.coroutines.launch
 @Composable
 fun TrackOnMapScreen(
     workoutData: WorkoutData,
-    tracks: List<MapTrack>,
+    modifier: Modifier = Modifier,
+    tracks: List<MapTrack> = emptyList(),
     segments: List<MapSegment> = emptyList(),
     routes: List<MapRoute> = emptyList(),
-    markers: List<LocationMarker> = emptyList(),
-    zoomFocus: MapZoomFocus,
-    bSportType: BSportType,
-    modifier: Modifier
+    markers: List<LocationMarker> = emptyList()
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
+    val bSportType = workoutData.bSportType
+    val zoomFocus = MapZoomFocus.TRACK_AND_MARKERS
 
     val headerLayer = rememberGraphicsLayer()
     val elevationLayer = rememberGraphicsLayer()

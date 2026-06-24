@@ -182,8 +182,6 @@ class WorkoutSummariesListFragment : Fragment() {
                                     segments = aftermathUIState.segments,
                                     routes = aftermathUIState.routes,
                                     markers = aftermathUIState.markers,
-                                    zoomFocus = aftermathUIState.zoomFocus,
-                                    bSportType = aftermathUIState.bSportType,
                                     modifier = Modifier
                                 )
 

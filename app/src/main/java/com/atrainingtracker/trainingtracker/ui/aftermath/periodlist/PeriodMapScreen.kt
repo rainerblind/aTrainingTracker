@@ -162,8 +162,6 @@ fun PeriodMapScreen(
                 TrackOnMapScreen(
                     workoutData = workoutData,
                     tracks = peekedTracks,
-                    zoomFocus = MapZoomFocus.TRACK_AND_MARKERS,
-                    bSportType = workoutData.bSportType,
                     modifier = Modifier
                 )
             }

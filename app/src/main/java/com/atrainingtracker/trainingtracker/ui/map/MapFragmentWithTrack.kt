@@ -71,29 +71,6 @@ class MapFragmentWithTrack : Fragment() {
 
     private val viewModel: MapFragmentWithTrackViewModel by viewModels()
 
-    /*
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
-        return ComposeView(requireContext()).apply {
-            setContent {
-                ATrainingTrackerTheme {
-                    // Observe the mapState which has bearing/speed/follow disabled
-                    val mapState by viewModel.mapState.collectAsStateWithLifecycle()
-
-                    ATrainingTrackerMap(
-                        mapState = mapState,
-                        currentLocationFlow = viewModel.currentLocation,
-                        modifier = Modifier.fillMaxSize(),
-                        onSegmentClick = { }  //TODO: show segment details as BottomSheetScaffold
-                    )
-                }
-            }
-        }
-    }
-     */
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreateView(
