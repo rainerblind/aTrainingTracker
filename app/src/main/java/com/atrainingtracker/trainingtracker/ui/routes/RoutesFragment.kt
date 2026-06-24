@@ -51,7 +51,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.activities.GpxImportActivity
-import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
 import com.atrainingtracker.trainingtracker.ui.map.toMapRoute
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
@@ -154,11 +153,9 @@ class RoutesFragment : Fragment() {
                                     }
 
                                     RouteOnMapScreen(
+                                        route = selectedRoute.toMapRoute(),
                                         routeSummary = selectedRoute.summary,
-                                        routes = listOf(selectedRoute.toMapRoute()),
                                         segments = sportSegments,
-                                        zoomFocus = MapZoomFocus.LOCAL_ROUTES,
-                                        bSportType = selectedRoute.summary.bSportType,
                                         modifier = Modifier.statusBarsPadding(),
                                         onToggleSelection = { isSelected ->
                                             viewModel.toggleRouteSelection(

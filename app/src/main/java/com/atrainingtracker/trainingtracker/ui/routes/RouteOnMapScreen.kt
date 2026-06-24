@@ -39,10 +39,8 @@ import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.helpers.combineWorkoutAndShare
 import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
-import com.atrainingtracker.trainingtracker.ui.map.MapTrack
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
 import com.atrainingtracker.trainingtracker.ui.map.MapRoute
-import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
 import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
 import com.atrainingtracker.banalservice.BSportType
 import com.google.android.gms.maps.model.LatLng
@@ -51,14 +49,15 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun RouteOnMapScreen(
+    route: MapRoute?,
     routeSummary: RouteSummary?,
-    routes: List<MapRoute> = emptyList(),
     segments: List<MapSegment> = emptyList(),
-    zoomFocus: MapZoomFocus,
-    bSportType: BSportType = BSportType.UNKNOWN,
     onToggleSelection: (Boolean) -> Unit,
     modifier: Modifier
 ) {
+    val routes = remember(route) { if (route != null) listOf(route) else emptyList() }
+    val bSportType = route?.bSportType ?: routeSummary?.bSportType ?: BSportType.UNKNOWN
+
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -102,7 +101,7 @@ fun RouteOnMapScreen(
             ATrainingTrackerMap(
                 segments = segments,
                 routes = routes,
-                zoomFocus = zoomFocus,
+                zoomFocus = MapZoomFocus.LOCAL_ROUTES,
                 bSportType = bSportType,
                 currentLocationFlow = noLocation,
                 selectedDistance = selectedDistance,

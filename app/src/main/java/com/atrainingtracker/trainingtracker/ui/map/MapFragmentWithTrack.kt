@@ -164,9 +164,7 @@ class MapFragmentWithTrack : Fragment() {
                                         uiState.routes.find {it.id == selectedRouteId }
 
                                     RouteOnMapScreen(
-                                        routes = if (selectedRoute != null) listOf(selectedRoute) else emptyList(),
-                                        zoomFocus = MapZoomFocus.LOCAL_ROUTES,
-                                        bSportType = selectedRoute?.bSportType ?: BSportType.UNKNOWN,
+                                        route = selectedRoute,
                                         routeSummary = allRoutes.find { it.summary.id == selectedRouteId}?.summary,
                                         onToggleSelection = { viewModel.onToggleRoute(
                                             id = selectedRouteId!!,
