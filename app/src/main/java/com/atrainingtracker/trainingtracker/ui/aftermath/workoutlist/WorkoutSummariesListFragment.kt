@@ -183,8 +183,6 @@ class WorkoutSummariesListFragment : Fragment() {
                                     routes = aftermathUIState.routes,
                                     markers = aftermathUIState.markers,
                                     zoomFocus = aftermathUIState.zoomFocus,
-                                    userBearing = 0f,
-                                    userSpeed = 0f,
                                     bSportType = aftermathUIState.bSportType,
                                     modifier = Modifier
                                 )

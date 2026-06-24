@@ -52,15 +52,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun RouteOnMapScreen(
     routeSummary: RouteSummary?,
-    tracks: List<MapTrack> = emptyList(),
-    segments: List<MapSegment> = emptyList(),
     routes: List<MapRoute> = emptyList(),
-    markers: List<LocationMarker> = emptyList(),
-    currentTrack: List<LatLng> = emptyList(),
-    activeLiveSegmentIds: Set<Long> = emptySet(),
+    segments: List<MapSegment> = emptyList(),
     zoomFocus: MapZoomFocus,
-    userBearing: Float = 0f,
-    userSpeed: Float = 0f,
     bSportType: BSportType = BSportType.UNKNOWN,
     onToggleSelection: (Boolean) -> Unit,
     modifier: Modifier
@@ -106,15 +100,9 @@ fun RouteOnMapScreen(
         // 2. MAP (Main content)
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             ATrainingTrackerMap(
-                tracks = tracks,
                 segments = segments,
                 routes = routes,
-                markers = markers,
-                currentTrack = currentTrack,
-                activeLiveSegmentIds = activeLiveSegmentIds,
                 zoomFocus = zoomFocus,
-                userBearing = userBearing,
-                userSpeed = userSpeed,
                 bSportType = bSportType,
                 currentLocationFlow = noLocation,
                 selectedDistance = selectedDistance,

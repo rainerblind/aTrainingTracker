@@ -70,11 +70,7 @@ fun TrackOnMapScreen(
     segments: List<MapSegment> = emptyList(),
     routes: List<MapRoute> = emptyList(),
     markers: List<LocationMarker> = emptyList(),
-    currentTrack: List<LatLng> = emptyList(),
-    activeLiveSegmentIds: Set<Long> = emptySet(),
     zoomFocus: MapZoomFocus,
-    userBearing: Float,
-    userSpeed: Float,
     bSportType: BSportType,
     modifier: Modifier
 ) {
@@ -123,11 +119,7 @@ fun TrackOnMapScreen(
                 segments = segments,
                 routes = routes,
                 markers = markers,
-                currentTrack = currentTrack,
-                activeLiveSegmentIds = activeLiveSegmentIds,
                 zoomFocus = zoomFocus,
-                userBearing = userBearing,
-                userSpeed = userSpeed,
                 bSportType = bSportType,
                 currentLocationFlow = noLocation,
                 selectedDistance = selectedDistance,
