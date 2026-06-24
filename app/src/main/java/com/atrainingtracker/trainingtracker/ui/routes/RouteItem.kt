@@ -167,7 +167,7 @@ fun PreviewSelectedRoute() {
             pathPoints = emptyList(),
             onMapClick = {},
             onHeaderClick = {},
-            onToggleSelection = {} as (Long, Boolean) -> Unit,
+            onToggleSelection = { _, _ -> },
             onDeleteConfirmed = {}
         )
     }

@@ -125,14 +125,21 @@ data class PathPoint(
 )
 
 /**
+ * Base interface for anything that can be drawn as a path on the map.
+ */
+interface MappablePath {
+    val path: List<PathPoint>
+}
+
+/**
  * Encapsulates a single track polyline with its metadata.
  */
 data class MapTrack(
     val id: Long,
     val type: TrackType,
-    val path: List<PathPoint>,
+    override val path: List<PathPoint>,
     val isVisible: Boolean = true
-)
+) : MappablePath
 {
     // Helper to access the zIndex defined in the TrackType
     val zIndex: Float get() = type.zIndex
@@ -143,17 +150,17 @@ data class MapSegment(
     val stravaId: Long,
     val name: String,
     val bSportType: BSportType,
-    val path: List<PathPoint>,
+    override val path: List<PathPoint>,
     val showStartAndFinishText: Boolean = true
-)
+) : MappablePath
 
 data class MapRoute(
     val id: Long,
     val name: String,
     val isSelected: Boolean,
     val bSportType: BSportType,
-    val path: List<PathPoint>
-)
+    override val path: List<PathPoint>
+) : MappablePath
 /**
  * Extension function to convert a Database Route (RouteWithPath)
  * into a Map-ready Route (MapRoute).
