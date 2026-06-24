@@ -1,59 +1,58 @@
 # aTrainingTracker
-An android app for tracking your sports activities (supporting ANT+ and BTLE).
+**The serious athlete's tracking cockpit for Android.**
+
+aTrainingTracker is a high-performance sports tracking application designed for athletes who demand precision and automation. While the primary focus is providing a solid tracking experience during your session, the app also includes tools for basic aftermath analysis and long-term volume tracking. By leveraging multi-sensor connectivity (ANT+ and Bluetooth LE), it transforms your smartphone into a training computer.
+
+**[Get it on Google Play](https://play.google.com/store/apps/details?id=com.atrainingtracker)**
 
 <img src="images/ANT+logo.png" alt="ANT+ logo" width="80" height="80"/> <img src="images/HR.jpeg" alt="ANT+ HR logo" width="40" height="40"/> <img src="images/run_spd.jpeg" alt="ANT+ run speed logo" width="40" height="40" /> <img src="images/bike_spd.jpeg" alt="ANT+ bike speed logo" width="40" height="40"/> <img src="images/bike_cad.jpeg" alt="ANT+ bike cadence logo" width="40" height="40"/> <img src="images/bike_speed_and_cadence.jpeg" alt="ANT+ bike speed & cadence logo" width="40" height="40"/> <img src="images/bike_pwr.jpeg" alt="ANT+ bike power logo" width="40" height="40"/> <img src="images/temp.jpeg" alt="ANT+ temperature logo" width="40" height="40"/>  
-Featuring certified wireless ANT+™ connectivity.  
-Visit www.thisisant.com/directory for compatible products.
+Featuring wireless ANT+™ connectivity.  
+Visit [www.thisisant.com/directory](https://www.thisisant.com/directory) for compatible products.
 
+### Focused on Performance, Minimize Interaction
 
-### This Android app is for the really serious athletes.
-
-For those, who want to track all the details of every training session but do not want to waste their time.  
-This app is for all the athletes, who want a powerful yet simple to use app to track their training.
-
-
-Once configured and paired with all your remote sensors, you only have to press start when you start your 
-training session and stop when you are done.  Except for the name of the workout, everything else should go 
-without further interaction.  The app automagically determines the sport and the equipment (shoe or bike) 
-you used during a training session based on the remote sensors that where used during this session. Moreover, 
-the app can upload the files to your Dropbox.  So when you have finished your shower, the data is already on 
-your computer, waiting to be analyzed with your favorite software like WKO+, or Golden Cheetah.
-
+For those who want to track every detail of their training without wasting time on their phone. aTrainingTracker is powerful yet simple:
+*   **Zero-Touch Automation**: Once configured, just press **Start**. The app automagically determines the sport (Run/Bike) and the specific equipment (bike or shoes) based on the remote sensors detected during the session.
+*   **Best-Sensor Logic**: Intelligent priority system selects the highest quality data source (e.g., preferring a dedicated ANT+ or BTLE speed sensor over GPS-based speed for superior precision).
+*   **Cloud Ready**: Automatic synchronization with **Strava** and **Dropbox**. Your data is ready for analysis on your computer (WKO+, Golden Cheetah) by the time you've finished your post-workout shower.
+*   **Privacy First**: All tracked data is stored exclusively on your device (unless you choose to upload it to the cloud). Of course, I do not collect, store, or have access to your personal workout data.
 
 ## Main Features:
 
-* Open source.
-* Support of many ANT+ sensors (heart rate, run speed and cadence, bike speed, bike cadence, bike speed and cadence, bike power, temperature/environment).
-* Support of many Bluetooth LE sensors (heart rate, run speed and cadence, cycling speed, cycling cadence, cycling speed and cadence).
-* Pair an unlimited number of remote (ANT+ or Bluetooth) sensors, e.g., a speed or cadence sensor on each of your bikes.
-* Simply swipe through the different configurable views
-* Export to TCX, GPX, CSV, and Golden Cheetah.
-* Upload to Dropbox.
-* Upload to Strava.
-* Use your Pebble to display values.
-* When the app starts, it searches for all paired sensors and takes the data from the "best" available one.
-* The sport type (run, bike) is derived from the available remote sensors.  When no remote sensors were available, the sport type is guessed from the average speed.
-* The equipment is synchronized with Strava.  The equipment used in a training session is then derived from the available remote sensors.
-* Simple setting of the calibration factor.  You only have to input the measured and true distance.
+*   **Extensive Sensor Support**:
+    *   **ANT+**: Heart Rate, Run Speed/Cadence, Bike Speed, Bike Cadence, Combined Speed & Cadence, Power Meters, and Temperature.
+    *   **Bluetooth LE**: Heart Rate, Cycling Speed/Cadence, Running Speed/Cadence.
+*   **Multi-Sensor Pairing**: Pair an unlimited number of sensors; the app automatically connects to what is available when you start.
+*   **Highly Customizable Cockpits**: Build your perfect dashboard by swiping through multiple configurable views. Cockpits are sport-type dependent, ensuring you always see the exact metrics relevant to your current activity (e.g., Power/Cadence for cycling vs. Pace for running).
+*   **Versatile Export**: Support for TCX, GPX, CSV, and Golden Cheetah formats.
+*   **Cloud Integration**: Automatic synchronization with **Strava** and **Dropbox** for seamless data analysis and backup.
+*   **Social Sharing**: Generate and share snapshots that combine your map, elevation profile, and key metrics into a single image.
+*   **Navigation & Routes**: Import routes from GPX or the Strava server and follow them on the live map during your session.
+*   **Strava Segments**: Manage your starred segments with detailed metrics and elevation profiles. Sort by proximity, grade, or elevation gain, with automatic detection and live feedback while on the segment.
+*   **Customizable Sport Types**: Fully flexible sport definitions to suit your specific training needs.
+*   **Multilingual**: Available in English, German, Spanish, French, Italian, Portuguese, Dutch, Polish, and Japanese.
+*   **Training History**: Built-in summaries (weekly, monthly, yearly) to monitor your training volume at a glance.
 
+## More than two Decades ago, I had a Dream
 
-## More than a decade ago, I had a dream.
+This project began as a vision more than two decades ago. Back then, I was an engineering student exploring the first possibilities of mobile coding with Java Midlets. When jogging, I wore a heart rate strap and a simple wrist watch.  Expensive watches that could store data were just appearing but out of reach for me. 
 
-Back then, I studied mechatronics, jogged from time to time, and did my first tries in writing code for mobile phones, so called Midlets.  When jogging, I wore a heart rate strap and wrist watch to display the heart rate values.  My wrist watch could not store the heart rate data but there were very very expensive ones available that could do this.  Moreover, the first version of speed sensors for running (very clumpy ones) were appearing.  Once, I thought about the amazing possibilities that open up, when a mobile phone could get all the data and store it.  Most obviously, a mobile phone has an almost infinite amount of storage (even back then) and it is simple to get the data from the phone to the computer (honestly, back then this was not as simple as today). Even better, the mobile phone has a huge display and can do complex computations.  Only the possibility to display the data on a wrist watch seemed to be out of reach.
+I dreamt of a future where the mobile phone—with its massive storage, large display, and computational power—could act as the ultimate training log, gathering and storing every bit of data from remote sensors.
 
-Over the years, I increased my running volume, added swimming and cycling and became a passionate triathlete.
+Over the years, I transitioned from a casual jogger to a passionate triathlete. By the time the first smartphones supporting the ANT+ protocol hit the market in 2011, I was ready. I bought one immediately, but found that none of the available apps were powerful or automated enough for a serious athlete. 
 
+So, I started coding.
 
-## Now, this dream becomes true.
+After many years of active development and use, the project saw a lengthy hiatus between 2019 and 2025. However, my passion for the ultimate tracking cockpit never faded. I have now returned to the project with renewed energy, modernizing the user interface while keeping the solid core tracking logic intact.
 
-In 2011, I realized that there are smartphones available that support the ANT+ protocol, the de facto standard for transmitting fitness data (heart rate, speed, cadence, power, ...).  Thus, I became excited and bought such a smartphone but non of the available apps were powerful enough and simple to use to satisfy me.  So I started coding ...
+Recently, I have invested significantly more time in refining this code than in actual training, and I am proud to share this labor of love with the community.
 
-Over the years, I invested much more time in developing this app than training.  Now, that my time becomes more and more limited I published the app here on GitHub under an open source licence.
+## Support & Contributing
 
+We welcome support from the community to keep aTrainingTracker the best tool for serious athletes:
+*   **Report Issues**: Add feature requests or bug reports on [GitHub](https://github.com/rainerblind/aTrainingTracker/issues).
+*   **Contribute Code**: Pull requests for Java or Kotlin improvements are always welcome.
+*   **Translate**: Help localize the app into your mother tongue. No coding is required—just simple text translation.
 
-## Support
-
-You are more than welcome to support the development of this app by 
-* Adding feature requests or bug reports here on github.  Simply add an issue on https://github.com/rainerblind/aTrainingTracker/issues.
-* If you are one of the blessed persons who learned to code in Java (or Kotlin) you can help to fix the bugs and realize the feature requests by contributing to the code.
-* Translate the app to other languages.  Therefore, you just have to translate the phrases within a file.  No coding required.  This should be a piece of cake for your mother tongue.
+---
+*Wireless ANT+™ connectivity. Visit www.thisisant.com/directory for compatible products.*
