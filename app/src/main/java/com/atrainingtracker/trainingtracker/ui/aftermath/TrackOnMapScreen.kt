@@ -46,6 +46,7 @@ import com.atrainingtracker.trainingtracker.ui.map.MapSegment
 import com.atrainingtracker.trainingtracker.ui.map.MapRoute
 import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
 import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
+import com.atrainingtracker.trainingtracker.ui.map.MapDetailLayout
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.flow.MutableStateFlow
 import androidx.compose.ui.graphics.asAndroidBitmap
@@ -72,115 +73,31 @@ fun TrackOnMapScreen(
     routes: List<MapRoute> = emptyList(),
     markers: List<LocationMarker> = emptyList()
 ) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-
-    val bSportType = workoutData.bSportType
-    val zoomFocus = MapZoomFocus.TRACK_AND_MARKERS
-
-    val headerLayer = rememberGraphicsLayer()
-    val elevationLayer = rememberGraphicsLayer()
-
-    var isSharing by remember { mutableStateOf(false) }
-    var selectedDistance by remember { mutableStateOf<Double?>(null) }
-    val noLocation = remember { MutableStateFlow<LatLng?>(null) }
-
-    Column(modifier = Modifier.fillMaxSize()) {
-
-        // 1. HEADER
-        Surface(
-            color = MaterialTheme.colorScheme.primaryContainer,
-            shape = RectangleShape,
-            modifier = Modifier.statusBarsPadding()
-        ) {
-            Box(modifier = Modifier.drawWithContent {
-                headerLayer.record {
-                    this@drawWithContent.drawContent()
-                }
-                drawLayer(headerLayer)
-            }) {
-                WorkoutHeader(
-                    modifier = modifier,
-                    data = workoutData.headerData,
-                    backgroundColor = MaterialTheme.colorScheme.surface,
-                    textColor = MaterialTheme.colorScheme.onSurface,
-                    menuEnabled = false,
-                    onClicked = { },
-                    onExport = { },
-                    onSaveAsRoute = { },
-                    onDeleteRequest = { }
-                )
-            }
-        }
-
-        // 2. MAP AREA with OVERLAYED SHARE BUTTON
-        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            ATrainingTrackerMap(
-                zoomFocus = zoomFocus,
-                bSportType = bSportType,
-                currentLocationFlow = noLocation,
-                selectedDistance = selectedDistance,
-                activeScrubPath = tracks.firstOrNull()?.path,
-                modifier = Modifier.fillMaxSize(),
-                shouldTakeSnapshot = isSharing,
-                onSnapshotReady = { mapBitmap ->
-                    scope.launch {
-                        val hBmp = headerLayer.toImageBitmap().asAndroidBitmap()
-                        val eBmp = elevationLayer.toImageBitmap().asAndroidBitmap()
-                        combineWorkoutAndShare(context, hBmp, mapBitmap, eBmp)
-                        isSharing = false
-                    }
-                }
-            ) {
-                tracks(tracks)
-                segments(segments)
-                routes(routes)
-                markers(markers)
-            }
-
-            // SHARE BUTTON positioned on top-right of the MAP
-            Surface(
-                onClick = { isSharing = true }, // Set click action directly on Surface
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(16.dp)            // Standard distance from screen edge
-                    .size(44.dp),              // Fixed size to match standard map controls
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f), // Slightly more opaque for better contrast
-                shadowElevation = 6.dp,        // More pronounced shadow for "floating" look
-                tonalElevation = 2.dp          // Material 3 tonal color
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Default.Share,
-                        contentDescription = "Share",
-                        modifier = Modifier.size(22.dp), // Precisely sized icon
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-        }
-
-        // 3. ELEVATION
-        Surface(
-            color = MaterialTheme.colorScheme.surface,
-            modifier = Modifier.navigationBarsPadding()
-        ) {
-            Box(modifier = Modifier.drawWithContent {
-                elevationLayer.record {
-                    this@drawWithContent.drawContent()
-                }
-                drawLayer(elevationLayer)
-            }) {
-                ElevationProfile(
-                    pathPoints = tracks.firstOrNull()?.path ?: emptyList(),
-                    modifier = Modifier.fillMaxWidth(),
-                    currentDistance = selectedDistance,
-                    minAltitudeOverride = workoutData.minAltitude,
-                    maxAltitudeOverride = workoutData.maxAltitude,
-                    onDistanceSelected = { selectedDistance = it }
-                )
-            }
-        }
-    }
+    MapDetailLayout(
+        bSportType = workoutData.bSportType,
+        zoomFocus = MapZoomFocus.TRACK_AND_MARKERS,
+        activeScrubPath = tracks.firstOrNull()?.path,
+        minAltitudeOverride = workoutData.minAltitude,
+        maxAltitudeOverride = workoutData.maxAltitude,
+        header = {
+            WorkoutHeader(
+                modifier = modifier,
+                data = workoutData.headerData,
+                backgroundColor = MaterialTheme.colorScheme.surface,
+                textColor = MaterialTheme.colorScheme.onSurface,
+                menuEnabled = false,
+                onClicked = { },
+                onExport = { },
+                onSaveAsRoute = { },
+                onDeleteRequest = { }
+            )
+        },
+        mapContent = {
+            tracks(tracks)
+            segments(segments)
+            routes(routes)
+            markers(markers)
+        },
+        modifier = modifier
+    )
 }

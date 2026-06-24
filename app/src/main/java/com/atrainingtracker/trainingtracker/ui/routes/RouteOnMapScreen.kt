@@ -42,6 +42,7 @@ import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
 import com.atrainingtracker.trainingtracker.ui.map.MapRoute
 import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
+import com.atrainingtracker.trainingtracker.ui.map.MapDetailLayout
 import com.atrainingtracker.banalservice.BSportType
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -53,117 +54,28 @@ fun RouteOnMapScreen(
     routeSummary: RouteSummary?,
     segments: List<MapSegment> = emptyList(),
     onToggleSelection: (Boolean) -> Unit,
-    modifier: Modifier
+    modifier: Modifier = Modifier
 ) {
-    val routes = remember(route) { if (route != null) listOf(route) else emptyList() }
     val bSportType = route?.bSportType ?: routeSummary?.bSportType ?: BSportType.UNKNOWN
 
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-
-    val headerLayer = rememberGraphicsLayer()
-    val elevationLayer = rememberGraphicsLayer()
-
-    var isSharing by remember { mutableStateOf(false) }
-
-    // Shared state for the "seeker" position on both Map and Profile
-    var selectedDistance by remember { mutableStateOf<Double?>(null) }
-    val noLocation = remember { MutableStateFlow<LatLng?>(null) }
-
-    Column(modifier = Modifier.fillMaxSize()) {
-
-        routeSummary?.let {
-            Surface(
-                color = MaterialTheme.colorScheme.primaryContainer,
-                shape = RectangleShape,
-                modifier = Modifier.statusBarsPadding()
-            ) {
-                Box(modifier = Modifier.drawWithContent {
-                    headerLayer.record {
-                        this@drawWithContent.drawContent()
-                    }
-                    drawLayer(headerLayer)
-                }) {
-                    Column(modifier = modifier) {
-                        RouteSummaryHeader(
-                            summary = it,
-                            modifier = Modifier.fillMaxWidth(),
-                            onToggleSelection = onToggleSelection,
-                            showSwitch = !isSharing
-                        )
-                    }
-                }
+    MapDetailLayout(
+        bSportType = bSportType,
+        zoomFocus = MapZoomFocus.LOCAL_ROUTES,
+        activeScrubPath = route?.path,
+        header = {
+            routeSummary?.let {
+                RouteSummaryHeader(
+                    summary = it,
+                    modifier = Modifier.fillMaxWidth(),
+                    onToggleSelection = onToggleSelection,
+                    showSwitch = true // Snapshot handled by MapDetailLayout
+                )
             }
-        }
-
-        // 2. MAP (Main content)
-        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            ATrainingTrackerMap(
-                zoomFocus = MapZoomFocus.LOCAL_ROUTES,
-                bSportType = bSportType,
-                currentLocationFlow = noLocation,
-                selectedDistance = selectedDistance,
-                activeScrubPath = routes.firstOrNull()?.path,
-                modifier = Modifier.fillMaxSize(),
-                shouldTakeSnapshot = isSharing,
-                onSnapshotReady = { mapBitmap ->
-                    scope.launch {
-                        val hBmp = headerLayer.toImageBitmap().asAndroidBitmap()
-                        val eBmp = elevationLayer.toImageBitmap().asAndroidBitmap()
-                        combineWorkoutAndShare(context, hBmp, mapBitmap, eBmp)
-                        isSharing = false
-                    }
-                }
-            ) {
-                routes(routes)
-                segments(segments)
-            }
-
-            // SHARE BUTTON positioned on top-right of the MAP
-            Surface(
-                onClick = { isSharing = true },
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(16.dp)
-                    .size(44.dp),
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                shadowElevation = 6.dp,
-                tonalElevation = 2.dp
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Default.Share,
-                        contentDescription = "Share",
-                        modifier = Modifier.size(22.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-        }
-
-        // 3. ELEVATION PROFILE
-        routes.firstOrNull()?.let { route ->
-            Surface(
-                color = MaterialTheme.colorScheme.surface,
-                modifier = Modifier.navigationBarsPadding()
-            ) {
-                Box(modifier = Modifier.drawWithContent {
-                    elevationLayer.record {
-                        this@drawWithContent.drawContent()
-                    }
-                    drawLayer(elevationLayer)
-                }) {
-                    ElevationProfile(
-                        pathPoints = route.path,
-                        currentDistance = selectedDistance,
-                        onDistanceSelected = { dist ->
-                            selectedDistance = dist
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
-        }
-    }
+        },
+        mapContent = {
+            if (route != null) routes(listOf(route))
+            segments(segments)
+        },
+        modifier = modifier
+    )
 }
