@@ -245,16 +245,15 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
             return
         }
 
-
-        // when requested by the user or the suggested equipment is empty, we show all equipment instead
-        if (showAllEquipment || suggestedEquipmentNames.isEmpty() ) {
-            suggestedEquipmentNames = allEquipment
-        }
-
         // when the suggested equipment contains only one item, we set this equipment
         if (suggestedEquipmentNames.size == 1) {
             if (DEBUG) Log.i(TAG, "FTW: finalizeEquipmentNames, {setting equipment to: ${suggestedEquipmentNames.first()}}")
             suggestedEquipmentName = suggestedEquipmentNames.first()
+            suggestedEquipmentNames = allEquipment
+        }
+
+        // when requested by the user or the suggested equipment is empty, we show all equipment instead
+        if (showAllEquipment || suggestedEquipmentNames.isEmpty() ) {
             suggestedEquipmentNames = allEquipment
         }
 
