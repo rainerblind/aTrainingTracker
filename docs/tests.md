@@ -44,6 +44,9 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-UI-018** | **Baseline Precision** | `REQ-UI-011` | Verify that the bottom edge of the icon and the bottom of the text characters are visually perfectly aligned. | Verified |
 | **TST-UI-019** | **Hierarchy** | `REQ-UI-011` | Verify context-aware bolding: HR/Power (Avg+Max), Speed/Pace/Cadence (Avg), Alt/Temp (Min+Max). | Verified |
 | **TST-UI-020** | **Contrast** | `REQ-UI-011` | Verify that the "-" placeholder is visually lighter (alpha 0.3) than numeric values. | Verified |
+| **TST-UI-021** | **Redundancy** | `REQ-UI-012` | Verify that Min/Max altitude no longer appear in the Workout Details row, only Ascent and Descent. | Verified |
+| **TST-UI-026** | **Consistency** | `REQ-UI-013` | In the Workout Summary card, verify that the altitude labels at the start/end of the chart axes match the Min/Max values shown in the Extrema table. | Verified |
+| **TST-UI-027** | **Harmonization** | `REQ-UI-014` | Start tracking; verify the Speed Average in the extrema table exactly matches the value derived from Total Distance / Active Time (e.g., if distance is 100m and active time is 100s, avg speed must be 1.0 m/s). | Verified |
 | **TST-LOG-001** | **Logic** | `REQ-UI-011` | Verify that all rows, including "Pace", follow strict mathematical ordering (numerical minimum in Min column, numerical maximum in Max column). | Verified |
 | **TST-LOG-002** | **Logic** | `REQ-UI-011` | Verify that for a running activity, both Speed and Pace rows are generated from the single Speed data source. | Verified |
 | **TST-MAN-001** | **General** | All other `REQ` | Ad-hoc functional testing on a physical device. | Feature performs according to the rationale defined in requirements. |

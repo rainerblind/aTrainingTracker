@@ -171,7 +171,7 @@ public class TrackerService extends Service {
         }
     };
     // private long   mLapNr           = BANALService.INIT_LAP_NR-1;
-    // int            mTimeTotal_s     = 0;
+    int mTimeTotal_s = 0;
     private int mTimeActive_s = 0;
     private double mDistanceTotal_m = 0.0;
     private final BroadcastReceiver mSearchingFinishedReceiver = new BroadcastReceiver() {
@@ -445,29 +445,29 @@ public class TrackerService extends Service {
         Cursor cursor = db.query(WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE, null, null, null, null, null, null);
         cursor.moveToLast();
 
-        mBaseFileName = cursor.getString(cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_NAME));
+        mBaseFileName = cursor.getString(cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME));
         mWorkoutID = cursor.getInt(cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID));
-        int time_total_s = cursor.getInt(cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_TOTAL_s));
-        int time_active_s = cursor.getInt(cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_ACTIVE_s));
+        mTimeTotal_s = cursor.getInt(cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_TOTAL_s));
+        mTimeActive_s = cursor.getInt(cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_ACTIVE_s));
         int calories = cursor.getInt(cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.CALORIES));
         int lapNr = cursor.getInt(cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.LAPS));
-        double distance_m = cursor.getDouble(cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.DISTANCE_TOTAL_m));
+        mDistanceTotal_m = cursor.getDouble(cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.DISTANCE_TOTAL_m));
 
         cursor.close();
 
         Log.d(TAG, "resuming with mBaseFileName=" + mBaseFileName
                 + ", mWorkoutId=" + mWorkoutID
-                + ", time_total_s=" + time_total_s
-                + ", time_active_s=" + time_active_s
+                + ", time_total_s=" + mTimeTotal_s
+                + ", time_active_s=" + mTimeActive_s
                 + ", calories=" + calories
                 + ", lapNr=" + lapNr
-                + ", distance_m=" + distance_m);
+                + ", distance_m=" + mDistanceTotal_m);
 
-        BANALService.setInitialSensorValue(SensorType.TIME_TOTAL, time_total_s);
-        BANALService.setInitialSensorValue(SensorType.TIME_ACTIVE, time_active_s);
+        BANALService.setInitialSensorValue(SensorType.TIME_TOTAL, mTimeTotal_s);
+        BANALService.setInitialSensorValue(SensorType.TIME_ACTIVE, mTimeActive_s);
         BANALService.setInitialSensorValue(SensorType.CALORIES, calories);
         BANALService.setInitialSensorValue(SensorType.LAP_NR, lapNr);
-        BANALService.setInitialSensorValue(SensorType.DISTANCE_m, distance_m);
+        BANALService.setInitialSensorValue(SensorType.DISTANCE_m, mDistanceTotal_m);
     }
 
     // NullPointerException when mBanalService is null!
@@ -681,6 +681,7 @@ public class TrackerService extends Service {
         final ContentValues samplingValues = new ContentValues();
         final ContentValues summaryValues = new ContentValues();
         final List<ExtremaUpdate> extremaUpdates = new java.util.ArrayList<>();
+        final boolean updateAvgInDb = (mExtremaDbUpdateCounter >= EXTREMA_DB_UPDATE_INTERVAL);
 
         LatLng currentPosTemp = null;
         SensorData<Number> latData = mBanalService.getBestSensorData(SensorType.LATITUDE);
@@ -700,13 +701,11 @@ public class TrackerService extends Service {
 
             SensorType sensorType = sensorData.getSensorType();
 
-            // Feed Live Session (Memory only)
             if (mLiveSession != null && SENSORS_TO_TRACK.contains(sensorType)) {
                 int changed = mLiveSession.addSample(sensorType, sensorData.getValue().doubleValue(), currentPos);
 
                 if (changed != 0) {
                     LiveWorkoutSession.RunningStats stats = mLiveSession.getSensorStats().get(sensorType);
-                    boolean updateAvgInDb = (mExtremaDbUpdateCounter >= EXTREMA_DB_UPDATE_INTERVAL);
 
                     if ((changed & LiveWorkoutSession.RunningStats.CHANGED_MIN) != 0) {
                         mWorkoutRepository.updateExtremaValue(mWorkoutID, sensorType, ExtremaType.MIN, stats.min, stats.minPos);
@@ -717,9 +716,13 @@ public class TrackerService extends Service {
                         extremaUpdates.add(new ExtremaUpdate(sensorType, ExtremaType.MAX, stats.max, stats.maxPos));
                     }
                     if ((changed & LiveWorkoutSession.RunningStats.CHANGED_AVG) != 0) {
-                        mWorkoutRepository.updateExtremaValue(mWorkoutID, sensorType, ExtremaType.AVG, stats.getAverage(), null);
-                        if (updateAvgInDb) {
-                            extremaUpdates.add(new ExtremaUpdate(sensorType, ExtremaType.AVG, stats.getAverage(), null));
+                        // For Speed, we defer the average update until after the loop to use the 
+                        // authoritative distance/time calculation (SCRUM-108)
+                        if (sensorType != SensorType.SPEED_mps) {
+                            mWorkoutRepository.updateExtremaValue(mWorkoutID, sensorType, ExtremaType.AVG, stats.getAverage(), null);
+                            if (updateAvgInDb) {
+                                extremaUpdates.add(new ExtremaUpdate(sensorType, ExtremaType.AVG, stats.getAverage(), null));
+                            }
                         }
                     }
                 }
@@ -745,7 +748,10 @@ public class TrackerService extends Service {
             }
 
             switch (sensorType) {
-                case TIME_TOTAL -> summaryValues.put(WorkoutSummaries.TIME_TOTAL_s, sensorData.getValue().intValue());
+                case TIME_TOTAL -> {
+                    mTimeTotal_s = sensorData.getValue().intValue();
+                    summaryValues.put(WorkoutSummaries.TIME_TOTAL_s, mTimeTotal_s);
+                }
                 case TIME_ACTIVE -> {
                     mTimeActive_s = sensorData.getValue().intValue();
                     summaryValues.put(WorkoutSummaries.TIME_ACTIVE_s, mTimeActive_s);
@@ -762,11 +768,20 @@ public class TrackerService extends Service {
         }
 
         if (averageSpeedCalculateable()) {
-            summaryValues.put(WorkoutSummaries.SPEED_AVERAGE_mps, getAverageSpeed());
+            double authoritativeAvgSpeed = getAverageSpeed();
+            summaryValues.put(WorkoutSummaries.SPEED_AVERAGE_mps, authoritativeAvgSpeed);
+
+            // Harmonize with Speed sensor average in Extrema Table (SCRUM-108)
+            // We do this every sample to ensure UI consistency while tracking.
+            if (mLiveSession != null && mLiveSession.getSensorStats().containsKey(SensorType.SPEED_mps)) {
+                mWorkoutRepository.updateExtremaValue(mWorkoutID, SensorType.SPEED_mps, ExtremaType.AVG, authoritativeAvgSpeed, null);
+                if (updateAvgInDb) {
+                    extremaUpdates.add(new ExtremaUpdate(SensorType.SPEED_mps, ExtremaType.AVG, authoritativeAvgSpeed, null));
+                }
+            }
         }
 
-        // Manage DB throttle for Average updates
-        if (mExtremaDbUpdateCounter >= EXTREMA_DB_UPDATE_INTERVAL) {
+        if (updateAvgInDb) {
             mExtremaDbUpdateCounter = 0;
         } else {
             mExtremaDbUpdateCounter++;
@@ -912,8 +927,13 @@ public class TrackerService extends Service {
             repository.updateExtremaValue(mWorkoutID, sensor, ExtremaType.MAX, stats.max, stats.maxPos);
             // Avg
             if (IMPORTANT_SENSOR_TYPES.contains(sensor)) {
-                summariesManager.updateExtremaValue(mWorkoutID, sensor, ExtremaType.AVG, stats.getAverage(), null);
-                repository.updateExtremaValue(mWorkoutID, sensor, ExtremaType.AVG, stats.getAverage(), null);
+                double avgValue = stats.getAverage();
+                // Special case: for Speed, use the authoritative distance/time average (SCRUM-108)
+                if (sensor == SensorType.SPEED_mps && averageSpeedCalculateable()) {
+                    avgValue = getAverageSpeed();
+                }
+                summariesManager.updateExtremaValue(mWorkoutID, sensor, ExtremaType.AVG, avgValue, null);
+                repository.updateExtremaValue(mWorkoutID, sensor, ExtremaType.AVG, avgValue, null);
             }
         }
 
