@@ -25,8 +25,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
-import com.atrainingtracker.trainingtracker.ui.theme.RouteColorSelected
-import com.atrainingtracker.trainingtracker.ui.theme.RouteColorUnselected
 import com.atrainingtracker.trainingtracker.ui.theme.StravaOrange
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.Dash
@@ -44,16 +42,15 @@ import com.google.maps.android.compose.Polyline
  */
 @Composable
 fun TrackLayer(tracks: List<MapTrack>) {
-    val trackOverlayPattern = listOf(Dot(), Gap(MapVisualization.TRACK_DOT_GAP))
     tracks.forEach { track ->
         if (track.isVisible) {
             XRayPolyline(
                 points = track.path.map { it.latLng },
                 color = track.color,
-                width = MapVisualization.TRACK_WIDTH,
-                baseZIndex = MapVisualization.TRACK_BASE_Z_INDEX,
-                overlayZIndex = MapVisualization.TRACK_OVERLAY_Z_INDEX,
-                pattern = trackOverlayPattern
+                width = track.width,
+                baseZIndex = track.zIndex,
+                overlayZIndex = track.overlayZIndex,
+                pattern = track.pattern
             )
         }
     }
@@ -70,24 +67,19 @@ fun RouteLayer(
     activeSportType: BSportType,
     onRouteClick: (Long) -> Unit
 ) {
-    val routeOverlayPattern = listOf(Dash(MapVisualization.ROUTE_DASH_LENGTH), Gap(MapVisualization.ROUTE_GAP_LENGTH))
-    
     routes.forEach { route ->
         val highlightRoute = zoomFocus != MapZoomFocus.FOLLOW_ME 
                 || (route.isSelected && route.bSportType == activeSportType)
 
         val alpha = if (highlightRoute) 1.0f else MapVisualization.ROUTE_UNSELECTED_ALPHA
-        val routeColor = if (route.isSelected) RouteColorSelected else RouteColorUnselected
-        val width = if (highlightRoute) MapVisualization.ROUTE_WIDTH else MapVisualization.ROUTE_UNSELECTED_WIDTH
-        val zIndex = if (route.isSelected) MapVisualization.ROUTE_BASE_Z_INDEX else MapVisualization.ROUTE_UNSELECTED_Z_INDEX
 
         XRayPolyline(
             points = route.path.map { it.latLng },
-            color = routeColor.copy(alpha = alpha),
-            width = width,
-            baseZIndex = zIndex,
-            overlayZIndex = MapVisualization.ROUTE_OVERLAY_Z_INDEX,
-            pattern = if (highlightRoute) routeOverlayPattern else null,
+            color = route.color.copy(alpha = alpha),
+            width = route.width,
+            baseZIndex = route.zIndex,
+            overlayZIndex = route.overlayZIndex,
+            pattern = if (highlightRoute) route.pattern else null,
             clickable = true,
             onClick = { onRouteClick(route.id) }
         )
@@ -204,7 +196,6 @@ fun SegmentLayer(
 @Composable
 fun LiveTrackLayer(path: List<LatLng>) {
     if (path.isEmpty()) return
-    val trackOverlayPattern = listOf(Dot(), Gap(MapVisualization.TRACK_DOT_GAP))
     
     XRayPolyline(
         points = path,
@@ -212,7 +203,7 @@ fun LiveTrackLayer(path: List<LatLng>) {
         width = MapVisualization.TRACK_WIDTH,
         baseZIndex = MapVisualization.TRACK_BASE_Z_INDEX,
         overlayZIndex = MapVisualization.TRACK_OVERLAY_Z_INDEX,
-        pattern = trackOverlayPattern,
+        pattern = listOf(Dot(), Gap(MapVisualization.TRACK_DOT_GAP)),
         jointType = JointType.ROUND
     )
 }

@@ -60,37 +60,30 @@ enum class TrackType(
 
 
 /**
- * Central point for tuning the 5-Layer "X-Ray" visual hierarchy.
- * We use dual-rendering: a solid base at the bottom and a patterned overlay at the top.
- * Overlay and Base now share the same width and color for a seamless look.
+ * Central point for tuning the map visual hierarchy.
  */
 object MapVisualization {
-    // User Location  (always on top)
+    // User Location (always on top)
     const val USER_LOCATION_Z_INDEX = 100.0f
 
-    // --- TOP LAYERS (Patterned Overlays for "X-Ray" visibility) ---
+    // Visual Constants
+    const val TRACK_WIDTH = 10f
+    const val TRACK_BASE_Z_INDEX = 10.0f
     const val TRACK_OVERLAY_Z_INDEX = 50.0f
     const val TRACK_DOT_GAP = 15f
 
-    const val ROUTE_OVERLAY_Z_INDEX = 40.0f
-    const val ROUTE_DASH_LENGTH = 15f
-    const val ROUTE_GAP_LENGTH = 15f
-
-    const val SEGMENT_Z_INDEX = 30.0f
-    const val SEGMENT_WIDTH = 10f
-
-    const val SEGMENT_UNSELECTED_ALPHA = 0.3f
-
-    // --- BOTTOM LAYERS (Solid Bases for color depth) ---
-    const val ROUTE_BASE_Z_INDEX = 20.0f
     const val ROUTE_WIDTH = 10f
-
-    const val TRACK_BASE_Z_INDEX = 10.0f
-    const val TRACK_WIDTH = 10f
-
+    const val ROUTE_BASE_Z_INDEX = 20.0f
+    const val ROUTE_OVERLAY_Z_INDEX = 40.0f
     const val ROUTE_UNSELECTED_Z_INDEX = 5.0f
     const val ROUTE_UNSELECTED_WIDTH = 6f
     const val ROUTE_UNSELECTED_ALPHA = 0.3f
+    const val ROUTE_DASH_LENGTH = 15f
+    const val ROUTE_GAP_LENGTH = 15f
+
+    const val SEGMENT_WIDTH = 10f
+    const val SEGMENT_Z_INDEX = 30.0f
+    const val SEGMENT_UNSELECTED_ALPHA = 0.3f
 }
 
 
@@ -129,6 +122,9 @@ data class PathPoint(
  */
 interface MappablePath {
     val path: List<PathPoint>
+    val color: Color
+    val width: Float
+    val zIndex: Float
 }
 
 /**
@@ -141,9 +137,13 @@ data class MapTrack(
     val isVisible: Boolean = true
 ) : MappablePath
 {
-    // Helper to access the zIndex defined in the TrackType
-    val zIndex: Float get() = type.zIndex
-    val color: Color get() = type.color
+    override val zIndex: Float get() = MapVisualization.TRACK_BASE_Z_INDEX
+    override val color: Color get() = type.color
+    override val width: Float get() = MapVisualization.TRACK_WIDTH
+    
+    val overlayZIndex: Float get() = MapVisualization.TRACK_OVERLAY_Z_INDEX
+    val pattern: List<com.google.android.gms.maps.model.PatternItem> 
+        get() = listOf(com.google.android.gms.maps.model.Dot(), com.google.android.gms.maps.model.Gap(MapVisualization.TRACK_DOT_GAP))
 }
 
 data class MapSegment(
@@ -152,7 +152,11 @@ data class MapSegment(
     val bSportType: BSportType,
     override val path: List<PathPoint>,
     val showStartAndFinishText: Boolean = true
-) : MappablePath
+) : MappablePath {
+    override val color: Color get() = com.atrainingtracker.trainingtracker.ui.theme.StravaOrange
+    override val width: Float get() = MapVisualization.SEGMENT_WIDTH
+    override val zIndex: Float get() = MapVisualization.SEGMENT_Z_INDEX
+}
 
 data class MapRoute(
     val id: Long,
@@ -160,7 +164,15 @@ data class MapRoute(
     val isSelected: Boolean,
     val bSportType: BSportType,
     override val path: List<PathPoint>
-) : MappablePath
+) : MappablePath {
+    override val color: Color get() = if (isSelected) com.atrainingtracker.trainingtracker.ui.theme.RouteColorSelected else com.atrainingtracker.trainingtracker.ui.theme.RouteColorUnselected
+    override val width: Float get() = if (isSelected) MapVisualization.ROUTE_WIDTH else MapVisualization.ROUTE_UNSELECTED_WIDTH
+    override val zIndex: Float get() = if (isSelected) MapVisualization.ROUTE_BASE_Z_INDEX else MapVisualization.ROUTE_UNSELECTED_Z_INDEX
+
+    val overlayZIndex: Float get() = MapVisualization.ROUTE_OVERLAY_Z_INDEX
+    val pattern: List<com.google.android.gms.maps.model.PatternItem> 
+        get() = listOf(com.google.android.gms.maps.model.Dash(MapVisualization.ROUTE_DASH_LENGTH), com.google.android.gms.maps.model.Gap(MapVisualization.ROUTE_GAP_LENGTH))
+}
 /**
  * Extension function to convert a Database Route (RouteWithPath)
  * into a Map-ready Route (MapRoute).
