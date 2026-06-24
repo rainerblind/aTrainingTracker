@@ -153,23 +153,22 @@ class MapFragmentWithTrack : Fragment() {
                     ) { innerPadding ->
                         // --- THE MAIN BODY: The Track Map ---
                         ATrainingTrackerMap(
-                            segments = uiState.segments,
-                            routes = uiState.routes,
-                            markers = uiState.markers,
-                            currentTrack = uiState.currentTrack,
                             zoomFocus = MapZoomFocus.LOCAL_SEGMENTS,
                             bSportType = uiState.bSportType,
                             currentLocationFlow = MutableStateFlow(currentLocation),
-                            modifier = Modifier.fillMaxSize(),
-                            onSegmentClick = { id ->
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            segments(uiState.segments, onSegmentClick = { id ->
                                 selectedRouteId = null
                                 selectedSegmentId = id
-                            },
-                            onRouteClick = { id ->
+                            })
+                            routes(uiState.routes, onRouteClick = { id ->
                                 selectedSegmentId = null
                                 selectedRouteId = id
-                            }
-                        )
+                            })
+                            markers(uiState.markers)
+                            liveTrack(uiState.currentTrack)
+                        }
                     }
 
                     // Handle system back button to close the peek

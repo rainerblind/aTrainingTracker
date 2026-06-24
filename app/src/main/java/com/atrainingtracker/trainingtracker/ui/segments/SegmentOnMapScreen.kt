@@ -103,14 +103,12 @@ fun SegmentOnMapScreen(
         // 2. MAP (Main content)
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             ATrainingTrackerMap(
-                segments = segments,
                 zoomFocus = MapZoomFocus.LOCAL_SEGMENTS,
                 bSportType = bSportType,
                 currentLocationFlow = noLocation,
                 selectedDistance = selectedDistance,
                 activeScrubPath = segments.firstOrNull()?.path,
                 modifier = Modifier.fillMaxSize(),
-                onSegmentClick = { },
                 shouldTakeSnapshot = isSharing,
                 onSnapshotReady = { mapBitmap ->
                     scope.launch {
@@ -120,7 +118,9 @@ fun SegmentOnMapScreen(
                         isSharing = false
                     }
                 }
-            )
+            ) {
+                segments(segments)
+            }
 
             // SHARE BUTTON positioned on top-right of the MAP
             Surface(

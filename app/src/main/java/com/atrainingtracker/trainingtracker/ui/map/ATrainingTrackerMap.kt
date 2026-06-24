@@ -54,32 +54,28 @@ import kotlinx.coroutines.flow.StateFlow
 @OptIn(MapsComposeExperimentalApi::class)
 @Composable
 fun ATrainingTrackerMap(
-    // Data Layers
-    tracks: List<MapTrack> = emptyList(),
-    segments: List<MapSegment> = emptyList(),
-    routes: List<MapRoute> = emptyList(),
-    markers: List<LocationMarker> = emptyList(),
-    currentTrack: List<LatLng> = emptyList(),
-    activeLiveSegmentIds: Set<Long> = emptySet(),
-
-    // Camera & Behavior
+    // Global State & Behavior
     zoomFocus: MapZoomFocus = MapZoomFocus.TRACK_AND_MARKERS,
     userBearing: Float = 0f,
     userSpeed: Float = 0f,
     bSportType: BSportType = BSportType.UNKNOWN,
     currentLocationFlow: StateFlow<LatLng?>,
-
-    // Interaction & Scrutiny
+    
+    // Scrutiny
     selectedDistance: Double? = null,
     activeScrubPath: List<PathPoint>? = null,
+
+    // Visualization Context
+    style: MapStyle = MapStyle(),
 
     // UI & Callbacks
     modifier: Modifier = Modifier,
     onMapClick: (() -> Unit)? = null,
-    onSegmentClick: (Long) -> Unit = {},
-    onRouteClick: (Long) -> Unit = {},
     shouldTakeSnapshot: Boolean = false,
-    onSnapshotReady: (Bitmap) -> Unit = {}
+    onSnapshotReady: (Bitmap) -> Unit = {},
+    
+    // Modular Data Layers (DSL)
+    content: MapContentScope.() -> Unit
 ) {
     val context = LocalContext.current
     val currentLocation by currentLocationFlow.collectAsStateWithLifecycle()
@@ -114,12 +110,13 @@ fun ATrainingTrackerMap(
     }
 
     // 3. Behavioral Controllers
-    MapBoundsController(tracks, markers, segments, routes, zoomFocus, currentLocation, cameraPositionState, isMapLoaded, context)
-    val filteredBearing = followMeController(zoomFocus, userBearing, userSpeed, currentLocation, cameraPositionState)
-    
-    val scrubPath = activeScrubPath ?: emptyList()
-    ScrubberController(selectedDistance, scrubPath, cameraPositionState)
+    val scope = remember(zoomFocus, cameraPositionState.position.zoom, primaryColor, context, directionIcons, bSportType) {
+        MapContentScopeImpl(zoomFocus, cameraPositionState.position.zoom, primaryColor, context, directionIcons, bSportType)
+    }
+    scope.collect(content)
 
+    MapBoundsController(scope.tracks, scope.markers, scope.segments, scope.routes, zoomFocus, currentLocation, cameraPositionState, isMapLoaded, context)
+    
     // Render Preview Check
     if (LocalInspectionMode.current) {
         Box(modifier = modifier.background(Color.LightGray), contentAlignment = Alignment.Center) {
@@ -129,61 +126,41 @@ fun ATrainingTrackerMap(
     }
 
     // 4. THE MAP
-    GoogleMap(
-        modifier = modifier,
-        cameraPositionState = cameraPositionState,
-        onMapClick = { onMapClick?.invoke() },
-        properties = MapProperties(mapType = MapType.TERRAIN),
-        uiSettings = MapUiSettings(zoomControlsEnabled = false, tiltGesturesEnabled = true),
-        onMapLoaded = { isMapLoaded = true }
-    ) {
-        MapEffect(shouldTakeSnapshot) { map ->
-            if (shouldTakeSnapshot) {
-                map.snapshot { onSnapshotReady(it!!) }
+    androidx.compose.runtime.CompositionLocalProvider(LocalMapStyle provides style) {
+        GoogleMap(
+            modifier = modifier,
+            cameraPositionState = cameraPositionState,
+            onMapClick = { onMapClick?.invoke() },
+            properties = MapProperties(mapType = MapType.TERRAIN),
+            uiSettings = MapUiSettings(zoomControlsEnabled = false, tiltGesturesEnabled = true),
+            onMapLoaded = { isMapLoaded = true }
+        ) {
+            MapEffect(shouldTakeSnapshot) { map ->
+                if (shouldTakeSnapshot) {
+                    map.snapshot { onSnapshotReady(it!!) }
+                }
             }
-        }
 
-        // Layer 1: Data Layers
-        SegmentLayer(
-            segments = segments,
-            activeLiveSegmentIds = activeLiveSegmentIds,
-            zoomFocus = zoomFocus,
-            currentZoom = cameraPositionState.position.zoom,
-            context = context,
-            directionIcons = directionIcons,
-            onSegmentClick = onSegmentClick
-        )
+            // Render the DSL content
+            scope.Render()
 
-        TrackLayer(tracks = tracks)
+            // Render Shared Overlays (Scrubber, User Location)
+            val scrubPath = activeScrubPath ?: emptyList()
+            ScrubberController(selectedDistance, scrubPath, cameraPositionState)
+            ScrubMarkerLayer(selectedDistance, scrubPath, scrubIcons.second, scrubIcons.first)
 
-        RouteLayer(
-            routes = routes,
-            zoomFocus = zoomFocus,
-            activeSportType = bSportType,
-            onRouteClick = onRouteClick
-        )
+            val filteredBearing = followMeController(zoomFocus, userBearing, userSpeed, currentLocation, cameraPositionState)
 
-        MarkerLayer(markers = markers, primaryColor = primaryColor, context = context)
-
-        LiveTrackLayer(path = currentTrack)
-
-        ScrubMarkerLayer(
-            selectedDistance = selectedDistance,
-            activePath = scrubPath,
-            scrubIconLeft = scrubIcons.second,
-            scrubIconRight = scrubIcons.first
-        )
-
-        // Layer 2: User Location
-        currentLocation?.let { loc ->
-            Marker(
-                state = remember(loc) { MarkerState(position = loc) },
-                icon = locationIcon,
-                rotation = if (zoomFocus == MapZoomFocus.FOLLOW_ME) filteredBearing else userBearing,
-                flat = true,
-                anchor = Offset(0.5f, 0.5f),
-                zIndex = MapVisualization.USER_LOCATION_Z_INDEX
-            )
+            currentLocation?.let { loc ->
+                Marker(
+                    state = remember(loc) { MarkerState(position = loc) },
+                    icon = locationIcon,
+                    rotation = if (zoomFocus == MapZoomFocus.FOLLOW_ME) filteredBearing else userBearing,
+                    flat = true,
+                    anchor = Offset(0.5f, 0.5f),
+                    zIndex = style.userLocationZIndex
+                )
+            }
         }
     }
 }

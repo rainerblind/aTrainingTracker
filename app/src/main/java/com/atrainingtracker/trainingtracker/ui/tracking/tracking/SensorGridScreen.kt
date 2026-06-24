@@ -176,12 +176,6 @@ fun SensorGridScreen(
             // the bottom of the sensors and the bottom of the screen.
             if (state.showMap) {
                 ATrainingTrackerMap(
-                    tracks = state.mapTracks,
-                    segments = state.mapSegments,
-                    routes = state.mapRoutes,
-                    markers = state.mapMarkers,
-                    currentTrack = state.currentTrack,
-                    activeLiveSegmentIds = state.activeLiveSegmentIds,
                     zoomFocus = state.zoomFocus,
                     userBearing = state.userBearing,
                     userSpeed = state.userSpeed,
@@ -189,9 +183,14 @@ fun SensorGridScreen(
                     currentLocationFlow = currentLocationFlow,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f), // Fills remaining space
-                    onSegmentClick = {  }  // TODO: show segment as BottomSheetScaffold?
-                )
+                        .weight(1f) // Fills remaining space
+                ) {
+                    tracks(state.mapTracks)
+                    segments(state.mapSegments, state.activeLiveSegmentIds)
+                    routes(state.mapRoutes)
+                    markers(state.mapMarkers)
+                    liveTrack(state.currentTrack)
+                }
             }
 
             // 3. The Elevation Profile (Below the Map)

@@ -99,15 +99,12 @@ fun RouteOnMapScreen(
         // 2. MAP (Main content)
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             ATrainingTrackerMap(
-                segments = segments,
-                routes = routes,
                 zoomFocus = MapZoomFocus.LOCAL_ROUTES,
                 bSportType = bSportType,
                 currentLocationFlow = noLocation,
                 selectedDistance = selectedDistance,
                 activeScrubPath = routes.firstOrNull()?.path,
                 modifier = Modifier.fillMaxSize(),
-                onSegmentClick = { },
                 shouldTakeSnapshot = isSharing,
                 onSnapshotReady = { mapBitmap ->
                     scope.launch {
@@ -117,7 +114,10 @@ fun RouteOnMapScreen(
                         isSharing = false
                     }
                 }
-            )
+            ) {
+                routes(routes)
+                segments(segments)
+            }
 
             // SHARE BUTTON positioned on top-right of the MAP
             Surface(

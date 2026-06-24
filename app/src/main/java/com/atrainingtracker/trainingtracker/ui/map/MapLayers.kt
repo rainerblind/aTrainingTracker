@@ -42,10 +42,11 @@ import com.google.maps.android.compose.Polyline
  */
 @Composable
 fun TrackLayer(tracks: List<MapTrack>) {
+    val style = LocalMapStyle.current
     tracks.forEach { track ->
         if (track.isVisible) {
             XRayPolyline(
-                points = track.path.map { it.latLng },
+                points = track.latLngs,
                 color = track.color,
                 width = track.width,
                 baseZIndex = track.zIndex,
@@ -67,14 +68,16 @@ fun RouteLayer(
     activeSportType: BSportType,
     onRouteClick: (Long) -> Unit
 ) {
+    val style = LocalMapStyle.current
+    
     routes.forEach { route ->
         val highlightRoute = zoomFocus != MapZoomFocus.FOLLOW_ME 
                 || (route.isSelected && route.bSportType == activeSportType)
 
-        val alpha = if (highlightRoute) 1.0f else MapVisualization.ROUTE_UNSELECTED_ALPHA
+        val alpha = if (highlightRoute) 1.0f else style.routeUnselectedAlpha
 
         XRayPolyline(
-            points = route.path.map { it.latLng },
+            points = route.latLngs,
             color = route.color.copy(alpha = alpha),
             width = route.width,
             baseZIndex = route.zIndex,
@@ -99,18 +102,19 @@ fun SegmentLayer(
     directionIcons: Triple<BitmapDescriptor?, BitmapDescriptor?, BitmapDescriptor?>,
     onSegmentClick: (Long) -> Unit
 ) {
+    val style = LocalMapStyle.current
     segments.forEach { segment ->
         val isLive = activeLiveSegmentIds.contains(segment.stravaId)
         val isFollowMeEnabled = zoomFocus == MapZoomFocus.FOLLOW_ME
-        val alpha = if (!isFollowMeEnabled || isLive) 1.0f else MapVisualization.SEGMENT_UNSELECTED_ALPHA
+        val alpha = if (!isFollowMeEnabled || isLive) 1.0f else style.segmentUnselectedAlpha
         val segmentColor = StravaOrange.copy(alpha = alpha)
 
         // 1. Path
         Polyline(
-            points = segment.path.map { it.latLng },
+            points = segment.latLngs,
             color = segmentColor,
-            width = MapVisualization.SEGMENT_WIDTH,
-            zIndex = MapVisualization.SEGMENT_Z_INDEX,
+            width = style.segmentWidth,
+            zIndex = style.segmentZIndex,
             clickable = true,
             onClick = { onSegmentClick(segment.stravaId) }
         )
@@ -135,7 +139,7 @@ fun SegmentLayer(
                     flat = true,
                     anchor = Offset(0.5f, 0.5f),
                     alpha = alpha,
-                    zIndex = MapVisualization.SEGMENT_Z_INDEX
+                    zIndex = style.segmentZIndex
                 )
             }
         }
@@ -150,14 +154,14 @@ fun SegmentLayer(
             Polyline(
                 points = calculateOrthogonalLine(startPt, startNext),
                 color = segmentColor,
-                width = MapVisualization.SEGMENT_WIDTH,
-                zIndex = MapVisualization.SEGMENT_Z_INDEX
+                width = style.segmentWidth,
+                zIndex = style.segmentZIndex
             )
             Polyline(
                 points = calculateOrthogonalLine(endPt, endPrev),
                 color = segmentColor,
-                width = MapVisualization.SEGMENT_WIDTH,
-                zIndex = MapVisualization.SEGMENT_Z_INDEX
+                width = style.segmentWidth,
+                zIndex = style.segmentZIndex
             )
 
             if (currentZoom > 14f && segment.showStartAndFinishText) {
@@ -196,14 +200,15 @@ fun SegmentLayer(
 @Composable
 fun LiveTrackLayer(path: List<LatLng>) {
     if (path.isEmpty()) return
+    val style = LocalMapStyle.current
     
     XRayPolyline(
         points = path,
         color = Color.Blue,
-        width = MapVisualization.TRACK_WIDTH,
-        baseZIndex = MapVisualization.TRACK_BASE_Z_INDEX,
-        overlayZIndex = MapVisualization.TRACK_OVERLAY_Z_INDEX,
-        pattern = listOf(Dot(), Gap(MapVisualization.TRACK_DOT_GAP)),
+        width = style.trackWidth,
+        baseZIndex = style.trackBaseZIndex,
+        overlayZIndex = style.trackOverlayZIndex,
+        pattern = listOf(Dot(), Gap(style.trackDotGap)),
         jointType = JointType.ROUND
     )
 }

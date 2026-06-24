@@ -60,18 +60,36 @@ enum class TrackType(
 
 
 /**
- * Central point for tuning the map visual hierarchy.
+ * Theme-aware configuration for map visuals.
  */
-object MapVisualization {
-    // User Location (always on top)
-    const val USER_LOCATION_Z_INDEX = 100.0f
+data class MapStyle(
+    val userLocationZIndex: Float = 100f,
+    val trackWidth: Float = 10f,
+    val trackBaseZIndex: Float = 10f,
+    val trackOverlayZIndex: Float = 50f,
+    val trackDotGap: Float = 15f,
+    val routeWidth: Float = 10f,
+    val routeBaseZIndex: Float = 20f,
+    val routeOverlayZIndex: Float = 40f,
+    val routeUnselectedZIndex: Float = 5f,
+    val routeUnselectedWidth: Float = 6f,
+    val routeUnselectedAlpha: Float = 0.3f,
+    val routeDashLength: Float = 15f,
+    val routeGapLength: Float = 15f,
+    val segmentWidth: Float = 10f,
+    val segmentZIndex: Float = 30f,
+    val segmentUnselectedAlpha: Float = 0.3f
+)
 
-    // Visual Constants
+val LocalMapStyle = androidx.compose.runtime.staticCompositionLocalOf { MapStyle() }
+
+@Deprecated("Use LocalMapStyle.current instead", replaceWith = ReplaceWith("LocalMapStyle.current"))
+object MapVisualization {
+    const val USER_LOCATION_Z_INDEX = 100.0f
     const val TRACK_WIDTH = 10f
     const val TRACK_BASE_Z_INDEX = 10.0f
     const val TRACK_OVERLAY_Z_INDEX = 50.0f
     const val TRACK_DOT_GAP = 15f
-
     const val ROUTE_WIDTH = 10f
     const val ROUTE_BASE_Z_INDEX = 20.0f
     const val ROUTE_OVERLAY_Z_INDEX = 40.0f
@@ -80,7 +98,6 @@ object MapVisualization {
     const val ROUTE_UNSELECTED_ALPHA = 0.3f
     const val ROUTE_DASH_LENGTH = 15f
     const val ROUTE_GAP_LENGTH = 15f
-
     const val SEGMENT_WIDTH = 10f
     const val SEGMENT_Z_INDEX = 30.0f
     const val SEGMENT_UNSELECTED_ALPHA = 0.3f
@@ -108,28 +125,33 @@ data class PathPoint(
  * Base interface for anything that can be drawn as a path on the map.
  */
 interface MappablePath {
+    val id: Long
     val path: List<PathPoint>
+    val latLngs: List<LatLng>
     val color: Color
     val width: Float
     val zIndex: Float
+    val overlayZIndex: Float?
+    val pattern: List<com.google.android.gms.maps.model.PatternItem>?
 }
 
 /**
  * Encapsulates a single track polyline with its metadata.
  */
 data class MapTrack(
-    val id: Long,
+    override val id: Long,
     val type: TrackType,
     override val path: List<PathPoint>,
     val isVisible: Boolean = true
 ) : MappablePath
 {
+    override val latLngs: List<LatLng> by lazy { path.map { it.latLng } }
     override val zIndex: Float get() = MapVisualization.TRACK_BASE_Z_INDEX
     override val color: Color get() = type.color
     override val width: Float get() = MapVisualization.TRACK_WIDTH
     
-    val overlayZIndex: Float get() = MapVisualization.TRACK_OVERLAY_Z_INDEX
-    val pattern: List<com.google.android.gms.maps.model.PatternItem> 
+    override val overlayZIndex: Float get() = MapVisualization.TRACK_OVERLAY_Z_INDEX
+    override val pattern: List<com.google.android.gms.maps.model.PatternItem> 
         get() = listOf(com.google.android.gms.maps.model.Dot(), com.google.android.gms.maps.model.Gap(MapVisualization.TRACK_DOT_GAP))
 }
 
@@ -140,24 +162,29 @@ data class MapSegment(
     override val path: List<PathPoint>,
     val showStartAndFinishText: Boolean = true
 ) : MappablePath {
+    override val id: Long get() = stravaId
+    override val latLngs: List<LatLng> by lazy { path.map { it.latLng } }
     override val color: Color get() = com.atrainingtracker.trainingtracker.ui.theme.StravaOrange
     override val width: Float get() = MapVisualization.SEGMENT_WIDTH
     override val zIndex: Float get() = MapVisualization.SEGMENT_Z_INDEX
+    override val overlayZIndex: Float? get() = null
+    override val pattern: List<com.google.android.gms.maps.model.PatternItem>? get() = null
 }
 
 data class MapRoute(
-    val id: Long,
+    override val id: Long,
     val name: String,
     val isSelected: Boolean,
     val bSportType: BSportType,
     override val path: List<PathPoint>
 ) : MappablePath {
+    override val latLngs: List<LatLng> by lazy { path.map { it.latLng } }
     override val color: Color get() = if (isSelected) com.atrainingtracker.trainingtracker.ui.theme.RouteColorSelected else com.atrainingtracker.trainingtracker.ui.theme.RouteColorUnselected
     override val width: Float get() = if (isSelected) MapVisualization.ROUTE_WIDTH else MapVisualization.ROUTE_UNSELECTED_WIDTH
     override val zIndex: Float get() = if (isSelected) MapVisualization.ROUTE_BASE_Z_INDEX else MapVisualization.ROUTE_UNSELECTED_Z_INDEX
 
-    val overlayZIndex: Float get() = MapVisualization.ROUTE_OVERLAY_Z_INDEX
-    val pattern: List<com.google.android.gms.maps.model.PatternItem> 
+    override val overlayZIndex: Float get() = MapVisualization.ROUTE_OVERLAY_Z_INDEX
+    override val pattern: List<com.google.android.gms.maps.model.PatternItem>
         get() = listOf(com.google.android.gms.maps.model.Dash(MapVisualization.ROUTE_DASH_LENGTH), com.google.android.gms.maps.model.Gap(MapVisualization.ROUTE_GAP_LENGTH))
 }
 /**

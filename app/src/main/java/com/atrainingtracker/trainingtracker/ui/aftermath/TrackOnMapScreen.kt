@@ -116,17 +116,12 @@ fun TrackOnMapScreen(
         // 2. MAP AREA with OVERLAYED SHARE BUTTON
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             ATrainingTrackerMap(
-                tracks = tracks,
-                segments = segments,
-                routes = routes,
-                markers = markers,
                 zoomFocus = zoomFocus,
                 bSportType = bSportType,
                 currentLocationFlow = noLocation,
                 selectedDistance = selectedDistance,
                 activeScrubPath = tracks.firstOrNull()?.path,
                 modifier = Modifier.fillMaxSize(),
-                onSegmentClick = { },
                 shouldTakeSnapshot = isSharing,
                 onSnapshotReady = { mapBitmap ->
                     scope.launch {
@@ -136,7 +131,12 @@ fun TrackOnMapScreen(
                         isSharing = false
                     }
                 }
-            )
+            ) {
+                tracks(tracks)
+                segments(segments)
+                routes(routes)
+                markers(markers)
+            }
 
             // SHARE BUTTON positioned on top-right of the MAP
             Surface(
