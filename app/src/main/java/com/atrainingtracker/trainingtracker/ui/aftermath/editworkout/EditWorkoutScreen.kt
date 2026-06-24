@@ -141,7 +141,7 @@ fun EditWorkoutScreen(
                 DropdownSelector(
                     label = stringResource(R.string.Equipment),
                     options = equipmentNames,
-                    selectedOption = viewModel.suggestedEquipmentName ?: "",
+                    selectedOption = viewModel.suggestedEquipmentName ?: viewModel.NO_EQUIPMENT,
                     onOptionSelected = { viewModel.updateEquipmentName(it) },
                     modifier = Modifier.weight(1f),
                     stayOpenOn = setOf(viewModel.ALL_EQUIPMENT, viewModel.ALL_SHOES, viewModel.ALL_BIKES)
