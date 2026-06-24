@@ -30,7 +30,6 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -42,7 +41,6 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.fragments.preferences.StravaUploadFragment
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
-import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
 import com.atrainingtracker.trainingtracker.ui.segments.SegmentOnMapScreen
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
@@ -103,24 +101,16 @@ class StarredSegmentsFragment : Fragment() {
 
                         if (selectedSegment != null) {
 
-                            // Create Map data on the fly
-                            val detailSegments = remember(selectedSegment) {
-                                listOf(
-                                    MapSegment(
-                                        stravaId = selectedSegment.summary.stravaId,
-                                        name = selectedSegment.summary.name,
-                                        bSportType = selectedSegment.summary.bSportType,
-                                        path = selectedSegment.path,
-                                        showStartAndFinishText = false
-                                    )
-                                )
-                            }
 
                             SegmentOnMapScreen(
                                 segmentSummary = selectedSegment.summary,
-                                segments = detailSegments,
-                                zoomFocus = MapZoomFocus.LOCAL_SEGMENTS,
-                                bSportType = selectedSegment.summary.bSportType,
+                                segment = MapSegment(
+                                    stravaId = selectedSegment.summary.stravaId,
+                                    name = selectedSegment.summary.name,
+                                    bSportType = selectedSegment.summary.bSportType,
+                                    path = selectedSegment.path,
+                                    showStartAndFinishText = false
+                                ),
                                 modifier = Modifier.statusBarsPadding()
                             )
 

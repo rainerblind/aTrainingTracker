@@ -42,8 +42,6 @@ import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
 import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
 import com.atrainingtracker.banalservice.BSportType
-import com.atrainingtracker.trainingtracker.ui.segments.SegmentHeader
-import com.atrainingtracker.trainingtracker.ui.segments.SegmentDetails
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -51,11 +49,12 @@ import kotlinx.coroutines.launch
 @Composable
 fun SegmentOnMapScreen(
     segmentSummary: SegmentSummary?,
-    segments: List<MapSegment> = emptyList(),
-    zoomFocus: MapZoomFocus,
-    bSportType: BSportType = BSportType.UNKNOWN,
+    segment: MapSegment?,
     modifier: Modifier
 ) {
+    val segments = remember(segment) { if (segment != null) listOf(segment) else emptyList() }
+    val bSportType = segment?.bSportType ?: segmentSummary?.bSportType ?: BSportType.UNKNOWN
+
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -105,7 +104,7 @@ fun SegmentOnMapScreen(
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             ATrainingTrackerMap(
                 segments = segments,
-                zoomFocus = zoomFocus,
+                zoomFocus = MapZoomFocus.LOCAL_SEGMENTS,
                 bSportType = bSportType,
                 currentLocationFlow = noLocation,
                 selectedDistance = selectedDistance,

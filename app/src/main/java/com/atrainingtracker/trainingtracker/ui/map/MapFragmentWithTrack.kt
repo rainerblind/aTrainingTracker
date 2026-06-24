@@ -153,9 +153,7 @@ class MapFragmentWithTrack : Fragment() {
 
                                     SegmentOnMapScreen(
                                         segmentSummary = liveSegments.find { it.summary.stravaId == selectedSegmentId }?.summary,
-                                        segments = if (selectedSegment != null) listOf(selectedSegment) else emptyList(),
-                                        zoomFocus = MapZoomFocus.LOCAL_SEGMENTS,
-                                        bSportType = selectedSegment?.bSportType ?: BSportType.UNKNOWN,
+                                        segment = selectedSegment,
                                         modifier = Modifier
                                     )
                                 }
