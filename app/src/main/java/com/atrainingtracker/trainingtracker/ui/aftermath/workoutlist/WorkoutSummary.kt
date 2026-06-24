@@ -43,7 +43,7 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.Workout
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeader
 import com.atrainingtracker.trainingtracker.ui.components.strava.StravaActivitySection
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
-import com.atrainingtracker.trainingtracker.ui.map.TrackOrSegmentOnMap
+import com.atrainingtracker.trainingtracker.ui.map.PathPreviewMap
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
 
 /**
@@ -165,7 +165,7 @@ private fun WorkoutMediaSection(
             .height(300.dp) // Total height for map + profile area
     ) {
         // 1. The Map (Weight 1 lets it take remaining space above profile)
-        TrackOrSegmentOnMap(
+        PathPreviewMap(
             polyline = workoutData.mapPolyline,
             color = TrackType.BEST.color,
             modifier = Modifier

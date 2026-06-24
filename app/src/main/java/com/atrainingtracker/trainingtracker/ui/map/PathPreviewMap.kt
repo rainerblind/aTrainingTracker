@@ -38,7 +38,7 @@ import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
 
 @Composable
-fun TrackOrSegmentOnMap(
+fun PathPreviewMap(
     latLngs: List<LatLng>? = null,
     polyline: String? = null,
     color: Color,

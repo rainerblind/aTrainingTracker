@@ -40,7 +40,7 @@ import com.atrainingtracker.trainingtracker.database.RouteSource
 import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
-import com.atrainingtracker.trainingtracker.ui.map.TrackOrSegmentOnMap
+import com.atrainingtracker.trainingtracker.ui.map.PathPreviewMap
 import com.atrainingtracker.trainingtracker.ui.theme.RouteColorSelected
 import com.atrainingtracker.trainingtracker.ui.theme.RouteColorUnselected
 
@@ -91,7 +91,7 @@ fun RouteItem(
                     .fillMaxWidth()
                     .height(180.dp)
             ) {
-                TrackOrSegmentOnMap(
+                PathPreviewMap(
                     latLngs = pathPoints.map { it.latLng },
                     color = if (summary.isSelected) RouteColorSelected else RouteColorUnselected,
                     modifier = Modifier.fillMaxSize(),
