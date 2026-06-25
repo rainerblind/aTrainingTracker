@@ -25,8 +25,10 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
 import com.atrainingtracker.trainingtracker.segments.SegmentWithPath
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.PolyUtil
 
 enum class TrackType(
     val color: Color,
@@ -221,4 +223,20 @@ enum class MapZoomFocus {
     LOCAL_SEGMENTS,
     LOCAL_ROUTES,
     FOLLOW_ME
+}
+
+/**
+ * Extension function to convert WorkoutData into a Map-ready Track.
+ * This decodes the polyline and simplifies it for display.
+ */
+fun WorkoutData.toMapTrack(): MapTrack {
+    val decoded = PolyUtil.decode(this.mapPolyline)
+    // Simplify for preview performance
+    val finalPoints = if (decoded.size > 100) PolyUtil.simplify(decoded, 10.0) else decoded
+
+    return MapTrack(
+        id = this.id,
+        type = TrackType.BEST,
+        path = finalPoints.map { PathPoint(0.0, it, 0.0) }
+    )
 }

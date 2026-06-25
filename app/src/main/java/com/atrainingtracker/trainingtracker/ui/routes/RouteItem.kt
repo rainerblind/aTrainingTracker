@@ -41,6 +41,7 @@ import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.ui.components.DeleteConfirmationDialog
 import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
+import com.atrainingtracker.trainingtracker.ui.map.MapRoute
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.map.PathPreviewMap
 import com.atrainingtracker.trainingtracker.ui.theme.RouteColorSelected
@@ -85,8 +86,13 @@ fun RouteItem(
                     .height(180.dp)
             ) {
                 PathPreviewMap(
-                    latLngs = pathPoints.map { it.latLng },
-                    color = if (summary.isSelected) RouteColorSelected else RouteColorUnselected,
+                    path = MapRoute(
+                        id = summary.id,
+                        name = summary.name,
+                        isSelected = summary.isSelected,
+                        bSportType = summary.bSportType,
+                        path = pathPoints
+                    ),
                     modifier = Modifier.fillMaxSize(),
                     onMapClick = { onMapClick(summary.id) }
                 )
