@@ -138,16 +138,11 @@ class RoutesFragment : Fragment() {
 
                                 if (selectedRoute != null) {
 
-                                    // Create Context data on the fly
-                                    val backgroundPaths = remember(selectedRoute, routes, allSegments) {
-                                        val otherRoutes = routes
-                                            .filter { it.summary.id != selectedRoute.summary.id }
-                                            .map { it.toMapRoute() }
-                                        
-                                        val segments = allSegments
+                                    // Create Context data on the fly (Segments only, same sport)
+                                    val backgroundPaths = remember(selectedRoute, allSegments) {
+                                        allSegments
+                                            .filter { it.summary.bSportType == selectedRoute.summary.bSportType }
                                             .map { it.toMapSegment(showStartAndFinishText = false) }
-                                        
-                                        otherRoutes + segments
                                     }
 
                                     RouteOnMapScreen(
