@@ -27,9 +27,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -102,10 +100,21 @@ class StarredSegmentsFragment : Fragment() {
 
                         if (selectedSegment != null) {
 
+                            // Background Context
+                            val backgroundPaths = remember(selectedSegment, segments, viewModel.routes) {
+                                val otherSegments = segments
+                                    .filter { it.summary.stravaId != selectedSegment.summary.stravaId }
+                                    .map { it.toMapSegment(showStartAndFinishText = false) }
+                                
+                                val routes = viewModel.routes.value
+                                
+                                otherSegments + routes
+                            }
 
                             SegmentOnMapScreen(
                                 segmentSummary = selectedSegment.summary,
                                 segment = selectedSegment.toMapSegment(showStartAndFinishText = false),
+                                backgroundPaths = backgroundPaths,
                                 modifier = Modifier
                             )
 

@@ -92,8 +92,8 @@ fun TrackOnMapScreen(
         },
         mapContent = {
             tracks(tracks)
-            segments(segments)
-            routes(routes)
+            contextualPaths(segments)
+            contextualPaths(routes)
             markers(markers)
         },
         modifier = modifier

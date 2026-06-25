@@ -115,6 +115,7 @@ fun PeriodMapScreen(
                 MapTrack(
                     id = workoutData.id,
                     type = TrackType.BEST,
+                    bSportType = workoutData.bSportType,
                     path = peekedWorkoutDataWithTrack.trackPoints
                 )
             )

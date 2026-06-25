@@ -129,6 +129,7 @@ data class PathPoint(
  */
 interface MappablePath {
     val id: Long
+    val bSportType: BSportType
     val path: List<PathPoint>
     val latLngs: List<LatLng>
     val color: Color
@@ -144,6 +145,7 @@ interface MappablePath {
 data class MapTrack(
     override val id: Long,
     val type: TrackType,
+    override val bSportType: BSportType,
     override val path: List<PathPoint>,
     val isVisible: Boolean = true
 ) : MappablePath
@@ -161,7 +163,7 @@ data class MapTrack(
 data class MapSegment(
     val stravaId: Long,
     val name: String,
-    val bSportType: BSportType,
+    override val bSportType: BSportType,
     override val path: List<PathPoint>,
     val showStartAndFinishText: Boolean = true
 ) : MappablePath {
@@ -178,7 +180,7 @@ data class MapRoute(
     override val id: Long,
     val name: String,
     val isSelected: Boolean,
-    val bSportType: BSportType,
+    override val bSportType: BSportType,
     override val path: List<PathPoint>
 ) : MappablePath {
     override val latLngs: List<LatLng> by lazy { path.map { it.latLng } }
@@ -237,6 +239,7 @@ fun WorkoutData.toMapTrack(): MapTrack {
     return MapTrack(
         id = this.id,
         type = TrackType.BEST,
+        bSportType = this.bSportType,
         path = finalPoints.map { PathPoint(0.0, it, 0.0) }
     )
 }

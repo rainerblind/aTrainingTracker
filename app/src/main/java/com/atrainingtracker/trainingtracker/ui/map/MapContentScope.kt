@@ -42,6 +42,11 @@ interface MapContentScope {
     fun segments(segments: List<MapSegment>, activeLiveSegmentIds: Set<Long> = emptySet(), onSegmentClick: (Long) -> Unit = {})
     fun routes(routes: List<MapRoute>, onRouteClick: (Long) -> Unit = {})
     
+    /**
+     * Renders a list of background paths (context) with tiered alpha based on sport type.
+     */
+    fun contextualPaths(paths: List<MappablePath>)
+
     fun markers(markers: List<LocationMarker>)
     fun liveTrack(path: List<LatLng>)
 }
@@ -147,6 +152,26 @@ internal class MapContentScopeImpl(
                 )
             }
             this.routes.add(route)
+        }
+    }
+
+    override fun contextualPaths(paths: List<MappablePath>) {
+        paths.forEach { path ->
+            when (path) {
+                is MapTrack -> tracks.add(path)
+                is MapSegment -> segments.add(path)
+                is MapRoute -> routes.add(path)
+            }
+            composables.add {
+                val alpha = if (path.bSportType == bSportType) 0.3f else 0.1f
+                MappablePathLayer(
+                    path = path,
+                    alpha = alpha,
+                    currentZoom = currentZoom,
+                    context = context,
+                    directionIcons = directionIcons
+                )
+            }
         }
     }
 

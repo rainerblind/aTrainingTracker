@@ -43,6 +43,7 @@ import com.atrainingtracker.trainingtracker.ui.map.MapSegment
 import com.atrainingtracker.trainingtracker.ui.map.MapRoute
 import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
 import com.atrainingtracker.trainingtracker.ui.map.MapDetailLayout
+import com.atrainingtracker.trainingtracker.ui.map.MappablePath
 import com.atrainingtracker.banalservice.BSportType
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -52,7 +53,7 @@ import kotlinx.coroutines.launch
 fun RouteOnMapScreen(
     route: MapRoute?,
     routeSummary: RouteSummary?,
-    segments: List<MapSegment> = emptyList(),
+    backgroundPaths: List<MappablePath> = emptyList(),
     onToggleSelection: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -74,7 +75,7 @@ fun RouteOnMapScreen(
         },
         mapContent = {
             if (route != null) routes(listOf(route))
-            segments(segments)
+            contextualPaths(backgroundPaths)
         },
         modifier = modifier
     )

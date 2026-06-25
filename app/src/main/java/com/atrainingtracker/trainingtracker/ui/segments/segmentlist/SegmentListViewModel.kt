@@ -30,6 +30,9 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.segments.SegmentWithPath
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
+import com.atrainingtracker.trainingtracker.ui.map.MapRoute
+import com.atrainingtracker.trainingtracker.ui.map.toMapRoute
 import com.atrainingtracker.trainingtracker.ui.util.BaseMappableListViewModel
 import com.atrainingtracker.trainingtracker.ui.util.MappableSortOrder
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -54,10 +57,16 @@ enum class SegmentSortOrder(@StringRes override val labelResId: Int) : MappableS
 class SegmentListViewModel(
     application: Application,
     private val segmentsRepository: SegmentsRepository,
+    private val routesRepository: RoutesRepository,
     private val banalServiceRepository: BANALServiceRepository
 ) : BaseMappableListViewModel<SegmentWithPath, SegmentSortOrder>(application, SegmentSortOrder.DISTANCE_TO_USER, SegmentSortOrder.DISTANCE_TO_USER) {
 
     val connectedToStrava = segmentsRepository.connectedToStrava
+
+    // Observation of other map context
+    val routes: StateFlow<List<MapRoute>> = routesRepository.allRoutes
+        .map { list -> list.map { it.toMapRoute() } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     override val isLocationAvailable: StateFlow<Boolean> = banalServiceRepository.currentLocation
         .map { it != null }
@@ -138,12 +147,18 @@ class SegmentListViewModel(
     class SegmentListViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
 
         private val segmentsRepository = SegmentsRepository.getInstance(context)
+        private val routesRepository = RoutesRepository.getInstance(context)
         private val banalServiceRepository = BANALServiceRepository.getInstance(context)
 
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(SegmentListViewModel::class.java)) {
                 @Suppress("UNCHECKED_CAST")
-                return SegmentListViewModel(context.applicationContext as Application, segmentsRepository, banalServiceRepository) as T
+                return SegmentListViewModel(
+                    context.applicationContext as Application,
+                    segmentsRepository,
+                    routesRepository,
+                    banalServiceRepository
+                ) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }

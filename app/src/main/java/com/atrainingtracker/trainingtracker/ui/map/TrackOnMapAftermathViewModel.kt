@@ -111,6 +111,7 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
                 val fastTrack = MapTrack(
                     id = workoutId,
                     type = TrackType.BEST,
+                    bSportType = bSportType,
                     path = fastPath
                 )
 
@@ -152,7 +153,12 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
             val fullTracks = TrackType.entries.mapNotNull { type ->
                 val path = workoutRepository.getWorkoutTrackPoints(workoutId, type)
                 if (path.isNotEmpty()) {
-                    MapTrack(id = type.ordinal.toLong(), type = type, path = path)
+                    MapTrack(
+                        id = type.ordinal.toLong(),
+                        type = type,
+                        bSportType = bSportType,
+                        path = path
+                    )
                 } else null
             }
 
@@ -162,10 +168,9 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
                 }
             }
 
-            // --- PHASE 5: Segments (Matches the Sport Type) ---
+            // --- PHASE 5: Segments (All for spatial context) ---
             val allSegments = segmentsRepository.allSegmentsWithPath.value
             val mapSegments = allSegments
-                .filter { it.summary.bSportType == bSportType }
                 .map { segment ->
                     MapSegment(
                         stravaId = segment.summary.stravaId,
@@ -182,10 +187,9 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
                 )
             }
 
-            // --- PHASE 6: Routes (Matches the Sport Type) ---
+            // --- PHASE 6: Routes (All for spatial context) ---
             val allRoutes = routesRepository.allRoutes.value
             val mapRoutes = allRoutes
-                .filter { it.summary.bSportType == bSportType }
                 .map { it.toMapRoute() }
 
             withContext(Dispatchers.Main) {

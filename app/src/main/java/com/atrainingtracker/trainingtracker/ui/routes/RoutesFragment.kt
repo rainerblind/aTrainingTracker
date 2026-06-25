@@ -138,17 +138,22 @@ class RoutesFragment : Fragment() {
 
                                 if (selectedRoute != null) {
 
-                                    // Create Map data on the fly
-                                    val sportSegments = remember(selectedRoute, allSegments) {
-                                        allSegments
-                                            .filter { it.summary.bSportType == selectedRoute.summary.bSportType }
+                                    // Create Context data on the fly
+                                    val backgroundPaths = remember(selectedRoute, routes, allSegments) {
+                                        val otherRoutes = routes
+                                            .filter { it.summary.id != selectedRoute.summary.id }
+                                            .map { it.toMapRoute() }
+                                        
+                                        val segments = allSegments
                                             .map { it.toMapSegment(showStartAndFinishText = false) }
+                                        
+                                        otherRoutes + segments
                                     }
 
                                     RouteOnMapScreen(
                                         route = selectedRoute.toMapRoute(),
                                         routeSummary = selectedRoute.summary,
-                                        segments = sportSegments,
+                                        backgroundPaths = backgroundPaths,
                                         modifier = Modifier,
                                         onToggleSelection = { isSelected ->
                                             viewModel.toggleRouteSelection(

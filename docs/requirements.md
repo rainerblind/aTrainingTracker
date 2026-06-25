@@ -69,6 +69,9 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-MAP-003** | Low-pass filtered map camera bearing. | Reduce rotation jitter from noisy GPS. | `ATrainingTrackerMap.kt` | `TST-REG-001` | Verified |
 | **REQ-MAP-004** | Zoom depending on speed. | Wider context at speed, detail when slow. | `ATrainingTrackerMap.kt` | `TST-REG-001` | Verified |
 | **REQ-MAP-005** | Strava Segments and Routes as map overlays. | Integrate community data directly on map. | `MapFragmentWithTrack.kt` | `TST-REG-002` | Verified |
+| **REQ-MAP-006** | Declarative Map DSL with modular layers. | Standardize map rendering and behavior across screens. | `ATrainingTrackerMap.kt`, `MapLayers.kt` | `TST-STR-005` | Verified |
+| **REQ-MAP-007** | Lazy coordinate projection for path rendering. | Optimize performance for long tracks and multiple layers. | `MapModels.kt` | `TST-UNT-009` | Verified |
+| **REQ-MAP-008** | Global Path Context. | In any detail map view, show all loaded Segments and Routes in the background. Use tiered alpha levels: same sport type = muted (0.3), different sport type = highly muted (0.1). | `MapDetailLayout.kt`, `*OnMapScreen.kt` | `TST-REG-005` | In Progress |
 
 ## 7. Live Segment Tracking
 
@@ -92,6 +95,9 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-UI-012** | Refined Altitude display in details. | Remove redundant Min/Max altitude from the workout details row (since it's in the Extrema table) and present a compact Ascent/Descent view with prioritized visual hierarchy (24dp icons). | `WorkoutDetails.kt`, `WorkoutDetailsData.kt` | `TST-UI-021` | Verified |
 | **REQ-UI-013** | Harmonized Elevation Extrema. | Ensure the Elevation Profile chart and the summary table display identical min/max values to prevent visual inconsistency and user confusion. | `ElevationProfile.kt`, `WorkoutSummary.kt`, `TrackOnMapScreen.kt` | `TST-UI-026` | Verified |
 | **REQ-UI-014** | Authoritative Average Speed. | Align the Speed sensor's average value in the extrema table with the global workout average calculated from distance and active time (mDistanceTotal_m / mTimeActive_s) in real-time. | `TrackerService.java` | `TST-UI-027` | Verified |
+| **REQ-UI-015** | Unified Metric component system. | Ensure cross-screen consistency for data presentation. | `MetricItem.kt`, `MetricBadge.kt` | `TST-STR-006` | Verified |
+| **REQ-UI-016** | Centralized metric formatting context. | Single source of truth for units and precision. | `MetricFormatterContext.kt` | `TST-STR-007` | Verified |
+| **REQ-UI-017** | Standardized list items and placeholders. | Harmonize the "look and feel" of all list views. | `MappableListItem.kt`, `EmptyStatePlaceholder.kt` | `TST-STR-008` | Verified |
 | **REQ-EXP-004** | Automated email export with attachments. | Simple, reliable backup and sharing. | `ExportManager.java` | `TST-MAN-001` | Verified |
 | **REQ-EXP-005** | Exponential backoff for Strava uploads. | Robust sync even with API issues. | `StravaUploader.kt` | `TST-STR-001` | Verified |
 
