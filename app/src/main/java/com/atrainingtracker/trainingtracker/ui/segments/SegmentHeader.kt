@@ -35,6 +35,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.segments.LiveSegmentStatus
 import com.atrainingtracker.trainingtracker.segments.SegmentSummary
+import com.atrainingtracker.trainingtracker.ui.components.MetricBadge
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 @Composable
@@ -77,18 +78,7 @@ fun SegmentHeader(
 
             // 3. Category Chip (Right-aligned in top row)
             if (summary.climbCategory.isNotBlank()) {
-                Surface(
-                    color = MaterialTheme.colorScheme.secondaryContainer,
-                    shape = RoundedCornerShape(4.dp)
-                ) {
-                    Text(
-                        text = summary.climbCategory,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
-                }
+                MetricBadge(text = summary.climbCategory)
             }
         }
 
