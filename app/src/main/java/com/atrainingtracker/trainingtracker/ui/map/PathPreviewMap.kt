@@ -38,44 +38,17 @@ import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
 
 @Composable
-fun TrackOrSegmentOnMap(
-    latLngs: List<LatLng>? = null,
-    polyline: String? = null,
-    color: Color,
+fun PathPreviewMap(
+    path: MappablePath?,
     modifier: Modifier = Modifier,
     onMapClick: () -> Unit = {}
 ) {
     val cameraPositionState = rememberCameraPositionState()
     var isMapLoaded by remember { mutableStateOf(false) }
-    var safeLatLngs = latLngs
-
-    if (safeLatLngs == null) {
-        if (polyline != null) {
-
-            // Decode the polyline into LatLngs.
-            // We 'remember' it so it doesn't re-decode on every recomposition.
-            safeLatLngs = remember(polyline) {
-                val decoded = PolyUtil.decode(polyline)
-                // If the path is huge, simplify it for the preview map to save GPU memory
-                if (decoded.size > 100) {
-                    PolyUtil.simplify(decoded, 10.0) // 10 meter tolerance
-                } else {
-                    decoded
-                }
-            }
-        }
-        else {
-            safeLatLngs = emptyList()
-        }
-    }
 
     GoogleMap(
         modifier = modifier,
         cameraPositionState = cameraPositionState,
-        // lite mode is disabled.  When enabled, the second and third path of the workouts are not shown.
-        // googleMapOptionsFactory = {
-        //     com.google.android.gms.maps.GoogleMapOptions().liteMode(true)
-        // },
         uiSettings = MapUiSettings(
             zoomControlsEnabled = false,
             compassEnabled = false,
@@ -88,19 +61,19 @@ fun TrackOrSegmentOnMap(
         onMapLoaded = { isMapLoaded = true },
         onMapClick = { onMapClick() }
     ) {
-        if (safeLatLngs.isNotEmpty()) {
+        if (path != null && path.latLngs.isNotEmpty()) {
 
             Polyline(
-                points = safeLatLngs,
-                color = color,
+                points = path.latLngs,
+                color = path.color,
                 width = 8f
             )
 
             // Auto-zoom to fit the segment whenever pathPoints change
-            LaunchedEffect(safeLatLngs, isMapLoaded) {
-                if (isMapLoaded && safeLatLngs.isNotEmpty()) {
+            LaunchedEffect(path, isMapLoaded) {
+                if (isMapLoaded && path.latLngs.isNotEmpty()) {
                     val boundsBuilder = LatLngBounds.Builder()
-                    safeLatLngs.forEach { boundsBuilder.include(it) }
+                    path.latLngs.forEach { boundsBuilder.include(it) }
                     try {
                         cameraPositionState.move(
                             CameraUpdateFactory.newLatLngBounds(

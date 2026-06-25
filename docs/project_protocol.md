@@ -17,6 +17,7 @@ Any AI assistant working on this project **must** follow these steps for every t
     *   **MANDATORY HARD STOP**: After requirement synchronization, the agent MUST define the verification criteria with the user.
     *   Identify which manual or automated tests in `docs/tests.md` will prove the requirement is met.
     *   If no suitable test exists, add a new one to `docs/tests.md` immediately.
+    *   **Iterative Refinement**: The agent must refine the test cases based on user feedback until the user explicitly agrees.
     *   **Enforcement**: The agent is strictly FORBIDDEN from proposing an implementation plan or writing any code until the user has formally agreed to the test cases in `docs/tests.md`. This phase is used to clarify and freeze the requirements.
 
 3.  **Impact Analysis (SWE.1.BP.5 Phase)**:
@@ -49,7 +50,8 @@ Any AI assistant working on this project **must** follow these steps for every t
     *   Create an `implementation_plan.artifact.md`.
     *   Every proposed change **must** explicitly reference the Requirement ID, the Component affected, and the corresponding Test ID it fulfills.
     *   **MANDATORY HARD STOP**: The agent MUST present the full implementation plan to the user and ask for formal approval.
-    *   **Enforcement**: The agent is strictly FORBIDDEN from performing any code modifications (writing files or replacing content) until the user has responded with "Implementation Plan approved" or similar confirmation.
+    *   **Iterative Refinement**: If the user provides feedback or asks for changes to the plan, the agent **MUST** update the plan and ask for approval again.
+    *   **Enforcement**: The agent is strictly FORBIDDEN from performing any code modifications (writing files or replacing content) until the user has explicitly responded with "Implementation Plan approved" or a similar clear confirmation of the *entire* plan.
 
 7.  **Execution & Multi-Stage Verification**:
     *   **SWE.4 (Unit Verification)**: Verify internal logic of the specific module (e.g., `NumericalEncodingUtilsTest`).
@@ -65,6 +67,12 @@ Any AI assistant working on this project **must** follow these steps for every t
         > - **Artifact**: [Link to log/screenshot]
     *   Update the `Status` in `docs/requirements.md` to `Verified`.
     *   Update the `walkthrough.artifact.md` with a summary of the fulfilled requirements.
+    *   **Git Commit Message**: Provide a clear, comprehensive commit message for the changes, following the Conventional Commits standard.
+
+9.  **Post-Implementation Review**:
+    *   **MANDATORY FINAL STEP**: Before concluding the task, the agent MUST review the newly implemented logic against the requirements and tests defined in Steps 1 and 2.
+    *   **Sync Discovery**: If the implementation revealed new constraints or changed the understanding of the requirement, the agent MUST update `docs/requirements.md` and `docs/tests.md` to reflect the *actual* final state.
+    *   **Truth Verification**: Ensure the documentation remains a "Single Source of Truth" that accurately describes the code as it exists after implementation.
 
 ## New Version / Release Workflow
 Whenever preparing for a new version:
@@ -75,7 +83,8 @@ Whenever preparing for a new version:
 
 ## Living Documentation Principle
 To maintain a high-fidelity "Digital Twin" of the codebase, the agent must:
-*   **Update Requirements**: Whenever a new logical rule or user constraint is discovered in the code, add it to `docs/requirements.md`.
+*   **Continuous Updates**: Whenever a new logical rule or user constraint is discovered in the code, add it to `docs/requirements.md`.
+*   **Final Session Audit**: Perform a rigorous final review of all documentation at the end of each task to ensure it matches the final implementation.
 *   **Refine Architecture**: Whenever a deeper understanding of component interactions is gained, update `docs/architecture.md`.
 *   **Maintain Traceability**: Ensure the "Implementation File(s)" column in the requirements list is always kept up to date as files move or logic shifts.
 

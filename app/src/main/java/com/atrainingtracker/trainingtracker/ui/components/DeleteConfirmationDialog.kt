@@ -16,30 +16,45 @@
  * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
-package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
+package com.atrainingtracker.trainingtracker.ui.components
 
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
-import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
-import com.atrainingtracker.trainingtracker.ui.components.DeleteConfirmationDialog
 
 /**
- * Reusable dialog for confirming workout deletion.
+ * A unified dialog for confirming the deletion of any item.
  */
 @Composable
-fun WorkoutDeleteDialog(
-    workout: WorkoutData,
-    onConfirm: (Long) -> Unit,
+fun DeleteConfirmationDialog(
+    title: String,
+    message: String,
+    onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    DeleteConfirmationDialog(
-        title = stringResource(R.string.delete_workout),
-        message = stringResource(R.string.really_delete_format, workout.workoutName),
-        onConfirm = { onConfirm(workout.id) },
-        onDismiss = onDismiss
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 0.dp,
+        title = { Text(title) },
+        text = { Text(message) },
+        confirmButton = {
+            TextButton(onClick = {
+                onConfirm()
+                onDismiss()
+            }) {
+                Text(stringResource(R.string.delete))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.Cancel))
+            }
+        }
     )
 }

@@ -24,6 +24,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -31,9 +33,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.trainingtracker.ui.components.EmptyStatePlaceholder
 
 /**
  * The scrollable list of WorkoutSummaries.
@@ -55,33 +60,33 @@ fun WorkoutList(
     headerHeightPx: Float
 ) {
     val density = LocalDensity.current
+    val topPadding = with(density) { (headerHeightPx + appBarOffsetPx).toDp() }
     val bottomPadding = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
 
-    LazyColumn(
-        state = scrollState,
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(
-            // Calculation: The initial header height (px) + the current offset (px)
-            // convert the final result to Dp.
-            top = with(density) { (headerHeightPx + appBarOffsetPx).toDp() + 8.dp },
-            bottom = bottomPadding + 16.dp,
-            start = 8.dp,
-            end = 8.dp
-        ),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        items(
-            items = workouts,
-            key = { it.id }
-        ) { workoutData ->
-            ElevatedCard(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.elevatedCardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
-            ) {
+    if (workouts.isEmpty()) {
+        EmptyStatePlaceholder(
+            modifier = Modifier.padding(top = topPadding),
+            icon = Icons.Default.History,
+            message = stringResource(R.string.no_workouts_available)
+        )
+    } else {
+        LazyColumn(
+            state = scrollState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                // Calculation: The initial header height (px) + the current offset (px)
+                // convert the final result to Dp.
+                top = topPadding + 8.dp,
+                bottom = bottomPadding + 16.dp,
+                start = 8.dp,
+                end = 8.dp
+            ),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(
+                items = workouts,
+                key = { it.id }
+            ) { workoutData ->
                 if (isCompactView) {
                     WorkoutSummaryCompact(
                         workoutData = workoutData,
@@ -89,8 +94,7 @@ fun WorkoutList(
                         onDeleteRequest = { onDeleteRequest(workoutData.id) },
                         modifier = Modifier.fillMaxWidth()
                     )
-                }
-                else {
+                } else {
                     WorkoutSummary(
                         workoutData = workoutData,
                         isPlayServiceAvailable = isPlayServiceAvailable,

@@ -55,8 +55,6 @@ fun WorkoutHeader(
     onSaveAsRoute: () -> Unit,
     onDeleteRequest: () -> Unit,
     modifier: Modifier = Modifier,
-    backgroundColor: Color = Color.Transparent,
-    textColor: Color = MaterialTheme.colorScheme.onSurface,
     menuEnabled: Boolean = true
 ) {
     // State to control menu visibility
@@ -74,8 +72,7 @@ fun WorkoutHeader(
         else {
             modifier.fillMaxWidth()
         },
-        color = backgroundColor,
-        contentColor = textColor
+        color = Color.Transparent
     ) {
         // Box allows us to place the Menu Button at the absolute top-right
         Box(modifier = Modifier.fillMaxWidth()) {
@@ -83,7 +80,7 @@ fun WorkoutHeader(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, top = 8.dp, bottom = 8.dp, end = 4.dp),
+                    .padding(start = 12.dp, top = 12.dp, bottom = 12.dp, end = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 // 1. TOP ROW: Sport Icon and Workout Name

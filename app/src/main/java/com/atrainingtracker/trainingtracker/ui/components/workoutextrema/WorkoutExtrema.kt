@@ -56,14 +56,14 @@ fun WorkoutExtrema(
             max = stringResource(R.string.max),
             unit = "",
             isHeader = true,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
         )
 
         // --- Table Data Rows ---
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = 12.dp)
         ) {
             val rows = data.dataRows.filter { it.hasAnyData() }
             rows.forEachIndexed { index, row ->

@@ -37,11 +37,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.helpers.combineWorkoutAndShare
 import com.atrainingtracker.trainingtracker.segments.SegmentSummary
-import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
-import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
-import com.atrainingtracker.trainingtracker.ui.map.MapState
 import com.atrainingtracker.trainingtracker.ui.segments.SegmentHeader
 import com.atrainingtracker.trainingtracker.ui.segments.SegmentDetails
+import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
+import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
+import com.atrainingtracker.trainingtracker.ui.map.MapSegment
+import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
+import com.atrainingtracker.trainingtracker.ui.map.MapDetailLayout
+import com.atrainingtracker.trainingtracker.ui.map.MappablePath
+import com.atrainingtracker.banalservice.BSportType
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -49,118 +53,39 @@ import kotlinx.coroutines.launch
 @Composable
 fun SegmentOnMapScreen(
     segmentSummary: SegmentSummary?,
-    mapState: MapState,
-    modifier: Modifier
+    segment: MapSegment?,
+    backgroundPaths: List<MappablePath> = emptyList(),
+    modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
+    val bSportType = segment?.bSportType ?: segmentSummary?.bSportType ?: BSportType.UNKNOWN
 
-    val headerLayer = rememberGraphicsLayer()
-    val elevationLayer = rememberGraphicsLayer()
-
-    var isSharing by remember { mutableStateOf(false) }
-
-    // Shared state for the "seeker" position on both Map and Profile
-    var selectedDistance by remember { mutableStateOf<Double?>(null) }
-    val noLocation = remember { MutableStateFlow<LatLng?>(null) }
-
-    Column(modifier = Modifier.fillMaxSize()) {
-
-        segmentSummary?.let {
-            Surface(
-                color = MaterialTheme.colorScheme.surface,
-                shape = RectangleShape,
-                modifier = Modifier.statusBarsPadding()
-            ) {
-                Box(modifier = Modifier.drawWithContent {
-                    headerLayer.record {
-                        this@drawWithContent.drawContent()
-                    }
-                    drawLayer(headerLayer)
-                }) {
-                    Column(modifier = modifier) {
-                        SegmentHeader(
-                            summary = it,
-                            modifier = Modifier.fillMaxWidth().padding(8.dp)
-                        )
-                        HorizontalDivider(
-                            modifier = Modifier.fillMaxWidth(),
-                            thickness = 0.5.dp,
-                            color = MaterialTheme.colorScheme.outlineVariant
-                        )
-                        SegmentDetails(
-                            summary = it,
-                            modifier = Modifier.fillMaxWidth().padding(8.dp)
-                        )
-                    }
-                }
-            }
-        }
-
-        // 2. MAP (Main content)
-        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            ATrainingTrackerMap(
-                mapState = mapState,
-                currentLocationFlow = noLocation,
-                selectedDistance = selectedDistance,
-                modifier = Modifier.fillMaxSize(),
-                onSegmentClick = { },
-                shouldTakeSnapshot = isSharing,
-                onSnapshotReady = { mapBitmap ->
-                    scope.launch {
-                        val hBmp = headerLayer.toImageBitmap().asAndroidBitmap()
-                        val eBmp = elevationLayer.toImageBitmap().asAndroidBitmap()
-                        combineWorkoutAndShare(context, hBmp, mapBitmap, eBmp)
-                        isSharing = false
-                    }
-                }
-            )
-
-            // SHARE BUTTON positioned on top-right of the MAP
-            Surface(
-                onClick = { isSharing = true },
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(16.dp)
-                    .size(44.dp),
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                shadowElevation = 6.dp,
-                tonalElevation = 2.dp
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Default.Share,
-                        contentDescription = "Share",
-                        modifier = Modifier.size(22.dp),
-                        tint = MaterialTheme.colorScheme.primary
+    MapDetailLayout(
+        bSportType = bSportType,
+        zoomFocus = MapZoomFocus.FIT_PRIMARY,
+        activeScrubPath = segment?.path,
+        header = {
+            segmentSummary?.let {
+                Column {
+                    SegmentHeader(
+                        summary = it,
+                        modifier = Modifier.fillMaxWidth().padding(12.dp)
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.fillMaxWidth(),
+                        thickness = 0.5.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+                    SegmentDetails(
+                        summary = it,
+                        modifier = Modifier.fillMaxWidth().padding(12.dp)
                     )
                 }
             }
-        }
-
-        // 3. ELEVATION PROFILE
-        mapState.segments.firstOrNull()?.let { segment ->
-            Surface(
-                color = MaterialTheme.colorScheme.surface,
-                modifier = Modifier.navigationBarsPadding()
-            ) {
-                Box(modifier = Modifier.drawWithContent {
-                    elevationLayer.record {
-                        this@drawWithContent.drawContent()
-                    }
-                    drawLayer(elevationLayer)
-                }) {
-                    ElevationProfile(
-                        pathPoints = segment.path,
-                        currentDistance = selectedDistance,
-                        onDistanceSelected = { dist ->
-                            selectedDistance = dist
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
-        }
-    }
+        },
+        mapContent = {
+            if (segment != null) segments(listOf(segment))
+            contextualPaths(backgroundPaths)
+        },
+        modifier = modifier
+    )
 }

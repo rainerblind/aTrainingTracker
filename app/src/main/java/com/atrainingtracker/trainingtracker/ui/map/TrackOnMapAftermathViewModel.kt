@@ -23,6 +23,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.application
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.database.ExtremaType
@@ -41,12 +42,19 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+data class AftermathMapUIState(
+    val tracks: List<MapTrack> = emptyList(),
+    val segments: List<MapSegment> = emptyList(),
+    val routes: List<MapRoute> = emptyList(),
+    val markers: List<LocationMarker> = emptyList(),
+    val bSportType: BSportType = BSportType.UNKNOWN,
+    val zoomFocus: MapZoomFocus = MapZoomFocus.FIT_PRIMARY
+)
+
 class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val _aftermathState = MutableStateFlow(
-        MapState(zoomFocus = MapZoomFocus.TRACK_AND_MARKERS)
-    )
-    val aftermathState = _aftermathState.asStateFlow()
+    private val _uiState = MutableStateFlow(AftermathMapUIState())
+    val uiState = _uiState.asStateFlow()
 
     // TODO: Move to WorkoutRepository.
     private val summariesDb = WorkoutSummariesDatabaseManager.getInstance(application)
@@ -69,8 +77,8 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
             // --- PHASE 1: Immediate Reset ---
             // Clear previous state so the user doesn't see "ghost" data from another workout
             withContext(Dispatchers.Main) {
-                _aftermathState.value = MapState(
-                    zoomFocus = MapZoomFocus.TRACK_AND_MARKERS,
+                _uiState.value = AftermathMapUIState(
+                    zoomFocus = MapZoomFocus.FIT_PRIMARY,
                     bSportType = bSportType,
                     tracks = emptyList(),
                     markers = emptyList()
@@ -103,11 +111,12 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
                 val fastTrack = MapTrack(
                     id = workoutId,
                     type = TrackType.BEST,
+                    bSportType = bSportType,
                     path = fastPath
                 )
 
                 withContext(Dispatchers.Main) {
-                    _aftermathState.value = _aftermathState.value.copy(
+                    _uiState.value = _uiState.value.copy(
                         tracks = listOf(fastTrack)
                     )
                 }
@@ -136,7 +145,7 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
             }
 
             withContext(Dispatchers.Main) {
-                _aftermathState.value = _aftermathState.value.copy(markers = markerList)
+                _uiState.value = _uiState.value.copy(markers = markerList)
             }
 
             // --- PHASE 4: High-Resolution Track (From Samples DB) ---
@@ -144,20 +153,24 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
             val fullTracks = TrackType.entries.mapNotNull { type ->
                 val path = workoutRepository.getWorkoutTrackPoints(workoutId, type)
                 if (path.isNotEmpty()) {
-                    MapTrack(id = type.ordinal.toLong(), type = type, path = path)
+                    MapTrack(
+                        id = type.ordinal.toLong(),
+                        type = type,
+                        bSportType = bSportType,
+                        path = path
+                    )
                 } else null
             }
 
             if (fullTracks.isNotEmpty()) {
                 withContext(Dispatchers.Main) {
-                    _aftermathState.value = _aftermathState.value.copy(tracks = fullTracks)
+                    _uiState.value = _uiState.value.copy(tracks = fullTracks)
                 }
             }
 
-            // --- PHASE 5: Segments (Matches the Sport Type) ---
+            // --- PHASE 5: Segments (All for spatial context) ---
             val allSegments = segmentsRepository.allSegmentsWithPath.value
             val mapSegments = allSegments
-                .filter { it.summary.bSportType == bSportType }
                 .map { segment ->
                     MapSegment(
                         stravaId = segment.summary.stravaId,
@@ -169,19 +182,18 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
                 }
 
             withContext(Dispatchers.Main) {
-                _aftermathState.value = _aftermathState.value.copy(
+                _uiState.value = _uiState.value.copy(
                     segments = mapSegments
                 )
             }
 
-            // --- PHASE 6: Routes (Matches the Sport Type) ---
+            // --- PHASE 6: Routes (All for spatial context) ---
             val allRoutes = routesRepository.allRoutes.value
             val mapRoutes = allRoutes
-                .filter { it.summary.bSportType == bSportType }
                 .map { it.toMapRoute() }
 
             withContext(Dispatchers.Main) {
-                _aftermathState.value = _aftermathState.value.copy(
+                _uiState.value = _uiState.value.copy(
                     routes = mapRoutes
                 )
             }

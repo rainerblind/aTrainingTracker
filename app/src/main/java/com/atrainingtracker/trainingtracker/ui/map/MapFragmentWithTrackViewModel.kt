@@ -22,12 +22,21 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
-import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+
+data class MapFragmentUIState(
+    val segments: List<MapSegment> = emptyList(),
+    val routes: List<MapRoute> = emptyList(),
+    val markers: List<LocationMarker> = emptyList(),
+    val currentTrack: List<LatLng> = emptyList(),
+    val bSportType: BSportType = BSportType.UNKNOWN
+)
 
 class MapFragmentWithTrackViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -38,7 +47,7 @@ class MapFragmentWithTrackViewModel(application: Application) : AndroidViewModel
     val liveSegments = segmentsRepository.allSegmentsWithPath
     val allRoutes = routesRepository.allRoutes
 
-    val mapState: StateFlow<MapState> = combine(
+    val uiState: StateFlow<MapFragmentUIState> = combine(
         banalRepository.bSportType,
         banalRepository.currentTrack,
         segmentsRepository.allSegmentsWithPath,
@@ -58,8 +67,7 @@ class MapFragmentWithTrackViewModel(application: Application) : AndroidViewModel
             emptyList()
         }
 
-        MapState(
-            zoomFocus = MapZoomFocus.LOCAL_SEGMENTS,
+        MapFragmentUIState(
             segments = liveSegments.map { liveSegment ->
                 MapSegment(
                     stravaId = liveSegment.summary.stravaId,
@@ -72,14 +80,12 @@ class MapFragmentWithTrackViewModel(application: Application) : AndroidViewModel
             routes = allRoutes.map { it.toMapRoute() },
             bSportType = bSportType,
             currentTrack = currentTrack,
-            bearing = 0f,
-            speed = 0f,
             markers = markers
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = MapState(zoomFocus = MapZoomFocus.LOCAL_SEGMENTS)
+        initialValue = MapFragmentUIState()
     )
 
     val currentLocation: StateFlow<LatLng?> = banalRepository.currentLocation

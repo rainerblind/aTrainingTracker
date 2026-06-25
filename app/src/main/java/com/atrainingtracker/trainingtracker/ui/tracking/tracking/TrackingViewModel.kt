@@ -40,9 +40,11 @@ import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
 import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
-import com.atrainingtracker.trainingtracker.ui.map.MapState
+import com.atrainingtracker.trainingtracker.ui.map.MapRoute
+import com.atrainingtracker.trainingtracker.ui.map.MapTrack
 import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
 import com.atrainingtracker.trainingtracker.ui.map.toMapRoute
+import com.google.android.gms.maps.model.LatLng
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
@@ -64,8 +66,19 @@ data class TrackingScreenState(
     val showLiveSegments: Boolean = false,
     val showElevationProfile: Boolean = false,
     val fields: List<SensorFieldState> = emptyList(),
-    val mapState: MapState = MapState(zoomFocus = MapZoomFocus.TRACK_AND_MARKERS),
-    val pathPoints: List<com.atrainingtracker.trainingtracker.ui.map.PathPoint> = emptyList()
+    val pathPoints: List<com.atrainingtracker.trainingtracker.ui.map.PathPoint> = emptyList(),
+    
+    // Map specific state
+    val zoomFocus: MapZoomFocus = MapZoomFocus.TRACK_AND_MARKERS,
+    val userBearing: Float = 0f,
+    val userSpeed: Float = 0f,
+    val bSportType: BSportType = BSportType.UNKNOWN,
+    val currentTrack: List<LatLng> = emptyList(),
+    val mapTracks: List<MapTrack> = emptyList(),
+    val mapSegments: List<MapSegment> = emptyList(),
+    val activeLiveSegmentIds: Set<Long> = emptySet(),
+    val mapRoutes: List<MapRoute> = emptyList(),
+    val mapMarkers: List<LocationMarker> = emptyList()
 )
 
 /**
@@ -257,17 +270,15 @@ class TrackingViewModel(
                     showLiveSegments =  viewInfo?.showLiveSegments ?: false,
                     showElevationProfile = viewInfo?.showElevationProfile ?: false,
                     pathPoints = livePathPoints,
-                    mapState = MapState(
-                        zoomFocus = MapZoomFocus.FOLLOW_ME,
-                        speed = banalServiceRepository.currentSpeed.value?.toFloat() ?: 0f,
-                        bearing = banalServiceRepository.currentBearing.value?.toFloat() ?: 0f,
-                        bSportType = banalServiceRepository.bSportType.value,
-                        currentTrack = currentTrack,
-                        segments = mapSegments,
-                        routes = allRoutes.map { it.toMapRoute() },
-                        activeLiveSegmentIds = activeIds,
-                        markers = markerList
-                    )
+                    zoomFocus = MapZoomFocus.FOLLOW_ME,
+                    userSpeed = banalServiceRepository.currentSpeed.value?.toFloat() ?: 0f,
+                    userBearing = banalServiceRepository.currentBearing.value?.toFloat() ?: 0f,
+                    bSportType = banalServiceRepository.bSportType.value,
+                    currentTrack = currentTrack,
+                    mapSegments = mapSegments,
+                    mapRoutes = allRoutes.map { it.toMapRoute() },
+                    activeLiveSegmentIds = activeIds,
+                    mapMarkers = markerList
                 )
             }.collect { newState ->
                 _uiState.value = newState

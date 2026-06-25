@@ -44,7 +44,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.segments.SegmentWithPath
+import com.atrainingtracker.trainingtracker.ui.components.EmptyStatePlaceholder
 import com.atrainingtracker.trainingtracker.ui.components.strava.ConnectWithStravaButton
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Map
 import com.atrainingtracker.trainingtracker.ui.components.strava.PoweredByStrava
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,27 +70,16 @@ fun SegmentList(
         val bottomPadding = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
 
         if (!isStravaConnected && segmentsWithPath.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(top = topPadding),
-                contentAlignment = Alignment.Center
+            EmptyStatePlaceholder(
+                modifier = Modifier.padding(top = topPadding),
+                icon = Icons.Default.Map,
+                message = stringResource(R.string.starred_segments__no_strava_connection)
             ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = stringResource(R.string.starred_segments__no_strava_connection),
-                        modifier = Modifier.padding(bottom = 12.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
-                    ConnectWithStravaButton(onClick = {
-                        Log.i("SegmentList", "ConnectWithStravaButton clicked")
-                        onConnectToStrava()
-                    })
-                }
+                Spacer(modifier = Modifier.height(12.dp))
+                ConnectWithStravaButton(onClick = {
+                    Log.i("SegmentList", "ConnectWithStravaButton clicked")
+                    onConnectToStrava()
+                })
             }
         }
         else {

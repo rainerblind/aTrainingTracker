@@ -17,6 +17,7 @@ This document defines the verification procedures for all project requirements. 
 | **TST-UNT-007** | `EditWorkoutViewModel` | `REQ-EXP-006` | Verify that selecting a sport type with a `null` Strava mapping automatically sets `uploadToStrava` to `0`. | Proposed |
 | **TST-UNT-008** | `Accumulator` | `REQ-PRO-003` | Verify that hardware deltas received during a pause are discarded, while deltas received while active are accumulated correctly. | Verified |
 | **TST-UNT-009** | `WorkoutDataMapper` | `REQ-UI-011` | Verify that the extrema rows only include the "Big 6" performance metrics: HR, Speed/Pace, Cadence, Power, Altitude, and Temperature. | Verified |
+| **TST-UNT-010** | `MappablePath` | `REQ-MAP-007` | Verify that coordinate projection (latLngs) is lazy and only occurs once. | Proposed |
 
 ## 2. Regression & Manual Verification (SWE.5 / SWE.6)
 
@@ -33,6 +34,7 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-INT-004** | **UI/Logic** | `REQ-UI-009` | In Tracking Tab Configuration, toggle "Show Elevation Profile". | Elevation profile is displayed below the map on the tracking screen. |
 | **TST-INT-005** | **UI Layout** | `REQ-UI-010` | Open the Tab Configuration on a narrow device or split-screen. | Checkboxes wrap into multiple rows instead of overlapping. Labels remain fully visible. |
 | **TST-INT-006** | **UI Layout** | `REQ-UI-010` | Audit the checkbox sequence in the tab configuration header. | Checkboxes appear in the exact order: Map, Elevation Profile, Live Segments, Lap Button. |
+| **TST-REG-005** | **Map Context** | `REQ-MAP-008` | Open detail map. Verify active item is primary. Verify background items of same sport are muted (0.3). Verify background items of different sport are highly muted (0.1). | Full tiered spatial context is maintained. |
 | **TST-UI-001** | **UI Design** | `REQ-UI-011` | Inspect the workout summary extrema table on various device themes. | The table has distinct headers, clear alignment, and high-quality typography matching the Material 3 standards. | Verified |
 | **TST-UI-011** | **Formatting** | `REQ-UI-011` | Verify that units in data rows are surrounded by square brackets (e.g., `[km/h]`). | Verified |
 | **TST-UI-012** | **Hierarchy** | `REQ-UI-011` | Verify that the Sensor Name and the Numeric Values share the same visual weight, while the unit is micro-scaled. | Verified |
@@ -59,6 +61,10 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-STR-002** | **Thread Safety** | `REQ-PRO-002` | Static analysis of `synchronized` blocks to ensure no nested locks or I/O within locks. |
 | **TST-STR-003** | **Data Integrity** | `REQ-UI-009` | 1. Static analysis of `onUpgrade` (v9->v10).<br>2. Static analysis of `onCreate` and `addDefaultTab`. | 1. `onUpgrade` must set `SHOW_ELEVATION_PROFILE = SHOW_MAP`.<br>2. `addDefaultTab` must initialize `SHOW_ELEVATION_PROFILE` using the value provided for `showMap`. | Verified |
 | **TST-STR-004** | **Consistency** | `REQ-TRK-008` | Static analysis of `TrackerService.java`. | `IMPORTANT_SENSOR_TYPES` must strictly contain only the "Big 6" + Temperature metrics. | Verified |
+| **TST-STR-005** | **Map DSL** | `REQ-MAP-006` | Static audit of `ATrainingTrackerMap` callers. | All data layers added via DSL block, not direct parameters. | Verified |
+| **TST-STR-006** | **Metric Consistency**| `REQ-UI-015` | Visual audit of Workout, Route, and Segment screens. | All use `MetricItem` for data rows. | Verified |
+| **TST-STR-007** | **Formatter Sync** | `REQ-UI-016` | Static audit of `LocalMetricFormatter` usages. | No direct `new DistanceFormatter()` etc. in UI layer. | Verified |
+| **TST-STR-008** | **List Foundation** | `REQ-UI-017` | Audit of `MappableListItem` usages. | All list cards share same foundation and padding. | Verified |
 
 ## 4. Release Verification Workflow
 

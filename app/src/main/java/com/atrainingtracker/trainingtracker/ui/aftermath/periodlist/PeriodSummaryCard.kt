@@ -53,6 +53,8 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
+import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
+import com.atrainingtracker.trainingtracker.ui.components.MetricItem
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.LatLngBounds
@@ -71,13 +73,10 @@ fun PeriodSummaryCard(
     val tf = TimeFormatter()
     val af = AltitudeFormatter()
 
-    ElevatedCard(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+    MappableListItem(
+        modifier = modifier,
+        onClick = { onHeaderClick(summary) }
     ) {
-        Column {
             // --- 1. CONTENT SECTION ---
             Column(modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 16.dp, bottom = 8.dp)) {
                 // PERIOD HEADER
@@ -199,7 +198,6 @@ fun PeriodSummaryCard(
                 }
             }
         }
-    }
 }
 
 @Composable
@@ -255,16 +253,15 @@ fun SportStatsRow(
                 }
 
                 Column(horizontalAlignment = Alignment.End) {
-                    MetricIconValue(
+                    MetricItem(
                         iconRes = R.drawable.ic_time_active,
                         value = tf.format_with_units(stats.totalDurationSec),
-                        isBold = true,
-                        textStyle = MaterialTheme.typography.titleMedium
+                        isPrimary = true,
                     )
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        MetricIconValue(R.drawable.ic_distance, df.format_with_units(stats.totalDistanceMeters), isBold = true)
+                        MetricItem(R.drawable.ic_distance, df.format_with_units(stats.totalDistanceMeters), isPrimary = true)
                         Spacer(modifier = Modifier.width(8.dp))
-                        MetricIconValue(R.drawable.ic_ascent, af.format_with_units(stats.totalAscentMeters))
+                        MetricItem(R.drawable.ic_ascent, af.format_with_units(stats.totalAscentMeters))
                     }
                 }
             }
@@ -309,10 +306,10 @@ fun SportStatsRow(
                                 color = MaterialTheme.colorScheme.primary,
                                 letterSpacing = 0.5.sp
                             )
-                            MetricIconValue(
+                            MetricItem(
                                 iconRes = R.drawable.ic_time_active,
                                 value = tf.format_with_units(longestWorkout.durationSec),
-                                isBold = true
+                                isPrimary = true
                             )
                         }
                         Row(
@@ -332,38 +329,14 @@ fun SportStatsRow(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                MetricIconValue(R.drawable.ic_distance, df.format_with_units(longestWorkout.distanceMeters), isBold = true)
-                                MetricIconValue(R.drawable.ic_ascent, af.format_with_units(longestWorkout.ascentMeters))
+                                MetricItem(R.drawable.ic_distance, df.format_with_units(longestWorkout.distanceMeters), isPrimary = true)
+                                MetricItem(R.drawable.ic_ascent, af.format_with_units(longestWorkout.ascentMeters))
                             }
                         }
                     }
                 }
             }
         }
-    }
-}
-
-@Composable
-fun MetricIconValue(
-    iconRes: Int,
-    value: String,
-    isBold: Boolean = false,
-    textStyle: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.labelSmall
-) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-            painter = painterResource(id = iconRes),
-            contentDescription = null,
-            modifier = Modifier.size(if (textStyle == MaterialTheme.typography.titleMedium) 14.dp else 12.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-        )
-        Spacer(modifier = Modifier.width(4.dp))
-        Text(
-            text = value,
-            style = textStyle,
-            fontWeight = if (isBold) FontWeight.Bold else FontWeight.Normal,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }
 
@@ -386,8 +359,8 @@ fun CompactMetricRow(label: String, count: Int, distance: String, duration: Stri
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            MetricIconValue(iconRes = R.drawable.ic_distance, value = distance)
-            MetricIconValue(iconRes = R.drawable.ic_time_active, value = duration, isBold = true)
+            MetricItem(iconRes = R.drawable.ic_distance, value = distance)
+            MetricItem(iconRes = R.drawable.ic_time_active, value = duration, isPrimary = true)
         }
     }
 }

@@ -175,9 +175,13 @@ class WorkoutSummariesListFragment : Fragment() {
                         Box(modifier = Modifier.padding(paddingValues)) {
                             if (selectedWorkoutForDetailsData != null) {
                                 // 3. Render the Detail Map Screen
+                                val aftermathUIState by trackOnMapViewModel.uiState.collectAsStateWithLifecycle()
                                 TrackOnMapScreen(
                                     workoutData = selectedWorkoutForDetailsData,
-                                    mapState = trackOnMapViewModel.aftermathState.collectAsStateWithLifecycle().value,
+                                    tracks = aftermathUIState.tracks,
+                                    segments = aftermathUIState.segments,
+                                    routes = aftermathUIState.routes,
+                                    markers = aftermathUIState.markers,
                                     modifier = Modifier
                                 )
 

@@ -26,12 +26,13 @@ import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.MyPreferenceManager
+import com.atrainingtracker.trainingtracker.ui.util.BaseMappableListViewModel
+import com.atrainingtracker.trainingtracker.ui.util.MappableSortOrder
 import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.aftermath.DeletionProgress
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
-import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -44,14 +45,15 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-enum class WorkoutSortOrder(@StringRes val labelResId: Int) {
+enum class WorkoutSortOrder(@StringRes override val labelResId: Int) : MappableSortOrder {
     DATE(R.string.sort_date),
     WORKOUT_DURATION(R.string.sort_duration),
     WORKOUT_DISTANCE(R.string.sort_length),
     TOTAL_ELEVATION_GAIN(R.string.sort_elevation_gain),
 }
 
-class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(application) {
+class WorkoutSummariesViewModel(application: Application) : 
+    BaseMappableListViewModel<WorkoutData, WorkoutSortOrder>(application, WorkoutSortOrder.DATE) {
     private val workoutRepo = WorkoutRepository.getInstance(application)
     private val prefManager = MyPreferenceManager(application)
 
@@ -63,22 +65,6 @@ class WorkoutSummariesViewModel(application: Application) : AndroidViewModel(app
         _saveRouteStatus.value = null
     }
 
-    private val _sortOrder = MutableStateFlow(WorkoutSortOrder.DATE)
-    val sortOrder = _sortOrder.asStateFlow()
-
-    private var lastScrolledOrder: WorkoutSortOrder? = null
-
-    fun shouldScrollToTop(currentOrder: WorkoutSortOrder): Boolean {
-        if (lastScrolledOrder != currentOrder) {
-            lastScrolledOrder = currentOrder
-            return true
-        }
-        return false
-    }
-
-    fun setSortOrder(order: WorkoutSortOrder) {
-        _sortOrder.value = order
-    }
 
     val workouts: StateFlow<List<WorkoutData>> = combine(
         workoutRepo.allWorkouts,

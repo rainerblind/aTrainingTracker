@@ -27,10 +27,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -42,8 +39,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.fragments.preferences.StravaUploadFragment
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
-import com.atrainingtracker.trainingtracker.ui.map.MapState
-import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
+import com.atrainingtracker.trainingtracker.ui.map.toMapSegment
 import com.atrainingtracker.trainingtracker.ui.segments.SegmentOnMapScreen
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
@@ -104,27 +100,22 @@ class StarredSegmentsFragment : Fragment() {
 
                         if (selectedSegment != null) {
 
-                            // Create MapState on the fly
-                            val mapState = remember(selectedSegment) {
-                                MapState(
-                                    zoomFocus = MapZoomFocus.LOCAL_SEGMENTS,
-                                    segments = listOf(
-                                            MapSegment(
-                                                stravaId = selectedSegment.summary.stravaId,
-                                                name = selectedSegment.summary.name,
-                                                bSportType = selectedSegment.summary.bSportType,
-                                                path = selectedSegment.path,
-                                                showStartAndFinishText = false
-                                        )
-                                    ),
-                                    bSportType = selectedSegment.summary.bSportType
-                                )
+                            // Background Context
+                            val backgroundPaths = remember(selectedSegment, segments, viewModel.routes) {
+                                val otherSegments = segments
+                                    .filter { it.summary.stravaId != selectedSegment.summary.stravaId }
+                                    .map { it.toMapSegment(showStartAndFinishText = false) }
+                                
+                                val routes = viewModel.routes.value
+                                
+                                otherSegments + routes
                             }
 
                             SegmentOnMapScreen(
                                 segmentSummary = selectedSegment.summary,
-                                mapState = mapState,
-                                modifier = Modifier.statusBarsPadding()
+                                segment = selectedSegment.toMapSegment(showStartAndFinishText = false),
+                                backgroundPaths = backgroundPaths,
+                                modifier = Modifier
                             )
 
                             // Handle Back Press to return to list
