@@ -55,6 +55,7 @@ fun WorkoutList(
     headerHeightPx: Float
 ) {
     val density = LocalDensity.current
+    val topPadding = with(density) { (headerHeightPx + appBarOffsetPx).toDp() }
     val bottomPadding = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
 
     if (workouts.isEmpty()) {
