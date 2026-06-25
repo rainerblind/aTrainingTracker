@@ -24,10 +24,24 @@ import com.google.android.gms.maps.model.LatLng
 /**
  * A DSL scope for defining the content of the ATrainingTrackerMap.
  */
+/**
+ * A DSL scope for defining the content of the ATrainingTrackerMap.
+ */
 interface MapContentScope {
+    /**
+     * Renders a generic mappable path (Track, Route, or Segment).
+     */
+    fun path(
+        path: MappablePath,
+        alpha: Float = 1.0f,
+        onPathClick: (Long) -> Unit = {}
+    )
+
+    // Specialized helpers for common collections
     fun tracks(tracks: List<MapTrack>)
     fun segments(segments: List<MapSegment>, activeLiveSegmentIds: Set<Long> = emptySet(), onSegmentClick: (Long) -> Unit = {})
     fun routes(routes: List<MapRoute>, onRouteClick: (Long) -> Unit = {})
+    
     fun markers(markers: List<LocationMarker>)
     fun liveTrack(path: List<LatLng>)
 }
@@ -65,9 +79,30 @@ internal class MapContentScopeImpl(
         composables.forEach { it() }
     }
 
+    override fun path(path: MappablePath, alpha: Float, onPathClick: (Long) -> Unit) {
+        when (path) {
+            is MapTrack -> tracks.add(path)
+            is MapSegment -> segments.add(path)
+            is MapRoute -> routes.add(path)
+        }
+        composables.add {
+            MappablePathLayer(
+                path = path,
+                alpha = alpha,
+                currentZoom = currentZoom,
+                context = context,
+                directionIcons = directionIcons,
+                onPathClick = onPathClick
+            )
+        }
+    }
+
     override fun tracks(tracks: List<MapTrack>) {
-        this.tracks.addAll(tracks)
-        composables.add { TrackLayer(tracks) }
+        tracks.forEach { track ->
+            if (track.isVisible) {
+                path(track)
+            }
+        }
     }
 
     override fun segments(
@@ -75,29 +110,43 @@ internal class MapContentScopeImpl(
         activeLiveSegmentIds: Set<Long>,
         onSegmentClick: (Long) -> Unit
     ) {
-        this.segments.addAll(segments)
-        composables.add {
-            SegmentLayer(
-                segments = segments,
-                activeLiveSegmentIds = activeLiveSegmentIds,
-                zoomFocus = zoomFocus,
-                currentZoom = currentZoom,
-                context = context,
-                directionIcons = directionIcons,
-                onSegmentClick = onSegmentClick
-            )
+        segments.forEach { segment ->
+            composables.add {
+                val style = LocalMapStyle.current
+                val isLive = activeLiveSegmentIds.contains(segment.stravaId)
+                val isFollowMeEnabled = zoomFocus == MapZoomFocus.FOLLOW_ME
+                val alpha = if (!isFollowMeEnabled || isLive) 1.0f else style.segmentUnselectedAlpha
+                
+                MappablePathLayer(
+                    path = segment,
+                    alpha = alpha,
+                    currentZoom = currentZoom,
+                    context = context,
+                    directionIcons = directionIcons,
+                    onPathClick = onSegmentClick
+                )
+            }
+            this.segments.add(segment)
         }
     }
 
     override fun routes(routes: List<MapRoute>, onRouteClick: (Long) -> Unit) {
-        this.routes.addAll(routes)
-        composables.add {
-            RouteLayer(
-                routes = routes,
-                zoomFocus = zoomFocus,
-                activeSportType = bSportType,
-                onRouteClick = onRouteClick
-            )
+        routes.forEach { route ->
+            composables.add {
+                val style = LocalMapStyle.current
+                val highlightRoute = zoomFocus != MapZoomFocus.FOLLOW_ME 
+                        || (route.isSelected && route.bSportType == bSportType)
+
+                MappablePathLayer(
+                    path = route,
+                    alpha = if (highlightRoute) 1.0f else style.routeUnselectedAlpha,
+                    currentZoom = currentZoom,
+                    context = context,
+                    directionIcons = directionIcons,
+                    onPathClick = onRouteClick
+                )
+            }
+            this.routes.add(route)
         }
     }
 

@@ -38,158 +38,126 @@ import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.Polyline
 
 /**
- * Renders a list of workout tracks with the "X-Ray" dotted pattern.
+ * A unified layer that can render any MappablePath (Track, Route, or Segment).
+ * It automatically applies the correct styling (Solid vs X-Ray) and
+ * adds specialized decorations like segment arrows or start/finish markers.
  */
 @Composable
-fun TrackLayer(tracks: List<MapTrack>) {
-    val style = LocalMapStyle.current
-    tracks.forEach { track ->
-        if (track.isVisible) {
-            XRayPolyline(
-                points = track.latLngs,
-                color = track.color,
-                width = track.width,
-                baseZIndex = track.zIndex,
-                overlayZIndex = track.overlayZIndex,
-                pattern = track.pattern
-            )
-        }
+fun MappablePathLayer(
+    path: MappablePath,
+    alpha: Float = 1.0f,
+    currentZoom: Float = 0f,
+    context: Context? = null,
+    directionIcons: Triple<BitmapDescriptor?, BitmapDescriptor?, BitmapDescriptor?>? = null,
+    onPathClick: (Long) -> Unit = {}
+) {
+    // 1. Core Path Rendering (Handles both Solid and X-Ray styles)
+    XRayPolyline(
+        points = path.latLngs,
+        color = path.color.copy(alpha = alpha),
+        width = path.width,
+        baseZIndex = path.zIndex,
+        overlayZIndex = path.overlayZIndex ?: path.zIndex,
+        pattern = path.pattern,
+        clickable = true,
+        onClick = { onPathClick(path.id) }
+    )
+
+    // 2. Specialized Decorations (Segments only)
+    if (path is MapSegment && context != null && directionIcons != null) {
+        SegmentDecorations(
+            segment = path,
+            alpha = alpha,
+            currentZoom = currentZoom,
+            context = context,
+            directionIcons = directionIcons
+        )
     }
 }
 
 /**
- * Renders a list of routes with the "X-Ray" dashed pattern.
- * Highlighted routes (active or focused) are shown with full opacity and dashes.
+ * Specialized decorations for Strava segments: Arrows and Labels.
  */
 @Composable
-fun RouteLayer(
-    routes: List<MapRoute>,
-    zoomFocus: MapZoomFocus,
-    activeSportType: BSportType,
-    onRouteClick: (Long) -> Unit
+private fun SegmentDecorations(
+    segment: MapSegment,
+    alpha: Float,
+    currentZoom: Float,
+    context: Context,
+    directionIcons: Triple<BitmapDescriptor?, BitmapDescriptor?, BitmapDescriptor?>
 ) {
     val style = LocalMapStyle.current
     
-    routes.forEach { route ->
-        val highlightRoute = zoomFocus != MapZoomFocus.FOLLOW_ME 
-                || (route.isSelected && route.bSportType == activeSportType)
-
-        val alpha = if (highlightRoute) 1.0f else style.routeUnselectedAlpha
-
-        XRayPolyline(
-            points = route.latLngs,
-            color = route.color.copy(alpha = alpha),
-            width = route.width,
-            baseZIndex = route.zIndex,
-            overlayZIndex = route.overlayZIndex,
-            pattern = if (highlightRoute) route.pattern else null,
-            clickable = true,
-            onClick = { onRouteClick(route.id) }
-        )
-    }
-}
-
-/**
- * Renders a list of Strava segments with direction arrows and labels.
- */
-@Composable
-fun SegmentLayer(
-    segments: List<MapSegment>,
-    activeLiveSegmentIds: Set<Long>,
-    zoomFocus: MapZoomFocus,
-    currentZoom: Float,
-    context: Context,
-    directionIcons: Triple<BitmapDescriptor?, BitmapDescriptor?, BitmapDescriptor?>,
-    onSegmentClick: (Long) -> Unit
-) {
-    val style = LocalMapStyle.current
-    segments.forEach { segment ->
-        val isLive = activeLiveSegmentIds.contains(segment.stravaId)
-        val isFollowMeEnabled = zoomFocus == MapZoomFocus.FOLLOW_ME
-        val alpha = if (!isFollowMeEnabled || isLive) 1.0f else style.segmentUnselectedAlpha
-        val segmentColor = StravaOrange.copy(alpha = alpha)
-
-        // 1. Path
-        Polyline(
-            points = segment.latLngs,
-            color = segmentColor,
-            width = style.segmentWidth,
-            zIndex = style.segmentZIndex,
-            clickable = true,
-            onClick = { onSegmentClick(segment.stravaId) }
-        )
-
-        // 2. Direction Arrows (Performance check: only at high zoom or if Live)
-        if (isLive || currentZoom > 15f) {
-            val arrowIcon = when {
-                currentZoom > 17f -> directionIcons.third
-                currentZoom > 15.5f -> directionIcons.second
-                else -> directionIcons.first
-            }
-
-            segment.path.windowed(2, 20).forEach { pair ->
-                val midPos = LatLng(
-                    (pair[0].latLng.latitude + pair[1].latLng.latitude) / 2.0,
-                    (pair[0].latLng.longitude + pair[1].latLng.longitude) / 2.0
-                )
-                Marker(
-                    state = remember(midPos) { MarkerState(position = midPos) },
-                    icon = arrowIcon,
-                    rotation = calculateBearing(pair[0].latLng, pair[1].latLng).toFloat(),
-                    flat = true,
-                    anchor = Offset(0.5f, 0.5f),
-                    alpha = alpha,
-                    zIndex = style.segmentZIndex
-                )
-            }
+    // 1. Direction Arrows
+    if (currentZoom > 15f) {
+        val arrowIcon = when {
+            currentZoom > 17f -> directionIcons.third
+            currentZoom > 15.5f -> directionIcons.second
+            else -> directionIcons.first
         }
 
-        // 3. Start / Finish Lines and Labels
-        if (segment.path.size >= 6) {
-            val startPt = segment.path[0].latLng
-            val startNext = segment.path[5].latLng
-            val endPt = segment.path.last().latLng
-            val endPrev = segment.path[segment.path.size - 6].latLng
-
-            Polyline(
-                points = calculateOrthogonalLine(startPt, startNext),
-                color = segmentColor,
-                width = style.segmentWidth,
+        segment.path.windowed(2, 20).forEach { pair ->
+            val midPos = LatLng(
+                (pair[0].latLng.latitude + pair[1].latLng.latitude) / 2.0,
+                (pair[0].latLng.longitude + pair[1].latLng.longitude) / 2.0
+            )
+            Marker(
+                state = remember(midPos) { MarkerState(position = midPos) },
+                icon = arrowIcon,
+                rotation = calculateBearing(pair[0].latLng, pair[1].latLng).toFloat(),
+                flat = true,
+                anchor = Offset(0.5f, 0.5f),
+                alpha = alpha,
                 zIndex = style.segmentZIndex
             )
-            Polyline(
-                points = calculateOrthogonalLine(endPt, endPrev),
-                color = segmentColor,
-                width = style.segmentWidth,
-                zIndex = style.segmentZIndex
-            )
+        }
+    }
 
-            if (currentZoom > 14f && segment.showStartAndFinishText) {
-                val textSize = when {
-                    currentZoom > 17f -> 22f
-                    currentZoom > 15f -> 18f
-                    else -> 14f
-                }
-                val sportIcon = if (segment.bSportType == BSportType.RUN) R.drawable.bsport_run else R.drawable.bsport_bike
+    // 2. Start / Finish Lines and Labels
+    if (segment.path.size >= 6) {
+        val startPt = segment.path[0].latLng
+        val startNext = segment.path[5].latLng
+        val endPt = segment.path.last().latLng
+        val endPrev = segment.path[segment.path.size - 6].latLng
 
-                Marker(
-                    state = remember(startPt) { MarkerState(position = startPt) },
-                    icon = remember(segment.name, textSize) {
-                        createTextMarkerBitmap(context, segment.name, "🚩", textSize, sportIcon)
-                    },
-                    anchor = Offset(0.5f, -0.2f),
-                    alpha = alpha
-                )
+        Polyline(
+            points = calculateOrthogonalLine(startPt, startNext),
+            color = StravaOrange.copy(alpha = alpha),
+            width = style.segmentWidth,
+            zIndex = style.segmentZIndex
+        )
+        Polyline(
+            points = calculateOrthogonalLine(endPt, endPrev),
+            color = StravaOrange.copy(alpha = alpha),
+            width = style.segmentWidth,
+            zIndex = style.segmentZIndex
+        )
 
-                Marker(
-                    state = remember(endPt) { MarkerState(position = endPt) },
-                    icon = remember(segment.name, textSize) {
-                        createTextMarkerBitmap(context, segment.name, "🏁", textSize, sportIcon)
-                    },
-                    anchor = Offset(0.5f, 1.2f),
-                    alpha = alpha
-                )
+        if (currentZoom > 14f && segment.showStartAndFinishText) {
+            val textSize = when {
+                currentZoom > 17f -> 22f
+                currentZoom > 15f -> 18f
+                else -> 14f
             }
+            val sportIcon = if (segment.bSportType == BSportType.RUN) R.drawable.bsport_run else R.drawable.bsport_bike
+
+            Marker(
+                state = remember(startPt) { MarkerState(position = startPt) },
+                icon = remember(segment.name, textSize) {
+                    createTextMarkerBitmap(context, segment.name, "🚩", textSize, sportIcon)
+                },
+                anchor = Offset(0.5f, -0.2f),
+                alpha = alpha
+            )
+
+            Marker(
+                state = remember(endPt) { MarkerState(position = endPt) },
+                icon = remember(segment.name, textSize) {
+                    createTextMarkerBitmap(context, segment.name, "🏁", textSize, sportIcon)
+                },
+                anchor = Offset(0.5f, 1.2f),
+                alpha = alpha
+            )
         }
     }
 }
