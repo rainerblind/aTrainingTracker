@@ -20,9 +20,24 @@ package com.atrainingtracker.banalservice.ui.sporttype
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
@@ -70,6 +85,9 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
+import com.atrainingtracker.trainingtracker.ui.components.EmptyStatePlaceholder
+import com.atrainingtracker.trainingtracker.ui.components.DeleteConfirmationDialog
 import com.atrainingtracker.trainingtracker.ui.components.stats.RichStatsSheet
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsSummaryBlock
@@ -126,33 +144,42 @@ fun SportTypesTabsScreen(
 
                 val bottomPadding = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
 
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
+                val topPadding = with(density) { (appBarMaxHeightPx.toFloat() + connection.appBarOffset).toDp() + 16.dp }
 
-                    contentPadding = PaddingValues(
-                        // Calculation: The initial header height (px) + the current offset (px)
-                        // convert the final result to Dp.
-                        top = with(density) { (appBarMaxHeightPx.toFloat() + connection.appBarOffset).toDp() + 16.dp },
-                        bottom = bottomPadding + 16.dp,
-                        start = 4.dp,
-                        end = 4.dp
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(12.dp) // Matching Equipment spacing
-                ) {
-                    items(filteredList, key = { it.id }) { item ->
-                        SportTypeCard(
-                            item = item,
-                            onConfigClick = { itemToEdit = item },
-                            onStatsClick = { item ->
-                                // 1. Fetch detailed periods from ViewModel
-                                val periods = viewModel.getDetailedStats(item.name, item.id, item.firstUsed)
-                                // 2. Combine with the "Total" stats already in the item
-                                val allStats = listOf(item.statsData) + periods
-                                // 3. Show the sheet
-                                statsToShow = Pair(item.name, allStats)
-                            },
-                            onDelete = { itemToDelete = item }
-                        )
+                if (filteredList.isEmpty()) {
+                    EmptyStatePlaceholder(
+                        modifier = Modifier.padding(top = topPadding),
+                        message = stringResource(R.string.no_sport_types_available)
+                    )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+
+                        contentPadding = PaddingValues(
+                            // Calculation: The initial header height (px) + the current offset (px)
+                            // convert the final result to Dp.
+                            top = topPadding,
+                            bottom = bottomPadding + 16.dp,
+                            start = 4.dp,
+                            end = 4.dp
+                        ),
+                        verticalArrangement = Arrangement.spacedBy(12.dp) // Matching Equipment spacing
+                    ) {
+                        items(filteredList, key = { it.id }) { item ->
+                            SportTypeCard(
+                                item = item,
+                                onConfigClick = { itemToEdit = item },
+                                onStatsClick = { item ->
+                                    // 1. Fetch detailed periods from ViewModel
+                                    val periods = viewModel.getDetailedStats(item.name, item.id, item.firstUsed)
+                                    // 2. Combine with the "Total" stats already in the item
+                                    val allStats = listOf(item.statsData) + periods
+                                    // 3. Show the sheet
+                                    statsToShow = Pair(item.name, allStats)
+                                },
+                                onDelete = { itemToDelete = item }
+                            )
+                        }
                     }
                 }
             }
@@ -290,23 +317,11 @@ fun SportTypesTabsScreen(
 
     // Delete Confirmation Dialog
     itemToDelete?.let { item ->
-        AlertDialog(
-            containerColor = MaterialTheme.colorScheme.surface,
-            tonalElevation = 0.dp,
-            onDismissRequest = { itemToDelete = null },
-            title = { Text(stringResource(R.string.delete)) },
-            text = { Text(stringResource(R.string.really_delete_format, item.name)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.deleteSportType(item.id)
-                    itemToDelete = null
-                }) {
-                    Text(stringResource(R.string.delete))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { itemToDelete = null }) { Text(stringResource(R.string.Cancel)) }
-            }
+        DeleteConfirmationDialog(
+            title = stringResource(R.string.delete),
+            message = stringResource(R.string.really_delete_format, item.name),
+            onConfirm = { viewModel.deleteSportType(item.id) },
+            onDismiss = { itemToDelete = null }
         )
     }
 }
@@ -324,27 +339,18 @@ fun SportTypeCard(
     var showMenu by remember { mutableStateOf(false) }
 
     Box {
-        ElevatedCard(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 4.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.elevatedCardColors(
-                containerColor = MaterialTheme.colorScheme.surface
-            ),
-            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
+        MappableListItem(
+            modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
+            onClick = { onConfigClick(item) },
+            onLongClick = {
+                if (item.isEditable) {
+                    showMenu = true
+                }
+            }
         ) {
             // Upper part: The equipment itself
             Column(modifier = Modifier
                 .fillMaxWidth()
-                .combinedClickable(
-                    onClick = { onConfigClick(item) },
-                    onLongClick = {
-                        if (item.isEditable) {
-                            showMenu = true
-                        }
-                    }
-                )
                 .padding(16.dp)
             ) {
                 // HEADER ZONE
