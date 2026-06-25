@@ -336,7 +336,7 @@ fun EquipmentItem(
             // ZONE 1: CONFIGURATION (Top part)
             Column(modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(12.dp)
             ) {
                 // Header Row
                 Row(
@@ -401,7 +401,7 @@ fun EquipmentItem(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { onStatsClick(item) }
-                        .padding(horizontal = 16.dp)
+                        .padding(horizontal = 12.dp)
                 ) {
                     HorizontalDivider(
                         thickness = 0.5.dp,

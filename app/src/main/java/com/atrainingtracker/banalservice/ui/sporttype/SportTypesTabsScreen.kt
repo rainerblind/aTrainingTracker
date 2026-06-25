@@ -351,7 +351,7 @@ fun SportTypeCard(
             // Upper part: The equipment itself
             Column(modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(12.dp)
             ) {
                 // HEADER ZONE
                 Row(
@@ -479,7 +479,7 @@ fun SportTypeCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { onStatsClick(item) }
-                        .padding(horizontal = 16.dp)
+                        .padding(horizontal = 12.dp)
                 ) {
                     HorizontalDivider(
                         thickness = 0.5.dp,

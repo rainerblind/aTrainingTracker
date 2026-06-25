@@ -67,7 +67,7 @@ fun WorkoutSummaryCompact(
         ) {
             Column(
                 modifier = Modifier
-                    .padding(horizontal = 12.dp, vertical = 10.dp)
+                    .padding(12.dp)
             ) {
                 // --- ROW 1: Workout Name ---
                 Text(

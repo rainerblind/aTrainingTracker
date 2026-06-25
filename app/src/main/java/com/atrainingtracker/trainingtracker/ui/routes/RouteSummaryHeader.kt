@@ -58,7 +58,7 @@ fun RouteSummaryHeader(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(4.dp),
+            .padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         // --- TOP ROW: Sport Icon and Route Name ---

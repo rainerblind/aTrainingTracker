@@ -49,7 +49,7 @@ fun SegmentItem(
                 summary = summary,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(4.dp)
+                    .padding(12.dp)
             )
 
             HorizontalDivider(
@@ -64,7 +64,7 @@ fun SegmentItem(
                 showStravaLogo = false,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(4.dp)
+                    .padding(12.dp)
             )
 
             // 3. BOTTOM: Elevation Profile (Full Width)

@@ -66,7 +66,7 @@ fun SegmentOnMapScreen(
                 Column {
                     SegmentHeader(
                         summary = it,
-                        modifier = Modifier.fillMaxWidth().padding(8.dp)
+                        modifier = Modifier.fillMaxWidth().padding(12.dp)
                     )
                     HorizontalDivider(
                         modifier = Modifier.fillMaxWidth(),
@@ -75,7 +75,7 @@ fun SegmentOnMapScreen(
                     )
                     SegmentDetails(
                         summary = it,
-                        modifier = Modifier.fillMaxWidth().padding(8.dp)
+                        modifier = Modifier.fillMaxWidth().padding(12.dp)
                     )
                 }
             }

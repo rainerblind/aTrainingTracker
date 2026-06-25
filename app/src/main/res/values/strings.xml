@@ -700,6 +700,7 @@
 
 
     <string name="show_all_sport_types">+ all sports +</string>
+    <string name="no_sport_types_available">No sport types available</string>
     <string name="sport_types">Sport Types</string>
     <string name="configure_sport_types">Configure Sport Types</string>
     <string name="average_speed_range_format" translatable="false">%1$.1f .. %2$.1f %3$s</string>
@@ -1174,4 +1175,5 @@
     <string name="strava_disconnected_status">You are not connected to Strava</string>
     <string name="strava_disconnect">Disconnect from Strava</string>
     <string name="strava_overall_rank_description">Overall Rank #%1$d</string>
+    <string name="no_workouts_available">No workouts available</string>
 </resources>

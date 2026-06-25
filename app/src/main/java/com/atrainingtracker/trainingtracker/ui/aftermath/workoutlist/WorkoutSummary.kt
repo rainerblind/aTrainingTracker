@@ -140,7 +140,7 @@ fun WorkoutSummary(
         )
 
         // Final spacing at the bottom of the summary
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
     }
 }
 

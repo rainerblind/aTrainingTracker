@@ -80,7 +80,7 @@ fun WorkoutHeader(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, top = 8.dp, bottom = 8.dp, end = 4.dp),
+                    .padding(start = 12.dp, top = 12.dp, bottom = 12.dp, end = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 // 1. TOP ROW: Sport Icon and Workout Name

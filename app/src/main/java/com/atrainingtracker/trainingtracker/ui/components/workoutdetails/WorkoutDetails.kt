@@ -48,7 +48,7 @@ fun WorkoutDetails(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(16.dp),
+            .padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // --- Metrics Row: Time and Distance ---
