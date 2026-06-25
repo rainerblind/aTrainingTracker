@@ -38,6 +38,8 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.RouteSource
 import com.atrainingtracker.trainingtracker.database.RouteSummary
+import com.atrainingtracker.trainingtracker.ui.components.DeleteConfirmationDialog
+import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.map.PathPreviewMap
@@ -119,22 +121,11 @@ fun RouteItem(
 
         // Delete Confirmation Dialog
         if (confirmDeletion) {
-            AlertDialog(
-                onDismissRequest = { confirmDeletion = false },
-                containerColor = MaterialTheme.colorScheme.surface,
-                title = { Text(stringResource(R.string.delete)) },
-                text = { Text(stringResource(R.string.really_delete_format, summary.name)) },
-                confirmButton = {
-                    TextButton(onClick = {
-                        onDeleteConfirmed(summary.id)
-                        confirmDeletion = false
-                    }) {
-                        Text(stringResource(R.string.delete))
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { confirmDeletion = false }) { Text(stringResource(R.string.Cancel)) }
-                }
+            DeleteConfirmationDialog(
+                title = stringResource(R.string.delete),
+                message = stringResource(R.string.really_delete_format, summary.name),
+                onConfirm = { onDeleteConfirmed(summary.id) },
+                onDismiss = { confirmDeletion = false }
             )
         }
     }

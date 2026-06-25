@@ -240,21 +240,11 @@ fun EquipmentTabsScreen(
 
     // Delete Confirmation Dialog
     itemToDelete?.let { item ->
-        AlertDialog(
-            onDismissRequest = { itemToDelete = null },
-            title = { Text(stringResource(R.string.delete)) },
-            text = { Text(stringResource(R.string.really_delete_format, item.name)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.deleteEquipment(item)
-                    itemToDelete = null
-                }) {
-                    Text(stringResource(R.string.delete))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { itemToDelete = null }) { Text(stringResource(R.string.Cancel)) }
-            }
+        DeleteConfirmationDialog(
+            title = stringResource(R.string.delete),
+            message = stringResource(R.string.really_delete_format, item.name),
+            onConfirm = { viewModel.deleteEquipment(item) },
+            onDismiss = { itemToDelete = null }
         )
     }
 
