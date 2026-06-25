@@ -31,6 +31,8 @@ import com.atrainingtracker.trainingtracker.database.RouteWithPath
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
+import com.atrainingtracker.trainingtracker.ui.util.BaseMappableListViewModel
+import com.atrainingtracker.trainingtracker.ui.util.MappableSortOrder
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -41,14 +43,15 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 
-enum class RouteSortOrder(@StringRes val labelResId: Int) {
+enum class RouteSortOrder(@StringRes override val labelResId: Int) : MappableSortOrder {
     DISTANCE_TO_USER(R.string.sort_closest),
     TOTAL_ELEVATION_GAIN(R.string.sort_elevation_gain),
     ROUTE_DISTANCE(R.string.sort_length),
     NAME(R.string.sort_name)
 }
 
-class RoutesViewModel(application: Application) : AndroidViewModel(application) {
+class RoutesViewModel(application: Application) : 
+    BaseMappableListViewModel<RouteWithPath, RouteSortOrder>(application, RouteSortOrder.DISTANCE_TO_USER, RouteSortOrder.DISTANCE_TO_USER) {
     private val routesRepository = RoutesRepository.getInstance(application)
     private val banalServiceRepository = BANALServiceRepository.getInstance(application)
     private val segmentsRepository = SegmentsRepository.getInstance(application)
@@ -64,40 +67,7 @@ class RoutesViewModel(application: Application) : AndroidViewModel(application) 
         _syncStravaStatus.value = null
     }
 
-    private val _sortOrder = MutableStateFlow(RouteSortOrder.DISTANCE_TO_USER)
-    val sortOrder = _sortOrder.asStateFlow()
-
-    private var lastScrolledOrder: RouteSortOrder? = null
-
-    // Track if we already scrolled when location became available
-    private var lastLocationWasAvailable: Boolean = false
-
-    fun shouldScrollToTop(currentOrder: RouteSortOrder): Boolean {
-        val isLocationAvailableNow = isLocationAvailable.value
-
-        // Scenario A: The Sort Order itself changed
-        val orderChanged = lastScrolledOrder != currentOrder
-
-        // Scenario B: We are in DISTANCE mode and location just became available
-        val locationJustBecameAvailable = currentOrder == RouteSortOrder.DISTANCE_TO_USER &&
-                !lastLocationWasAvailable && isLocationAvailableNow
-
-        if (orderChanged || locationJustBecameAvailable) {
-            lastScrolledOrder = currentOrder
-            lastLocationWasAvailable = isLocationAvailableNow
-            return true
-        }
-
-        // Keep the location state in sync even if we don't scroll
-        lastLocationWasAvailable = isLocationAvailableNow
-        return false
-    }
-
-    fun setSortOrder(order: RouteSortOrder) {
-        _sortOrder.value = order
-    }
-
-    val isLocationAvailable: StateFlow<Boolean> = banalServiceRepository.currentLocation
+    override val isLocationAvailable: StateFlow<Boolean> = banalServiceRepository.currentLocation
         .map { it != null }
         .stateIn(
             scope = viewModelScope,
@@ -158,11 +128,6 @@ class RoutesViewModel(application: Application) : AndroidViewModel(application) 
         initialValue = emptyList()
     )
 
-    private fun calculateDistance(uLat: Double, uLon: Double, sLat: Double, sLon: Double): Float {
-        val results = FloatArray(1)
-        android.location.Location.distanceBetween(uLat, uLon, sLat, sLon, results)
-        return results[0]
-    }
 
 
 

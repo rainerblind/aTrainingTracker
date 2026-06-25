@@ -18,8 +18,10 @@
 
 package com.atrainingtracker.trainingtracker.ui.segments.segmentlist
 
+import android.app.Application
 import android.content.Context
 import androidx.annotation.StringRes
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -28,6 +30,8 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.segments.SegmentWithPath
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import com.atrainingtracker.trainingtracker.ui.util.BaseMappableListViewModel
+import com.atrainingtracker.trainingtracker.ui.util.MappableSortOrder
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -38,7 +42,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlin.text.lowercase
 
-enum class SegmentSortOrder(@StringRes val labelResId: Int) {
+enum class SegmentSortOrder(@StringRes override val labelResId: Int) : MappableSortOrder {
     DISTANCE_TO_USER(R.string.sort_closest),
     CLIMB_CATEGORY(R.string.sort_climb_category),
     TOTAL_ELEVATION_GAIN(R.string.sort_elevation_gain),
@@ -48,41 +52,14 @@ enum class SegmentSortOrder(@StringRes val labelResId: Int) {
 }
 
 class SegmentListViewModel(
+    application: Application,
     private val segmentsRepository: SegmentsRepository,
     private val banalServiceRepository: BANALServiceRepository
-) : ViewModel() {
-
-    private val _sortOrder = MutableStateFlow(SegmentSortOrder.DISTANCE_TO_USER)
-    val sortOrder = _sortOrder.asStateFlow()
+) : BaseMappableListViewModel<SegmentWithPath, SegmentSortOrder>(application, SegmentSortOrder.DISTANCE_TO_USER, SegmentSortOrder.DISTANCE_TO_USER) {
 
     val connectedToStrava = segmentsRepository.connectedToStrava
 
-    private var lastScrolledOrder: SegmentSortOrder? = null
-
-    private var lastLocationWasAvailable: Boolean = false
-
-    fun shouldScrollToTop(currentOrder: SegmentSortOrder): Boolean {
-        val isLocationAvailableNow = isLocationAvailable.value
-
-        // Scenario A: The Sort Order itself changed
-        val orderChanged = lastScrolledOrder != currentOrder
-
-        // Scenario B: We are in DISTANCE mode and location just became available
-        val locationJustBecameAvailable = currentOrder == SegmentSortOrder.DISTANCE_TO_USER &&
-                !lastLocationWasAvailable && isLocationAvailableNow
-
-        if (orderChanged || locationJustBecameAvailable) {
-            lastScrolledOrder = currentOrder
-            lastLocationWasAvailable = isLocationAvailableNow
-            return true
-        }
-
-        // Keep the location state in sync even if we don't scroll
-        lastLocationWasAvailable = isLocationAvailableNow
-        return false
-    }
-
-    val isLocationAvailable: StateFlow<Boolean> = banalServiceRepository.currentLocation
+    override val isLocationAvailable: StateFlow<Boolean> = banalServiceRepository.currentLocation
         .map { it != null }
         .stateIn(
             scope = viewModelScope,
@@ -149,15 +126,6 @@ class SegmentListViewModel(
         initialValue = emptyList()
     )
 
-    fun setSortOrder(order: SegmentSortOrder) {
-        _sortOrder.value = order
-    }
-
-    private fun calculateDistance(uLat: Double, uLon: Double, sLat: Double, sLon: Double): Float {
-        val results = FloatArray(1)
-        android.location.Location.distanceBetween(uLat, uLon, sLat, sLon, results)
-        return results[0]
-    }
 
     val refreshingSports: StateFlow<Set<BSportType>> = segmentsRepository.refreshingSports
 
@@ -167,7 +135,7 @@ class SegmentListViewModel(
         }
     }
 
-    class SegmentListViewModelFactory(context: Context) : ViewModelProvider.Factory {
+    class SegmentListViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
 
         private val segmentsRepository = SegmentsRepository.getInstance(context)
         private val banalServiceRepository = BANALServiceRepository.getInstance(context)
@@ -175,7 +143,7 @@ class SegmentListViewModel(
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(SegmentListViewModel::class.java)) {
                 @Suppress("UNCHECKED_CAST")
-                return SegmentListViewModel(segmentsRepository, banalServiceRepository) as T
+                return SegmentListViewModel(context.applicationContext as Application, segmentsRepository, banalServiceRepository) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }
