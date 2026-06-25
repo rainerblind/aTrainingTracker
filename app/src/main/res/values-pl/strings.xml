@@ -175,6 +175,7 @@
     <string name="accuracy_short">dokł.</string>
     <string name="ascent">wznios</string>
     <string name="ascent_short">wznios</string>
+    <string name="elevation">przewyższenie</string>
     <string name="bearing">namiar</string>
     <string name="bearing_short">namiar</string>
     <string name="altitude">wysokość</string>

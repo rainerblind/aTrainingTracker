@@ -244,6 +244,7 @@
     <string name="accuracy_short">acc.</string>
     <string name="ascent">ascent</string>
     <string name="ascent_short">ascent</string>
+    <string name="elevation">elevation</string>
     <string name="bearing">bearing</string>
     <string name="bearing_short">bearing</string>
     <string name="altitude">altitude</string>

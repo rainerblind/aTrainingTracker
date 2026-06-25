@@ -175,6 +175,7 @@
     <string name="accuracy_short">prec.</string>
     <string name="ascent">ascenso</string>
     <string name="ascent_short">ascenso</string>
+    <string name="elevation">desnivel</string>
     <string name="bearing">rumbo</string>
     <string name="bearing_short">rumbo</string>
     <string name="altitude">altitud</string>

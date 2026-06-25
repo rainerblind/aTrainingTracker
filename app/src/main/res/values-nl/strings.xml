@@ -175,6 +175,7 @@
     <string name="accuracy_short">nauwkeur.</string>
     <string name="ascent">stijging</string>
     <string name="ascent_short">stijging</string>
+    <string name="elevation">hoogtemeters</string>
     <string name="bearing">richting</string>
     <string name="bearing_short">richting</string>
     <string name="altitude">hoogte</string>

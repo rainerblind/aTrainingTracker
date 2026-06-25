@@ -51,6 +51,7 @@ Any AI assistant working on this project **must** follow these steps for every t
     *   Every proposed change **must** explicitly reference the Requirement ID, the Component affected, and the corresponding Test ID it fulfills.
     *   **MANDATORY HARD STOP**: The agent MUST present the full implementation plan to the user and ask for formal approval.
     *   **Iterative Refinement**: If the user provides feedback or asks for changes to the plan, the agent **MUST** update the plan and ask for approval again.
+    *   **Jira Synchronization**: Upon presentation of the plan to the user, the agent **MUST** also post the full text of the implementation plan as a comment on the corresponding Jira ticket.
     *   **Enforcement**: The agent is strictly FORBIDDEN from performing any code modifications (writing files or replacing content) until the user has explicitly responded with "Implementation Plan approved" or a similar clear confirmation of the *entire* plan.
 
 7.  **Execution & Multi-Stage Verification**:

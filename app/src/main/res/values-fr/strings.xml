@@ -175,6 +175,7 @@
     <string name="accuracy_short">préc.</string>
     <string name="ascent">ascension</string>
     <string name="ascent_short">D+</string>
+    <string name="elevation">dénivelé</string>
     <string name="bearing">relèvement</string>
     <string name="bearing_short">relèvement</string>
     <string name="altitude">altitude</string>

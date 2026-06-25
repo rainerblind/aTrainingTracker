@@ -175,6 +175,7 @@
     <string name="accuracy_short">精度</string>
     <string name="ascent">上昇</string>
     <string name="ascent_short">上昇</string>
+    <string name="elevation">獲得標高</string>
     <string name="bearing">方位</string>
     <string name="bearing_short">方位</string>
     <string name="altitude">高度</string>

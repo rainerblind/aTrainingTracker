@@ -118,7 +118,7 @@ private fun AltitudeRow(
                 )
                 Spacer(modifier = Modifier.width(5.dp))
                 Text(
-                    text = stringResource(R.string.altitude),
+                    text = stringResource(R.string.elevation),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

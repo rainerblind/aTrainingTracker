@@ -181,6 +181,7 @@
     <string name="accuracy_short">acc.</string>
     <string name="ascent">Anstieg</string>
     <string name="ascent_short">Hoch</string>
+    <string name="elevation">Höhenmeter</string>
     <string name="bearing">Richtung</string>
     <string name="bearing_short">Richtung</string>
     <string name="altitude">Höhe</string>
