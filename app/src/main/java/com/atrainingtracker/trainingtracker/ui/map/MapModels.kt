@@ -224,7 +224,8 @@ enum class MapZoomFocus {
     TRACK_AND_MARKERS,
     LOCAL_SEGMENTS,
     LOCAL_ROUTES,
-    FOLLOW_ME
+    FOLLOW_ME,
+    FIT_PRIMARY
 }
 
 /**

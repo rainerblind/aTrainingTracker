@@ -157,11 +157,8 @@ internal class MapContentScopeImpl(
 
     override fun contextualPaths(paths: List<MappablePath>) {
         paths.forEach { path ->
-            when (path) {
-                is MapTrack -> tracks.add(path)
-                is MapSegment -> segments.add(path)
-                is MapRoute -> routes.add(path)
-            }
+            // Background context is NOT added to the fitting lists (tracks, segments, routes)
+            // so that the MapBoundsController ignores them when calculating focus.
             composables.add {
                 val alpha = if (path.bSportType == bSportType) 0.3f else 0.1f
                 MappablePathLayer(

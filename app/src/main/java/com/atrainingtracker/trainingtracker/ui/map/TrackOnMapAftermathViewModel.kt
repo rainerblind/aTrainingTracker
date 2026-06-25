@@ -48,7 +48,7 @@ data class AftermathMapUIState(
     val routes: List<MapRoute> = emptyList(),
     val markers: List<LocationMarker> = emptyList(),
     val bSportType: BSportType = BSportType.UNKNOWN,
-    val zoomFocus: MapZoomFocus = MapZoomFocus.TRACK_AND_MARKERS
+    val zoomFocus: MapZoomFocus = MapZoomFocus.FIT_PRIMARY
 )
 
 class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(application) {
@@ -78,7 +78,7 @@ class TrackOnMapAftermathViewModel(application: Application) : AndroidViewModel(
             // Clear previous state so the user doesn't see "ghost" data from another workout
             withContext(Dispatchers.Main) {
                 _uiState.value = AftermathMapUIState(
-                    zoomFocus = MapZoomFocus.TRACK_AND_MARKERS,
+                    zoomFocus = MapZoomFocus.FIT_PRIMARY,
                     bSportType = bSportType,
                     tracks = emptyList(),
                     markers = emptyList()

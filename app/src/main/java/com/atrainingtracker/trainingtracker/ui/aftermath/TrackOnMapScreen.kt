@@ -75,7 +75,7 @@ fun TrackOnMapScreen(
 ) {
     MapDetailLayout(
         bSportType = workoutData.bSportType,
-        zoomFocus = MapZoomFocus.TRACK_AND_MARKERS,
+        zoomFocus = MapZoomFocus.FIT_PRIMARY,
         activeScrubPath = tracks.firstOrNull()?.path,
         minAltitudeOverride = workoutData.minAltitude,
         maxAltitudeOverride = workoutData.maxAltitude,

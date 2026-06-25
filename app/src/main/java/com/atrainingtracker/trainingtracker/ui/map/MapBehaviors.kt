@@ -19,7 +19,6 @@
 package com.atrainingtracker.trainingtracker.ui.map
 
 import android.content.Context
-import android.location.Location
 import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -53,7 +52,8 @@ fun MapBoundsController(
 
         if (zoomFocus == MapZoomFocus.TRACK_AND_MARKERS || 
             zoomFocus == MapZoomFocus.LOCAL_SEGMENTS || 
-            zoomFocus == MapZoomFocus.LOCAL_ROUTES) {
+            zoomFocus == MapZoomFocus.LOCAL_ROUTES ||
+            zoomFocus == MapZoomFocus.FIT_PRIMARY) {
             
             val userPos = currentLocation
             val builder = LatLngBounds.Builder()
@@ -63,7 +63,7 @@ fun MapBoundsController(
             fun isLocal(target: LatLng): Boolean {
                 if (userPos == null) return true
                 val results = FloatArray(1)
-                Location.distanceBetween(
+                android.location.Location.distanceBetween(
                     userPos.latitude, userPos.longitude,
                     target.latitude, target.longitude,
                     results
@@ -72,11 +72,20 @@ fun MapBoundsController(
             }
 
             when (zoomFocus) {
-                MapZoomFocus.TRACK_AND_MARKERS -> {
+                MapZoomFocus.TRACK_AND_MARKERS, MapZoomFocus.FIT_PRIMARY -> {
                     tracks.forEach { track ->
                         track.path.forEach { builder.include(it.latLng); hasPoints = true }
                     }
                     markers.forEach { marker -> builder.include(marker.position); hasPoints = true }
+                    
+                    if (zoomFocus == MapZoomFocus.FIT_PRIMARY) {
+                        segments.forEach { segment ->
+                            segment.path.forEach { builder.include(it.latLng); hasPoints = true }
+                        }
+                        routes.forEach { route ->
+                            route.path.forEach { builder.include(it.latLng); hasPoints = true }
+                        }
+                    }
                 }
                 MapZoomFocus.LOCAL_SEGMENTS -> {
                     segments.forEach { segment ->

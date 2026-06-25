@@ -61,7 +61,7 @@ fun SegmentOnMapScreen(
 
     MapDetailLayout(
         bSportType = bSportType,
-        zoomFocus = MapZoomFocus.LOCAL_SEGMENTS,
+        zoomFocus = MapZoomFocus.FIT_PRIMARY,
         activeScrubPath = segment?.path,
         header = {
             segmentSummary?.let {

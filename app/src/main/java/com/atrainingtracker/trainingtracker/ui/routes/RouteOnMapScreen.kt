@@ -61,7 +61,7 @@ fun RouteOnMapScreen(
 
     MapDetailLayout(
         bSportType = bSportType,
-        zoomFocus = MapZoomFocus.LOCAL_ROUTES,
+        zoomFocus = MapZoomFocus.FIT_PRIMARY,
         activeScrubPath = route?.path,
         header = {
             routeSummary?.let {
