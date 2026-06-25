@@ -149,7 +149,7 @@ fun RouteSummaryHeader(
                 }
 
                 if (summary.source == RouteSource.STRAVA) {
-                    PoweredByStrava()
+                    PoweredByStrava(height = 24.dp)
                 }
             }
         }

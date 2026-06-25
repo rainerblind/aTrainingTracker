@@ -53,6 +53,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.activities.GpxImportActivity
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
 import com.atrainingtracker.trainingtracker.ui.map.toMapRoute
+import com.atrainingtracker.trainingtracker.ui.map.toMapSegment
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 /**
@@ -141,22 +142,14 @@ class RoutesFragment : Fragment() {
                                     val sportSegments = remember(selectedRoute, allSegments) {
                                         allSegments
                                             .filter { it.summary.bSportType == selectedRoute.summary.bSportType }
-                                            .map { segment ->
-                                                MapSegment(
-                                                    stravaId = segment.summary.stravaId,
-                                                    name = segment.summary.name,
-                                                    path = segment.path,
-                                                    bSportType = segment.summary.bSportType,
-                                                    showStartAndFinishText = false
-                                                )
-                                            }
+                                            .map { it.toMapSegment(showStartAndFinishText = false) }
                                     }
 
                                     RouteOnMapScreen(
                                         route = selectedRoute.toMapRoute(),
                                         routeSummary = selectedRoute.summary,
                                         segments = sportSegments,
-                                        modifier = Modifier.statusBarsPadding(),
+                                        modifier = Modifier,
                                         onToggleSelection = { isSelected ->
                                             viewModel.toggleRouteSelection(
                                                 selectedRoute.summary.id,

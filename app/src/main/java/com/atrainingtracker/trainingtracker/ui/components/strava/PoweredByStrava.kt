@@ -36,7 +36,8 @@ import com.atrainingtracker.R
 @Composable
 fun PoweredByStrava(
     modifier: Modifier = Modifier,
-    useWhite: Boolean = false
+    useWhite: Boolean = false,
+    height: androidx.compose.ui.unit.Dp = 42.dp
 ) {
     val resId = if (useWhite) R.drawable.api_logo_pwrdby_strava_horiz_white 
                 else R.drawable.api_logo_pwrdby_strava_horiz_orange
@@ -49,7 +50,7 @@ fun PoweredByStrava(
             painter = painterResource(id = resId),
             contentDescription = "Powered by Strava",
             contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-            modifier = Modifier.height(40.dp).wrapContentWidth() // Increased from 32dp for even better visibility
+            modifier = Modifier.height(height).wrapContentWidth()
         )
     }
 }

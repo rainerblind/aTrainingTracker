@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
+import com.atrainingtracker.trainingtracker.segments.SegmentWithPath
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.LatLng
 
@@ -192,13 +193,26 @@ data class MapRoute(
  * into a Map-ready Route (MapRoute).
  */
 fun RouteWithPath.toMapRoute(): MapRoute {
-
     return MapRoute(
         id = this.summary.id,
         name = this.summary.name,
         isSelected = this.summary.isSelected,
         path = this.path,
         bSportType = this.summary.bSportType
+    )
+}
+
+/**
+ * Extension function to convert a Database Segment (SegmentWithPath)
+ * into a Map-ready Segment (MapSegment).
+ */
+fun SegmentWithPath.toMapSegment(showStartAndFinishText: Boolean = true): MapSegment {
+    return MapSegment(
+        stravaId = this.summary.stravaId,
+        name = this.summary.name,
+        bSportType = this.summary.bSportType,
+        path = this.path,
+        showStartAndFinishText = showStartAndFinishText
     )
 }
 

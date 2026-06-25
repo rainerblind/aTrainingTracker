@@ -41,6 +41,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.fragments.preferences.StravaUploadFragment
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
+import com.atrainingtracker.trainingtracker.ui.map.toMapSegment
 import com.atrainingtracker.trainingtracker.ui.segments.SegmentOnMapScreen
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
@@ -104,14 +105,8 @@ class StarredSegmentsFragment : Fragment() {
 
                             SegmentOnMapScreen(
                                 segmentSummary = selectedSegment.summary,
-                                segment = MapSegment(
-                                    stravaId = selectedSegment.summary.stravaId,
-                                    name = selectedSegment.summary.name,
-                                    bSportType = selectedSegment.summary.bSportType,
-                                    path = selectedSegment.path,
-                                    showStartAndFinishText = false
-                                ),
-                                modifier = Modifier.statusBarsPadding()
+                                segment = selectedSegment.toMapSegment(showStartAndFinishText = false),
+                                modifier = Modifier
                             )
 
                             // Handle Back Press to return to list
