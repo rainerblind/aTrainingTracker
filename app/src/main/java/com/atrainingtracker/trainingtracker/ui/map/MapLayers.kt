@@ -52,13 +52,15 @@ fun MappablePathLayer(
     onPathClick: (Long) -> Unit = {}
 ) {
     // 1. Core Path Rendering (Handles both Solid and X-Ray styles)
+    // Only apply the X-Ray pattern if the path is primary (alpha = 1.0)
+    // to avoid visual artifacts with overlapping transparent layers.
     XRayPolyline(
         points = path.latLngs,
         color = path.color.copy(alpha = alpha),
         width = path.width,
         baseZIndex = path.zIndex,
         overlayZIndex = path.overlayZIndex ?: path.zIndex,
-        pattern = path.pattern,
+        pattern = if (alpha >= 1.0f) path.pattern else null,
         clickable = true,
         onClick = { onPathClick(path.id) }
     )

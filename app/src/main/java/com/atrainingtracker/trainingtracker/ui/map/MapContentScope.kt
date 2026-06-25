@@ -44,8 +44,13 @@ interface MapContentScope {
     
     /**
      * Renders a list of background paths (context) with tiered alpha based on sport type.
+     * Contextual paths are ignored by automated bounds fitting.
      */
-    fun contextualPaths(paths: List<MappablePath>)
+    fun contextualPaths(
+        paths: List<MappablePath>,
+        sameSportAlpha: Float = 0.5f,
+        otherSportAlpha: Float = 0.2f
+    )
 
     fun markers(markers: List<LocationMarker>)
     fun liveTrack(path: List<LatLng>)
@@ -155,12 +160,16 @@ internal class MapContentScopeImpl(
         }
     }
 
-    override fun contextualPaths(paths: List<MappablePath>) {
+    override fun contextualPaths(
+        paths: List<MappablePath>,
+        sameSportAlpha: Float,
+        otherSportAlpha: Float
+    ) {
         paths.forEach { path ->
             // Background context is NOT added to the fitting lists (tracks, segments, routes)
             // so that the MapBoundsController ignores them when calculating focus.
             composables.add {
-                val alpha = if (path.bSportType == bSportType) 0.3f else 0.1f
+                val alpha = if (path.bSportType == bSportType) sameSportAlpha else otherSportAlpha
                 MappablePathLayer(
                     path = path,
                     alpha = alpha,

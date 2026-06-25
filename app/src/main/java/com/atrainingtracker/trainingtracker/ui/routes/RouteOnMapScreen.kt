@@ -75,7 +75,7 @@ fun RouteOnMapScreen(
         },
         mapContent = {
             if (route != null) routes(listOf(route))
-            contextualPaths(backgroundPaths)
+            contextualPaths(backgroundPaths, sameSportAlpha = 0.7f)
         },
         modifier = modifier
     )
