@@ -55,6 +55,8 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-LOG-002** | **Logic** | `REQ-UI-011` | Verify that for a running activity, both Speed and Pace rows are generated from the single Speed data source. | Verified |
 | **TST-MAN-001** | **General** | All other `REQ` | Ad-hoc functional testing on a physical device. | Feature performs according to the rationale defined in requirements. |
 
+| **TST-STP-001** | **Localization** | `REQ-STP-001` | Review generated markdown files in `docs/store_presence/`. Verify that Title, Short Description ("The serious athlete's tracking cockpit with ANT+, BLE, Strava & live segments."), and Full Description are correctly translated and adhere to Google Play character limits (Title: 30, Short: 80). | Verified |
+
 ## 3. Structural & Compliance Checks
 
 | Test ID | Focus | Requirement ID(s) | Method |
