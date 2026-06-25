@@ -83,8 +83,6 @@ fun TrackOnMapScreen(
             WorkoutHeader(
                 modifier = modifier,
                 data = workoutData.headerData,
-                backgroundColor = MaterialTheme.colorScheme.surface,
-                textColor = MaterialTheme.colorScheme.onSurface,
                 menuEnabled = false,
                 onClicked = { },
                 onExport = { },

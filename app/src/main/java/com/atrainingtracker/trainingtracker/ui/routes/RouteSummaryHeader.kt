@@ -52,10 +52,9 @@ fun RouteSummaryHeader(
     showSwitch: Boolean = true,
     switchScale: Float = 0.7f
 ) {
-    Card(
+    Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RectangleShape, //RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        color = Color.Transparent
     ) {
         Column(
             modifier = Modifier

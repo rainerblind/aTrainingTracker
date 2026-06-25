@@ -43,10 +43,14 @@ fun SegmentHeader(
     liveSegmentStatus: LiveSegmentStatus? = null,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    Surface(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        color = Color.Transparent
     ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
         // --- TOP ROW: Sport Icon and Name ---
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -123,6 +127,7 @@ fun SegmentHeader(
                         fontWeight = FontWeight.Bold
                     )
                 }
+            }
             }
         }
     }

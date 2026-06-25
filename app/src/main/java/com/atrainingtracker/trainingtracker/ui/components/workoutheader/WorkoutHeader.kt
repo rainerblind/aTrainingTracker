@@ -55,8 +55,6 @@ fun WorkoutHeader(
     onSaveAsRoute: () -> Unit,
     onDeleteRequest: () -> Unit,
     modifier: Modifier = Modifier,
-    backgroundColor: Color = Color.Transparent,
-    textColor: Color = MaterialTheme.colorScheme.onSurface,
     menuEnabled: Boolean = true
 ) {
     // State to control menu visibility
@@ -74,8 +72,7 @@ fun WorkoutHeader(
         else {
             modifier.fillMaxWidth()
         },
-        color = backgroundColor,
-        contentColor = textColor
+        color = Color.Transparent
     ) {
         // Box allows us to place the Menu Button at the absolute top-right
         Box(modifier = Modifier.fillMaxWidth()) {

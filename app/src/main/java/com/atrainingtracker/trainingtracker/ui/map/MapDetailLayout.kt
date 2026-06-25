@@ -70,7 +70,8 @@ fun MapDetailLayout(
 
         // 1. HEADER (Slotted)
         Surface(
-            color = MaterialTheme.colorScheme.primaryContainer,
+            color = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface,
             shape = RectangleShape,
             modifier = Modifier.statusBarsPadding()
         ) {
