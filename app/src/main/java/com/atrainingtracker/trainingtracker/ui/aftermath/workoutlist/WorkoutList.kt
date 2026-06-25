@@ -24,6 +24,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -31,9 +33,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.trainingtracker.ui.components.EmptyStatePlaceholder
 
 /**
  * The scrollable list of WorkoutSummaries.
@@ -89,8 +94,7 @@ fun WorkoutList(
                         onDeleteRequest = { onDeleteRequest(workoutData.id) },
                         modifier = Modifier.fillMaxWidth()
                     )
-                }
-                else {
+                } else {
                     WorkoutSummary(
                         workoutData = workoutData,
                         isPlayServiceAvailable = isPlayServiceAvailable,
