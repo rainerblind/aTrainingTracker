@@ -39,6 +39,7 @@ import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.trainingtracker.database.RouteSource
 import com.atrainingtracker.trainingtracker.database.RouteSummary
+import com.atrainingtracker.trainingtracker.ui.components.MetricItem
 import com.atrainingtracker.trainingtracker.ui.components.strava.PoweredByStrava
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.RouteColorSelected
@@ -132,37 +133,17 @@ fun RouteSummaryHeader(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Distance Group
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_distance),
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = DistanceFormatter().format_with_units(summary.distance),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
+                    MetricItem(
+                        iconRes = R.drawable.ic_distance,
+                        value = DistanceFormatter().format_with_units(summary.distance),
+                        isPrimary = true
+                    )
 
-                    // Elevation Group
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_ascent),
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = AltitudeFormatter().format_with_units(summary.elevationGain),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
+                    MetricItem(
+                        iconRes = R.drawable.ic_ascent,
+                        value = AltitudeFormatter().format_with_units(summary.elevationGain),
+                        isPrimary = true
+                    )
                 }
 
                 if (summary.source == RouteSource.STRAVA) {
