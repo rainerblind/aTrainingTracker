@@ -325,6 +325,12 @@ class BANALServiceRepository private constructor(context: Context) {
         }
     }
 
+    fun clearBreadcrumbs() {
+        if (DEBUG) Log.i(TAG, "clearBreadcrumbs()")
+        _currentTrack.value = emptyList()
+        _currentPathPoints.value = emptyList()
+    }
+
     // --- Helper methods to communicate with BANALService via Binder ---
 
     fun createFilter(filterData: FilterData) {

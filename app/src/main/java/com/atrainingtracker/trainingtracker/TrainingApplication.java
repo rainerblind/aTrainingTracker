@@ -56,6 +56,7 @@ import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation;
 import com.atrainingtracker.trainingtracker.exporter.FileFormat;
+import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository;
 import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleService;
 import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleServiceBuildIn;
 import com.atrainingtracker.trainingtracker.smartwatch.pebble.Watchapp;
@@ -964,6 +965,7 @@ public class TrainingApplication extends Application {
         if (!cResumeFromCrash) {
             sendBroadcast(new Intent(BANALService.RESET_ACCUMULATORS_INTENT)
                     .setPackage(getPackageName()));
+            BANALServiceRepository.Companion.getInstance(this).clearBreadcrumbs();
         }
 
         if (startSearchWhenTrackingStarts()) {
