@@ -336,23 +336,14 @@ fun EquipmentItem(
     }
 
     Box {
-        ElevatedCard(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 4.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.elevatedCardColors(
-                containerColor = MaterialTheme.colorScheme.surface
-            ),
-            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
+        MappableListItem(
+            modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
+            onClick = { onConfigClick(item) },
+            onLongClick = { showMenu = true }
         ) {
             // ZONE 1: CONFIGURATION (Top part)
             Column(modifier = Modifier
                 .fillMaxWidth()
-                .combinedClickable(
-                    onClick = { onConfigClick(item) },
-                    onLongClick = { showMenu = true }
-                )
                 .padding(16.dp)
             ) {
                 // Header Row

@@ -39,11 +39,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.sensor.SensorType
-import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter
-import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
-import com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter
-import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
+import com.atrainingtracker.trainingtracker.ui.components.MetricItem
+import com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter
 
 @Composable
 fun WorkoutSummaryCompact(
@@ -57,24 +56,14 @@ fun WorkoutSummaryCompact(
 
     var showContextMenu by remember { mutableStateOf(false) }
 
-    val df = DistanceFormatter()
-    val tf = TimeFormatter()
-    val sf = SpeedFormatter()
-    val af = AltitudeFormatter()
+    val formatters = LocalMetricFormatter.current
 
     Box {
-        ElevatedCard(
-            modifier = modifier
-                .fillMaxWidth()
-                .graphicsLayer(alpha = contentAlpha)
-                .combinedClickable(
-                    onClick = onEditWorkout,
-                    onLongClick = { showContextMenu = true }
-                ),
-            colors = CardDefaults.elevatedCardColors(
-                containerColor = MaterialTheme.colorScheme.surface
-            ),
-            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+        MappableListItem(
+            modifier = modifier,
+            onClick = onEditWorkout,
+            onLongClick = { showContextMenu = true },
+            alpha = contentAlpha
         ) {
             Column(
                 modifier = Modifier
@@ -149,25 +138,25 @@ fun WorkoutSummaryCompact(
                     // Active Time
                     CompactMetricItem(
                         label = stringResource(SensorType.TIME_ACTIVE.fullNameId),
-                        value = tf.format_with_units(workoutData.detailsData.activeTimeSec)
+                        value = formatters.time.format_with_units(workoutData.detailsData.activeTimeSec)
                     )
 
                     // Distance
                     CompactMetricItem(
                         label = stringResource(SensorType.DISTANCE_m.fullNameId),
-                        value = df.format_with_units(workoutData.detailsData.totalDistance)
+                        value = formatters.distance.format_with_units(workoutData.detailsData.totalDistance)
                     )
 
                     // Speed/Pace
                     CompactMetricItem(
                         label = "Ø " + stringResource(SensorType.SPEED_mps.fullNameId),
-                        value = sf.format_with_units(workoutData.detailsData.avgSpeedMps)
+                        value = formatters.speed.format_with_units(workoutData.detailsData.avgSpeedMps)
                     )
 
                     // Ascent
                     CompactMetricItem(
                         label = stringResource(SensorType.ASCENT.fullNameId),
-                        value = af.format_with_units(workoutData.ascentMeters)
+                        value = formatters.altitude.format_with_units(workoutData.ascentMeters)
                     )
                 }
             }

@@ -37,8 +37,9 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatus
+import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
 import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.WorkoutDescription
-import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.*
+import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetails
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.WorkoutExtrema
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeader
 import com.atrainingtracker.trainingtracker.ui.components.strava.StravaActivitySection
@@ -73,17 +74,10 @@ fun WorkoutSummary(
     }
     // TODO: Add functionality to show more detailed stats when clicking on the WorkoutDetails or Extrema Values.
 
-    ElevatedCard(
-        modifier = modifier.fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface)
-            // Apply the alpha to the entire summary container
-            .graphicsLayer(alpha = contentAlpha),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surface // This is your Color.White
-        ),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+    MappableListItem(
+        alpha = contentAlpha,
+        modifier = modifier
     ) {
-
         // 1. Header
         WorkoutHeader(
             data = workoutData.headerData,

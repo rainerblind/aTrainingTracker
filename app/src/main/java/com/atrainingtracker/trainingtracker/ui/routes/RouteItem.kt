@@ -57,14 +57,8 @@ fun RouteItem(
     var showContextMenu by remember { mutableStateOf(false) }
     var confirmDeletion by remember { mutableStateOf(false) }
 
-    ElevatedCard(
-        modifier = modifier
-            .fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
+    MappableListItem(
+        modifier = modifier,
         onClick = { onMapClick(summary.id) }
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
