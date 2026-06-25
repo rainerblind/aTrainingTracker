@@ -42,6 +42,8 @@ fun SegmentDetails(
     modifier: Modifier = Modifier,
     showStravaLogo: Boolean = true
 ) {
+    val formatters = com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter.current
+
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -54,7 +56,7 @@ fun SegmentDetails(
         ) {
             MetricItem(
                 iconRes = R.drawable.ic_distance,
-                value = summary.distance,
+                value = formatters.distance.format_with_units(summary.distance_raw),
                 isPrimary = true
             )
             if (showStravaLogo) {
@@ -81,13 +83,19 @@ fun SegmentDetails(
         Row(verticalAlignment = Alignment.CenterVertically) {
             MetricItem(
                 iconRes = R.drawable.ic_altitude,
-                value = summary.elevationGain,
+                value = formatters.altitude.format_with_units(summary.elevationGain_raw),
                 isPrimary = true
             )
             VerticalDivider()
-            MetricItem(R.drawable.ic_altitude_min, summary.elevationMin)
+            MetricItem(
+                iconRes = R.drawable.ic_altitude_min,
+                value = summary.elevationMin
+            )
             VerticalDivider()
-            MetricItem(R.drawable.ic_altitude_max, summary.elevationMax)
+            MetricItem(
+                iconRes = R.drawable.ic_altitude_max,
+                value = summary.elevationMax
+            )
         }
     }
 }

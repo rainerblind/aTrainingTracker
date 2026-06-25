@@ -53,6 +53,8 @@ fun RouteSummaryHeader(
     showSwitch: Boolean = true,
     switchScale: Float = 0.7f
 ) {
+    val formatters = com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter.current
+
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = Color.Transparent
@@ -135,13 +137,13 @@ fun RouteSummaryHeader(
                 ) {
                     MetricItem(
                         iconRes = R.drawable.ic_distance,
-                        value = DistanceFormatter().format_with_units(summary.distance),
+                        value = formatters.distance.format_with_units(summary.distance),
                         isPrimary = true
                     )
 
                     MetricItem(
                         iconRes = R.drawable.ic_ascent,
-                        value = AltitudeFormatter().format_with_units(summary.elevationGain),
+                        value = formatters.altitude.format_with_units(summary.elevationGain),
                         isPrimary = true
                     )
                 }

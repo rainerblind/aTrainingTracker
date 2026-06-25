@@ -43,8 +43,7 @@ fun WorkoutDetails(
     data: WorkoutDetailsData,
     modifier: Modifier = Modifier
 ) {
-    val distanceFormatter = DistanceFormatter()
-    val timeFormatter = TimeFormatter()
+    val formatters = com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter.current
 
     Column(
         modifier = modifier
@@ -61,8 +60,8 @@ fun WorkoutDetails(
             MetricItem(
                 iconRes = R.drawable.ic_time_active,
                 label = stringResource(R.string.time_active),
-                value = timeFormatter.format(data.activeTimeSec),
-                secondaryValue = stringResource(R.string.total_time_format, timeFormatter.format(data.totalTimeSec)),
+                value = formatters.time.format(data.activeTimeSec),
+                secondaryValue = stringResource(R.string.total_time_format, formatters.time.format(data.totalTimeSec)),
                 layout = MetricLayout.VERTICAL,
                 isPrimary = true,
                 iconSize = 28.dp,
@@ -71,14 +70,14 @@ fun WorkoutDetails(
 
             // 2. Distance
             val maxDispString = if (data.maxDisplacement != null) {
-                val maxDispFormatted = distanceFormatter.format_with_units(data.maxDisplacement)
+                val maxDispFormatted = formatters.distance.format_with_units(data.maxDisplacement)
                 stringResource(R.string.format_max_displacement, maxDispFormatted)
             } else null
 
             MetricItem(
                 iconRes = R.drawable.ic_distance,
                 label = stringResource(R.string.distance),
-                value = distanceFormatter.format_with_units(data.totalDistance),
+                value = formatters.distance.format_with_units(data.totalDistance),
                 secondaryValue = maxDispString,
                 layout = MetricLayout.VERTICAL,
                 isPrimary = true,
@@ -102,7 +101,7 @@ private fun AltitudeRow(
     descentMeters: Long,
     modifier: Modifier = Modifier,
 ){
-    val altitudeFormatter = AltitudeFormatter()
+    val formatters = com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter.current
 
     if (ascentMeters > 0 || descentMeters > 0) {
         Row(
@@ -130,14 +129,14 @@ private fun AltitudeRow(
                     MetricItem(
                         iconRes = R.drawable.ic_ascent,
                         label = stringResource(R.string.ascent_short),
-                        value = altitudeFormatter.format_with_units(ascentMeters),
+                        value = formatters.altitude.format_with_units(ascentMeters),
                         layout = MetricLayout.VERTICAL,
                         modifier = Modifier.weight(1f)
                     )
                     MetricItem(
                         iconRes = R.drawable.ic_descent,
                         label = stringResource(R.string.descent_short),
-                        value = altitudeFormatter.format_with_units(descentMeters),
+                        value = formatters.altitude.format_with_units(descentMeters),
                         layout = MetricLayout.VERTICAL,
                         modifier = Modifier.weight(1f)
                     )
