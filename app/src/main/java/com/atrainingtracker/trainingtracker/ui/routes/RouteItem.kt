@@ -65,20 +65,17 @@ fun RouteItem(
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             // 1. TOP: Route Summary Header (Title, Source, Metrics, Sport Icon, Switch)
-            Box(modifier = Modifier
-                .fillMaxWidth()
-                .combinedClickable(
-                    onClick = { onHeaderClick(summary.id) },
-                    onLongClick = { showContextMenu = true }
-                )
-                .padding(4.dp)
-            ) {
-                RouteSummaryHeader(
-                    summary = summary,
-                    onToggleSelection = { onToggleSelection(summary.id, it) },
-                    switchScale = 0.6f
-                )
-            }
+            RouteSummaryHeader(
+                summary = summary,
+                onToggleSelection = { onToggleSelection(summary.id, it) },
+                switchScale = 0.6f,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .combinedClickable(
+                        onClick = { onHeaderClick(summary.id) },
+                        onLongClick = { showContextMenu = true }
+                    )
+            )
 
             // 2. MIDDLE: Map Preview
             // We use height(200.dp) to give the route map more prominence than the small segment square

@@ -55,119 +55,107 @@ fun RouteSummaryHeader(
 ) {
     val formatters = com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter.current
 
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        color = Color.Transparent
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(4.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(4.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
+        // --- TOP ROW: Sport Icon and Route Name ---
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // --- TOP ROW: Sport Icon and Route Name ---
-            Row(
-                modifier = Modifier.height(32.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Icon(
-                    painter = painterResource(id = summary.bSportType.iconResId),
-                    contentDescription = null,
-                    modifier = Modifier.size(32.dp),
-                    tint = Color.Unspecified // Original color
-                )
-                Text(
-                    text = summary.name,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
-            }
+            Icon(
+                painter = painterResource(id = summary.bSportType.iconResId),
+                contentDescription = null,
+                modifier = Modifier.size(32.dp),
+                tint = Color.Unspecified // Original color
+            )
+            Text(
+                text = summary.name,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+        }
 
-            // --- SECOND ROW: Source and Visibility Switch ---
-            Row(
-                modifier = Modifier.fillMaxWidth().height(24.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = stringResource(R.string.routes_source_label, stringResource(summary.source.displayNameResId)),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f)
-                )
+        // --- SECOND ROW: Source and Visibility Switch ---
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = stringResource(R.string.routes_source_label, stringResource(summary.source.displayNameResId)),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f)
+            )
 
-                if (showSwitch) {
-                    // Wrap Switch in a Box with constrained height to prevent it from 
-                    // pushing the rows apart (M3 Switch defaults to 48dp touch target)
-                    Box(
-                        modifier = Modifier.height(24.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Switch(
-                            modifier = Modifier.scale(switchScale),
-                            checked = summary.isSelected,
-                            onCheckedChange = onToggleSelection,
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = RouteColorSelected,
-                                checkedTrackColor = RouteColorSelected.copy(alpha = 0.5f),
-                                checkedBorderColor = RouteColorSelected,
-                                uncheckedThumbColor = RouteColorUnselected,
-                                uncheckedTrackColor = RouteColorUnselected.copy(alpha = 0.5f),
-                                uncheckedBorderColor = RouteColorUnselected
-                            )
-                        )
-                    }
-                }
-            }
-
-            // --- THIRD ROW: Metrics and Mandatory Branding ---
-            Row(
-                modifier = Modifier.fillMaxWidth().height(24.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    MetricItem(
-                        iconRes = R.drawable.ic_distance,
-                        value = formatters.distance.format_with_units(summary.distance),
-                        isPrimary = true
+            if (showSwitch) {
+                Switch(
+                    modifier = Modifier.scale(switchScale),
+                    checked = summary.isSelected,
+                    onCheckedChange = onToggleSelection,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = RouteColorSelected,
+                        checkedTrackColor = RouteColorSelected.copy(alpha = 0.5f),
+                        checkedBorderColor = RouteColorSelected,
+                        uncheckedThumbColor = RouteColorUnselected,
+                        uncheckedTrackColor = RouteColorUnselected.copy(alpha = 0.5f),
+                        uncheckedBorderColor = RouteColorUnselected
                     )
-
-                    MetricItem(
-                        iconRes = R.drawable.ic_ascent,
-                        value = formatters.altitude.format_with_units(summary.elevationGain),
-                        isPrimary = true
-                    )
-                }
-
-                if (summary.source == RouteSource.STRAVA) {
-                    PoweredByStrava(height = 24.dp)
-                }
-            }
-
-            // Add the description if it is not empty
-            if (summary.description.isNotEmpty()) {
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                    thickness = 0.5.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant
-                )
-                Text(
-                    text = summary.description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(4.dp)
                 )
             }
+        }
+
+        // --- THIRD ROW: Metrics and Mandatory Branding ---
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                MetricItem(
+                    iconRes = R.drawable.ic_distance,
+                    value = formatters.distance.format_with_units(summary.distance),
+                    isPrimary = true
+                )
+
+                MetricItem(
+                    iconRes = R.drawable.ic_ascent,
+                    value = formatters.altitude.format_with_units(summary.elevationGain),
+                    isPrimary = true
+                )
+            }
+
+            if (summary.source == RouteSource.STRAVA) {
+                PoweredByStrava(height = 24.dp)
+            }
+        }
+
+        // Add the description if it is not empty
+        if (summary.description.isNotEmpty()) {
+            HorizontalDivider(
+                modifier = Modifier.padding(top = 4.dp),
+                thickness = 0.5.dp,
+                color = MaterialTheme.colorScheme.outlineVariant
+            )
+            Text(
+                text = summary.description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(horizontal = 4.dp)
+            )
         }
     }
 }
