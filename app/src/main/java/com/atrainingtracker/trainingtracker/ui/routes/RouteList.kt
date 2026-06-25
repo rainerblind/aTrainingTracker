@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -30,9 +31,15 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
+import com.atrainingtracker.trainingtracker.ui.components.EmptyStatePlaceholder
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Route
+import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun RouteList(
@@ -51,7 +58,17 @@ fun RouteList(
     val bottomPadding = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
 
     if (routes.isEmpty()) {
-        EmptyRoutesPlaceholder(bSportType = bSportType)
+        val context = LocalContext.current
+        EmptyStatePlaceholder(
+            modifier = Modifier.padding(top = topPadding),
+            icon = Icons.Default.Route,
+            message = if (bSportType != null) {
+                stringResource(R.string.no_routes_available, bSportType.getName(context))
+            } else {
+                stringResource(R.string.absolutely_no_routes_available)
+            },
+            hint = stringResource(R.string.routes_import_hint)
+        )
     }
     else {
 

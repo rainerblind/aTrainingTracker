@@ -52,6 +52,9 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
+import com.atrainingtracker.trainingtracker.ui.components.EmptyStatePlaceholder
+import com.atrainingtracker.trainingtracker.ui.components.DeleteConfirmationDialog
 import com.atrainingtracker.trainingtracker.ui.components.stats.RichStatsSheet
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsSummaryBlock
@@ -273,12 +276,11 @@ fun EquipmentList(
     val topPadding = with(density) { (headerHeightPx + appBarOffsetPx).toDp() }
 
     if (items.isEmpty()) {
-        Box(modifier = Modifier
-            .fillMaxSize()
-            .padding(top = topPadding + 16.dp),
-            contentAlignment = Alignment.Center) {
-            Text(emptyMessage, style = MaterialTheme.typography.headlineSmall)
-        }
+        EmptyStatePlaceholder(
+            modifier = Modifier.padding(top = topPadding + 16.dp),
+            iconRes = if (emptyMessage == stringResource(R.string.equipment_no_bikes)) R.drawable.ic_equipment_bike else R.drawable.ic_equipment_shoe,
+            message = emptyMessage
+        )
     } else {
         val bottomPadding = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
 

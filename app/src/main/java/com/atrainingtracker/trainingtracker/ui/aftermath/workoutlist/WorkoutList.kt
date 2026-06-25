@@ -57,31 +57,30 @@ fun WorkoutList(
     val density = LocalDensity.current
     val bottomPadding = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
 
-    LazyColumn(
-        state = scrollState,
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(
-            // Calculation: The initial header height (px) + the current offset (px)
-            // convert the final result to Dp.
-            top = with(density) { (headerHeightPx + appBarOffsetPx).toDp() + 8.dp },
-            bottom = bottomPadding + 16.dp,
-            start = 8.dp,
-            end = 8.dp
-        ),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        items(
-            items = workouts,
-            key = { it.id }
-        ) { workoutData ->
-            ElevatedCard(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.elevatedCardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
-            ) {
+    if (workouts.isEmpty()) {
+        EmptyStatePlaceholder(
+            modifier = Modifier.padding(top = topPadding),
+            icon = Icons.Default.History,
+            message = stringResource(R.string.no_workouts_available)
+        )
+    } else {
+        LazyColumn(
+            state = scrollState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                // Calculation: The initial header height (px) + the current offset (px)
+                // convert the final result to Dp.
+                top = topPadding + 8.dp,
+                bottom = bottomPadding + 16.dp,
+                start = 8.dp,
+                end = 8.dp
+            ),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(
+                items = workouts,
+                key = { it.id }
+            ) { workoutData ->
                 if (isCompactView) {
                     WorkoutSummaryCompact(
                         workoutData = workoutData,
