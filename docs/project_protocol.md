@@ -63,12 +63,12 @@ Any AI assistant working on this project **must** follow these steps for every t
 8.  **Final Documentation & Release (SWE.6)**:
     *   **Pass/Fail Recording**: Document verification evidence in Jira using the following format:
         > **Verification Result: PASS**
-        > - **Test ID**: TST-UNT-001
-        > - **Scope**: SWE.4 Unit Verification
-        > - **Artifact**: [Link to log/screenshot]
+        > * **Test ID**: TST-UNT-001
+        > * **Scope**: SWE.4 Unit Verification
+        > * **Artifact**: [Link to log/screenshot]
     *   Update the `Status` in `docs/requirements.md` to `Verified`.
     *   Update the `walkthrough.artifact.md` with a summary of the fulfilled requirements.
-    *   **Git Commit Message**: Provide a clear, comprehensive commit message for the changes, following the Conventional Commits standard.
+    *   **Git Commit Message**: Provide a clear, comprehensive commit message for the changes, following the Conventional Commits standard. Use the `*` symbol for bullet points within the commit body (avoiding dots or dashes) to ensure clean formatting and copy-paste compatibility.
 
 9.  **Post-Implementation Review**:
     *   **MANDATORY FINAL STEP**: Before concluding the task, the agent MUST review the newly implemented logic against the requirements and tests defined in Steps 1 and 2.
