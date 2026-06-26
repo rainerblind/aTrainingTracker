@@ -100,6 +100,7 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-UI-017** | Standardized list items and placeholders. | Harmonize the "look and feel" of all list views. | `MappableListItem.kt`, `EmptyStatePlaceholder.kt` | `TST-STR-008` | Verified |
 | **REQ-UI-018** | Refined Elevation Terminology. | Distinguish between absolute altitude ("Altitude"/"Höhe") and relative gain ("Elevation"/"Höhenmeter") in all languages. | `WorkoutDetails.kt`, `strings.xml` | `TST-UI-028` | Verified |
 | **REQ-UI-020** | Consistent Vertical Metric Representation. | Provide a harmonized technical representation of elevation data across all list items using standardized icons and visual lead-ins. | `WorkoutDetails.kt`, `SegmentDetails.kt` | `TST-UI-030` | Verified |
+| **REQ-UI-021** | Improved Elevation Section Labeling. | Position the descriptive elevation text above the mountain symbol in the Workout Summary to improve visual hierarchy. | `WorkoutDetails.kt` | `TST-UI-031` | Verified |
 | **REQ-EXP-004** | Automated email export with attachments. | Simple, reliable backup and sharing. | `ExportManager.java` | `TST-MAN-001` | Verified |
 | **REQ-EXP-005** | Exponential backoff for Strava uploads. | Robust sync even with API issues. | `StravaUploader.kt` | `TST-STR-001` | Verified |
 

@@ -109,18 +109,18 @@ private fun AltitudeRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
+                Text(
+                    text = stringResource(R.string.elevation),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(4.dp))
                 Icon(
                     painter = painterResource(id = R.drawable.ic_altitude),
                     contentDescription = null,
                     modifier = Modifier
                         .size(24.dp), // Slightly smaller than Time/Distance (28dp)
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = stringResource(R.string.elevation),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Spacer(modifier = Modifier.width(20.dp))

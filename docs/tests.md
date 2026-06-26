@@ -52,6 +52,7 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-UI-028** | **Localization** | `REQ-UI-018` | Inspect Workout Summary in various languages. Verify Ascent/Descent uses relative terminology (e.g., "Höhenmeter", "Elevation") and Min/Max uses absolute terminology (e.g., "Höhe", "Altitude"). | Correct linguistic distinction across all supported languages. |
 | **TST-UI-029** | **Session Isolation** | `REQ-UI-009` | 1. Start a workout, move, stop workout. 2. Immediately start a new workout. 3. Verify Map and Elevation Profile are empty at start. | Verified |
 | **TST-UI-030** | **Metric Consistency**| `REQ-UI-020` | Audit Workout and Segment items. Verify \"Gain\" uses `ic_ascent` in both. Verify \"Elevation\" label in Workout is bottom-aligned with values. Verify all icons/text share a consistent baseline. | Verified |
+| **TST-UI-031** | **Layout Hierarchy** | `REQ-UI-021` | Open Workout Summary. Inspect the Elevation section header (left column). | Verified |
 | **TST-LOG-001** | **Logic** | `REQ-UI-011` | Verify that all rows, including "Pace", follow strict mathematical ordering (numerical minimum in Min column, numerical maximum in Max column). | Verified |
 | **TST-LOG-002** | **Logic** | `REQ-UI-011` | Verify that for a running activity, both Speed and Pace rows are generated from the single Speed data source. | Verified |
 | **TST-MAN-001** | **General** | All other `REQ` | Ad-hoc functional testing on a physical device. | Feature performs according to the rationale defined in requirements. |
