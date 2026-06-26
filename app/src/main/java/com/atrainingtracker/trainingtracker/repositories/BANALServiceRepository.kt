@@ -290,7 +290,7 @@ class BANALServiceRepository private constructor(context: Context) {
                             val newLocation = LatLng(latData.value as Double, lonData.value as Double)
                             if (_currentLocation.value != newLocation) {
                                 _currentLocation.value = newLocation
-                                if (TrainingApplication.isTracking()) {
+                                if (TrainingApplication.getTrackingMode() == TrackingMode.TRACKING) {
                                     _currentTrack.value = currentTrack.value + newLocation
                                 }
                             }
@@ -305,7 +305,7 @@ class BANALServiceRepository private constructor(context: Context) {
                         _currentBearing.value = binder.getBestSensorData(SensorType.BEARING)?.value as Double?
                         _currentDistance.value = currentDistance
 
-                        if (TrainingApplication.isTracking()) {
+                        if (TrainingApplication.getTrackingMode() == TrackingMode.TRACKING) {
                             val newPathPoint = com.atrainingtracker.trainingtracker.ui.map.PathPoint(
                                 distance = currentDistance ?: 0.0,
                                 latLng = _currentLocation.value ?: LatLng(0.0, 0.0),

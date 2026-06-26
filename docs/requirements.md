@@ -141,6 +141,7 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-PRO-001** | Integrate Agile Workflow with Jira Cloud. | Ensure bidirectional traceability between tasks and code. | `project_protocol.md`, `SCRUM-103` | `TST-MAN-001` | Verified |
 | **REQ-PRO-002** | Minimize lock contention and eliminate ANRs. | Ensure the app remains responsive during heavy I/O or sensor load. | `TrackerService.java`, `ExportManager.java` | `TST-STR-002` | Verified |
 | **REQ-PRO-003** | Prevent distance accumulation while paused. | Ensure workout statistics only reflect active movement. | `MyAccumulatorSensor.java`, `ANTBikeSpeedDevice.java`, `BTLEBikeDevice.java` | `TST-UNT-008`, `TST-REG-004` | Verified |
+| **REQ-PRO-004** | Prevent track and profile accumulation while paused. | Visual track and elevation profile must strictly reflect active periods to avoid artifacts from movement during pause. | `BANALServiceRepository.kt` | `TST-UI-039` | Verified |
 
 | **REQ-STP-001** | Multilingual Store Presence. | Increase global reach and accessibility by providing localized App Titles, Short Descriptions, and Full Descriptions for the Google Play Store. | `docs/store_presence/` | `TST-STP-001` | Verified |
 

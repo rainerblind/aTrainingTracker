@@ -63,6 +63,7 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-UI-035** | **Compact Metric Row** | `REQ-UI-025` | 1. Open Route List. 2. Inspect gap between identity row and metrics row. | Verified |
 | **TST-UI-036** | **Branding Audit** | `REQ-UI-026` | 1. Open Segment List. 2. Verify top logo height (e.g., 24dp). 3. Inspect individual Segment Items (if enabled). | Verified |
 | **TST-UI-038** | **Detailed Metric Scale** | `REQ-UI-028` | 1. Open Periods screen. 2. Inspect sub-sport rows and \"Longest Workout\" highlight. Verify icons are 14dp and text is bodySmall. | Verified |
+| **TST-UI-039** | **Pause Movement Isolation** | `REQ-PRO-004` | 1. Start workout. 2. Move to create track. 3. **Pause**. 4. Move 50m. 5. Observe map. | Verified |
 
 ## 3. Structural & Compliance Checks
 
