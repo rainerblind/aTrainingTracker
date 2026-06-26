@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -52,10 +53,20 @@ fun MetricItem(
     layout: MetricLayout = MetricLayout.HORIZONTAL,
     iconSize: Dp = 20.dp,
     isPrimary: Boolean = false,
+    valueStyle: TextStyle? = null,
+    labelStyle: TextStyle? = null,
     iconColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     valueColor: Color = MaterialTheme.colorScheme.onSurface,
     labelColor: Color = MaterialTheme.colorScheme.onSurfaceVariant
 ) {
+    val finalValueStyle = valueStyle ?: if (layout == MetricLayout.HORIZONTAL) {
+        if (isPrimary) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyMedium
+    } else {
+        if (isPrimary) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.bodyMedium
+    }
+
+    val finalLabelStyle = labelStyle ?: MaterialTheme.typography.labelSmall
+
     when (layout) {
         MetricLayout.HORIZONTAL -> {
             Row(
@@ -71,8 +82,8 @@ fun MetricItem(
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = value,
-                    style = if (isPrimary) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyMedium,
-                    fontWeight = if (isPrimary) FontWeight.SemiBold else FontWeight.Normal,
+                    style = finalValueStyle,
+                    fontWeight = if (valueStyle == null && isPrimary) FontWeight.SemiBold else finalValueStyle.fontWeight,
                     color = valueColor
                 )
             }
@@ -91,14 +102,13 @@ fun MetricItem(
                         if (label != null) {
                             Text(
                                 text = label,
-                                style = MaterialTheme.typography.labelSmall,
+                                style = finalLabelStyle,
                                 color = labelColor
                             )
                         }
                         Text(
                             text = value,
-                            style = if (isPrimary) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold,
+                            style = finalValueStyle.copy(fontWeight = if (valueStyle == null) FontWeight.Bold else finalValueStyle.fontWeight),
                             color = valueColor
                         )
                     }

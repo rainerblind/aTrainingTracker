@@ -309,7 +309,9 @@ fun SportStatsRow(
                             MetricItem(
                                 iconRes = R.drawable.ic_time_active,
                                 value = tf.format_with_units(longestWorkout.durationSec),
-                                isPrimary = true
+                                isPrimary = true,
+                                iconSize = 14.dp,
+                                valueStyle = MaterialTheme.typography.bodySmall
                             )
                         }
                         Row(
@@ -329,8 +331,19 @@ fun SportStatsRow(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                MetricItem(R.drawable.ic_distance, df.format_with_units(longestWorkout.distanceMeters), isPrimary = true)
-                                MetricItem(R.drawable.ic_ascent, af.format_with_units(longestWorkout.ascentMeters))
+                                MetricItem(
+                                    R.drawable.ic_distance,
+                                    df.format_with_units(longestWorkout.distanceMeters),
+                                    isPrimary = true,
+                                    iconSize = 14.dp,
+                                    valueStyle = MaterialTheme.typography.bodySmall
+                                )
+                                MetricItem(
+                                    R.drawable.ic_ascent,
+                                    af.format_with_units(longestWorkout.ascentMeters),
+                                    iconSize = 14.dp,
+                                    valueStyle = MaterialTheme.typography.bodySmall
+                                )
                             }
                         }
                     }
@@ -359,8 +372,19 @@ fun CompactMetricRow(label: String, count: Int, distance: String, duration: Stri
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            MetricItem(iconRes = R.drawable.ic_distance, value = distance)
-            MetricItem(iconRes = R.drawable.ic_time_active, value = duration, isPrimary = true)
+            MetricItem(
+                iconRes = R.drawable.ic_distance,
+                value = distance,
+                iconSize = 14.dp,
+                valueStyle = MaterialTheme.typography.bodySmall
+            )
+            MetricItem(
+                iconRes = R.drawable.ic_time_active,
+                value = duration,
+                isPrimary = true,
+                iconSize = 14.dp,
+                valueStyle = MaterialTheme.typography.bodySmall
+            )
         }
     }
 }

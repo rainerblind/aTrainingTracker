@@ -1,26 +1,32 @@
-# Implementation Plan - SCRUM-125 Refinement: Centered Branding in Segment List
+# Implementation Plan - SCRUM-125 Refinement: Balanced Sub-Sport Scaling
 
-Center the "Powered by Strava" logo in the Segment list header to improve visual balance while maintaining subordinate scaling.
+Refine the visual hierarchy in the Period Summary by using a balanced scale for sub-sport details: `bodySmall` for typography and `14.dp` for icons.
 
 ## 1. Requirements Mapping
-- **Requirement**: `REQ-UI-026` (Consistent Branding Scaling)
-- **Test ID**: `TST-UI-036` (Branding Audit)
+- **Requirement**: `REQ-UI-028` (Hierarchical Detailed Metrics)
+- **Test ID**: `TST-UI-038` (Detailed Metric Scale)
 
 ## 2. Impact Analysis
-- **UI Components**: `PoweredByStrava.kt`, `SegmentList.kt`.
-- **Visuals**: Center-aligns the logo in headers where `fillMaxWidth` is applied.
-- **Side Effects**: None. The change in default alignment within the `PoweredByStrava` container is safe for existing usages.
+- **UI Components**: `PeriodSummaryCard.kt`.
+- **Typographic Scale**:
+    - Primary aggregates: `titleMedium` (16sp)
+    - Sub-sport details: `bodySmall` (12sp) - *Refinement: Larger than labelSmall but smaller than primary.*
+- **Icon Scale**: `14.dp` for sub-sports to maintain subordinate status.
+- **Side Effects**: None.
 
 ## 3. Proposed Changes
 
-### 3.1 Alignment Refinement (`PoweredByStrava.kt`)
-- Change the internal `Box` alignment from `CenterStart` to `Center`.
-- This ensures that when the component is given `fillMaxWidth`, the logo is perfectly centered.
-
-### 3.2 Spacing Adjustment (`SegmentList.kt`)
-- Ensure the logo has consistent padding to feel integrated into the list flow.
+### 3.1 Sub-Sport Typography Refinement (`PeriodSummaryCard.kt`)
+- Update **`CompactMetricRow`**:
+    - Set `valueStyle = MaterialTheme.typography.bodySmall`.
+    - Keep `iconSize = 14.dp`.
+- Update **Longest Workout Section**:
+    - Set `valueStyle = MaterialTheme.typography.bodySmall` for all metric items.
+    - Keep `iconSize = 14.dp`.
 
 ## 4. Verification Plan
 - **Build**: Ensure successful compilation.
-- **Visual Audit**: Open Segment List and verify the top Strava logo is horizontally centered.
-- **Regression Audit**: Verify that inline logos (e.g., in `SegmentDetails`) remain correctly positioned.
+- **Visual Audit**:
+    1. Verify that sub-sport values (e.g., "35,11 km") are clearly legible but noticeably smaller than the main sport totals.
+    2. Confirm icons at 14dp feel subordinate.
+- **Compose Previews**: Audit `PreviewPeriodSummary` for hierarchical balance.
