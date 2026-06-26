@@ -52,20 +52,7 @@ class WorkoutDataMapper(
     private val stravaUploadDbHelper: StravaUploadDbHelper
 ) {
     // Define all sensors to check
-    val sensorsToCheck = arrayOf(
-        SensorType.HR,
-        SensorType.SPEED_mps,
-        SensorType.PACE_spm,
-        SensorType.CADENCE,
-        SensorType.POWER,
-        SensorType.TORQUE,
-        SensorType.PEDAL_POWER_BALANCE,
-        SensorType.PEDAL_SMOOTHNESS_L,
-        SensorType.PEDAL_SMOOTHNESS,
-        SensorType.PEDAL_SMOOTHNESS_R,
-        SensorType.ALTITUDE,
-        SensorType.TEMPERATURE
-    )
+    val sensorsToCheck = SensorType.CORE_METRICS
 
     /**
      * Creates a WorkoutData object from the current position of a cursor.
@@ -126,42 +113,123 @@ class WorkoutDataMapper(
             goal = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.GOAL)),
             method = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.METHOD)),
 
+            stravaSportName = sportTypeDatabaseManager.getStravaName(sportId),
+
             stravaActivityData = stravaActivityData,
 
-            extremaRows = sensorsToCheck.mapNotNull { sensorType ->
-                // Business logic: do not show speed for running activities
-                if (bSportType == BSportType.RUN && sensorType == SensorType.SPEED_mps) {
-                    return@mapNotNull null // Skip this sensor
-                }
-                // Business logic: show pace only for running activities
-                if (bSportType != BSportType.RUN && sensorType == SensorType.PACE_spm) {
-                    return@mapNotNull null // Skip this sensor
-                }
+            extremaRows = sensorsToCheck.flatMap { sensorType ->
+                val rows = mutableListOf<ExtremaDataRow>()
 
-                val min = getFormattedExtremaValue(workoutId, sensorType, ExtremaType.MIN)
-                val minPos = workoutSummariesDatabaseManager.getExtremaPosition(workoutId, sensorType, ExtremaType.MIN)
+                // Primary row data
+                val rawMinVal = workoutSummariesDatabaseManager.getExtremaValue(workoutId, sensorType, ExtremaType.MIN)
+                val rawMinPos = workoutSummariesDatabaseManager.getExtremaPosition(workoutId, sensorType, ExtremaType.MIN)
+                val avgVal = workoutSummariesDatabaseManager.getExtremaValue(workoutId, sensorType, ExtremaType.AVG)
+                val rawMaxVal = workoutSummariesDatabaseManager.getExtremaValue(workoutId, sensorType, ExtremaType.MAX)
+                val rawMaxPos = workoutSummariesDatabaseManager.getExtremaPosition(workoutId, sensorType, ExtremaType.MAX)
 
-                val avg = getFormattedExtremaValue(workoutId, sensorType, ExtremaType.AVG)
-
-                val max = getFormattedExtremaValue(workoutId, sensorType, ExtremaType.MAX)
-                val maxPos = workoutSummariesDatabaseManager.getExtremaPosition(workoutId, sensorType, ExtremaType.MAX)
-
-                val data = ExtremaDataRow(
-                    sensorLabel = context.getString(sensorType.shortNameId),
-                    unitLabel = context.getString(MyHelper.getUnitsId(sensorType)),
-                    minValue = min,
-                    minLatLng = minPos,
-                    avgValue = avg,
-                    maxValue = max,
-                    maxLatLng = maxPos
+                // 1. Create standard row
+                val standardRow = createExtremaRow(
+                    sensorType,
+                    rawMinVal, rawMinPos,
+                    avgVal,
+                    rawMaxVal, rawMaxPos,
+                    bSportType == BSportType.RUN && sensorType == SensorType.SPEED_mps // Special case: label speed even in run
                 )
+                if (standardRow != null) rows.add(standardRow)
 
-                // Only return the data object if it's not empty, otherwise return null
-                if (data.hasAnyData()) data else null
+                // 2. Special Case: Derive Pace from Speed for Runs
+                if (bSportType == BSportType.RUN && sensorType == SensorType.SPEED_mps) {
+                    val paceRow = createDerivedPaceRow(rawMinVal, rawMinPos, avgVal, rawMaxVal, rawMaxPos)
+                    if (paceRow != null) rows.add(paceRow)
+                }
+
+                rows
             },
 
             exportStatuses = emptyList() // will be added/merged by the viewModel
         )
+    }
+
+    private fun createExtremaRow(
+        sensorType: SensorType,
+        rawMinVal: Double?, minPos: com.google.android.gms.maps.model.LatLng?,
+        avgVal: Double?,
+        rawMaxVal: Double?, maxPos: com.google.android.gms.maps.model.LatLng?,
+        forceSpeedLabel: Boolean = false
+    ): ExtremaDataRow? {
+        val min = rawMinVal?.let { sensorType.myFormatter.format(it) }
+        val avg = avgVal?.let { sensorType.myFormatter.format(it) }
+        val max = rawMaxVal?.let { sensorType.myFormatter.format(it) }
+
+        val iconResId = when (sensorType) {
+            SensorType.HR -> R.drawable.ic_heart_rate
+            SensorType.SPEED_mps -> R.drawable.ic_speed
+            SensorType.PACE_spm -> R.drawable.ic_speed
+            SensorType.CADENCE -> R.drawable.ic_cadence
+            SensorType.POWER -> R.drawable.ic_power
+            SensorType.ALTITUDE -> R.drawable.ic_altitude
+            SensorType.TEMPERATURE -> R.drawable.ic_temp_max
+            else -> null
+        }
+
+        val isMinRelevant = when (sensorType) {
+            SensorType.SPEED_mps, SensorType.PACE_spm, SensorType.CADENCE, SensorType.POWER -> {
+                min != null && min != "0" && min != "0.0"&& min != "0,0" && min != "0:00" && min != "~~"
+            }
+            else -> true
+        }
+
+        val data = ExtremaDataRow(
+            sensorLabel = context.getString(sensorType.shortNameId),
+            unitLabel = context.getString(com.atrainingtracker.trainingtracker.MyHelper.getUnitsId(sensorType)),
+            minValue = min,
+            minLatLng = minPos,
+            avgValue = avg,
+            maxValue = max,
+            maxLatLng = maxPos,
+            iconResId = iconResId,
+            isMinRelevant = isMinRelevant,
+            boldMin = sensorType == SensorType.ALTITUDE || sensorType == SensorType.TEMPERATURE,
+            boldAvg = sensorType == SensorType.HR || sensorType == SensorType.SPEED_mps || sensorType == SensorType.PACE_spm || sensorType == SensorType.CADENCE || sensorType == SensorType.POWER,
+            boldMax = sensorType == SensorType.HR || sensorType == SensorType.POWER || sensorType == SensorType.ALTITUDE || sensorType == SensorType.TEMPERATURE
+        )
+
+        return if (data.hasAnyData()) data else null
+    }
+
+    private fun createDerivedPaceRow(
+        speedMin: Double?, minPos: com.google.android.gms.maps.model.LatLng?,
+        speedAvg: Double?,
+        speedMax: Double?, maxPos: com.google.android.gms.maps.model.LatLng?
+    ): ExtremaDataRow? {
+        val paceType = SensorType.PACE_spm
+
+        // Strict mathematical ordering:
+        // paceAtMaxSpeed is the smallest number (Fastest).
+        // paceAtMinSpeed is the largest number (Slowest).
+
+        val paceAtMaxSpeed = if (speedMax != null && speedMax > 0.001) paceType.myFormatter.format(1.0 / speedMax) else null
+        val paceAtAvgSpeed = if (speedAvg != null && speedAvg > 0.001) paceType.myFormatter.format(1.0 / speedAvg) else null
+        val paceAtMinSpeed = if (speedMin != null && speedMin > 0.001) paceType.myFormatter.format(1.0 / speedMin) else null
+
+        val isMinRelevant = paceAtMaxSpeed != null && paceAtMaxSpeed != "0:00" && paceAtMaxSpeed != "~~"
+
+        val data = ExtremaDataRow(
+            sensorLabel = context.getString(paceType.shortNameId),
+            unitLabel = context.getString(com.atrainingtracker.trainingtracker.MyHelper.getUnitsId(paceType)),
+            minValue = paceAtMaxSpeed, // Numerical Min (Fastest)
+            minLatLng = maxPos,       // Location of Max Speed = Location of Fastest Pace
+            avgValue = paceAtAvgSpeed,
+            maxValue = paceAtMinSpeed, // Numerical Max (Slowest)
+            maxLatLng = minPos,       // Location of Min Speed = Location of Slowest Pace
+            iconResId = R.drawable.ic_speed,
+            isMinRelevant = isMinRelevant,
+            boldMin = false,
+            boldAvg = true,
+            boldMax = false
+        )
+
+        return if (data.hasAnyData()) data else null
     }
 
     private data class DateTimeResult(
@@ -198,10 +266,4 @@ class WorkoutDataMapper(
     }
 
 
-    private fun getFormattedExtremaValue(workoutId: Long, sensorType: SensorType, extremaType: ExtremaType): String? {
-        val value = WorkoutSummariesDatabaseManager.getInstance(context).getExtremaValue(workoutId, sensorType, extremaType)
-        // if (DEBUG) Log.d(TAG, "${sensorType.name} ${extremaType.name} extremaValue=$value")
-        // Use Kotlin's scope function 'let' for safe handling of nullable values
-        return value?.let { sensorType.myFormatter.format(it) }
-    }
 }

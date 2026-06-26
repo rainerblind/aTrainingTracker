@@ -23,8 +23,9 @@
     <string name="OK">OK</string>
     <string name="do_not_show_again">nicht mehr anzeigen</string>
     <string name="Cancel">Abbrechen</string>
+    <string name="no_upload">- Kein Upload -</string>
     <string name="searching_for">suche nach</string>
-    <string name="searching_for_device_format">Suche nach  %1$s</string>
+    <string name="searching_for_device_format">Suche nach %1$s…</string>
     <string name="default_device_name">irgendein ANT+ Sensor</string>
     <string name="waiting">warte</string>
     <string name="pairing_ANT">ANT+ Kopplung</string>
@@ -37,7 +38,7 @@
     <string name="Stop">Stop</string>
     <string name="Pause">Pause</string>
     <string name="Paused">Pause</string>
-    <string name="Resume">Fortsetzten</string>
+    <string name="Resume">Fortsetzen</string>
     <string name="Tracking">Aufzeichnung</string>
     <string name="StartPositionTitle">Start</string>
     <string name="EndPositionTitle">Ende</string>
@@ -55,19 +56,19 @@
     <string name="delete_device">Sensor löschen</string>
     <string name="delete_pebble_view">Pebble Ansicht löschen</string>
     <string name="delete_tracking_view">Ansicht löschen</string>
-    <string name="delete_workout">Trainingseinheit löschen</string>
+    <string name="delete_workout">Einheit löschen</string>
     <string name="deleteOldWorkouts">Alte Einheiten löschen</string>
     <string name="deleteWorkoutsThatAreOlderThanDays">Lösche alle Einheiten, die älter als … Tage sind.</string>
     <string name="delete_sensor">löschen</string>
-    <string name="really_delete_workout">Willst du diese Trainingseinheit wirklich löchen?</string>
-    <string name="really_delete_location">Willst du diesen Ort wirklich löchen?</string>
+    <string name="really_delete_workout">Willst du diese Einheit wirklich löschen?</string>
+    <string name="really_delete_location">Willst du diesen Ort wirklich löschen?</string>
     <string name="really_delete_pebble_view_format">Willst du die Pebble Ansicht "%1$s" wirklich löschen?</string>
     <string name="really_delete_view_format">Willst du die Ansicht "%1$s" wirklich löschen?</string>
-    <string name="deleting_please_wait">Lösche die Einheit …\nbitte warten</string>
+    <string name="deleting_please_wait">Einheit wird gelöscht …\nbitte warten</string>
     <string name="deleting_workout">Lösche: %1$s…</string>)
-    <string name="calculating_extrema_values">Berechne min, mean und max Werte…</string>
+    <string name="calculating_extrema_values">Berechne Min-, Mittel- und Max-Werte…</string>
     <string name="calculating_extrema_value_for">berechne %1$s für %2$s</string>
-    <string name="calculating_max_away_point">berechne den am weitesten entfernten Punkt</string>
+    <string name="calculating_max_away_point">berechne Wendepunkt</string>
     <string name="initializing">Initialisierung</string>
     <string name="delete_location">lösche Standort</string>
     <string name="show_HW_details">zeige HW details</string>
@@ -94,7 +95,7 @@
     <string name="name">Name</string>
     <string name="number_of_fields">Anzahl von Feldern:</string>
     <string name="Lap_NR">Runde %1$d</string>
-    <string name="build_in">Standard</string>
+    <string name="build_in">Eingebaut</string>
     <string name="no_user_name">kein Benutzername</string>
     <string name="no_password">kein Passwort</string>
     <string name="add_sensor">Sensor hinzufügen</string>
@@ -104,7 +105,7 @@
     <string name="trainer_bike">Rolle</string>
     <string name="trainer_run">Laufband</string>
 
-    <string name="guess_commute_and_trainer">Rate pendeln und indoor trainer</string>
+    <string name="guess_commute_and_trainer">Pendeln/Trainer automatisch erkennen</string>
 
     <string name="install_pebble_watchapp_title">Pebble Watchapp installieren</string>
     <string name="install_pebble_watchapp_text">Um dies zu nutzen, muss die entsprechende Pebble Watchapp installierte sein.</string>
@@ -180,6 +181,7 @@
     <string name="accuracy_short">acc.</string>
     <string name="ascent">Anstieg</string>
     <string name="ascent_short">Hoch</string>
+    <string name="elevation">Höhenmeter</string>
     <string name="bearing">Richtung</string>
     <string name="bearing_short">Richtung</string>
     <string name="altitude">Höhe</string>
@@ -218,10 +220,10 @@
     <string name="strides_short">Schritte</string>
     <string name="temperature">Temperatur</string>
     <string name="temperature_short">Temp.</string>
-    <string name="temperature_max">maximale Temperatur</string>
-    <string name="temperature_max_short">max Temp</string>
-    <string name="temperature_min">minimale Temperatur</string>
-    <string name="temperature_min_short">min Temp</string>
+    <string name="temperature_max">Maximale Temperatur</string>
+    <string name="temperature_max_short">Max Temp</string>
+    <string name="temperature_min">Minimale Temperatur</string>
+    <string name="temperature_min_short">Min Temp</string>
     <string name="time_active">Zeit aktiv</string>
     <string name="time_active_short">aktiv</string>
     <string name="time_lap">Zeit Lap</string>
@@ -592,7 +594,7 @@
     <string name="smoothing">Glättung der Werte</string>
     <string name="powerSmoothingTitle">Faktor α zur Glättung der Leistungswerte</string>
     <string name="powerSmoothingTitle_format">Glättung der Leistung: α=%1$f</string>
-    <string name="powerSmoothingSummary">Faktor 0 &lt; α &#8804; 1 zur Glättung der Leitung. P_anzeige = α P_gemessen + (1-α) P_anzeige_alt. Je kleiner α, desto glatter werden die angezeigten Were.  Z.B. ergibt α=1 den gemessenen Wert, α in Richtung 0 führt zu extrem geklätteten Werten.</string>
+    <string name="powerSmoothingSummary">Faktor 0 &lt; α &#8804; 1 zur Glättung der Leitung. P_anzeige = α P_gemessen + (1-α) P_anzeige_alt. Je kleiner α, desto glatter werden die angezeigten Werte. Z.B. ergibt α=1 den gemessenen Wert, α in Richtung 0 führt zu extrem geglätteten Werten.</string>
     <string name="alpha_must_be_between_0_and_1">Der Faktor zur Glättung α muss zwischen 0 und 1 sein.</string>
 
     <string name="Search_Settings">Such Einstellungen</string>
@@ -1060,5 +1062,9 @@
     </plurals>
     <string name="strava_kom_description">KOM / Streckenrekord</string>
     <string name="strava_pr_description">Persönliche Bestleistung #%1$d</string>
+
+    <string name="strava_connected_status">Du bist mit Strava verbunden</string>
+    <string name="strava_disconnected_status">Du bist nicht mit Strava verbunden</string>
+    <string name="strava_disconnect">Von Strava trennen</string>
     <string name="strava_overall_rank_description">Gesamtrang #%1$d</string>
 </resources>

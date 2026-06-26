@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+  -->
+
+<resources>
+    <string name="devices_button_pair">Koppelen</string>
+    <string name="devices_button_unpair">Ontkoppelen</string>
+
+    <string name="devices_unknown">Onbekend</string>
+    <string name="devices_unknown_manufacturer">onbekende fabrikant</string>
+    <string name="devices_unknown_device">geen naam</string>
+
+    <string name="devices_all">Alle</string>
+
+    <string name="devices_available_devices_format">beschikbare %1$s apparaten</string>
+    <string name="devices_paired_devices_format">gekoppelde %1$s apparaten</string>
+    <string name="devices_known_devices_format">bekende %1$s apparaten</string>
+    <string name="devices_all_available_devices">alle beschikbare apparaten</string>
+    <string name="devices_all_paired_devices">alle gekoppelde apparaten</string>
+    <string name="devices_all_known_devices">alle bekende apparaten</string>
+
+    <string name="devices_myRemoteDevices">Apparaten</string>
+    <string name="devices_newDevices">Nieuwe apparaten</string>
+    <string name="devices_searchingForDevice">zoeken naar %1$s %2$s apparaten</string>
+    <string name="devicessearchingForRemoteDevice">zoeken naar ANT+ hartslagmeters</string>
+
+    <string name="devices_lastSeenText">laatst gezien</string>
+    <string name="devices_now">nu</string>
+
+    <string name="devices_correct_calibration_factor_title_bike">Wielomtrek corrigeren</string>
+    <string name="devices_correct_calibration_factor_title_run">Kalibratiefactor corrigeren</string>
+    <string name="devices_correct_calibration_explanation_bike">Hier kunt u de wielomtrek corrigeren voor deze sensor.</string>
+    <string name="devices_correct_calibration_explanation_run">Hier kunt u de kalibratiefactor corrigeren voor deze sensor.</string>
+    <string name="devices_measuredDistanceText">gemeten afstand:</string>
+    <string name="devices_correctDistanceText">correcte afstand:</string>
+
+    <string name="devices_settings_header">instellingen</string>
+    <string name="devices_deviceNameText">apparaatnaam</string>
+    <string name="devices_deviceTypeText">apparaattype</string>
+    <string name="devices_manufacturerText">fabrikant</string>
+    <string name="devices_on_equipment_text">op materiaal</string>
+    <string name="devices_on_bikes_text">op fietsen</string>
+    <string name="devices_on_shoes_text">op schoenen</string>
+    <string name="devices_on_short_format">op: %1$s</string>
+    <string name="devices_calibration_factor">Kalibratiefactor</string>
+    <string name="devices_wheel_circumference">Wielomtrek</string>
+    <string name="devices_set_calibration">%1$s instellen</string>
+
+    <string name="devices_editDeviceBikeCadenceDeviceNameValue">Garmin cadans</string>
+    <string name="devices_editDeviceBikeCadenceDeviceTypeValue">Cadans</string>
+
+    <string name="devices_editDeviceBikeDeviceNameValue">Garmin snelheid</string>
+    <string name="devices_editDeviceBikeDeviceTypeValue">Fiets Snelheid</string>
+    <string name="devices_editDeviceBikeEditCalibrationFactorBasedOnDistance">wielomtrek corrigeren</string>
+
+    <string name="devices_editDeviceRunDeviceNameValue">Garmin loop</string>
+    <string name="devices_editDeviceRunDeviceTypeValue">Loopsnelheid</string>
+    <string name="devices_editDeviceRunEditCalibrationFactorBasedOnDistance">corrigeren</string>
+
+    <string name="devices_editDeviceGenericDeviceNameValue">Algemeen apparaat</string>
+    <string name="devices_editDeviceGenericDeviceTypeValue">Algemeen</string>
+    <string name="devices_select_wheel_size_prompt">Selecteer wielmaat…</string>
+    <string name="devices_last_seen_never">nog niet</string>
+
+    <string name="devices_location_GPS">GPS</string>
+    <string name="devices_location_Network">Netwerk</string>
+    <string name="devices_location_GoogleFused">Google Fused</string>
+    <string name="devices_altitude_from_pressure">Luchtdruk</string>
+
+    <string name="devices_live_sensor_data_header">Sensorgegevens</string>
+
+    <string name="devices_dialog_delete_device_title">Echt verwijderen?</string>
+    <string name="devices_dialog_delete_device_message">Wilt u de sensor \'%1$s\' echt verwijderen?</string>
+
+</resources>

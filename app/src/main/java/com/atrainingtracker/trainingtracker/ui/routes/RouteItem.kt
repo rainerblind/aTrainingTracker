@@ -38,9 +38,12 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.RouteSource
 import com.atrainingtracker.trainingtracker.database.RouteSummary
+import com.atrainingtracker.trainingtracker.ui.components.DeleteConfirmationDialog
+import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
+import com.atrainingtracker.trainingtracker.ui.map.MapRoute
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
-import com.atrainingtracker.trainingtracker.ui.map.TrackOrSegmentOnMap
+import com.atrainingtracker.trainingtracker.ui.map.PathPreviewMap
 import com.atrainingtracker.trainingtracker.ui.theme.RouteColorSelected
 import com.atrainingtracker.trainingtracker.ui.theme.RouteColorUnselected
 
@@ -57,32 +60,23 @@ fun RouteItem(
     var showContextMenu by remember { mutableStateOf(false) }
     var confirmDeletion by remember { mutableStateOf(false) }
 
-    ElevatedCard(
-        modifier = modifier
-            .fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
+    MappableListItem(
+        modifier = modifier,
         onClick = { onMapClick(summary.id) }
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             // 1. TOP: Route Summary Header (Title, Source, Metrics, Sport Icon, Switch)
-            Box(modifier = Modifier
-                .fillMaxWidth()
-                .combinedClickable(
-                    onClick = { onHeaderClick(summary.id) },
-                    onLongClick = { showContextMenu = true }
-                )
-                .padding(4.dp)
-            ) {
-                RouteSummaryHeader(
-                    summary = summary,
-                    onToggleSelection = { onToggleSelection(summary.id, it) },
-                    switchScale = 0.6f
-                )
-            }
+            RouteSummaryHeader(
+                summary = summary,
+                onToggleSelection = { onToggleSelection(summary.id, it) },
+                switchScale = 0.6f,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .combinedClickable(
+                        onClick = { onHeaderClick(summary.id) },
+                        onLongClick = { showContextMenu = true }
+                    )
+            )
 
             // 2. MIDDLE: Map Preview
             // We use height(200.dp) to give the route map more prominence than the small segment square
@@ -91,9 +85,14 @@ fun RouteItem(
                     .fillMaxWidth()
                     .height(180.dp)
             ) {
-                TrackOrSegmentOnMap(
-                    latLngs = pathPoints.map { it.latLng },
-                    color = if (summary.isSelected) RouteColorSelected else RouteColorUnselected,
+                PathPreviewMap(
+                    path = MapRoute(
+                        id = summary.id,
+                        name = summary.name,
+                        isSelected = summary.isSelected,
+                        bSportType = summary.bSportType,
+                        path = pathPoints
+                    ),
                     modifier = Modifier.fillMaxSize(),
                     onMapClick = { onMapClick(summary.id) }
                 )
@@ -125,22 +124,11 @@ fun RouteItem(
 
         // Delete Confirmation Dialog
         if (confirmDeletion) {
-            AlertDialog(
-                onDismissRequest = { confirmDeletion = false },
-                containerColor = MaterialTheme.colorScheme.surface,
-                title = { Text(stringResource(R.string.delete)) },
-                text = { Text(stringResource(R.string.really_delete_format, summary.name)) },
-                confirmButton = {
-                    TextButton(onClick = {
-                        onDeleteConfirmed(summary.id)
-                        confirmDeletion = false
-                    }) {
-                        Text(stringResource(R.string.delete))
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { confirmDeletion = false }) { Text(stringResource(R.string.Cancel)) }
-                }
+            DeleteConfirmationDialog(
+                title = stringResource(R.string.delete),
+                message = stringResource(R.string.really_delete_format, summary.name),
+                onConfirm = { onDeleteConfirmed(summary.id) },
+                onDismiss = { confirmDeletion = false }
             )
         }
     }
@@ -167,7 +155,7 @@ fun PreviewSelectedRoute() {
             pathPoints = emptyList(),
             onMapClick = {},
             onHeaderClick = {},
-            onToggleSelection = {} as (Long, Boolean) -> Unit,
+            onToggleSelection = { _, _ -> },
             onDeleteConfirmed = {}
         )
     }

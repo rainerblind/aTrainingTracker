@@ -24,11 +24,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
 
 @Composable
@@ -36,35 +41,50 @@ fun WorkoutExtrema(
     data: ExtremaData,
     modifier: Modifier = Modifier
 ) {
+    if (data.dataRows.isEmpty()) return
+
     Column(
         modifier = modifier
             .fillMaxWidth()
-            // .padding(vertical = 8.dp)
+            .padding(vertical = 8.dp)
     ) {
-        if (data.dataRows.isNotEmpty()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-            ) {
-                // --- Table Header ---
+        // --- Table Header (Flat and Subtle) ---
+        ExtremaRow(
+            label = "",
+            min = stringResource(R.string.min),
+            avg = "Ø",
+            max = stringResource(R.string.max),
+            unit = "",
+            isHeader = true,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+        )
+
+        // --- Table Data Rows ---
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp)
+        ) {
+            val rows = data.dataRows.filter { it.hasAnyData() }
+            rows.forEachIndexed { index, row ->
                 ExtremaRow(
-                    label = "",
-                    min = stringResource(R.string.min),
-                    avg = stringResource(R.string.average),
-                    max = stringResource(R.string.max),
-                    unit = "",
-                    isHeader = true
+                    label = row.sensorLabel,
+                    min = if (row.isMinRelevant) (row.minValue ?: "-") else "-",
+                    avg = row.avgValue ?: "-",
+                    max = row.maxValue ?: "-",
+                    unit = row.unitLabel,
+                    iconResId = row.iconResId,
+                    boldMin = row.boldMin,
+                    boldAvg = row.boldAvg,
+                    boldMax = row.boldMax,
+                    modifier = Modifier.padding(vertical = 6.dp)
                 )
 
-                // --- Table Data Rows ---
-                data.dataRows.filter { it.hasAnyData() }.forEach { row ->
-                    ExtremaRow(
-                        label = row.sensorLabel,
-                        min = row.minValue ?: "-",
-                        avg = row.avgValue ?: "-",
-                        max = row.maxValue ?: "-",
-                        unit = row.unitLabel
+                if (index < rows.size - 1) {
+                    HorizontalDivider(
+                        thickness = 0.5.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                        modifier = Modifier.padding(start = 28.dp) // Align divider with text after icon
                     )
                 }
             }
@@ -79,12 +99,17 @@ private fun ExtremaRow(
     avg: String,
     max: String,
     unit: String,
+    modifier: Modifier = Modifier,
+    iconResId: Int? = null,
+    boldMin: Boolean = false,
+    boldAvg: Boolean = false,
+    boldMax: Boolean = false,
     isHeader: Boolean = false
 ) {
     val style = if (isHeader) {
-        MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
+        MaterialTheme.typography.labelSmall
     } else {
-        MaterialTheme.typography.bodyMedium
+        MaterialTheme.typography.bodyLarge
     }
 
     val color = if (isHeader) {
@@ -93,53 +118,83 @@ private fun ExtremaRow(
         MaterialTheme.colorScheme.onSurface
     }
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Column 1: Sensor Label (Weight 2.5)
-        Text(
-            text = label,
-            modifier = Modifier.weight(2.5f),
-            style = style,
-            color = color
+    // World-class typography: disable font padding to allow true baseline alignment
+    val baseStyle = style.copy(
+        platformStyle = PlatformTextStyle(includeFontPadding = false),
+        lineHeightStyle = LineHeightStyle(
+            alignment = LineHeightStyle.Alignment.Bottom,
+            trim = LineHeightStyle.Trim.Both
         )
+    )
+
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Bottom
+    ) {
+        // Column 0: Icon
+        Box(
+            modifier = Modifier.width(26.dp),
+            contentAlignment = Alignment.BottomStart
+        ) {
+            if (iconResId != null && !isHeader) {
+                Icon(
+                    painter = painterResource(id = iconResId),
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        // Column 1: Sensor Label + Unit (Weight 4)
+        Row(
+            modifier = Modifier.weight(4f),
+            verticalAlignment = Alignment.Bottom
+        ) {
+            Text(
+                text = label,
+                style = if (isHeader) baseStyle else baseStyle.copy(fontSize = 16.sp),
+                color = if (isHeader) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                maxLines = 1
+            )
+            if (unit.isNotEmpty() && !isHeader) {
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "[$unit]",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    maxLines = 1
+                )
+            }
+        }
 
         // Column 2: Min (Weight 2.0)
+        val isMinDash = min == "-"
         Text(
             text = min,
             modifier = Modifier.weight(2.0f),
-            style = style,
-            color = color,
+            style = if (boldMin && !isHeader && !isMinDash) baseStyle.copy(fontWeight = FontWeight.Bold) else baseStyle,
+            color = if (isMinDash) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f) else color,
             textAlign = TextAlign.End
         )
 
         // Column 3: Average (Weight 2.0)
+        val isAvgDash = avg == "-"
         Text(
             text = avg,
             modifier = Modifier.weight(2.0f),
-            style = style,
-            color = color,
+            style = if (((boldAvg && !isHeader) || (isHeader && avg == "Ø")) && !isAvgDash) baseStyle.copy(fontWeight = FontWeight.Bold) else baseStyle,
+            color = if (isAvgDash) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f) else color,
             textAlign = TextAlign.End
         )
 
         // Column 4: Max (Weight 2.0)
+        val isMaxDash = max == "-"
         Text(
             text = max,
             modifier = Modifier.weight(2.0f),
-            style = style,
-            color = color,
-            textAlign = TextAlign.End
-        )
-
-        // Column 5: Unit (Weight 1.5)
-        Text(
-            text = unit,
-            modifier = Modifier.weight(1.5f),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = if (boldMax && !isHeader && !isMaxDash) baseStyle.copy(fontWeight = FontWeight.Bold) else baseStyle,
+            color = if (isMaxDash) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f) else color,
             textAlign = TextAlign.End
         )
     }
@@ -147,17 +202,21 @@ private fun ExtremaRow(
 
 // --- Previews ---
 
-@Preview(showBackground = true, name = "Data View")
+@Preview(showBackground = true, name = "Core Performance Metrics")
 @Composable
-fun PreviewWorkoutExtrema() {
+fun PreviewAllCoreSensors() {
     MaterialTheme {
         WorkoutExtrema(
             data = ExtremaData(
                 workoutId = 123L,
                 dataRows = listOf(
-                    ExtremaDataRow(sensorLabel = "Heart Rate", unitLabel = "bpm", minValue = "65", avgValue = "142", maxValue = "185"),
-                    ExtremaDataRow(sensorLabel = "Cadence", unitLabel = "rpm", minValue = "0", avgValue = "85", maxValue = "112"),
-                    ExtremaDataRow(sensorLabel = "Power", unitLabel = "W", minValue = "0", avgValue = "215", maxValue = "640")
+                    ExtremaDataRow(sensorLabel = "Power", unitLabel = "W", minValue = "0", avgValue = "215", maxValue = "640", iconResId = R.drawable.ic_power, isMinRelevant = false, boldAvg = true, boldMax = true),
+                    ExtremaDataRow(sensorLabel = "Heart Rate", unitLabel = "bpm", minValue = "65", avgValue = "142", maxValue = "185", iconResId = R.drawable.ic_heart_rate, boldAvg = true, boldMax = true),
+                    ExtremaDataRow(sensorLabel = "Speed", unitLabel = "km/h", minValue = "0.0", avgValue = "24.5", maxValue = "52.1", iconResId = R.drawable.ic_speed, isMinRelevant = false, boldAvg = true),
+                    ExtremaDataRow(sensorLabel = "Pace", unitLabel = "min/km", minValue = "4:30", avgValue = "5:12", maxValue = "6:45", iconResId = R.drawable.ic_speed, isMinRelevant = true, boldAvg = true),
+                    ExtremaDataRow(sensorLabel = "Cadence", unitLabel = "rpm", minValue = "0", avgValue = "85", maxValue = "112", iconResId = R.drawable.ic_cadence, isMinRelevant = false, boldAvg = true),
+                    ExtremaDataRow(sensorLabel = "Altitude", unitLabel = "m", minValue = "150", avgValue = "210", maxValue = "410", iconResId = R.drawable.ic_altitude, boldMin = true, boldMax = true),
+                    ExtremaDataRow(sensorLabel = "Temp", unitLabel = "°C", minValue = "18", avgValue = "22", maxValue = "25", iconResId = R.drawable.ic_temp_max, boldMin = true, boldMax = true)
                 )
             )
         )
@@ -167,35 +226,6 @@ fun PreviewWorkoutExtrema() {
 @Preview(showBackground = true, name = "Calculating State")
 @Composable
 fun PreviewWorkoutExtremaCalculating() {
-    MaterialTheme {
-        WorkoutExtrema(
-            data = ExtremaData(
-                workoutId = 123L,
-                dataRows = emptyList()
-            )
-        )
-    }
-}
-
-@Preview(showBackground = true, name = "Calculating HR")
-@Composable
-fun PreviewWorkoutExtremaCalculatingHR() {
-    MaterialTheme {
-        WorkoutExtrema(
-            data = ExtremaData(
-                workoutId = 123L,
-                dataRows = listOf(
-                    ExtremaDataRow(sensorLabel = "Cadence", unitLabel = "rpm", minValue = "0", avgValue = "85", maxValue = "112"),
-                    ExtremaDataRow(sensorLabel = "Power", unitLabel = "W", minValue = "0", avgValue = "215", maxValue = "640")
-                )
-            )
-        )
-    }
-}
-
-@Preview(showBackground = true, name = "Nothing to show")
-@Composable
-fun PreviewWorkoutExtremaNothing() {
     MaterialTheme {
         WorkoutExtrema(
             data = ExtremaData(

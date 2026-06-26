@@ -32,64 +32,83 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.segments.SegmentSummary
+import com.atrainingtracker.trainingtracker.ui.components.MetricItem
+import com.atrainingtracker.trainingtracker.ui.components.strava.PoweredByStrava
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 @Composable
 fun SegmentDetails(
     summary: SegmentSummary,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    showStravaLogo: Boolean = true
 ) {
+    val formatters = com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter.current
+
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        // --- ROW 1: Distance ---
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            StatItem(R.drawable.ic_distance, summary.distance)
+        // --- ROW 1: Distance and Optional Branding ---
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            MetricItem(
+                iconRes = R.drawable.ic_distance,
+                value = formatters.distance.format_with_units(summary.distance_raw),
+                isPrimary = true
+            )
+            if (showStravaLogo) {
+                PoweredByStrava(height = 16.dp)
+            }
         }
 
         // --- ROW 2: Grades (Avg and Max) ---
         Row(verticalAlignment = Alignment.CenterVertically) {
-            StatItem(R.drawable.ic_grade, summary.averageGrade)
+            MetricItem(
+                iconRes = R.drawable.ic_grade,
+                value = summary.averageGrade,
+                isPrimary = true
+            )
             VerticalDivider()
             Text(
                 text = summary.maxGrade,
-                style = MaterialTheme.typography.titleMedium
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
-        // --- ROW 3: Elevations (Gain, Min, Max) ---
+        // --- ROW 3: Elevations (Altitude Icon + Gain/Min/Max Metrics) ---
         Row(verticalAlignment = Alignment.CenterVertically) {
+            // Section Identifier (Mirrors Workout Summary lead icon)
             Icon(
                 painter = painterResource(id = R.drawable.ic_altitude),
                 contentDescription = null,
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(modifier = Modifier.width(4.dp))
+            Spacer(modifier = Modifier.width(8.dp))
 
-            StatItem(R.drawable.ic_ascent, summary.elevationGain)
+            MetricItem(
+                iconRes = R.drawable.ic_ascent,
+                value = formatters.altitude.format_with_units(summary.elevationGain_raw),
+                isPrimary = true
+            )
             VerticalDivider()
-            StatItem(R.drawable.ic_altitude_min, summary.elevationMin)
+            MetricItem(
+                iconRes = R.drawable.ic_altitude_min,
+                value = summary.elevationMin
+            )
             VerticalDivider()
-            StatItem(R.drawable.ic_altitude_max, summary.elevationMax)
+            MetricItem(
+                iconRes = R.drawable.ic_altitude_max,
+                value = summary.elevationMax
+            )
         }
     }
 }
 
-@Composable
-private fun StatItem(iconRes: Int, value: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-            painter = painterResource(id = iconRes),
-            contentDescription = null,
-            modifier = Modifier.size(20.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(modifier = Modifier.width(4.dp))
-        Text(text = value, style = MaterialTheme.typography.titleMedium)
-    }
-}
 
 @Composable
 private fun VerticalDivider() {

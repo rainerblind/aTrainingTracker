@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.lazy.LazyColumn
@@ -43,6 +44,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.segments.SegmentWithPath
+import com.atrainingtracker.trainingtracker.ui.components.EmptyStatePlaceholder
+import com.atrainingtracker.trainingtracker.ui.components.strava.ConnectWithStravaButton
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Map
+import com.atrainingtracker.trainingtracker.ui.components.strava.PoweredByStrava
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,20 +70,16 @@ fun SegmentList(
         val bottomPadding = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
 
         if (!isStravaConnected && segmentsWithPath.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(top = topPadding),
-                contentAlignment = Alignment.Center
+            EmptyStatePlaceholder(
+                modifier = Modifier.padding(top = topPadding),
+                icon = Icons.Default.Map,
+                message = stringResource(R.string.starred_segments__no_strava_connection)
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(stringResource(R.string.starred_segments__no_strava_connection))
-                    Button(onClick = {
-                        Log.i("SegmentList", "onConnectToStrava clicked" )
-                        onConnectToStrava() }) {
-                        Text(stringResource(R.string.starred_segments__connect_to_strava))
-                    }
-                }
+                Spacer(modifier = Modifier.height(12.dp))
+                ConnectWithStravaButton(onClick = {
+                    Log.i("SegmentList", "ConnectWithStravaButton clicked")
+                    onConnectToStrava()
+                })
             }
         }
         else {
@@ -92,6 +96,15 @@ fun SegmentList(
                 ),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                if (segmentsWithPath.isNotEmpty()) {
+                    item {
+                        PoweredByStrava(
+                            height = 18.dp,
+                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+                        )
+                    }
+                }
+
                 items(
                     items = segmentsWithPath,
                     key = { it.summary.stravaId } // Improves performance and scroll position handling

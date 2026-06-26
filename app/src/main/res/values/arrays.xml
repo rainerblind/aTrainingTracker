@@ -51,6 +51,7 @@
 
 
     <string-array name="Strava_Sport_Types_Strava_Names">
+        <item/>
         <item>Workout</item>
         <item>Ride</item>
         <item>Run</item>
@@ -80,9 +81,25 @@
         <item>WeightTraining</item>
         <item>Windsurf</item>
         <item>Yoga</item>
+        <item>GravelRide</item>
+        <item>MountainBikeRide</item>
+        <item>EMountainBikeRide</item>
+        <item>Handcycle</item>
+        <item>Velomobile</item>
+        <item>TrailRun</item>
+        <item>VirtualRun</item>
+        <item>HIIT</item>
+        <item>PhysicalTherapy</item>
+        <item>Padel</item>
+        <item>Pickleball</item>
+        <item>Golf</item>
+        <item>Skateboard</item>
+        <item>Sail</item>
+        <item>Wheelchair</item>
     </string-array>
 
     <string-array name="Strava_Sport_Types_UI_Names">
+        <item>@string/no_upload</item>
         <item>Workout (Other)</item>
         <item>Ride</item>
         <item>Run</item>
@@ -112,6 +129,21 @@
         <item>Weight Training</item>
         <item>Windsurf</item>
         <item>Yoga</item>
+        <item>Gravel Ride</item>
+        <item>Mountain Bike Ride</item>
+        <item>E-Mountain Bike Ride</item>
+        <item>Handcycle</item>
+        <item>Velomobile</item>
+        <item>Trail Run</item>
+        <item>Virtual Run</item>
+        <item>HIIT</item>
+        <item>Physical Therapy</item>
+        <item>Padel</item>
+        <item>Pickleball</item>
+        <item>Golf</item>
+        <item>Skateboard</item>
+        <item>Sail</item>
+        <item>Wheelchair</item>
     </string-array>
 
     <string-array name="Runkeeper_Sport_Types">

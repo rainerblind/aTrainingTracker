@@ -47,7 +47,12 @@ data class ExtremaDataRow(
     val minLatLng: LatLng? = null,
     val avgValue: String?,
     val maxValue: String?,
-    val maxLatLng: LatLng? = null
+    val maxLatLng: LatLng? = null,
+    val iconResId: Int? = null,
+    val isMinRelevant: Boolean = true,
+    val boldMin: Boolean = false,
+    val boldAvg: Boolean = false,
+    val boldMax: Boolean = false
 ) {
     /**
      * Helper to check if any value is present for this sensor.

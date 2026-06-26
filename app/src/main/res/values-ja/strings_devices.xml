@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+  -->
+
+<resources>
+    <string name="devices_button_pair">ペアリング</string>
+    <string name="devices_button_unpair">ペアリング解除</string>
+
+    <string name="devices_unknown">不明</string>
+    <string name="devices_unknown_manufacturer">不明なメーカー</string>
+    <string name="devices_unknown_device">名前なし</string>
+
+    <string name="devices_all">すべて</string>
+
+    <string name="devices_available_devices_format">利用可能な %1$s デバイス</string>
+    <string name="devices_paired_devices_format">ペアリング済み %1$s デバイス</string>
+    <string name="devices_known_devices_format">既知の %1$s デバイス</string>
+    <string name="devices_all_available_devices">利用可能なすべてのデバイス</string>
+    <string name="devices_all_paired_devices">ペアリング済みのすべてのデバイス</string>
+    <string name="devices_all_known_devices">すべての既知のデバイス</string>
+
+    <string name="devices_myRemoteDevices">デバイス</string>
+    <string name="devices_newDevices">新規デバイス</string>
+    <string name="devices_searchingForDevice">%1$s %2$s デバイスを検索中</string>
+    <string name="devicessearchingForRemoteDevice">ANT+ 心拍計を検索中</string>
+
+    <string name="devices_lastSeenText">最終検出</string>
+    <string name="devices_now">現在</string>
+
+    <string name="devices_correct_calibration_factor_title_bike">タイヤ周長の補正</string>
+    <string name="devices_correct_calibration_factor_title_run">補正係数の編集</string>
+    <string name="devices_correct_calibration_explanation_bike">このセンサーのタイヤ周長を補正します。</string>
+    <string name="devices_correct_calibration_explanation_run">このセンサーの補正係数を編集します。</string>
+    <string name="devices_measuredDistanceText">測定距離:</string>
+    <string name="devices_correctDistanceText">正確な距離:</string>
+
+    <string name="devices_settings_header">設定</string>
+    <string name="devices_deviceNameText">デバイス名</string>
+    <string name="devices_deviceTypeText">デバイスの種類</string>
+    <string name="devices_manufacturerText">メーカー</string>
+    <string name="devices_on_equipment_text">装備</string>
+    <string name="devices_on_bikes_text">バイク</string>
+    <string name="devices_on_shoes_text">シューズ</string>
+    <string name="devices_on_short_format">装着先: %1$s</string>
+    <string name="devices_calibration_factor">補正係数</string>
+    <string name="devices_wheel_circumference">タイヤ周長</string>
+    <string name="devices_set_calibration">%1$s を設定</string>
+
+    <string name="devices_editDeviceBikeCadenceDeviceNameValue">Garmin ケイデンス</string>
+    <string name="devices_editDeviceBikeCadenceDeviceTypeValue">ケイデンス</string>
+
+    <string name="devices_editDeviceBikeDeviceNameValue">Garmin スピード</string>
+    <string name="devices_editDeviceBikeDeviceTypeValue">バイクスピード</string>
+    <string name="devices_editDeviceBikeEditCalibrationFactorBasedOnDistance">タイヤ周長を補正</string>
+
+    <string name="devices_editDeviceRunDeviceNameValue">Garmin ラン</string>
+    <string name="devices_editDeviceRunDeviceTypeValue">ランスピード</string>
+    <string name="devices_editDeviceRunEditCalibrationFactorBasedOnDistance">補正</string>
+
+    <string name="devices_editDeviceGenericDeviceNameValue">汎用デバイス</string>
+    <string name="devices_editDeviceGenericDeviceTypeValue">汎用</string>
+    <string name="devices_select_wheel_size_prompt">タイヤサイズを選択…</string>
+    <string name="devices_last_seen_never">未検出</string>
+
+    <string name="devices_location_GPS">GPS</string>
+    <string name="devices_location_Network">ネットワーク</string>
+    <string name="devices_location_GoogleFused">Google Fused</string>
+    <string name="devices_altitude_from_pressure">気圧</string>
+
+    <string name="devices_live_sensor_data_header">センサーデータ</string>
+
+    <string name="devices_dialog_delete_device_title">削除しますか？</string>
+    <string name="devices_dialog_delete_device_message">センサー \'%1$s\' を本当に削除しますか？</string>
+
+</resources>

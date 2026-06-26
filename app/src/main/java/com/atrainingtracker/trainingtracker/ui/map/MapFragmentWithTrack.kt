@@ -71,29 +71,6 @@ class MapFragmentWithTrack : Fragment() {
 
     private val viewModel: MapFragmentWithTrackViewModel by viewModels()
 
-    /*
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
-        return ComposeView(requireContext()).apply {
-            setContent {
-                ATrainingTrackerTheme {
-                    // Observe the mapState which has bearing/speed/follow disabled
-                    val mapState by viewModel.mapState.collectAsStateWithLifecycle()
-
-                    ATrainingTrackerMap(
-                        mapState = mapState,
-                        currentLocationFlow = viewModel.currentLocation,
-                        modifier = Modifier.fillMaxSize(),
-                        onSegmentClick = { }  //TODO: show segment details as BottomSheetScaffold
-                    )
-                }
-            }
-        }
-    }
-     */
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreateView(
@@ -105,7 +82,7 @@ class MapFragmentWithTrack : Fragment() {
             setContent {
                 ATrainingTrackerTheme {
 
-                    val mapState by viewModel.mapState.collectAsStateWithLifecycle()
+                    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
                     val currentLocation by viewModel.currentLocation.collectAsStateWithLifecycle()
                     val liveSegments by viewModel.liveSegments.collectAsStateWithLifecycle()
                     val allRoutes by viewModel.allRoutes.collectAsStateWithLifecycle()
@@ -149,44 +126,20 @@ class MapFragmentWithTrack : Fragment() {
                                 selectedSegmentId != null -> {
                                     // --- THE SHEET CONTENT: The Entire SimpleSegmentOnMapScreen ---
                                     val selectedSegment =
-                                        mapState.segments.find { it.stravaId == selectedSegmentId }
-
-                                    // Transform the single selected Segment into a MapState for the Detail Screen
-                                    val detailMapState = remember(selectedSegment) {
-                                        MapState(
-                                            zoomFocus = MapZoomFocus.LOCAL_SEGMENTS,
-                                            segments = if (selectedSegment != null) listOf(
-                                                selectedSegment
-                                            ) else emptyList(),
-                                            bSportType = selectedSegment?.bSportType
-                                                ?: BSportType.UNKNOWN
-                                        )
-                                    }
+                                        uiState.segments.find { it.stravaId == selectedSegmentId }
 
                                     SegmentOnMapScreen(
                                         segmentSummary = liveSegments.find { it.summary.stravaId == selectedSegmentId }?.summary,
-                                        mapState = detailMapState,
+                                        segment = selectedSegment,
                                         modifier = Modifier
                                     )
                                 }
                                 selectedRouteId != null -> {
                                     val selectedRoute =
-                                        mapState.routes.find {it.id == selectedRouteId }
-
-                                    // Transform the single selected route into a MapState for the Detail Screen
-                                    val detailMapState = remember(selectedRoute) {
-                                        MapState(
-                                            zoomFocus = MapZoomFocus.LOCAL_ROUTES,
-                                            routes = if (selectedRoute != null) listOf(
-                                                selectedRoute
-                                            ) else emptyList(),
-                                            bSportType = selectedRoute?.bSportType
-                                                ?: BSportType.UNKNOWN
-                                        )
-                                    }
+                                        uiState.routes.find {it.id == selectedRouteId }
 
                                     RouteOnMapScreen(
-                                        mapState = detailMapState,
+                                        route = selectedRoute,
                                         routeSummary = allRoutes.find { it.summary.id == selectedRouteId}?.summary,
                                         onToggleSelection = { viewModel.onToggleRoute(
                                             id = selectedRouteId!!,
@@ -194,25 +147,28 @@ class MapFragmentWithTrack : Fragment() {
                                         ) },
                                         modifier = Modifier,
                                     )
-
                                 }
                             }
                         }
                     ) { innerPadding ->
                         // --- THE MAIN BODY: The Track Map ---
                         ATrainingTrackerMap(
-                            mapState = mapState,
+                            zoomFocus = MapZoomFocus.LOCAL_SEGMENTS,
+                            bSportType = uiState.bSportType,
                             currentLocationFlow = MutableStateFlow(currentLocation),
-                            modifier = Modifier.fillMaxSize(),
-                            onSegmentClick = { id ->
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            segments(uiState.segments, onSegmentClick = { id ->
                                 selectedRouteId = null
                                 selectedSegmentId = id
-                            },
-                            onRouteClick = { id ->
+                            })
+                            routes(uiState.routes, onRouteClick = { id ->
                                 selectedSegmentId = null
                                 selectedRouteId = id
-                            }
-                        )
+                            })
+                            markers(uiState.markers)
+                            liveTrack(uiState.currentTrack)
+                        }
                     }
 
                     // Handle system back button to close the peek

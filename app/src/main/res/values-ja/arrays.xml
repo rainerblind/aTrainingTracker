@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+  -->
+
+<resources>
+
+    <string name="filter_max">最大</string>
+
+    <string-array name="Strava_Sport_Types_UI_Names">
+        <item>@string/no_upload</item>
+        <item>トレーニング (その他)</item>
+        <item>ライド</item>
+        <item>ラン</item>
+        <item>スイム</item>
+        <item>ハイキング</item>
+        <item>ウォーキング</item>
+        <item>アルペンスキー</item>
+        <item>バックカントリースキー</item>
+        <item>カヌー</item>
+        <item>クロスフィット</item>
+        <item>E-Bike</item>
+        <item>エリプティカル</item>
+        <item>アイススケート</item>
+        <item>インラインスケート</item>
+        <item>カヤック</item>
+        <item>カイトサーフィン</item>
+        <item>ノルディックスキー</item>
+        <item>ロッククライミング</item>
+        <item>ローラースキー</item>
+        <item>ローイング</item>
+        <item>スノーボード</item>
+        <item>スノーシュー</item>
+        <item>ステッパー</item>
+        <item>SUP</item>
+        <item>サーフィン</item>
+        <item>バーチャルライド</item>
+        <item>ウェイトトレーニング</item>
+        <item>ウィンドサーフィン</item>
+        <item>ヨガ</item>
+            <item>グラベルライド</item>
+        <item>マウンテンバイク</item>
+        <item>E-マウンテンバイク</item>
+        <item>ハンドサイクル</item>
+        <item>ベロモービル</item>
+        <item>トレイルラン</item>
+        <item>バーチャルラン</item>
+        <item>HIIT</item>
+        <item>理学療法</item>
+        <item>パデル</item>
+        <item>ピックルボール</item>
+        <item>ゴルフ</item>
+        <item>スケートボード</item>
+        <item>セーリング</item>
+        <item>車いす</item>
+</string-array>
+
+    <string-array name="Runkeeper_Sport_Types">
+        <item>その他</item>
+        <item>ランニング</item>
+        <item>サイクリング</item>
+        <item>マウンテンバイク</item>
+        <item>ウォーキング</item>
+        <item>ハイキング</item>
+        <item>ダウンヒルスキー</item>
+        <item>クロスカントリースキー</item>
+        <item>スノーボード</item>
+        <item>スケート</item>
+        <item>スイミング</item>
+        <item>車椅子</item>
+        <item>ローイング</item>
+        <item>エリプティカル</item>
+        <item>ヨガ</item>
+        <item>ピラティス</item>
+        <item>クロスフィット</item>
+        <item>スピニング</item>
+        <item>ズンバ</item>
+        <item>バレエ</item>
+        <item>グループワークアウト</item>
+        <item>ダンス</item>
+        <item>ブートキャンプ</item>
+        <item>ボクシング / MMA</item>
+        <item>瞑想</item>
+        <item>筋力トレーニング</item>
+        <item>サーキットトレーニング</item>
+        <item>コアトレーニング</item>
+        <item>アークトレーナー</item>
+        <item>ステアマスター</item>
+        <item>スポーツ</item>
+        <item>ノルディックウォーキング</item>
+    </string-array>
+
+    <string-array name="Training_Peaks_Sport_Types">
+        <item>その他</item>
+        <item>バイク</item>
+        <item>ラン</item>
+        <item>ウォーク</item>
+        <item>スイム</item>
+        <item>X-Train</item>
+        <item>MTB</item>
+        <item>筋力トレ</item>
+        <item>XCスキー</item>
+        <item>ローイング</item>
+    </string-array>
+
+    <string-array name="TCX_Sport_Types">
+        <item>その他</item>
+        <item>ウォーキング</item>
+        <item>ランニング</item>
+        <item>サイクリング</item>
+    </string-array>
+
+    <string-array name="GC_Sport_Types">
+        <item>ウォーク</item>
+        <item>ラン</item>
+        <item>mtb</item>
+        <item>バイク</item>
+    </string-array>
+
+    <string-array name="wheel_size_names">
+        <item>カスタム</item>
+        <item>700 x 28</item>
+        <item>700 x 25</item>
+        <item>700 x 23</item>
+        <item>700 x 20</item>
+        <item>26 x 2.125"</item>
+        <item>26 x 1.9"</item>
+        <item>26 x 1.5"</item>
+        <item>26 x 1.25"</item>
+        <item>26 x 1.0"</item>
+    </string-array>
+
+</resources>

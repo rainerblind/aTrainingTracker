@@ -75,7 +75,6 @@ import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
 import com.atrainingtracker.trainingtracker.helpers.combineAndShare
 import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreen
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataWithTrack
-import com.atrainingtracker.trainingtracker.ui.map.MapState
 import com.atrainingtracker.trainingtracker.ui.map.MapTrack
 import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
@@ -109,21 +108,18 @@ fun PeriodMapScreen(
         }
     }
 
-    // Prepare MapState for the TrackOnMapScreen
-    val mapState = remember(peekedWorkoutDataWithTrack) {
+    // Prepare Map data for the TrackOnMapScreen
+    val peekedTracks = remember(peekedWorkoutDataWithTrack) {
         peekedWorkoutDataWithTrack?.workoutData?.let { workoutData ->
-            MapState(
-                tracks = listOf(
-                    MapTrack(
-                        id = workoutData.id,
-                        type = TrackType.BEST,
-                        path = peekedWorkoutDataWithTrack.trackPoints
-                    )
-                ),
-                zoomFocus = MapZoomFocus.TRACK_AND_MARKERS,
-                bSportType = workoutData.bSportType
+            listOf(
+                MapTrack(
+                    id = workoutData.id,
+                    type = TrackType.BEST,
+                    bSportType = workoutData.bSportType,
+                    path = peekedWorkoutDataWithTrack.trackPoints
+                )
             )
-        }
+        } ?: emptyList()
     }
 
     val scaffoldState = rememberBottomSheetScaffoldState(
@@ -162,11 +158,11 @@ fun PeriodMapScreen(
             }
         },
         sheetContent = {
-            if (peekedWorkoutDataWithTrack?.workoutData != null && mapState != null) {
+            peekedWorkoutDataWithTrack?.workoutData?.let { workoutData ->
                 // Here we show the TrackOnMapScreen for the specific workout
                 TrackOnMapScreen(
-                    workoutData = peekedWorkoutDataWithTrack.workoutData,
-                    mapState = mapState,
+                    workoutData = workoutData,
+                    tracks = peekedTracks,
                     modifier = Modifier
                 )
             }

@@ -67,10 +67,10 @@ public class ANTRunSpeedDevice extends MyANTDevice {
         mCadenceSensor = new MySensor<Double>(this, SensorType.CADENCE);
         mSpeedSensor = new MySensor<Double>(this, SensorType.SPEED_mps);
         mPaceSensor = new MySensor<Double>(this, SensorType.PACE_spm);
-        mDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m, false);
-        mLapDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m_LAP, false);
-        mStridesSensor = new MyIntegerAccumulatorSensor(this, SensorType.STRIDES, false);
-        mCaloriesSensor = new MyIntegerAccumulatorSensor(this, SensorType.CALORIES, false);
+        mDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m, true);
+        mLapDistanceSensor = new MyDoubleAccumulatorSensor(this, SensorType.DISTANCE_m_LAP, true);
+        mStridesSensor = new MyIntegerAccumulatorSensor(this, SensorType.STRIDES, true);
+        mCaloriesSensor = new MyIntegerAccumulatorSensor(this, SensorType.CALORIES, true);
 
         addSensor(mCadenceSensor);
         addSensor(mSpeedSensor);
@@ -107,7 +107,7 @@ public class ANTRunSpeedDevice extends MyANTDevice {
 
                 @Override
                 public void onNewCalorieData(long estTimestamp, java.util.EnumSet<EventFlag> eventFlags, long cumulativeCalories) {
-                    mCaloriesSensor.newValue((int) cumulativeCalories);
+                    mCaloriesSensor.accumulate((int) cumulativeCalories);
                 }
             });
 
@@ -115,11 +115,11 @@ public class ANTRunSpeedDevice extends MyANTDevice {
                 @Override
                 public void onNewDistance(long estTimestamp, java.util.EnumSet<EventFlag> eventFlags, java.math.BigDecimal cumulativeDistance) {
                     if (cumulativeDistance != null) {
-                        mDistanceSensor.newValue(mCalibrationFactor * cumulativeDistance.doubleValue());
-                        mLapDistanceSensor.newValue(mCalibrationFactor * cumulativeDistance.doubleValue());
+                        mDistanceSensor.accumulate(mCalibrationFactor * cumulativeDistance.doubleValue());
+                        mLapDistanceSensor.accumulate(mCalibrationFactor * cumulativeDistance.doubleValue());
                     } else {
-                        mDistanceSensor.newValue(0.0);
-                        mLapDistanceSensor.newValue(0.0);
+                        mDistanceSensor.accumulate(0.0);
+                        mLapDistanceSensor.accumulate(0.0);
                     }
                 }
             });
@@ -149,7 +149,7 @@ public class ANTRunSpeedDevice extends MyANTDevice {
             mStrideSdmPcc.subscribeStrideCountEvent(new IStrideCountReceiver() {
                 @Override
                 public void onNewStrideCount(long estTimestamp, java.util.EnumSet<EventFlag> eventFlags, long cumulativeStrides) {
-                    mStridesSensor.newValue((int) cumulativeStrides);
+                    mStridesSensor.accumulate((int) cumulativeStrides);
                 }
             });
         }

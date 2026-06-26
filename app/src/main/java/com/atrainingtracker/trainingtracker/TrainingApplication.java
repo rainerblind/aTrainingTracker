@@ -56,6 +56,7 @@ import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation;
 import com.atrainingtracker.trainingtracker.exporter.FileFormat;
+import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository;
 import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleService;
 import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleServiceBuildIn;
 import com.atrainingtracker.trainingtracker.smartwatch.pebble.Watchapp;
@@ -501,10 +502,12 @@ public class TrainingApplication extends Application {
      * Strava helpers
      */
     public static boolean uploadToStrava() {
-        return cSharedPreferences.getBoolean(SP_UPLOAD_TO_STRAVA, false);
+        return getStravaAccessToken() != null;
     }
 
     public static void setUploadToStrava(boolean value) {
+        // Since we now use the presence of the access token as the source of truth,
+        // we keep this for legacy compatibility but the logic is handled by token presence.
         cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_STRAVA, value).apply();
     }
 
@@ -962,6 +965,7 @@ public class TrainingApplication extends Application {
         if (!cResumeFromCrash) {
             sendBroadcast(new Intent(BANALService.RESET_ACCUMULATORS_INTENT)
                     .setPackage(getPackageName()));
+            BANALServiceRepository.Companion.getInstance(this).clearBreadcrumbs();
         }
 
         if (startSearchWhenTrackingStarts()) {

@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+  -->
+
+<resources>
+    <string name="devices_button_pair">Paruj</string>
+    <string name="devices_button_unpair">Rozłącz</string>
+
+    <string name="devices_unknown">Nieznany</string>
+    <string name="devices_unknown_manufacturer">nieznany producent</string>
+    <string name="devices_unknown_device">bez nazwy</string>
+
+    <string name="devices_all">Wszystkie</string>
+
+    <string name="devices_available_devices_format">dostępne urządzenia %1$s</string>
+    <string name="devices_paired_devices_format">sparowane urządzenia %1$s</string>
+    <string name="devices_known_devices_format">znane urządzenia %1$s</string>
+    <string name="devices_all_available_devices">wszystkie dostępne urządzenia</string>
+    <string name="devices_all_paired_devices">wszystkie sparowane urządzenia</string>
+    <string name="devices_all_known_devices">wszystkie znane urządzenia</string>
+
+    <string name="devices_myRemoteDevices">Urządzenia</string>
+    <string name="devices_newDevices">Nowe urządzenia</string>
+    <string name="devices_searchingForDevice">szukanie urządzeń %1$s %2$s</string>
+    <string name="devicessearchingForRemoteDevice">szukanie urządzeń tętna ANT+</string>
+
+    <string name="devices_lastSeenText">ostatnio widziano</string>
+    <string name="devices_now">teraz</string>
+
+    <string name="devices_correct_calibration_factor_title_bike">Koryguj obwód koła</string>
+    <string name="devices_correct_calibration_factor_title_run">Koryguj współczynnik kalibracji</string>
+    <string name="devices_correct_calibration_explanation_bike">Tutaj możesz skorygować obwód koła dla tego czujnika.</string>
+    <string name="devices_correct_calibration_explanation_run">Tutaj możesz skorygować współczynnik kalibracji dla tego czujnika.</string>
+    <string name="devices_measuredDistanceText">zmierzony dystans:</string>
+    <string name="devices_correctDistanceText">poprawny dystans:</string>
+
+    <string name="devices_settings_header">ustawienia</string>
+    <string name="devices_deviceNameText">nazwa urządzenia</string>
+    <string name="devices_deviceTypeText">typ urządzenia</string>
+    <string name="devices_manufacturerText">producent</string>
+    <string name="devices_on_equipment_text">na sprzęcie</string>
+    <string name="devices_on_bikes_text">na rowerach</string>
+    <string name="devices_on_shoes_text">na butach</string>
+    <string name="devices_on_short_format">na: %1$s</string>
+    <string name="devices_calibration_factor">Współczynnik kalibracji</string>
+    <string name="devices_wheel_circumference">Obwód koła</string>
+    <string name="devices_set_calibration">Ustaw %1$s</string>
+
+    <string name="devices_editDeviceBikeCadenceDeviceNameValue">Kadencja Garmin</string>
+    <string name="devices_editDeviceBikeCadenceDeviceTypeValue">Kadencja</string>
+
+    <string name="devices_editDeviceBikeDeviceNameValue">Prędkość Garmin</string>
+    <string name="devices_editDeviceBikeDeviceTypeValue">Prędkość roweru</string>
+    <string name="devices_editDeviceBikeEditCalibrationFactorBasedOnDistance">koryguj obwód koła</string>
+
+    <string name="devices_editDeviceRunDeviceNameValue">Bieg Garmin</string>
+    <string name="devices_editDeviceRunDeviceTypeValue">Prędkość biegu</string>
+    <string name="devices_editDeviceRunEditCalibrationFactorBasedOnDistance">koryguj</string>
+
+    <string name="devices_editDeviceGenericDeviceNameValue">Urządzenie ogólne</string>
+    <string name="devices_editDeviceGenericDeviceTypeValue">Ogólne</string>
+    <string name="devices_select_wheel_size_prompt">Wybierz rozmiar koła…</string>
+    <string name="devices_last_seen_never">jeszcze nie</string>
+
+    <string name="devices_location_GPS">GPS</string>
+    <string name="devices_location_Network">Sieć</string>
+    <string name="devices_location_GoogleFused">Google Fused</string>
+    <string name="devices_altitude_from_pressure">Ciśnienie pow.</string>
+
+    <string name="devices_live_sensor_data_header">Dane czujników</string>
+
+    <string name="devices_dialog_delete_device_title">Na pewno usunąć?</string>
+    <string name="devices_dialog_delete_device_message">Czy na pewno chcesz usunąć czujnik \'%1$s\'?</string>
+
+</resources>

@@ -163,6 +163,12 @@ class TrackingTabsViewModel(
         }
     }
 
+    fun onUpdateShowElevationProfile(tabViewId: Long, showElevationProfile: Boolean) {
+        viewModelScope.launch {
+            trackingViewsRepository.updateShowElevationProfile(tabViewId, showElevationProfile)
+        }
+    }
+
     fun onAddTabRelative(tabViewId: Long, after: Boolean) {
         viewModelScope.launch {
             // 1. Get current index to calculate new index

@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.segments.SegmentSummary
+import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.segments.SegmentHeader
@@ -38,14 +39,8 @@ fun SegmentItem(
     onSegmentClick: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    ElevatedCard(
-        modifier = modifier
-            .fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
+    MappableListItem(
+        modifier = modifier,
         onClick = { onSegmentClick(summary.stravaId) }
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -54,7 +49,7 @@ fun SegmentItem(
                 summary = summary,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(4.dp)
+                    .padding(12.dp)
             )
 
             HorizontalDivider(
@@ -66,9 +61,10 @@ fun SegmentItem(
             // 2. Performance Metrics (Full Width)
             SegmentDetails(
                 summary = summary,
+                showStravaLogo = false,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(4.dp)
+                    .padding(12.dp)
             )
 
             // 3. BOTTOM: Elevation Profile (Full Width)

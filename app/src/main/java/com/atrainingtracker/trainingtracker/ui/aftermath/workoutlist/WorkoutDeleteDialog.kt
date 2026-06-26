@@ -18,7 +18,6 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -26,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.trainingtracker.ui.components.DeleteConfirmationDialog
 
 /**
  * Reusable dialog for confirming workout deletion.
@@ -36,23 +36,10 @@ fun WorkoutDeleteDialog(
     onConfirm: (Long) -> Unit,
     onDismiss: () -> Unit
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = MaterialTheme.colorScheme.surface,
-        title = { Text(stringResource(R.string.delete_workout)) },
-        text = { Text(stringResource(R.string.really_delete_format, workout.workoutName)) },
-        confirmButton = {
-            TextButton(onClick = {
-                onConfirm(workout.id)
-                onDismiss()
-            }) {
-                Text(stringResource(R.string.delete_workout))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
-            }
-        }
+    DeleteConfirmationDialog(
+        title = stringResource(R.string.delete_workout),
+        message = stringResource(R.string.really_delete_format, workout.workoutName),
+        onConfirm = { onConfirm(workout.id) },
+        onDismiss = onDismiss
     )
 }

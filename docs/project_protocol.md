@@ -1,9 +1,9 @@
 # Project Protocol: Requirement-Based Engineering
 
-## Vision
-The goal of **aTrainingTracker** is to be an awesome, professional, and world-class application for tracking training activities. To achieve this, every AI agent must produce high-quality, robust, and visually superior code and UI components. If instructions are unclear or ambiguous, the agent **must ask for clarification** before proceeding.
+## Vision & ASPICE Alignment
+The goal of **aTrainingTracker** is to be an awesome, professional, and world-class application for tracking training activities. To achieve this, we follow a workflow inspired by **ASPICE (Automotive SPICE)** standards, emphasizing bidirectional traceability and architectural integrity. Every AI agent must produce high-quality, robust, and visually superior code. If instructions are unclear, the agent **must ask for clarification**.
 
-## Mandatory Development Workflow
+## Mandatory Development Workflow (TDD-Based)
 
 Any AI assistant working on this project **must** follow these steps for every task:
 
@@ -11,22 +11,85 @@ Any AI assistant working on this project **must** follow these steps for every t
     *   Before writing any code or plans, read `docs/requirements.md`.
     *   Add a new Requirement ID (e.g., `REQ-XXX-###`) or update an existing one to reflect the user's request.
     *   Define the **Rationale** (the "Why") clearly.
+    *   Map the requirement to the relevant **Implementation File(s)**.
 
-2.  **Implementation Planning**:
-    *   Create an `implementation_plan.artifact.md` (as per standard AI workflow).
-    *   Every proposed change **must** explicitly reference the Requirement ID it fulfills.
+2.  **Test Definition (The TDD Hard Stop)**:
+    *   **MANDATORY HARD STOP**: After requirement synchronization, the agent MUST define the verification criteria with the user.
+    *   Identify which manual or automated tests in `docs/tests.md` will prove the requirement is met.
+    *   If no suitable test exists, add a new one to `docs/tests.md` immediately.
+    *   **Iterative Refinement**: The agent must refine the test cases based on user feedback until the user explicitly agrees.
+    *   **Enforcement**: The agent is strictly FORBIDDEN from proposing an implementation plan or writing any code until the user has formally agreed to the test cases in `docs/tests.md`. This phase is used to clarify and freeze the requirements.
 
-3.  **Execution & Verification**:
-    *   Implement the changes as planned.
+3.  **Impact Analysis (SWE.1.BP.5 Phase)**:
+    *   Before implementation, perform a formal audit of existing code.
+    *   Identify potential side effects on:
+        *   **Android System**: Battery usage, WakeLock durations, Background execution rules.
+        *   **Component Interfaces**: Will a change in `BANALService` break the `MutableStateFlow` used by the UI?
+        *   **Data Integrity**: Will a schema change affect backward compatibility of existing workout files?
+    *   Document these risks in the `implementation_plan.artifact.md`.
+
+4.  **Jira Ticket Management (Agile Phase)**:
+    *   **Automation**: Use the local utility `./tools/jira_util.py` for Jira interactions (list, comment).
+    *   **Syntax**: All Jira comments must use **Jira Wiki Markup** (e.g., `h1.`, `{code}`, `*bold*`).
+    *   **Credentials**: Authentication details are stored in `.env.jira` (not tracked in Git).
+    *   **State Control**: The agent **MUST NOT** transition tickets between states (e.g., move to "In Progress" or "Done") unless explicitly instructed by the user. The user maintains sole control over the workflow state.
+    *   **Selection & Focus**: Multiple tickets may be "In Bearbeitung" (In Progress). The agent works on one chosen ticket at a time. While working on a ticket, it becomes the exclusive focus of the development session. The agent MUST fully complete the current topic (including documentation and verification) before concluding. The agent is strictly FORBIDDEN from asking to start a new ticket or suggesting the next task; the user holds sole initiative for task transitions.
+    *   **Clarification & Completeness**: If a ticket selected for work lacks a **Description**, specific failure logs, or clear technical context, the agent **MUST NOT** proceed with an implementation plan. Instead, the agent must ask the user for clarification and agreement on the problem statement first.
+    *   **Documentation**: For any ticket in progress, the agent must:
+        *   **Identity Disclaimer**: Every comment posted by the agent MUST start with a clear disclaimer: *"[Automated comment by AI Agent]"*.
+        *   **Initial Analysis**: Immediately after moving to "In Progress", post a comment containing the **Root Cause Analysis (RCA)** (for bugs), the **Implementation Strategy**, the **Impact Analysis**, and the **Agreed Verification Criteria (Test IDs)**.
+        *   **Design Documentation**: Post the full text of the `implementation_plan.artifact.md` as a comment on the ticket.
+        *   **Verification & Closure**: When moving to "In Überprüfung", post the full text of the `walkthrough.artifact.md` as a comment. This provides a permanent record of the implemented changes and verification evidence.
+
+5.  **Architectural Integrity (SWE.2 Phase)**:
+    *   Identify which core components are affected (e.g., `BANALService`, `TrackerService`, `Repository`).
+    *   Define or update the **Interfaces** and **Data Flow** between components in `docs/architecture.md`.
+    *   Ensure that new code does not violate the established architecture (e.g., maintain clear separation between background services and UI layers).
+
+6.  **Implementation Planning (SWE.3 Phase - The Implementation Hard Stop)**:
+    *   Create an `implementation_plan.artifact.md`.
+    *   Every proposed change **must** explicitly reference the Requirement ID, the Component affected, and the corresponding Test ID it fulfills.
+    *   **MANDATORY HARD STOP**: The agent MUST present the full implementation plan to the user and ask for formal approval.
+    *   **Iterative Refinement**: If the user provides feedback or asks for changes to the plan, the agent **MUST** update the plan and ask for approval again.
+    *   **Jira Synchronization**: Upon presentation of the plan to the user, the agent **MUST** also post the full text of the implementation plan as a comment on the corresponding Jira ticket.
+    *   **Enforcement**: The agent is strictly FORBIDDEN from performing any code modifications (writing files or replacing content) until the user has explicitly responded with "Implementation Plan approved" or a similar clear confirmation of the *entire* plan.
+
+7.  **Execution & Multi-Stage Verification**:
+    *   **SWE.4 (Unit Verification)**: Verify internal logic of the specific module (e.g., `NumericalEncodingUtilsTest`).
+    *   **SWE.5 (Integration Verification)**: Verify that the interface between two modules remains stable (e.g., `TrackerService` correctly consumes `BANALService` data).
     *   Perform a verification (build, static analysis, or logic check).
+    *   Refer to `docs/tests.md` to execute the agreed-upon tests.
 
-4.  **Final Documentation**:
+8.  **Final Documentation & Release (SWE.6)**:
+    *   **Pass/Fail Recording**: Document verification evidence in Jira using the following format:
+        > **Verification Result: PASS**
+        > * **Test ID**: TST-UNT-001
+        > * **Scope**: SWE.4 Unit Verification
+        > * **Artifact**: [Link to log/screenshot]
     *   Update the `Status` in `docs/requirements.md` to `Verified`.
     *   Update the `walkthrough.artifact.md` with a summary of the fulfilled requirements.
+    *   **Git Commit Message**: Provide a clear, comprehensive commit message for the changes, following the Conventional Commits standard. Use the `*` symbol for bullet points within the commit body (avoiding dots or dashes) to ensure clean formatting and copy-paste compatibility.
+
+9.  **Post-Implementation Review**:
+    *   **MANDATORY FINAL STEP**: Before concluding the task, the agent MUST review the newly implemented logic against the requirements and tests defined in Steps 1 and 2.
+    *   **Sync Discovery**: If the implementation revealed new constraints or changed the understanding of the requirement, the agent MUST update `docs/requirements.md` and `docs/tests.md` to reflect the *actual* final state.
+    *   **Truth Verification**: Ensure the documentation remains a "Single Source of Truth" that accurately describes the code as it exists after implementation.
+
+## New Version / Release Workflow
+Whenever preparing for a new version:
+1.  **File Audit**: The agent identifies all files modified since the last release.
+2.  **Impact Analysis**: Mapping modified files back to Requirement IDs in `docs/requirements.md`.
+3.  **Test Collection**: Identifying all manual or automated tests in `docs/tests.md` that cover the affected Requirements.
+4.  **Co-Verification**: The agent and user execute the collected tests together to ensure no regressions were introduced.
+
+## Living Documentation Principle
+To maintain a high-fidelity "Digital Twin" of the codebase, the agent must:
+*   **Continuous Updates**: Whenever a new logical rule or user constraint is discovered in the code, add it to `docs/requirements.md`.
+*   **Final Session Audit**: Perform a rigorous final review of all documentation at the end of each task to ensure it matches the final implementation.
+*   **Refine Architecture**: Whenever a deeper understanding of component interactions is gained, update `docs/architecture.md`.
+*   **Maintain Traceability**: Ensure the "Implementation File(s)" column in the requirements list is always kept up to date as files move or logic shifts.
 
 ## How to use this in new sessions
 
 At the start of any new session, the user should provide the following instruction:
-> "Please read the `docs/project_protocol.md` and follow our requirement-based engineering approach for this task."
-
-This ensures the AI assistant immediately adopts the correct mindset and uses the established tools.
+> "Please read the `docs/project_protocol.md` and follow our TDD and requirement-based engineering approach for this task."

@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+  -->
+
+<resources>
+
+    <string name="filter_max">max</string>
+
+    <string-array name="Strava_Sport_Types_UI_Names">
+        <item>@string/no_upload</item>
+        <item>Allenamento (Altro)</item>
+        <item>Giro</item>
+        <item>Corsa</item>
+        <item>Nuoto</item>
+        <item>Escursione</item>
+        <item>Camminata</item>
+        <item>Sci alpino</item>
+        <item>Sci alpinismo</item>
+        <item>Canoa</item>
+        <item>Crossfit</item>
+        <item>EBike</item>
+        <item>Ellittica</item>
+        <item>Pattinaggio ghiaccio</item>
+        <item>Pattinaggio in linea</item>
+        <item>Kayak</item>
+        <item>Kitesurf</item>
+        <item>Sci nordico</item>
+        <item>Arrampicata</item>
+        <item>Skiroll</item>
+        <item>Canottaggio</item>
+        <item>Snowboard</item>
+        <item>Ciaspole</item>
+        <item>Stair Stepper</item>
+        <item>Stand Up Paddling</item>
+        <item>Surf</item>
+        <item>Ciclismo virtuale</item>
+        <item>Pesi</item>
+        <item>Windsurf</item>
+        <item>Yoga</item>
+            <item>Gravel</item>
+        <item>Mountain bike</item>
+        <item>Mountain bike elettrica</item>
+        <item>Handbike</item>
+        <item>Velomobile</item>
+        <item>Trail running</item>
+        <item>Corsa virtuale</item>
+        <item>HIIT</item>
+        <item>Fisioterapia</item>
+        <item>Padel</item>
+        <item>Pickleball</item>
+        <item>Golf</item>
+        <item>Skateboard</item>
+        <item>Vela</item>
+        <item>Sedia a rotelle</item>
+</string-array>
+
+    <string-array name="Runkeeper_Sport_Types">
+        <item>Altro</item>
+        <item>Corsa</item>
+        <item>Ciclismo</item>
+        <item>MTB</item>
+        <item>Camminata</item>
+        <item>Escursione</item>
+        <item>Sci alpino</item>
+        <item>Sci di fondo</item>
+        <item>Snowboard</item>
+        <item>Pattinaggio</item>
+        <item>Nuoto</item>
+        <item>Sedia a rotelle</item>
+        <item>Canottaggio</item>
+        <item>Ellittica</item>
+        <item>Yoga</item>
+        <item>Pilates</item>
+        <item>CrossFit</item>
+        <item>Spinning</item>
+        <item>Zumba</item>
+        <item>Barre</item>
+        <item>Allenamento di gruppo</item>
+        <item>Danza</item>
+        <item>Bootcamp</item>
+        <item>Boxe / MMA</item>
+        <item>Meditazione</item>
+        <item>Pesi</item>
+        <item>Circuito</item>
+        <item>Core</item>
+        <item>Arc Trainer</item>
+        <item>Stairmaster</item>
+        <item>Sport</item>
+        <item>Nordic Walking</item>
+    </string-array>
+
+    <string-array name="Training_Peaks_Sport_Types">
+        <item>Altro</item>
+        <item>Bici</item>
+        <item>Corsa</item>
+        <item>Camminata</item>
+        <item>Nuoto</item>
+        <item>X-Train</item>
+        <item>MTB</item>
+        <item>Pesi</item>
+        <item>Sci di fondo</item>
+        <item>Canottaggio</item>
+    </string-array>
+
+    <string-array name="TCX_Sport_Types">
+        <item>Altro</item>
+        <item>Camminata</item>
+        <item>Corsa</item>
+        <item>Ciclismo</item>
+    </string-array>
+
+    <string-array name="GC_Sport_Types">
+        <item>camminata</item>
+        <item>corsa</item>
+        <item>mtb</item>
+        <item>bici</item>
+    </string-array>
+
+    <string-array name="wheel_size_names">
+        <item>Personalizzato</item>
+        <item>700 x 28</item>
+        <item>700 x 25</item>
+        <item>700 x 23</item>
+        <item>700 x 20</item>
+        <item>26 x 2.125"</item>
+        <item>26 x 1.9"</item>
+        <item>26 x 1.5"</item>
+        <item>26 x 1.25"</item>
+        <item>26 x 1.0"</item>
+    </string-array>
+
+</resources>

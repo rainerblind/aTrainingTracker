@@ -37,13 +37,15 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatus
+import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
 import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.WorkoutDescription
-import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.*
+import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetails
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.WorkoutExtrema
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeader
 import com.atrainingtracker.trainingtracker.ui.components.strava.StravaActivitySection
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
-import com.atrainingtracker.trainingtracker.ui.map.TrackOrSegmentOnMap
+import com.atrainingtracker.trainingtracker.ui.map.PathPreviewMap
+import com.atrainingtracker.trainingtracker.ui.map.toMapTrack
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
 
 /**
@@ -73,18 +75,11 @@ fun WorkoutSummary(
     }
     // TODO: Add functionality to show more detailed stats when clicking on the WorkoutDetails or Extrema Values.
 
-    ElevatedCard(
-        modifier = modifier.fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface)
-            // Apply the alpha to the entire summary container
-            .graphicsLayer(alpha = contentAlpha),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surface // This is your Color.White
-        ),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+    MappableListItem(
+        alpha = contentAlpha,
+        modifier = modifier
     ) {
-
-        // 1. Header (Blue Scrim Section)
+        // 1. Header
         WorkoutHeader(
             data = workoutData.headerData,
             onClicked = onEditWorkout,
@@ -114,13 +109,7 @@ fun WorkoutSummary(
         )
 
         // 4. Extrema Values Section
-        // Show a subtle divider if extrema data exists
         if (workoutData.extremaData.dataRows.isNotEmpty()) {
-            HorizontalDivider(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                thickness = 0.5.dp,
-                color = MaterialTheme.colorScheme.outlineVariant
-            )
             WorkoutExtrema(data = workoutData.extremaData,
                 modifier = editWorkoutModifier
             )
@@ -152,7 +141,7 @@ fun WorkoutSummary(
         )
 
         // Final spacing at the bottom of the summary
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
     }
 }
 
@@ -171,9 +160,8 @@ private fun WorkoutMediaSection(
             .height(300.dp) // Total height for map + profile area
     ) {
         // 1. The Map (Weight 1 lets it take remaining space above profile)
-        TrackOrSegmentOnMap(
-            polyline = workoutData.mapPolyline,
-            color = TrackType.BEST.color,
+        PathPreviewMap(
+            path = workoutData.toMapTrack(),
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth(),
@@ -186,6 +174,8 @@ private fun WorkoutMediaSection(
             encodedAltitudes = workoutData.encodedAltitudes,
             encodedDistances = workoutData.encodedDistances,
             currentDistance = null,
+            minAltitudeOverride = workoutData.minAltitude,
+            maxAltitudeOverride = workoutData.maxAltitude,
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable { onMapClick() }

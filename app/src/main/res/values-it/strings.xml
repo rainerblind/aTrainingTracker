@@ -1,0 +1,978 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+  -->
+
+<resources>
+
+    <!-- Standard stuff -->
+    <string name="OK">OK</string>
+    <string name="do_not_show_again">non mostrare più</string>
+    <string name="Cancel">Annulla</string>
+    <string name="searching_for">ricerca di</string>
+    <string name="searching_for_device_format">ricerca di %1$s</string>
+    <string name="default_device_name">un dispositivo ANT+</string>
+    <string name="waiting">in attesa</string>
+    <string name="pairing_ANT">Associazione ANT+</string>
+    <string name="pairing_bluetooth">Associazione Bluetooth LE</string>
+    <string name="searching">ricerca</string>
+    <string name="research">Ricerca</string>
+    <string name="Start">Avvia</string>
+    <string name="Stop">Ferma</string>
+    <string name="Pause">Pausa</string>
+    <string name="Paused">In pausa</string>
+    <string name="Resume">Riprendi</string>
+    <string name="Tracking">Allenamento</string>
+    <string name="StartPositionTitle">Partenza</string>
+    <string name="EndPositionTitle">Arrivo</string>
+    <string name="Lap">Giro</string>
+    <string name="Equipment">Attrezzatura</string>
+    <string name="edit_device">modifica dispositivo</string>
+    <string name="edit_location">modifica luogo</string>
+    <string name="Edit_Location">Modifica luogo</string>
+    <string name="edit_workout">modifica allenamento</string>
+    <string name="save_as_route">salva come percorso</string>
+    <string name="Edit_Location_Message">Modifica il nome e l\'altitudine di questo luogo</string>
+    <string name="edit_wheel_circumference">modifica circonferenza ruota</string>
+    <string name="edit_calibration_factor">modifica fattore calibrazione</string>
+    <string name="delete">elimina</string>
+    <string name="delete_device">elimina dispositivo</string>
+    <string name="delete_pebble_view">elimina vista Pebble</string>
+    <string name="delete_tracking_view">elimina vista allenamento</string>
+    <string name="delete_workout">elimina allenamento</string>
+    <string name="deleteOldWorkouts">elimina vecchi allenamenti</string>
+    <string name="deleteWorkoutsThatAreOlderThanDays">elimina allenamenti più vecchi di … giorni</string>
+    <string name="delete_sensor">elimina</string>
+    <string name="really_delete_workout">Vuoi davvero eliminare questo allenamento?</string>
+    <string name="really_delete_location">Vuoi davvero eliminare questo luogo?</string>
+    <string name="really_delete_pebble_view_format">Vuoi davvero eliminare la vista Pebble "%1$s"?</string>
+    <string name="really_delete_view_format">Vuoi davvero eliminare la vista "%1$s"?</string>
+    <string name="deleting_please_wait">Eliminazione allenamento …\nattendere</string>
+    <string name="deleting_workout">Eliminazione: %1$s…</string>
+    <string name="calculating_extrema_values">Calcolo valori min, med e max…</string>
+    <string name="calculating_extrema_value_for">calcolo %1$s di %2$s</string>
+    <string name="calculating_max_away_point">calcolo punto più lontano</string>
+    <string name="initializing">inizializzazione</string>
+    <string name="delete_location">elimina luogo</string>
+    <string name="show_HW_details">mostra dettagli HW</string>
+    <string name="show_google_maps_licence">Informazioni legali Google Maps</string>
+    <string name="play_services_not_installed">Google Play services non è installato.</string>
+    <string name="Preferences">Preferenze</string>
+    <string name="start_tracking">Avvia allenamento</string>
+    <string name="stop_tracking">Ferma allenamento</string>
+    <string name="pause_tracking">Sospendi allenamento</string>
+    <string name="resume_tracking">Riprendi allenamento</string>
+    <string name="start_or_resume_dialog_message">L\'allenamento precedente non è finito.\nVuoi iniziarne uno nuovo o riprendere ?</string>
+    <string name="start_new_workout">Nuovo</string>
+    <string name="resume_workout">Riprendi</string>
+    <string name="SD_card">Scheda SD</string>
+    <string name="File">File</string>
+    <string name="Community">Comunità</string>
+    <string name="TrainingPeaks_login_title">Accesso TrainingPeaks</string>
+    <string name="TrainingPeaks_login_message">Per TrainingPeaks, servono nome utente e password</string>
+    <string name="unknown_manufacturer">Sconosciuto</string>
+    <string name="unknown_last_seen_date">mai visto</string>
+    <string name="next">succ.</string>
+    <string name="text_new">nuovo</string>
+    <string name="prev">prec.</string>
+    <string name="name">nome</string>
+    <string name="number_of_fields">Numero di campi:</string>
+    <string name="Lap_NR">Giro %1$d</string>
+    <string name="build_in">integrato</string>
+    <string name="no_user_name">no utente</string>
+    <string name="no_password">no password</string>
+    <string name="add_sensor">aggiungi sensore</string>
+
+    <string name="commute">pendolarismo</string>
+    <string name="trainer_general">rulli indoor</string>
+    <string name="trainer_bike">rulli indoor</string>
+    <string name="trainer_run">tapis roulant</string>
+
+    <string name="guess_commute_and_trainer">indovina rulli/pendolarismo</string>
+
+    <string name="install_pebble_watchapp_title">Installa app Pebble</string>
+    <string name="install_pebble_watchapp_text">Devi installare la corrispondente app Pebble.</string>
+    <string name="install_pebble_watchapp_now">OK, installa ora</string>
+    <string name="pebble_build_in">App Pebble standard</string>
+    <string name="pebble_a_training_tracker_watchapp">App a Training Tracker</string>
+
+    <string name="install_ant_plugin_message">Per ANT+, serve il servizio ANT+ Plugin.</string>
+    <string name="install_ant_plugin_ok">OK, installa ora</string>
+
+    <string name="protocol_all">tutti</string>
+    <string name="protocol_unknown">Sconosciuto</string>
+
+    <!-- Units -->
+    <string name="units_type_metric">metrico (m)</string>
+    <string name="units_type_imperial">imperiale (miglio)</string>
+
+    <string name="value_unit_float_string">%1$.2f %2$s</string>
+    <string name="value_unit_string_string">%1$s %2$s</string>
+    <string name="value_unit_int_string">%1$d %2$s</string>
+    <string name="distance_distanceUnit_sport_time_format">%1$s %2$s %3$s in %4$s</string>
+
+    <string name="location_extrema_format">%1$s %2$s: %3$s %4$s</string>
+
+    <string name="configure_pebble_view">Configura vista Pebble: %1$s</string>
+
+    <!--  ActivityType -->
+    <string name="activity_type_bike_power">Potenza Bici</string>
+    <string name="activity_type_bike_speed_and_cadence">Bici</string>
+    <string name="activity_type_multisport_with_hr">Generico</string>
+    <string name="activity_type_run_speed_and_cadence">Corsa</string>
+
+    <string name="text_default">predefinito</string>
+    <string name="string_and_number_format">%1$s %2$d</string>
+
+    <!-- DeviceType -->
+    <string name="device_type_dummy">finto</string>
+    <string name="device_type_short_dummy">finto</string>
+    <string name="device_type_all">tutti i dispositivi</string>
+    <string name="device_type_short_all">tutti</string>
+    <string name="device_type_bike_cadence">cadenza bici</string>
+    <string name="device_type_short_bike_cadence">cad</string>
+    <string name="device_type_bike_power">potenza bici</string>
+    <string name="device_type_short_bike_power">pot</string>
+    <string name="device_type_bike_speed_and_cadence">vel e cad bici</string>
+    <string name="device_type_short_bike_speed_and_cadence">v&amp;c</string>
+    <string name="device_type_bike_speed">velocità bici</string>
+    <string name="device_type_short_bike_speed">vel</string>
+    <string name="device_type_heart_rate">frequenza cardiaca</string>
+    <string name="device_type_short_heart_rate">FC</string>
+    <string name="device_type_run_speed">velocità corsa</string>
+    <string name="device_type_short_run_speed">vel corsa</string>
+    <string name="device_type_environment">temperatura</string>
+    <string name="device_type_short_environment">temp.</string>
+    <string name="device_type_altitude_from_pressure">altitudine barom.</string>
+    <string name="device_type_short_altitude_from_pressure">altitudine</string>
+    <string name="device_type_sensor_manager">gestore sensori</string>
+    <string name="device_type_short_sensor_manager">gest. sensori</string>
+    <string name="device_type_clock">orologio</string>
+    <string name="device_type_short_clock">orologio</string>
+
+    <string name="gps_enabled_on_device">Il GPS è attivo</string>
+    <string name="gps_disabled_on_device">Il GPS è disattivo. Vai nelle impostazioni</string>
+    <string name="gps_goto_settings">Impostazioni</string>
+
+    <!-- sensor types -->
+    <string name="accumulated_sensors">sensori accumulati</string>
+    <string name="accumulated_sensors_short">sens. acc.</string>
+    <string name="accuracy">precisione</string>
+    <string name="accuracy_short">prec.</string>
+    <string name="ascent">ascesa</string>
+    <string name="ascent_short">D+</string>
+    <string name="elevation">dislivello</string>
+    <string name="bearing">direzione</string>
+    <string name="bearing_short">direzione</string>
+    <string name="altitude">altitudine</string>
+    <string name="altitude_short">alt.</string>
+    <string name="cadence">cadenza</string>
+    <string name="cadence_short">cad.</string>
+    <string name="cadence_run">cadenza corsa</string>
+    <string name="cadence_run_short">cad.</string>
+    <string name="cadence_bike">cadenza bici</string>
+    <string name="cadence_bike_short">cad.</string>
+    <string name="calories">calorie</string>
+    <string name="calories_short">cal.</string>
+    <string name="descent">discesa</string>
+    <string name="descent_short">D-</string>
+    <string name="distance">distanza</string>
+    <string name="distance_short">dist.</string>
+    <string name="distance_lap">distanza giro</string>
+    <string name="distance_lap_short">dist. giro</string>
+    <string name="heart_rate">frequenza cardiaca</string>
+    <string name="heart_rate_short">FC</string>
+    <string name="lap_number">numero giro</string>
+    <string name="lap_number_short">giro n.</string>
+    <string name="line_distance">distanza lineare</string>
+    <string name="line_distance_short">dist. lin.</string>
+    <string name="pace">passo</string>
+    <string name="pace_short">passo</string>
+    <string name="position">posizione</string>
+    <string name="position_short">pos.</string>
+    <string name="power">potenza</string>
+    <string name="power_short">pot</string>
+    <string name="speed">velocità</string>
+    <string name="speed_short">vel</string>
+    <string name="current_sensors">sensori attuali</string>
+    <string name="current_sensors_short">sens. att.</string>
+    <string name="strides">passi</string>
+    <string name="strides_short">passi</string>
+    <string name="temperature">temperatura</string>
+    <string name="temperature_short">temp.</string>
+    <string name="temperature_max">temperatura max</string>
+    <string name="temperature_max_short">max temp</string>
+    <string name="temperature_min">temperatura min</string>
+    <string name="temperature_min_short">min temp</string>
+    <string name="time_active">tempo attivo</string>
+    <string name="time_active_short">attivo</string>
+    <string name="time_lap">tempo giro</string>
+    <string name="time_lap_short">giro</string>
+    <string name="time_of_day">ora</string>
+    <string name="time_of_day_short">ora</string>
+    <string name="time_total">tempo totale</string>
+    <string name="time_total_short">totale</string>
+    <string name="torque">coppia</string>
+    <string name="torque_short">coppia</string>
+    <string name="pedal_power_balance">bilanciamento pedali</string>
+    <string name="pedal_power_balance_short">bilanc.</string>
+    <string name="pedal_smoothness_l">fluidità pedale sx</string>
+    <string name="pedal_smoothness_l_short">fluider sx</string>
+    <string name="pedal_smoothness_r">fluidità pedale dx</string>
+    <string name="pedal_smoothness_r_short">fluidità dx</string>
+    <string name="pedal_smoothness">fluidità pedali</string>
+    <string name="pedal_smoothness_short">fluidità</string>
+    <string name="torque_effectiveness_l">efficacia coppia sx</string>
+    <string name="torque_effectiveness_l_short">eff. sx</string>
+    <string name="torque_effectiveness_r">efficacia coppia dx</string>
+    <string name="torque_effectiveness_r_short">eff. dx</string>
+    <string name="slope">pendenza</string>
+    <string name="slope_short">pnd</string>
+    <string name="vertical_speed">velocità verticale (VAM)</string>
+    <string name="vertical_speed_short">VAM</string>
+
+    <string name="sport_type_walk">camminata</string>
+    <string name="sport_type_run">corsa</string>
+    <string name="sport_type_MTB">MTB</string>
+    <string name="sport_type_bike">bici</string>
+    <string name="sport_type_other">altro</string>
+
+    <!-- Bike Power Features -->
+    <string name="bike_power__features">caratteristiche</string>
+    <string name="bike_power__instantaneous_power">&#8226; Potenza istantanea</string>
+    <string name="bike_power__pedal_power_balance">&#8226; Bilanciamento potenza</string>
+    <string name="bike_power__accumulated_torque">&#8226; Coppia accumulata</string>
+    <string name="bike_power__wheel_revolution_data">&#8226; Velocità &amp; Distanza</string>
+    <string name="bike_power__crank_revolution_data">&#8226; Cadenza</string>
+    <string name="bike_power__extreme_magnitudes">&#8226; Magnitudo estreme</string>
+    <string name="bike_power__extreme_angles">&#8226; Angoli estremi</string>
+    <string name="bike_power__top_and_bottom_dead_sport_angles">&#8226; Angoli punti morti</string>
+    <string name="bike_power__accumulated_energy">&#8226; Energia accumulata</string>
+    <string name="bike_power__wheel_speed_and_distance_data">&#8226; Velocità &amp; Distanza</string>
+    <string name="bike_power__wheel_speed_data">&#8226; Velocità</string>
+    <string name="bike_power__wheel_distance_data">&#8226; Distanza</string>
+    <string name="bike_power__pedal_smoothness">&#8226; Fluidità pedale</string>
+    <string name="bike_power__torque_effectiveness">&#8226; Efficacia coppia</string>
+    <string name="bike_power__torque_data">&#8226; Coppia</string>
+
+    <string name="bike_power__pedal_power_balance_correction">Correzione bilanciamento</string>
+    <string name="bike_power__double_power_balance_values">Raddoppia valori misurati</string>
+    <string name="bike_power__invert_power_balance_values">Inverti (sx/dx)</string>
+
+    <!-- Labels -->
+    <string name="PrefsActivityLabel">Preferenze</string>
+    <string name="UpdateWorkoutActivityLabel">Aggiorna allenamento</string>
+    <string name="TrackOnMapActivityLabel">Allenamento</string>
+    <string name="ExportDetailsActivityLabel">Dettagli esportazione</string>
+    <string name="TrackingFragmentConfigListActivityLabel">Modifica viste</string>
+    <string name="TrackingFragmentConfigActivityLabel">Modifica vista</string>
+    <string name="PebbleConfigListActivityLabel">Modifica viste Pebble</string>
+    <string name="PebbleConfigActivityLabel">Modifica vista Pebble</string>
+    <string name="AltitudeCorrectionListActivityLabel">Correzione altitudine</string>
+    <string name="DeviceChoiceActivityLabel">Associazione</string>
+    <string name="PairingActivityLabel">Associazione</string>
+    <string name="EditDeviceActivityLabel">Modifica dispositivo</string>
+    <string name="LegalInfoLabel">Note legali Google Maps</string>
+
+    <!--  For Preferences Activity -->
+    <string name="prefsUserTitle">Utente</string>
+    <string name="prefsBasic">Base</string>
+    <string name="prefs_Export">Esportazione</string>
+    <string name="prefs_Display">Schermo</string>
+    <string name="prefsAdvanced">Avanzate</string>
+
+    <string name="prefsThresholdSpeedsTitle">Velocità soglia</string>
+    <string name="prefsThresholdSpeedsSummary">Configura le soglie per gli sport</string>
+    <string name="prefsMinWalkSpeedTitle">vel min camminata</string>
+    <string name="prefsMaxWalkSpeedTitle">vel max camminata</string>
+    <string name="prefsMaxRunSpeedTitle">vel max corsa</string>
+    <string name="prefsMaxMTBSpeedTitle">vel max MTB</string>
+
+    <string name="prefsTrackingTitle">Allenamento</string>
+
+    <string name="prefsDisplayTitle">Schermo</string>
+    <string name="prefsDisplaySummary">Regolazioni schermo e orientamento</string>
+    <string name="prefsKeepScreenOnTitle">tieni schermo acceso</string>
+    <string name="prefsNoUnlockingTitle">tieni schermo sbloccato</string>
+    <string name="prefZoomDependingOnSpeedTitle">zoom in base a velocità</string>
+    <string name="prefsUnitsTitle">Unità</string>
+    <string name="prefsUnitsSummary">metrico</string>
+    <string name="prefShowUnitsTitle">mostra unità</string>
+
+    <string name="prefsConfigureDisplaysTitle">Schede allenamento</string>
+
+    <string name="prefsDoNotUsePebble">non usare Pebble</string>
+    <string name="prefsPebbleSupportTitle">Supporto Pebble</string>
+    <string name="prefsPebbleSupportSummary">Usa Pebble per mostrare i valori</string>
+    <string name="prefsPebbleWatchappsTitle">App Pebble</string>
+    <string name="prefsPebbleWatchappsSummary">integrato</string>
+    <string name="prefsConfigurePebbleDisplaysTitle">Configura schermi Pebble</string>
+
+    <string name="prefsExportTitle">Esportazione file</string>
+    <string name="prefsExportSummary">Formati di esportazione</string>
+
+    <string name="prefsUploadTitle">Caricamento</string>
+    <string name="prefsUploadSummary">Cloud e comunità online</string>
+    <string name="prefsOnlineStorage">Cloud storage</string>
+    <string name="prefsOnlineCommunities">Comunità online</string>
+    <string name="prefsUploadToDropboxSummary">Carica su Dropbox</string>
+    <string name="prefsUploadToStravaSummary">Carica su Strava</string>
+    <string name="prefsUploadToRunkeeperSummary">Carica su Runkeeper</string>
+    <string name="prefsUploadToTrainingPeaksSummary">Carica su TrainingPeaks</string>
+
+    <string name="prefsAltitudeCorrectionTitle">Correzione altitudine</string>
+    <string name="prefsUseAltitudeCorrectionTitle">Attiva correzione altitudine</string>
+    <string name="prefsUseAltitudeCorrectionSummary">usa punto di partenza</string>
+    <string name="prefsStartLocationsTitle">Punti di partenza</string>
+    <string name="prefsStartLocationsSummary">Configura altitudine luoghi noti</string>
+    <string name="updateStravaEquipment">Aggiorna attrezzatura Strava</string>
+    <string name="lastUpdateOfEquipmentNever">mai aggiornato</string>
+
+    <string name="getting_equipment_from_strava">caricamento attrezzatura Strava…\nattendere</string>
+    <string name="got_shoe">scarpe Strava ricevute\nricevuto: %1$s</string>
+    <string name="got_bike">bici Strava ricevute\nricevuto: %1$s</string>
+    <string name="strava_success_but_must_check">caricato su Strava, verifica…</string>
+    <string name="strava_success_waiting_for_result">caricato su Strava, attesa…</string>
+
+    <string name="choose_view">scegli vista</string>
+    <string name="choose_activity_type">scegli tipo attività</string>
+
+    <!-- Main Activity -->
+    <string name="tab_start">Avvia</string>
+    <string name="tab_tracking">Segui</string>
+    <string name="tab_map">Mappa</string>
+    <string name="tab_laps">Giri</string>
+    <string name="tab_workouts">Cronologia</string>
+
+    <!-- layouts -->
+    <string name="pairedText">associato</string>
+
+    <string name="drawer__pairing">associazione</string>
+    <string name="unpairing">disassociazione</string>
+
+    <!-- altitude_correction_dialog -->
+    <string name="LocationNameHint">nome luogo</string>
+    <string name="AltitudeHint">altitudine</string>
+
+    <string name="correct_altitude_title">Correggi altitudine</string>
+    <string name="correct_altitude_message">Indica altitudine e nome del luogo attuale</string>
+
+    <!-- update_workout -->
+    <string name="ExportName">Nome export:</string>
+    <string name="Sport">Sport:</string>
+    <string name="Goal">Obiettivo:</string>
+    <string name="GoalHint">modifica obiettivo</string>
+    <string name="Method">Metodo:</string>
+    <string name="MethodHint">modifica metodo</string>
+    <string name="Description">Descrizione:</string>
+    <string name="DescriptionHint">modifica descrizione</string>
+    <string name="StartTime">Ora inizio:</string>
+    <string name="TotalTime">Tempo totale:</string>
+    <string name="ActiveTime">Tempo attivo:</string>
+    <string name="Distance">Distanza:</string>
+    <string name="MaxLineDistance">Distanza lin. max:</string>
+    <string name="Calories">Calorie:</string>
+    <string name="min">min</string>
+    <string name="mean">med</string>
+    <string name="max">max</string>
+    <string name="SensorTypes">Sensori:</string>
+    <string name="buttonSaveWorkoutText">Salva ed esporta</string>
+    <string name="buttonDeleteWorkoutText">Elimina</string>
+
+    <!-- export_details -->
+    <string name="csvWrite">esporta in CSV</string>
+    <string name="jsonWrite">esporta in JSON Golden Cheetah</string>
+    <string name="tcxWrite">esporta in TCX</string>
+    <string name="gpxWrite">esporta in GPX</string>
+    <string name="stravaUpload">carica su Strava</string>
+    <string name="runkeeperUpload">carica su Runkeeper</string>
+    <string name="trainingPeaksUpload">carica su TrainingPeaks</string>
+
+    <string name="Is_not_an_integer">%1$s non è un intero</string>
+
+    <!--  PairingActivity -->
+    <string name="PairingDevice">Associazione %1$s</string>
+    <string name="ValueAndUnitFormat">(%1$s %2$s)</string>
+
+    <!-- others -->
+    <string name="equipment_none">- nessuno -</string>
+    <string name="equipment_all">+ tutti +</string>
+    <string name="equipment_all_bikes">+ tutte le bici +</string>
+    <string name="equipment_all_shoes">+ tutte le scarpe +</string>
+    <string name="equipment_type_bike">Bici</string>
+    <string name="equipment_type_shoe">Scarpe</string>
+    <string name="equipment_no_bikes">Nessuna bici</string>
+    <string name="equipment_no_shoes">Nessuna scarpa</string>
+
+    <string name="SD_card_not_available">Scheda SD non disponibile.</string>
+
+    <!-- actions -->
+    <string name="uploading">Caricamento</string>
+    <string name="uploaded">Caricato</string>
+    <string name="writing">Scrittura</string>
+    <string name="wrote">Scritto</string>
+
+    <string name="something_strange_happened">È successo qualcosa di strano.</string>
+    <string name="exporting_to_file_not_wanted">Esportazione file non richiesta.</string>
+    <string name="uploading_to_dropbox_not_wanted">Caricamento Dropbox non richiesto.</string>
+    <string name="uploading_to_community_not_wanted">Caricamento comunità non richiesto.</string>
+
+    <string name="exporting_to_file">esportazione: %1$s (%2$d/%3$d)</string>
+    <string name="uploading_to_dropbox">caricamento Dropbox: %1$s (%2$d/%3$d)</string>
+    <string name="uploading_to_community">caricamento comunità: %1$s (%2$d/%3$d)</string>
+
+    <string name="exporting_to_file_failed_for_one">errore export 1/%1$d</string>
+    <string name="uploading_to_dropbox_failed_for_one">errore Dropbox 1/%1$d</string>
+    <string name="uploading_to_community_failed_for_one">errore 1/%1$d comunità</string>
+    <string name="exporting_to_file_failed_for_several">errore export %1$d/%2$d</string>
+    <string name="uploading_to_dropbox_failed_for_several">errore Dropbox %1$d/%2$d</string>
+    <string name="uploading_to_community_failed_for_several">errore %1$d/%2$d comunità</string>
+    <string name="successfully_exported_to_file">esportati con successo %1$d/%2$d file</string>
+    <string name="successfully_uploaded_to_dropbox">caricati con successo %1$d/%2$d file su Dropbox</string>
+    <string name="successfully_uploaded_to_community">caricato con successo su %1$d/%2$d comunità</string>
+
+    <string name="tracking">allenamento</string>
+    <string name="tracking_finished">finito</string>
+    <string name="waiting_to_export_to_file">attesa export %1$d/%2$d file</string>
+    <string name="waiting_to_upload_to_dropbox">attesa Dropbox %1$d/%2$d file</string>
+    <string name="waiting_to_upload_to_community">attesa comunità %1$d/%2$d</string>
+
+    <string name="please_wait">Attendere …</string>
+    <string name="connecting_to_string">Connessione a %1$s. \nAttendere …</string>
+    <string name="deauthorization">Disattivazione in corso …</string>
+
+    <!-- notification -->
+    <string name="notification_title">%1$s su %2$s</string>
+    <string name="notification_export_unknown">%1$s file %2$s su ???\n%3$s</string>
+    <string name="notification_export_file">%1$s file %2$s su local\n%3$s</string>
+    <string name="notification_export_dropbox">%1$s file %2$s su Dropbox\n%3$s</string>
+    <string name="notification_export_community">%1$s su %2$s\n%3$s</string>
+    <string name="notification_finished_unknown">successo %1$s file %2$s su ???\n%3$s</string>
+    <string name="notification_finished_file">successo %1$s file %2$s su local\n%3$s</string>
+    <string name="notification_finished_dropbox">successo %1$s file %2$s su Dropbox\n%3$s</string>
+    <string name="notification_finished_community">successo %1$s su %2$s\n%3$s</string>
+    <string name="notification_exporting_finished">esportazione finita</string>
+    <string name="notification_tracking_a_workout">Registrazione allenamento</string>
+    <string name="notification_searching_for_ant">ricerca dispositivi ANT+</string>
+    <string name="notification_searching_finished">ricerca finita</string>
+    <string name="notification_tracking">allenamento</string>
+    <string name="notification_paused">in pausa</string>
+    <string name="notification_tracking_and_searching_format">allenamento e ricerca %1$s</string>
+    <string name="notification_pause_and_searching_format">pausa e ricerca %1$s</string>
+    <string name="copy_of">copia di %1$s</string>
+    <string name="select_device_type">scegli tipo dispositivo</string>
+    <string name="Preview">anteprima</string>
+    <string name="preview_name_format">Anteprima: %1$s</string>
+    <string name="default_device_name_format">%1$s %2$s</string>
+    <string name="waiting_for">in attesa di</string>
+    <string name="ready_to">pronto per</string>
+    <string name="paused">in pausa</string>
+    <string name="some_remote_device">dispositivo remoto</string>
+    <string name="ready_run">una corsa</string>
+    <string name="ready_bike">un giro</string>
+    <string name="ready_other">allenamento</string>
+    <string name="tracking_run">una corsa</string>
+    <string name="tracking_bike">un giro</string>
+    <string name="tracking_other">allenamento</string>
+    <string name="paused_run">una corsa</string>
+    <string name="paused_bike"> un giro</string>
+    <string name="paused_other">allenamento</string>
+    <string name="export_status">Stato esportazione</string>
+    <string name="LocationsActivityLabel">Luoghi</string>
+    <string name="getting_start_locations">Ricerca punti di partenza.</string>
+    <string name="average">media</string>
+    <string name="start">partenza</string>
+    <string name="max_line_distance">più lontano</string>
+    <string name="end">fine</string>
+    <string name="my_locations">Miei Luoghi</string>
+    <string name="drawer__settings">Impostazioni</string>
+    <string name="get_extremaType_of_sportType_format">Ottieni posizioni %1$s dei tuoi %2$s allenamenti.</string>
+    <string name="getting_my_locations">Ricerca luoghi noti.</string>
+    <string name="editLocationName">Nome:</string>
+    <string name="LocationAltitude">Altitudine:</string>
+    <string name="LocationRadius">Raggio:</string>
+    <string name="edit_my_location">Modifica Luogo</string>
+    <string name="create_new_my_location">Nuovo luogo noto.</string>
+    <string name="calc_workout_name">Calcolo nome allenamento.</string>
+    <string name="calc_map_polyline">Calcolo tracciato.</string>
+    <string name="edit_counter">modifica</string>
+    <string name="edit_counter_format">Modifica contatore %1$s.</string>
+    <string name="editWorkoutNameCounters">Modifica contatori nomi.</string>
+    <string name="StartLocation">Partenza:</string>
+    <string name="EndLocation">Arrivo:</string>
+    <string name="NameScheme">Schema nome:</string>
+    <string name="addCounter">Aggiungi contatore</string>
+    <string name="addVia">Aggiungi via [luogo lontano].</string>
+    <string name="configureWorkoutNameSchemes">Configura nomi automatici.</string>
+    <string name="via_format">&#032;via %1$s</string>
+    <string name="loop_around_format">&#032;verso %1$s e ritorno</string>
+    <string name="really_delete_format">Vuoi eliminare \"%1$s\"?</string>
+    <string name="workout_name_scheme">Schema nome</string>
+    <string name="workout_name_schemes">Schemi nomi</string>
+    <string name="starred_run_segments">Corsa</string>
+    <string name="starred_bike_segments">Bici</string>
+    <string name="segments">Segmenti Strava</string>
+
+    <string name="TODO">dimostralo!</string>
+    <string name="tomorrow">domani?</string>
+    <string name="updating_starred_segments_failed">aggiornamento segmenti fallito: </string>
+    <string name="edit_field">Modifica campo</string>
+    <string name="ANT_Installation">Installazione ANT+</string>
+    <string name="install">installa</string>
+    <string name="do_not_check_again">non controllare più</string>
+    <string name="check_ANT_installation">controlla installazione ANT</string>
+    <string name="forcePortrait">Orientamento verticale</string>
+    <string name="Display">Impostazioni schermo</string>
+    <string name="smoothing">Smoothing valori</string>
+    <string name="powerSmoothingTitle">Fattore α smoothing potenza</string>
+    <string name="powerSmoothingTitle_format">Smoothing potenza: α=%1$f</string>
+    <string name="powerSmoothingSummary">Fattore 0 &lt; α &#8804; 1 per smoothare la potenza.</string>
+    <string name="alpha_must_be_between_0_and_1">α deve essere tra 0 e 1.</string>
+
+    <string name="Search_Settings">Impostazioni ricerca</string>
+    <string name="prefsNumberOfSearchTriesTitle">Round di ricerca</string>
+    <string name="prefStartSearchTitle">Avvia ricerca quando …</string>
+    <string name="prefsStartSearchWhenAppStartsTitle">L\'app si avvia</string>
+    <string name="prefsStartSearchWhenTrackingStartsTitle">Il tracking inizia</string>
+    <string name="prefsStartSearchWhenResumeFromPausedTitle">Ripresa dopo pausa</string>
+    <string name="prefsStartSearchWhenNewLapTitle">Nuovo giro</string>
+    <string name="prefsStartSearchWhenUserChangesSportTitle">Cambi sport</string>
+    <string name="prefs_search_behavior_title">Comportamento ricerca</string>
+    <string name="prefsChangeSportWhenDeviceGetsLostTitle">Cambia tipo attività</string>
+    <string name="prefsChangeSportWhenDeviceGetsLostSummary">Cambia se si perde il sensore</string>
+
+    <string name="prefsSearchOnlyForSportSpecificDevicesTitle">Ricerca specifica sport</string>
+    <string name="prefsSearchOnlyForSportSpecificDevicesSummary">Solo sensori dello sport</string>
+
+    <string name="startSearchWhenAppStarts_short">avvio app</string>
+    <string name="startSearchWhenTrackingStarts_short">inizio tracking</string>
+    <string name="startSearchWhenResumeFromPaused_short">ripresa</string>
+    <string name="startSearchWhenNewLap_short">nuovo giro</string>
+    <string name="startSearchWhenUserChangesSport_short">cambio sport</string>
+    <string name="startSearchOnlyManually">solo manuale</string>
+
+
+    <string name="show_all_sport_types">+ tutti gli sport +</string>
+    <string name="sport_types">Tipi di sport</string>
+    <string name="configure_sport_types">Configura sport</string>
+    <string name="select_sport_type_format">scegli %1$s sport</string>
+    <string name="edit_auto_name">nome auto</string>
+    <string name="choose_auto_name">scegli nome auto</string>
+
+    <string name="uploadAltitude">altitudine</string>
+    <string name="uploadHR">frequenza cardiaca</string>
+    <string name="uploadPower">potenza</string>
+    <string name="uploadCadence">cadenza</string>
+    <string name="selectiveUpload">Caricamento selettivo</string>
+    <string name="summary">solo riassunto</string>
+    <string name="upload_to_strava_format">Carica %1$s su Strava</string>
+    <string name="upload_to_runkeeper_format">Carica %1$s su Runkeeper</string>
+    <string name="upload_to_training_peaks_format">Carica %1$s su TrainingPeaks</string>
+    <string name="concatenate_2_format">%1$s e %2$s</string>
+    <string name="concatenate_last_format">%1$s, e %2$s</string>
+    <string name="concatenate_2_format_or">%1$s o %2$s</string>
+    <string name="everything">assolutamente tutto</string>
+    <string name="battery_level_good">buono</string>
+    <string name="battery_level_ok">OK</string>
+    <string name="battery_level_new">nuovo</string>
+    <string name="battery_level_low">basso</string>
+    <string name="battery_level_critical">critico</string>
+    <string name="battery_level_unknown">sconosciuto</string>
+    <string name="check_battery_status_title_1">Sostituisci presto la pila di</string>
+    <string name="check_battery_status_title_many">Sostituisci presto le pile di</string>
+    <string name="send_email">E-mail</string>
+    <string name="prefSendWorkoutEmailTitle">Invia e-mail</string>
+    <string name="prefSendWorkoutEmailSummary">Invia file via mail dopo ogni sessione.</string>
+    <string name="prefSendEmailTo">Indirizzo e-mail</string>
+    <string name="prefEmailSubject">Oggetto mail</string>
+    <string name="prefSendTCXEmailSummary">allega file TCX</string>
+    <string name="prefSendGPXEmailSummary">allega file GPX</string>
+    <string name="prefSendCSVEmailSummary">allega file CSV</string>
+    <string name="prefSendGCEmailSummary">allega file GC</string>
+    <string name="upload_via_email">Invia dati via e-mail</string>
+    <string name="send_email_only_summary_format">Invia mail riassuntiva a %1$s.</string>
+    <string name="send_email_format">Invia mail con file %1$s a %2$s.</string>
+    <string name="send_email_format_plural">Invia mail con file %1$s a %2$s.</string>
+    <string name="ready_to_send_email">Pronto per invio mail.</string>
+    <string name="title_request_dropbox_token">Accesso Dropbox</string>
+    <string name="message_request_dropbox_token">Vuoi caricare allenamenti su Dropbox?\n(Nuova API: autorizzazione richiesta.)</string>
+
+    <string name="smartphone">Smartphone</string>
+    <string name="no_sensor_available">nessun sensore</string>
+    <string name="bestSensor">migliore</string>
+
+    <string name="units_seconds_long">secondi</string>
+    <string name="units_minutes_long">minuti</string>
+    <string name="configSensor">Sensore:</string>
+    <string name="configSource">Sorgente:</string>
+    <string name="configSmoothing">Smoothing:</string>
+    <string name="configSize">Dimensione:</string>
+    <string name="privacy_policy">Privacy Policy</string>
+    <string name="notification_channel_name__tracking">Allenamento</string>
+    <string name="notification_channel_description__tracking">Notifiche durante allenamento</string>
+    <string name="notification_channel_name__export">Esportazione</string>
+    <string name="notification_channel_description__export">Notifiche durante export</string>
+    <string name="config_tracking__full_screen">Schermo intero</string>
+    <string name="config_tracking_night_day__system_setting">Imp. sistema</string>
+    <string name="config_tracking_night_day__day">Giorno (chiaro)</string>
+    <string name="conffig_tracking_night_day__night">Notte (scuro)</string>
+    <string name="config_tracking__Display">Schermo</string>
+    <string name="config_tracking__Map">Mappa</string>
+    <string name="config_tracking__Lap">Giro</string>
+    <string name="config_tracking__day_or_night">Giorno o notte</string>
+    <string name="config_tracking__show_map">Mappa</string>
+    <string name="config_tracking__showLiveSegments">Live Segments</string>
+    <string name="config_tracking__showLapButton">Pulsante Giro</string>
+    <string name="add_view_before">aggiungi vista prima</string>
+    <string name="delete_view">elimina vista</string>
+    <string name="add_view_after">aggiungi vista dopo</string>
+    <string name="EditTrackingView">modifica</string>
+
+    <string name="location_permission_required">Permessi</string>
+    <string name="background_location_permission_title">Posizione in background</string>
+    <string name="background_location_permission_text">Per continuare il tracking a schermo spento, scegli \"Consenti sempre\".</string>
+    <string name="location_permission_text">L\'app segue i tuoi allenamenti anche se non visibile. Consenti posizione (precisa).</string>
+    <string name="location_permission_text_Android12">L\'app segue i tuoi allenamenti anche se non visibile. Consenti posizione (precisa).\n\nPer Bluetooth LE, serve il permesso \"Dispositivi vicini\".</string>
+    <string name="Request_permission_text">Consenti tramite \"OK\".</string>
+
+    <string name="battery_optimization_title">Ottimizzazione batteria</string>
+    <string name="battery_optimization_text">Per un tracking affidabile, disattiva l\'ottimizzazione batteria nella prossima schermata.</string>
+
+    <!-- Zone Settings Screen -->
+    <string name="prefs_training_zones">Zone allenamento</string>
+    <string name="prefs_training_zones_summary">Configura le tue zone</string>
+    <string name="title_edit_zones">Zone allenamento</string>
+    <string name="tab_hr_run">FC Corsa</string>
+    <string name="tab_hr_bike">FC Bici</string>
+    <string name="tab_pwr_bike">Pot. Bici</string>
+
+    <string name="zone_1_label">Zona 1 (Recupero)</string>
+    <string name="zone_2_label">Zona 2 (Aerobico)</string>
+    <string name="zone_3_label">Zona 3 (Tempo)</string>
+    <string name="zone_4_label">Zona 4 (Soglia)</string>
+    <string name="zone_5_label">Zona 5 (Anaerobico)</string>
+
+    <string name="label_min">Min</string>
+    <string name="label_max">Max</string>
+
+    <string name="prefEmailExport">e-Mail</string>
+
+<!-- 2026 -->
+    <!-- StringUtils -->
+    <string name="list_connector__and">\u0020;e\u0020</string>
+    <string name="list_connector__and_with_comma">, e\u0020</string>
+    <string name="list_connector__comma">, </string>
+
+
+<!-- notifications -->
+    <string name="export_notification__title">Esportazione %1$s</string>
+    <string name="export_notification__summary__started">Export iniziato.</string>
+    <string name="export_notification__summary__in_progress_to">Export su %1$s.</string>
+    <string name="export_notification__summary__finished">Export finito.</string>
+
+    <!-- details -->
+
+    <!-- waiting  -->
+    <plurals name="export_notification__detail__File_waiting">
+        <item quantity="one">⏳ Attesa scrittura file %1$s.</item>
+        <item quantity="other">⏳ Attesa scrittura file %1$s.</item>
+    </plurals>
+
+    <plurals name="export_notification__detail__Dropbox_waiting">
+        <item quantity="one">⏳ Attesa upload %1$s su Dropbox.</item>
+        <item quantity="other">⏳ Attesa upload %1$s su Dropbox.</item>
+    </plurals>
+
+    <plurals name="export_notification__detail__Community_waiting">
+        <item quantity="one">⏳ Attesa upload su %1$s.</item>
+        <item quantity="other">⏳ Attesa upload su %1$s.</item>
+    </plurals>
+
+    <!-- ongoing -->
+    <plurals name="export_notification__detail__File_ongoing">
+        <item quantity="one">💾 Scrittura file %1$s.</item>
+        <item quantity="other">💾 Scrittura file %1$s.</item>
+    </plurals>
+
+    <plurals name="export_notification__detail__Dropbox_ongoing">
+        <item quantity="one">📤 Upload %1$s su Dropbox.</item>
+        <item quantity="other">📤 Upload %1$s su Dropbox.</item>
+    </plurals>
+
+    <plurals name="export_notification__detail__Community_ongoing">
+        <item quantity="one">📤 Upload su %1$s.</item>
+        <item quantity="other">📤 Upload su %1$s.</item>
+    </plurals>
+
+    <!-- success -->
+    <plurals name="export_notification__detail__File_success">
+        <item quantity="one">✅ File %1$s scritto con successo.</item>
+        <item quantity="other">✅ File %1$s scritti con successo.</item>
+    </plurals>
+
+    <plurals name="export_notification__detail__Dropbox_success">
+        <item quantity="one">✅ %1$s caricato su Dropbox.</item>
+        <item quantity="other">✅ %1$s caricati su Dropbox.</item>
+    </plurals>
+
+    <plurals name="export_notification__detail__Community_success">
+        <item quantity="one">✅ Caricamento su %1$s riuscito.</item>
+        <item quantity="other">✅ Caricamento su %1$s riuscito.</item>
+    </plurals>
+
+    <!-- failed -->
+    <plurals name="export_notification__detail__File_failed">
+        <item quantity="one">❌ Errore scrittura file %1$s.</item>
+        <item quantity="other">❌ Errore scrittura file %1$s.</item>
+    </plurals>
+
+    <plurals name="export_notification__detail__Dropbox_failed">
+        <item quantity="one">❌ Errore upload %1$s su Dropbox.</item>
+        <item quantity="other">❌ Errore upload %1$s su Dropbox.</item>
+    </plurals>
+
+    <plurals name="export_notification__detail__Community_failed">
+        <item quantity="one">❌ Errore upload su %1$s.</item>
+        <item quantity="other">❌ Errore upload su %1$s.</item>
+    </plurals>
+
+    <string name="export_notification__detail__no_results">❓ Nessun risultato.</string>
+
+    <string name="export_status__header_title">Stato esportazione</string>
+
+    <string name="export_status__waiting">In attesa</string>
+    <string name="export_status__processing">In corso</string>
+    <string name="export_status__success">Riuscito</string>
+    <string name="export_status__failed">Fallito</string>
+    <string name="export_status__tracking">Allenamento</string>
+    <string name="export_status__tracking_finished">Allenamento finito</string>
+    <string name="export_status__unwanted">Non richiesto</string>
+
+    <!-- change Sport Dialog -->
+    <string name="change_sport">Cambia sport</string>
+    <string name="save">Salva</string>
+    <string name="cancel">Annulla</string>
+
+    <!-- Edit workout name -->
+    <string name="hint_workout_name">nome\nallenamento</string>
+    <string name="edit_workout_name">modifica nome</string>
+
+    <!-- workout summary description-->
+    <string name="workout_summary__description_header">Descrizione</string>
+
+    <!-- Edit workout description -->
+    <string name="hint_workout_description">descrizione</string>
+    <string name="hint_workout_goal">obiettivo</string>
+    <string name="hint_workout_method">metodo</string>
+    <string name="title_edit_description">Modifica descrizione</string>
+
+    <!-- workout details -->
+    <string name="total_time_format">(totale: %1$s)</string>
+    <string name="format_max_displacement">(Distanza lin. max: %1$s)</string>
+
+    <!-- workout summary with equipment -->
+    <string name="format_with_equipment_bike">su %1$s</string>
+    <string name="format_with_equipment_run">con %1$s</string>
+    <string name="format_with_equipment_other">con %1$s</string>
+
+    <string name="invalid_date">\???</string>
+
+    <!-- sport type list / edit sport type -->
+    <string name="you_can_not_delete_this_sport_type">Non puoi eliminare questo sport</string>
+    <string name="add_sport_type">aggiungi sport</string>
+    <string name="edit_sport_type">Modifica sport</string>
+    <string name="sport_type_name">Nome sport</string>
+    <string name="basic_sport_type">sport di base</string>
+    <string name="OnlineCommunities">Comunità online</string>
+    <string name="ExportFiles">Esportazione file</string>
+    <string name="min_avg_speed">vel med min:</string>
+    <string name="max_avg_speed">vel med max:</string>
+    <string name="mapping_format_strava">Strava: %1$s</string>
+    <string name="mapping_format_tcx">TCX: %1$s</string>
+    <string name="mapping_format_gc">GC: %1$s</string>
+    <string name="item_is_fixed_and_cannot_be_deleted">Sport fisso, non modificabile.</string>
+
+    <!-- drawer -->
+    <string name="drawer__training">Allenamento</string>
+    <string name="drawer__maps">Mappe</string>
+    <string name="drawer__my_stuff">Miei dati</string>
+
+    <!-- sensor view settings -->
+    <string name="source">Sorgente</string>
+    <string name="sensor">Sensore</string>
+    <string name="text_size">Dimensione</string>
+    <string name="filter">Filtro</string>
+
+    <string name="view_size_xsmall">Molto piccolo</string>
+    <string name="view_size_small">Piccolo</string>
+    <string name="view_size_normal">Normale</string>
+    <string name="view_size_large">Grande</string>
+    <string name="view_size_xlarge">Molto grande</string>
+    <string name="view_size_huge">Enorme</string>
+    <string name="view_size_xhuge">Gigante</string>
+    <string name="configure">Configura</string>
+    <string name="tab_name">Nome</string>
+
+    <!-- Equipment -->
+    <string name="equipment_management_title">Attrezzatura</string>
+    <string name="equipment_management_summary">Configura attrezzatura</string>
+    <string name="prefs_manage_bikes_title">Biciclette</string>
+    <string name="prefs_manage_bikes_summary">Configura le tue bici</string>
+    <string name="prefs_manage_shoes_title">Scarpe</string>
+    <string name="prefs_manage_shoes_summary">Configura le tue scarpe</string>
+
+    <string name="equipment_configure_equipment">Configura attrezzatura</string>
+    <string name="equipment_bike_type">Tipo bici</string>
+    <string name="equipment_select_bike_type">Scegli tipo bici</string>
+    <string name="equipment_linked_sensors">Sensori collegati</string>
+    <string name="equipment_no_sensors_linked">Nessun sensore collegato</string>
+    <string name="equipment_sport_types">Sport:</string>
+    <string name="equipment_linked_sport_types">Sport collegati</string>
+    <string name="equipment_no_sports_linked">Nessuno</string>
+
+    <!-- statistics -->
+    <string name="stats_total">Sempre</string>
+    <string name="stats_first_use">Primo uso</string>
+    <string name="stats_last_use">Ultimo uso</string>
+    <string name="stats_first_activity">Prima attività</string>
+    <string name="stats_last_activity">Ultima attività</string>
+    <string name="stats_distance">Distanza</string>
+    <string name="stats_workouts">Allenamenti</string>
+    <string name="stats_time">Tempo attivo</string>
+    <string name="stats_ascent">Ascesa</string>
+    <string name="stats_this_week">Questa settimana</string>
+    <string name="stats_last_week">Settimana scorsa</string>
+    <string name="stats_this_month">Questo mese</string>
+    <string name="stats_last_month">Mese scorso</string>
+    <string name="stats_this_year">Quest\'anno</string>
+
+    <!-- sport type -->
+    <string name="sport_type_linked_equipment">Attrezzatura collegata</string>
+    <string name="sport_type_no_equipment_linked">Nessuna attrezzatura collegata</string>
+    <string name="sport_type_equipment">Attrezzatura</string>
+    <string name="sport_type_tab_all">Tutti gli sport</string>
+    <string name="sport_type_tab_bike">Ciclismo</string>
+    <string name="sport_type_tab_run">Corsa</string>
+    <string name="sport_type_tab_unknown">Altri sport</string>
+
+    <!-- workout summaries tabs -->
+    <string name="workout_summaries_tab_all">Tutti</string>
+    <string name="workout_summaries_tab_bike">Bici</string>
+    <string name="workout_summaries_tab_run">Corsa</string>
+    <string name="workout_summaries_tab_other">Altro</string>
+    <string name="workout_summaries_loading">Caricamento…</string>
+
+    <!-- starred Strava segments -->
+    <string name="starred_segments__no_update_because_upload_to_strava_is_disabled">Nessuna connessione Strava. Nessun aggiornamento.</string>
+    <string name="starred_segments__no_strava_connection">Nessuna connessione Strava</string>
+    <string name="starred_segments__connect_to_strava">Connetti a Strava</string>
+    <string name="starred_segments__refresh">Aggiorna segmenti</string>
+
+    <!-- Control tracking -->
+    <string name="control_tracking_connecting">Connessione…</string>
+    <string name="control_tracking_ready_run">Pronto per correre</string>
+    <string name="control_tracking_ready_bike">Pronto per pedalare</string>
+    <string name="control_tracking_ready_other">Pronto per l\'allenamento</string>
+
+    <!-- live segments -->
+    <string name="segment_status_far_far_away">Lontano</string>
+    <string name="segment_status_approaching">In avvicinamento</string>
+    <string name="segment_status_on_segment">Sul segmento</string>
+    <string name="segment_status_near_finish">Arrivo vicino</string>
+    <string name="segment_status_finished">Finito</string>
+    <string name="segment_status_start_in">Inizio tra: %1$s</string>
+    <string name="segment_status_remaining">Resta: %1$s</string>
+    <string name="segment_status_offset">Offset: %1$s</string>
+
+    <!-- ANT(+) Plugins -->
+    <string name="ant_general_explanation">Con hardware e software corretti, puoi associare i tuoi dispositivi ANT+.</string>
+    <string name="ant_missing_adapter_title">Adattatore ANT mancante</string>
+    <string name="ant_missing_adapter_message">Il tuo dispositivo non sembra supportare ANT+ nativamente. Usa un Dongle USB ANT.</string>
+    <string name="ant_missing_dependency_title">Dipendenza mancante</string>
+    <string name="ant_missing_dependency_message">L\'app \"%1$s\" manca. Vai sul Play Store?</string>
+    <string name="go_to_store">Play Store</string>
+
+    <!-- Tracking -->
+    <string name="Done">Fatto</string>
+    <string name="Edit">Modifica</string>
+
+    <!-- Segment / Route Sorting -->
+    <string name="sort_closest">Più vicino</string>
+    <string name="sort_climb_category">Categoria colli</string>
+    <string name="sort_elevation_gain">Dislivello</string>
+    <string name="sort_average_grade">Pendenza media</string>
+    <string name="sort_length">Lunghezza</string>
+    <string name="sort_name">Nome</string>
+    <string name="sort_date">Data</string>
+    <string name="sort_duration">Durata</string>
+
+    <!-- routes -->
+    <string name="routes">Percorsi</string>
+    <string name="no_routes_available">Nessun percorso %s.</string>
+    <string name="absolutely_no_routes_available">Nessun percorso disponibile.</string>
+    <string name="routes_import_hint">Importa un GPX dal \"+\" o dal tuo file manager.</string>
+    <string name="route_edit">Modifica percorso</string>
+    <string name="route_sport_type">Sport</string>
+    <string name="route_description">Descrizione</string>
+    <string name="route_import">Importa</string>
+    <string name="route_saved_success">Percorso salvato.</string>
+    <string name="route_saved_failed">Errore salvataggio.</string>
+    <string name="strava_sync_success">Percorsi Strava sincronizzati.</string>
+    <string name="strava_sync_failed">Errore sincronizzazione Strava.</string>
+    <string name="route_source_workout">Allenamento</string>
+    <string name="sort">Ordina</string>
+    <string name="routes_source_label">Sorgente: %1$s</string>
+
+    <!-- workout periods -->
+    <string name="workout_periods__periods">Periodi</string>
+    <string name="workout_periods__days">Giorni</string>
+    <string name="workout_periods__weeks">Settimane</string>
+    <string name="workout_periods__months">Mesi</string>
+    <string name="workout_periods__years">Anni</string>
+    <plurals name="workout_periods__workouts">
+        <item quantity="one">%1$d Sessione</item>
+        <item quantity="other">%1$d Sessioni</item>
+    </plurals>
+    <string name="workout_periods__longest_workout">Allenamento più lungo</string>
+
+    <!-- share screenshots -->
+    <string name="share">Condividi</string>
+
+    <string name="avg_speed_label">Velocità med.</string>
+    <string name="ascent_label">Ascesa</string>
+    <string name="unit_meters_short">m</string>
+    <string name="strava_results_title">Risultati Strava</string>
+    <string name="strava_uploaded_no_records">Inviato a Strava. Nessun record.</string>
+    <string name="strava_best_efforts">Migliori sforzi</string>
+    <plurals name="strava_best_efforts_with_prs_format">
+        <item quantity="one">Migliori sforzi (%1$d PR)</item>
+        <item quantity="other">Migliori sforzi (%1$d PRs)</item>
+    </plurals>
+    <string name="strava_segments_title">Segmenti</string>
+    <plurals name="strava_segments_with_prs_format">
+        <item quantity="one">Segmenti (%1$d PR)</item>
+        <item quantity="other">Segmenti (%1$d PRs)</item>
+    </plurals>
+    <string name="strava_kom_description">KOM / Record del tracciato</string>
+    <string name="strava_pr_description">Record personale #%1$d</string>
+
+    <string name="strava_connected_status">Sei connesso a Strava</string>
+    <string name="strava_disconnected_status">Non sei connesso a Strava</string>
+    <string name="strava_disconnect">Disconnetti da Strava</string>
+    <string name="strava_overall_rank_description">Rango globale #%1$d</string>
+    <string name="no_upload">- Nessun caricamento -</string>
+</resources>

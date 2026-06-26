@@ -27,18 +27,18 @@
 
     <!-- device_choice_row -->
     <string name="devices_unknown">Unknown</string>
-    <string name="devices_unknown_manufacturer">unknown manufacturer</string>
-    <string name="devices_unknown_device">no name</string>
+    <string name="devices_unknown_manufacturer">Unknown manufacturer</string>
+    <string name="devices_unknown_device">No name</string>
 
     <string name="devices_all">All</string>
 
     <!-- tab title -->
-    <string name="devices_available_devices_format">available %1$s devices</string>
-    <string name="devices_paired_devices_format">paired %1$s devices</string>
-    <string name="devices_known_devices_format">known %1$s devices</string>
-    <string name="devices_all_available_devices">all available devices</string>
-    <string name="devices_all_paired_devices">all paired devices</string>
-    <string name="devices_all_known_devices">all known devices</string>
+    <string name="devices_available_devices_format">Available %1$s devices</string>
+    <string name="devices_paired_devices_format">Paired %1$s devices</string>
+    <string name="devices_known_devices_format">Known %1$s devices</string>
+    <string name="devices_all_available_devices">All available devices</string>
+    <string name="devices_all_paired_devices">All paired devices</string>
+    <string name="devices_all_known_devices">All known devices</string>
 
 
 
@@ -51,12 +51,12 @@
     <string name="devices_myRemoteDevices">Devices</string>
     <!-- <string name="knownDevices">known devices</string> -->
     <string name="devices_newDevices">New Devices</string>
-    <string name="devices_searchingForDevice">searching for %1$s %2$s devices</string>
-    <string name="devicessearchingForRemoteDevice">searching for ANT+ Heart Rate devices</string>
+    <string name="devices_searchingForDevice">Searching for %1$s %2$s devices</string>
+    <string name="devicessearchingForRemoteDevice">Searching for ANT+ Heart Rate devices</string>
 
-    <string name="devices_lastSeenText">last seen</string>
+    <string name="devices_lastSeenText">Last seen</string>
     <string name="devices_lastSeenDefaultValue" translatable="false">2014-10-18 09:10:11</string>
-    <string name="devices_now">now</string>
+    <string name="devices_now">Now</string>
 
 
     <!-- dialog_set_calibration_factor -->
@@ -64,21 +64,21 @@
     <string name="devices_correct_calibration_factor_title_run">Correct calibration factor</string>
     <string name="devices_correct_calibration_explanation_bike">Here, you can correct the wheel circumference for this sensor.  The corrected wheel circumference is calculated based on the distance you measured with the current wheel circumference and the correct distance (e.g. you know the exact distance from race report).</string>
     <string name="devices_correct_calibration_explanation_run">Here, you can correct the calibration factor for this sensor.  The corrected value is calculated based on the distance you measured with the current value and the correct distance (e.g. the distance of some race).</string>
-    <string name="devices_measuredDistanceText">measured distance:</string>
-    <string name="devices_correctDistanceText">correct distance:</string>
+    <string name="devices_measuredDistanceText">Measured distance:</string>
+    <string name="devices_correctDistanceText">Correct distance:</string>
     <string name="measuredDistanceValue" translatable="false">100</string>
     <string name="trueDistanceValue" translatable="false">100</string>
     <string name="calibrationFactor_Value" translatable="false">1.0</string>
 
     <!-- edit_device_* -->
-    <string name="devices_settings_header">settings</string>
-    <string name="devices_deviceNameText">device name</string>
-    <string name="devices_deviceTypeText">device type</string>
-    <string name="devices_manufacturerText">manufacturer</string>
-    <string name="devices_on_equipment_text">on equipment</string>
-    <string name="devices_on_bikes_text">on bikes</string>
-    <string name="devices_on_shoes_text">on shoes</string>
-    <string name="devices_on_short_format">on: %1$s</string>
+    <string name="devices_settings_header">Settings</string>
+    <string name="devices_deviceNameText">Device name</string>
+    <string name="devices_deviceTypeText">Device type</string>
+    <string name="devices_manufacturerText">Manufacturer</string>
+    <string name="devices_on_equipment_text">On equipment</string>
+    <string name="devices_on_bikes_text">On bikes</string>
+    <string name="devices_on_shoes_text">On shoes</string>
+    <string name="devices_on_short_format">On: %1$s</string>
     <string name="manufacturerValue" translatable="false">Garmin</string>
     <!--  somewhere else, todo: make one -->
     <string name="devices_calibration_factor">Calibration Factor</string>
@@ -100,20 +100,20 @@
     <!-- edit_device_bike -->
     <string name="devices_editDeviceBikeDeviceNameValue">Garmin speed</string>
     <string name="devices_editDeviceBikeDeviceTypeValue">Bike Speed</string>
-    <string name="devices_editDeviceBikeEditCalibrationFactorBasedOnDistance">correct wheel circumference</string>
+    <string name="devices_editDeviceBikeEditCalibrationFactorBasedOnDistance">Correct wheel circumference</string>
     <string name="editDeviceBikeCalibrationFactorValue" translatable="false">2.01</string>
 
     <!-- edit_device_run -->
     <string name="devices_editDeviceRunDeviceNameValue">Garmin run</string>
     <string name="devices_editDeviceRunDeviceTypeValue">Run Speed</string>
-    <string name="devices_editDeviceRunEditCalibrationFactorBasedOnDistance">correct</string>
+    <string name="devices_editDeviceRunEditCalibrationFactorBasedOnDistance">Correct</string>
     <string name="editDeviceRunCalibrationFactorValue" translatable="false">1.0</string>
 
     <!-- edit_device_generic -->
     <string name="devices_editDeviceGenericDeviceNameValue">Generic Device</string>
     <string name="devices_editDeviceGenericDeviceTypeValue">Generic</string>
     <string name="devices_select_wheel_size_prompt">Select wheel size…</string>
-    <string name="devices_last_seen_never">not yet</string>
+    <string name="devices_last_seen_never">Never</string>
     <string name="devices_equipment_none" />
 
     <!-- smartphone devices -->

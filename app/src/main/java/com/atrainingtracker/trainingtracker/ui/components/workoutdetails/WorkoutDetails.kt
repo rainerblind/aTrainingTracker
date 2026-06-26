@@ -34,6 +34,8 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
+import com.atrainingtracker.trainingtracker.ui.components.MetricItem
+import com.atrainingtracker.trainingtracker.ui.components.MetricLayout
 
 
 @Composable
@@ -41,17 +43,12 @@ fun WorkoutDetails(
     data: WorkoutDetailsData,
     modifier: Modifier = Modifier
 ) {
-    val distanceFormatter = DistanceFormatter()
-    val timeFormatter = TimeFormatter()
-
-    val iconColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val textColorMain = MaterialTheme.colorScheme.onSurface
-    val textColorSecondary = MaterialTheme.colorScheme.onSurfaceVariant
+    val formatters = com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter.current
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(16.dp),
+            .padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // --- Metrics Row: Time and Distance ---
@@ -60,93 +57,41 @@ fun WorkoutDetails(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // 1. Active Time
-            MainItem(
-                iconColor = iconColor,
-                textColorMain = textColorMain,
-                textColorSecondary = textColorSecondary,
+            MetricItem(
                 iconRes = R.drawable.ic_time_active,
                 label = stringResource(R.string.time_active),
-                mainValueString = timeFormatter.format(data.activeTimeSec),
-                secondaryValueString = stringResource(R.string.total_time_format, timeFormatter.format(data.totalTimeSec)),
+                value = formatters.time.format(data.activeTimeSec),
+                secondaryValue = stringResource(R.string.total_time_format, formatters.time.format(data.totalTimeSec)),
+                layout = MetricLayout.VERTICAL,
+                isPrimary = true,
+                iconSize = 28.dp,
                 modifier = Modifier.weight(1f)
             )
 
             // 2. Distance
             val maxDispString = if (data.maxDisplacement != null) {
-                val maxDispFormatted = distanceFormatter.format_with_units(data.maxDisplacement)
+                val maxDispFormatted = formatters.distance.format_with_units(data.maxDisplacement)
                 stringResource(R.string.format_max_displacement, maxDispFormatted)
             } else null
 
-            MainItem(
-                iconColor = iconColor,
-                textColorMain = textColorMain,
-                textColorSecondary = textColorSecondary,
+            MetricItem(
                 iconRes = R.drawable.ic_distance,
                 label = stringResource(R.string.distance),
-                mainValueString = distanceFormatter.format_with_units(data.totalDistance),
-                secondaryValueString = maxDispString,
+                value = formatters.distance.format_with_units(data.totalDistance),
+                secondaryValue = maxDispString,
+                layout = MetricLayout.VERTICAL,
+                isPrimary = true,
+                iconSize = 28.dp,
                 modifier = Modifier.weight(1f)
             )
         }
 
-        // --- Section 3: Altitude (Identical to bindAltitude in ViewHolder) ---
+        // --- Section 3: Altitude (Ascent and Descent) ---
         AltitudeRow(
             data.ascentMeters,
             data.descentMeters,
-            data.minAltitude,
-            data.maxAltitude,
-            modifier = Modifier,
-            iconColor = iconColor,
-            textColorMain = textColorMain,
-            textColorSecondary = textColorSecondary
+            modifier = Modifier
         )
-    }
-}
-
-
-@Composable
-private fun MainItem(
-    iconColor: Color,
-    textColorMain: Color,
-    textColorSecondary: Color,
-    iconRes: Int,
-    label: String,
-    mainValueString: String,
-    secondaryValueString: String?,
-    modifier: Modifier = Modifier
-) {
-    Column(modifier = modifier) {
-        Row(verticalAlignment = Alignment.Bottom) {
-            Icon(
-                painter = painterResource(id = iconRes),
-                contentDescription = null,
-                modifier = Modifier
-                    .size(28.dp)
-                    .padding(bottom = 0.dp),
-                tint = iconColor
-            )
-            Spacer(modifier = Modifier.width(5.dp))
-            Column {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = textColorSecondary
-                )
-                Text(
-                    text = mainValueString,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = textColorMain
-                )
-            }
-        }
-        if (secondaryValueString != null) {
-            Text(
-                text = secondaryValueString,
-                style = MaterialTheme.typography.bodySmall,
-                color = textColorSecondary
-            )
-        }
     }
 }
 
@@ -154,143 +99,66 @@ private fun MainItem(
 private fun AltitudeRow(
     ascentMeters: Long,
     descentMeters: Long,
-    minAltitude: Double?,
-    maxAltitude: Double?,
-    iconColor: Color,
-    textColorMain: Color,
-    textColorSecondary: Color,
-    modifier: Modifier,
+    modifier: Modifier = Modifier,
 ){
-    val altitudeFormatter = AltitudeFormatter()
+    val formatters = com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter.current
 
-    if (ascentMeters > 0 || descentMeters > 0 || minAltitude != null || maxAltitude != null) {
-        HorizontalDivider(
-            // modifier = Modifier.padding(8.dp),
-            thickness = 0.5.dp,
-            color = MaterialTheme.colorScheme.outlineVariant
-        )
-
+    if (ascentMeters > 0 || descentMeters > 0) {
         Row(
-            modifier = modifier
-                .fillMaxWidth()
+            modifier = modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column() {
+            Column {
+                Text(
+                    text = stringResource(R.string.elevation),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(4.dp))
                 Icon(
                     painter = painterResource(id = R.drawable.ic_altitude),
                     contentDescription = null,
                     modifier = Modifier
-                        .size(28.dp)
-                        .padding(bottom = 0.dp),
-                    tint = iconColor
-                )
-                Spacer(modifier = Modifier.width(5.dp))
-                Text(
-                    text = stringResource(R.string.altitude),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = textColorSecondary
+                        .size(24.dp), // Slightly smaller than Time/Distance (28dp)
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Spacer(modifier = Modifier.width(20.dp))
-            Column() {
+            Column {
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    AltitudeItem(
-                        modifier = Modifier.weight(1f),
-                        label = stringResource(R.string.ascent_short),
-                        value = altitudeFormatter.format_with_units(ascentMeters),
+                    MetricItem(
                         iconRes = R.drawable.ic_ascent,
-                        iconColor = iconColor,
-                        textColorMain = textColorMain,
-                        textColorSecondary = textColorSecondary
+                        label = stringResource(R.string.ascent_short),
+                        value = formatters.altitude.format_with_units(ascentMeters),
+                        layout = MetricLayout.VERTICAL,
+                        modifier = Modifier.weight(1f)
                     )
-                    maxAltitude?.let {
-                        AltitudeItem(
-                            modifier = Modifier.weight(1f),
-                            label = stringResource(R.string.max),
-                            value = altitudeFormatter.format_with_units(it),
-                            iconRes = R.drawable.ic_altitude_max,
-                            iconColor = iconColor,
-                            textColorMain = textColorMain,
-                            textColorSecondary = textColorSecondary
-                        )
-                    }
-                }
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    AltitudeItem(
-                        modifier = Modifier.weight(1f),
-                        label = stringResource(R.string.descent_short),
-                        value = altitudeFormatter.format_with_units(descentMeters),
+                    MetricItem(
                         iconRes = R.drawable.ic_descent,
-                        iconColor = iconColor,
-                        textColorMain = textColorMain,
-                        textColorSecondary = textColorSecondary
+                        label = stringResource(R.string.descent_short),
+                        value = formatters.altitude.format_with_units(descentMeters),
+                        layout = MetricLayout.VERTICAL,
+                        modifier = Modifier.weight(1f)
                     )
-                    minAltitude?.let {
-                        AltitudeItem(
-                            modifier = Modifier.weight(1f),
-                            label = stringResource(R.string.min),
-                            value = altitudeFormatter.format_with_units(it),
-                            iconRes = R.drawable.ic_altitude_min,
-                            iconColor = iconColor,
-                            textColorMain = textColorMain,
-                            textColorSecondary = textColorSecondary
-                        )
-                    }
                 }
             }
         }
     }
 }
 
-@Composable
-private fun AltitudeItem(
-    modifier: Modifier,
-    label: String,
-    value: String,
-    iconRes: Int,
-    iconColor: Color,
-    textColorMain: Color,
-    textColorSecondary: Color
-) {
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.Bottom
-    ) {
-        Icon(
-            painter = painterResource(id = iconRes),
-            contentDescription = null,
-            modifier = Modifier.size(24.dp),
-            tint = iconColor
-        )
-        Spacer(modifier = Modifier.width(2.dp))
-        Column {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                color = textColorSecondary
-            )
-            Text(
-                text = value,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
-                color = textColorMain
-            )
-        }
-    }
-}
+
 
 @Preview
 @Composable
 fun PreviewDetailItem() {
     MaterialTheme {
-        MainItem(
+        MetricItem(
             iconRes = R.drawable.ic_distance,
-            iconColor = MaterialTheme.colorScheme.onSurface,
-            textColorMain = MaterialTheme.colorScheme.onSurface,
-            textColorSecondary = MaterialTheme.colorScheme.onSurfaceVariant,
             label = "Distance",
             modifier = Modifier.fillMaxWidth(),
-            mainValueString = "10,00 km",
-            secondaryValueString = "(Max. Luftlinie: 5,00 km)"
+            value = "10,00 km",
+            secondaryValue = "(Max. Luftlinie: 5,00 km)",
+            layout = MetricLayout.VERTICAL
         )
     }
 }
@@ -301,47 +169,29 @@ fun PreviewDistanceAndTime() {
     MaterialTheme {
         Row(modifier = Modifier.fillMaxWidth()) {
             // Active Time
-            MainItem(
+            MetricItem(
                 iconRes = R.drawable.ic_time_active,
-                iconColor = MaterialTheme.colorScheme.onSurface,
-                textColorMain = MaterialTheme.colorScheme.onSurface,
-                textColorSecondary = MaterialTheme.colorScheme.onSurfaceVariant,
                 label = "Active Time",
-                mainValueString = "0:30:00",
-                secondaryValueString = "(Total: 0:45:00)",
-                modifier = Modifier.weight(1f)
+                value = "0:30:00",
+                secondaryValue = "(Total: 0:45:00)",
+                modifier = Modifier.weight(1f),
+                layout = MetricLayout.VERTICAL,
+                iconSize = 28.dp
             )
 
-            MainItem(
+            MetricItem(
                 iconRes = R.drawable.ic_distance,
-                iconColor = MaterialTheme.colorScheme.onSurface,
-                textColorMain = MaterialTheme.colorScheme.onSurface,
-                textColorSecondary = MaterialTheme.colorScheme.onSurfaceVariant,
                 label = "Distance",
-                mainValueString = "10,00 km",
-                secondaryValueString = "(Max. Luftlinie: 5,00 km)",
-                modifier = Modifier.weight(1f)
+                value = "10,00 km",
+                secondaryValue = "(Max. Luftlinie: 5,00 km)",
+                modifier = Modifier.weight(1f),
+                layout = MetricLayout.VERTICAL,
+                iconSize = 28.dp
             )
         }
     }
 }
 
-@Preview
-@Composable
-fun PreviewAltitudeRow() {
-    MaterialTheme {
-        AltitudeRow(
-            ascentMeters = 1250,
-            descentMeters = 1240,
-            minAltitude = 1150.0,
-            maxAltitude = 1410.0,
-            modifier = Modifier,
-            iconColor = MaterialTheme.colorScheme.onSurface,
-            textColorMain = MaterialTheme.colorScheme.onSurface,
-            textColorSecondary = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
 
 @Preview(showBackground = true)
 @Composable
@@ -356,9 +206,7 @@ fun PreviewWorkoutDetails() {
                 avgSpeedMps = 3.47,
                 bSportType = BSportType.BIKE,
                 ascentMeters = 250,
-                descentMeters = 240,
-                minAltitude = 150.0,
-                maxAltitude = 410.0
+                descentMeters = 240
             )
         )
     }

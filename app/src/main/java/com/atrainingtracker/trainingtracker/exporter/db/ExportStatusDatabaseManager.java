@@ -67,7 +67,7 @@ public class ExportStatusDatabaseManager {
     }
 
 
-    public synchronized void addExportStatus(ContentValues contentValues) {
+    public void addExportStatus(ContentValues contentValues) {
         SQLiteDatabase db = mDbHelper.getWritableDatabase();
         db.insert(ExportStatusDbHelper.TABLE, null, contentValues);
     }
@@ -92,7 +92,7 @@ public class ExportStatusDatabaseManager {
         return db.update(ExportStatusDbHelper.TABLE, values, whereClause, whereArgs);
     }
 
-    public synchronized void updateExportStatus(ContentValues contentValues, String fileBaseName, ExportType exportType, FileFormat fileFormat) {
+    public void updateExportStatus(ContentValues contentValues, String fileBaseName, ExportType exportType, FileFormat fileFormat) {
         SQLiteDatabase db = mDbHelper.getWritableDatabase();
         if (db == null) {
             Log.e(TAG, "Database is null, cannot update status for " + fileBaseName + ", " + exportType + ", " + fileFormat);
@@ -104,7 +104,7 @@ public class ExportStatusDatabaseManager {
                 new String[]{fileBaseName, exportType.name(), fileFormat.name()});
     }
 
-    public synchronized void updateExportStatus(ContentValues contentValues, ExportInfo exportInfo) {
+    public void updateExportStatus(ContentValues contentValues, ExportInfo exportInfo) {
         SQLiteDatabase db = mDbHelper.getWritableDatabase();
         if (db == null) {
             Log.e(TAG, "Database is null, cannot update status for " + exportInfo);
@@ -119,7 +119,7 @@ public class ExportStatusDatabaseManager {
 
 
 
-    public synchronized EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>> getExportStatusMap(String fileBaseName) {
+    public EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>> getExportStatusMap(String fileBaseName) {
         if (DEBUG) Log.d(TAG, "getExportStatus");
 
         SQLiteDatabase db = mDbHelper.getWritableDatabase();
@@ -170,7 +170,7 @@ public class ExportStatusDatabaseManager {
         }
     }
 
-    public synchronized java.util.List<ExportRow> getExportRows(String fileBaseName) {
+    public java.util.List<ExportRow> getExportRows(String fileBaseName) {
         java.util.List<ExportRow> result = new java.util.ArrayList<>();
         SQLiteDatabase db = mDbHelper.getReadableDatabase();
         try (Cursor cursor = db.query(ExportStatusDbHelper.TABLE,
@@ -193,7 +193,7 @@ public class ExportStatusDatabaseManager {
         return result;
     }
 
-    public synchronized EnumMap<FileFormat, ExportStatus> getExportStatusMap(String fileBaseName, ExportType exportType) {
+    public EnumMap<FileFormat, ExportStatus> getExportStatusMap(String fileBaseName, ExportType exportType) {
         if (DEBUG) Log.d(TAG, "getExportStatus " + fileBaseName + " " + exportType);
 
         SQLiteDatabase db = mDbHelper.getWritableDatabase();
@@ -226,7 +226,7 @@ public class ExportStatusDatabaseManager {
     }
 
 
-    public synchronized ExportStatus getExportStatus(@NonNull ExportInfo exportInfo) {
+    public ExportStatus getExportStatus(@NonNull ExportInfo exportInfo) {
         if (DEBUG) Log.d(TAG, "getExportStatus");
 
         SQLiteDatabase db = mDbHelper.getWritableDatabase();
@@ -254,7 +254,7 @@ public class ExportStatusDatabaseManager {
     }
 
 
-    public synchronized String getExportAnswer(@NonNull ExportInfo exportInfo) {
+    public String getExportAnswer(@NonNull ExportInfo exportInfo) {
         if (DEBUG) Log.d(TAG, "getExportAnswer");
 
         SQLiteDatabase db = mDbHelper.getWritableDatabase();
@@ -281,7 +281,7 @@ public class ExportStatusDatabaseManager {
         return exportAnswer;
     }
 
-    public synchronized void deleteWorkout(String baseFileName) {
+    public void deleteWorkout(String baseFileName) {
         SQLiteDatabase db = mDbHelper.getWritableDatabase();
         if (db == null) {
             Log.e(TAG, "Database is null, cannot delete " + baseFileName);

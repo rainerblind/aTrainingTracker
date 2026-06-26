@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+  -->
+
+<resources>
+    <string name="filter_configure_smoothing">Configurer lissage</string>
+
+    <string name="filter_instantaneous">instantané</string>
+    <string name="filter_average">moyenne (séance entière)</string>
+    <string name="filter_exponential_smoothing">lissage exponentiel</string>
+    <string name="filter_moving_average">moyenne mobile</string>
+    <string name="filter_exponential_smoothing_format">lissage exponentiel α=%1.2f</string>
+    <string name="filter_exponential_smoothing_short_format">exp α=%1.1f</string>
+
+    <string name="filter_details__instantaneous">Affiche la valeur actuelle.</string>
+    <string name="filter_details__average">Affiche la moyenne de toute la séance.</string>
+    <string name="filter_details__max">Affiche la valeur maximale.</string>
+    <string name="filter_details__moving_average_time">Moyenne des derniers %1$d %2$s.</string>
+    <string name="filter_details__moving_average_number">Moyenne des %1$d dernières valeurs.</string>
+    <string name="filter_details__exponential_smoothing">Lissage exponentiel avec 0 &lt; α &#8804; 1.</string>
+
+    <string name="filter_unit">Unité</string>
+    <string name="filter_type">Type de lissage</string>
+    <string name="filter_value">Valeur</string>
+
+</resources>

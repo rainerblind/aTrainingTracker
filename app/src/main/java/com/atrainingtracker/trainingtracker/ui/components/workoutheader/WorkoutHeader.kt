@@ -55,8 +55,6 @@ fun WorkoutHeader(
     onSaveAsRoute: () -> Unit,
     onDeleteRequest: () -> Unit,
     modifier: Modifier = Modifier,
-    backgroundColor: Color = Color.Transparent,
-    textColor: Color = MaterialTheme.colorScheme.onSurface,
     menuEnabled: Boolean = true
 ) {
     // State to control menu visibility
@@ -74,8 +72,7 @@ fun WorkoutHeader(
         else {
             modifier.fillMaxWidth()
         },
-        color = backgroundColor,
-        contentColor = textColor
+        color = Color.Transparent
     ) {
         // Box allows us to place the Menu Button at the absolute top-right
         Box(modifier = Modifier.fillMaxWidth()) {
@@ -83,7 +80,7 @@ fun WorkoutHeader(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, top = 8.dp, bottom = 8.dp, end = 4.dp),
+                    .padding(start = 12.dp, top = 12.dp, bottom = 12.dp, end = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 // 1. TOP ROW: Sport Icon and Workout Name
@@ -101,7 +98,7 @@ fun WorkoutHeader(
                         text = data.workoutName,
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
                     )
@@ -214,12 +211,12 @@ fun WorkoutHeader(
                             leadingIcon = { Icon(painterResource(R.drawable.ic_route), contentDescription = null) }
                         )
 
-                        // 3. Conditional Strava Logic
                         // Check if Strava is globally enabled AND if this workout specifically allows it
                         val stravaGloballyEnabled = TrainingApplication.uploadToCommunity(FileFormat.STRAVA)
+                        val stravaMappingAvailable = data.stravaSportName != null
                         val stravaIndividuallyEnabled = data.uploadToStrava != 0
 
-                        if (stravaGloballyEnabled && stravaIndividuallyEnabled) {
+                        if (stravaGloballyEnabled && stravaIndividuallyEnabled && stravaMappingAvailable) {
                             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                             DropdownMenuItem(
                                 text = {
@@ -298,7 +295,8 @@ class WorkoutHeaderPreviewProvider : PreviewParameterProvider<WorkoutHeaderData>
             startTimeS = 0,
             commute = false,
             trainer = false,
-            uploadToStrava = 0
+            uploadToStrava = 0,
+            stravaSportName = "Ride"
         ),
         // Case 2: Commute / Trainer Run (Testing Chips)
         WorkoutHeaderData(
@@ -312,7 +310,23 @@ class WorkoutHeaderPreviewProvider : PreviewParameterProvider<WorkoutHeaderData>
             trainer = true,
             startTimeS = 0,
             equipmentName = null,
-            uploadToStrava = 1
+            uploadToStrava = 1,
+            stravaSportName = "Run"
+        ),
+        // Case 3: No Strava Mapping
+        WorkoutHeaderData(
+            workoutName = "Private Walk",
+            formattedDate = "Thursday, Apr 23",
+            formattedTime = "10:00",
+            sportName = "Walk",
+            bSportType = BSportType.RUN,
+            finished = true,
+            commute = false,
+            trainer = false,
+            startTimeS = 0,
+            equipmentName = null,
+            uploadToStrava = 1,
+            stravaSportName = "NONE"
         )
     )
 }
@@ -352,7 +366,8 @@ fun PreviewCommuteHeader() {
                 startTimeS = 0,
                 equipmentName = null,
                 trainer = false,
-                uploadToStrava = -1
+                uploadToStrava = -1,
+                stravaSportName = "Ride"
             ),
             onClicked = {},
             onExport = {},

@@ -56,7 +56,7 @@ fun StravaActivitySection(
             .clickable(enabled = activity.id != null) {
                 activity.id?.let { StravaHelper.openActivity(context, it) }
             }
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 2.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // --- Header Row ---
@@ -64,10 +64,10 @@ fun StravaActivitySection(
             Icon(
                 painter = painterResource(R.drawable.logo_square_strava),
                 contentDescription = null,
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier.size(18.dp),
                 tint = Color.Unspecified
             )
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(6.dp))
             Text(
                 text = stringResource(R.string.strava_results_title),
                 style = MaterialTheme.typography.titleMedium,
@@ -120,6 +120,11 @@ fun StravaActivitySection(
                 SegmentEffortRow(effort)
             }
         }
+
+        // --- Mandatory Branding ---
+        PoweredByStrava(
+            modifier = Modifier.align(Alignment.End).padding(top = 4.dp)
+        )
     }
 }
 

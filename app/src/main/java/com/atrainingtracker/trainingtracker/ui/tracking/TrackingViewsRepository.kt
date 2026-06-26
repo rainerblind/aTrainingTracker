@@ -42,7 +42,8 @@ data class TrackingViewInfo(
     val name: String,
     val showMap: Boolean,
     val showLapButton: Boolean,
-    val showLiveSegments: Boolean
+    val showLiveSegments: Boolean,
+    val showElevationProfile: Boolean
 )
 
 
@@ -128,7 +129,8 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                 TrackingViewsDatabaseManager.TrackingViewsDbHelper.NAME,
                 TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_MAP,
                 TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LAP_BUTTON,
-                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_SEGMENTS
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_SEGMENTS,
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_ELEVATION_PROFILE
             ),
             "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID}=?",
             arrayOf(tabViewId.toString()),
@@ -142,7 +144,8 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                 val showMap = it.getInt(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_MAP)) == 1
                 val showLapButton = it.getInt(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LAP_BUTTON)) == 1
                 val showLiveSegments = it.getInt(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_SEGMENTS)) == 1
-                return TrackingViewInfo(id, name, showMap, showLapButton, showLiveSegments)
+                val showElevationProfile = it.getInt(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_ELEVATION_PROFILE)) == 1
+                return TrackingViewInfo(id, name, showMap, showLapButton, showLiveSegments, showElevationProfile)
             }
         }
         return null
@@ -173,7 +176,8 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                 TrackingViewsDatabaseManager.TrackingViewsDbHelper.NAME,
                 TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_MAP,
                 TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LAP_BUTTON,
-                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_SEGMENTS
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_SEGMENTS,
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_ELEVATION_PROFILE
             ),
             "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.ACTIVITY_TYPE}=?",
             arrayOf(activityType.name),
@@ -190,8 +194,9 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                     val showMap = it.getInt(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_MAP)) == 1
                     val showLapButton = it.getInt(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LAP_BUTTON)) == 1
                     val showLiveSegments = it.getInt(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_SEGMENTS)) == 1
+                    val showElevationProfile = it.getInt(it.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_ELEVATION_PROFILE)) == 1
 
-                    viewList.add(TrackingViewInfo(id, name, showMap, showLapButton, showLiveSegments))
+                    viewList.add(TrackingViewInfo(id, name, showMap, showLapButton, showLiveSegments, showElevationProfile))
                 } while (it.moveToNext())
             }
         }
@@ -444,6 +449,17 @@ class TrackingViewsRepository private constructor(private val context: Context) 
     suspend fun updateShowLiveSegments(tabViewId: Long, showLiveSegments: Boolean) {
         withContext(Dispatchers.IO) {
             viewsDbManager.updateShowLiveSegments(tabViewId, showLiveSegments)
+        }
+
+        // trigger recreation of UI
+        withContext(Dispatchers.Main) {
+            configUpdateTrigger.value++
+        }
+    }
+
+    suspend fun updateShowElevationProfile(tabViewId: Long, showElevationProfile: Boolean) {
+        withContext(Dispatchers.IO) {
+            viewsDbManager.updateShowElevationProfile(tabViewId, showElevationProfile)
         }
 
         // trigger recreation of UI

@@ -136,7 +136,7 @@ public class StravaHelper {
                 .appendQueryParameter(REDIRECT_URI, getRedirectUri())
                 .appendQueryParameter(RESPONSE_TYPE, CODE)
                 .appendQueryParameter(APPROVAL_PROMPT, AUTO)
-                .appendQueryParameter(SCOPE, READ + ',' + READ_ALL  + ',' + ACTIVITY_WRITE);
+                .appendQueryParameter(SCOPE, READ + "," + READ_ALL  + "," + ACTIVITY_WRITE + ",activity:read_all");
         return builder.build().toString();
     }
 
@@ -193,37 +193,34 @@ public class StravaHelper {
             return TrainingApplication.getStravaAccessToken();
         }
 
-        String refreshUrl = getRefreshUrl();
+        String refreshUrl = "https://www.strava.com/api/v3/oauth/token";
+        
+        okhttp3.RequestBody formBody = new okhttp3.FormBody.Builder()
+                .add(CLIENT_ID, MY_CLIENT_ID)
+                .add(CLIENT_SECRET, MY_CLIENT_SECRET)
+                .add(GRANT_TYPE, REFRESH_TOKEN)
+                .add(REFRESH_TOKEN, TrainingApplication.getStravaRefreshToken())
+                .build();
 
-        HttpPost httpPost = new HttpPost(refreshUrl);
-        HttpClient httpClient = new DefaultHttpClient();
-        try {
-            HttpResponse httpResponse = httpClient.execute(httpPost);
+        okhttp3.Request request = new okhttp3.Request.Builder()
+                .url(refreshUrl)
+                .post(formBody)
+                .build();
 
-            if (DEBUG) Log.i(TAG, "HTTP status: " + httpResponse.getStatusLine());
-
-            String response = EntityUtils.toString(httpResponse.getEntity());
-            if (DEBUG) Log.d(TAG, "response: " + response);
-            // Uri uri = Uri.parse(response);
-            JSONObject responseJson = new JSONObject(response);
-            storeJSONData(responseJson);
-
-            if (responseJson.has(ACCESS_TOKEN)) {
-                // String tokenType   = responseJson.getString(TOKEN_TYPE);
-                return responseJson.getString(ACCESS_TOKEN);
+        okhttp3.OkHttpClient client = new okhttp3.OkHttpClient();
+        
+        try (okhttp3.Response response = client.newCall(request).execute()) {
+            if (response.isSuccessful() && response.body() != null) {
+                String responseBody = response.body().string();
+                if (DEBUG) Log.d(TAG, "Refresh Response: " + responseBody);
+                JSONObject responseJson = new JSONObject(responseBody);
+                storeJSONData(responseJson);
+                return responseJson.optString(ACCESS_TOKEN, null);
+            } else {
+                Log.e(TAG, "Refresh failed: " + response.code() + " " + response.message());
             }
-        } catch (ClientProtocolException e) {
-            // TODO Auto-generated catch block
-            Log.e(TAG, e.toString());
-            e.printStackTrace();
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            Log.e(TAG, e.toString());
-            e.printStackTrace();
-        } catch (JSONException e) {
-            // TODO Auto-generated catch block
-            Log.e(TAG, e.toString());
-            e.printStackTrace();
+        } catch (Exception e) {
+            Log.e(TAG, "Error refreshing token", e);
         }
 
         return null;

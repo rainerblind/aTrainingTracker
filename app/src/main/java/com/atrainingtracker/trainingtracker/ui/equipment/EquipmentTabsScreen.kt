@@ -52,6 +52,9 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
+import com.atrainingtracker.trainingtracker.ui.components.EmptyStatePlaceholder
+import com.atrainingtracker.trainingtracker.ui.components.DeleteConfirmationDialog
 import com.atrainingtracker.trainingtracker.ui.components.stats.RichStatsSheet
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsSummaryBlock
@@ -240,21 +243,11 @@ fun EquipmentTabsScreen(
 
     // Delete Confirmation Dialog
     itemToDelete?.let { item ->
-        AlertDialog(
-            onDismissRequest = { itemToDelete = null },
-            title = { Text(stringResource(R.string.delete)) },
-            text = { Text(stringResource(R.string.really_delete_format, item.name)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.deleteEquipment(item)
-                    itemToDelete = null
-                }) {
-                    Text(stringResource(R.string.delete))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { itemToDelete = null }) { Text(stringResource(R.string.Cancel)) }
-            }
+        DeleteConfirmationDialog(
+            title = stringResource(R.string.delete),
+            message = stringResource(R.string.really_delete_format, item.name),
+            onConfirm = { viewModel.deleteEquipment(item) },
+            onDismiss = { itemToDelete = null }
         )
     }
 
@@ -283,12 +276,11 @@ fun EquipmentList(
     val topPadding = with(density) { (headerHeightPx + appBarOffsetPx).toDp() }
 
     if (items.isEmpty()) {
-        Box(modifier = Modifier
-            .fillMaxSize()
-            .padding(top = topPadding + 16.dp),
-            contentAlignment = Alignment.Center) {
-            Text(emptyMessage, style = MaterialTheme.typography.headlineSmall)
-        }
+        EmptyStatePlaceholder(
+            modifier = Modifier.padding(top = topPadding + 16.dp),
+            iconRes = if (emptyMessage == stringResource(R.string.equipment_no_bikes)) R.drawable.ic_equipment_bike else R.drawable.ic_equipment_shoe,
+            message = emptyMessage
+        )
     } else {
         val bottomPadding = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
 
@@ -336,24 +328,15 @@ fun EquipmentItem(
     }
 
     Box {
-        ElevatedCard(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 4.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.elevatedCardColors(
-                containerColor = MaterialTheme.colorScheme.surface
-            ),
-            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
+        MappableListItem(
+            modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
+            onClick = { onConfigClick(item) },
+            onLongClick = { showMenu = true }
         ) {
             // ZONE 1: CONFIGURATION (Top part)
             Column(modifier = Modifier
                 .fillMaxWidth()
-                .combinedClickable(
-                    onClick = { onConfigClick(item) },
-                    onLongClick = { showMenu = true }
-                )
-                .padding(16.dp)
+                .padding(12.dp)
             ) {
                 // Header Row
                 Row(
@@ -418,7 +401,7 @@ fun EquipmentItem(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { onStatsClick(item) }
-                        .padding(horizontal = 16.dp)
+                        .padding(horizontal = 12.dp)
                 ) {
                     HorizontalDivider(
                         thickness = 0.5.dp,

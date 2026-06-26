@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -61,6 +62,7 @@ fun TrackingTabConfigHeader(
     onDeleteTab: (Long) -> Unit,
     onUpdateShowMap: (Long, Boolean) -> Unit,
     onUpdateShowLiveSegments: (Long, Boolean) -> Unit,
+    onUpdateShowElevationProfile: (Long, Boolean) -> Unit,
     onUpdateShowLapButton: (Long, Boolean) -> Unit,
     onToggleMode: () -> Unit,
 ) {
@@ -142,16 +144,21 @@ fun TrackingTabConfigHeader(
 
             Spacer(Modifier.height(4.dp))
 
-            // Row 3: Settings (The three Checkboxes)
-            Row(
+            // Row 3: Settings (The checkboxes)
+            FlowRow(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 ConfigCheckbox(
                     label = stringResource(R.string.config_tracking__show_map),
                     checked = viewInfo.showMap,
                     onCheckedChange = { onUpdateShowMap(viewInfo.tabViewId, it) }
+                )
+                ConfigCheckbox(
+                    label = stringResource(R.string.config_tracking__showElevationProfile),
+                    checked = viewInfo.showElevationProfile,
+                    onCheckedChange = { onUpdateShowElevationProfile(viewInfo.tabViewId, it) }
                 )
                 ConfigCheckbox(
                     label = stringResource(R.string.config_tracking__showLiveSegments),

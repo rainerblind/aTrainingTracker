@@ -191,9 +191,13 @@ class WorkoutSummariesTabbedFragment : Fragment() {
                     ) { paddingValues ->
                         Box(modifier = Modifier.padding(paddingValues)) {
                             if (selectedWorkoutForDetails != null) {
+                                val aftermathUIState by trackOnMapViewModel.uiState.collectAsStateWithLifecycle()
                                 TrackOnMapScreen(
                                     workoutData = selectedWorkoutForDetails,
-                                    mapState = trackOnMapViewModel.aftermathState.collectAsStateWithLifecycle().value,
+                                    tracks = aftermathUIState.tracks,
+                                    segments = aftermathUIState.segments,
+                                    routes = aftermathUIState.routes,
+                                    markers = aftermathUIState.markers,
                                     modifier = Modifier
                                 )
 

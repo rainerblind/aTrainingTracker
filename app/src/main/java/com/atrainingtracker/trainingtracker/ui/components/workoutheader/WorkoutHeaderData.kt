@@ -31,5 +31,6 @@ data class WorkoutHeaderData(
     var commute: Boolean,
     var trainer: Boolean,
     val uploadToStrava: Int,
+    val stravaSportName: String? = null,
     val finished: Boolean
 )

@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+  -->
+
+<resources>
+
+    <string name="filter_max">max</string>
+
+    <string-array name="Strava_Sport_Types_UI_Names">
+        <item>@string/no_upload</item>
+        <item>Trening (Inne)</item>
+        <item>Jazda</item>
+        <item>Bieg</item>
+        <item>Pływanie</item>
+        <item>Wędrówka</item>
+        <item>Spacer</item>
+        <item>Narciarstwo alpejskie</item>
+        <item>Narciarstwo skiturowe</item>
+        <item>Kajakarstwo</item>
+        <item>Crossfit</item>
+        <item>Jazda na rowerze elek.</item>
+        <item>Orbitrek</item>
+        <item>Łyżwiarstwo</item>
+        <item>Wrotkarstwo</item>
+        <item>Kajakarstwo</item>
+        <item>Kitesurfing</item>
+        <item>Biegi narciarskie</item>
+        <item>Wspinaczka</item>
+        <item>Nartorolki</item>
+        <item>Wioślarstwo</item>
+        <item>Snowboard</item>
+        <item>Rakiety śnieżne</item>
+        <item>Stepper</item>
+        <item>SUP</item>
+        <item>Surfing</item>
+        <item>Wirtualna jazda</item>
+        <item>Trening siłowy</item>
+        <item>Windsurfing</item>
+        <item>Joga</item>
+            <item>Gravel</item>
+        <item>Jazda na rowerze górskim</item>
+        <item>Jazda na e-bike\'u górskim</item>
+        <item>Handbike</item>
+        <item>Velomobil</item>
+        <item>Bieg przełajowy</item>
+        <item>Bieg wirtualny</item>
+        <item>HIIT</item>
+        <item>Fizjoterapia</item>
+        <item>Padel</item>
+        <item>Pickleball</item>
+        <item>Golf</item>
+        <item>Skateboard</item>
+        <item>Żeglarstwo</item>
+        <item>Wózek inwalidzki</item>
+</string-array>
+
+    <string-array name="Runkeeper_Sport_Types">
+        <item>Inne</item>
+        <item>Bieganie</item>
+        <item>Kolarstwo</item>
+        <item>MTB</item>
+        <item>Chodzenie</item>
+        <item>Wędrówki</item>
+        <item>Narciarstwo zjazdowe</item>
+        <item>Narciarstwo biegowe</item>
+        <item>Snowboard</item>
+        <item>Jazda na łyżwach</item>
+        <item>Pływanie</item>
+        <item>Wózek inwalidzki</item>
+        <item>Wioślarstwo</item>
+        <item>Orbitrek</item>
+        <item>Joga</item>
+        <item>Pilates</item>
+        <item>CrossFit</item>
+        <item>Spinning</item>
+        <item>Zumba</item>
+        <item>Barre</item>
+        <item>Trening grupowy</item>
+        <item>Taniec</item>
+        <item>Bootcamp</item>
+        <item>Boks / MMA</item>
+        <item>Medytacja</item>
+        <item>Trening siłowy</item>
+        <item>Obwodowy</item>
+        <item>Core</item>
+        <item>Arc Trainer</item>
+        <item>Stairmaster</item>
+        <item>Sporty</item>
+        <item>Nordic Walking</item>
+    </string-array>
+
+    <string-array name="Training_Peaks_Sport_Types">
+        <item>Inne</item>
+        <item>Rower</item>
+        <item>Bieg</item>
+        <item>Spacer</item>
+        <item>Pływanie</item>
+        <item>X-Train</item>
+        <item>MTB</item>
+        <item>Siła</item>
+        <item>XC-Ski</item>
+        <item>Wioślarstwo</item>
+    </string-array>
+
+    <string-array name="TCX_Sport_Types">
+        <item>Inne</item>
+        <item>Chodzenie</item>
+        <item>Bieganie</item>
+        <item>Kolarstwo</item>
+    </string-array>
+
+    <string-array name="GC_Sport_Types">
+        <item>spacer</item>
+        <item>bieg</item>
+        <item>mtb</item>
+        <item>rower</item>
+    </string-array>
+
+    <string-array name="wheel_size_names">
+        <item>Niestandardowy</item>
+        <item>700 x 28</item>
+        <item>700 x 25</item>
+        <item>700 x 23</item>
+        <item>700 x 20</item>
+        <item>26 x 2.125"</item>
+        <item>26 x 1.9"</item>
+        <item>26 x 1.5"</item>
+        <item>26 x 1.25"</item>
+        <item>26 x 1.0"</item>
+    </string-array>
+
+</resources>

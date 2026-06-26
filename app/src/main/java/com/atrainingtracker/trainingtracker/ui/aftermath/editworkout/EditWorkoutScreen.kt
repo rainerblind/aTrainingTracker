@@ -141,7 +141,7 @@ fun EditWorkoutScreen(
                 DropdownSelector(
                     label = stringResource(R.string.Equipment),
                     options = equipmentNames,
-                    selectedOption = viewModel.suggestedEquipmentName ?: "",
+                    selectedOption = viewModel.suggestedEquipmentName ?: viewModel.NO_EQUIPMENT,
                     onOptionSelected = { viewModel.updateEquipmentName(it) },
                     modifier = Modifier.weight(1f),
                     stayOpenOn = setOf(viewModel.ALL_EQUIPMENT, viewModel.ALL_SHOES, viewModel.ALL_BIKES)
@@ -169,28 +169,36 @@ fun EditWorkoutScreen(
             if (TrainingApplication.uploadToCommunity(FileFormat.STRAVA)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     val uploadStatus = workoutData?.uploadToStrava ?: -1
+                    val stravaMappingAvailable = workoutData?.stravaSportName != null
 
                     // Determine the visual state of the checkbox
                     // If -1, it defaults to 'true' because we already checked the global status above
-                    val isChecked = when (uploadStatus) {
-                        1 -> true
-                        0 -> false
-                        else -> true
-                    }
+                    // If mapping is NOT available, it MUST be false
+                    val isChecked = if (stravaMappingAvailable) {
+                        when (uploadStatus) {
+                            1 -> true
+                            0 -> false
+                            else -> true
+                        }
+                    } else false
 
                     // The Strava Logo
                     Icon(
                         painter = painterResource(R.drawable.logo_square_strava),
                         contentDescription = null,
                         modifier = Modifier.size(18.dp),
-                        tint = Color.Unspecified // Important: Keeps the original orange/brand colors
+                        tint = if (stravaMappingAvailable) Color.Unspecified else Color.Gray // Important: Keeps the original orange/brand colors
                     )
 
                     Checkbox(
                         checked = isChecked,
-                        onCheckedChange = { viewModel.updateUploadToStrava(it) }
+                        onCheckedChange = { viewModel.updateUploadToStrava(it) },
+                        enabled = stravaMappingAvailable
                     )
-                    Text(text = stringResource(R.string.stravaUpload))
+                    Text(
+                        text = stringResource(R.string.stravaUpload),
+                        color = if (stravaMappingAvailable) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    )
                 }
             }
 
