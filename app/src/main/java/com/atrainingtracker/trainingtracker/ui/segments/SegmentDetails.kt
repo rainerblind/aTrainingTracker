@@ -79,10 +79,19 @@ fun SegmentDetails(
             )
         }
 
-        // --- ROW 3: Elevations (Gain, Min, Max) ---
+        // --- ROW 3: Elevations (Altitude Icon + Gain/Min/Max Metrics) ---
         Row(verticalAlignment = Alignment.CenterVertically) {
+            // Section Identifier (Mirrors Workout Summary lead icon)
+            Icon(
+                painter = painterResource(id = R.drawable.ic_altitude),
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+
             MetricItem(
-                iconRes = R.drawable.ic_altitude,
+                iconRes = R.drawable.ic_ascent,
                 value = formatters.altitude.format_with_units(summary.elevationGain_raw),
                 isPrimary = true
             )

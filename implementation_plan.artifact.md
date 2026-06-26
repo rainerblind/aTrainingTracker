@@ -1,33 +1,33 @@
-# Implementation Plan - SCRUM-119 Refinement: Store Presence Length Optimization
+# Implementation Plan - SCRUM-122: Structural Start-Alignment for Segment Items
 
-Truncate Full Descriptions for Spanish, French, Italian, Dutch, and Portuguese to stay within the Google Play 4000-character limit, while updating the App Title in all languages.
+Improve the visual organization of the Segment Item by ensuring a consistent horizontal starting point for metric values across different rows, while maintaining flexible row widths for large data values.
 
 ## 1. Requirements Mapping
-- **Requirement**: `REQ-STP-001` (Multilingual Store Presence)
-- **Test ID**: `TST-STP-001` (Localization Review)
+- **Requirement**: `REQ-UI-020` (Consistent Vertical Metric Representation)
+- **Test ID**: `TST-UI-030` (Metric Consistency & Structural Alignment)
 
 ## 2. Impact Analysis
-- **Resource System**: Documentation files in `docs/store_presence/`.
-- **Side Effects**: None.
+- **UI Components**: `SegmentDetails.kt`.
+- **Structural Integrity**: We replace flexible spacers with a fixed-width lead-in container for category icons.
+- **Safety**: The data values (right side) remain in a standard horizontal `Row`, ensuring they can expand freely without causing awkward gaps if values are long.
+- **Side Effects**: None. This is a layout-only refinement.
 
 ## 3. Proposed Changes
 
-### 3.1 App Title Update
-- Update `**App Title**` to: `aTrainingTracker (ANT+ BTLE)` in all languages. (26/30 characters).
+### 3.1 Fixed-Width Lead-in (`SegmentDetails.kt`)
+- Define a shared constant for the lead-in width (e.g., `56.dp`).
+- Wrap the leading icons of Row 2 (Grades) and Row 3 (Elevations) in a `Box` or `Row` with this fixed width.
+- **Row 2**: Fixed-width container for `ic_grade`.
+- **Row 3**: Fixed-width container for `ic_altitude` + `ic_ascent`.
+- Result: The first numerical value in both rows will align perfectly at the `56.dp` mark.
 
-### 3.2 Full Description Optimization (Trimming)
-For languages exceeding 4000 characters (ES, FR, IT, NL, PT), I will apply the following compression strategy:
-- Merge "FOCUSED ON PERFORMANCE" and "MAIN FEATURES" headers if needed, or slightly condense bullet points.
-- Concatenate short paragraphs in the "JOURNEY" section.
-- Remove redundant adjectives without losing the "world-class" tone.
-
-#### Targeted Languages:
-- **French**: ~4366 -> <4000
-- **Spanish**: ~4243 -> <4000
-- **Dutch**: ~4128 -> <4000
-- **Italian**: ~4099 -> <4000
-- **Portuguese**: ~4077 -> <4000
+### 3.2 Baseline Alignment
+- Switch the vertical alignment of these rows from `CenterVertically` to `Bottom`.
+- This ensures the technical data sits on a solid visual baseline, matching the professional look of the Workout Summary.
 
 ## 4. Verification Plan
-- **Character Count Audit**: Use `wc -m` to verify all `.md` files (excluding the file header) are below 4000 characters.
-- **Title Audit**: Verify all titles match "aTrainingTracker (ANT+ BTLE)".
+- **Build**: Ensure successful compilation.
+- **Visual Audit**:
+    1. Verify that the '%' value (Grade) and the 'm' value (Gain) start at the exact same horizontal position.
+    2. Verify that long elevation values do not break the row or cause misalignment in the columns to the right.
+- **Compose Preview**: Check the "Segment Details" preview to confirm baseline and start-point precision.

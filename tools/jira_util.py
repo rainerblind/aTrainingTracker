@@ -73,6 +73,17 @@ def list_sprint_issues():
     for i in issues:
         print(f"{i['key']}: {i['fields']['summary']} [{i['fields']['status']['name']}]")
 
+def show_issue(issue_key):
+    config = get_config()
+    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=summary,description,comment"
+    issue = jira_request(url)
+
+    print(f"h1. {issue['key']}: {issue['fields']['summary']}")
+    print(f"\n*Description*:\n{issue['fields']['description']}")
+    print("\n*Comments*:")
+    for c in issue['fields']['comment']['comments']:
+        print(f"--- {c['author']['displayName']} ({c['created']}) ---\n{c['body']}\n")
+
 def transition_issue(issue_key, status_name):
     config = get_config()
     trans_id = TRANSITIONS.get(status_name)
@@ -101,12 +112,14 @@ def add_comment(issue_key, text):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: jira_util.py [list | move KEY todo|in_progress|in_review|done | comment KEY TEXT]")
+        print("Usage: jira_util.py [list | show KEY | move KEY todo|in_progress|in_review|done | comment KEY TEXT]")
         sys.exit(1)
 
     cmd = sys.argv[1]
     if cmd == "list":
         list_sprint_issues()
+    elif cmd == "show" and len(sys.argv) == 3:
+        show_issue(sys.argv[2])
     elif cmd == "move" and len(sys.argv) == 4:
         transition_issue(sys.argv[2], sys.argv[3])
     elif cmd == "comment" and len(sys.argv) == 4:

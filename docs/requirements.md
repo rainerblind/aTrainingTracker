@@ -98,7 +98,8 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-UI-015** | Unified Metric component system. | Ensure cross-screen consistency for data presentation. | `MetricItem.kt`, `MetricBadge.kt` | `TST-STR-006` | Verified |
 | **REQ-UI-016** | Centralized metric formatting context. | Single source of truth for units and precision. | `MetricFormatterContext.kt` | `TST-STR-007` | Verified |
 | **REQ-UI-017** | Standardized list items and placeholders. | Harmonize the "look and feel" of all list views. | `MappableListItem.kt`, `EmptyStatePlaceholder.kt` | `TST-STR-008` | Verified |
-| **REQ-UI-018** | Refined Elevation Terminology. | Distinguish between absolute altitude ("Altitude"/"Höhe") and relative gain ("Elevation"/"Höhenmeter") in all languages. | `WorkoutDetails.kt`, `strings.xml` | `TST-UI-028` | Proposed |
+| **REQ-UI-018** | Refined Elevation Terminology. | Distinguish between absolute altitude ("Altitude"/"Höhe") and relative gain ("Elevation"/"Höhenmeter") in all languages. | `WorkoutDetails.kt`, `strings.xml` | `TST-UI-028` | Verified |
+| **REQ-UI-020** | Consistent Vertical Metric Representation. | Provide a harmonized technical representation of elevation data across all list items using standardized icons and visual lead-ins. | `WorkoutDetails.kt`, `SegmentDetails.kt` | `TST-UI-030` | Verified |
 | **REQ-EXP-004** | Automated email export with attachments. | Simple, reliable backup and sharing. | `ExportManager.java` | `TST-MAN-001` | Verified |
 | **REQ-EXP-005** | Exponential backoff for Strava uploads. | Robust sync even with API issues. | `StravaUploader.kt` | `TST-STR-001` | Verified |
 

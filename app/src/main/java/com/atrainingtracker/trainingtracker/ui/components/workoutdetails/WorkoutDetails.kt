@@ -116,7 +116,7 @@ private fun AltitudeRow(
                         .size(24.dp), // Slightly smaller than Time/Distance (28dp)
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.width(5.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = stringResource(R.string.elevation),
                     style = MaterialTheme.typography.labelMedium,
