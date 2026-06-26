@@ -18,6 +18,7 @@ This document defines the verification procedures for all project requirements. 
 | **TST-UNT-008** | `Accumulator` | `REQ-PRO-003` | Verify that hardware deltas received during a pause are discarded, while deltas received while active are accumulated correctly. | Verified |
 | **TST-UNT-009** | `WorkoutDataMapper` | `REQ-UI-011` | Verify that the extrema rows only include the "Big 6" performance metrics: HR, Speed/Pace, Cadence, Power, Altitude, and Temperature. | Verified |
 | **TST-UNT-010** | `MappablePath` | `REQ-MAP-007` | Verify that coordinate projection (latLngs) is lazy and only occurs once. | Proposed |
+| **TST-UNT-011** | `TrackingViewsDb` | `REQ-PRO-005` | 1. Simulated fresh install (Wipe data): Verify schema contains ShowElevationProfile. 2. Simulated upgrade (v9->v10): Verify ShowElevationProfile is added. | Verified |
 
 ## 2. Regression & Manual Verification (SWE.5 / SWE.6)
 

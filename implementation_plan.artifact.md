@@ -1,27 +1,32 @@
-# Implementation Plan - SCRUM-127: Prevent track accumulation while paused
+# Implementation Plan - SCRUM-129: Fix Database Schema Inconsistency
 
-Suspend map track and elevation profile updates when the session is in a PAUSED state.
+Resolve the `SQLiteException` by correcting the database `onCreate` and `onUpgrade` logic for the `ViewsTable`.
 
 ## 1. Requirements Mapping
-- **Requirement**: `REQ-PRO-004` (Prevent track and profile accumulation while paused)
-- **Test ID**: `TST-UI-039` (Pause Movement Isolation)
+- **Requirement**: `REQ-PRO-005` (Database Schema Integrity)
+- **Test ID**: `TST-UNT-011` (TrackingViewsDb Integrity)
 
 ## 2. Impact Analysis
-- **Core Repository**: `BANALServiceRepository.kt`.
-- **Logic**: Currently uses `TrainingApplication.isTracking()` which is true during pause.
-- **Side Effects**: None. This aligns the visual representation with the accumulated distance logic.
+- **Core Component**: `TrackingViewsDatabaseManager.java`.
+- **Root Cause**: The `onCreate` method incorrectly uses `CREATE_VIEWS_TABLE_V9`, which is missing the `ShowElevationProfile` column introduced in Version 10. Fresh installations or certain upgrade paths results in a query crash when `TrackingViewsRepository.kt` expects this column.
+- **Risk**: Critical (Fatal crash on tracking screen).
+- **Side Effects**: This fix will stabilize all future installations and attempt to repair existing broken installations.
 
 ## 3. Proposed Changes
 
-### 3.1 Refine Update Gates (`BANALServiceRepository.kt`)
-- In `startObservingBANALService()`, replace `TrainingApplication.isTracking()` with a check for `TrainingApplication.getTrackingMode() == TrackingMode.TRACKING`.
-- This affects two locations:
-    1. The block that appends to `_currentTrack` (Map).
-    2. The block that appends to `_currentPathPoints` (Elevation Profile).
+### 3.1 Correct Schema Definitions (`TrackingViewsDatabaseManager.java`)
+- Define `CREATE_VIEWS_TABLE_V10` which includes `ShowElevationProfile`.
+- Update `onCreate` to use `CREATE_VIEWS_TABLE_V10`.
+
+### 3.2 Robust Migration (`TrackingViewsDatabaseManager.java`)
+- Refine the `onUpgrade` block for version 10:
+    - Use a helper method to check if the column exists before attempting to add it (idempotent migration).
+    - If the column is missing, execute the `ALTER TABLE` command and synchronize the default value with `ShowMap`.
 
 ## 4. Verification Plan
-- **Build**: Ensure successful compilation.
-- **Visual Audit**:
-    1. Start workout.
-    2. Pause workout.
-    3. Verify that `_currentTrack` and `_currentPathPoints` stop accumulating new data points even if sensor values (GPS/Altitude) change.
+- **Unit Verification (v10 Fresh Install)**:
+    - Wipe data / Fresh install simulation.
+    - Verify that `ViewsTable` contains `ShowElevationProfile`.
+- **Integration Verification**:
+    - Launch the app and enter the Tracking screen.
+    - Verify that the query for tracking views no longer throws an exception.

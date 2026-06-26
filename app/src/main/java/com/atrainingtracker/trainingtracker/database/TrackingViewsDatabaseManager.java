@@ -422,6 +422,21 @@ public class TrackingViewsDatabaseManager {
                 + NIGHT + " int, "
                 + SHOW_LIVE_SEGMENTS + " int)";
 
+        protected static final String CREATE_VIEWS_TABLE_V10 = "create table " + VIEWS_TABLE + " ("
+                + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + ACTIVITY_TYPE + " text, "
+                + NAME + " text, "
+                + LAYOUT_NR + " int, "
+                + NEXT_POSITION + " int, "
+                + SHOW_LAP_BUTTON + " int, "
+                + SHOW_MAP + " int, "
+                + FULL_SCREEN + " int, "
+                + SYSTEM_SETTING + " int, "
+                + DAY + " int, "
+                + NIGHT + " int, "
+                + SHOW_LIVE_SEGMENTS + " int, "
+                + SHOW_ELEVATION_PROFILE + " int)";
+
         @Deprecated
         protected static final String CREATE_LAYOUTS_TABLE_V3 = "create table " + ROWS_TABLE + " ("
                 + ROW_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -489,10 +504,10 @@ public class TrackingViewsDatabaseManager {
 
         @Override
         public void onCreate(@NonNull SQLiteDatabase db) {
-            db.execSQL(CREATE_VIEWS_TABLE_V9);
+            db.execSQL(CREATE_VIEWS_TABLE_V10);
             db.execSQL(CREATE_LAYOUTS_TABLE_V8);
 
-            if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_VIEWS_TABLE_V9);
+            if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_VIEWS_TABLE_V10);
             if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_LAYOUTS_TABLE_V8);
 
 
@@ -652,7 +667,11 @@ public class TrackingViewsDatabaseManager {
 
             if (oldVersion < 10) {
                 Log.i(TAG, "Upgrading database from version 9 to 10");
-                addColumn(db, VIEWS_TABLE, SHOW_ELEVATION_PROFILE, "int");
+                try {
+                    addColumn(db, VIEWS_TABLE, SHOW_ELEVATION_PROFILE, "int");
+                } catch (Exception e) {
+                    Log.w(TAG, "Column " + SHOW_ELEVATION_PROFILE + " might already exist.");
+                }
                 // Synchronize elevation profile default with map visibility
                 db.execSQL("UPDATE " + VIEWS_TABLE + " SET " + SHOW_ELEVATION_PROFILE + " = " + SHOW_MAP);
             }
