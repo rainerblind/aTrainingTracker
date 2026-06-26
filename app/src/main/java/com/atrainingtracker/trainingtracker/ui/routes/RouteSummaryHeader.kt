@@ -26,7 +26,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -35,8 +34,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
-import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter
-import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.trainingtracker.database.RouteSource
 import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.ui.components.MetricItem
@@ -56,50 +53,80 @@ fun RouteSummaryHeader(
     val formatters = com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter.current
 
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(12.dp),
+        modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        // --- TOP ROW: Sport Icon and Route Name ---
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Icon(
-                painter = painterResource(id = summary.bSportType.iconResId),
-                contentDescription = null,
-                modifier = Modifier.size(32.dp),
-                tint = Color.Unspecified // Original color
-            )
-            Text(
-                text = summary.name,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
-            )
-        }
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                // --- TOP ROW: Sport Icon and Identity (Name + Source) ---
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(id = summary.bSportType.iconResId),
+                        contentDescription = null,
+                        modifier = Modifier.size(32.dp),
+                        tint = Color.Unspecified // Original color
+                    )
 
-        // --- SECOND ROW: Source and Visibility Switch ---
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = stringResource(R.string.routes_source_label, stringResource(summary.source.displayNameResId)),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f)
-            )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = summary.name,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        if (summary.source == RouteSource.STRAVA) {
+                            PoweredByStrava(height = 10.dp)
+                        } else {
+                            Text(
+                                text = stringResource(R.string.routes_source_label, stringResource(summary.source.displayNameResId)),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+                }
 
+                // --- SECOND ROW: Metrics ---
+                // Note: End padding ensures metrics don't overlap with the decoupled Switch
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(end = 48.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    MetricItem(
+                        iconRes = R.drawable.ic_distance,
+                        value = formatters.distance.format_with_units(summary.distance),
+                        isPrimary = true
+                    )
+
+                    MetricItem(
+                        iconRes = R.drawable.ic_ascent,
+                        value = formatters.altitude.format_with_units(summary.elevationGain),
+                        isPrimary = true
+                    )
+                }
+            }
+
+            // --- DECOUPLED CONTROL: Visibility Switch (Bottom Right Overlay) ---
             if (showSwitch) {
                 Switch(
-                    modifier = Modifier.scale(switchScale),
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(end = 12.dp, bottom = 0.dp) // Aligned with card padding
+                        .scale(switchScale),
                     checked = summary.isSelected,
                     onCheckedChange = onToggleSelection,
                     colors = SwitchDefaults.colors(
@@ -111,34 +138,6 @@ fun RouteSummaryHeader(
                         uncheckedBorderColor = RouteColorUnselected
                     )
                 )
-            }
-        }
-
-        // --- THIRD ROW: Metrics and Mandatory Branding ---
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                MetricItem(
-                    iconRes = R.drawable.ic_distance,
-                    value = formatters.distance.format_with_units(summary.distance),
-                    isPrimary = true
-                )
-
-                MetricItem(
-                    iconRes = R.drawable.ic_ascent,
-                    value = formatters.altitude.format_with_units(summary.elevationGain),
-                    isPrimary = true
-                )
-            }
-
-            if (summary.source == RouteSource.STRAVA) {
-                PoweredByStrava(height = 24.dp)
             }
         }
 
@@ -154,7 +153,7 @@ fun RouteSummaryHeader(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(horizontal = 4.dp)
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp)
             )
         }
     }

@@ -99,6 +99,7 @@ fun SegmentList(
                 if (segmentsWithPath.isNotEmpty()) {
                     item {
                         PoweredByStrava(
+                            height = 18.dp,
                             modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
                         )
                     }

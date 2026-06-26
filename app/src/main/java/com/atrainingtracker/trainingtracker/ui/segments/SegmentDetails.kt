@@ -60,7 +60,7 @@ fun SegmentDetails(
                 isPrimary = true
             )
             if (showStravaLogo) {
-                PoweredByStrava(height = 24.dp)
+                PoweredByStrava(height = 16.dp)
             }
         }
 

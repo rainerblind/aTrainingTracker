@@ -101,7 +101,9 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-UI-018** | Refined Elevation Terminology. | Distinguish between absolute altitude ("Altitude"/"Höhe") and relative gain ("Elevation"/"Höhenmeter") in all languages. | `WorkoutDetails.kt`, `strings.xml` | `TST-UI-028` | Verified |
 | **REQ-UI-020** | Consistent Vertical Metric Representation. | Provide a harmonized technical representation of elevation data across all list items using standardized icons and visual lead-ins. | `WorkoutDetails.kt`, `SegmentDetails.kt` | `TST-UI-030` | Verified |
 | **REQ-UI-021** | Improved Elevation Section Labeling. | Position the descriptive elevation text above the mountain symbol in the Workout Summary to improve visual hierarchy. | `WorkoutDetails.kt` | `TST-UI-031` | Verified |
-| **REQ-EXP-004** | Automated email export with attachments. | Simple, reliable backup and sharing. | `ExportManager.java` | `TST-MAN-001` | Verified |
+| **REQ-UI-024** | Optimized Route Identity Layout. | The Route Name shall be granted maximum horizontal priority. Secondary metadata (Source) must be subordinate. For Strava routes, the text label must be replaced by the official logo to eliminate redundancy. Control elements (Switch) must be positioned in the metrics row to prevent layout conflicts. | `RouteSummaryHeader.kt` | `TST-UI-034` | Verified |
+| **REQ-UI-025** | Decoupled Control Positioning. | The visibility switch shall be positioned as an overlay in the bottom-right of the header area to decouple its technical height from the metrics layout, enabling maximum vertical density. | `RouteSummaryHeader.kt` | `TST-UI-035` | Verified |
+| **REQ-UI-026** | Consistent Branding Scaling. | Official third-party logos (e.g., Strava) must be scaled to subordinate heights (10dp-24dp) when used as source metadata or list headers to prevent visual dominance over primary athletic data. | `SegmentList.kt`, `SegmentDetails.kt` | `TST-UI-036` | Verified |
 | **REQ-EXP-005** | Exponential backoff for Strava uploads. | Robust sync even with API issues. | `StravaUploader.kt` | `TST-STR-001` | Verified |
 
 ## 9. External API Compliance

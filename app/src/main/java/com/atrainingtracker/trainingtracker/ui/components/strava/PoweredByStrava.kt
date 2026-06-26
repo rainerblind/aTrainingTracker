@@ -21,15 +21,13 @@ package com.atrainingtracker.trainingtracker.ui.components.strava
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 
@@ -37,28 +35,37 @@ import com.atrainingtracker.R
 fun PoweredByStrava(
     modifier: Modifier = Modifier,
     useWhite: Boolean = false,
-    height: androidx.compose.ui.unit.Dp = 42.dp
+    height: Dp = 42.dp
 ) {
     val resId = if (useWhite) R.drawable.api_logo_pwrdby_strava_horiz_white 
                 else R.drawable.api_logo_pwrdby_strava_horiz_orange
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center
+    
+    // Use a Box with mandatory height to force scaling of the content
+    Box(
+        modifier = modifier.height(height),
+        contentAlignment = Alignment.Center
     ) {
         Image(
             painter = painterResource(id = resId),
             contentDescription = "Powered by Strava",
-            contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-            modifier = Modifier.height(height).wrapContentWidth()
+            contentScale = ContentScale.FillHeight,
+            modifier = Modifier.fillMaxHeight().wrapContentWidth()
         )
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, name = "Large Logo")
 @Composable
-fun PreviewPoweredByStrava() {
+fun PreviewPoweredByStravaLarge() {
     MaterialTheme {
-        PoweredByStrava()
+        PoweredByStrava(height = 42.dp)
+    }
+}
+
+@Preview(showBackground = true, name = "Compact Logo")
+@Composable
+fun PreviewPoweredByStravaCompact() {
+    MaterialTheme {
+        PoweredByStrava(height = 16.dp)
     }
 }

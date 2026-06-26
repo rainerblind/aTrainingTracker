@@ -53,11 +53,15 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-UI-029** | **Session Isolation** | `REQ-UI-009` | 1. Start a workout, move, stop workout. 2. Immediately start a new workout. 3. Verify Map and Elevation Profile are empty at start. | Verified |
 | **TST-UI-030** | **Metric Consistency**| `REQ-UI-020` | Audit Workout and Segment items. Verify \"Gain\" uses `ic_ascent` in both. Verify \"Elevation\" label in Workout is bottom-aligned with values. Verify all icons/text share a consistent baseline. | Verified |
 | **TST-UI-031** | **Layout Hierarchy** | `REQ-UI-021` | Open Workout Summary. Inspect the Elevation section header (left column). | Verified |
+| **TST-UI-034** | **Identity Branding UI** | `REQ-UI-024` | 1. Open Route List. 2. Inspect Strava route: verify logo is below name and no \"Source: Strava\" text exists. 3. Inspect Local route: verify \"Source: Local\" text is below name. 4. Verify no branding logo in metrics row. | Verified |
 | **TST-LOG-001** | **Logic** | `REQ-UI-011` | Verify that all rows, including "Pace", follow strict mathematical ordering (numerical minimum in Min column, numerical maximum in Max column). | Verified |
 | **TST-LOG-002** | **Logic** | `REQ-UI-011` | Verify that for a running activity, both Speed and Pace rows are generated from the single Speed data source. | Verified |
 | **TST-MAN-001** | **General** | All other `REQ` | Ad-hoc functional testing on a physical device. | Feature performs according to the rationale defined in requirements. |
 
 | **TST-STP-001** | **Localization** | `REQ-STP-001` | Review generated markdown files in `docs/store_presence/`. Verify that Title, Short Description ("The serious athlete's tracking cockpit with ANT+, BLE, Strava & live segments."), and Full Description are correctly translated and adhere to Google Play character limits (Title: 30, Short: 80). | Verified |
+
+| **TST-UI-035** | **Compact Metric Row** | `REQ-UI-025` | 1. Open Route List. 2. Inspect gap between identity row and metrics row. | Verified |
+| **TST-UI-036** | **Branding Audit** | `REQ-UI-026` | 1. Open Segment List. 2. Verify top logo height (e.g., 24dp). 3. Inspect individual Segment Items (if enabled). | Verified |
 
 ## 3. Structural & Compliance Checks
 
