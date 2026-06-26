@@ -10,6 +10,11 @@ Any AI assistant working on this project **must** follow these steps for every t
 1.  **Requirement Synchronization**:
     *   Before writing any code or plans, read `docs/requirements.md`.
     *   Add a new Requirement ID (e.g., `REQ-XXX-###`) or update an existing one to reflect the user's request.
+    *   **Phasing Standards**: Requirements must be written with the precision of a professional requirements engineer:
+        *   **SHALL**: For mandatory functional behavior (e.g., "The system SHALL...").
+        *   **MUST**: For strict technical constraints or quality attributes (e.g., "The database MUST...").
+        *   **Atomic & Unambiguous**: One requirement per entry; avoid vague terms like "easy", "improved", or "better".
+        *   **System-Centric**: Describe system behavior, not user desires. (Avoid "The user wants...", "I would like...").
     *   Define the **Rationale** (the "Why") clearly.
     *   Map the requirement to the relevant **Implementation File(s)**.
 
