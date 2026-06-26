@@ -36,7 +36,7 @@ def get_headers(config):
         "Content-Type": "application/json"
     }
 
-def jira_request(url, method="GET", payload=None):
+def jira_request(url, method="GET", payload=None, is_binary=False):
     config = get_config()
     headers = get_headers(config)
     data = json.dumps(payload).encode("utf-8") if payload else None
@@ -47,6 +47,8 @@ def jira_request(url, method="GET", payload=None):
 
     try:
         with urllib.request.urlopen(req) as response:
+            if is_binary:
+                return response.read()
             body = response.read().decode("utf-8")
             return json.loads(body) if body else {}
     except Exception as e:
@@ -75,14 +77,34 @@ def list_sprint_issues():
 
 def show_issue(issue_key):
     config = get_config()
-    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=summary,description,comment"
+    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=summary,description,comment,attachment"
     issue = jira_request(url)
 
     print(f"h1. {issue['key']}: {issue['fields']['summary']}")
     print(f"\n*Description*:\n{issue['fields']['description']}")
+
+    print("\n*Attachments*:")
+    attachments = issue['fields'].get('attachment', [])
+    if not attachments:
+        print("None")
+    for a in attachments:
+        print(f"* {a['filename']} ({a['size']} bytes) - ID: {a['id']} - URL: {a['content']}")
+
     print("\n*Comments*:")
     for c in issue['fields']['comment']['comments']:
         print(f"--- {c['author']['displayName']} ({c['created']}) ---\n{c['body']}\n")
+
+def download_attachment(url, filename):
+    print(f"Downloading {filename}...")
+    content = jira_request(url, is_binary=True)
+
+    # Save to a temporary or docs folder.
+    # For now, let's assume current directory or a specific 'attachments' dir
+    os.makedirs("docs/attachments", exist_ok=True)
+    path = os.path.join("docs/attachments", filename)
+    with open(path, "wb") as f:
+        f.write(content)
+    print(f"Saved to {path}")
 
 def transition_issue(issue_key, status_name):
     config = get_config()
@@ -112,7 +134,7 @@ def add_comment(issue_key, text):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: jira_util.py [list | show KEY | move KEY todo|in_progress|in_review|done | comment KEY TEXT]")
+        print("Usage: jira_util.py [list | show KEY | move KEY todo|in_progress|in_review|done | comment KEY TEXT | download URL FILENAME]")
         sys.exit(1)
 
     cmd = sys.argv[1]
@@ -120,6 +142,8 @@ if __name__ == "__main__":
         list_sprint_issues()
     elif cmd == "show" and len(sys.argv) == 3:
         show_issue(sys.argv[2])
+    elif cmd == "download" and len(sys.argv) == 4:
+        download_attachment(sys.argv[2], sys.argv[3])
     elif cmd == "move" and len(sys.argv) == 4:
         transition_issue(sys.argv[2], sys.argv[3])
     elif cmd == "comment" and len(sys.argv) == 4:
