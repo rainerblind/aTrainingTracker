@@ -144,6 +144,17 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-PRO-004** | Prevent track and profile accumulation while paused. | Visual track and elevation profile must strictly reflect active periods to avoid artifacts from movement during pause. | `BANALServiceRepository.kt` | `TST-UI-039` | Verified |
 | **REQ-PRO-005** | Database Schema Integrity. | The database initialization and migration logic must ensure that all required columns (e.g., ShowElevationProfile) exist for both fresh installations and upgrades. | `TrackingViewsDatabaseManager.java` | `TST-UNT-011` | Verified |
 
+## 13. High-Fidelity Navigation (SCRUM-131)
+
+| ID | Description | Rationale | Implementation File(s) | Verification ID | Status |
+|:---|:---|:---|:---|:---|:---|
+| **REQ-FIL-007** | EKF Sensor Fusion. | The system SHALL implement an Extended Kalman Filter to fuse GPS, IMU (Accel/Mag), and Hardware Speed Sensors for high-precision state estimation. | TBD | `TST-FUSION-001` | Backlog |
+| **REQ-FIL-008** | Body-to-World Frame Transformation. | The system SHALL rotate raw phone MEMS data into the geographic East-North-Up (ENU) frame using a 3x3 Rotation Matrix or Quaternions. | TBD | `TST-FUSION-001` | Backlog |
+| **REQ-FIL-009** | Dead Reckoning Navigation. | In GPS-denied environments, the system SHALL maintain location and speed predictions using integrated IMU and wheel speed data. | TBD | `TST-FUSION-002` | Backlog |
+| **REQ-FIL-010** | Speed Sensor Auto-Calibration. | The system SHALL dynamically solve for the "Wheel Scale Factor" within the EKF state vector to automate circumference calibration. | TBD | `TST-FUSION-003` | Backlog |
+| **REQ-NFR-001** | Deterministic EKF Timing. | The estimation loop SHALL use hardware event timestamps and dynamic Delta-T calculation to ensure mathematical robustness against Android CPU jitter. | TBD | `TST-STR-010` | Backlog |
+| **REQ-NFR-002** | Stationary Pinning. | The system SHALL detect "Not Moving" events via IMU variance and coordinate clustering to prevent stationary "Drunkard's Walk" artifacts. | TBD | `TST-FUSION-004` | Backlog |
+
 | **REQ-STP-001** | Multilingual Store Presence. | Increase global reach and accessibility by providing localized App Titles, Short Descriptions, and Full Descriptions for the Google Play Store. | `docs/store_presence/` | `TST-STP-001` | Verified |
 
 ## 12. Privacy & Permissions

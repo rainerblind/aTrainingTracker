@@ -66,6 +66,11 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-UI-038** | **Detailed Metric Scale** | `REQ-UI-028` | 1. Open Periods screen. 2. Inspect sub-sport rows and \"Longest Workout\" highlight. Verify icons are 14dp and text is bodySmall. | Verified |
 | **TST-UI-039** | **Pause Movement Isolation** | `REQ-PRO-004` | 1. Start workout. 2. Move to create track. 3. **Pause**. 4. Move 50m. 5. Observe map. | Verified |
 
+| **TST-FUSION-001** | **Dynamic Accuracy** | `REQ-FIL-007`, `REQ-FIL-008` | Audit live track during sharp turns and rapid acceleration. Verify no "overshoot" or "lag" in position relative to visual map markers. | Backlog |
+| **TST-FUSION-002** | **Dead Reckoning** | `REQ-FIL-009` | 1. Enter tunnel (GPS loss). 2. Continue moving. 3. Verify map track continues along road based on speed sensor. | Backlog |
+| **TST-FUSION-003** | **Auto-Calibration Audit** | `REQ-FIL-010` | Compare EKF Wheel Scale Factor against a manually measured circumference after a 10km ride. | Backlog |
+| **TST-FUSION-004** | **Stationary Audit** | `REQ-NFR-002` | Stop physically for 2 minutes. Verify location dot remains perfectly fixed with zero "webbing" artifacts on the map. | Backlog |
+
 ## 3. Structural & Compliance Checks
 
 | Test ID | Focus | Requirement ID(s) | Method |
