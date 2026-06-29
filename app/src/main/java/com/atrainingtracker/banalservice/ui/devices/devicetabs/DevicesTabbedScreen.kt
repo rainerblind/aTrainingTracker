@@ -20,14 +20,18 @@ package com.atrainingtracker.banalservice.ui.devices.devicetabs
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.R
@@ -37,6 +41,7 @@ import com.atrainingtracker.banalservice.helpers.UIHelper
 import com.atrainingtracker.banalservice.ui.devices.devicelist.*
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialog
+import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
 import kotlinx.coroutines.launch
 
 @Composable
@@ -52,6 +57,16 @@ fun DevicesTabbedScreen(
     val protocol = tabViewModel.protocol
     var showDeleteConfirmFor by remember { mutableStateOf<DeviceUiData?>(null) }
     var editingDeviceId by remember { mutableStateOf<Long?>(null) }
+
+    val density = LocalDensity.current
+    val appBarMaxHeightPx = with(density) { 135.dp.roundToPx() }
+    val connection = remember(appBarMaxHeightPx) {
+        CollapsingAppBarNestedScrollConnection(appBarMaxHeightPx)
+    }
+
+    val availableListState = rememberLazyListState()
+    val pairedListState = rememberLazyListState()
+    val allKnownListState = rememberLazyListState()
 
     Surface(modifier = modifier.fillMaxSize()) {
         when (val state = uiState) {
@@ -75,30 +90,67 @@ fun DevicesTabbedScreen(
                 val pagerState = rememberPagerState(initialPage = initialTab) { tabs.size }
                 val scope = rememberCoroutineScope()
 
-                Column {
-                    TabRow(selectedTabIndex = pagerState.currentPage) {
-                        tabs.forEachIndexed { index, spec ->
-                            Tab(
-                                selected = pagerState.currentPage == index,
-                                onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
-                                text = {
-                                    Text(getTabTitle(spec))
-                                }
-                            )
-                        }
-                    }
-
+                Box(Modifier.nestedScroll(connection)) {
                     HorizontalPager(
                         state = pagerState,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.fillMaxSize(),
+                        userScrollEnabled = true,
+                        verticalAlignment = Alignment.Top
                     ) { page ->
+                        val scrollState = when (page) {
+                            0 -> availableListState
+                            1 -> pairedListState
+                            else -> allKnownListState
+                        }
                         DeviceListScreen(
                             viewModel = listViewModel,
                             filterSpec = tabs[page],
                             searchingFor = if (page == 0) searchingFor else null,
                             onDeviceSelected = { editingDeviceId = it },
-                            onDeleteDevice = { showDeleteConfirmFor = it }
+                            onDeleteDevice = { showDeleteConfirmFor = it },
+                            scrollState = scrollState,
+                            appBarOffsetPx = connection.appBarOffset,
+                            headerHeightPx = appBarMaxHeightPx.toFloat()
                         )
+                    }
+
+                    // --- HEADER ---
+                    Surface(
+                        modifier = Modifier.offset { IntOffset(0, connection.appBarOffset) },
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                    ) {
+                        Column {
+                            Column(modifier = Modifier.statusBarsPadding()) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = stringResource(UIHelper.getNameId(protocol)),
+                                        style = MaterialTheme.typography.headlineSmall,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    )
+                                }
+                            }
+                            PrimaryScrollableTabRow(
+                                selectedTabIndex = pagerState.currentPage,
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                divider = {}
+                            ) {
+                                tabs.forEachIndexed { index, spec ->
+                                    Tab(
+                                        selected = pagerState.currentPage == index,
+                                        onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
+                                        text = {
+                                            Text(getTabTitle(spec))
+                                        }
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
                 

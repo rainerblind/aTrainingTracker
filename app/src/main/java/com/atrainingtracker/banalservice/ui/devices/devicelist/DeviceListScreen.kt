@@ -20,21 +20,26 @@ package com.atrainingtracker.banalservice.ui.devices.devicelist
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.helpers.UIHelper
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
+import com.atrainingtracker.trainingtracker.ui.components.EmptyStatePlaceholder
 
 @Composable
 fun DeviceListScreen(
@@ -43,37 +48,53 @@ fun DeviceListScreen(
     searchingFor: String?,
     onDeviceSelected: (Long) -> Unit,
     onDeleteDevice: (DeviceUiData) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    scrollState: LazyListState = rememberLazyListState(),
+    appBarOffsetPx: Int = 0,
+    headerHeightPx: Float = 0f
 ) {
     val devices by viewModel.getFilteredDevices(filterSpec).observeAsState(emptyList())
+    val density = LocalDensity.current
+    val topPadding = with(density) { (headerHeightPx + appBarOffsetPx).toDp() }
 
     Column(modifier = modifier.fillMaxSize()) {
         // 1. Searching Header (Only for Available tab)
-        if (filterSpec.deviceType != DeviceType.ALL && filterSpec.filterType == DeviceFilterType.AVAILABLE) {
-            SearchingHeader(
-                protocolName = stringResource(UIHelper.getNameId(filterSpec.protocol)),
-                deviceTypeName = stringResource(UIHelper.getNameId(filterSpec.deviceType)),
-                isSearching = searchingFor != null
-            )
-        }
+        // Note: With collapsing header, we might want this to be part of the LazyColumn or handled differently.
+        // But for now, let's keep it here if it's visible.
 
-        // 2. The Device List
         if (devices.isEmpty()) {
-            Box(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = stringResource(R.string.no_workouts_available), // TODO: Use better "No devices" string
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            EmptyStatePlaceholder(
+                modifier = Modifier.padding(top = topPadding),
+                icon = Icons.Default.Devices,
+                message = stringResource(R.string.no_workouts_available), // TODO: Add better "No devices" string
+                hint = if (searchingFor != null) stringResource(R.string.devices_searchingForDevice, 
+                    stringResource(UIHelper.getNameId(filterSpec.protocol)), 
+                    stringResource(UIHelper.getNameId(filterSpec.deviceType))) 
+                else ""
+            )
         } else {
             LazyColumn(
-                modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(vertical = 8.dp)
+                state = scrollState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    top = topPadding + 8.dp,
+                    bottom = 16.dp,
+                    start = 8.dp,
+                    end = 8.dp
+                ),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                // If searching, show the searching indicator as the first item or header
+                if (filterSpec.deviceType != DeviceType.ALL && filterSpec.filterType == DeviceFilterType.AVAILABLE && searchingFor != null) {
+                    item {
+                        SearchingHeader(
+                            protocolName = stringResource(UIHelper.getNameId(filterSpec.protocol)),
+                            deviceTypeName = stringResource(UIHelper.getNameId(filterSpec.deviceType)),
+                            isSearching = true
+                        )
+                    }
+                }
+
                 items(devices, key = { it.id }) { device ->
                     DeviceItem(
                         device = device,
@@ -95,7 +116,8 @@ private fun SearchingHeader(
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
