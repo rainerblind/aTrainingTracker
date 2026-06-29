@@ -33,6 +33,7 @@ import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Sealed class to represent the UI state in a clean and type-safe way.
@@ -63,6 +64,7 @@ class DevicesTabbedViewModel(
     }
 
     private val banalServiceRepository: BANALServiceRepository = BANALServiceRepository.getInstance(application)
+    val searchingFor: StateFlow<String?> = banalServiceRepository.searchingForDevice
 
     private val _uiState = MutableLiveData<UiState>()
     val uiState: LiveData<UiState> = _uiState

@@ -21,7 +21,6 @@ package com.atrainingtracker.banalservice.ui.devices.devicelist
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.banalservice.Protocol
@@ -30,11 +29,7 @@ import com.atrainingtracker.banalservice.ui.devices.GetMergedDevicesUseCase
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
-import com.atrainingtracker.trainingtracker.ui.util.Event
 import kotlinx.coroutines.launch
-
-data class EditDeviceNavigationEvent(val deviceId: Long, val deviceType: DeviceType)
-
 
 class DeviceListViewModel(private val application: Application) : AndroidViewModel(application) {
 
@@ -49,16 +44,6 @@ class DeviceListViewModel(private val application: Application) : AndroidViewMod
 
     // the single source of truth: the merged devices
     private val allDevices = useCase.mergedDevices
-
-    private val _navigateToEditDevice = MutableLiveData<Event<EditDeviceNavigationEvent>>()
-    val navigateToEditDevice: LiveData<Event<EditDeviceNavigationEvent>> = _navigateToEditDevice
-
-    fun onDeviceSelected(deviceId: Long) {
-        val deviceType = devicesDBRepository.getDeviceType(deviceId)
-        if (deviceType != null) {
-            _navigateToEditDevice.postValue(Event(EditDeviceNavigationEvent(deviceId, deviceType)))
-        }
-    }
 
     /**
      * This is the key public method.

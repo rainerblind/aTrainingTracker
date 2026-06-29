@@ -61,6 +61,7 @@ data class DeviceUiData(
     val linkedEquipment: List<String>,
     val availableEquipment: List<String>,
     val powerFeaturesFlags: Int?,
+    val batteryPercentage: Int,
 
     // derived from the raw data
     val deviceTypeIconRes: Int,
@@ -123,6 +124,7 @@ fun raw2UiDeviceData(rawData: DeviceRawData, context: Context): DeviceUiData {
         linkedEquipment = rawData.linkedEquipment,
         availableEquipment = rawData.availableEquipment,
         powerFeaturesFlags = rawData.powerFeaturesFlags,
+        batteryPercentage = batteryPercentage,
 
         deviceTypeIconRes = getIconId(rawData.deviceType, rawData.protocol),
         batteryStatusIconRes = getBatteryStatusIconRes(batteryPercentage),

@@ -31,6 +31,7 @@
     <string name="devices_unknown_device">No name</string>
 
     <string name="devices_all">All</string>
+    <string name="devices_available">available</string>
 
     <!-- tab title -->
     <string name="devices_available_devices_format">Available %1$s devices</string>
