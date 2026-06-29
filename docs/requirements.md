@@ -39,6 +39,7 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-TRK-006** | Support sport-specific search triggers. | Sensors ready when user changes activity. | `TrainingApplication.java` | `TST-MAN-001` | Verified |
 | **REQ-TRK-007** | Deterministic 1Hz sampling rate during recording. | Consistent time-base for analysis and export. | `TrackerService.java` | `TST-REG-001` | Verified |
 | **REQ-TRK-008** | Align session averages with core summary metrics. | Ensure background tracking focus matches optimized UI summary for consistency and performance. | `TrackerService.java` | `TST-STR-004` | Verified |
+| **REQ-TRK-009** | Total Time Persistence. | The `TrackerService` SHALL continue to update the `TIME_TOTAL_s` field in the `WorkoutSummaries` database table even when the recording is in a PAUSED state. | `TrackerService.java` | `TST-REG-007` | Verified |
 
 ## 4. Advanced Metrics & User Profiles
 
@@ -109,6 +110,7 @@ This document tracks all functional and non-functional requirements of the proje
 | **REQ-UI-035** | Peak Marker Alpha Sync. | Technical markers in the Period Map SHALL use the same Alpha (opacity) as the workout's polyline (defined by the period type) to ensure visual consistency. | `InteractivePeriodMap.kt`, `PeriodMapUtils.kt` | `TST-UI-041` | Verified |
 | **REQ-UI-036** | Peak Marker Interactivity. | Tapping a technical marker SHALL select the associated workout and open its details in the BottomSheet. | `InteractivePeriodMap.kt`, `PeriodMapScreen.kt` | `TST-UI-041` | Verified |
 | **REQ-UI-037** | Peak Marker Styling. | Period Map markers SHALL use the unified `createSensorMarker` visual style (pin with icon) to ensure visual consistency with individual workout views. | `InteractivePeriodMap.kt` | `TST-UI-041` | Verified |
+| **REQ-UI-038** | Live Pause Updates. | The user interface SHALL reflect real-time updates to the Total Duration of an active workout session while paused, ensuring accurate visibility into the overall elapsed time. | `WorkoutDetails.kt`, `TrackerService.java` | `TST-REG-007` | Verified |
 | **REQ-EXP-005** | Exponential backoff for Strava uploads. | Robust sync even with API issues. | `StravaUploader.kt` | `TST-STR-001` | Verified |
 
 ## 9. External API Compliance

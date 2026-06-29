@@ -36,6 +36,7 @@ These procedures ensure high-level system integrity and UI consistency.
 | **TST-INT-005** | **UI Layout** | `REQ-UI-010` | Open the Tab Configuration on a narrow device or split-screen. | Checkboxes wrap into multiple rows instead of overlapping. Labels remain fully visible. |
 | **TST-INT-006** | **UI Layout** | `REQ-UI-010` | Audit the checkbox sequence in the tab configuration header. | Checkboxes appear in the exact order: Map, Elevation Profile, Live Segments, Lap Button. |
 | **TST-REG-005** | **Map Context** | `REQ-MAP-008` | Open detail map. Verify active item is primary. Verify background items of same sport are muted (0.3). Verify background items of different sport are highly muted (0.1). | Full tiered spatial context is maintained. |
+| **TST-REG-007** | **Pause Time Sync** | `REQ-TRK-009`, `REQ-UI-038` | 1. Start workout. 2. Pause after 10s. 3. Wait 20s while paused. 4. Verify Active Time is 10s and Total Time is ~30s in the UI and DB. | Verified |
 | **TST-UI-001** | **UI Design** | `REQ-UI-011` | Inspect the workout summary extrema table on various device themes. | The table has distinct headers, clear alignment, and high-quality typography matching the Material 3 standards. | Verified |
 | **TST-UI-011** | **Formatting** | `REQ-UI-011` | Verify that units in data rows are surrounded by square brackets (e.g., `[km/h]`). | Verified |
 | **TST-UI-012** | **Hierarchy** | `REQ-UI-011` | Verify that the Sensor Name and the Numeric Values share the same visual weight, while the unit is micro-scaled. | Verified |
