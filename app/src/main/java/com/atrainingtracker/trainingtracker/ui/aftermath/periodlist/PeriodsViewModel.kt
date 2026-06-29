@@ -246,6 +246,28 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
             }
         }
 
+        // Aggregate Peak Markers for the Map
+        val extremaMarkers = items.flatMap { workout ->
+            val markers = mutableListOf<PeriodPeakMarker>()
+            workout.maxAltitudeLatLng?.let { pos ->
+                markers.add(PeriodPeakMarker(
+                    workoutId = workout.id,
+                    pos = pos,
+                    iconResId = R.drawable.ic_altitude_max,
+                    title = "${workout.workoutName}: Max Alt"
+                ))
+            }
+            workout.maxDisplacementLatLng?.let { pos ->
+                markers.add(PeriodPeakMarker(
+                    workoutId = workout.id,
+                    pos = pos,
+                    iconResId = R.drawable.ic_distance,
+                    title = "${workout.workoutName}: Max Dist"
+                ))
+            }
+            markers
+        }
+
         return PeriodSummary(
             periodLabel = label,
             periodDateRange = range,
@@ -258,6 +280,7 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
             polylines = items.mapNotNull { it.mapPolyline }.filter { it.isNotEmpty() },
             workoutIdToPolylineMap = workoutIdToPolylineMap,
             workoutIdToSportMap = workoutIdToSportMap,
+            extremaMarkers = extremaMarkers,
             sortKey = key // Used for descending sort
         )
     }

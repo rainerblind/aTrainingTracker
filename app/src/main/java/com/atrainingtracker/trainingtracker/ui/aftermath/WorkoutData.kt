@@ -27,6 +27,7 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.Extrema
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaDataRow
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderData
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
+import com.google.android.gms.maps.model.LatLng
 import java.time.LocalDateTime
 
 /**
@@ -90,6 +91,8 @@ data class WorkoutData(
     val descentMeters: Long,
     val minAltitude: Double?,
     val maxAltitude: Double?,
+    val maxAltitudeLatLng: LatLng? = null,
+    val maxDisplacementLatLng: LatLng? = null,
 
     val description: String?,
     val goal: String?,

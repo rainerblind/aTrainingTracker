@@ -36,7 +36,15 @@ data class PeriodSummary(
     val polylines: List<String>, // List of encoded polylines for the map
     val workoutIdToPolylineMap: Map<Long, String>, // ID -> Encoded Polyline
     val workoutIdToSportMap: Map<Long, BSportType>,
+    val extremaMarkers: List<PeriodPeakMarker> = emptyList(),
     val sortKey: String // Used for sorting
+)
+
+data class PeriodPeakMarker(
+    val workoutId: Long,
+    val pos: com.google.android.gms.maps.model.LatLng,
+    val iconResId: Int,
+    val title: String
 )
 
 data class SportStats(
