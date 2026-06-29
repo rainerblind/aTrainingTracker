@@ -56,7 +56,7 @@ class DeviceListViewModel(private val application: Application) : AndroidViewMod
             // First, apply the main filter based on the filter type.
             val primaryFiltered = when (spec.filterType) {
                 DeviceFilterType.PAIRED -> devices.filter { it.isPaired }
-                DeviceFilterType.AVAILABLE -> devices.filter { it.isAvailable }
+                DeviceFilterType.CONNECTED -> devices.filter { it.isConnected }
                 DeviceFilterType.ALL_KNOWN -> devices // No primary filter, return the whole list
             }
 

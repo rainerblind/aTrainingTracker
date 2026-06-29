@@ -27,14 +27,24 @@
     <string name="devices_unknown_device">Kein Name</string>
 
     <string name="devices_all">Alle</string>
+    <string name="devices_all_sensors">Alle Sensoren</string>
+    <string name="devices_tab_available">Verbunden</string>
+    <string name="devices_tab_paired">Gekoppelt</string>
+    <string name="devices_tab_known">Bekannt</string>
+
+    <string name="devices_available">verbunden</string>
 
     <!-- tab title -->
-    <string name="devices_available_devices_format">Verfügbare %1$s Sensoren</string>
+    <string name="devices_available_devices_format">Verbundene %1$s Sensoren</string>
     <string name="devices_paired_devices_format">Gekoppelte %1$s Sensoren</string>
     <string name="devices_known_devices_format">Bekannte %1$s Sensoren</string>
-    <string name="devices_all_available_devices">Alle verfügbaren Sensoren</string>
+    <string name="devices_all_available_devices">Alle verbundenen Sensoren</string>
     <string name="devices_all_paired_devices">Alle gekoppelten Sensoren</string>
     <string name="devices_all_known_devices">Alle bekannten Sensoren</string>
+
+    <string name="devices_no_devices_available">Keine Sensoren verbunden</string>
+    <string name="devices_no_paired_devices">Keine gekoppelten Sensoren gefunden</string>
+    <string name="devices_no_known_devices">Keine bekannten Sensoren in Datenbank</string>
 
     <!-- device_list -->
     <string name="devices_myRemoteDevices">Sensoren</string>

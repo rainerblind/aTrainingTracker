@@ -62,7 +62,7 @@ class GetMergedDevicesUseCase(
                     val mainSensorData = activeDevice.mainSensorData
                     val unit = application.getString(MyHelper.getUnitsId(mainSensorData.sensor))
                     knownDevice.copy(
-                        isAvailable = true,
+                        isConnected = true,
                         lastSeen = application.getString(R.string.devices_now),
                         mainValue = "${mainSensorData.value} $unit",
                         allValues = activeDevice.allSensorData.map {
@@ -71,10 +71,10 @@ class GetMergedDevicesUseCase(
                     )
                 }
                 isFound -> knownDevice.copy(
-                    isAvailable = true,
+                    isConnected = true,
                     lastSeen = application.getString(R.string.devices_now)
                 )
-                else -> knownDevice.copy(isAvailable = false, mainValue = null)
+                else -> knownDevice.copy(isConnected = false, mainValue = null)
             }
         }
     }

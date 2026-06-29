@@ -26,13 +26,22 @@
     <string name="devices_unknown_device">bez nazwy</string>
 
     <string name="devices_all">Wszystkie</string>
+    <string name="devices_all_sensors">Wszystkie czujniki</string>
+    <string name="devices_tab_available">Połączone</string>
+    <string name="devices_tab_paired">Sparowane</string>
+    <string name="devices_tab_known">Znane</string>
+    <string name="devices_available">połączony</string>
 
-    <string name="devices_available_devices_format">dostępne urządzenia %1$s</string>
+    <string name="devices_available_devices_format">połączone urządzenia %1$s</string>
     <string name="devices_paired_devices_format">sparowane urządzenia %1$s</string>
     <string name="devices_known_devices_format">znane urządzenia %1$s</string>
-    <string name="devices_all_available_devices">wszystkie dostępne urządzenia</string>
+    <string name="devices_all_available_devices">wszystkie połączone urządzenia</string>
     <string name="devices_all_paired_devices">wszystkie sparowane urządzenia</string>
     <string name="devices_all_known_devices">wszystkie znane urządzenia</string>
+
+    <string name="devices_no_devices_available">Brak połączonych urządzeń</string>
+    <string name="devices_no_paired_devices">Nie znaleziono sparowanych urządzeń</string>
+    <string name="devices_no_known_devices">Brak znanych urządzeń w bazie danych</string>
 
     <string name="devices_myRemoteDevices">Urządzenia</string>
     <string name="devices_newDevices">Nowe urządzenia</string>

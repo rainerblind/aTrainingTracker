@@ -74,7 +74,7 @@ data class DeviceUiData(
     val powerFeatures: BikePowerFeatures?,
 
     // stuff that we don't get from the database but from the devices itself.
-    val isAvailable: Boolean,
+    val isConnected: Boolean,
     val mainValue: String?,
     val allValues: List<String>?
     )
@@ -135,7 +135,7 @@ fun raw2UiDeviceData(rawData: DeviceRawData, context: Context): DeviceUiData {
         powerFeatures = powerFeatures,
 
         // set by observing the devices
-        isAvailable = false,
+        isConnected = false,
         mainValue = null,
         allValues = null
         )

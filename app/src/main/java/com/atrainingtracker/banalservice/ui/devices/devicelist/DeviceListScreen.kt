@@ -58,15 +58,16 @@ fun DeviceListScreen(
     val topPadding = with(density) { (headerHeightPx + appBarOffsetPx).toDp() }
 
     Column(modifier = modifier.fillMaxSize()) {
-        // 1. Searching Header (Only for Available tab)
-        // Note: With collapsing header, we might want this to be part of the LazyColumn or handled differently.
-        // But for now, let's keep it here if it's visible.
-
         if (devices.isEmpty()) {
+            val emptyMessage = when (filterSpec.filterType) {
+                DeviceFilterType.CONNECTED -> stringResource(R.string.devices_no_devices_available)
+                DeviceFilterType.PAIRED -> stringResource(R.string.devices_no_paired_devices)
+                DeviceFilterType.ALL_KNOWN -> stringResource(R.string.devices_no_known_devices)
+            }
             EmptyStatePlaceholder(
                 modifier = Modifier.padding(top = topPadding),
                 icon = Icons.Default.Devices,
-                message = stringResource(R.string.no_workouts_available), // TODO: Add better "No devices" string
+                message = emptyMessage,
                 hint = if (searchingFor != null) stringResource(R.string.devices_searchingForDevice, 
                     stringResource(UIHelper.getNameId(filterSpec.protocol)), 
                     stringResource(UIHelper.getNameId(filterSpec.deviceType))) 
@@ -85,7 +86,7 @@ fun DeviceListScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // If searching, show the searching indicator as the first item or header
-                if (filterSpec.deviceType != DeviceType.ALL && filterSpec.filterType == DeviceFilterType.AVAILABLE && searchingFor != null) {
+                if (filterSpec.deviceType != DeviceType.ALL && filterSpec.filterType == DeviceFilterType.CONNECTED && searchingFor != null) {
                     item {
                         SearchingHeader(
                             protocolName = stringResource(UIHelper.getNameId(filterSpec.protocol)),

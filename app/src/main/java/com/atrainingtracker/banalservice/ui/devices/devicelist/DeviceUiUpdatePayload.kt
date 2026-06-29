@@ -48,10 +48,10 @@ class DeviceDiffCallback : DiffUtil.ItemCallback<DeviceUiData>() {
     override fun getChangePayload(oldItem: DeviceUiData, newItem: DeviceUiData): Any? {
         val payloads = mutableListOf<DeviceUiUpdatePayload>()
 
-        // isAvailable or lastSeen
-        if (oldItem.isAvailable != newItem.isAvailable
+        // isConnected or lastSeen
+        if (oldItem.isConnected != newItem.isConnected
             || oldItem.lastSeen != newItem.lastSeen) {
-            payloads.add(DeviceUiUpdatePayload.AvailabilityChanged(newItem.isAvailable, newItem.lastSeen))
+            payloads.add(DeviceUiUpdatePayload.AvailabilityChanged(newItem.isConnected, newItem.lastSeen))
         }
 
         // mainValue

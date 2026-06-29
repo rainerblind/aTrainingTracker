@@ -31,13 +31,17 @@
     <string name="devices_unknown_device">No name</string>
 
     <string name="devices_all">All</string>
-    <string name="devices_available">available</string>
+    <string name="devices_all_sensors">All Sensors</string>
+    <string name="devices_tab_available">Connected</string>
+    <string name="devices_tab_paired">Paired</string>
+    <string name="devices_tab_known">Known</string>
+    <string name="devices_available">connected</string>
 
     <!-- tab title -->
-    <string name="devices_available_devices_format">Available %1$s devices</string>
+    <string name="devices_available_devices_format">Connected %1$s devices</string>
     <string name="devices_paired_devices_format">Paired %1$s devices</string>
     <string name="devices_known_devices_format">Known %1$s devices</string>
-    <string name="devices_all_available_devices">All available devices</string>
+    <string name="devices_all_available_devices">All connected devices</string>
     <string name="devices_all_paired_devices">All paired devices</string>
     <string name="devices_all_known_devices">All known devices</string>
 
@@ -47,6 +51,10 @@
     <string name="devices_main_value_format" translatable="false">(%1$s)</string>
     <string name="devices_no_main_value" translatable="false">--</string>
     <string name="DeviceListRowEquipmentText" translatable="false" />
+
+    <string name="devices_no_devices_available">No devices connected</string>
+    <string name="devices_no_paired_devices">No paired devices found</string>
+    <string name="devices_no_known_devices">No known devices in database</string>
 
     <!-- device_list -->
     <string name="devices_myRemoteDevices">Devices</string>

@@ -26,13 +26,22 @@
     <string name="devices_unknown_device">sem nome</string>
 
     <string name="devices_all">Todos</string>
+    <string name="devices_all_sensors">Todos os sensores</string>
+    <string name="devices_tab_available">Conectados</string>
+    <string name="devices_tab_paired">Emparelhados</string>
+    <string name="devices_tab_known">Conhecidos</string>
+    <string name="devices_available">conectado</string>
 
-    <string name="devices_available_devices_format">dispositivos %1$s disponíveis</string>
+    <string name="devices_available_devices_format">dispositivos %1$s conectados</string>
     <string name="devices_paired_devices_format">dispositivos %1$s emparelhados</string>
     <string name="devices_known_devices_format">dispositivos %1$s conhecidos</string>
-    <string name="devices_all_available_devices">todos os disp. disponíveis</string>
+    <string name="devices_all_available_devices">todos os disp. conectados</string>
     <string name="devices_all_paired_devices">todos os disp. emparelhados</string>
     <string name="devices_all_known_devices">todos os disp. conhecidos</string>
+
+    <string name="devices_no_devices_available">Nenhum dispositivo conectado</string>
+    <string name="devices_no_paired_devices">Nenhum dispositivo emparelhado encontrado</string>
+    <string name="devices_no_known_devices">Nenhum dispositivo conhecido no banco de dados</string>
 
     <string name="devices_myRemoteDevices">Dispositivos</string>
     <string name="devices_newDevices">Novos dispositivos</string>

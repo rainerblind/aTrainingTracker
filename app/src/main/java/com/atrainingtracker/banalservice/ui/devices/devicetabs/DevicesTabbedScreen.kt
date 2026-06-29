@@ -81,7 +81,7 @@ fun DevicesTabbedScreen(
                 val deviceType = state.deviceType
                 val tabs = remember(protocol, deviceType) {
                     listOf(
-                        DeviceFilterSpec(DeviceFilterType.AVAILABLE, protocol, deviceType),
+                        DeviceFilterSpec(DeviceFilterType.CONNECTED, protocol, deviceType),
                         DeviceFilterSpec(DeviceFilterType.PAIRED, protocol, deviceType),
                         DeviceFilterSpec(DeviceFilterType.ALL_KNOWN, protocol, deviceType)
                     )
@@ -128,8 +128,13 @@ fun DevicesTabbedScreen(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
+                                    val title = if (deviceType == DeviceType.ALL) {
+                                        stringResource(R.string.devices_all_sensors)
+                                    } else {
+                                        "${stringResource(UIHelper.getNameId(protocol))} ${stringResource(UIHelper.getNameId(deviceType))}"
+                                    }
                                     Text(
-                                        text = stringResource(UIHelper.getNameId(protocol)),
+                                        text = title,
                                         style = MaterialTheme.typography.headlineSmall,
                                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                                     )
@@ -198,19 +203,10 @@ fun DevicesTabbedScreen(
 
 @Composable
 private fun getTabTitle(spec: DeviceFilterSpec): String {
-    return if (spec.deviceType == DeviceType.ALL) {
-        when (spec.filterType) {
-            DeviceFilterType.AVAILABLE -> stringResource(R.string.devices_all_available_devices)
-            DeviceFilterType.PAIRED -> stringResource(R.string.devices_all_paired_devices)
-            DeviceFilterType.ALL_KNOWN -> stringResource(R.string.devices_all_known_devices)
-        }
-    } else {
-        val deviceTypeName = stringResource(UIHelper.getNameId(spec.deviceType))
-        when (spec.filterType) {
-            DeviceFilterType.AVAILABLE -> stringResource(R.string.devices_available_devices_format, deviceTypeName)
-            DeviceFilterType.PAIRED -> stringResource(R.string.devices_paired_devices_format, deviceTypeName)
-            DeviceFilterType.ALL_KNOWN -> stringResource(R.string.devices_known_devices_format, deviceTypeName)
-        }
+    return when (spec.filterType) {
+        DeviceFilterType.CONNECTED -> stringResource(R.string.devices_tab_available)
+        DeviceFilterType.PAIRED -> stringResource(R.string.devices_tab_paired)
+        DeviceFilterType.ALL_KNOWN -> stringResource(R.string.devices_tab_known)
     }
 }
 

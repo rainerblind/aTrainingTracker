@@ -458,7 +458,7 @@ private fun PowerMeterSection(data: DeviceUiData, viewModel: EditDeviceViewModel
 
 @Composable
 private fun LivePreviewSection(data: DeviceUiData) {
-    if (data.isAvailable) {
+    if (data.isConnected) {
         Column(
             modifier = Modifier.padding(top = 8.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)

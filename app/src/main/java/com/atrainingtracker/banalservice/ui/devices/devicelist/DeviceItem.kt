@@ -114,7 +114,7 @@ fun DeviceItem(
                     modifier = Modifier.padding(top = 2.dp)
                 ) {
                     // 1. Availability Icon
-                    val statusIcon = if (device.isAvailable) R.drawable.ic_device_available else R.drawable.ic_device_not_available
+                    val statusIcon = if (device.isConnected) R.drawable.ic_device_available else R.drawable.ic_device_not_available
                     Icon(
                         painter = painterResource(id = statusIcon),
                         contentDescription = null,
@@ -125,7 +125,7 @@ fun DeviceItem(
                     
                     // 2. Status Text
                     Text(
-                        text = if (device.isAvailable) {
+                        text = if (device.isConnected) {
                             stringResource(R.string.devices_available)
                         } else {
                             "${stringResource(R.string.devices_lastSeenText)} ${device.lastSeen?.split(" ")?.firstOrNull() ?: ""}"
@@ -200,7 +200,7 @@ fun PreviewDeviceItem() {
         wheelCircumference = null,
         calibrationFactor = null,
         powerFeatures = null,
-        isAvailable = true,
+        isConnected = true,
         mainValue = "145",
         allValues = listOf("145 bpm")
     )
@@ -236,7 +236,7 @@ fun PreviewDeviceItem2() {
         wheelCircumference = null,
         calibrationFactor = null,
         powerFeatures = null,
-        isAvailable = false,
+        isConnected = false,
         mainValue = "145",
         allValues = listOf("145 bpm")
     )

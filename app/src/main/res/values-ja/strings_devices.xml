@@ -26,13 +26,22 @@
     <string name="devices_unknown_device">名前なし</string>
 
     <string name="devices_all">すべて</string>
+    <string name="devices_all_sensors">すべてのセンサー</string>
+    <string name="devices_tab_available">接続済み</string>
+    <string name="devices_tab_paired">ペアリング済み</string>
+    <string name="devices_tab_known">登録済み</string>
+    <string name="devices_available">接続済み</string>
 
-    <string name="devices_available_devices_format">利用可能な %1$s デバイス</string>
+    <string name="devices_available_devices_format">接続済み %1$s デバイス</string>
     <string name="devices_paired_devices_format">ペアリング済み %1$s デバイス</string>
-    <string name="devices_known_devices_format">既知の %1$s デバイス</string>
-    <string name="devices_all_available_devices">利用可能なすべてのデバイス</string>
+    <string name="devices_known_devices_format">登録済み %1$s デバイス</string>
+    <string name="devices_all_available_devices">すべての接続済みデバイス</string>
     <string name="devices_all_paired_devices">ペアリング済みのすべてのデバイス</string>
-    <string name="devices_all_known_devices">すべての既知のデバイス</string>
+    <string name="devices_all_known_devices">登録済みのすべてのデバイス</string>
+
+    <string name="devices_no_devices_available">接続されているデバイスはありません</string>
+    <string name="devices_no_paired_devices">ペアリングされたデバイスが見つかりません</string>
+    <string name="devices_no_known_devices">データベースに登録されているデバイスはありません</string>
 
     <string name="devices_myRemoteDevices">デバイス</string>
     <string name="devices_newDevices">新規デバイス</string>
