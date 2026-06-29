@@ -100,7 +100,7 @@ fun DeviceItem(
                         // Row 2: Manufacturer
                         Text(
                             text = device.manufacturer,
-                            style = MaterialTheme.typography.labelSmall,
+                            style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -130,7 +130,7 @@ fun DeviceItem(
                         } else {
                             "${stringResource(R.string.devices_lastSeenText)} ${device.lastSeen?.split(" ")?.firstOrNull() ?: ""}"
                         },
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                     )
 
@@ -145,7 +145,7 @@ fun DeviceItem(
                     Spacer(modifier = Modifier.width(2.dp))
                     Text(
                         text = "${device.batteryPercentage}%",
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                     )
                 }
@@ -158,7 +158,7 @@ fun DeviceItem(
                             R.string.devices_on_short_format,
                             device.linkedEquipment.joinToString(", ")
                         ),
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.SemiBold,
                         textAlign = TextAlign.Start,
