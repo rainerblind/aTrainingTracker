@@ -88,13 +88,22 @@ fun DeviceItem(
                                 modifier = Modifier.weight(1f)
                             )
                             
-                            Text(
-                                text = device.mainValue ?: "--",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                textAlign = TextAlign.End
-                            )
+                            if (device.isConnected) {
+                                Text(
+                                    text = device.mainValue ?: "--",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    textAlign = TextAlign.End
+                                )
+                            } else {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_device_not_available),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(24.dp),
+                                    tint = Color.Unspecified
+                                )
+                            }
                         }
 
                         // Row 2: Manufacturer
