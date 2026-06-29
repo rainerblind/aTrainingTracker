@@ -22,6 +22,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.switchMap
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ui.devices.GetMergedDevicesUseCase
@@ -51,9 +52,14 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
         application
     )
 
-    // the device data with the data of its sensors.
-    // This must not used for editing the device since it would be updated every second with the value of the database.
-    lateinit var deviceLiveData : LiveData<DeviceUiData?>
+    // The ID of the device currently being edited.
+    private val _editingId = MutableLiveData<Long?>()
+
+    // The device data with the data of its sensors.
+    val deviceLiveData: LiveData<DeviceUiData?> = _editingId.switchMap { id ->
+        if (id == null) MutableLiveData(null)
+        else useCase.getMergedDeviceById(id)
+    }
 
     // The single source of truth for the UI. This holds the CURRENT state of the device being edited.
     private val _deviceSnapshot = MutableLiveData<DeviceUiData?>()
@@ -65,10 +71,11 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
      * This should be called once when the edit dialog is created.
      */
     fun loadInitialDeviceData(deviceId: Long) {
-        // No launch block is needed for this synchronous, main-safe call.
+        // Only reload if the ID changed or we don't have data yet
+        if (_editingId.value == deviceId && _deviceSnapshot.value != null) return
+
         _deviceSnapshot.value = devicesRepository.getDeviceSnapshotById(deviceId)
-        // _uiState.value = useCase.getMergedDeviceById(deviceId).value
-        deviceLiveData = useCase.getMergedDeviceById(deviceId)
+        _editingId.value = deviceId
     }
 
     //--- dealing with wheel sizes
@@ -273,11 +280,11 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
     }
 
     fun onDoublePowerBalanceValuesChanged(isDouble: Boolean) {
-        updateState { it.copy(powerFeatures = it.powerFeatures!!.copy(doublePowerBalanceValues = isDouble)) }
+        updateState { it.copy(powerFeatures = it.powerFeatures?.copy(doublePowerBalanceValues = isDouble)) }
     }
 
     fun onInvertPowerBalanceValuesChanged(isInverted: Boolean) {
-        updateState { it.copy(powerFeatures = it.powerFeatures!!.copy(invertPowerBalanceValues = isInverted)) }
+        updateState { it.copy(powerFeatures = it.powerFeatures?.copy(invertPowerBalanceValues = isInverted)) }
     }
 
     /**
