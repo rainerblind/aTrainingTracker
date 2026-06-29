@@ -119,7 +119,8 @@ fun EditDeviceDialog(
                 TextButton(onClick = onDismiss) {
                     Text(stringResource(R.string.cancel))
                 }
-            }
+            },
+            containerColor = MaterialTheme.colorScheme.surface
         )
     }
 }
@@ -199,7 +200,8 @@ private fun EquipmentSection(data: DeviceUiData, viewModel: EditDeviceViewModel)
                 }) {
                     Text(stringResource(R.string.OK))
                 }
-            }
+            },
+            containerColor = MaterialTheme.colorScheme.surface
         )
     }
 }
@@ -401,7 +403,8 @@ private fun CorrectCalibrationDialog(
             TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.cancel))
             }
-        }
+        },
+        containerColor = MaterialTheme.colorScheme.surface
     )
 }
 

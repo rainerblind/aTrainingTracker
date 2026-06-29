@@ -187,7 +187,8 @@ fun DevicesTabbedScreen(
                 TextButton(onClick = { showDeleteConfirmFor = null }) {
                     Text(stringResource(R.string.cancel))
                 }
-            }
+            },
+            containerColor = MaterialTheme.colorScheme.surface
         )
     }
 
@@ -235,6 +236,7 @@ private fun DeviceTypeSelectionDialog(
             TextButton(onClick = { onSelected(DeviceType.ALL) }) {
                 Text(stringResource(R.string.devices_all))
             }
-        }
+        },
+        containerColor = MaterialTheme.colorScheme.surface
     )
 }
